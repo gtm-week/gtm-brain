@@ -1,0 +1,39 @@
+# Internal working context: meeting notes, source material, screenshots, design docs,
+# and the reference workshop kit. Not tracked.
+gtm-week-context/
+docs/
+
+# Arthur's reference kit keeps its own work/ convention
+reference/gtm-week-workshop/work/*
+!reference/gtm-week-workshop/work/README.md
+
+# Scratch test brains never live inside this repo, but just in case
+/brain/
+/work/
+# Test-brain paths dev-reset.sh created and may wipe (machine-specific)
+.dev-brains
+
+# macOS
+.DS_Store
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Editor / machine-specific
+.vscode/
+.idea/
+*.swp
+.obsidian/
+.claude/settings.local.json
+
+# Stray tooling / credentials
+.gh/
+.env
+.env.*
+!.env.example
+*.local
+.playwright-mcp/
+.gstack/
+
+tools/demo-week/.env

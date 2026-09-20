@@ -1,0 +1,46 @@
+{
+  "name": "gtm-os",
+  "version": "0.26.0",
+  "description": "Shared company memory for priorities, customers and follow-ups",
+  "author": {
+    "name": "GTM Tech Week"
+  },
+  "license": "MIT",
+  "keywords": [
+    "gtm",
+    "revenue",
+    "brain",
+    "memory",
+    "contexts"
+  ],
+  "skills": "./skills/",
+  "hooks": "./hooks.json",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "GTM OS",
+    "shortDescription": "Shared company memory for priorities, customers and follow-ups",
+    "longDescription": "Keep your team's customer knowledge, decisions and follow-ups in a local company brain. Start the day with your priorities, catch up on customer updates from connected tools, capture meeting decisions, or get a brief on a company or person with links to the evidence. Organize work into contexts, connect project folders to the same brain, and open the dashboard to see where things stand. Your company files stay local unless you choose to share them.",
+    "developerName": "GTM Tech Week",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Set up a new company brain in this folder",
+      "What should I focus on today? Show my priorities and follow-ups",
+      "What changed since last time in the contexts I have open?",
+      "Sync the latest customer updates from my connected tools",
+      "Capture the decisions and next steps from these meeting notes",
+      "Brief me on a company or person, with sources",
+      "Create a context for a new customer opportunity",
+      "Link this project folder to my existing company brain",
+      "Refresh the summaries and open the dashboard"
+    ],
+    "brandColor": "#1E6B68",
+    "composerIcon": "./assets/logo.png",
+    "logo": "./assets/logo.png",
+    "logoDark": "./assets/logo.png"
+  }
+}

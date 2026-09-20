@@ -1,0 +1,26 @@
+flowchart TB
+  you["You, in a Codex chat"] --> os["GTM OS<br/>keeps every change"]
+  tools["Your tools<br/>Gmail · Calendar · HubSpot"] --> os
+
+  subgraph brain["Your company brain · one folder on your Mac"]
+    ctx["<b>Context</b><br/>an area of work<br/><i>Our offer · Target customers</i>"]
+    mem["<b>Memory</b><br/>one record of what happened<br/><i>“Inovo asked what five seats cost”</i>"]
+    ent["<b>Entity</b><br/>person · organization · product<br/><i>Kasia Nowak · Inovo</i>"]
+    adm["<b>Admin</b><br/>company · team · tools<br/><i>changes only on APPROVE</i>"]
+  end
+
+  os --> ctx & mem & ent & adm
+  ctx & mem & ent & adm --> dash["Dashboard · view only"]
+
+  classDef plain fill:#141415,stroke:#2a2a2b,color:#ededec
+  classDef os fill:#ffffff,stroke:#ffffff,color:#070707
+  classDef context fill:#1e2416,stroke:#a3bd5e,color:#ededec
+  classDef memory fill:#14262a,stroke:#56aab8,color:#ededec
+  classDef entity fill:#2a1c28,stroke:#bd77b0,color:#ededec
+  classDef approve fill:#2c2617,stroke:#dfbe79,color:#ededec
+  class you,tools,dash plain
+  class os os
+  class ctx context
+  class mem memory
+  class ent entity
+  class adm approve

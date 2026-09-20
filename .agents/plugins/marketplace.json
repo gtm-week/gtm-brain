@@ -1,0 +1,22 @@
+{
+  "name": "gtm-os",
+  "interface": {
+    "displayName": "GTM OS"
+  },
+  "plugins": [
+    {
+      "name": "gtm-os",
+      "displayName": "GTM OS",
+      "source": {
+        "source": "local",
+        "path": "./plugins/gtm-os"
+      },
+      "description": "Shared company memory for priorities, customers and follow-ups",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

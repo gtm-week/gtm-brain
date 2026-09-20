@@ -1,0 +1,82 @@
+[
+  {
+    "id": "gtm-os-todo",
+    "group": "daily",
+    "featured": true,
+    "title": "Choose my next task",
+    "description": "Find what needs your attention and work through it.",
+    "example": "What should I focus on today?"
+  },
+  {
+    "id": "gtm-os-sync",
+    "group": "daily",
+    "featured": true,
+    "title": "Sync the latest updates",
+    "description": "Bring recent updates from your connected tools into shared knowledge.",
+    "example": "Sync recent updates from my connected tools."
+  },
+  {
+    "id": "gtm-os-deepdive",
+    "group": "daily",
+    "featured": true,
+    "title": "Prepare for a meeting",
+    "description": "Get a sourced brief on a person, company or topic.",
+    "example": "Help me prepare for my next customer meeting."
+  },
+  {
+    "id": "gtm-os-use-brain",
+    "group": "knowledge",
+    "featured": false,
+    "title": "Ask or remember something",
+    "description": "Use saved knowledge and keep new findings with their sources.",
+    "example": "What do we know about our target customers?"
+  },
+  {
+    "id": "gtm-os-add-file",
+    "group": "knowledge",
+    "featured": false,
+    "title": "Add a file",
+    "description": "Put a PDF, image or deck in the brain, attached to who it belongs to, with its content noted.",
+    "example": "Add this deck to the brain for Acme."
+  },
+  {
+    "id": "gtm-os-project",
+    "group": "projects",
+    "featured": true,
+    "title": "Work in a project",
+    "description": "Create a project folder, or link an existing one to your brain.",
+    "example": "Create a new project for our website."
+  },
+  {
+    "id": "gtm-os-start",
+    "group": "setup",
+    "featured": false,
+    "title": "Set up or resume GTM OS",
+    "description": "Start onboarding or continue from the last saved step.",
+    "example": "Resume my GTM OS setup."
+  },
+  {
+    "id": "gtm-os-configure",
+    "group": "setup",
+    "featured": false,
+    "title": "Change my preferences",
+    "description": "Adjust workplace information, language or dashboard preferences.",
+    "example": "Help me change my GTM OS preferences."
+  },
+  {
+    "id": "gtm-os-skill",
+    "group": "setup",
+    "featured": false,
+    "title": "Make a skill of your own",
+    "description": "Turn a repeated workflow into a Codex skill kept in this brain, or install one from GitHub.",
+    "example": "Turn what we just did into a skill."
+  },
+  {
+    "id": "gtm-os-guideline",
+    "group": "setup",
+    "featured": false,
+    "title": "Keep the brand guidelines",
+    "description": "Tone of voice, design system, target customer definition: the documents Codex follows before writing copy or designing.",
+    "example": "Add our tone of voice from the website and the last deck."
+  }
+]
