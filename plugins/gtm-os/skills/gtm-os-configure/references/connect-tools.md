@@ -50,7 +50,7 @@ yes, propose the `admin.md` change through the `gtm-os-configure` workplace-chan
 
 An explicit "connect Gmail and Google Calendar" request in Codex authorizes installing those named tools. Do not ask for another yes per tool.
 If no selection exists, offer an available structured choice control in Codex. For a single-select chat control, offer "Email and calendar", "Email only",
-and "Skip both", with its built-in free-text answer for alternatives; then the CRM as its
+and "Skip both"; then the CRM as its
 own question: "HubSpot (the course gives it to you)", "Attio", "Another CRM or none yet".
 
 Prefer `configuration_question` with the named tools as `options` and `multiple: true`.

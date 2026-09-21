@@ -15,7 +15,7 @@ Explain before the native question:
 Propose a concrete daily time, normally 09:00 in the person's known local timezone, and name
 only the connected, tested tools in scope. Reuse known timing. If timezone or source scope is
 unknown, resolve it before creating the automation; do not infer the timezone.
-Use `configuration_question` with these choices and built-in free text for corrections:
+Use `configuration_question` with these choices; ask a free-text follow-up only for another time:
 
 - Daily sync at 09:00 (Recommended), with the actual proposed timezone and tools in the prompt.
 - Sync manually for now.

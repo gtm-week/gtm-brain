@@ -28,6 +28,8 @@ The host labels the call by the tool's name, so the name is the person's only cu
 of question it is. All three are the same native form: it waits inside the call and supports
 radio choices, `multiple: true` checkboxes and free text. Do not show the same question with a
 second tool or end the turn with a text question while these tools are available.
+In Plan mode, ask through the host's own planning question tool instead: it is the form the
+person expects there, and it shows the choices and their own answer on one page.
 
 Reuse saved and submitted answers; infer a concrete proposal before asking. Use structured
 questions proactively for missing information and decisions in the person's current mode.
@@ -37,8 +39,10 @@ prefer a blocking question tool when its current contract allows it, then an asy
 Use a plain text question only when an appropriate structured control is unavailable.
 
 Explain why the answer matters before the widget. Offer two or three concrete choices,
-recommended first when appropriate, with built-in free text for corrections; do not add
-an Other option.
+recommended first when appropriate. A choice question is one page: the host shows each field
+on its own page, so `text_label` next to `options` adds a second step. Pass it only when a note
+is really needed. When another answer is likely, let the last choice name it (Different company,
+Needs corrections) and ask the follow-up as a free-text question; do not add a bare Other option.
 Use genuine multi-select for independent choices only when the tool's schema supports it;
 otherwise offer concrete combinations in a single-select chat question. The dashboard is
 view-only. Aim for clicks or at most five words per answer. Never bundle a business

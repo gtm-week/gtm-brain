@@ -12,7 +12,7 @@ export const inputSchema = {
       description: 'Concrete choices, recommended first. Always pass them for a yes/no or permission question. Omit only when the answer is a name, a link or other free text.' },
     multiple: { type: 'boolean', description: 'True for independent checkbox selections; otherwise radio choices.' },
     text_label: { type: 'string', minLength: 1, maxLength: 100,
-      description: 'Optional label for the free-text field, in the person\'s language. With options it sits under them, for a note or another answer. Without options it names what to type, for example Company website; omit it to show the question alone.' },
+      description: 'Optional label for a free-text field, in the person\'s language. With options, omit it: the host shows one field per page, so it adds a second step after the choices. Pass it only when a note is really needed, for example Add a note. Without options it names what to type, for example Company website; omit it to show the question alone.' },
   }, required: ['question'],
 };
 
@@ -31,10 +31,12 @@ export function buildQuestion(args) {
   if (options) properties.selection = args.multiple
     ? { type: 'array', title: args.question, items: { type: 'string', enum: options }, minItems: 0, maxItems: options.length }
     : { type: 'string', title: args.question, enum: options };
-  // Without choices the host's header already shows the question, so the field repeats nothing and
-  // never says "or": an "Or type an answer" box with nothing above it reads as a second question.
-  const label = options ? args.text_label || OR_LABEL : args.text_label !== OR_LABEL && args.text_label;
-  properties.text = { type: 'string', ...(label ? { title: label } : {}), maxLength: 1000 };
+  // The host shows one field per page. A text field next to choices is a second step ("2 of 2"),
+  // so a choice question carries one only when the caller names it. Without choices the host's
+  // header already shows the question, so the field repeats nothing. The old default label is
+  // dropped either way: the model used to copy it, and alone on its page it reads as a second question.
+  const label = args.text_label !== OR_LABEL && args.text_label;
+  if (!options || label) properties.text = { type: 'string', ...(label ? { title: label } : {}), maxLength: 1000 };
   // No defaults and no autoResolutionMs metadata. Only a submitted value is an answer.
   return { mode: 'form', message: args.question, requestedSchema: { type: 'object', properties, required: [] } };
 }

@@ -12,7 +12,7 @@ const args = { question: 'Connect Gmail?', options: ['Yes, go ahead', 'No, skip 
 test('forms preserve choice order, support multi-select and free text, and carry no default or timeout', () => {
   const single = buildQuestion(args);
   assert.deepEqual(single.requestedSchema.properties.selection.enum, args.options);
-  assert.equal(single.requestedSchema.properties.text.type, 'string');
+  assert.equal(buildQuestion({ ...args, text_label: 'Add a note' }).requestedSchema.properties.text.type, 'string');
   assert.equal(single._meta, undefined);
   assert.equal(single.requestedSchema.properties.selection.default, undefined);
   const multi = buildQuestion({ ...args, multiple: true });
@@ -30,10 +30,19 @@ test('a free-text question carries no "or" label: the header already shows the q
   // The model used to copy the default out of the schema description; with no choices above it, it is dropped.
   assert.equal(buildQuestion({ question: 'May I?', text_label: 'Or type an answer' }).requestedSchema.properties.text.title, undefined);
   assert.equal(buildQuestion({ question: 'Website?', text_label: 'Company website' }).requestedSchema.properties.text.title, 'Company website');
-  assert.equal(buildQuestion(args).requestedSchema.properties.text.title, 'Or type an answer');
   assert.equal(buildQuestion({ ...args, text_label: 'Add a note' }).requestedSchema.properties.text.title, 'Add a note');
   assert.doesNotMatch(buildQuestionSchema.properties.text_label.description, /Or type an answer/);
   assert.match(buildQuestionSchema.properties.options.description, /yes\/no/i);
+});
+
+test('a choice question is one page: the host shows one field per page, so a text field is a second step (Artur, 2026-09-21)', () => {
+  // Codex rendered the choices as "1 of 2" and an "Or type an answer" box as "2 of 2" on every question.
+  assert.deepEqual(Object.keys(buildQuestion(args).requestedSchema.properties), ['selection']);
+  assert.deepEqual(Object.keys(buildQuestion({ ...args, multiple: true }).requestedSchema.properties), ['selection']);
+  // The second step is opt-in, and never under the old default label.
+  assert.deepEqual(Object.keys(buildQuestion({ ...args, text_label: 'Add a note' }).requestedSchema.properties), ['selection', 'text']);
+  assert.deepEqual(Object.keys(buildQuestion({ ...args, text_label: 'Or type an answer' }).requestedSchema.properties), ['selection']);
+  assert.match(buildQuestionSchema.properties.text_label.description, /second/i);
 });
 
 test('only submitted data supplies answers; cancellation, empty input and invalid responses cannot become consent', () => {

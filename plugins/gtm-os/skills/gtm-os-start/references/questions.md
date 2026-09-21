@@ -8,6 +8,8 @@ The host labels the call by the tool's name, so the name is the person's only cu
 of question it is. All three are the same native form: it waits inside the call and supports
 radio choices, `multiple: true` checkboxes and free text. Do not show the same question with a
 second tool or end the turn with a text question while these tools are available.
+In Plan mode, ask through the host's own planning question tool instead: it is the form the
+person expects there, and it shows the choices and their own answer on one page.
 
 Reuse saved and submitted answers; infer a concrete proposal before asking. Use structured
 questions proactively for missing information and decisions in the person's current mode.
@@ -17,8 +19,10 @@ prefer a blocking question tool when its current contract allows it, then an asy
 Use a plain text question only when an appropriate structured control is unavailable.
 
 Explain why the answer matters before the widget. Offer two or three concrete choices,
-recommended first when appropriate, with built-in free text for corrections; do not add
-an Other option.
+recommended first when appropriate. A choice question is one page: the host shows each field
+on its own page, so `text_label` next to `options` adds a second step. Pass it only when a note
+is really needed. When another answer is likely, let the last choice name it (Different company,
+Needs corrections) and ask the follow-up as a free-text question; do not add a bare Other option.
 Use genuine multi-select for independent choices only when the tool's schema supports it;
 otherwise offer concrete combinations in a single-select chat question. The dashboard is
 view-only. Aim for clicks or at most five words per answer. Never bundle a business
@@ -85,7 +89,8 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
 `onboarding_question` works before a brain exists; `configuration_question` and `question`
 take the same arguments and are the names to use after setup. Pass `question`, two or three
 `options` in display order, and `multiple: true` only for independent selections.
-Omit `options` only for free text, never for a yes/no; translate `text_label` when needed. An `options` array
+Omit `options` only for free text, never for a yes/no. With `options`, leave `text_label` out unless
+a note is needed: it becomes a second page. Translate it when used. An `options` array
 on `request_user_input_async` accepts one choice per question, not multiple selections.
 Never invent a `multiple` or `multi_select` parameter on another tool.
 
@@ -104,15 +109,15 @@ Do not interpret panel collapse as an answer or a reason to repost.
 
 | Moment | Default interaction |
 | --- | --- |
-| Inferred company | Yes, this is my company; Different company. Free text for the website. |
+| Inferred company | Yes, this is my company; Different company. Then a free-text question for the website. |
 | Unknown website or identity | Structured free-text question, with one example in the prompt. |
 | Company profile corrections | Offer concrete sections to revise when helpful. Applying the profile still requires the literal APPROVE flow below. |
 | Connections | `onboarding_question` with `multiple: true`, or single-select combinations in chat. Submit once; no second yes per tool. |
 | Existing Codex projects | Ask which projects to follow with native checkboxes and actual project names. Selection consents to future capture; reuse it when linking. If the catalog is unavailable, ask for the folder, or offer Not yet / Skip for now. Stay in the onboarding chat. |
 | Claude context import | Import context; Skip. Explain what will run before asking. |
-| Snapshot | Looks right; Needs corrections. Free text for corrections. |
+| Snapshot | Looks right; Needs corrections. Then a free-text question for the corrections. |
 | Automation | Show the actual proposed work and timing first; offer the named choices and Skip. |
-| Schedule | Concrete cadence, time and timezone options based on the proposal; free text for another time. |
+| Schedule | Concrete cadence, time and timezone options based on the proposal, the last one Another time; then a free-text question. |
 | Changing context rules | Use proposed rule; Customize. Show the actual rule before the choice. Setup uses the starting rules without a separate interview. |
 | Changing dashboard opening | Every chat (Recommended); Only when asked. Setup explains the default without asking. |
 | Chrome for website work during setup | Explain login reuse, then ask `Set up your logged-in Chrome for website work?`: Set up Chrome (Recommended); Skip for now. This is personal setup, not dashboard configuration or permission to read websites. |
