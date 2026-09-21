@@ -399,6 +399,14 @@ work/                                   ignored: loaded-contexts.json, hooks.log
   new chat, then quit and reopen the app. If it persists: `codex plugin add gtm-os@gtm-os` again.
 - The hook never fires: the hooks are not approved (`work/hooks.log` is empty in that case).
   `node <plugin>/hooks/trust-hooks.mjs` reports each hook; `--trust` approves them.
+- A local install (`./dev-install.sh`) works in chats but GTM OS is missing from the app's Plugins
+  tab: the tab lists a local marketplace only when its folder is a trusted project. Open the
+  checkout as a project in Codex and accept the trust prompt. `codex plugin list` shows the truth
+  either way.
+- A local install goes back to an older version every time the app starts: a second checkout
+  that Codex trusts still has `.agents/plugins/marketplace.json` with the marketplace name
+  `gtm-os`, and the app reinstalls from it at launch whatever `config.toml` says. Rename or remove
+  that manifest in the other checkout, then run `./dev-install.sh` again.
 - `codex exec` hangs: add `</dev/null`. Hooks under exec need `--dangerously-bypass-hook-trust`.
 - Pre-commit says the plugin is not installed: `git config gtm-os.lib <path to plugins/gtm-os/lib/brain.mjs>`,
   or open the folder in Codex once (the session hook sets it).
