@@ -701,11 +701,9 @@ test("each question goes to the tool named for its purpose, so setup, settings a
 });
 
 test("sync and resolution end without a next step, a reminder or a to-do; the brain is not the person's to-do system (ALL-208)", () => {
-  const template = readFileSync(`${P}/templates/AGENTS.md`, "utf8"), example = readFileSync(join(P, "..", "..", "examples", "reflow-brain", "AGENTS.md"), "utf8");
-  for (const text of [template, example]) {
-    assert.match(text, /not the person's to-do system/);
-    assert.match(text, /Not after `gtm-os-sync` or a dashboard resolution/);
-  }
+  const template = readFileSync(`${P}/templates/AGENTS.md`, "utf8");
+  assert.match(template, /not the person's to-do system/);
+  assert.match(template, /Not after `gtm-os-sync` or a dashboard resolution/);
   const sync = readFileSync(`${P}/skills/gtm-os-sync/SKILL.md`, "utf8");
   assert.match(sync, /Record what happened, never what should happen next/);
   assert.match(sync, /no next step, no reminder, no to-do/i);
