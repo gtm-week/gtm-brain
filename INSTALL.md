@@ -156,8 +156,13 @@ Check each step before the next. Report progress as you go, one line per step.
 
    ```bash
    codex plugin marketplace add gtm-week/gtm-os
+   codex plugin marketplace upgrade gtm-os
    codex plugin add gtm-os@gtm-os
    ```
+
+   The upgrade line matters on a machine that already had the marketplace: `add` keeps the
+   old snapshot there, and `plugin add` would install the version in it, not the newest.
+   On a fresh machine it changes nothing.
 
    If the person pointed you at a local folder instead (this file is on their disk),
    install from that checkout, so they get exactly the code they are looking at:
