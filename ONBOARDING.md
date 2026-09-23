@@ -144,7 +144,8 @@ The brain is one folder; your work does not have to move into it. To connect ano
 folder or links one you already have, and asks before capturing any work done there. From
 the next chat in that folder, what you do lands in the brain tagged with that project, and
 each project keeps its own open contexts, so two projects never mix. The dashboard lists
-your projects. The brain folder stays the place for company-wide work.
+your projects. The brain folder stays the place for company-wide work. What goes where
+(notes, guidelines, project folders) is in [GUIDE.md](GUIDE.md#files-if-you-ever-look).
 
 On macOS, GTM OS asks Codex to open the linked folder for you. If it does not appear in
 the sidebar, choose **New project** (or **+** beside Projects) and select the folder path

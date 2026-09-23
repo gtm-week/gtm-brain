@@ -24,8 +24,11 @@ no GTM OS update ever touches them.
    drafted an update from the CRM). Say `turn what we just did into a skill` or
    `make this a skill`. Codex drafts the skill from the steps it just ran.
 2. **Ask for it.** Type `/gtm-os-skill` or say `add a skill`. Codex asks one question: what the
-   skill does, when it applies, which connected tool it uses, and whether it records to the
-   brain.
+   skill does, when it applies, which connected tool it uses, and what it produces and where
+   that lands. A skill that writes a document says so in its last step: decisions go to the
+   brain as notes, a document the work must follow becomes a guideline, a draft stays in the
+   project folder. A skill that only says "write strategy.md" leaves a loose file at the brain
+   root that nobody else receives.
 3. **The health check suggests it.** When the same action shows up on three separate days in
    the last month (three different days, not thirteen events in one afternoon), the advisor
    behind `/gtm-os-todo` and the dashboard's attention list says

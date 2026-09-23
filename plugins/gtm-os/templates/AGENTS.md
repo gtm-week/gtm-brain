@@ -82,7 +82,10 @@ surface's writing standard) is a guideline (rule 11); a person, organization or 
 entity (rule 2a); a file is landed by `gtm-os-add-file` and attached; everything that happened,
 was decided, found or asked is a memory in the context whose purpose fits (rules 1 and 2). A
 strategic choice is a memory in Strategy, never a guideline; the approved statement that
-follows from it can be one.
+follows from it can be one. A document a chat or a skill produces (a strategy, a plan, a
+playbook) follows the same split: its decisions and findings become memories, the approved
+text becomes a guideline when work must follow it, and a draft lives in the project folder it
+belongs to. Never leave it as a loose file at the brain root or in a new folder beside `brain/`.
 The files in `brain/entities/` form the global identity registry and readable entity briefs.
 Each Markdown file holds a stable ID, canonical name, kind, aliases, contacts and external
 references, plus a generated overview, per-context state, relationships, the full timeline

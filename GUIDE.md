@@ -160,8 +160,19 @@ brain/admin.md                       company, team, tools
 brain/entities/<id>.md               identity and cited briefs
 brain/contexts/<context>/context.md  the context summary and rules
 brain/contexts/<context>/memories.jsonl   the notes, one per line
+brain/guidelines/<name>.md           the documents work must follow (voice, ICP, strategy)
+files/<yyyy-mm>/                     files you added with /gtm-os-add-file
+<project>/                           a working folder you created or linked, beside brain/
 work/home/index.html                 the dashboard
 ```
+
+Three places, three jobs. `brain/` is GTM OS's own: contexts hold what happened and what was
+decided, as notes; guidelines hold the standing documents the work must follow; entities hold
+who is who. A project folder beside `brain/` holds drafts and deliverables for one piece of
+work (the website, an event). Nothing else belongs at the root: a `strategy.md` next to
+`brain/`, or a `company/` folder with subfolders, is a loose file nobody else receives, and
+`save` does not commit it. A strategy is decisions (notes in the Strategy context) plus, once
+approved, a guideline; say `add strategy.md as a guideline` to move one in.
 
 A context's standing instructions (`rule`) describe its purpose, meaningful boundaries and
 how Codex should work there. The dashboard shows them as Instructions; change them in chat.

@@ -6,7 +6,7 @@ editor, then convert each prefixed blockquote into a callout:
   ✅ You should see  -> green callout    💡 Tip -> blue callout
   ⚠️ Warning         -> yellow callout   🛠 If it goes wrong -> red/grey callout
 HTML comments like this one carry Linear ticket references for maintainers; they do not
-paste into Circle. Version referenced: GTM OS 0.26.1.
+paste into Circle. Version referenced: GTM OS 0.26.2.
 -->
 
 This guide takes you from nothing to a working GTM OS in about 30 minutes, one click at a
@@ -133,7 +133,7 @@ flowchart TB
 
 > 💡 **Tip:** To confirm the version at any time: in the Codex app open **Settings >
 > Plugins** (or say "which GTM OS version do I have?" in a chat). This guide was written
-> for **0.26.1**. <!-- ALL-183 asks for the click-level version check -->
+> for **0.26.2**. <!-- ALL-183 asks for the click-level version check -->
 
 > 🛠 **If it goes wrong:**
 > - **"Marketplace add failed" / network error.** Check your internet connection and that

@@ -24,7 +24,8 @@ Follow [question handling](../gtm-os-start/references/questions.md) for native q
    connector steps, the same document shape), draft from those steps: a title, one English
    sentence of at most 200 characters saying what it does and when it applies, and the steps
    another chat should follow. Otherwise ask one `question`: what the skill does, when it
-   should apply, which connected tool it uses, and whether it records to the brain.
+   should apply, which connected tool it uses, and what it produces and where that lands
+   (memories, a guideline, a draft in the project folder).
    Write the body by [authoring](references/authoring.md).
 
    When the ask names a repeated action ("make a skill for "move deal" in attio", usually from the
