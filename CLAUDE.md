@@ -26,6 +26,8 @@ node --test 'plugins/gtm-os/test/*.test.mjs'            # whole suite (quote the
 node --test plugins/gtm-os/test/brain.test.mjs          # one file
 node --test --test-name-pattern='<regex>' plugins/gtm-os/test/brain.test.mjs   # one test
 
+node plugins/gtm-os/test/live/harness-bench.mjs         # live Codex A/B: bare / plugin / brain on 3 tasks (~4 min)
+
 node scripts/sync-derived.mjs                           # regenerate derived blocks and schema
 node scripts/sync-derived.mjs --check                   # report drift only (the suite runs this)
 
@@ -40,6 +42,12 @@ Run the suite before every commit that touches `lib/`, a skill script, a server 
 build throwaway brains with `setup` and set `GTM_OS_NO_COMMIT` where committing must stay off.
 `plugins/gtm-os/test/live/` holds benchmarks and fixtures that talk to real connectors; they are
 not `*.test.mjs` files and are not part of the suite.
+
+`.githooks/pre-push` (enabled by `./dev-install.sh`) runs the suite before a push to `main`, then
+the harness bench when the push changes anything under `plugins/gtm-os/` but `test/`. The bench
+fails when the plugin makes Codex solve fewer tasks than without it, adds more prompt tokens than
+`GTM_OS_BENCH_MAX_OVERHEAD`, or calls GTM OS tools for a self-contained puzzle.
+`GTM_OS_SKIP_BENCH=1 git push` skips it.
 
 `dev-reset.sh` only wipes a folder that is empty or that it created itself (tracked in the
 gitignored `.dev-brains`); it never deletes a real brain.

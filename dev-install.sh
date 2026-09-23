@@ -5,6 +5,8 @@
 # quit and reopen the app only if stale skills linger.
 set -eu
 R="$(cd "$(dirname "$0")" && pwd)"
+# the checkout's own git hooks: tests and the harness bench before a push to main
+git -C "$R" config core.hooksPath .githooks
 src="$(codex plugin marketplace list 2>/dev/null | awk '$1=="gtm-os"{print $2}')"
 if [ "$src" != "$R" ]; then
   echo "marketplace gtm-os -> $R (was: ${src:-none})"

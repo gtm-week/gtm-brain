@@ -167,6 +167,17 @@ The plugin ships from `gtm-week/gtm-os`, branch `main`.
 Describe a feature in its owning reference and link to it from the other guides. Shared
 agent policies are embedded automatically where an agent needs a self-contained document.
 
+## Before pushing to main
+
+`./dev-install.sh` points git at [.githooks/](.githooks/). Before a push to `main`, the pre-push
+hook runs the test suite, then [the harness bench](plugins/gtm-os/test/live/harness-bench.mjs)
+when the push changes what ships. The bench runs three tasks (a coding fix, a logic puzzle, a
+connector question) through `codex exec` without the plugin, with it in an ordinary folder and
+in a brain, in throwaway Codex profiles with this checkout installed. It fails when the plugin
+costs solved tasks, adds more prompt tokens than `GTM_OS_BENCH_MAX_OVERHEAD` (default 14000) or
+calls GTM OS tools for the puzzle. Traces of every run stay in its artifacts folder.
+`GTM_OS_SKIP_BENCH=1 git push` skips it.
+
 ## Maintaining shared text and schemas
 
 Run `node scripts/sync-derived.mjs` after changing either source below. Commit the source

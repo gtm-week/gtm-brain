@@ -158,6 +158,9 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
   `brain.test.mjs` covers the lib, `skills.test.mjs` runs the scripts on a brain made by setup,
   `server.test.mjs` drives the MCP server, `dash.test.mjs` the dashboard server and the session
   hook. Run them before every commit that touches `lib/`, a skill script, a server or the hook.
+  Before a push to `main`, `.githooks/pre-push` runs them and, when what ships changed,
+  `test/live/harness-bench.mjs`: the plugin must not cost Codex solved tasks on work that is not
+  GTM (see README.md, Before pushing to main).
 - The model reaches the skills through the MCP server (`server/server.mjs`, one tool per
   operation, each runs the skill's script in the brain). The server runs outside the sandbox, so
   every writer commits what it wrote at once (`lib.commit`, pushed in the background when there
