@@ -1,4 +1,4 @@
-# Writing a guideline
+# Writing a document
 
 The body is what a chat reads in full before the work, every time. Put in what changes the
 output; leave out what Codex already knows.
@@ -18,17 +18,17 @@ output; leave out what Codex already knows.
      world-class, excited to announce), not a description of it.
   6. Worldview: how we frame the problem and the customer, in two or three sentences; every
      piece must agree with it.
-  Company voice and founder voice are two guidelines when they differ; say which applies where.
+  Company voice and founder voice are two documents when they differ; say which applies where.
 - **Design system.** The palette with its values, the type scale, spacing and grid, the
   component rules (buttons, cards, forms), what an image may and may not be, and the anti-slop
   list (no gradients, no stock photos of handshakes, whatever the person names). A file with
-  the assets goes in through `gtm-os-add-file`; the guideline names its path.
+  the assets goes in with `add-file.mjs --document <ref>` and lands in the document's files folder; the document names what matters.
 - **Target customer definition.** Who we sell to (segment, size, roles), the trigger that
   makes them buy, what disqualifies, and three named examples. Evidence for it lives in the
-  Target customers context; the guideline is the approved statement, not the evidence.
+  Target customers context; the document is the approved statement, not the evidence.
 - `applies_to` is what rule 11 matches the current work against. Name kinds of work, not
   places where it is published: copy, outreach, posts, landing pages, creatives, proposals, design, targeting.
   Twelve at most, lowercase.
 - Title in the person's language is fine; the slug is derived from it (`tone-of-voice`).
-- Under 64 KB. A guideline that needs more is two guidelines.
+- Under 64 KB. A document that needs more is two documents.
 - Never restate the brain's rulebook or the question policy: every chat already has them.

@@ -7,7 +7,7 @@ one, where it shows up, and how it travels.
 
 A skill is a folder with a `SKILL.md` file that tells Codex how to do one kind of work the same
 way every time (draft the weekly account update, prepare a Circle event, run the sales review).
-GTM OS ships eight of them (`/gtm-os-todo`, `/gtm-os-sync`, `/gtm-os-deepdive`, ...). From
+GTM OS ships nine of them (`/gtm-os-todo`, `/gtm-os-sync`, `/gtm-os-deepdive`, ...). From
 0.22.0 you can add your own. They live inside your company brain folder, they show in Codex
 next to the shipped ones as `/gtm-os-<name>`, they reach everyone who shares the brain, and
 no GTM OS update ever touches them.
@@ -26,7 +26,7 @@ no GTM OS update ever touches them.
 2. **Ask for it.** Type `/gtm-os-skill` or say `add a skill`. Codex asks one question: what the
    skill does, when it applies, which connected tool it uses, and what it produces and where
    that lands. A skill that writes a document says so in its last step: decisions go to the
-   brain as notes, a document the work must follow becomes a guideline, a draft stays in the
+   brain as notes, a document the work must follow is written as a document, a draft stays in the
    project folder. A skill that only says "write strategy.md" leaves a loose file at the brain
    root that nobody else receives.
 3. **The health check suggests it.** When the same action shows up on three separate days in
@@ -42,7 +42,7 @@ written before you answer. Then quit and reopen Codex: the skill is there in you
 Rules the tool enforces:
 
 - The name is `gtm-os-` plus lowercase letters, digits and hyphens, made from the title.
-  A shipped name (`gtm-os-todo` and the other seven) is refused.
+  A shipped name (`gtm-os-todo` and the other eight) is refused.
 - The description is English, one sentence, at most 200 characters. It is what Codex reads in
   every chat to decide when the skill applies, so it is the whole cost of the skill until it
   is used.

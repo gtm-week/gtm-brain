@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 // add-file: put one file into the brain (ALL-205).
 //   node add-file.mjs <root> --file <path>
-// A file from outside the brain and its linked projects is copied to files/<yyyy-mm>/<name> and
-// committed, so it travels with the brain. A file already inside the brain or a linked project
+//   node add-file.mjs <root> --file <path> [--document <ref> | --entity <name>]
+// With --document <ref> or --entity <name> the file lands beside its owner (the document's files folder,
+// or brain/entities/<id>/); without an owner, a file from outside the brain and its linked projects is
+// copied to files/<yyyy-mm>/<name>. Either way it is committed, so it travels with the brain. A file
+// already inside the brain or a linked project
 // is referenced where it is: nothing is moved, nothing is overwritten. For a PDF or a document
 // the text is extracted into work/files/ (derived, outside git) so the notes can be written from
 // it. Prints one JSON object: { base, path, project?, copied, kind, bytes, text, note? }.
@@ -11,6 +14,8 @@ import { readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync, statS
 import { join, resolve, relative, isAbsolute, basename, extname } from "node:path";
 import { execFileSync } from "node:child_process";
 import * as lib from "../../lib/brain.mjs";
+import * as docs from "../../lib/documents.mjs";
+import { resolveEntity } from "../../lib/entities.mjs";
 
 const MAX_BYTES = 25 * 1024 * 1024;
 const KINDS = [[/^\.(png|jpe?g|gif|webp|svg|heic)$/i, "image"], [/^\.pdf$/i, "pdf"], [/^\.(txt|md|csv|rtf|html?|docx?|odt|pptx?|xlsx?|key|pages|numbers)$/i, "document"]];
@@ -26,13 +31,29 @@ if (bytes > MAX_BYTES) fail(`${basename(given)} is ${(bytes / 1048576).toFixed(0
 const within = (base, path) => { const r = relative(base, path); return r !== "" && !isAbsolute(r) && !r.startsWith("..") ; };
 const kind = (KINDS.find(([re]) => re.test(extname(real))) || [null, "other"])[1];
 
+// the owner, when named: a document (its files folder) or an entity (beside its file)
+const flag = name => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
+const wantDoc = flag("--document"), wantEntity = flag("--entity");
+if (wantDoc !== undefined && wantEntity !== undefined) fail("pass --document or --entity, not both");
+let owner = null;
+if (wantDoc !== undefined) {
+  let doc; try { doc = docs.readDocument(root, wantDoc); } catch (e) { fail(e.message); }
+  if (!doc) fail(`no such document ${wantDoc}; yours: ${docs.listDocuments(root).map(d => d.path).join(", ") || "none"}`);
+  owner = { kind: "document", ref: doc.path, dir: docs.landingDir(root, doc) };
+}
+if (wantEntity !== undefined) {
+  const e = resolveEntity(lib.readNames(root), wantEntity);
+  if (!e || !e._path) fail(`${wantEntity} is not a known person, organization or product; register it with add_name first`);
+  owner = { kind: "entity", ref: e._path, dir: e._path.replace(/\.md$/, "") };
+}
+
 // where it lands
 let base = "brain", project, path, copied = false, note;
 const linked = lib.readProjects(root).find(p => { try { return lib.projectPointerStatus(root, p) === "ok" && within(realpathSync(p.path), real); } catch { return false; } });
 if (within(root, real)) { path = relative(root, real); note = "already in the brain"; }
 else if (linked) { base = "project"; project = linked.slug; path = relative(realpathSync(linked.path), real); note = `already in project ${linked.slug}`; }
 else {
-  const folder = join("files", new Date().toISOString().slice(0, 7)); mkdirSync(join(root, folder), { recursive: true });
+  const folder = owner ? owner.dir : join("files", new Date().toISOString().slice(0, 7)); mkdirSync(join(root, folder), { recursive: true });
   const ext = extname(real), stem = basename(real, ext), same = p => existsSync(p) && statSync(p).size === bytes && readFileSync(p).equals(readFileSync(real));
   let name = `${stem}${ext}`, n = 1;
   while (existsSync(join(root, folder, name)) && !same(join(root, folder, name))) name = `${stem}-${++n}${ext}`;
@@ -55,4 +76,4 @@ if (kind === "document" || kind === "pdf") {
   else ok = has("textutil") ? attempt("textutil", ["-convert", "txt", "-output", out, stored]) : false, note = ok ? note : `${note ? note + "; " : ""}could not extract text from this document`;
   if (ok) text = out;
 }
-console.log(JSON.stringify({ base, path, ...(project ? { project } : {}), copied, kind, bytes, text, ...(note ? { note } : {}) }));
+console.log(JSON.stringify({ base, path, ...(project ? { project } : {}), copied, kind, bytes, text, ...(owner ? { owner } : {}), ...(note ? { note } : {}) }));

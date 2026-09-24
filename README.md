@@ -140,8 +140,8 @@ plugins/gtm-os/
   .mcp.json  server/          the operations as MCP tools (Remembering, Searching the brain, ...);
                               dash.mjs serves the read-only dashboard and revision events
   lib/                        the file format: read, append, write covers, commit; no dependencies
-  skills/                     the ten workflows a person can ask for (all prefixed gtm-os-): start,
-                              todo, sync, deepdive, project, configure, add-file, skill, guideline,
+  skills/                     the nine workflows a person can ask for (all prefixed gtm-os-): start,
+                              todo, sync, deepdive, project, configure, skill, document,
                               use-brain; what
                               they used to be as separate skills lives on as their references
     gtm-os-use-brain/references/    load, create and edit contexts, remember, recall, names, compile,

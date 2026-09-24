@@ -67,6 +67,8 @@ node -e 'const l=await import(process.argv[1]); l.writeNames(".", l.readNames(".
 
 # 3. AGENTS.md, gitignore, hooks
 sed -e "s|{{COMPANY}}|$(esc "$COMPANY")|g" "$T/AGENTS.md" > AGENTS.md
+# The root README says what goes where (documents, projects, brain/); a README the person wrote stays.
+[ -f README.md ] || sed -e "s|{{COMPANY}}|$(esc "$COMPANY")|g" "$T/README.md" > README.md
 if [ -f .gitignore ]; then # keep theirs, add ours
   while IFS= read -r line; do grep -qxF -- "$line" .gitignore || printf '%s\n' "$line" >> .gitignore; done < "$T/gitignore"
 else cp "$T/gitignore" .gitignore; fi
@@ -80,7 +82,7 @@ git config gtm-os.lib "$PLUGIN/lib/brain.mjs"
 OWNER_NAME="$(printf '%s' "$PEOPLE_JSON" | node -e 'const p=JSON.parse(require("fs").readFileSync(0,"utf8"))[0];console.log(p.name)')"
 OWNER_EMAIL="$(printf '%s' "$PEOPLE_JSON" | node -e 'const p=JSON.parse(require("fs").readFileSync(0,"utf8"))[0];console.log(p.email)')"
 [ -n "$OWNER_NAME" ] && git config user.name "$OWNER_NAME"; [ -n "$OWNER_EMAIL" ] && git config user.email "$OWNER_EMAIL"
-if git add -- brain AGENTS.md .gitignore .githooks && git -c commit.gpgsign=false commit -q -m "setup: $COMPANY brain (gtm-os v0)"; then
+if git add -- brain AGENTS.md README.md .gitignore .githooks && git -c commit.gpgsign=false commit -q -m "setup: $COMPANY brain (gtm-os v0)"; then
   echo "gtm-os: brain created for $COMPANY  ·  committed"
 else
   echo "gtm-os: brain created for $COMPANY  ·  written to disk, NOT committed (git is read-only here): say save"

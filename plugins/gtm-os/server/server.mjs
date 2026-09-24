@@ -20,7 +20,7 @@ import { validateValue } from "../vendor/allethic/validation.mjs";
 
 const P = dirname(dirname(fileURLToPath(import.meta.url)));
 const lib = await import(join(P, "lib", "brain.mjs"));
-const gl = await import(join(P, "lib", "guidelines.mjs"));
+const docs = await import(join(P, "lib", "documents.mjs"));
 const memoryReader = createMemoryReader();
 
 /* ---------- running an operation script in a brain ---------- */
@@ -78,7 +78,7 @@ const TOOLS = [
         const t = JSON.parse(readFileSync(join(brain, "work", "tools.json"), "utf8")), keys = new Set(((lib.readAdmin(brain) || {}).tools || []).map(lib.toolKey));
         tools = Object.entries(t).filter(([k]) => keys.has(k)).map(([, x]) => `${x.tool}: ${x.status}${x.test ? ` (read test ${x.test})` : ""}`).join(", ");
       } catch {}
-      return text(`${r.out}${r.err}\nLoaded in this ${project ? `project (${project})` : "chat"}: ${loaded.length ? loaded.join(", ") : "nothing (admin only)"}${tools ? `\nTools: ${tools}` : ""}\n${gl.guidelinesLine(brain)}\nSummaries: updated by themselves in the background (after each saved change); a chat never compiles; when asked, queue the background worker as the compile procedure says` + companyLine(brain) + `\n${lib.onboardingInstruction(brain, { project })}`, r.code !== 0);
+      return text(`${r.out}${r.err}\nLoaded in this ${project ? `project (${project})` : "chat"}: ${loaded.length ? loaded.join(", ") : "nothing (admin only)"}${tools ? `\nTools: ${tools}` : ""}\n${docs.documentsLine(brain)}\nSummaries: updated by themselves in the background (after each saved change); a chat never compiles; when asked, queue the background worker as the compile procedure says` + companyLine(brain) + `\n${lib.onboardingInstruction(brain, { project })}`, r.code !== 0);
     } },
   { name: "list_contexts", title: "Listing the contexts", readOnly: true,
     description: "List the contexts: title, stable slug, standing rule, memory count, summary state and whether loaded in this chat. Choose by title, rule and summary; the rule includes purpose and boundaries. Show titles to the person and use slugs in tool calls. Our company describes the organization that owns this brain; external company findings belong in the relevant topic's context.",
@@ -207,14 +207,19 @@ const TOOLS = [
       const args = action === "list" ? ["--list"] : action === "remove" ? ["--remove", String(id || "")] : action === "install" ? ["--install", "--repo", String(repo || ""), "--path", String(path || ""), ...(ref ? ["--ref", ref] : []), ...(title ? ["--title", title] : [])] : ["--create", "--title", String(title || ""), "--description", String(description || ""), "--body", String(body || "")];
       return run(brain, "gtm-os-skills/skill.mjs", [...args, ...(by ? ["--by", by] : [])], { timeout: 120000 }).then(result);
     } },
-  { name: "guideline", title: "Guidelines", readOnly: false,
-    description: "The brand, voice and ICP documents the work must follow, kept in this brain's brain/guidelines as one Markdown file each (tone of voice, design system, target customer definition, ...). action create writes one from a title, applies_to (the kinds of work it governs: copy, outreach, posts, landing pages, creatives, proposals) and the body (the rules themselves); list shows them; show returns one in full; update rewrites only the fields given and keeps hand edits; remove deletes one. Status is draft unless the person approved it. Confirm the draft with the person before create. Before work of a listed kind, read the matching file and follow it (AGENTS.md rule 11).",
-    inputSchema: schema({ action: str("What to do", { enum: ["create", "list", "show", "update", "remove"] }), title: str("create/update: the guideline's title; its slug is the handle of the title"), applies_to: strs("create/update: the kinds of work this guideline governs, lowercase, at most 12"), body: str("create/update: the rules, Markdown, under 64 KB"), file: str("create/update: instead of body, the absolute path of a Markdown or text file the person prepared (a design.md, a voice.md); it becomes the body as it is"), status: str("create/update: draft (default) or approved, only on the person's word", { enum: ["draft", "approved"] }), slug: str("show/update/remove: the guideline's slug"), by: str("The current person's handle") }, ["brain", "action"]),
-    call: ({ brain, action, title, applies_to, body, file, status, slug, by }) => {
-      const fields = [...(title !== undefined ? ["--title", String(title)] : []), ...(applies_to !== undefined ? ["--applies-to", Array.isArray(applies_to) ? applies_to.join(", ") : String(applies_to)] : []), ...(body !== undefined ? ["--body", String(body)] : []), ...(file !== undefined ? ["--file", String(file)] : []), ...(status !== undefined ? ["--status", String(status)] : [])];
-      const args = action === "list" ? ["--list"] : action === "show" ? ["--show", String(slug || "")] : action === "remove" ? ["--remove", String(slug || "")] : action === "update" ? ["--update", String(slug || ""), ...fields] : ["--create", ...fields];
-      return run(brain, "gtm-os-guidelines/guideline.mjs", [...args, ...(by ? ["--by", by] : [])]).then(result);
+  { name: "document", title: "Documents", readOnly: false,
+    description: "The documents the work must follow, kept as Markdown at the brain root or in folders the person names (strategy.md, brand/voice.md, pricing/pricing.md), each with a kind: document marker; a document's files live in a folder of its name beside it. action create writes one from a title, applies_to (the kinds of work it governs: copy, outreach, posts, landing pages, design, proposals, planning) and the body, or from a prepared file (a Markdown already at the brain root is adopted in place); list shows them with file counts; show returns one in full; files lists what one owns; update rewrites only the fields given and keeps hand edits; remove deletes one (its files folder stays). Status is draft unless the person approved it. Confirm the draft with the person before create. Before work of a listed kind, read the matching file and follow it (AGENTS.md rule 11). Land a file for a document with add-file.mjs --document.",
+    inputSchema: schema({ action: str("What to do", { enum: ["create", "list", "show", "files", "update", "remove"] }), title: str("create/update: the document's title; its slug is the file name"), applies_to: strs("create/update: the kinds of work this document governs, lowercase, at most 12"), body: str("create/update: the document text, Markdown, under 64 KB"), file: str("create/update: instead of body, the path of a Markdown or text file the person prepared; one already at the brain root is adopted where it is"), folder: str("create: the folder to put it in (brand, market/battle-cards); omit for the root"), status: str("create/update: draft (default) or approved, only on the person's word", { enum: ["draft", "approved"] }), ref: str("show/files/update/remove: the document's slug (voice) or path (brand/voice)"), by: str("The current person's handle") }, ["brain", "action"]),
+    call: ({ brain, action, title, applies_to, body, file, folder, status, ref, by }) => {
+      const fields = [...(title !== undefined ? ["--title", String(title)] : []), ...(applies_to !== undefined ? ["--applies-to", Array.isArray(applies_to) ? applies_to.join(", ") : String(applies_to)] : []), ...(body !== undefined ? ["--body", String(body)] : []), ...(file !== undefined ? ["--file", String(file)] : []), ...(folder !== undefined ? ["--folder", String(folder)] : []), ...(status !== undefined ? ["--status", String(status)] : [])];
+      const args = action === "list" ? ["--list"] : ["show", "files", "remove"].includes(action) ? [`--${action}`, String(ref || "")] : action === "update" ? ["--update", String(ref || ""), ...fields] : ["--create", ...fields];
+      return run(brain, "gtm-os-documents/document.mjs", [...args, ...(by ? ["--by", by] : [])]).then(result);
     } },
+  // Retired in 0.27.0: guidelines became documents. Callable for one more version, hidden from tools/list (RETIRED_READS).
+  { name: "guideline", title: "Guidelines (retired)", readOnly: false,
+    description: "Retired: guidelines became documents. Use document.",
+    inputSchema: schema({ action: str("What to do", { enum: ["create", "list", "show", "update", "remove"] }), title: str("see document"), applies_to: strs("see document"), body: str("see document"), file: str("see document"), status: str("see document", { enum: ["draft", "approved"] }), slug: str("the document's slug"), by: str("The current person's handle") }, ["brain", "action"]),
+    call: args => byName("document").call({ ...args, ref: args.slug }) },
   { name: "list_brains", title: "Listing the brains on this machine", readOnly: true, noBrain: true,
     description: "The company brains this machine has opened (path and company), for linking a folder to one. Empty when none was opened yet in this Codex.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
@@ -259,7 +264,7 @@ const QUESTION_TOOLS = new Set(TOOLS.filter(t => t.inputSchema === questionSchem
 // A chat never sees these tools: it queues the worker instead (ALL-204 step 1). tools/call still works.
 const RUN_ONLY_TOOLS = new Set(["compile_facts", "compile_apply", "compile_entity", "entity_facts"]);
 // The reads that query covers (ALL-204 step 2b): never listed; still answering, marked deprecated, for one release.
-const RETIRED_READS = { recall: "query (memories with search, or object brief)", who_is: "query (entities with search)", list_contexts: "query (contexts)", list_projects: "query (projects)", list_brains: "query (brains)", customer_overview: "query (customers)", meeting_overview: "query (meetings)", advise: "query (health)", where_we_are: "query (status)" };
+const RETIRED_READS = { recall: "query (memories with search, or object brief)", who_is: "query (entities with search)", list_contexts: "query (contexts)", list_projects: "query (projects)", list_brains: "query (brains)", customer_overview: "query (customers)", meeting_overview: "query (meetings)", advise: "query (health)", where_we_are: "query (status)", guideline: "document" };
 const offered = t => !(QUESTION_TOOLS.has(t.name) && !questions.available()) && !(RUN_ONLY_TOOLS.has(t.name) && !process.env.GTM_OS_RUN) && !(t.name in RETIRED_READS);
 
 // Allethic supplies memory capture and structured reads; the host keeps its native forms

@@ -164,3 +164,23 @@ test("the session hook says when a brain's rules are from an older GTM OS, and s
   assert.match(hook(legacy), /are from an older GTM OS[\s\S]*refresh the rules/);
   assert.doesNotMatch(hook(current), /older GTM OS/);
 });
+
+test("upgrade moves brain/guidelines/*.md to root documents, keeps a slug the root already has, adds README.md", t => {
+  const { root, run } = fixture(t);
+  mkdirSync(join(root, "brain", "guidelines"), { recursive: true });
+  writeFileSync(join(root, "brain", "guidelines", "tone-of-voice.md"), "---\ntitle: Tone of voice\napplies_to: [copy, posts]\nstatus: approved\nby: marta-nowak\nupdated: 2026-09-17\ngtm-os: 0.23.0\n---\n# Tone of voice\n\nMade with GTM OS. This guideline lives in the brain's guidelines folder and travels with the brain.\n\nNo exclamation points.\n");
+  writeFileSync(join(root, "brain", "guidelines", "strategy.md"), "---\ntitle: Strategy\napplies_to: [planning]\nstatus: draft\n---\n# Strategy\n\nOld.\n");
+  writeFileSync(join(root, "strategy.md"), "# Strategy\n\nWritten by hand, newer.\n");
+  rmSync(join(root, "README.md"), { force: true });
+  const result = run(); assert.equal(result.status, 0, result.stderr); const out = result.stdout;
+  assert.match(out, /moved brain\/guidelines\/tone-of-voice\.md -> tone-of-voice\.md/);
+  assert.match(out, /kept brain\/guidelines\/strategy\.md: strategy\.md already exists at the root/);
+  assert.match(out, /added README\.md/);
+  const moved = readFileSync(join(root, "tone-of-voice.md"), "utf8");
+  assert.match(moved, /^kind: document$/m); assert.match(moved, /^status: approved$/m); assert.match(moved, /No exclamation points\./); assert.equal(moved.split("# Tone of voice").length, 2);
+  assert.ok(!existsSync(join(root, "brain", "guidelines", "tone-of-voice.md")));
+  assert.ok(existsSync(join(root, "brain", "guidelines", "strategy.md")));
+  assert.equal(readFileSync(join(root, "strategy.md"), "utf8"), "# Strategy\n\nWritten by hand, newer.\n");
+  assert.match(readFileSync(join(root, "README.md"), "utf8"), /^# Upgrade Co brain/m);
+  assert.equal(run().stdout.includes("moved"), false);
+});
