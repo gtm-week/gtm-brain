@@ -18,9 +18,10 @@ into the chat pastes its path. Do not search the disk for it.
 
 Name the owner when it is clear from the request: a document by slug or path (`--document
 design-system`, `--document brand/design-system`), an entity by name (`--entity "Positive
-Surfer"`). The file then lands beside its owner: the document's files folder
-(`brand/design-system/`, or the document's own folder when it lives there alone), or
-`brain/entities/<id>/` next to the entity file. A file with no owner is refused: nothing lands
+Surfer"`). The file then lands beside its owner: for a document, its own folder (the first file
+moves the document into a folder of its name, `design-system.md` becoming
+`design-system/design-system.md`; the JSON says so under `moved`), or `brain/entities/<id>/`
+next to the entity file. A file with no owner is refused: nothing lands
 in the brain unasked. When the owner is not obvious, ask once with `question` offering the two
 or three most likely documents or entities, then run, through the shell:
 

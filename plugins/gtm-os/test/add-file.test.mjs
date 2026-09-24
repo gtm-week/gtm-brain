@@ -72,11 +72,23 @@ test('text is extracted for the notes when an extractor exists, and its absence 
 test('--document lands the file in the document\'s files folder, --entity beside the entity file; the JSON says the owner', () => {
  const f = fixture();
  const make = (title, applies) => execFileSync(process.execPath, [join(P, 'scripts/gtm-os-documents/document.mjs'), f.root, '--create', '--title', title, '--applies-to', applies, '--body', 'Blue.', '--folder', 'brand'], { stdio: 'ignore', env: { ...process.env, GTM_OS_NO_COMMIT: '1' } });
- make('Voice', 'copy'); make('Design system', 'design');   // two documents in brand/: each owns a folder of its own name
+ make('Voice', 'copy'); make('Design system', 'design');   // two documents in brand/
  const kit = join(f.outside, 'ui-kit.fig'); writeFileSync(kit, 'fig');
+ // the first file moves the document into a folder of its own name, so Finder shows one thing, not a file beside a folder
  const a = f.run('--file', kit, '--document', 'design-system');
- assert.deepEqual([a.base, a.path, a.copied, a.owner], ['brain', 'brand/design-system/ui-kit.fig', true, { kind: 'document', ref: 'brand/design-system.md', dir: 'brand/design-system' }]);
- assert.ok(existsSync(join(f.root, a.path)));
+ assert.deepEqual([a.base, a.path, a.copied, a.owner], ['brain', 'brand/design-system/ui-kit.fig', true, { kind: 'document', ref: 'brand/design-system/design-system.md', dir: 'brand/design-system' }]);
+ assert.deepEqual(a.moved, { from: 'brand/design-system.md', to: 'brand/design-system/design-system.md' });
+ assert.ok(existsSync(join(f.root, a.path))); assert.ok(existsSync(join(f.root, 'brand/design-system/design-system.md'))); assert.ok(!existsSync(join(f.root, 'brand/design-system.md')));
+ assert.ok(existsSync(join(f.root, 'brand/voice.md')), 'the sibling document stays where it is');
+ const kit2 = join(f.outside, 'tokens.json'); writeFileSync(kit2, '{}');
+ const a2 = f.run('--file', kit2, '--document', 'design-system');
+ assert.equal(a2.path, 'brand/design-system/tokens.json'); assert.equal(a2.moved, undefined, 'a document already in its folder is not moved again');
+ // a root document does the same: strategy.md becomes strategy/strategy.md on its first file
+ execFileSync(process.execPath, [join(P, 'scripts/gtm-os-documents/document.mjs'), f.root, '--create', '--title', 'Strategy', '--applies-to', 'planning', '--body', 'Win.'], { stdio: 'ignore', env: { ...process.env, GTM_OS_NO_COMMIT: '1' } });
+ const deck = join(f.outside, 'deck.pdf'); writeFileSync(deck, 'pdf');
+ const s = f.run('--file', deck, '--document', 'strategy');
+ assert.equal(s.path, 'strategy/deck.pdf'); assert.deepEqual(s.moved, { from: 'strategy.md', to: 'strategy/strategy.md' });
+ assert.ok(!existsSync(join(f.root, 'strategy.md')));
  lib.addName(f.root, 'Positive Surfer', { kind: 'organization' });
  const entityPath = resolveEntity(lib.readNames(f.root), 'Positive Surfer')._path;
  const logo = join(f.outside, 'logo.svg'); writeFileSync(logo, '<svg/>');

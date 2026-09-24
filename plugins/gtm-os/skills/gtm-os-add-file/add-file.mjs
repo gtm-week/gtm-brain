@@ -39,7 +39,10 @@ let owner = null;
 if (wantDoc !== undefined) {
   let doc; try { doc = docs.readDocument(root, wantDoc); } catch (e) { fail(e.message); }
   if (!doc) fail(`no such document ${wantDoc}; yours: ${docs.listDocuments(root).map(d => d.path).join(", ") || "none"}`);
-  owner = { kind: "document", ref: doc.path, dir: docs.landingDir(root, doc) };
+  // the first file moves the document into a folder of its own name, so a document with files is one thing in Finder
+  const moved = docs.moveIntoFolder(root, doc);
+  if (moved) { doc = docs.readDocument(root, moved.to); owner = { kind: "document", ref: doc.path, dir: doc.folder, moved }; }
+  else owner = { kind: "document", ref: doc.path, dir: docs.landingDir(root, doc) };
 }
 if (wantEntity !== undefined) {
   const e = resolveEntity(lib.readNames(root), wantEntity);
@@ -61,7 +64,7 @@ else {
   while (existsSync(join(root, folder, name)) && !same(join(root, folder, name))) name = `${stem}-${++n}${ext}`;
   path = join(folder, name);
   if (same(join(root, path))) note = "already in the brain";
-  else { copyFileSync(real, join(root, path)); copied = true; lib.commit(root, [path], `file: ${name}`); }
+  else { copyFileSync(real, join(root, path)); copied = true; const mv = owner?.moved; lib.commit(root, mv ? [path, mv.from, mv.to] : [path], mv ? `file: ${name}; ${mv.from} -> ${mv.to}` : `file: ${name}`); }
 }
 
 // what it says, for the notes: derived text under work/, never in git
@@ -78,4 +81,5 @@ if (kind === "document" || kind === "pdf") {
   else ok = has("textutil") ? attempt("textutil", ["-convert", "txt", "-output", out, stored]) : false, note = ok ? note : `${note ? note + "; " : ""}could not extract text from this document`;
   if (ok) text = out;
 }
-console.log(JSON.stringify({ base, path, ...(project ? { project } : {}), copied, kind, bytes, text, ...(owner ? { owner } : {}), ...(note ? { note } : {}) }));
+const { moved, ...ownerOut } = owner || {};
+console.log(JSON.stringify({ base, path, ...(project ? { project } : {}), copied, kind, bytes, text, ...(owner ? { owner: ownerOut } : {}), ...(moved ? { moved } : {}), ...(note ? { note } : {}) }));

@@ -5,7 +5,7 @@
 // scan never writes. The rulebook's rule 11 makes Codex read the matching one before that kind of work; the
 // session hook and the status read list them every chat (documentsLine). This file is the format; the script,
 // the server, the hook, add-file and save go through it.
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync, rmdirSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync, rmdirSync, renameSync } from "node:fs";
 import { join, dirname, basename, relative, sep } from "node:path";
 import { handleFor, parseFrontmatter, renderFrontmatter, readProjects } from "./brain.mjs";
 
@@ -119,6 +119,20 @@ export function documentFiles(root, doc, all = listDocuments(root)) {
   const own = filesDir(doc); if (existsSync(join(root, own))) listing(join(root, own), `${own}/`);
   if (isAlone(doc, all)) for (const e of readdirSync(join(root, doc.folder), { withFileTypes: true })) if (e.isFile() && !e.name.startsWith(".") && !e.name.endsWith(".md")) files.push(`${doc.folder}/${e.name}`);
   return files.sort();
+}
+
+/* A document inside a folder of its own name (design-system/design-system.md) is one thing in Finder. */
+export const inOwnFolder = doc => Boolean(doc.folder) && basename(doc.folder) === doc.slug;
+/* The first file makes the document move into a folder of its own name, beside its files: strategy.md becomes
+   strategy/strategy.md, brand/design-system.md becomes brand/design-system/design-system.md. A document already
+   there stays. Returns { from, to } or null; the caller commits both paths (git sees a rename). */
+export function moveIntoFolder(root, doc) {
+  if (inOwnFolder(doc)) return null;
+  const to = `${filesDir(doc)}/${doc.slug}.md`;
+  if (existsSync(join(root, to))) return null;   // a document of that name already lives there: leave both alone
+  mkdirSync(join(root, filesDir(doc)), { recursive: true });
+  renameSync(join(root, doc.path), join(root, to));
+  return { from: doc.path, to };
 }
 
 export function writeDocument(root, d) {

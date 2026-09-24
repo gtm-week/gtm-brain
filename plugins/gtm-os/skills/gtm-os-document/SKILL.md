@@ -13,8 +13,8 @@ allowed-tools: [Bash, Read]
 
 A document is one Markdown file the work must follow, at the brain root (`strategy.md`) or in a
 folder the person names (`brand/voice.md`), with the `kind: document` marker in its frontmatter.
-Its files, if any, live in a folder of its name beside it (`brand/design-system/`), or around it
-when it is alone in its folder (`pricing/pricing.md` with `pricing/pricing-2026.xlsx`). Codex
+Its first file moves it into a folder of its own name, beside the file (`strategy/strategy.md`,
+`brand/design-system/design-system.md`); a document alone in its folder owns the files there. Codex
 reads a document in full before work of a kind it applies to and says which one it followed
 (rule 11). Everything goes through the `document` tool; never write these files by hand from a
 chat (the person may, in an editor: `save` keeps that).
