@@ -57,8 +57,9 @@ test("forked evidence counts once globally while keeping both context paths, inc
 });
 
 const template = readFileSync(new URL("../scripts/gtm-os-render/home.template.html", import.meta.url), "utf8");
-function explorer() {
-  const reg = [...registry, ...Array.from({ length: 8 }, (_, i) => identity(`Partner ${i}`)), identity('Unsafe <img src=x onerror="alert(1)">')];
+function explorer(extra = []) {
+  if (!Array.isArray(extra)) extra = [];
+  const reg = [...registry, ...Array.from({ length: 8 }, (_, i) => identity(`Partner ${i}`)), identity('Unsafe <img src=x onerror="alert(1)">'), ...extra];
   reg[1] = { ...reg[1], not: ["OtherCo"] };
   const contexts = [context("sales", [memory(1, 'Annie is the buyer at Acme. <script>alert(1)</script>', { people: ["Annie"], source: [{ kind: "url", ref: "https://example.com/buyer" }] }), ...reg.slice(5).map((n, i) => memory(10 + i, `Acme met ${n.name}.`, { people: ["Acme", n.name] }))]), context("market", [memory(2, "Annie evaluated OtherCo.", { context: "market" })]), context("archive", [], { status: "archived", names: [{ name: "OldCo" }] })];
   contexts[0].memories[0].source.push({ kind: "codex", ref: "example-thread" });
@@ -151,6 +152,37 @@ test("explorer selects, scopes, inspects shared evidence and pivots without losi
   assert.equal(ui.run("entContext"), "market");
 });
 
+test("more than twelve connections open as groups by kind, a click drills into one, the list follows, and a new entity resets the view", () => {
+  // Acme's connections: Ann Lee, Partner 0-7, Unsafe (ten people), five organizations, one product: sixteen
+  const ui = explorer([...Array.from({ length: 5 }, (_, i) => identity(`Org ${i}`, { kind: "company" })), identity("Widget", { kind: "product" })]);
+  ui.click("[data-entity]", { entity: "Acme" });
+  let html = ui.$("#entity-detail").innerHTML;
+  assert.match(html, /Connections <span class="pill kind">16<\/span>/);
+  assert.equal((html.match(/<button class="eg-node eg-group"/g) || []).length, 3, "three group nodes, one per kind present");
+  assert.equal((html.match(/<button class="eg-node"/g) || []).length, 0, "no single entities at the grouped level");
+  assert.match(html, /data-entity-group="person"[^>]*>People<small>10 · Ann Lee, Partner 0, Partner 1/, "a group names its count and its strongest members");
+  assert.match(html, /data-entity-group="organization"[^>]*>Organizations<small>5 · /);
+  assert.match(html, /data-entity-group="product"[^>]*>Products<small>1 · Widget/);
+  assert.doesNotMatch(html, /data-entity-page/, "no pager at the grouped level");
+  assert.equal((html.match(/class="entity-neighbor"/g) || []).length, 16, "the list stays complete");
+  ui.click("[data-entity-group]", { entityGroup: "organization" });
+  html = ui.$("#entity-detail").innerHTML;
+  assert.equal((html.match(/<button class="eg-node"/g) || []).length, 5, "the open group shows its entities");
+  assert.equal((html.match(/eg-group/g) || []).length, 0);
+  assert.match(html, /data-entity-group=""[^>]*>All connections<\/button>[^<]*Organizations/, "a breadcrumb leads back");
+  assert.equal((html.match(/class="entity-neighbor"/g) || []).length, 5, "the list follows the open group");
+  ui.click("[data-entity-group]", { entityGroup: "person" });
+  html = ui.$("#entity-detail").innerHTML;
+  assert.equal((html.match(/<button class="eg-node"/g) || []).length, 6, "ten people page six at a time");
+  assert.match(html, /data-entity-page="1"/);
+  ui.click("[data-entity-group]", { entityGroup: "" });
+  assert.equal((ui.$("#entity-detail").innerHTML.match(/eg-group/g) || []).length, 3, "back to the groups");
+  ui.click("[data-entity-group]", { entityGroup: "person" });
+  ui.click("[data-entity]", { entity: "Ann Lee" });
+  assert.equal(ui.run("entGroup"), "", "a new entity starts ungrouped");
+  assert.equal((ui.$("#entity-detail").innerHTML.match(/eg-group/g) || []).length, 0, "Ann Lee has few connections: no groups");
+});
+
 test("empty identities, stale covers and Polish UI explain visibility while preserving source text", () => {
   const ui = explorer();
   ui.click("[data-entity]", { entity: "Unused", entityContext: "" });
@@ -186,7 +218,7 @@ test("entity timelines label recording and refresh times, retain dated text and 
 });
 
 test("entity timeline keeps records beyond the first ten inside the shared scroll region", () => {
-  const ui = explorer("en");
+  const ui = explorer();
   ui.run(`D.names.find(n=>n.name==="Ann Lee").brief={timeline:Array.from({length:25},(_,i)=>({id:"timeline_"+i,context:"market",at:"2026-09-11T10:00:00Z",content:"Timeline entry "+i})),timelineTotal:25}`);
   ui.click("[data-entity]", { entity: "Ann Lee", entityContext: "" });
   const html = ui.$("#entity-detail").innerHTML;
