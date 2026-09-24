@@ -164,6 +164,19 @@ test("save commits a document and the files a person dropped beside it by hand; 
   assert.equal(lib.unsavedChanges(root).length, 0);
 });
 
+const hook = (root, project) => execFileSync("bash", [`${P}/hooks/session-start.sh`], { cwd: project || root, encoding: "utf8", env, input: JSON.stringify({ session_id: "thread-1", cwd: project || root }) });
+test("the session hook names the documents every chat, in the brain and in a linked project, and says when there are none", () => {
+  const root = brain();
+  assert.match(hook(root), /documents: none yet/);
+  document(root, "--create", "--title", "Tone of voice", "--applies-to", "copy, posts", "--body", VOICE, "--folder", "brand");
+  assert.match(hook(root), /documents: Tone of voice \[draft\] \(copy, posts\) -> brand\/tone-of-voice\.md\./);
+  const folder = realpathSync(mkdtempSync(join(tmpdir(), "gtm-os-doc-folder-")));
+  execFileSync(process.execPath, [`${P}/skills/gtm-os-project/project.mjs`, ".", "--link", folder, "--slug", "landing", "--contexts", "offer"], { cwd: root, encoding: "utf8", env });
+  const inProject = hook(root, folder);
+  assert.match(inProject, /^PROJECT landing/m);
+  assert.ok(inProject.includes(`Tone of voice [draft] (copy, posts) -> ${join(root, "brand", "tone-of-voice.md")}`), inProject);
+});
+
 test("--files lists what a document owns; the old guideline.mjs path still runs", () => {
   const root = brain();
   document(root, "--create", "--title", "Design system", "--applies-to", "design", "--body", "Blue.", "--folder", "brand");

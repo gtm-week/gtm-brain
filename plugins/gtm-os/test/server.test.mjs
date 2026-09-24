@@ -505,7 +505,7 @@ test("compile_apply accepts empty working guidance through MCP and rejects missi
 test("RESERVED_TOOLS is the live catalog, so no company interaction can shadow a tool", async () => {
   const { result } = await rpc("tools/list");
   // the question tools are listed only to a client that can show forms; this test client cannot
-  const hidden = ["onboarding_question", "configuration_question", "question", "compile_facts", "compile_apply", "compile_entity", "entity_facts", "recall", "who_is", "list_contexts", "list_projects", "list_brains", "customer_overview", "meeting_overview", "advise", "where_we_are"];
+  const hidden = ["onboarding_question", "configuration_question", "question", "compile_facts", "compile_apply", "compile_entity", "entity_facts", "recall", "who_is", "list_contexts", "list_projects", "list_brains", "customer_overview", "meeting_overview", "advise", "where_we_are", "guideline"];
   assert.deepEqual([...lib.RESERVED_TOOLS].sort(), [...new Set([...result.tools.map(t => t.name), ...hidden])].sort());
 });
 
@@ -617,18 +617,20 @@ test("the skill tool creates, lists, and removes a person's own skill in the bra
   assert.equal(existsSync(join(root, ".agents", "skills", "gtm-os-circle-event")), false);
 });
 
-test("the guideline tool creates, lists, shows, updates and removes a guideline, and query (status) names them", async () => {
-  const root = mkdtempSync(join(tmpdir(), "gtm-os-guide-mcp-")); execFileSync("git", ["init", "-q", root]); execFileSync("git", ["-C", root, "config", "commit.gpgsign", "false"]);
+test("the document tool creates, lists, shows, updates and removes a document, query (status) names them, and guideline still answers hidden", async () => {
+  const root = mkdtempSync(join(tmpdir(), "gtm-os-doc-mcp-")); execFileSync("git", ["init", "-q", root]); execFileSync("git", ["-C", root, "config", "commit.gpgsign", "false"]);
   execFileSync("bash", [`${P}/scripts/gtm-os-setup/setup.sh`, "--company", "Reflow", "--one-liner", "returns automation", "--owner", "Marta Nowak <marta@reflow.io>", "--dashboard", "on-demand"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P, GTM_OS_NO_OPEN: "1" }, stdio: "ignore" });
-  const tools = (await rpc("tools/list")).result.tools.map(t => t.name); assert.ok(tools.includes("guideline"));
-  assert.match((await call("where_we_are", { brain: root })).text, /guidelines: none yet/);
-  const made = await call("guideline", { brain: root, action: "create", title: "Tone of voice", applies_to: ["Copy", "posts"], body: "Short sentences. No exclamation points.", by: "marta-nowak" });
-  assert.equal(made.isError, false, made.text); assert.match(made.text, /created guideline tone-of-voice/);
-  assert.match((await call("guideline", { brain: root, action: "list" })).text, /Tone of voice \[draft\] \(copy, posts\)/);
-  assert.match((await call("guideline", { brain: root, action: "show", slug: "tone-of-voice" })).text, /No exclamation points/);
-  const up = await call("guideline", { brain: root, action: "update", slug: "tone-of-voice", status: "approved" }); assert.equal(up.isError, false, up.text);
-  assert.match((await call("where_we_are", { brain: root })).text, /guidelines: Tone of voice \[approved\] \(copy, posts\) -> brain\/guidelines\/tone-of-voice\.md/);
-  const bad = await call("guideline", { brain: root, action: "create", title: "Design system", body: "x" }); assert.equal(bad.isError, true); assert.match(bad.text, /applies_to/);
-  const gone = await call("guideline", { brain: root, action: "remove", slug: "tone-of-voice" }); assert.equal(gone.isError, false, gone.text);
-  assert.equal(existsSync(join(root, "brain", "guidelines", "tone-of-voice.md")), false);
+  const tools = (await rpc("tools/list")).result.tools.map(t => t.name); assert.ok(tools.includes("document")); assert.ok(!tools.includes("guideline"));
+  assert.match((await call("where_we_are", { brain: root })).text, /documents: none yet/);
+  const made = await call("document", { brain: root, action: "create", title: "Tone of voice", applies_to: ["Copy", "posts"], body: "Short sentences. No exclamation points.", folder: "brand", by: "marta-nowak" });
+  assert.equal(made.isError, false, made.text); assert.match(made.text, /created document brand\/tone-of-voice\.md/);
+  assert.match((await call("document", { brain: root, action: "list" })).text, /Tone of voice \[draft\] \(copy, posts\)/);
+  assert.match((await call("document", { brain: root, action: "show", ref: "tone-of-voice" })).text, /No exclamation points/);
+  const up = await call("document", { brain: root, action: "update", ref: "tone-of-voice", status: "approved" }); assert.equal(up.isError, false, up.text);
+  assert.match((await call("where_we_are", { brain: root })).text, /documents: Tone of voice \[approved\] \(copy, posts\) -> brand\/tone-of-voice\.md/);
+  assert.match((await call("guideline", { brain: root, action: "list" })).text, /Tone of voice \[approved\]/);
+  const bad = await call("document", { brain: root, action: "create", title: "Design system", body: "x" }); assert.equal(bad.isError, true); assert.match(bad.text, /applies_to/);
+  const gone = await call("document", { brain: root, action: "remove", ref: "tone-of-voice" }); assert.equal(gone.isError, false, gone.text);
+  assert.equal(existsSync(join(root, "brand", "tone-of-voice.md")), false);
+  assert.match((await call("document", { brain: root, action: "list" })).text, /no documents yet/);
 });

@@ -5,7 +5,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync, readdir
 import { join, basename, resolve } from "node:path";
 import { contextLabel } from "./localize.mjs";
 import { skillCatalog } from './skill-catalog.mjs';
-import { listGuidelines } from '../../lib/guidelines.mjs';
+import { listDocuments, documentFiles } from '../../lib/documents.mjs';
 import { assetRows } from '../../lib/assets.mjs';
 import { contextGraph } from "../../lib/context-graph.mjs";
 import { entityGraph } from "../../lib/entity-graph.mjs";
@@ -88,7 +88,7 @@ for (const id of new Set([...all.flatMap(m => m.source.filter(s => s.kind === "c
 data.threads = threads;
 const outDir = join(root, "work", "home"); mkdirSync(outDir, { recursive: true });
 data.skills = skillCatalog(undefined, root);
-data.guidelines = listGuidelines(root).map(({ body, ...g }) => g);
+const allDocs = listDocuments(root); data.documents = allDocs.map(({ body, ...d }) => ({ ...d, files: documentFiles(root, d, allDocs).length }));
 data.entityGraph = graph;
 data.contextGraph = snapshot?.contextConnections || contextGraph(sourceContexts);
 data.assets = assetRows(root, snapshot?.specialContexts || sourceContexts);

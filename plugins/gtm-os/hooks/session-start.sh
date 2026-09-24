@@ -120,9 +120,9 @@ if [ -f "$root/work/tools.json" ]; then
 else
   echo "tools: not checked yet in this Codex. Say: connect my tools."
 fi
-# The guidelines (brain/guidelines): the brand, voice and ICP documents the work must follow, named every chat so
-# rule 11 has something to point at; absolute paths in a linked project, where the landing pages get built (ALL-218).
-node -e 'const g=await import(process.argv[1]);console.log(g.guidelinesLine(process.argv[2],{absolute:!!process.argv[3]}))' "$P/lib/guidelines.mjs" "$root" "$project" 2>/dev/null || true
+# The documents (root Markdown with kind: document): what the work must follow, named every chat so rule 11
+# has something to point at; absolute paths in a linked project, where the landing pages get built.
+node -e 'const d=await import(process.argv[1]);console.log(d.documentsLine(process.argv[2],{absolute:!!process.argv[3]}))' "$P/lib/documents.mjs" "$root" "$project" 2>/dev/null || true
 # Rules from an older GTM OS keep naming tools and habits the plugin has moved on from (ALL-204).
 rules="$(node -e 'const u=await import(process.argv[1]);console.log(u.rulesState(process.argv[2],process.argv[3]))' "$P/lib/upgrade-files.mjs" "$root" "$P/templates" 2>/dev/null)"
 [ "$rules" = legacy ] && echo "GTM OS: this brain's rules (AGENTS.md) are from an older GTM OS. Offer once, in one line, to refresh the rules (upgrade_brain, gtm-os-configure); it backs the old file up and keeps local edits."
