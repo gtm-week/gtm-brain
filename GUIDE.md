@@ -160,19 +160,19 @@ brain/admin.md                       company, team, tools
 brain/entities/<id>.md               identity and cited briefs
 brain/contexts/<context>/context.md  the context summary and rules
 brain/contexts/<context>/memories.jsonl   the notes, one per line
-brain/guidelines/<name>.md           the documents work must follow (voice, ICP, strategy)
-files/<yyyy-mm>/                     files you added with /gtm-os-add-file
+README.md                            what goes where, written by setup
+strategy.md, brand/voice.md, ...     your documents, with their files in a folder of the same name
 <project>/                           a working folder you created or linked, beside brain/
 work/home/index.html                 the dashboard
 ```
 
-Three places, three jobs. `brain/` is GTM OS's own: contexts hold what happened and what was
-decided, as notes; guidelines hold the standing documents the work must follow; entities hold
-who is who. A project folder beside `brain/` holds drafts and deliverables for one piece of
-work (the website, an event). Nothing else belongs at the root: a `strategy.md` next to
-`brain/`, or a `company/` folder with subfolders, is a loose file nobody else receives, and
-`save` does not commit it. A strategy is decisions (notes in the Strategy context) plus, once
-approved, a guideline; say `add strategy.md as a guideline` to move one in.
+Three places, three jobs. A document is a Markdown you wrote and the work must follow, at the
+top of the folder or in a folder you named, with its files beside it ([DOCUMENTS.md](DOCUMENTS.md)).
+A project folder holds drafts and deliverables for one piece of work (the website, an event).
+`brain/` is what Codex remembers: notes by topic, people, companies. Nothing else belongs at the
+top, and `README.md` says so: a `company/` folder with subfolders is a container nobody reads.
+A strategy is a document plus, once written, its decisions as notes in the Strategy context;
+say `add strategy.md as a document` to register one you wrote by hand.
 
 A context's standing instructions (`rule`) describe its purpose, meaningful boundaries and
 how Codex should work there. The dashboard shows them as Instructions; change them in chat.

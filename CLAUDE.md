@@ -56,7 +56,7 @@ gitignored `.dev-brains`); it never deletes a real brain.
 
 Everything that ships is under `plugins/gtm-os/`. The layers, from the outside in:
 
-- **Skills** (`skills/gtm-os-*/SKILL.md`): the ten user-facing workflows. Detailed procedures
+- **Skills** (`skills/gtm-os-*/SKILL.md`): the nine user-facing workflows. Detailed procedures
   live in each skill's `references/`. These are what people install, so developer workflows never
   go here.
 - **MCP server** (`server/server.mjs`): hand-rolled stdio JSON-RPC, Node built-ins only. Each tool
@@ -110,7 +110,8 @@ brain/admin.md                         workplace info, protected, changed only v
 brain/entities/*.md                    identity, aliases, cited brief; hand-editable
 brain/contexts/<slug>/context.md       the compiled cover
 brain/contexts/<slug>/memories.jsonl   append-only records
-brain/guidelines/<name>.md             standing documents (voice, design system, ICP)
+README.md                              what goes where, written by setup
+<slug>.md, <folder>/<slug>.md          documents (kind: document), files in a folder of the same name
 brain/ontology.ossie.json              the company's own interactions, protected
 work/                                  gitignored: dashboard, loaded set, tools.json, hooks.log, index
 ```
@@ -138,6 +139,6 @@ the hooks stay silently off.
 Describe a feature once, in its owning document, and link from the others: `INSTALL.md`
 (standalone instructions for the installing agent), `ONBOARDING.md` (first-use walkthrough),
 `GUIDE.md` (everyday use), `COMMANDS.md` (every tool and command and the files it writes),
-`SETUP.md` (manual install and contributor verification), `GUIDELINES.md` (brand guidelines
+`SETUP.md` (manual install and contributor verification), `DOCUMENTS.md` (documents
 feature), `USER-SKILLS.md`, `IMPORT.md` (its text is duplicated word for word as the body of
 `plugins/gtm-os/claude/gtm-os-export/SKILL.md`; keep the two in step).

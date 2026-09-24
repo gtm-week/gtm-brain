@@ -125,9 +125,9 @@ update by themselves in the background. When you want a specific workflow:
 | Know what to do next | `/gtm-os-todo` |
 | Pull in what arrived through your tools | `/gtm-os-sync` |
 | Get a one-page brief before a call | `/gtm-os-deepdive` |
-| Add a PDF, image or deck to the brain | `/gtm-os-add-file` |
+| Add a PDF, image or deck to the brain | drop it in the chat and say what it belongs to; no command |
 | Change company info, team or tools | `/gtm-os-configure` |
-| Keep brand, voice or customer guidelines the work must follow | `/gtm-os-guideline` |
+| Keep the strategy, voice, design system or pricing the work must follow | `/gtm-os-document` |
 | Turn something you do repeatedly into a reusable skill | `/gtm-os-skill` |
 
 The **dashboard** is view-only: what needs you, open questions, contexts, notes, sources,
@@ -145,7 +145,7 @@ folder or links one you already have, and asks before capturing any work done th
 the next chat in that folder, what you do lands in the brain tagged with that project, and
 each project keeps its own open contexts, so two projects never mix. The dashboard lists
 your projects. The brain folder stays the place for company-wide work. What goes where
-(notes, guidelines, project folders) is in [GUIDE.md](GUIDE.md#files-if-you-ever-look).
+(notes, documents, project folders) is in [GUIDE.md](GUIDE.md#files-if-you-ever-look).
 
 On macOS, GTM OS asks Codex to open the linked folder for you. If it does not appear in
 the sidebar, choose **New project** (or **+** beside Projects) and select the folder path

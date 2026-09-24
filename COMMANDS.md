@@ -259,24 +259,38 @@ of identity or memory truth. Page/data publication is serialized across explicit
 Legacy registry files migrate on the first write or `upgrade_brain`, with originals backed up.
 `node $PLUGIN_ROOT/scripts/gtm-os-entities/entities.mjs .`, `... --add "Name" --alias "a, b" --email x@y`, `... --who chris`
 
-## Guidelines
+## Documents
 
-### guideline
-*"add our tone of voice"*, *"save the design system"*, *"our ICP definition"*, *"list the guidelines"*,
-*"check this against our guidelines"*
+### document
+*"add our tone of voice"*, *"save the design system"*, *"add strategy.md as a document"*, *"our ICP
+definition"*, *"list the documents"*, *"check this against our documents"*, *"approve the strategy"*
 
-A guideline is one Markdown file in `brain/guidelines/<slug>.md`: a title, `applies_to` (the kinds of
-work it governs: copy, outreach, posts, landing pages, creatives, proposals, design, targeting), a
-status (`draft` or `approved`, approved only on the person's word) and the body in the person's
-language. The session hook and `query` (status) name every guideline in every chat, in the brain
-and in each linked project, and rule 11 of the brain's rules makes Codex read the matching one in
-full before that kind of work and say which it followed. Nothing compiles or summarizes a guideline.
-Hand edits in an editor are kept by `save`.
+A document is one Markdown file at the brain root (`strategy.md`) or in a folder the person names
+(`brand/voice.md`) with `kind: document` in its frontmatter: a title, `applies_to` (the kinds of
+work it governs: copy, outreach, posts, landing pages, design, proposals, planning), a status
+(`draft` or `approved`, approved only on the person's word) and the body in the person's language.
+Its files live in a folder of its name beside it (`brand/design-system/`), or around it when it is
+alone in its folder. The session hook and `query` (status) name every document in every chat with
+its file count, in the brain and in each linked project, and rule 11 of the brain's rules makes
+Codex read the matching one in full before that kind of work and say which it followed. Nothing
+compiles or summarizes a document. Hand edits in an editor are kept by `save`; a hand-written
+Markdown without the marker is not a document until adopted. See [DOCUMENTS.md](DOCUMENTS.md).
 
-Tool: `guideline` (`action` create | list | show | update | remove). Writes: `brain/guidelines/<slug>.md`, one commit each.
-`node $PLUGIN_ROOT/scripts/gtm-os-guidelines/guideline.mjs . --create --title "Tone of voice" --applies-to "copy, outreach, posts" --body "..." [--status approved] [--by handle]`
-`... --create --title "Design system" --applies-to "landing pages, creatives, design" --file ~/design.md` (a prepared file becomes the body as it is)
-`... --list [--json]`, `... --show tone-of-voice`, `... --update tone-of-voice --status approved`, `... --remove tone-of-voice`
+Tool: `document` (`action` create | list | show | files | update | remove; `ref` is a slug or a path,
+`folder` places a new one). Writes: the document file, one commit each. `guideline` is the retired
+name, hidden from the tool list, answering with the same result for one more version.
+`node $PLUGIN_ROOT/scripts/gtm-os-documents/document.mjs . --create --title "Tone of voice" --applies-to "copy, outreach, posts" --body "..." [--folder brand] [--status approved] [--by handle]`
+`... --create --title "Strategy" --applies-to "strategy, planning" --file strategy.md` (a Markdown already at the root is adopted in place; one from outside is copied in)
+`... --list [--json]`, `... --show tone-of-voice`, `... --files design-system`, `... --update brand/tone-of-voice --status approved`, `... --remove tone-of-voice`
+
+### A file for a document or an entity
+*a path or a dropped file with "add this to the design system"*, *"this is the Acme logo"*
+
+`node $PLUGIN_ROOT/skills/gtm-os-add-file/add-file.mjs . --file <path> [--document <ref> | --entity "<name>"]`
+lands the file beside its owner: the document's files folder, or `brain/entities/<id>/` next to the
+entity file; with no owner named, `files/<yyyy-mm>/`. It prints where it landed and the owner; an
+entity file is then attached through `remember` with `asset`. No skill to invoke: use-brain's
+`references/files.md` is the procedure.
 
 ## Setup and admin
 
@@ -414,7 +428,8 @@ backups, and identity files only when migration is needed.
   records which chat this is (for session context), starts the dashboard server, rebuilds
   the page. The dashboard is available inside Codex, with no Chrome launch. The chat opens with
   one line saying where you are and what is new, plus at most one tool offer. One more line
-  names the guidelines (`brain/guidelines/`) with what each applies to, in a linked project too.
+  names the documents (the marked Markdown at the brain root) with what each applies to and how
+  many files each owns, in a linked project too.
 - **Before any file edit or shell command by Codex**: the gate denies patches to
   `brain/admin.md` and any `memories.jsonl`, and shell commands that write to
   them (reads pass); the skills are the only writers. Best effort, logged in `work/hooks.log`.
@@ -434,7 +449,10 @@ brain/admin.md                       workplace info; APPROVE to change
 brain/entities/*.md                     identity and cited briefs
 brain/contexts/<slug>/context.md     the context cover
 brain/contexts/<slug>/memories.jsonl the context's time series, append-only
-brain/guidelines/<slug>.md           the guidelines the work must follow; guideline tool or a hand edit
+<slug>.md, <folder>/<slug>.md        the documents the work must follow (kind: document); document tool or a hand edit
+<folder>/<slug>/                     a document's files; add-file.mjs --document, or dropped in by hand
+brain/entities/<id>/                 an entity's files; add-file.mjs --entity
+README.md                            what goes where, written by setup and by the first upgrade
 AGENTS.md                            the rules Codex reads every session
 work/                                local, ignored: dashboard, loaded set, tools, logs, proposals
 ~/.gtm-os/approvals.log              who approved what, outside every brain
