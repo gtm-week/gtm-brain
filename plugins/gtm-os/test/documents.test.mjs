@@ -150,6 +150,20 @@ test("--file adopts a Markdown already at the root in place, copies one from out
   assert.match(refused(root, "--create", "--title", "Strategy", "--applies-to", "x", "--file", "strategy.md", "--folder", "plans").text, /already a document/);
 });
 
+test("save commits a document and the files a person dropped beside it by hand; setup wrote the README", () => {
+  const root = brain();
+  assert.match(readFileSync(join(root, "README.md"), "utf8"), /^# Reflow brain/m);
+  assert.match(execFileSync("git", ["-C", root, "log", "--format=%s", "--", "README.md"], { encoding: "utf8" }), /setup/);
+  document(root, "--create", "--title", "Design system", "--applies-to", "design", "--body", "Blue.", "--folder", "brand");
+  mkdirSync(join(root, "brand", "design-system")); writeFileSync(join(root, "brand", "design-system", "tokens.json"), "{}");
+  writeFileSync(join(root, "strategy.md"), docs.renderDocument({ title: "Strategy", applies_to: "planning", status: "draft", body: "By hand." }));
+  assert.ok(lib.unsavedChanges(root).length >= 2);
+  lib.save(root, "saved by hand");
+  const tracked = execFileSync("git", ["-C", root, "ls-files"], { encoding: "utf8" });
+  assert.match(tracked, /^brand\/design-system\/tokens\.json$/m); assert.match(tracked, /^strategy\.md$/m);
+  assert.equal(lib.unsavedChanges(root).length, 0);
+});
+
 test("--files lists what a document owns; the old guideline.mjs path still runs", () => {
   const root = brain();
   document(root, "--create", "--title", "Design system", "--applies-to", "design", "--body", "Blue.", "--folder", "brand");

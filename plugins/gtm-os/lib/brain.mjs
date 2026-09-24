@@ -14,6 +14,7 @@ import { spawnSync, execFileSync, execFile, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { parseOntology } from "../vendor/allethic/ontology.mjs";
 import { validateAsset } from './assets.mjs';
+import { savePaths as documentSavePaths } from "./documents.mjs";
 import { rankEntityCandidates } from './entity-search.mjs';
 export { rankEntityCandidates } from './entity-search.mjs';
 import { checkSchema } from "../vendor/allethic/validation.mjs";
@@ -746,6 +747,8 @@ export const NOT_COMMITTED = "written to disk, NOT committed (git is read-only h
 export const NOT_COMMITTED_YET = "written to disk, not committed yet: say save to keep it";
 /* What a save covers: the brain and the plugin-owned files, never work/. */
 export const BRAIN_PATHS = ["brain", "AGENTS.md", ".githooks", ".gitignore", ".agents"];
+/* Everything save keeps: the engine's paths, the root README, and the documents with their files (lib/documents.mjs). */
+export function savePathsFor(root) { return [...BRAIN_PATHS, "README.md", ...documentSavePaths(root)].filter(p => existsSync(join(root, p))); }
 /* Every writer calls this once after writing: everything written is kept at once, one commit per
    change. The message is also the activity line the dashboard shows. GTM_OS_NO_COMMIT (tests,
    dry runs) turns committing off; `always` lets save ignore it. */
@@ -791,14 +794,14 @@ export function readActivity(root, n = 12) {
 /* Only the context covers: what a scheduled run may commit. */
 export const COVER_PATHS = [":(glob)brain/contexts/*/context.md"];
 /* what git would commit on save */
-export function unsavedChanges(root, paths = BRAIN_PATHS) {
+export function unsavedChanges(root, paths = savePathsFor(root)) {
   paths = paths.filter(p => p.startsWith(":(") || existsSync(join(root, p)));
   try { return execFileSync("git", ['--no-optional-locks', "-C", root, "status", "--short", "--", ...paths], { encoding: "utf8", stdio: "pipe" }).split("\n").filter(Boolean).map(l => ({ state: l.slice(0, 2).trim() || "M", path: l.slice(3) })); } catch { return []; }
 }
 /* The person's save: commit what unsavedChanges lists, push when there is a remote. */
 export function save(root, message, { covers = false } = {}) {
   if (!covers && existsSync(join(root, "work", "admin.proposed.md"))) return { ok: false, note: "a change to brain/admin.md is waiting for APPROVE; ask for APPROVE or a drop, then save" };
-  const paths = covers ? COVER_PATHS : BRAIN_PATHS.filter(p => existsSync(join(root, p)));
+  const paths = covers ? COVER_PATHS : savePathsFor(root);
   const files = unsavedChanges(root, paths);
   if (!files.length) return { ok: true, note: covers ? "nothing to save: no cover changed" : "nothing to save: everything is committed", files };
   const r = commit(root, paths, String(message || "save").split("\n")[0].slice(0, 120), { always: true });
