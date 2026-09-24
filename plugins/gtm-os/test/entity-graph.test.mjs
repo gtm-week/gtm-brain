@@ -132,8 +132,18 @@ test("explorer selects, scopes, inspects shared evidence and pivots without losi
   const connections = ui.$("#entity-detail").innerHTML;
   assert.equal((connections.match(/class="entity-neighbor"/g)||[]).length,10,"all connections remain available in the scrollable list");
   assert.match(connections,/class="entity-connections-list scroll-list" tabindex="0" role="region"/);
-  assert.doesNotMatch(connections,/connection-node|Graph view/);
-  assert.doesNotMatch(connections,/data-entity-page/);
+  // the neighborhood chart: the entity in the centre, six neighbours around it, paged; the list stays below it
+  assert.match(connections, /<div class="eg" role="group"/, "the connections chart is drawn");
+  assert.match(connections, /class="eg-node center"[^>]*>Acme</, "the selected entity sits in the centre");
+  assert.equal((connections.match(/<button class="eg-node"/g) || []).length, 6, "six neighbours on a page");
+  assert.equal((connections.match(/<line /g) || []).length, 6, "one line per neighbour on the page");
+  assert.match(connections, /<button class="eg-node"[^>]*data-entity="Ann Lee"[^>]*>Ann Lee<small>1 shared note</, "a node names the neighbour and its shared notes");
+  assert.match(connections, /data-entity-page="1"/, "ten neighbours need a second page");
+  ui.click("[data-entity-page]", { entityPage: "1" });
+  const page2 = ui.$("#entity-detail").innerHTML;
+  assert.equal((page2.match(/<button class="eg-node"/g) || []).length, 4, "the second page holds the remaining four");
+  assert.equal((page2.match(/class="entity-neighbor"/g) || []).length, 10, "paging the chart leaves the list whole");
+  ui.click("[data-entity-page]", { entityPage: "0" });
   ui.$("#entity-context").onchange({ target: { value: "market" } });
   html = ui.$("#entity-detail").innerHTML;
   assert.match(html, /No current evidence in this context/);
