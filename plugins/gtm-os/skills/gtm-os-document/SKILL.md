@@ -43,8 +43,9 @@ Follow [question handling](../gtm-os-start/references/questions.md) for native q
 6. Call `document` with `action: create`, `title`, `applies_to`, `body` (or `file`), `folder`
    when chosen, `status`, and the person's `by`.
 7. One line back: the title, its path, what it now governs, and that Codex reads it before that
-   kind of work. When it holds decisions (a strategy), remember them in the fitting context as
-   well, in the person's words; the document is the statement, the notes are the evidence.
+   kind of work. Nothing else is written: a document's content is never recorded as notes
+   (rule 11), so no `remember` call follows. The strategic intake (`gtm-os-strategy`) is the
+   one workflow that also notes decisions, and it does that itself.
 
 ## Files of a document
 
