@@ -110,3 +110,51 @@ test("the line names every document with status, kinds of work, path and file co
   assert.match(line, /rule 11/);
   assert.match(docs.documentsLine(root, { absolute: true }), new RegExp(`-> ${root}/strategy\\.md`));
 });
+
+const document = (root, ...args) => execFileSync(process.execPath, [`${P}/scripts/gtm-os-documents/document.mjs`, ".", ...args], { cwd: root, encoding: "utf8", env });
+const refused = (root, ...args) => { try { document(root, ...args); return null; } catch (e) { return { code: e.status, text: String(e.stderr || e.stdout) }; } };
+const lastCommit = root => execFileSync("git", ["-C", root, "log", "-1", "--format=%s"], { encoding: "utf8" }).trim();
+
+test("the script creates at the root or in a folder, lists, shows, updates, removes, one commit each, and refuses what the format refuses", () => {
+  const root = brain();
+  assert.match(document(root, "--create", "--title", "Tone of voice", "--applies-to", "copy, posts", "--body", VOICE, "--by", "marta-nowak", "--folder", "brand"), /created document brand\/tone-of-voice\.md/);
+  assert.equal(lastCommit(root), "Added document brand/tone-of-voice.md");
+  assert.ok(existsSync(join(root, "brand", "tone-of-voice.md")));
+  assert.match(document(root, "--create", "--title", "Strategy", "--applies-to", "strategy", "--body", "# Strategy\n\nWin SMB in DACH."), /created document strategy\.md/);
+  assert.match(document(root, "--list"), /Tone of voice \[draft\] \(copy, posts\) · brand\/tone-of-voice\.md · by marta-nowak/);
+  assert.match(document(root, "--show", "tone-of-voice"), /Banned words: synergy/);
+  assert.match(document(root, "--update", "tone-of-voice", "--status", "approved"), /updated document brand\/tone-of-voice\.md/);
+  assert.equal(lastCommit(root), "Updated document brand/tone-of-voice.md");
+  assert.match(readFileSync(join(root, "brand", "tone-of-voice.md"), "utf8"), /^status: approved$/m);
+  assert.deepEqual(JSON.parse(document(root, "--list", "--json")).map(d => [d.slug, d.status, d.files]), [["tone-of-voice", "approved", 0], ["strategy", "draft", 0]]);
+  assert.match(refused(root, "--create", "--title", "Tone of voice", "--applies-to", "copy", "--body", "x", "--folder", "brand").text, /already exists/);
+  assert.match(refused(root, "--create", "--title", "Bad", "--applies-to", "", "--body", "x").text, /applies_to/);
+  assert.match(refused(root, "--create", "--title", "Bad", "--applies-to", "copy", "--body", "x", "--folder", "brain").text, /folder/);
+  assert.match(refused(root, "--update", "nope", "--status", "approved").text, /no such document nope; yours: tone-of-voice, strategy/);
+  assert.match(document(root, "--remove", "tone-of-voice"), /removed document brand\/tone-of-voice\.md/);
+  assert.ok(!existsSync(join(root, "brand")));
+  assert.equal(lastCommit(root), "Removed document brand/tone-of-voice.md");
+});
+
+test("--file adopts a Markdown already at the root in place, copies one from outside, and refuses other kinds", () => {
+  const root = brain();
+  writeFileSync(join(root, "strategy.md"), "# Strategy\n\nWin SMB in DACH.\n");
+  assert.match(document(root, "--create", "--title", "Strategy", "--applies-to", "strategy, planning", "--file", "strategy.md"), /created document strategy\.md/);
+  const text = readFileSync(join(root, "strategy.md"), "utf8");
+  assert.match(text, /^kind: document$/m); assert.match(text, /Win SMB in DACH\./); assert.equal(text.split("# Strategy").length, 2);
+  const outside = join(tmpdir(), `icp-${Date.now()}.md`); writeFileSync(outside, "# ICP\n\nMid-market ops leads.\n");
+  assert.match(document(root, "--create", "--title", "ICP", "--applies-to", "targeting", "--file", outside), /created document icp\.md/);
+  assert.ok(existsSync(outside));
+  writeFileSync(join(root, "deck.pdf"), "pdf");
+  assert.match(refused(root, "--create", "--title", "Deck", "--applies-to", "sales", "--file", "deck.pdf").text, /not a Markdown or text file/);
+  assert.match(refused(root, "--create", "--title", "Strategy", "--applies-to", "x", "--file", "strategy.md", "--folder", "plans").text, /already a document/);
+});
+
+test("--files lists what a document owns; the old guideline.mjs path still runs", () => {
+  const root = brain();
+  document(root, "--create", "--title", "Design system", "--applies-to", "design", "--body", "Blue.", "--folder", "brand");
+  mkdirSync(join(root, "brand", "design-system")); writeFileSync(join(root, "brand", "design-system", "logo.svg"), "<svg/>");
+  assert.equal(document(root, "--files", "design-system").trim(), "brand/design-system/logo.svg");
+  const old = execFileSync(process.execPath, [`${P}/scripts/gtm-os-guidelines/guideline.mjs`, ".", "--list"], { cwd: root, encoding: "utf8", env });
+  assert.match(old, /Design system \[draft\]/);
+});
