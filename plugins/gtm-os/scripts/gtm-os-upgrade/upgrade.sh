@@ -34,6 +34,16 @@ if [ "$entity_change" = "changed" ]; then
   echo "migrated entity identities and kinds (original files backed up in work/entity-migration)"
   changed=1; paths="$paths brain/entities brain/entities.md brain/names.md"
 fi
+# 0.27.0: guidelines become documents at the root; the root README says what goes where.
+docs_out="$(node --input-type=module -e 'const d=await import(process.argv[1]);const r=d.migrateGuidelines(".");for(const [f,t] of r.moved)console.log(`moved ${f} -> ${t}`);for(const [f,w] of r.kept)console.log(`kept ${f}: ${w}`);' "$PLUGIN/lib/documents.mjs")"
+if [ -n "$docs_out" ]; then
+  echo "$docs_out"; changed=1
+  paths="$paths brain/guidelines $(echo "$docs_out" | sed -n 's/^moved .* -> //p' | tr '\n' ' ')"
+fi
+if [ ! -f README.md ]; then
+  sed -e "s|{{COMPANY}}|$(printf '%s' "$COMPANY" | sed -e 's/[&|]/\\&/g')|g" "$T/README.md" > README.md
+  echo "added README.md"; changed=1; paths="$paths README.md"
+fi
 git config core.hooksPath .githooks 2>/dev/null || true
 git config gtm-os.lib "$PLUGIN/lib/brain.mjs" 2>/dev/null || true
 # Team handles: the rule is the full name, lowercase, hyphenated. A brain set up before that rule

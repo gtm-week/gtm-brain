@@ -130,6 +130,23 @@ export function savePaths(root) {
   return [...out];
 }
 
+/* 0.27.0: brain/guidelines/<slug>.md becomes <slug>.md at the root, content kept, marker added. A root file
+   with that name already there is the person's; the old guideline stays put and is reported. */
+export function migrateGuidelines(root) {
+  const dir = join(root, "brain", "guidelines"), moved = [], kept = [];
+  if (!existsSync(dir)) return { moved, kept };
+  for (const name of readdirSync(dir).filter(f => f.endsWith(".md") && !f.startsWith(".")).sort()) {
+    const from = `brain/guidelines/${name}`, to = name;
+    if (existsSync(join(root, to))) { kept.push([from, `${to} already exists at the root`]); continue; }
+    const { fm, body } = parseFrontmatter(readFileSync(join(dir, name), "utf8"));
+    const text = body.replace("Made with GTM OS. This guideline lives in the brain's guidelines folder and travels with the brain.", HEADER_LINE);
+    writeDocument(root, { path: to, title: fm.title || basename(name, ".md"), applies_to: fm.applies_to || "all work", status: STATUSES.includes(fm.status) ? fm.status : "draft", by: fm.by, updated: fm.updated, version: fm["gtm-os"], body: text });
+    rmSync(join(dir, name)); moved.push([from, to]);
+  }
+  try { if (!readdirSync(dir).length) rmdirSync(dir); } catch {}
+  return { moved, kept };
+}
+
 /* The one line every chat reads: the session hook (brain and linked project) and query (status).
    With an absolute root the paths are absolute, for a chat in a linked folder. */
 export function documentsLine(root, { absolute = false } = {}) {
