@@ -23,8 +23,10 @@ it into a folder of its own name, beside the file: `strategy/strategy.md` and
 `strategy/deck.pdf`, one thing in Finder. The same in a folder you named: `brand/design-system.md`
 becomes `brand/design-system/design-system.md` on its first file, and `brand/voice.md` stays
 where it is. A document alone in its folder owns the files in it, so nothing else changes: the
-chat line, `save` and the file count follow. If you make `strategy/` beside `strategy.md` by
-hand, that is read too; GTM OS itself only ever produces the one-folder shape.
+chat line, `save` and the file count follow. A folder of the same name that appears beside a
+document some other way (a new document made into it, a folder made by hand) pulls the
+document in at the next write, and `refresh the rules` does it for a brain that already has the
+split. A linked project's folder is never used this way.
 
 The one decision you make is one document or several: the work follows them separately (copy
 reads the voice, a landing page reads the design system), so they are separate files.

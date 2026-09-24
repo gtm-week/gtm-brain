@@ -40,8 +40,12 @@ if (opt.file !== undefined) {
 }
 const finish = (doc, verb, message) => {
   const paths = [doc.path]; if (verb === "removed" && doc.folder) paths.push(doc.folder);
-  const c = lib.commit(root, paths, message);
+  // a document that now has a folder of its own name beside it moves in, in the same commit (one thing in Finder)
+  const moves = verb === "removed" ? [] : docs.consolidateDocuments(root);
+  for (const m of moves) paths.push(m.from, m.to);
+  const c = lib.commit(root, paths, moves.length ? `${message}; ${moves.map(m => `${m.from} -> ${m.to}`).join(", ")}` : message);
   console.log(`${verb} document ${doc.path} (${c.note}). ${verb === "removed" ? "Nothing else changed." : `Codex reads ${doc.path} before work it applies to, from the next chat on; in this chat, from now.`}`);
+  for (const m of moves) console.log(`moved ${m.from} into ${m.to.slice(0, m.to.lastIndexOf("/") + 1)} (now ${m.to}), so the document and its folder are one thing.`);
   lib.logActivity(root, "document", `${verb} ${doc.path}`); lib.rerender(root);
 };
 

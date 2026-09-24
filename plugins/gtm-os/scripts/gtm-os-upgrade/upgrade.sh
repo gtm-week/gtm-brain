@@ -44,6 +44,12 @@ if [ ! -f README.md ]; then
   sed -e "s|{{COMPANY}}|$(printf '%s' "$COMPANY" | sed -e 's/[&|]/\\&/g')|g" "$T/README.md" > README.md
   echo "added README.md"; changed=1; paths="$paths README.md"
 fi
+# A document beside a folder of its own name moves into it (design-system.md + design-system/ -> design-system/design-system.md).
+cons_out="$(node --input-type=module -e 'const d=await import(process.argv[1]);for(const m of d.consolidateDocuments("."))console.log(`${m.from}\t${m.to}`)' "$PLUGIN/lib/documents.mjs" 2>/dev/null || true)"
+if [ -n "$cons_out" ]; then
+  while IFS="$(printf '\t')" read -r from to; do echo "moved $from into ${to%/*}/"; paths="$paths $from $to"; done <<< "$cons_out"
+  changed=1
+fi
 # Every brain has strategy.md (0.27.0): a pre-0.27 brain gets the same placeholder setup writes, waiting for the intake.
 added_strategy=0
 if [ ! -f strategy.md ]; then

@@ -233,6 +233,24 @@ test("folders at the top GTM OS does not use are named once at session start, ag
   assert.deepEqual(docs.strayFolders(root), ["assets", "company", "output"]);
 });
 
+test("a new document made in a folder named after another document pulls that one in: one folder, one thing in Finder", () => {
+  const root = brain();
+  document(root, "--create", "--title", "Design system", "--applies-to", "design", "--body", "Blue.");
+  assert.ok(existsSync(join(root, "design-system.md")));
+  const out = document(root, "--create", "--title", "Design inspirations", "--applies-to", "design", "--body", "Callstack.", "--folder", "design-system");
+  assert.match(out, /created document design-system\/design-inspirations\.md/);
+  assert.match(out, /moved design-system\.md into design-system\//);
+  assert.ok(!existsSync(join(root, "design-system.md"))); assert.ok(existsSync(join(root, "design-system", "design-system.md")));
+  assert.equal(execFileSync("git", ["-C", root, "status", "--short"], { encoding: "utf8" }).trim(), "", "the move is committed with the new document");
+  assert.deepEqual(docs.listDocuments(root).filter(d => d.folder === "design-system").map(d => d.path).sort(), ["design-system/design-inspirations.md", "design-system/design-system.md"]);
+  // a document in its own folder is not moved again, and a name already taken inside is left alone
+  document(root, "--create", "--title", "Colors", "--applies-to", "design", "--body", "Teal.", "--folder", "design-system");
+  assert.ok(existsSync(join(root, "design-system", "design-system.md")));
+  mkdirSync(join(root, "voice")); writeFileSync(join(root, "voice", "voice.md"), docs.renderDocument({ title: "Voice", applies_to: "copy", status: "draft", body: "Inside." }));
+  writeFileSync(join(root, "voice.md"), docs.renderDocument({ title: "Voice root", applies_to: "copy", status: "draft", body: "Outside." }));
+  assert.deepEqual(docs.consolidateDocuments(root), [], "voice/voice.md exists: both stay, nothing is overwritten");
+});
+
 test("--files lists what a document owns; the old guideline.mjs path still runs", () => {
   const root = brain();
   document(root, "--create", "--title", "Design system", "--applies-to", "design", "--body", "Blue.", "--folder", "brand");

@@ -5,7 +5,7 @@
 // scan never writes. The rulebook's rule 11 makes Codex read the matching one before that kind of work; the
 // session hook and the status read list them every chat (documentsLine). This file is the format; the script,
 // the server, the hook, add-file and save go through it.
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync, rmdirSync, renameSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync, rmdirSync, renameSync, statSync } from "node:fs";
 import { join, dirname, basename, relative, sep } from "node:path";
 import { handleFor, parseFrontmatter, renderFrontmatter, readProjects } from "./brain.mjs";
 
@@ -133,6 +133,21 @@ export function moveIntoFolder(root, doc) {
   mkdirSync(join(root, filesDir(doc)), { recursive: true });
   renameSync(join(root, doc.path), join(root, to));
   return { from: doc.path, to };
+}
+
+/* Every document that has a folder of its own name beside it (made by a new document, by hand, or by an older
+   version) moves into it: design-system.md beside design-system/ becomes design-system/design-system.md.
+   Run after every document write and by the upgrade; idempotent. Returns the moves; the caller commits them. */
+export function consolidateDocuments(root) {
+  const moves = [], projects = projectDirs(root);
+  for (const doc of listDocuments(root)) {
+    if (inOwnFolder(doc)) continue;
+    if (projects.has(filesDir(doc).split("/")[0])) continue;   // a linked project's folder is never a document home
+    let dir; try { dir = statSync(join(root, filesDir(doc))); } catch { continue; }
+    if (!dir.isDirectory()) continue;
+    const m = moveIntoFolder(root, doc); if (m) moves.push(m);
+  }
+  return moves;
 }
 
 export function writeDocument(root, d) {

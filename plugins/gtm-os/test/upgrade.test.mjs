@@ -203,3 +203,13 @@ test("upgrade adds the strategy document a pre-0.27 brain lacks and ends with a 
   const again = run().stdout;
   assert.doesNotMatch(again, /added strategy\.md/); assert.doesNotMatch(again, /moved 1 guideline/);
 });
+
+test("upgrade pulls a document into the folder of its own name that sits beside it, and says so", t => {
+  const { root, run } = fixture(t);
+  writeFileSync(join(root, "design-system.md"), "---\nkind: document\ntitle: Design system\napplies_to: [design]\nstatus: approved\n---\n# Design system\n\nBlue.\n");
+  mkdirSync(join(root, "design-system")); writeFileSync(join(root, "design-system", "colors.md"), "---\nkind: document\ntitle: Colors\napplies_to: [design]\nstatus: draft\n---\n# Colors\n\nTeal.\n");
+  const out = run().stdout;
+  assert.match(out, /moved design-system\.md into design-system\//);
+  assert.ok(!existsSync(join(root, "design-system.md"))); assert.match(readFileSync(join(root, "design-system", "design-system.md"), "utf8"), /^status: approved$/m);
+  assert.doesNotMatch(run().stdout, /moved design-system\.md/, "a second run has nothing to move");
+});
