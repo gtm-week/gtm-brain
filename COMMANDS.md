@@ -194,6 +194,19 @@ it refreshed. Anything you had staged yourself stays out of these commits.
 
 Tool: `save`. Writes: a git commit (never `work/`).
 
+### share_brain
+*"push this brain to my GitHub"*, *"share the brain"*, *"put the brain on GitHub"*
+
+Creates a private repository on the person's GitHub with `gh` (named `<company>-brain`, or the
+name they give), sets it as `origin` and pushes everything; hand edits are saved first. From then
+on every note and every save pushes there. A brain that already has a remote is pushed, never
+re-created. It needs `gh` installed and signed in (`gh auth login`, then `gh auth setup-git`,
+the person's own step in a terminal); when it is not, the reply says exactly that and nothing
+changes. Codex asks once before creating the repository, since it publishes the folder.
+
+Tool: `share_brain` (`name` optional). Writes: the git remote `origin`, a push; the repository on GitHub.
+`node $PLUGIN_ROOT/scripts/gtm-os-share/share.mjs . [--name <repository>]`
+
 ## Contexts
 
 ### contexts

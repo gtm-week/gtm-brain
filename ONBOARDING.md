@@ -139,6 +139,14 @@ to begin. All decisions and changes happen in the chat, never in the dashboard.
 When a newer GTM OS is out, the dashboard shows it under Admin and the chat mentions it
 once. Say **"update GTM OS"**, then start a new chat.
 
+## Put the brain on your GitHub
+
+Say **push this brain to my GitHub**. Codex creates a private repository named after your
+company, pushes everything, and from then on every note and every save goes there too;
+teammates sign in once with `gh auth login`, clone it and open the folder in Codex. It needs
+GitHub's `gh` tool signed in (`gh auth login`, then `gh auth setup-git`, once, in a terminal);
+if it is not, Codex tells you exactly that and stops.
+
 ## Work in your own folders
 
 The brain is one folder; your work does not have to move into it. To connect another folder

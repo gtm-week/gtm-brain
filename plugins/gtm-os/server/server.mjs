@@ -153,6 +153,10 @@ const TOOLS = [
       writeFileSync(join(brain, "work", "admin.proposed.md"), String(content));
       return result(await run(brain, "gtm-os-approve/approve.mjs", ["--diff"]));
     } },
+  { name: "share_brain", title: "Sharing the brain on GitHub", readOnly: false,
+    description: "Push this brain to the person's GitHub: creates a private repository with gh (named <company>-brain, or name), sets it as origin and pushes everything; from then on every note and every save pushes there. A brain that already has a remote is saved and pushed, never re-created. Needs gh installed and signed in (gh auth login, gh auth setup-git: the person's own step, never done here); when it is not, the reply says exactly what to run. Call it only when the person asks to push or share the brain.",
+    inputSchema: schema({ name: str("The repository name; default <company>-brain") }),
+    call: ({ brain, name }) => run(brain, "gtm-os-share/share.mjs", name ? ["--name", String(name)] : [], { timeout: 120000 }).then(result) },
   { name: "save", title: "Saving", readOnly: false,
     description: "Keep changes made by hand outside Codex (a cover edited in an editor, the rules after an upgrade). Everything Codex writes is already kept the moment it is written, so normally there is nothing to save; call this only when the person asks to save. Refuses while an admin proposal is pending.",
     inputSchema: schema({ message: str("One line, what changed: e.g. notes: pipeline (3), marketing (1)"), scope: str("all (default) | covers: only brain/contexts/*/context.md, for the scheduled run", { enum: ["all", "covers"] }) }),
