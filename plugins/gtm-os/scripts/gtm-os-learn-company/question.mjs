@@ -20,6 +20,8 @@ export function buildQuestion(args) {
   if (!args || !nonempty(args.question, 500)) throw Error('question must be a nonempty string of at most 500 characters');
   if (Object.keys(args).some(key => !(key in inputSchema.properties))) throw Error('unsupported question argument');
   if (args.multiple !== undefined && typeof args.multiple !== 'boolean') throw Error('multiple must be a boolean');
+  // A blank text_label ("" or spaces) means "no note field", which is what omitting it means: treat it as omitted.
+  if (typeof args.text_label === 'string' && !args.text_label.trim()) args = { ...args, text_label: undefined };
   if (args.text_label !== undefined && !nonempty(args.text_label, 100)) throw Error('invalid text_label');
   const options = args.options;
   if (options !== undefined && (!Array.isArray(options) || options.length < 2 || options.length > 8 ||

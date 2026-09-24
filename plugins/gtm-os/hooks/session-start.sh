@@ -24,6 +24,7 @@ fi
 # Both the empty-folder and brain branches emit the same authored policy.
 interaction_policy() {
   echo "Before the first interactive question in this chat, read $P/skills/gtm-os-start/references/questions.md once; do not read it again for later questions."
+  echo "Call GTM OS tools directly as tools, never inside an exec or script cell: a result is content parts (never stringify it), and a question form opened inside a cell hangs the turn."
   cat "$P/policies/questions.md" "$P/policies/computer-use.md"
 }
 # In the brain itself Codex has already loaded AGENTS.md, which carries generated copies of both

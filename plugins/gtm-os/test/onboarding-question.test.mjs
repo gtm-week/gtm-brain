@@ -13,6 +13,9 @@ test('forms preserve choice order, support multi-select and free text, and carry
   const single = buildQuestion(args);
   assert.deepEqual(single.requestedSchema.properties.selection.enum, args.options);
   assert.equal(buildQuestion({ ...args, text_label: 'Add a note' }).requestedSchema.properties.text.type, 'string');
+  // a model passes text_label: "" to mean "no note field"; that is omission, never a refusal
+  assert.deepEqual(Object.keys(buildQuestion({ ...args, text_label: '' }).requestedSchema.properties), Object.keys(single.requestedSchema.properties));
+  assert.deepEqual(Object.keys(buildQuestion({ ...args, text_label: '  ' }).requestedSchema.properties), Object.keys(single.requestedSchema.properties));
   assert.equal(single._meta, undefined);
   assert.equal(single.requestedSchema.properties.selection.default, undefined);
   const multi = buildQuestion({ ...args, multiple: true });

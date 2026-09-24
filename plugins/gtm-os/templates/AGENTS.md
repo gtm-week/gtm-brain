@@ -421,6 +421,9 @@ context. Use displayed names in conversation and stable IDs in tools.
 ## Skills and tools
 
 The person asks in plain language; the skills they see are listed under Plugin workflows below.
+Call GTM OS tools directly as tools, never inside an exec or script cell: a tool result is content
+parts, not a string to print, and a question form opened inside a cell hangs the turn waiting for
+an approval the person cannot see. A skill file is read once with a plain file read, not through a cell.
 
 The compile tools are offered only to the scheduled and background runs; a chat queues that
 run through the shell and never compiles itself. For a count, a join or a date range, `query`
