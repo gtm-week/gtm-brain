@@ -73,19 +73,23 @@ The company brain for **{{COMPANY}}**. Three formal objects:
   Companies and teams are organization subtypes. Facts and roles are supported by memories.
 
 `brain/admin.md` is the workplace info: company, what we sell, to whom, the team, the tools.
-`brain/guidelines/*.md` are the guidelines: the standing documents the work must follow (tone of
-voice, design system, target customer definition, ...), authored by people, never compiled; rule 11.
+Documents (`kind: document` Markdown at the brain root or in folders the person names) are the
+standing documents the work must follow (strategy, tone of voice, design system, target customer
+definition, pricing, ...), authored by people, never compiled; rule 11. One file is the document;
+its files live in a folder of its name beside it.
 
 Where things go, first match wins: workplace info (company, team, tools) is `brain/admin.md`
-(rule 3); a standing document the work must follow (voice, design system, ICP definition, a
-surface's writing standard) is a guideline (rule 11); a person, organization or product is an
-entity (rule 2a); a file is landed beside its owner (gtm-os-use-brain's references/files.md) and, for an entity, attached; everything that happened,
+(rule 3); a standing document the work must follow (strategy, voice, design system, ICP
+definition, pricing, a surface's writing standard) is a document (rule 11); a person,
+organization or product is an entity (rule 2a); a file is landed beside its owner
+(gtm-os-use-brain's references/files.md) and, for an entity, attached; everything that happened,
 was decided, found or asked is a memory in the context whose purpose fits (rules 1 and 2). A
-strategic choice is a memory in Strategy, never a guideline; the approved statement that
-follows from it can be one. A document a chat or a skill produces (a strategy, a plan, a
-playbook) follows the same split: its decisions and findings become memories, the approved
-text becomes a guideline when work must follow it, and a draft lives in the project folder it
-belongs to. Never leave it as a loose file at the brain root or in a new folder beside `brain/`.
+strategic choice is a memory in Strategy as well as a line in the strategy document; the
+document is the statement, the notes are the evidence. A document a chat or a skill produces (a
+strategy, a plan, a playbook) is written as a document through `document`, at the root or in the
+folder the person names; its decisions and findings also become memories, and a draft in
+progress lives in the project folder it belongs to. Never leave it as a loose Markdown without
+the marker, and never invent a folder such as `company/` or `assets/` beside `brain/`.
 The files in `brain/entities/` form the global identity registry and readable entity briefs.
 Each Markdown file holds a stable ID, canonical name, kind, aliases, contacts and external
 references, plus a generated overview, per-context state, relationships, the full timeline
@@ -365,7 +369,7 @@ context. Use displayed names in conversation and stable IDs in tools.
      contexts touched in one chat, or once a week: `gtm-os-todo` for how the brain is doing; a
      subject that has grown its own loops and people: a new context, offered by name; the same multi-step piece of work done twice in one chat:
      `gtm-os-skill`, to keep it as a skill of their own; copy, a design or outreach produced with
-     no guideline covering it: `gtm-os-guideline`, to keep the voice or the design system. Say what it
+     no document covering it: `gtm-os-document`, to keep the voice, the design system or the strategy. Say what it
      would give them in half a sentence, then wait.
    - Never record a guess as a fact, and never leave a loop unrecorded because you did not ask.
    - Do not nag: an offer declined is not repeated in that chat, and a skill is never run
@@ -395,19 +399,23 @@ context. Use displayed names in conversation and stable IDs in tools.
    run, not the chat a memory came from (its `codex:` source), not an agent you delegated to.
    When one is worth checking, say so in one line and give its link, `codex://threads/<id>`;
    the click is theirs. Delegated agents report back into this chat.
-11. **Guidelines govern the work.** `brain/guidelines/` holds the documents the work must follow:
-   a tone of voice, a design system, a target customer definition, whatever the person added.
-   The session hook and `query` (status) list them with what each applies to. Before producing
-   anything of a listed kind (copy, outreach, a post, a deck, a page, a mockup, an image, a
-   creative, a proposal, a design), read the matching guideline file in full and follow it, in a project folder as much
-   as in the brain's own chat; say in one line which guideline you followed ("Following Tone of
-   voice."). An approved guideline is a rule; a draft one is the best available guidance, say
-   so. When two conflict, show the two lines and ask. "Check this against our guidelines" means
-   read the ones that apply and list what breaks them, with the line that says so. A guideline
-   changes only through `guideline` (the `gtm-os-guideline` skill) after the person confirmed
-   the draft, or by the person's own hand; never rewrite one because a draft did not fit it, and
-   never record a guideline's content as memories. Without any guideline, work as usual and,
-   the first time such work comes up in a chat, offer once to add one (rule 7b).
+11. **Documents govern the work.** The documents are the Markdown files at the brain root and in
+   the person's own folders that carry `kind: document`: a strategy, a tone of voice, a design
+   system, a target customer definition, pricing, whatever the person added. The session hook
+   and `query` (status) list them with what each applies to and how many files each owns.
+   Before producing anything of a listed kind (copy, outreach, a post, a deck, a page, a mockup,
+   an image, a creative, a proposal, a design, a plan), read the matching document in full and
+   follow it, in a project folder as much as in the brain's own chat; say in one line which
+   document you followed ("Following Tone of voice."). Open its files only when the work needs
+   them (a logo, a token file). An approved document is a rule; a draft one is the best
+   available guidance, say so. When two conflict, show the two lines and ask. "Check this
+   against our documents" means read the ones that apply and list what breaks them, with the
+   line that says so. A document changes only through `document` (the `gtm-os-document` skill)
+   after the person confirmed the draft, or by the person's own hand; never rewrite one because
+   a draft did not fit it, and never record a document's content as memories. A file for a
+   document lands beside it (`add-file.mjs --document`), never in `files/`. Without any
+   document, work as usual and, the first time such work comes up in a chat, offer once to add
+   one (rule 7b).
 
 ## Skills and tools
 
@@ -420,7 +428,7 @@ The skills run through the GTM OS tools (`query` for every read: status first, t
 memories, entities, brief, projects, brains, customers, meetings, health, or `sql`; `load_context`,
 `remember`, `render_dashboard`, `open_dashboard`, `new_context`, `fork_context`, `archive_context`,
 `save`, `add_name`, `check_tools`, `mark_tool`, `propose_admin_change`, `setup_brain`,
-`upgrade_brain`, `guideline`, `link_project`, `unlink_project`), never through
+`upgrade_brain`, `document`, `link_project`, `unlink_project`), never through
 shell commands; pass this folder as `brain`. One thing stays a
 shell command on purpose, so Codex asks the person's permission: applying an APPROVE. Report what a tool did in your own words, one or two sentences; never paste
 its output.
@@ -430,9 +438,9 @@ installed and removed through `gtm-os-skill` and its `skill` tool, never by hand
 with Codex's own skill creator; they appear after Codex is quit and reopened. A skill someone asks for that
 does not exist yet is this skill's job.
 
-The guidelines (rule 11) live in `brain/guidelines/` as `<slug>.md`, made, updated and removed
-through `gtm-os-guideline` and its `guideline` tool after the person confirmed the draft; a
-person may also edit the file by hand, and `save` keeps that.
+The documents (rule 11) live at the brain root as `<slug>.md` or `<folder>/<slug>.md`, made,
+updated and removed through `gtm-os-document` and its `document` tool after the person
+confirmed the draft; a person may also edit the file by hand, and `save` keeps that.
 
 <!-- generated: computer-use; edit plugins/gtm-os/policies/computer-use.md -->
 Do the work through the tools. The GTM OS MCP tools, and any other MCP server configured for the
@@ -490,11 +498,12 @@ handoff from another assistant, offered once when the hook says one is waiting),
 (workplace changes, connecting tools, plugin updates and refreshing this
 brain's rules: when the hook says a newer GTM OS is available, offer it once in one line; the
 dashboard shows the same) `gtm-os-skill` (a repeated workflow kept as a skill in this brain, installed from GitHub,
-listed or removed; offered once when the same multi-step work was done twice), `gtm-os-guideline`
-(the brand, voice and ICP documents the work must follow: add one from existing material or a
-conversation, list, update, check a draft against them; offered once when copy, a design or
-outreach is produced and no guideline covers it), and `gtm-os-use-brain` (everyday work: loading, creating and editing
-contexts, the dashboard). Natural requests
+listed or removed; offered once when the same multi-step work was done twice), `gtm-os-document`
+(the strategy, voice, design system, pricing and any document the work must follow: add one
+from a prepared file, existing material or a conversation, list, update, check a draft against
+them; offered once when copy, a design, outreach or a plan is produced and no document covers
+it), and `gtm-os-use-brain` (everyday work: loading, creating and editing contexts, landing a
+file beside its owner, the dashboard). Natural requests
 such as "remember this", "load pipeline" and "what should I do" still work.
 
 ## Entity attachments
