@@ -2,10 +2,10 @@
 // add-file: put one file into the brain (ALL-205).
 //   node add-file.mjs <root> --file <path>
 //   node add-file.mjs <root> --file <path> [--document <ref> | --entity <name>]
-// With --document <ref> or --entity <name> the file lands beside its owner (the document's files folder,
-// or brain/entities/<id>/); without an owner, a file from outside the brain and its linked projects is
-// copied to files/<yyyy-mm>/<name>. Either way it is committed, so it travels with the brain. A file
-// already inside the brain or a linked project
+// A file from outside the brain and its linked projects lands beside its owner and is committed, so it
+// travels with the brain: --document <ref> puts it in the document's files folder, --entity <name> in
+// brain/entities/<id>/. Without an owner it is refused; nothing lands in the brain unasked (0.27.0
+// retired the files/<yyyy-mm>/ fallback). A file already inside the brain or a linked project
 // is referenced where it is: nothing is moved, nothing is overwritten. For a PDF or a document
 // the text is extracted into work/files/ (derived, outside git) so the notes can be written from
 // it. Prints one JSON object: { base, path, project?, copied, kind, bytes, text, note? }.
@@ -53,7 +53,9 @@ const linked = lib.readProjects(root).find(p => { try { return lib.projectPointe
 if (within(root, real)) { path = relative(root, real); note = "already in the brain"; }
 else if (linked) { base = "project"; project = linked.slug; path = relative(realpathSync(linked.path), real); note = `already in project ${linked.slug}`; }
 else {
-  const folder = owner ? owner.dir : join("files", new Date().toISOString().slice(0, 7)); mkdirSync(join(root, folder), { recursive: true });
+  // Nothing lands in the brain unasked: a file from outside needs the document or the entity it belongs to.
+  if (!owner) fail(`Say what ${basename(given)} belongs to: --document <ref> for a document (the strategy, the design system), --entity "<name>" for a person, company or product. Nothing lands in the brain without an owner.`);
+  const folder = owner.dir; mkdirSync(join(root, folder), { recursive: true });
   const ext = extname(real), stem = basename(real, ext), same = p => existsSync(p) && statSync(p).size === bytes && readFileSync(p).equals(readFileSync(real));
   let name = `${stem}${ext}`, n = 1;
   while (existsSync(join(root, folder, name)) && !same(join(root, folder, name))) name = `${stem}-${++n}${ext}`;

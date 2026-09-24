@@ -24,16 +24,20 @@ function fixture() {
 }
 const month = new Date().toISOString().slice(0, 7);
 
-test('a file from outside the brain lands in files/<yyyy-mm>/ once; the same name with other bytes gets a suffix', () => {
+test('a file from outside the brain needs an owner; it lands beside it once, and the same name with other bytes gets a suffix', () => {
  const f = fixture(); writeFileSync(join(f.outside, 'Deck.pdf'), '%PDF-1.4 fake');
- const first = f.run('--file', join(f.outside, 'Deck.pdf'));
- assert.deepEqual([first.base, first.path, first.copied, first.kind], ['brain', `files/${month}/Deck.pdf`, true, 'pdf']);
+ assert.match(f.fail('--file', join(f.outside, 'Deck.pdf')), /belongs to.*--document.*--entity/s, 'no owner, no landing: nothing appears in the brain unasked');
+ assert.ok(!existsSync(join(f.root, 'files')), 'the old files/<yyyy-mm>/ fallback is gone');
+ lib.addName(f.root, 'Acme', { kind: 'organization' });
+ const dir = resolveEntity(lib.readNames(f.root), 'Acme')._path.replace(/\.md$/, '');
+ const first = f.run('--file', join(f.outside, 'Deck.pdf'), '--entity', 'Acme');
+ assert.deepEqual([first.base, first.path, first.copied, first.kind], ['brain', `${dir}/Deck.pdf`, true, 'pdf']);
  assert.equal(readFileSync(join(f.root, first.path), 'utf8'), '%PDF-1.4 fake');
- const again = f.run('--file', join(f.outside, 'Deck.pdf')); assert.match(again.note, /^already in the brain/, 'same bytes: reused, not duplicated');
+ const again = f.run('--file', join(f.outside, 'Deck.pdf'), '--entity', 'Acme'); assert.match(again.note, /^already in the brain/, 'same bytes: reused, not duplicated');
  assert.deepEqual({ ...again, note: undefined }, { ...first, copied: false, note: undefined });
  writeFileSync(join(f.outside, 'Deck.pdf'), '%PDF-1.4 other');
- const third = f.run('--file', join(f.outside, 'Deck.pdf'));
- assert.equal(third.path, `files/${month}/Deck-2.pdf`); assert.ok(existsSync(join(f.root, third.path)));
+ const third = f.run('--file', join(f.outside, 'Deck.pdf'), '--entity', 'Acme');
+ assert.equal(third.path, `${dir}/Deck-2.pdf`); assert.ok(existsSync(join(f.root, third.path)));
 });
 
 test('a file already inside the brain or a linked project is referenced where it is, never copied', () => {
@@ -57,11 +61,11 @@ test('it refuses a folder, a missing file and anything over 25 MB, and says why'
 });
 
 test('text is extracted for the notes when an extractor exists, and its absence is said, not hidden', () => {
- const f = fixture(); writeFileSync(join(f.outside, 'notes.txt'), 'Acme wants a 30-day pilot.');
- const txt = f.run('--file', join(f.outside, 'notes.txt'));
+ const f = fixture(); writeFileSync(join(f.outside, 'notes.txt'), 'Acme wants a 30-day pilot.'); lib.addName(f.root, 'Acme', { kind: 'organization' });
+ const txt = f.run('--file', join(f.outside, 'notes.txt'), '--entity', 'Acme');
  assert.equal(txt.kind, 'document'); assert.equal(readFileSync(txt.text, 'utf8'), 'Acme wants a 30-day pilot.'); assert.ok(txt.text.startsWith(join(f.root, 'work')), 'extractions are derived, outside git');
  writeFileSync(join(f.outside, 'scan.pdf'), '%PDF-1.4 not really a pdf');
- const pdf = f.run('--file', join(f.outside, 'scan.pdf'));
+ const pdf = f.run('--file', join(f.outside, 'scan.pdf'), '--entity', 'Acme');
  assert.ok(pdf.text === null, 'a broken pdf has no text'); assert.match(pdf.note || '', /no text|could not extract/i);
 });
 

@@ -290,7 +290,9 @@ name, hidden from the tool list, answering with the same result for one more ver
 
 `node $PLUGIN_ROOT/skills/gtm-os-add-file/add-file.mjs . --file <path> [--document <ref> | --entity "<name>"]`
 lands the file beside its owner: the document's files folder, or `brain/entities/<id>/` next to the
-entity file; with no owner named, `files/<yyyy-mm>/`. It prints where it landed and the owner; an
+entity file. With no owner named it refuses, so nothing lands in the brain unasked (the
+`files/<yyyy-mm>/` fallback is gone since 0.27.0; files landed there earlier stay and their
+links keep working). It prints where it landed and the owner; an
 entity file is then attached through `remember` with `asset`. No skill to invoke: use-brain's
 `references/files.md` is the procedure.
 

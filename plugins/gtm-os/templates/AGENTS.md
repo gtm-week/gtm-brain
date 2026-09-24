@@ -516,8 +516,8 @@ such as "remember this", "load pipeline" and "what should I do" still work.
 
 A file the person hands over goes through gtm-os-use-brain's references/files.md: it lands beside
 its owner (a document's files folder, or `brain/entities/<id>/` for a person, company or product;
-`files/` only with no owner named; a project file stays in its project folder), an entity file
-is attached, and its content is noted. Under the hood attachments are
+a file with no owner is refused, so ask what it belongs to; a project file stays in its project
+folder), an entity file is attached, and its content is noted. Under the hood attachments are
 `remember` with its optional `asset` field. Each attachment belongs
 to an existing entity and one memory; one file can have several entity relationships. Use a
 readable label, role and draft/approved/retired status. File paths remain references: no upload,

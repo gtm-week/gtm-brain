@@ -20,9 +20,9 @@ Name the owner when it is clear from the request: a document by slug or path (`-
 design-system`, `--document brand/design-system`), an entity by name (`--entity "Positive
 Surfer"`). The file then lands beside its owner: the document's files folder
 (`brand/design-system/`, or the document's own folder when it lives there alone), or
-`brain/entities/<id>/` next to the entity file. With no owner it goes to `files/<yyyy-mm>/`.
-When the owner is not obvious, ask once with `question` offering the two or three most likely
-documents or entities. Run, through the shell:
+`brain/entities/<id>/` next to the entity file. A file with no owner is refused: nothing lands
+in the brain unasked. When the owner is not obvious, ask once with `question` offering the two
+or three most likely documents or entities, then run, through the shell:
 
 ```
 node "$PLUGIN_ROOT/skills/gtm-os-add-file/add-file.mjs" <brain> --file "<path>" [--document <ref> | --entity "<name>"]
@@ -33,8 +33,8 @@ It prints one JSON object. `path` is where the file now lives, relative to `base
 already was; `owner` names the document or entity it landed beside; `kind` is image, pdf,
 document or other; `text` is the extracted text file when there is one; `note` explains
 anything unusual (already in the brain, no text extractor). It refuses folders, missing files,
-an unknown document or entity (register one with `add_name` first) and anything over 25 MB,
-with the reason: pass that reason on in one line and stop.
+a file with no owner, an unknown document or entity (register one with `add_name` first) and
+anything over 25 MB, with the reason: pass that reason on in one line and stop.
 
 ## Step 3: attach it (entity files)
 
