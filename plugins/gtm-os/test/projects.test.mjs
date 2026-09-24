@@ -39,6 +39,22 @@ const folder = () => mkdtempSync(join(tmpdir(), "gtm-os-proj-folder-"));
 const project = (root, ...args) => execFileSync(process.execPath, [`${P}/skills/gtm-os-project/project.mjs`, ".", ...args], { cwd: root, encoding: "utf8", env });
 const refused = (root, ...args) => { try { project(root, ...args); return null; } catch (e) { return { code: e.status, text: String(e.stderr || e.stdout) }; } };
 
+test("a folder that holds documents is not linked as a project: open it in Codex instead; a plain folder still links", () => {
+  const root = realpathSync(brain());
+  mkdirSync(join(root, "brand")); writeFileSync(join(root, "brand", "voice.md"), "---\nkind: document\ntitle: Voice\napplies_to: [copy]\nstatus: draft\n---\n# Voice\n\nShort sentences.\n");
+  mkdirSync(join(root, "brand", "design-system")); writeFileSync(join(root, "brand", "design-system", "logo.svg"), "<svg/>");
+  const link = (folder, slug) => { try { return { out: execFileSync(process.execPath, [`${P}/skills/gtm-os-project/project.mjs`, ".", "--link", folder, "--slug", slug, "--contexts", "offer"], { cwd: root, encoding: "utf8", env }), code: 0 }; } catch (e) { return { out: String(e.stderr), code: e.status }; } };
+  const refused = link(join(root, "brand"), "brand");
+  assert.equal(refused.code, 2, refused.out);
+  assert.match(refused.out, /holds documents \(brand\/voice\.md\)/);
+  assert.match(refused.out, /open its folder in Codex/); assert.match(refused.out, /deliverables/);
+  assert.ok(!existsSync(join(root, "brand", "AGENTS.md")), "no pointer was written");
+  assert.deepEqual(lib.readProjects(root), [], "nothing registered");
+  mkdirSync(join(root, "website")); writeFileSync(join(root, "website", "README.md"), "# Site\n");
+  assert.equal(link(join(root, "website"), "website").code, 0, "a folder of deliverables links as before");
+  assert.equal(lib.readProjects(root).length, 1);
+});
+
 test("linked projects stay flat: child creation and existing-folder linking refuse without writes", () => {
   const root = brain(), external = folder();
   mkdirSync(join(external, "src")); writeFileSync(join(external, "src", "app.js"), "existing app\n");

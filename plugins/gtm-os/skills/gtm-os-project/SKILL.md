@@ -75,6 +75,10 @@ and its fallbacks. Reuse submitted answers; never link without a yes to capturin
 
 Follow [project structure](references/structure.md): one working project per linked folder.
 For a hierarchy of new projects, propose separate folders inside the existing GTM OS workspace.
+A folder that holds documents (`brand/`, `strategy/`) is a document home, not a project: the
+tool refuses it, because linking would take its documents out of the scan and out of the
+brain's git. To work on a document, the person opens its folder in Codex; it sees the brain
+without being linked. Link only folders that hold deliverables (a website, an event).
 
 Use the folder the person named, or the current working folder. Verify it with
 `check_environment`. If the current folder is the brain, ask which existing working folder

@@ -8,7 +8,9 @@ Made with GTM OS. Three kinds of things live in this folder.
   any, live in a folder of the same name beside it (`strategy/deck.pdf`). Any folder name
   works. Wrote one by hand? Say `add pricing.md as a document`.
 - **A project**: a folder for one piece of work (`website/`, an event). Make or link one with
-  `/gtm-os-project`; open it in Codex and work there.
+  `/gtm-os-project`; open it in Codex and work there. To work on a document, just open its
+  folder in Codex: it sees the brain without being linked. Link only folders that hold
+  deliverables; a folder that holds documents is refused.
 - **`brain/`**: what Codex remembers: notes by topic, people, companies. Read it; let Codex write
   it. `work/` is scratch and stays out of git.
 

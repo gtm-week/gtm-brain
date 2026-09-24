@@ -9,6 +9,7 @@
 import { existsSync, mkdirSync, rmSync, realpathSync, readFileSync, writeFileSync, lstatSync } from "node:fs";
 import { join, resolve, isAbsolute, basename, dirname, relative, sep } from "node:path";
 import { listCodexProjects } from "../../lib/codex-projects.mjs";
+import { listDocuments } from "../../lib/documents.mjs";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const us = await import(new URL("../../lib/user-skills.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = resolve(args[0] && !args[0].startsWith("--") ? args.shift() : ".");
@@ -78,6 +79,13 @@ if (opt.link) {
   for (const candidate of [path, effectivePath]) for (let d = dirname(candidate); ; d = dirname(d)) {
     if (existsSync(join(d, "brain", "admin.md")) && !same(d, root)) refuse(`${path} is inside another brain (${d})`);
     if (dirname(d) === d) break;
+  }
+  // A folder that holds documents is a document home, not a project: linking it would take its documents out of
+  // the scan and out of the brain's git. To work on a document, open its folder in Codex; it sees the brain unlinked.
+  if (!opt.create && existsSync(path) && below(rootReal, effectivePath)) {
+    const rel = relative(rootReal, effectivePath).split(sep).join("/");
+    const held = listDocuments(root).filter(d => d.path.startsWith(`${rel}/`)).map(d => d.path);
+    if (held.length) refuse(`${path} holds documents (${held.join(", ")}); a document's folder is not a project. To work on a document, open its folder in Codex: it sees the brain without being linked. Link only folders that hold deliverables (a website, an event).`);
   }
   const title = opt.title ? String(opt.title).trim() : basename(path);
   const slug = slugOf(opt.slug || title || basename(path)); if (!slug) refuse("give --slug or --title");
