@@ -80,7 +80,7 @@ recording a note from refreshing its summary. Report failures or partial complet
 Do not paste file diffs, raw records, file paths or commit output unless explicitly requested.
 The host app may still expose its own review UI; these instructions do not disable it.
 
-Before the first question in a chat, read [question handling](../gtm-os-start/references/questions.md) once.
+Before the first question that uses a form (`question`), read [question handling](../gtm-os-start/references/questions.md) once for the tool parameters; a plain answer needs no reading.
 This applies after onboarding too: every question in everyday work (which context, same as X?,
 is this a company?, what is the answer?, which direction or photo?) is asked with `question`,
 or `configuration_question` for tools and settings, with two or three concrete options on one page.

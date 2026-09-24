@@ -23,7 +23,7 @@ if [ -n "$project" ]; then
 fi
 # Both the empty-folder and brain branches emit the same authored policy.
 interaction_policy() {
-  echo "Before the first interactive question in this chat, read $P/skills/gtm-os-start/references/questions.md once; do not read it again for later questions."
+  echo "Before the first question that uses a form (question, configuration_question, onboarding_question), read $P/skills/gtm-os-start/references/questions.md once for the tool parameters; not before a plain answer, and not again later."
   echo "Call GTM OS tools directly as tools, never inside an exec or script cell: a result is content parts (never stringify it), and a question form opened inside a cell hangs the turn."
   cat "$P/policies/questions.md" "$P/policies/computer-use.md"
 }
@@ -32,7 +32,7 @@ interaction_policy() {
 # is only a pointer, and an old brain may predate the generated blocks, so those still get them.
 brain_interaction_policy() {
   if [ -z "$project" ] && grep -q '<!-- generated: questions' "$root/AGENTS.md" 2>/dev/null && grep -q '<!-- generated: computer-use' "$root/AGENTS.md" 2>/dev/null; then
-    echo "Before the first interactive question in this chat, read $P/skills/gtm-os-start/references/questions.md once; do not read it again for later questions."
+    echo "Before the first question that uses a form (question, configuration_question, onboarding_question), read $P/skills/gtm-os-start/references/questions.md once for the tool parameters; not before a plain answer, and not again later."
   else
     interaction_policy
   fi

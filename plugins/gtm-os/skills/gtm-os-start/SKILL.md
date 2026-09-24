@@ -27,7 +27,7 @@ onboarding question or announcement about its completion. Use the status interna
 the person asks about onboarding. A person's statement that they already finished is enough to record
 completion with `remember`; never make them repeat the checklist to clear a stale flag.
 
-Before asking the first question, read [onboarding questions](references/questions.md).
+Before the first `onboarding_question` form, read [question handling](references/questions.md) once for the tool parameters.
 Prefer `onboarding_question` when available: it waits inside the call and supplies native
 choices, multi-select checkboxes and free text in ordinary mode. Reuse known answers and
 keep one question pending until it is answered or cancelled. No Plan-mode switch is needed.

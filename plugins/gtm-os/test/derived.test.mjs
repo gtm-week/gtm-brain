@@ -10,8 +10,7 @@ const repo = fileURLToPath(new URL("../../../", import.meta.url));
 const script = "scripts/sync-derived.mjs";
 const ontology = "plugins/gtm-os/ontology/gtm-os.ossie.json";
 const policy = "plugins/gtm-os/policies/questions.md";
-const documents = ["AGENTS.md", "INSTALL.md", "plugins/gtm-os/templates/AGENTS.md",
-  "plugins/gtm-os/skills/gtm-os-start/references/questions.md"];
+const documents = ["AGENTS.md", "INSTALL.md", "plugins/gtm-os/templates/AGENTS.md"];
 const run = (root, ...args) => spawnSync(process.execPath, [join(root, script), ...args], { encoding: "utf8" });
 const memoryProperties = model => model.custom_extensions.find(e => e.vendor_name === "ALLETHIC")
   .data.actions.find(action => action.tool_name === "remember").input_schema.properties;

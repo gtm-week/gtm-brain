@@ -9,8 +9,9 @@ if (process.argv.slice(2).some(arg => arg !== "--check")) throw new Error("Usage
 const read = path => readFileSync(new URL(path, root), "utf8");
 const outputs = new Map();
 
-for (const path of ["AGENTS.md", "INSTALL.md", "plugins/gtm-os/templates/AGENTS.md",
-  "plugins/gtm-os/skills/gtm-os-start/references/questions.md"]) {
+// The question reference (gtm-os-start/references/questions.md) no longer carries the blocks: every chat already
+// holds them through the brain's AGENTS.md and the session line, so the reference keeps only the tool details.
+for (const path of ["AGENTS.md", "INSTALL.md", "plugins/gtm-os/templates/AGENTS.md"]) {
   let text = read(path);
   for (const name of ["questions", "computer-use"]) {
     const start = `<!-- generated: ${name}; edit plugins/gtm-os/policies/${name}.md -->`;

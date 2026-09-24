@@ -12,7 +12,7 @@ allowed-tools: [Bash, Read, Write]
 
 # GTM OS: Configure GTM OS
 
-For interactive onboarding questions, read [onboarding questions](../gtm-os-start/references/questions.md) once.
+Before the first `configuration_question` form, read [question handling](../gtm-os-start/references/questions.md) once for the tool parameters.
 Use structured choices by default and keep async questions alive until answered.
 
 Route the requested change to the procedure below. Read only the one needed.
