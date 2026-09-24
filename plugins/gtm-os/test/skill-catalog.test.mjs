@@ -73,8 +73,8 @@ test('copy prompt copies the exact command and example without navigating',async
  assert.match(p.node('#copy-status-'+s.id).textContent,/Copied/);assert.equal(p.run('view'),'home');
 });
 
-test('the person can ask for ten skills, the ones onboarding and rule 7b name; the rest are references (ALL-204 step 4, ALL-218)',()=>{
- assert.deepEqual(skillCatalog().map(s=>s.id).sort(),['gtm-os-add-file','gtm-os-configure','gtm-os-deepdive','gtm-os-guideline','gtm-os-project','gtm-os-skill','gtm-os-start','gtm-os-sync','gtm-os-todo','gtm-os-use-brain']);
+test('the person can ask for nine skills, the ones onboarding and rule 7b name; the rest are references (ALL-204 step 4, ALL-218)',()=>{
+ assert.deepEqual(skillCatalog().map(s=>s.id).sort(),['gtm-os-configure','gtm-os-deepdive','gtm-os-document','gtm-os-project','gtm-os-skill','gtm-os-start','gtm-os-sync','gtm-os-todo','gtm-os-use-brain']);
 });
 
 test('a brain with a skill of its own gets a "yours" group after the shipped ones; the shipped set is unchanged',()=>{

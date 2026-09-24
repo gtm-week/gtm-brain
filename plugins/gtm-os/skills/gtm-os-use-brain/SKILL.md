@@ -30,10 +30,13 @@ When beginning company work or the objective changes, follow
 evidence, honor manual restrictions, and select each memory's destination by meaning.
 Short continuations reuse the current scope; do not rerun discovery before every reply.
 
-Before producing copy, outreach, posts, landing pages, creatives, proposals or a design, read the
-guideline that applies (the session hook and `query` (status) list `brain/guidelines/` with what
-each applies to) and follow it, saying which one in one line; AGENTS.md rule 11. Adding or
-changing one is `gtm-os-guideline`.
+Before producing copy, outreach, posts, landing pages, creatives, proposals, a design or a plan,
+read the document that applies (the session hook and `query` (status) list the documents at the
+brain root with what each applies to) and follow it, saying which one in one line; AGENTS.md
+rule 11. Adding or changing one is `gtm-os-document`.
+
+A file in the chat (a path, a dropped PDF or image, "save this deck", "add this to the design
+system"): follow [files](references/files.md). No skill to invoke; it is part of everyday work.
 
 When asked to create subprojects or a workspace structure in a linked folder, follow
 [project structure](../gtm-os-project/references/structure.md): propose separate projects

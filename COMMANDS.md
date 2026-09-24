@@ -14,9 +14,8 @@ to distinguish these workflows from other installed skills.
 | `gtm-os-deepdive` | GTM OS: Deep dive | A one-page brief on an entity or a context, from the notes and the tools read live |
 | `gtm-os-use-brain` | GTM OS: Use the company brain | Everyday work: remember, recall, where we are |
 | `gtm-os-configure` | GTM OS: Configure GTM OS | Workplace info, team, tools and settings through APPROVE |
-| `gtm-os-add-file` | GTM OS: Add a file | Put a PDF, image or deck in the brain: kept in its files folder, attached to who it belongs to, its content noted |
 | `gtm-os-skill` | GTM OS: Your skills | Turn a repeated workflow into a Codex skill kept in the brain's `.agents/skills`; install from GitHub, list, remove, share |
-| `gtm-os-guideline` | GTM OS: Guidelines | The brand guidelines the work must follow (tone of voice, design system, target customer definition) kept in `brain/guidelines/`: add, list, show, update, remove, check a draft against them |
+| `gtm-os-document` | GTM OS: Documents | The documents the work must follow (strategy, tone of voice, design system, pricing) kept as Markdown at the brain root with their files beside them: add, adopt a hand-written one, list, show, update, approve, remove, check a draft against them. A file in the chat lands beside its owner through use-brain's files reference, no skill to invoke |
 
 Find workflow examples from Overview or Help > Ways to work in Codex.
 Each entry explains the workflow, shows an example and its command, and opens a prepared

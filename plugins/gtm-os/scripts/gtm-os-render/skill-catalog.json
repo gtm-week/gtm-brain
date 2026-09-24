@@ -32,14 +32,6 @@
     "example": "What do we know about our target customers?"
   },
   {
-    "id": "gtm-os-add-file",
-    "group": "knowledge",
-    "featured": false,
-    "title": "Add a file",
-    "description": "Put a PDF, image or deck in the brain, attached to who it belongs to, with its content noted.",
-    "example": "Add this deck to the brain for Acme."
-  },
-  {
     "id": "gtm-os-project",
     "group": "projects",
     "featured": true,
@@ -72,11 +64,11 @@
     "example": "Turn what we just did into a skill."
   },
   {
-    "id": "gtm-os-guideline",
+    "id": "gtm-os-document",
     "group": "setup",
     "featured": false,
-    "title": "Keep the brand guidelines",
-    "description": "Tone of voice, design system, target customer definition: the documents Codex follows before writing copy or designing.",
-    "example": "Add our tone of voice from the website and the last deck."
+    "title": "Keep your documents",
+    "description": "The strategy, voice, design system, pricing and any document the work must follow, with their files beside them.",
+    "example": "Add strategy.md as a document."
   }
 ]

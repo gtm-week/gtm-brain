@@ -242,7 +242,9 @@ through separate memories; approval and retirement apply independently to each r
 Relative paths resolve against the selected project folder, or the brain when no project was
 passed. An absolute file inside that folder is stored relatively. Other absolute paths are
 local to this computer. Only paths are stored: sharing the brain does not share the file.
-No folder is scanned or created for attachments. Keep project files in their existing folder.
+No folder is scanned for attachments. A file landed with `add-file.mjs --entity` sits in
+`brain/entities/<id>/` beside the entity file; one landed with `--document` belongs to that
+document and needs no attachment ([files](files.md)). Keep project files in their existing folder.
 
 Before using a file, read the entity's brief with `query` (brief) or query its effective memories
 and read the asset field. The brief gives the resolved absolute file location and availability. Use approved

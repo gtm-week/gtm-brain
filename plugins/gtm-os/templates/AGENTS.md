@@ -79,7 +79,7 @@ voice, design system, target customer definition, ...), authored by people, neve
 Where things go, first match wins: workplace info (company, team, tools) is `brain/admin.md`
 (rule 3); a standing document the work must follow (voice, design system, ICP definition, a
 surface's writing standard) is a guideline (rule 11); a person, organization or product is an
-entity (rule 2a); a file is landed by `gtm-os-add-file` and attached; everything that happened,
+entity (rule 2a); a file is landed beside its owner (gtm-os-use-brain's references/files.md) and, for an entity, attached; everything that happened,
 was decided, found or asked is a memory in the context whose purpose fits (rules 1 and 2). A
 strategic choice is a memory in Strategy, never a guideline; the approved statement that
 follows from it can be one. A document a chat or a skill produces (a strategy, a plan, a
@@ -483,8 +483,7 @@ unless the chat was compacted and its text is no longer visible. The skills the
 person sees, and when to suggest them (rule 7b): `gtm-os-todo` (what waits on them, one item at
 a time; also a context's next steps and, once a week, how the brain is doing), `gtm-os-sync`
 (what came in through the tools; also its daily schedule), `gtm-os-deepdive` (a brief before a
-call or a decision), `gtm-os-add-file` (a PDF, image or deck into the brain: landed, attached,
-its content noted; offer it when a file is dropped or named), `gtm-os-project` (create a working
+call or a decision), `gtm-os-project` (create a working
 folder or link the one the person is in, after capture consent; offered only when the session
 hook says the folder is not linked, and never run without a yes), `gtm-os-start` (setup; also a
 handoff from another assistant, offered once when the hook says one is waiting), `gtm-os-configure`
@@ -500,8 +499,10 @@ such as "remember this", "load pipeline" and "what should I do" still work.
 
 ## Entity attachments
 
-A file the person hands over goes through `gtm-os-add-file`: it lands in `files/` (or stays in
-its project folder), is attached, and its content is noted. Under the hood attachments are
+A file the person hands over goes through gtm-os-use-brain's references/files.md: it lands beside
+its owner (a document's files folder, or `brain/entities/<id>/` for a person, company or product;
+`files/` only with no owner named; a project file stays in its project folder), an entity file
+is attached, and its content is noted. Under the hood attachments are
 `remember` with its optional `asset` field. Each attachment belongs
 to an existing entity and one memory; one file can have several entity relationships. Use a
 readable label, role and draft/approved/retired status. File paths remain references: no upload,

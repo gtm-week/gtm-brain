@@ -712,14 +712,17 @@ test("sync and resolution end without a next step, a reminder or a to-do; the br
   assert.ok(existsSync(`${P}/skills/gtm-os-todo/SKILL.md`), "the to-do skill stays, on request");
 });
 
-test("adding a file is one obvious pathway: a skill, listed and offered, that lands, attaches and notes (ALL-205)", () => {
-  const skill = readFileSync(`${P}/skills/gtm-os-add-file/SKILL.md`, "utf8");
-  assert.match(skill, /^name: gtm-os-add-file$/m); assert.match(skill, /add-file\.mjs/); assert.match(skill, /remember` with `asset`/); assert.match(skill, /kind: "file"/);
-  assert.match(skill, /never what should happen next/, "learning from a file follows the no to-do rule");
-  assert.match(readFileSync(`${P}/skills/gtm-os-add-file/agents/openai.yaml`, "utf8"), /"GTM OS: Add a file"/);
-  assert.match(readFileSync(join(P, "..", "..", "COMMANDS.md"), "utf8"), /^\| `gtm-os-add-file` \| GTM OS: Add a file \|/m);
+test("adding a file is one obvious pathway: everyday work through use-brain's files reference, which lands beside the owner, attaches and notes (ALL-205)", () => {
+  assert.ok(!existsSync(`${P}/skills/gtm-os-add-file/SKILL.md`), "add-file is no longer a listed skill; its script path stays");
+  assert.ok(existsSync(`${P}/skills/gtm-os-add-file/add-file.mjs`));
+  const files = readFileSync(`${P}/skills/gtm-os-use-brain/references/files.md`, "utf8");
+  assert.match(files, /add-file\.mjs/); assert.match(files, /--document <ref> \| --entity/); assert.match(files, /remember` with `asset`/); assert.match(files, /kind: "file"/);
+  assert.match(files, /never what should happen next/, "learning from a file follows the no to-do rule");
+  assert.match(readFileSync(`${P}/skills/gtm-os-use-brain/SKILL.md`, "utf8"), /\[files\]\(references\/files\.md\)/);
+  assert.match(readFileSync(`${P}/skills/gtm-os-document/agents/openai.yaml`, "utf8"), /"GTM OS: Documents"/);
+  assert.match(readFileSync(join(P, "..", "..", "COMMANDS.md"), "utf8"), /^\| `gtm-os-document` \| GTM OS: Documents \|/m);
   const template = readFileSync(`${P}/templates/AGENTS.md`, "utf8");
-  assert.match(template, /`gtm-os-add-file` \(a PDF, image or deck into the brain/); assert.match(template, /goes through `gtm-os-add-file`/);
+  assert.match(template, /goes through gtm-os-use-brain's references\/files\.md/); assert.doesNotMatch(template, /gtm-os-add-file/);
 });
 
 test("a chat never compiles: the procedure queues the background worker, and the template and tables say so (ALL-204 step 1)", () => {
