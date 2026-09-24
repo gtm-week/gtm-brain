@@ -61,9 +61,9 @@ const TOOLS = [
     async call(args, requestId) { return text(JSON.stringify(await questions.ask(args, requestId))); } })),
   { name: "update_plugin", title: "Updating GTM OS", readOnly: false, noBrain: true, openWorld: true,
     description: "Check the installed GTM OS plugin (mode check, no remote fetch), or update it from its configured marketplace (mode update, only when the person requests an update). Preserves the repository and branch; local installs refresh from their checkout. Requires an app restart afterward. Does not edit a company brain.",
-    inputSchema: { type: "object", properties: { mode: str("check | update", { enum: ["check", "update"] }) }, required: ["mode"], additionalProperties: false },
-    call: ({ mode }) => ["check", "update"].includes(mode)
-      ? run(P, "gtm-os-update-plugin/update.mjs", [`--${mode}`], { timeout: 300000 }).then(result)
+    inputSchema: { type: "object", properties: { mode: str("check | update", { enum: ["check", "update"] }), brain: str("update: the brain folder this chat is in; its rules are refreshed by the new version right after the install") }, required: ["mode"], additionalProperties: false },
+    call: ({ mode, brain }) => ["check", "update"].includes(mode)
+      ? run(P, "gtm-os-update-plugin/update.mjs", [`--${mode}`, ...(mode === "update" && brain ? ["--brain", String(brain)] : [])], { timeout: 300000 }).then(result)
       : text("mode must be check or update", true) },
   { name: "where_we_are", title: "Checking where we are", readOnly: true,
     description: "Locate contexts, loaded contexts and tool status before answering where things stand or what is new. Reports live onboarding state: only an active pending request has a next step. Completed onboarding, missing historical markers and plugin updates do not start onboarding. This state overrides stale summary reminders. This is an orientation map, not a business overview: read supporting memories with query, including relevant unloaded contexts for a company-wide request. Give a concise synthesis of concrete developments and blockers, with a supporting source citation beside each material claim. Counts and summary freshness alone do not establish business status.",

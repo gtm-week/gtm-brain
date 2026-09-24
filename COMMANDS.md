@@ -428,7 +428,11 @@ the plugin source checkout to update that bundle from upstream and test it throu
 This source refresh changes `plugins/gtm-os/vendor/allethic/`; installation is a separate
 step of the same workflow when requested.
 
-Tool: `update_plugin` (`mode: check | update`). Writes: Codex's plugin installation and
+An update asked for in a brain refreshes that brain's rules in the same step (`brain`): the newly
+installed version's upgrader runs right after the verified install and prints its report, so
+`update GTM OS` alone is enough there. Other brains are offered "refresh the rules" when next opened.
+
+Tool: `update_plugin` (`mode: check | update`, `brain` optional). Writes: Codex's plugin installation and
 marketplace cache when updating. No brain files.
 `node $PLUGIN_ROOT/scripts/gtm-os-update-plugin/update.mjs --check`, `... --update`; `check-version.mjs <root>` asks the source whether a newer version exists (the hook runs it daily in the background; the dashboard and the advisor read `work/plugin-version.json`)
 

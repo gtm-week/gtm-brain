@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Refresh the installed plugin only. No brain files or brain commits are involved.
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { homedir } from "node:os";
 import { hookTrust, trustSummary } from "../../hooks/trust-hooks.mjs";
@@ -10,8 +11,11 @@ import { sourceVersion } from "../../lib/plugin-source.mjs";
 const args = process.argv.slice(2);
 if (args[0] && !args[0].startsWith("--")) args.shift(); // MCP runner supplies its cwd.
 const mode = args.shift() || "--check";
+// --brain <path>: after a verified update, refresh that brain's rules with the newly installed upgrader
+let brainArg = null;
+if (args[0] === "--brain" && args[1]) { brainArg = resolve(args[1]); args.splice(0, 2); }
 if (!["--check", "--update"].includes(mode) || args.length) {
-  console.error("usage: update.mjs [folder] --check|--update");
+  console.error("usage: update.mjs [folder] --check|--update [--brain <path>]");
   process.exit(1);
 }
 let stage = "checking the configured marketplace";
@@ -90,6 +94,17 @@ try {
     console.log(`GTM OS refreshed: ${before?.version || "missing"} -> ${after.version || "unknown"}.`);
     console.log(`Connector: GTM OS ${runtime.version} starts and lists ${runtime.tools} tools.`);
     await safety(true);
+    // One step for the person: the brain they updated from gets the new rules and migrations at once, run by the
+    // version just installed (the old one does not know them). Other brains get the one-line offer when opened.
+    if (brainArg) {
+      if (!existsSync(join(brainArg, "brain", "admin.md"))) console.log(`${brainArg} is not a brain, rules not refreshed.`);
+      else {
+        console.log("Refreshing this brain's rules with the new version:");
+        const up = spawnSync("bash", [join(cached(after.version), "scripts/gtm-os-upgrade/upgrade.sh"), brainArg], { cwd: brainArg, encoding: "utf8", timeout: 120000 });
+        process.stdout.write(up.stdout || "");
+        if (up.status !== 0) console.log(`The rules were not refreshed (${(up.stderr || "").trim().split("\n")[0] || `exit ${up.status}`}). Say: refresh the rules.`);
+      }
+    }
     console.log("Quit and reopen the Codex app, then start a new chat in the same project or brain folder to load the refreshed plugin. Brain files were not changed; continue your work without running setup again.");
   }
 } catch (error) {

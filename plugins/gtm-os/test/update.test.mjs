@@ -2,7 +2,7 @@ process.env.GTM_OS_NO_WATCH = "1";
 process.env.GTM_OS_NO_COMPILE = "1"; // Model runs are opt-in through test doubles.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -25,6 +25,9 @@ function run(t, mode, config = {}) {
     const tools = ["update_plugin", "upgrade_brain", "check_environment", "setup_brain", "remember", "query"];
     if (fault === "catalog") tools.pop();
     if (fault === "missing") return;
+    // the release's own brain upgrader: records which version ran it and on which folder
+    mkdirSync(join(folder, "scripts/gtm-os-upgrade"), { recursive: true });
+    writeFileSync(join(folder, "scripts/gtm-os-upgrade/upgrade.sh"), `#!/usr/bin/env bash\necho "upgrade report: rules from ${version}"\nprintf '%s' "${version}" > "$1/work-upgraded-by"\n`);
     writeFileSync(join(folder, "server/server.mjs"), `
       if (${JSON.stringify(fault)} === "crash") { console.error("private connector stderr"); process.exit(1); }
       process.stdin.resume(); process.stdin.on("end", () => {
@@ -85,7 +88,7 @@ else if (command === "plugin add gtm-os@gtm-os") {
   const again = (nextMode, nextConfig = {}) => {
     writeFileSync(log, "");
     release(join(market, "plugins/gtm-os"), nextConfig.candidate || "0.4.0", nextConfig.candidateFault);
-    const result = spawnSync(process.execPath, [script, nextMode], { cwd: nextConfig.fromInstalled ? cache("0.3.0") : root, encoding: "utf8",
+    const result = spawnSync(process.execPath, [script, nextMode, ...(nextConfig.args || [])], { cwd: nextConfig.fromInstalled ? cache("0.3.0") : root, encoding: "utf8",
       env: { ...process.env, PATH: `${root}:${process.env.PATH}`, CODEX_HOME: home, UPDATE_TEST_MARKET: market, UPDATE_TEST_LOG: log, UPDATE_TEST_CONFIG: JSON.stringify(nextConfig) } });
     assert.deepEqual(readFileSync(join(brain, "admin.md")), originalBrain);
     assert.equal(readFileSync(join(home, "preferences.json"), "utf8"), '{"brains":[]}');
@@ -138,6 +141,20 @@ test("a Git update stops when Codex's copy of the marketplace is behind GitHub, 
   assert.match(r.stderr, /gh auth login/); assert.match(r.stderr, /gh auth setup-git/);
   assert.ok(!r.calls.some(c => c[1] === "add"), "nothing is installed from a stale copy");
   assert.match(r.stdout, /Source: Git repository/);
+});
+
+test("an update from a brain refreshes that brain's rules with the new version's upgrader; without one, no brain is touched", t => {
+  const plain = run(t, "--update");
+  assert.equal(plain.status, 0, plain.stderr);
+  assert.ok(!existsSync(join(plain.root, "work-upgraded-by")), "no --brain, no brain refresh");
+  const withBrain = plain.again("--update", { args: ["--brain", plain.root] });
+  assert.equal(withBrain.status, 0, withBrain.stderr);
+  assert.match(withBrain.stdout, /Refreshing this brain's rules/);
+  assert.match(withBrain.stdout, /upgrade report: rules from 0\.4\.0/, "the installed version's upgrader ran, not the old one");
+  assert.equal(readFileSync(join(plain.root, "work-upgraded-by"), "utf8"), "0.4.0");
+  assert.ok(withBrain.stdout.indexOf("Refreshing") < withBrain.stdout.indexOf("Quit and reopen"), "the restart line stays last");
+  const notABrain = plain.again("--update", { args: ["--brain", join(plain.root, "nope")] });
+  assert.equal(notABrain.status, 0, notABrain.stderr); assert.match(notABrain.stdout, /not a brain, rules not refreshed/);
 });
 
 test("local installs refresh from the checkout without a Git fetch", t => {

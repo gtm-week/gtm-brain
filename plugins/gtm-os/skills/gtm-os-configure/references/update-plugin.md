@@ -21,8 +21,13 @@ plugin update does not independently track Allethic's main branch.
 
 For "upgrade the brain", "refresh the rules", or "update AGENTS.md", read
 [brain refresh](upgrade.md) and use `upgrade_brain`. This does not update the
-plugin installation. If the person requested both, update the plugin first, then refresh
-the brain after restarting the app with the new plugin.
+plugin installation.
+
+An update run from a brain refreshes that brain too: call `update_plugin` with `mode: update`
+and `brain` set to the brain folder of this chat. After a verified install, the new version's
+upgrader refreshes its rules and migrations and prints its report; pass the report on in a few
+lines (what moved, what was added, what stays), then the restart line. Without a brain in this
+chat, omit `brain`; other brains get a one-line offer to refresh their rules when next opened.
 
 ## Check or update
 
