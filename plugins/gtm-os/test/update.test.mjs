@@ -68,7 +68,7 @@ if (command === config.fail) { console.error("private credential in stderr"); pr
 const statePath = join(process.env.CODEX_HOME, "installation.json");
 const state = JSON.parse(readFileSync(statePath, "utf8"));
 if (command === "plugin marketplace list --json") console.log(JSON.stringify({ marketplaces:
-  config.missing ? [] : [{ name: "gtm-os", root: process.env.UPDATE_TEST_MARKET, marketplaceSource: { sourceType: config.source || "git", source: process.env.UPDATE_TEST_MARKET, ref: "release" } }] }));
+  config.missing ? [] : [{ name: "gtm-os", root: process.env.UPDATE_TEST_MARKET, marketplaceSource: { sourceType: config.source || "git", source: config.sourceRepo || process.env.UPDATE_TEST_MARKET, ref: "release" } }] }));
 else if (command === "plugin list --marketplace gtm-os --json") console.log(JSON.stringify({ installed:
   !state.installed ? [] : [{ pluginId: "gtm-os@gtm-os", ...state, enabled: !config.disabled && !(state.added && config.badVerify) }] }));
 else if (command === "plugin add gtm-os@gtm-os") {
@@ -125,6 +125,21 @@ test("Git update refreshes only GTM OS, installs, then verifies", t => {
   assert.match(r.stdout, /0.3.0 -> 0.4.0/);
   assert.match(r.stdout, /Quit and reopen/);
 });
+test("a Git update stops when Codex's copy of the marketplace is behind GitHub, and says how to sign git in", t => {
+  // "GitHub" holds 0.5.0; Codex's marketplace snapshot stayed at 0.4.0 because git had no credentials to fetch
+  const repo = mkdtempSync(join(tmpdir(), "gtm-os-remote-")); t.after(() => rmSync(repo, { recursive: true, force: true }));
+  mkdirSync(join(repo, "plugins/gtm-os/.codex-plugin"), { recursive: true });
+  writeFileSync(join(repo, "plugins/gtm-os/.codex-plugin/plugin.json"), JSON.stringify({ name: "gtm-os", version: "0.5.0" }));
+  const git = (...a) => { const r = spawnSync("git", ["-C", repo, "-c", "user.name=t", "-c", "user.email=t@t.t", ...a], { encoding: "utf8" }); assert.equal(r.status, 0, r.stderr); };
+  git("init", "-q", "-b", "release"); git("add", "-A"); git("commit", "-qm", "0.5.0");
+  const r = run(t, "--update", { sourceRepo: `file://${repo}` });
+  assert.equal(r.status, 1, r.stdout + r.stderr);
+  assert.match(r.stderr, /Codex's copy of GTM OS is 0\.4\.0, GitHub has 0\.5\.0/);
+  assert.match(r.stderr, /gh auth login/); assert.match(r.stderr, /gh auth setup-git/);
+  assert.ok(!r.calls.some(c => c[1] === "add"), "nothing is installed from a stale copy");
+  assert.match(r.stdout, /Source: Git repository/);
+});
+
 test("local installs refresh from the checkout without a Git fetch", t => {
   const r = run(t, "--update", { source: "local" });
   assert.equal(r.status, 0, r.stderr);

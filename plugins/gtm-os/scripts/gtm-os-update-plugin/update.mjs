@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import { homedir } from "node:os";
 import { hookTrust, trustSummary } from "../../hooks/trust-hooks.mjs";
 import { pluginVersion, olderVersion, verifyRuntime } from "../../lib/plugin-runtime.mjs";
+import { sourceVersion } from "../../lib/plugin-source.mjs";
 
 const args = process.argv.slice(2);
 if (args[0] && !args[0].startsWith("--")) args.shift(); // MCP runner supplies its cwd.
@@ -69,6 +70,14 @@ try {
     const candidateRoot = join(market.root, "plugins/gtm-os");
     const candidate = pluginVersion(candidateRoot);
     if (olderVersion(candidate, before?.version)) throw new Error(`The source version ${candidate} is older than installed ${before.version}. Update stopped; check the configured source.`);
+    // Codex's marketplace copy is a snapshot: when git could not fetch (no GitHub sign-in for git,
+    // offline), "upgrade" leaves it where it was and the copy is behind the source. Compare before
+    // installing an old version and calling it an update.
+    if (source.sourceType === "git") {
+      const remote = sourceVersion({ type: "git", source: source.source || source.url || source.repo, ref: source.ref || source.branch || null, codexHome });
+      if (remote.version && olderVersion(candidate, remote.version)) throw new Error(`Codex's copy of GTM OS is ${candidate}, GitHub has ${remote.version}: Codex could not fetch the newer one. Usually git has no GitHub sign-in (the GitHub connector in Codex is a different login): run \`gh auth login\`, then \`gh auth setup-git\`, then say: update GTM OS.`);
+      console.log(remote.version ? `Source version: ${remote.version} (Codex's copy: ${candidate}).` : `Source not reachable to compare (${remote.error}); installing Codex's copy ${candidate}.`);
+    }
     verifyRuntime(candidateRoot, candidate);
     stage = "installing the refreshed plugin";
     installationAttempted = true;

@@ -400,6 +400,11 @@ from its configured repository and branch. A local development install refreshes
 checkout. It checks that the candidate connector starts before installation and verifies
 the installed copy afterward. After a verified update, quit and reopen Codex, then start a
 new chat in the same folder. Existing brains resume without setup.
+Codex's marketplace copy is a snapshot; when git cannot fetch (no GitHub sign-in for git,
+offline), "upgrade" leaves it where it was. Before installing, the update fetches the source's
+own `plugin.json` and stops when Codex's copy is behind it: "Codex's copy of GTM OS is X,
+GitHub has Y", with the fix (`gh auth login`, then `gh auth setup-git`, then update again).
+The GitHub connector inside Codex is a different login and does not help git.
 Check mode does not fetch the remote or establish whether an update is available.
 For missing tools or a missing plugin version, ask "repair the GTM OS update". Codex checks
 the installed files before choosing between a source refresh and an app restart.

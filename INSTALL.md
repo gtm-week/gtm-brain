@@ -151,7 +151,11 @@ Check each step before the next. Report progress as you go, one line per step.
 1. **Prerequisites.** `codex --version` must be 0.149 or newer, `node --version` 22 or
    newer, and git present. Install what is missing (Homebrew on macOS). If Codex itself
    is missing or not signed in, stop and tell the person: installing and signing into
-   Codex is theirs to do.
+   Codex is theirs to do. The plugin repository is private and Codex fetches it with git,
+   which has its own GitHub sign-in (the GitHub connector inside Codex is a different login
+   and does not help git): if `codex plugin marketplace add` answers "Missing or invalid
+   credentials", the person runs `gh auth login` then `gh auth setup-git` once, in a
+   terminal, and you retry.
 2. **Install the plugin.** If you are reading this file from GitHub, install from there:
 
    ```bash

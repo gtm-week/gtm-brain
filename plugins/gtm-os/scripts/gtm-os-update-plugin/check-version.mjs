@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { sourceVersion } from "../../lib/plugin-source.mjs";
 const root = process.argv[2] && !process.argv[2].startsWith("--") ? process.argv[2] : ".";
 const P = fileURLToPath(new URL("../..", import.meta.url)).replace(/[\\/]$/, "");
 const codexHome = process.env.CODEX_HOME || join(homedir(), ".codex");
@@ -37,15 +38,9 @@ try {
     if (!src) throw new Error("the marketplace source has no location");
   }
   state.source = type; state.ref = ref;
-  if (type === "local") state.latest = version(readFileSync(join(src, "plugins", "gtm-os", ".codex-plugin", "plugin.json"), "utf8"));
-  else {
-    const url = /^[\w.-]+\/[\w.-]+$/.test(src) ? `https://github.com/${src}` : src;   // owner/repo is GitHub
-    const cache = join(codexHome, "gtm-os", "source.git"); mkdirSync(cache, { recursive: true });
-    if (!existsSync(join(cache, "HEAD"))) run("git", ["init", "-q", "--bare", cache]);
-    run("git", ["-C", cache, "fetch", "-q", "--depth", "1", url, ref || "HEAD"], 20000);
-    state.latest = version(run("git", ["-C", cache, "cat-file", "-p", "FETCH_HEAD:plugins/gtm-os/.codex-plugin/plugin.json"]));
-  }
-  if (!state.latest) throw new Error("the source has no readable plugin.json");
+  const remote = sourceVersion({ type, source: src, ref, codexHome });   // lib/plugin-source.mjs: the same fetch update.mjs relies on
+  if (!remote.version) throw new Error(remote.error);
+  state.latest = remote.version;
   state.status = newer(state.latest, state.installed) ? "newer" : "current";
 } catch (e) {
   state.status = "unknown"; state.note = String(e && e.message || e).split("\n")[0].slice(0, 160);

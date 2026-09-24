@@ -20,9 +20,13 @@ grows with the steps: each section is a step you can run and check.
 
 ## 1. Install the plugin
 
-The repo is private: you need to be a collaborator, and git needs your GitHub credentials
-(`gh auth login` then `gh auth setup-git`, once). Without them the marketplace add fails with
-"Missing or invalid credentials".
+The repo is private: you need to be a collaborator, and **git itself** needs your GitHub
+credentials (`gh auth login` then `gh auth setup-git`, once). Codex fetches the marketplace
+with git, and git does not use the GitHub connector you signed into inside Codex: that is a
+different login, and "GitHub connector authenticated" says nothing about git. Without git's
+own sign-in the marketplace add fails with "Missing or invalid credentials", and later updates
+quietly keep Codex's old copy; `update GTM OS` now notices that ("Codex's copy of GTM OS is X,
+GitHub has Y") and tells you to run the two commands.
 
 ```bash
 gh auth login && gh auth setup-git                                     # once; brew install gh if missing
