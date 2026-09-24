@@ -184,3 +184,22 @@ test("upgrade moves brain/guidelines/*.md to root documents, keeps a slug the ro
   assert.match(readFileSync(join(root, "README.md"), "utf8"), /^# Upgrade Co brain/m);
   assert.equal(run().stdout.includes("moved"), false);
 });
+
+test("upgrade adds the strategy document a pre-0.27 brain lacks and ends with a report of what it did and what stays", t => {
+  const { root, run } = fixture(t);
+  rmSync(join(root, "strategy.md"), { force: true });
+  mkdirSync(join(root, "brain", "guidelines"), { recursive: true });
+  writeFileSync(join(root, "brain", "guidelines", "voice.md"), "---\ntitle: Voice\napplies_to: [copy]\nstatus: draft\n---\n# Voice\n\nShort.\n");
+  mkdirSync(join(root, "files", "2026-08"), { recursive: true }); writeFileSync(join(root, "files", "2026-08", "deck.pdf"), "pdf"); writeFileSync(join(root, "files", "2026-08", "logo.svg"), "<svg/>");
+  mkdirSync(join(root, "company")); mkdirSync(join(root, "assets"));
+  const out = run().stdout;
+  assert.match(out, /added strategy\.md/);
+  const strategy = readFileSync(join(root, "strategy.md"), "utf8");
+  assert.match(strategy, /^kind: document$/m); assert.match(strategy, /^title: Strategy$/m); assert.match(strategy, /Upgrade Co/); assert.match(strategy, /run the strategic intake/);
+  assert.match(out, /upgrade report:/);
+  assert.match(out, /moved 1 guideline to the root as a document/);
+  assert.match(out, /2 files in files\/ from before 0\.27 stay where they are; their links keep working/);
+  assert.match(out, /folders at the top GTM OS does not use: assets\/, company\//);
+  const again = run().stdout;
+  assert.doesNotMatch(again, /added strategy\.md/); assert.doesNotMatch(again, /moved 1 guideline/);
+});

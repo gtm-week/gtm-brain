@@ -59,11 +59,14 @@ if (opt.remove) {
   finish(id, "removed", `Removed skill ${id}`); process.exit(0);
 }
 if (opt.list) {
-  const yours = us.listUserSkills(root).map(s => ({ ...s, projects: projectsSeeing(s.id) })), plugin = us.shippedSkillIds();
-  if (opt.json) { console.log(JSON.stringify({ yours, plugin }, null, 1)); process.exit(0); }
-  if (!yours.length) console.log("no skills of your own yet. Say: make this a skill, or: add a skill.");
-  for (const s of yours) console.log(`• /${s.id} · ${s.title} · ${s.description}${s.by ? ` · by ${s.by}` : ""}${s.projects.length ? ` · also in ${s.projects.join(", ")}` : ""}`);
-  console.log(`shipped with GTM OS: ${plugin.map(id => "/" + id).join(", ")}`);
+  // Three kinds, three groups: what the plugin ships, what this brain holds, what Codex keeps for this person alone.
+  const yours = us.listUserSkills(root).map(s => ({ ...s, projects: projectsSeeing(s.id) })), plugin = us.shippedSkillIds(), personal = us.personalSkillIds();
+  if (opt.json) { console.log(JSON.stringify({ yours, plugin, personal }, null, 1)); process.exit(0); }
+  console.log(`Shipped with GTM OS (updated with the plugin, not yours to edit): ${plugin.map(id => "/" + id).join(", ")}`);
+  console.log(`Yours, in this brain (.agents/skills; they travel with the brain and teammates get them):`);
+  if (!yours.length) console.log("  none yet. Say: make this a skill, or: add a skill.");
+  for (const s of yours) console.log(`  • /${s.id} · ${s.title} · ${s.description}${s.by ? ` · by ${s.by}` : ""}${s.projects.length ? ` · also in ${s.projects.join(", ")}` : ""}`);
+  console.log(`Codex's own, on this machine (~/.agents/skills; yours alone, GTM OS never sees or updates them): ${personal.length ? personal.join(", ") : "none"}`);
   process.exit(0);
 }
 if (opt.install) {

@@ -96,7 +96,17 @@ test("list shows the brain's skills and the shipped ones; remove deletes the fol
   const rows = JSON.parse(skill(root, "--list", "--json"));
   assert.deepEqual(rows.yours.map(s => s.id), ["gtm-os-weekly-update"]); assert.ok(rows.plugin.includes("gtm-os-todo"));
   assert.deepEqual(rows.yours[0].projects, ["website"]);
-  assert.match(skill(root, "--list"), /gtm-os-weekly-update/);
+  // three kinds, said as three groups: shipped with the plugin, yours in this brain, Codex's own on this machine
+  const home = mkdtempSync(join(tmpdir(), "gtm-os-skills-home-")); mkdirSync(join(home, ".agents", "skills", "analyze-account-signals"), { recursive: true });
+  writeFileSync(join(home, ".agents", "skills", "analyze-account-signals", "SKILL.md"), "---\nname: analyze-account-signals\ndescription: Personal.\n---\n");
+  const listed = execFileSync(process.execPath, [`${P}/scripts/gtm-os-skills/skill.mjs`, ".", "--list"], { cwd: root, encoding: "utf8", env: { ...env, HOME: home } });
+  const [shipped, yours, personal] = ["Shipped with GTM OS", "Yours, in this brain", "Codex's own, on this machine"].map(h => listed.indexOf(h));
+  assert.ok(shipped >= 0 && yours > shipped && personal > yours, `three groups in order:\n${listed}`);
+  assert.match(listed.slice(shipped, yours), /updated with the plugin/); assert.match(listed.slice(shipped, yours), /\/gtm-os-todo/);
+  assert.match(listed.slice(yours, personal), /travel with the brain/); assert.match(listed.slice(yours, personal), /gtm-os-weekly-update/);
+  assert.match(listed.slice(personal), /GTM OS never sees or updates them/); assert.match(listed.slice(personal), /analyze-account-signals/);
+  const withPersonal = JSON.parse(execFileSync(process.execPath, [`${P}/scripts/gtm-os-skills/skill.mjs`, ".", "--list", "--json"], { cwd: root, encoding: "utf8", env: { ...env, HOME: home } }));
+  assert.deepEqual(withPersonal.personal, ["analyze-account-signals"]);
   const out = skill(root, "--remove", "gtm-os-weekly-update");
   assert.match(out, /removed gtm-os-weekly-update/);
   assert.equal(existsSync(join(root, ".agents/skills/gtm-os-weekly-update")), false);

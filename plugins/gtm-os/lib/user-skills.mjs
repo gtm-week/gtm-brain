@@ -5,6 +5,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, lstatSync, readlinkSync, symlinkSync, unlinkSync, realpathSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { homedir } from "node:os";
 import { handleFor, readProjects } from "./brain.mjs";
 
 export const SKILLS_DIR = ".agents/skills";
@@ -53,6 +54,13 @@ export function renderSkillMd({ id, title, description, body, by, version }) {
 }
 export function renderOpenaiYaml({ title, description }) {
   return `interface:\n  display_name: ${quote("GTM OS: " + title)}\n  short_description: ${quote(description.trim().slice(0, 80))}\n`;
+}
+
+/* Codex's own skills on this machine (~/.agents/skills): the person's alone, never seen or updated by GTM OS.
+   Listed so "list my skills" can say which kind a skill is; nothing here reads or writes them. */
+export function personalSkillIds(home = process.env.HOME || homedir()) {
+  const dir = join(home, ".agents", "skills"); if (!existsSync(dir)) return [];
+  try { return readdirSync(dir).filter(id => !id.startsWith(".") && existsSync(join(dir, id, "SKILL.md"))).sort(); } catch { return []; }
 }
 
 export function listUserSkills(root) {

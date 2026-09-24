@@ -123,6 +123,8 @@ fi
 # The documents (root Markdown with kind: document): what the work must follow, named every chat so rule 11
 # has something to point at; absolute paths in a linked project, where the landing pages get built.
 node -e 'const d=await import(process.argv[1]);console.log(d.documentsLine(process.argv[2],{absolute:!!process.argv[3]}))' "$P/lib/documents.mjs" "$root" "$project" 2>/dev/null || true
+# Folders at the top GTM OS does not use (a migrated brain's company/, assets/): named once per set, never touched.
+[ -z "$project" ] && { node -e 'const d=await import(process.argv[1]);const h=d.strayFoldersHint(process.argv[2]);if(h)console.log(h)' "$P/lib/documents.mjs" "$root" 2>/dev/null || true; }
 # Rules from an older GTM OS keep naming tools and habits the plugin has moved on from (ALL-204).
 rules="$(node -e 'const u=await import(process.argv[1]);console.log(u.rulesState(process.argv[2],process.argv[3]))' "$P/lib/upgrade-files.mjs" "$root" "$P/templates" 2>/dev/null)"
 [ "$rules" = legacy ] && echo "GTM OS: this brain's rules (AGENTS.md) are from an older GTM OS. Offer once, in one line, to refresh the rules (upgrade_brain, gtm-os-configure); it backs the old file up and keeps local edits."

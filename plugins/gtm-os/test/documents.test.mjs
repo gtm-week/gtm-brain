@@ -218,6 +218,21 @@ test("review: old guidelines are named until the upgrade moves them; a document 
   assert.ok(!existsSync(join(root, "admin-copy.md")));
 });
 
+test("folders at the top GTM OS does not use are named once at session start, again only when the set changes; document homes and projects are not stray", () => {
+  const root = brain();
+  assert.doesNotMatch(hook(root), /does not use/, "a fresh brain has nothing stray");
+  mkdirSync(join(root, "company", "strategy"), { recursive: true }); writeFileSync(join(root, "company", "strategy", "old.md"), "# Old\n");
+  mkdirSync(join(root, "assets")); writeFileSync(join(root, "assets", "logo.png"), "png");
+  document(root, "--create", "--title", "Voice", "--applies-to", "copy", "--body", "Short.", "--folder", "brand");   // a document home
+  const hint = hook(root).split("\n").find(l => l.startsWith("Folders at the top GTM OS does not use")) || "";
+  assert.match(hint, /^Folders at the top GTM OS does not use: assets\/, company\/\./);
+  assert.match(hint, /adopt the documents in company\//); assert.doesNotMatch(hint, /brand\//, "a document home is not stray");
+  assert.doesNotMatch(hook(root), /does not use/, "said once");
+  mkdirSync(join(root, "output"));
+  assert.match(hook(root), /assets\/, company\/, output\/\./, "a new stray folder brings the line back");
+  assert.deepEqual(docs.strayFolders(root), ["assets", "company", "output"]);
+});
+
 test("--files lists what a document owns; the old guideline.mjs path still runs", () => {
   const root = brain();
   document(root, "--create", "--title", "Design system", "--applies-to", "design", "--body", "Blue.", "--folder", "brand");

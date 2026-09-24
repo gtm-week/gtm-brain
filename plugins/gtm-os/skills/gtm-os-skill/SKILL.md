@@ -42,7 +42,11 @@ Follow [question handling](../gtm-os-start/references/questions.md) for native q
 
 ## List, remove, install, share
 
-- "list my skills": `skill` with `action: list`; one line per skill, then the shipped ones.
+- "list my skills": `skill` with `action: list`. The answer has three groups, keep them and
+  their one-line meaning: shipped with GTM OS (come with the plugin, not theirs to edit);
+  yours, in this brain (travel with the brain, teammates get them); Codex's own, on this
+  machine (`~/.agents/skills`, theirs alone, GTM OS never sees or updates them). When asked
+  to make a skill inside a brain, say in one line that it is the second kind and why.
 - "remove the skill X": confirm with one `question` ("Remove /gtm-os-x? Its folder goes; notes
   stay."), then `action: remove` with `id`.
 - "install ... from GitHub": read [install and share](references/install-share.md).

@@ -139,6 +139,17 @@ to begin. All decisions and changes happen in the chat, never in the dashboard.
 When a newer GTM OS is out, the dashboard shows it under Admin and the chat mentions it
 once. Say **"update GTM OS"**, then start a new chat.
 
+## Three kinds of skills
+
+Type `/` in Codex and every skill looks the same. They are three kinds. **Shipped with GTM OS**
+(`/gtm-os-todo`, `/gtm-os-strategy`, ...): they come with the plugin, update with it, and are
+not yours to edit. **Yours, in this brain**: made with `/gtm-os-skill` or installed from
+GitHub; they live in the brain's `.agents/skills`, travel with the brain, and teammates get
+them. **Codex's own, on this machine**: made with Codex's `$skill-creator`; they live in
+`~/.agents/skills`, are yours alone, and GTM OS never sees or updates them. Say `list my
+skills` to see the three groups; when you ask for a skill inside a brain, Codex makes the
+second kind and says so.
+
 ## Put the brain on your GitHub
 
 Say **push this brain to my GitHub**. Codex creates a private repository named after your

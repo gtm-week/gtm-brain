@@ -140,6 +140,27 @@ export function savePaths(root) {
   return [...out];
 }
 
+/* Folders at the top GTM OS does not use: not the engine's, not a project's, not a document's home. A brain
+   migrated from an older layout brings company/, assets/, output/; nothing here touches them, the hint names them. */
+export function strayFolders(root) {
+  const skip = new Set([...SKIP_DIRS, ...projectDirs(root)]), homes = new Set(listDocuments(root).map(d => d.folder.split("/")[0]).filter(Boolean));
+  let entries; try { entries = readdirSync(root, { withFileTypes: true }); } catch { return []; }
+  return entries.filter(e => e.isDirectory() && !e.name.startsWith(".") && !skip.has(e.name) && !homes.has(e.name)).map(e => e.name).sort();
+}
+
+/* The session line for them, said once per set: the set is remembered in work/ and the line returns only when it changes. */
+export function strayFoldersHint(root) {
+  const stray = strayFolders(root), memo = join(root, "work", "stray-folders.json");
+  let seen = []; try { seen = JSON.parse(readFileSync(memo, "utf8")).folders || []; } catch {}
+  if (JSON.stringify(stray) === JSON.stringify(seen)) return "";
+  try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(memo, JSON.stringify({ folders: stray, at: new Date().toISOString() })); } catch {}
+  if (!stray.length) return "";
+  // the adopt example names a folder that actually holds Markdown, when one does
+  const holdsMarkdown = f => { try { return readdirSync(join(root, f), { recursive: true }).some(p => String(p).endsWith(".md")); } catch { return false; } };
+  const first = stray.find(holdsMarkdown) || stray[0];
+  return `Folders at the top GTM OS does not use: ${stray.map(f => `${f}/`).join(", ")}. Say it once, in one line, and do nothing to them: a Markdown in them can become a document where it lies (say: adopt the documents in ${first}/), files belong beside a document or a person, company or product (add this to ...), and the rest can go. Their content is the person's; never move or delete it unasked.`;
+}
+
 /* 0.27.0: brain/guidelines/<slug>.md becomes <slug>.md at the root, content kept, marker added. A root file
    with that name already there is the person's; the old guideline stays put and is reported. */
 export function migrateGuidelines(root) {
