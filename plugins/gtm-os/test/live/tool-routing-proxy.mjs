@@ -20,7 +20,7 @@ const root = realpathSync(brain);
 const contexts = () => new Set(listContexts(root).map(c => c.slug));
 const allowed = new Set(["memory_index", "check_environment", "list_projects", "update_entity", "merge_entities", "archive_entity", "undo_entity_merge", "meeting_overview", "render_dashboard", "open_dashboard", "entity_facts", "compile_entity", "customer_overview", "list_objects", "describe_object", "query", "remember", "recall", "load_context", "list_contexts", "who_is", "where_we_are", "onboarding_question",
   "compile_facts", "compile_apply", "new_context", "fork_context", "edit_context", "archive_context", "add_name", "interact", "propose_interaction",
-  "question", "configuration_question", "guideline", "skill"]);   // the everyday question form and the two document tools the skill cases exercise
+  "question", "configuration_question", "guideline", "document", "skill"]);   // the everyday question form and the two document tools the skill cases exercise
 if (meetingFixture === "projects") allowed.add("link_project");
 // a simulated connector, the way a real environment has Attio's own tools: the doing has a legitimate path
 const connector = { name: "attio_move_deal", description: "Attio (simulated): move a deal to a stage. Returns ok. No real CRM is touched.", inputSchema: { type: "object", properties: { deal: { type: "string" }, stage: { type: "string" } }, required: ["deal", "stage"], additionalProperties: false }, annotations: { title: "Attio (simulated)", readOnlyHint: false, destructiveHint: false, openWorldHint: false } };   // open-world tools need an approval the eval never gives

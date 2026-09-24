@@ -11,12 +11,12 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as lib from "../../lib/brain.mjs";
-import { listGuidelines, readGuideline } from "../../lib/guidelines.mjs";
+import { readDocument } from "../../lib/documents.mjs";
 import { listUserSkills } from "../../lib/user-skills.mjs";
 
 const asks = c => ["question", "configuration_question", "onboarding_question"].includes(c.tool);
 const unchanged = (root, { before, after }) => JSON.stringify(before) === JSON.stringify(after);
-const noWrites = calls => !calls.some(c => ["remember", "new_context", "fork_context", "archive_context", "edit_context", "compile_apply", "guideline", "skill", "update_entity", "merge_entities", "archive_entity"].includes(c.tool) && !(c.tool === "guideline" && ["list", "show"].includes(c.arguments?.action)) && !(c.tool === "skill" && c.arguments?.action === "list"));
+const noWrites = calls => !calls.some(c => ["remember", "new_context", "fork_context", "archive_context", "edit_context", "compile_apply", "guideline", "document", "skill", "update_entity", "merge_entities", "archive_entity"].includes(c.tool) && !(c.tool === "guideline" && ["list", "show"].includes(c.arguments?.action)) && !(c.tool === "skill" && c.arguments?.action === "list"));
 const status = calls => calls.some(c => c.tool === "query" && c.arguments?.object === "status");
 const firstIndex = (calls, pred) => calls.findIndex(pred);
 
@@ -38,21 +38,20 @@ export const skillCases = [
     expect: "One page on Bergstrom Home (organization, company, in offer): where it stands, a dated timeline of the three notes (Krzysztof Pawlak owns the rollout, the security review request, the proposal sent) with their sources, people on both sides, what is open, one suggested next step. A note's source (gmail:19fa01, the send action gmail:send:19fa02) may be cited as its evidence, and the notes' author is Marta Nowak, the brain's owner, so she may be named as the one who sent the proposal. Citing a note by its context and date, or by its file, is a citation of a note, not an invention. No tool is connected: live checks are marked unavailable, nothing is invented, nothing is written.",
   },
   {
-    judge: "advisory", name: "skill-guideline-create", workflow: "gtm-os-guideline", answer: "^Add it as approved",
-    prompt: "/gtm-os-guideline Add our tone of voice as a guideline. The rules: short sentences; no exclamation marks; name the customer's problem before our product. It applies to copy and outreach. I vouch for it, and there are no real samples to test against.",
+    judge: "advisory", name: "skill-document-create", workflow: "gtm-os-document", answer: "^Add it as approved",
+    prompt: "/gtm-os-document Add our tone of voice as a document. The rules: short sentences; no exclamation marks; name the customer's problem before our product. It applies to copy and outreach. I vouch for it, and there are no real samples to test against.",
     calls: calls => {
-      const create = firstIndex(calls, c => c.tool === "guideline" && c.arguments?.action === "create");
+      const create = firstIndex(calls, c => c.tool === "document" && c.arguments?.action === "create");
       const ask = firstIndex(calls, asks);
       return create >= 0 && ask >= 0 && ask < create && calls[create].arguments.status === "approved" && !calls.some(c => c.tool === "remember");
     },
     verify: root => {
-      const g = listGuidelines(root).find(g => g.slug === "tone-of-voice"); if (!g) return false;
-      const full = readGuideline(root, "tone-of-voice");
+      let full; try { full = readDocument(root, "tone-of-voice"); } catch { return false; } if (!full) return false;
       return full.status === "approved" && ["copy", "outreach"].every(k => full.applies_to.includes(k)) && /exclamation/i.test(full.body) && /problem/i.test(full.body);
     },
     responseCheck: text => /tone of voice/i.test(text) && /copy/i.test(text) && /outreach/i.test(text),
-    evidence: root => { const g = readGuideline(root, "tone-of-voice"); return g ? `GUIDELINE FILE brain/guidelines/tone-of-voice.md, written by the run through the guideline tool:\n${JSON.stringify({ title: g.title, applies_to: g.applies_to, status: g.status, by: g.by })}\n${g.body}` : "(no guideline file was written)"; },
-    expect: "The final message is one or two lines: the guideline Tone of voice now exists, approved, governing copy and outreach, and Codex reads it before that kind of work from now on, in the brain and in every linked project (that sentence is the skill's own closing line, not an invention). The draft and the confirmation question happened before this message: see the form exchange, whose first option was Add it as approved and which the person accepted. The guideline file listed under tool results is the evidence it was written. The blind test needs real samples and the person said there are none, so skipping it is correct whether or not the final message repeats that.",
+    evidence: root => { let d = null; try { d = readDocument(root, "tone-of-voice"); } catch {} return d ? `DOCUMENT FILE ${d.path}, written by the run through the document tool:\n${JSON.stringify({ title: d.title, applies_to: d.applies_to, status: d.status, by: d.by })}\n${d.body}` : "(no document file was written)"; },
+    expect: "The final message is one or two lines: the document Tone of voice now exists, approved, at the brain root or in a folder the person named, governing copy and outreach, and Codex reads it before that kind of work from now on, in the brain and in every linked project (that sentence is the skill's own closing line, not an invention). The draft and the confirmation question happened before this message: see the form exchange, whose first option was Add it as approved and which the person accepted. The document file listed under tool results is the evidence it was written. The blind test needs real samples and the person said there are none, so skipping it is correct whether or not the final message repeats that.",
   },
   {
     judge: "advisory", name: "skill-sync-nothing-connected", workflow: "gtm-os-sync", answer: "No|skip|later|not now",

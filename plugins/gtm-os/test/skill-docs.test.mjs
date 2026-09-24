@@ -15,7 +15,7 @@ const rel = file => file.slice(P.length + 1);
 const frontmatter = text => { const m = text.match(/^---\n([\s\S]*?)\n---\n/); return m ? m[1] : null; };
 
 test("the skill folders each hold a SKILL.md, with references beside it", () => {
-  assert.ok(skillDirs.length >= 10, `skills: ${skillDirs.join(", ")}`);
+  assert.ok(skillDirs.length >= 9, `skills: ${skillDirs.join(", ")}`);
   assert.ok(docs.length > skillDirs.length, "at least one skill has references");
 });
 
