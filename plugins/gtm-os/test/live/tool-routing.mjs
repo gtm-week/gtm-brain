@@ -14,6 +14,7 @@ import { attioWriteCases } from './attio-write-cases.mjs';
 import { attioMetrics } from './attio-write-fixture.mjs';
 import { judge } from "./judge.mjs";
 import { contextRoutingCases } from './context-routing-cases.mjs';
+import { skillCases } from './skill-cases.mjs';
 
 // GTM_OS_PLUGIN points the same cases at another build of the plugin: the baseline a before/after claim needs
 const plugin = process.env.GTM_OS_PLUGIN ? process.env.GTM_OS_PLUGIN.replace(/\/?$/, "/") : fileURLToPath(new URL("../../", import.meta.url));
@@ -22,7 +23,7 @@ mkdirSync(scratchBase, { recursive: true });
 const artifacts = mkdtempSync(join(scratchBase, "gtm-tool-routing-"));
 const fixtureProfile = join(artifacts, "fixture-profile");
 mkdirSync(fixtureProfile);
-const env = { ...process.env, CODEX_HOME: fixtureProfile, GTM_OS_EVAL_PROFILE: fixtureProfile, PLUGIN_ROOT: plugin, GTM_OS_NO_OPEN: "1", GTM_OS_NO_COMPILE: "1", GTM_OS_NO_COMMIT: "1" };
+const env = { ...process.env, CODEX_HOME: fixtureProfile, GTM_OS_EVAL_PROFILE: fixtureProfile, PLUGIN_ROOT: plugin, GTM_OS_NO_OPEN: "1", GTM_OS_NO_COMPILE: "1", GTM_OS_NO_COMMIT: "1", GTM_OS_NO_WATCH: "1" };   // no file watcher on a scratch brain
 const run = (root, operation, args) => execFileSync(process.execPath, [join(plugin, existsSync(join(plugin, "scripts", operation.split("/")[0])) ? "scripts" : "skills", operation), ".", ...args], { cwd: root, env, encoding: "utf8", timeout: 30000 });
 const readJSONL = path => existsSync(path) ? readFileSync(path, "utf8").split("\n").filter(Boolean).map(line => JSON.parse(line)) : [];
 const rows = (root, ctx = "offer") => lib.readMemories(root, ctx);
@@ -63,6 +64,7 @@ const cases = [
   ...contextRoutingCases,
   ...attioWriteCases,
   ...hubspotWriteCases,
+  ...skillCases,
   { name: 'dashboard-chrome', workflow: 'gtm-os-use-brain',
     prompt: 'Open the brain dashboard. It is configured to use a separate Chrome window.',
     prepare: root => { const path = join(root, 'brain', 'admin.md'); writeFileSync(path, readFileSync(path, 'utf8').replace('dashboard: always', 'dashboard: always\ndashboard_browser: chrome')); },
@@ -271,17 +273,17 @@ const cases = [
 /* the judge reads the final answer against the seeded notes and the state change */
 const channels = root => lib.listContexts(root).map(c => `${c.slug} [${c.status}] "${c.title}"${c.rule ? ` rule: ${String(c.rule).replace(/\s+/g, " ").slice(0, 120)}` : ""}${c.compiledAt ? ` summary at ${c.compiledAt.slice(0, 16)}` : ""}`).join("\n");
 async function judgeAnswer(scenario, { root, before, after, final, calls, channelsBefore, records }) {
-  const line = m => `${m.context} ${m.at.slice(0, 10)} [${m.kind}] ${m.content}${m.people?.length ? ` (people: ${m.people.join(", ")})` : ""}${m.tools?.length ? ` (tools: ${m.tools.join(", ")})` : ""}${m.actions?.length ? ` (actions: ${m.actions.map(a => `${a.tool}:${a.action}${a.ref ? ":" + a.ref : ""}`).join(", ")})` : ""}${m.tags?.length ? ` (tags: ${m.tags.join(", ")})` : ""}${m.supersedes ? ` (corrects ${m.supersedes})` : ""}`;
+  const line = m => `${m.context} ${m.at.slice(0, 10)} [${m.kind}] ${m.content}${m.people?.length ? ` (people: ${m.people.join(", ")})` : ""}${m.tools?.length ? ` (tools: ${m.tools.join(", ")})` : ""}${m.actions?.length ? ` (actions: ${m.actions.map(a => `${a.tool}:${a.action}${a.ref ? ":" + a.ref : ""}`).join(", ")})` : ""}${m.source?.length ? ` (source: ${m.source.map(s => `${s.kind}:${s.ref}`).join(", ")})` : ""}${m.tags?.length ? ` (tags: ${m.tags.join(", ")})` : ""}${m.supersedes ? ` (corrects ${m.supersedes})` : ""}`;
   const memories = before.map(line).join("\n");
   // the registry is part of the brain: a name's aliases and email are facts the answer may use
   const registry = lib.readNames(root).map(n => `${n.name}${n.kind !== "person" ? ` (${n.kind})` : ""}${n.aliases.length ? `; also ${n.aliases.join(", ")}` : ""}${n.emails.length ? `; email ${n.emails.join(", ")}` : ""}`).join("\n") || "(empty)";
   const added = after.filter(a => !before.some(b => b.id === a.id)).map(line).join("\n") || "(none)";
   return judge("You judge an assistant's answer against a company's brain: its channels (status, rule, summary), its notes and its names registry. A change between CHANNELS BEFORE and AFTER is evidence of an action taken. Use those, the notes added, and any supplied project state and recorded tool results as truth. faithful=false if the answer states anything the notes do not support or contradicts them; complete=false if the request's outcome is not established.",
-    `CHANNELS BEFORE:\n${channelsBefore}\n\nCHANNELS AFTER THE RUN:\n${channels(root)}\n\nNOTES BEFORE:\n${memories}\n\nNAMES REGISTRY (after the run):\n${registry}\n\nNOTES ADDED BY THE RUN:\n${added}\n\nPROJECT STATE AND TOOL RESULTS:\n${/^(hubspot-)?write-/.test(scenario.crm || "") ? JSON.stringify(records.filter(r => r.kind === "result" && r.tool?.startsWith(`${scenario.provider || "attio"}_`))) : scenario.creation ? JSON.stringify({ projects: lib.readProjects(root).map(p => ({ ...p, pointer: lib.readPointer(p.path), hasBrain: existsSync(join(p.path, "brain")) })), results: records.filter(r => r.kind === "result" && [...QUESTION_TOOLS, "link_project"].includes(r.tool)) }) : "(not applicable)"}\n\nTOOLS CALLED: ${calls.map(c => c.tool).join(", ") || "none"}\n\nREQUEST:\n${scenario.prompt}\n\nEXPECTED OUTCOME: ${scenario.expect || "(see request)"}\n\nANSWER:\n${final || "(empty)"}`,
+    `CHANNELS BEFORE:\n${channelsBefore}\n\nCHANNELS AFTER THE RUN:\n${channels(root)}\n\nNOTES BEFORE:\n${memories}\n\nNAMES REGISTRY (after the run):\n${registry}\n\nNOTES ADDED BY THE RUN:\n${added}\n\nPROJECT STATE AND TOOL RESULTS:\n${/^(hubspot-)?write-/.test(scenario.crm || "") ? JSON.stringify(records.filter(r => r.kind === "result" && r.tool?.startsWith(`${scenario.provider || "attio"}_`))) : scenario.creation ? JSON.stringify({ projects: lib.readProjects(root).map(p => ({ ...p, pointer: lib.readPointer(p.path), hasBrain: existsSync(join(p.path, "brain")) })), results: records.filter(r => r.kind === "result" && [...QUESTION_TOOLS, "link_project"].includes(r.tool)) }) : scenario.evidence ? scenario.evidence(root, records) : "(not applicable)"}\n\nQUESTIONS ASKED THROUGH THE FORM, WITH THE SIMULATED PERSON'S ANSWERS:\n${records.filter(r => r.kind === "question").map(q => `${q.message} | options: ${(q.options || []).join(" / ") || "(free text)"} | answered: ${JSON.stringify(q.answered)}`).join("\n") || "(none)"}\n\nTOOLS CALLED: ${calls.map(c => c.tool).join(", ") || "none"}\n\nREQUEST:\n${scenario.prompt}\n\nEXPECTED OUTCOME: ${scenario.expect || "(see request)"}\n\nANSWER:\n${final || "(empty)"}`,
     '{"faithful": true|false, "complete": true|false, "score": 0..1, "issues": ["..."]}');
 }
 
-const selected = process.argv[2] ? cases.filter(c => c.name === process.argv[2] || (process.argv[2] === 'crm' && c.name.startsWith('crm-')) || (['attio-write', 'hubspot-write'].includes(process.argv[2]) && c.name.startsWith(`${process.argv[2]}-`))) : cases;
+const selected = process.argv[2] ? cases.filter(c => c.name === process.argv[2] || (process.argv[2] === 'crm' && c.name.startsWith('crm-')) || (process.argv[2] === 'skills' && c.name.startsWith('skill-')) || (['attio-write', 'hubspot-write'].includes(process.argv[2]) && c.name.startsWith(`${process.argv[2]}-`))) : cases;
 if (!selected.length) throw new Error(`case must be one of ${cases.map(c => c.name).join(", ")}`);
 const report = { scope: "Real Codex with production MCP and a simulated computer-use competitor. No real UI, external connectors or Desktop configuration are exercised. No before/after improvement claim.", plugin, model, artifacts, cases: [] };
 console.log(`Artifacts: ${artifacts}`);
@@ -340,7 +342,8 @@ for (const scenario of selected) {
     const verdict = await judgeAnswer(scenario, { root, before, after, final: finalText, calls, channelsBefore, records });
     if (scenario.responseCheck) checks.wording = scenario.responseCheck(finalText);
     if (scenario.retention) checks.retention = scenario.retention(root, { before, after });
-    if (!verdict.skipped && !verdict.error) checks.judge = !!verdict.faithful && !!verdict.complete;
+    // a case with judge: "advisory" records the verdict in the report but passes or fails on its deterministic checks
+    if (!verdict.skipped && !verdict.error && scenario.judge !== "advisory") checks.judge = !!verdict.faithful && !!verdict.complete;
     if (/^(hubspot-)?write-/.test(scenario.crm || '') && verdict.error) checks.judge = false;
     checks.build = records.some(r => r.kind === 'build' && r.server === join(plugin, 'server/server.mjs'));
     const status = Object.values(checks).every(Boolean) ? "pass" : "fail";

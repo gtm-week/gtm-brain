@@ -27,6 +27,7 @@ node --test plugins/gtm-os/test/brain.test.mjs          # one file
 node --test --test-name-pattern='<regex>' plugins/gtm-os/test/brain.test.mjs   # one test
 
 node plugins/gtm-os/test/live/harness-bench.mjs         # live Codex A/B: bare / plugin / brain on 3 tasks (~4 min)
+node plugins/gtm-os/test/live/tool-routing.mjs skills   # live Codex through five skills on a seeded brain; one case: skill-todo
 
 node scripts/sync-derived.mjs                           # regenerate derived blocks and schema
 node scripts/sync-derived.mjs --check                   # report drift only (the suite runs this)
