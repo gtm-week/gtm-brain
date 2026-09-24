@@ -21,18 +21,21 @@ const find = ref => { try { return docs.readDocument(root, ref); } catch (e) { r
 const line = d => `${d.title} [${d.status}] (${d.applies_to.join(", ")}) · ${d.path}${d.by ? ` · by ${d.by}` : ""}${d.updated ? ` · ${d.updated}` : ""}`;
 const inside = abs => { const r = relative(root, abs); return r && !isAbsolute(r) && !r.startsWith(".."); };
 
-// --file: the body as it is; a Markdown already at the root (depth 0-2, outside the engine) is adopted where it lies.
-let adopt = null;
+// --file: the body as it is; a Markdown already at the root (depth 0-2, outside the engine and the projects) is
+// adopted where it lies, keeping its name and its own frontmatter keys. The engine's files and a project's are refused.
+let adopt = null, extra = {};
 if (opt.file !== undefined) {
   if (opt.body !== undefined) refuse("pass --body or --file, not both");
   const abs = resolve(String(opt.file));   // relative to the caller's cwd, which the server sets to the brain
   if (!existsSync(abs)) refuse(`${opt.file} does not exist. Drag the file from Finder into the chat to paste its path.`);
   if (!/\.(md|markdown|txt)$/i.test(abs)) refuse(`${opt.file} is not a Markdown or text file. Put it in with "add this file to <document>" instead.`);
-  opt.body = readFileSync(abs, "utf8");
-  const real = realpathSync(abs);
-  if (inside(real) && abs.endsWith(".md")) {
+  const real = realpathSync(abs), parsed = lib.parseFrontmatter(readFileSync(abs, "utf8"));
+  opt.body = parsed.body; extra = parsed.fm || {};
+  if (inside(real)) {
     const rel = relative(root, real).split("/");
-    if (rel.length <= docs.MAX_DEPTH + 1 && !docs.SKIP_DIRS.has(rel[0])) adopt = relative(root, real);
+    if (docs.SKIP_DIRS.has(rel[0])) refuse(`${relative(root, real)} is one of the brain's own files; a document is something the person wrote, at the root or in a folder of theirs`);
+    if (docs.projectDirs(root).has(rel[0])) refuse(`${relative(root, real)} is inside the linked project ${rel[0]}; a document lives at the brain root or in a folder of its own, not in a project`);
+    if (abs.endsWith(".md") && rel.length <= docs.MAX_DEPTH + 1) adopt = relative(root, real);
   }
 }
 const finish = (doc, verb, message) => {
@@ -44,19 +47,20 @@ const finish = (doc, verb, message) => {
 
 if (opt.create) {
   const title = String(opt.title || "").trim(), slug = docs.documentSlug(title), status = String(opt.status || "draft"), folder = String(opt.folder || "");
-  const why = docs.validateDocument({ slug, title, applies_to: opt["applies-to"], body: opt.body, status, folder }); if (why) refuse(why);
+  // An adopted file keeps its own name and folder; only a new file is held to the naming rules.
+  const why = docs.validateDocument(adopt ? { title, applies_to: opt["applies-to"], body: opt.body, status } : { slug, title, applies_to: opt["applies-to"], body: opt.body, status, folder, root }); if (why) refuse(why);
   if (adopt && docs.parseDocument(root, adopt)) refuse(`${adopt} is already a document; update it instead`);
   if (adopt && opt.folder !== undefined && adopt !== docs.documentPathFor(slug, folder)) refuse(`${adopt} stays where it is when adopted; leave out --folder`);
   const path = adopt || docs.documentPathFor(slug, folder);
-  if (!adopt && existsSync(join(root, path))) refuse(`${path} already exists; update it, or pick another title or folder`);
-  docs.writeDocument(root, { path, title, applies_to: opt["applies-to"], body: String(opt.body), status, by, version: VERSION });
+  if (!adopt && existsSync(join(root, path))) refuse(`${path} already exists; pass it as --file to adopt it, or pick another title or folder`);
+  docs.writeDocument(root, { path, title, applies_to: opt["applies-to"], body: String(opt.body), status, by, version: VERSION, extra });
   finish(docs.parseDocument(root, path), "created", `Added document ${path}`); process.exit(0);
 }
 if (opt.update) {
   const current = find(String(opt.update)); if (!current) refuse(`no such document ${opt.update}; yours: ${yours()}`);
   if (!["title", "applies-to", "body", "status"].some(k => opt[k] !== undefined)) refuse("nothing to change: pass --title, --applies-to, --body, --file or --status");
-  const next = { path: current.path, title: opt.title !== undefined ? String(opt.title).trim() : current.title, applies_to: opt["applies-to"] !== undefined ? opt["applies-to"] : current.applies_to, body: opt.body !== undefined ? String(opt.body) : current.body, status: opt.status !== undefined ? String(opt.status) : current.status, by: by || current.by, version: VERSION };
-  const why = docs.validateDocument({ ...next, slug: current.slug, folder: current.folder }); if (why) refuse(why);
+  const next = { path: current.path, title: opt.title !== undefined ? String(opt.title).trim() : current.title, applies_to: opt["applies-to"] !== undefined ? opt["applies-to"] : current.applies_to, body: opt.body !== undefined ? String(opt.body) : current.body, status: opt.status !== undefined ? String(opt.status) : current.status, by: by || current.by, version: VERSION, extra: { ...current.extra, ...extra } };
+  const why = docs.validateDocument(next); if (why) refuse(why);   // content only: the name and folder are already the person's
   docs.writeDocument(root, next);
   finish(docs.parseDocument(root, current.path), "updated", `Updated document ${current.path}`); process.exit(0);
 }

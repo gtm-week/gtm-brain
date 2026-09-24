@@ -96,7 +96,7 @@ test("files: a folder of the document's name beside it; a document alone in its 
   assert.equal(docs.landingDir(root, docs.readDocument(root, "pricing/pricing"), all), "pricing/pricing");
   assert.deepEqual(docs.documentFiles(root, docs.readDocument(root, "pricing/pricing"), all), []);
   assert.ok(existsSync(join(root, "pricing", "pricing-2026.xlsx")));
-  assert.deepEqual(docs.savePaths(root).sort(), ["pricing/discounts.md", "pricing/pricing.md", "strategy", "strategy.md"]);
+  assert.deepEqual(docs.savePaths(root).sort(), ["pricing", "pricing/discounts.md", "pricing/pricing.md", "strategy", "strategy.md"]);
 });
 
 test("the line names every document with status, kinds of work, path and file count, and says what to do when there are none", () => {
@@ -175,6 +175,46 @@ test("the session hook names the documents every chat, in the brain and in a lin
   const inProject = hook(root, folder);
   assert.match(inProject, /^PROJECT landing/m);
   assert.ok(inProject.includes(`Tone of voice [draft] (copy, posts) -> ${join(root, "brand", "tone-of-voice.md")}`), inProject);
+});
+
+test("review: save commits unmarked root Markdown and every folder that holds a document, even with two documents in it", () => {
+  const root = brain();
+  writeFileSync(join(root, "notes.md"), "# Notes\n\nno marker\n");
+  document(root, "--create", "--title", "Strategy", "--applies-to", "planning", "--body", "One.", "--folder", "strategy");
+  document(root, "--create", "--title", "Positioning", "--applies-to", "planning", "--body", "Two.", "--folder", "strategy");
+  writeFileSync(join(root, "strategy", "deck.pptx"), "pptx");
+  lib.save(root, "hand edits");
+  const tracked = execFileSync("git", ["-C", root, "ls-files"], { encoding: "utf8" });
+  assert.match(tracked, /^notes\.md$/m); assert.match(tracked, /^strategy\/deck\.pptx$/m);
+  writeFileSync(join(root, "strategy", "deck.pptx"), "pptx v2");
+  assert.equal(lib.unsavedChanges(root).length, 1);
+  lib.save(root, "deck again"); assert.equal(lib.unsavedChanges(root).length, 0);
+});
+
+test("review: an adopted document keeps a non-canonical folder or name and can still be updated; its own frontmatter is merged, not duplicated", () => {
+  const root = brain();
+  mkdirSync(join(root, "Brand"));
+  writeFileSync(join(root, "Brand", "Voice guide.md"), "---\ntags: [brand, voice]\n---\n# Voice guide\n\nShort sentences.\n");
+  assert.match(document(root, "--create", "--title", "Voice guide", "--applies-to", "copy", "--file", "Brand/Voice guide.md"), /created document Brand\/Voice guide\.md/);
+  const text = readFileSync(join(root, "Brand", "Voice guide.md"), "utf8");
+  assert.equal(text.split("---").length, 3, "one frontmatter block"); assert.equal(text.split("# Voice guide").length, 2, "one heading");
+  assert.match(text, /^tags: \[brand, voice\]$/m); assert.match(text, /^kind: document$/m);
+  assert.match(document(root, "--update", "Brand/Voice guide", "--status", "approved"), /updated document Brand\/Voice guide\.md/);
+  assert.match(readFileSync(join(root, "Brand", "Voice guide.md"), "utf8"), /^status: approved$/m);
+  assert.match(docs.documentsLine(root), /Voice guide \[approved\]/);
+});
+
+test("review: old guidelines are named until the upgrade moves them; a document cannot be made inside a project or the engine", () => {
+  const root = brain();
+  mkdirSync(join(root, "brain", "guidelines")); writeFileSync(join(root, "brain", "guidelines", "tone-of-voice.md"), "---\ntitle: Tone of voice\napplies_to: [copy]\nstatus: approved\n---\n# Tone of voice\n\nNo exclamation points.\n");
+  const line = docs.documentsLine(root);
+  assert.match(line, /brain\/guidelines\/tone-of-voice\.md/); assert.match(line, /upgrade/);
+  const folder = join(root, "website"); mkdirSync(folder); writeFileSync(join(folder, "brief.md"), "# Brief\n\nx\n");
+  execFileSync(process.execPath, [`${P}/skills/gtm-os-project/project.mjs`, ".", "--link", folder, "--slug", "website", "--contexts", "offer"], { cwd: root, encoding: "utf8", env });
+  assert.match(refused(root, "--create", "--title", "Brief", "--applies-to", "planning", "--file", "website/brief.md").text, /project/);
+  assert.match(refused(root, "--create", "--title", "Brief", "--applies-to", "planning", "--body", "x", "--folder", "website").text, /project/);
+  assert.match(refused(root, "--create", "--title", "Admin copy", "--applies-to", "planning", "--file", "brain/admin.md").text, /brain/);
+  assert.ok(!existsSync(join(root, "admin-copy.md")));
 });
 
 test("--files lists what a document owns; the old guideline.mjs path still runs", () => {

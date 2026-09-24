@@ -32,12 +32,17 @@ export function normalizeAppliesTo(value) {
   return [...new Set(items.map(s => String(s).trim().toLowerCase().replace(/\s+/g, " ")).filter(Boolean))];
 }
 
-export function validateDocument({ slug, title, applies_to, body, status, folder = "" }) {
+/* Content rules always; naming rules (slug, folder) only when a slug is passed, which is creation. An adopted
+   file keeps the name and folder the person gave it. With a root, a linked project's folder is refused too. */
+export function validateDocument({ slug, title, applies_to, body, status, folder = "", root = null }) {
   if (!String(title || "").trim()) return "a title is needed (Strategy, Tone of voice, Design system, Pricing)";
-  if (!/^[a-z0-9][a-z0-9-]*$/.test(slug || "")) return `the title must give a slug of lowercase letters, digits and hyphens; got ${slug || "(nothing)"}`;
-  if (slug.length > 64) return `${slug} is longer than 64 characters`;
-  const f = String(folder || "").replace(/^\/+|\/+$/g, "");
-  if (f && (!FOLDER.test(f) || SKIP_DIRS.has(f.split("/")[0]))) return `folder must be one or two lowercase names outside the brain's own folders (brand, market/battle-cards); got ${f}`;
+  if (slug !== undefined) {
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(slug || "")) return `the title must give a slug of lowercase letters, digits and hyphens; got ${slug || "(nothing)"}`;
+    if (slug.length > 64) return `${slug} is longer than 64 characters`;
+    const f = String(folder || "").replace(/^\/+|\/+$/g, "");
+    if (f && (!FOLDER.test(f) || SKIP_DIRS.has(f.split("/")[0]))) return `folder must be one or two lowercase names outside the brain's own folders (brand, market/battle-cards); got ${f}`;
+    if (f && root && projectDirs(root).has(f.split("/")[0])) return `${f.split("/")[0]} is a linked project folder; a document lives at the brain root or in a folder of its own`;
+  }
   const applies = normalizeAppliesTo(applies_to);
   if (!applies.length) return "applies_to is needed: the kinds of work this document governs (copy, outreach, landing pages, proposals, planning)";
   if (applies.length > APPLIES_MAX) return `applies_to lists ${applies.length} kinds of work; at most ${APPLIES_MAX}`;
@@ -48,8 +53,11 @@ export function validateDocument({ slug, title, applies_to, body, status, folder
   return null;
 }
 
-export function renderDocument({ title, applies_to, status, by, updated, version, body }) {
-  const fm = { kind: KIND, title: String(title).trim(), applies_to: normalizeAppliesTo(applies_to), status, by: by || "", updated: updated || new Date().toISOString().slice(0, 10), "gtm-os": version || "" };
+const DOCUMENT_KEYS = new Set(["kind", "title", "applies_to", "status", "by", "updated", "gtm-os"]);
+/* extra: frontmatter keys of the person's own (Obsidian tags, aliases) kept next to the document's fields. */
+export function renderDocument({ title, applies_to, status, by, updated, version, body, extra = {} }) {
+  const own = Object.fromEntries(Object.entries(extra || {}).filter(([k]) => !DOCUMENT_KEYS.has(k)));
+  const fm = { kind: KIND, title: String(title).trim(), applies_to: normalizeAppliesTo(applies_to), status, by: by || "", updated: updated || new Date().toISOString().slice(0, 10), "gtm-os": version || "", ...own };
   const text = String(body).replace(/\r\n/g, "\n").trim();
   // Heading, then the header line once, then the text; a body that carries its own heading (a prepared
   // strategy.md) keeps it, and a body read back keeps its header line where it is.
@@ -60,7 +68,7 @@ export function renderDocument({ title, applies_to, status, by, updated, version
 }
 
 /* The first folder of every linked project that sits inside the root: a project is a project, never a document's home. */
-function projectDirs(root) {
+export function projectDirs(root) {
   return new Set(readProjects(root).map(p => { const r = posix(relative(root, p.path || "")); return r && !r.startsWith("..") && !r.startsWith("/") ? r.split("/")[0] : null; }).filter(Boolean));
 }
 
@@ -84,7 +92,8 @@ export function parseDocument(root, path) {
   const { fm, body } = parseFrontmatter(readFileSync(abs, "utf8"));
   if (fm.kind !== KIND) return null;
   const slug = basename(path, ".md"), dir = posix(dirname(path));
-  return { slug, path: posix(path), folder: dir === "." ? "" : dir, title: String(fm.title || slug), applies_to: normalizeAppliesTo(fm.applies_to), status: STATUSES.includes(fm.status) ? fm.status : "draft", by: fm.by ? String(fm.by) : null, updated: fm.updated ? String(fm.updated) : null, version: fm["gtm-os"] ? String(fm["gtm-os"]) : null, body: body.trim(), bytes: Buffer.byteLength(body, "utf8") };
+  const extra = Object.fromEntries(Object.entries(fm).filter(([k]) => !DOCUMENT_KEYS.has(k)));
+  return { slug, path: posix(path), folder: dir === "." ? "" : dir, title: String(fm.title || slug), applies_to: normalizeAppliesTo(fm.applies_to), status: STATUSES.includes(fm.status) ? fm.status : "draft", by: fm.by ? String(fm.by) : null, updated: fm.updated ? String(fm.updated) : null, version: fm["gtm-os"] ? String(fm["gtm-os"]) : null, body: body.trim(), bytes: Buffer.byteLength(body, "utf8"), extra };
 }
 
 export function listDocuments(root) { return markdownFiles(root).map(p => parseDocument(root, p)).filter(Boolean); }
@@ -123,10 +132,11 @@ export function removeDocument(root, doc) {
   try { if (doc.folder && !readdirSync(join(root, doc.folder)).length) rmdirSync(join(root, doc.folder)); } catch {}
 }
 
-/* What save commits for documents: each file, its files folder, and its whole folder when it lives there alone. */
+/* What save commits for documents: every Markdown a person keeps at the root (marked or not yet), each
+   document's files folder, and every folder that holds a document (its loose files travel with it). */
 export function savePaths(root) {
-  const all = listDocuments(root), out = new Set();
-  for (const d of all) { out.add(d.path); if (existsSync(join(root, filesDir(d)))) out.add(filesDir(d)); if (isAlone(d, all)) out.add(d.folder); }
+  const out = new Set(markdownFiles(root));
+  for (const d of listDocuments(root)) { if (existsSync(join(root, filesDir(d)))) out.add(filesDir(d)); if (d.folder) out.add(d.folder); }
   return [...out];
 }
 
@@ -150,9 +160,12 @@ export function migrateGuidelines(root) {
 /* The one line every chat reads: the session hook (brain and linked project) and query (status).
    With an absolute root the paths are absolute, for a chat in a linked folder. */
 export function documentsLine(root, { absolute = false } = {}) {
-  const all = listDocuments(root);
-  if (!all.length) return `documents: none yet. A document is something we wrote that the work must follow (${SUGGESTED.join(", ")}); say "add our tone of voice", "add strategy.md as a document" or /gtm-os-document.`;
-  const where = d => absolute ? join(root, d.path) : d.path;
-  const items = all.map(d => { const n = documentFiles(root, d, all).length; return `${d.title} [${d.status}] (${d.applies_to.join(", ")}) -> ${where(d)}${n ? ` (${n} file${n === 1 ? "" : "s"})` : ""}`; }).join("  ·  ");
-  return `documents: ${items}. Before work of a listed kind, read that file in full and follow it (AGENTS.md rule 11); say in one line which document you followed. A draft one is the best available guidance, say so.`;
+  const all = listDocuments(root), where = p => absolute ? join(root, p) : p;
+  // Guidelines of a brain not yet upgraded (0.26 and earlier) still govern the work until the upgrade moves them.
+  const oldDir = join(root, "brain", "guidelines");
+  const old = existsSync(oldDir) ? readdirSync(oldDir).filter(f => f.endsWith(".md") && !f.startsWith(".")).sort().map(f => `brain/guidelines/${f}`) : [];
+  const legacy = old.length ? ` Older guidelines not moved yet, read them the same way: ${old.map(where).join(", ")}; the upgrade (say: refresh the rules) moves them to the root.` : "";
+  if (!all.length) return `documents: none yet. A document is something we wrote that the work must follow (${SUGGESTED.join(", ")}); say "add our tone of voice", "add strategy.md as a document" or /gtm-os-document.${legacy}`;
+  const items = all.map(d => { const n = documentFiles(root, d, all).length; return `${d.title} [${d.status}] (${d.applies_to.join(", ")}) -> ${where(d.path)}${n ? ` (${n} file${n === 1 ? "" : "s"})` : ""}`; }).join("  ·  ");
+  return `documents: ${items}. Before work of a listed kind, read that file in full and follow it (AGENTS.md rule 11); say in one line which document you followed. A draft one is the best available guidance, say so.${legacy}`;
 }
