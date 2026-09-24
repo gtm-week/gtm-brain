@@ -28,7 +28,7 @@ const a = process.argv.slice(2); appendFileSync(${JSON.stringify(log)}, a.join("
 if (a[0] === "auth" && a[1] === "status") process.exit(${signedIn ? 0 : 1});
 if (a[0] === "api" && a[1] === "user") { console.log(JSON.stringify({ login: "marta" })); process.exit(0); }
 if (a[0] === "repo" && a[1] === "create") {
-  const name = a[2], source = a[a.indexOf("--source") + 1], remote = a[a.indexOf("--remote") + 1];
+  const name = a.includes("--") ? a[a.indexOf("--") + 1] : a[2], source = a[a.indexOf("--source") + 1], remote = a[a.indexOf("--remote") + 1];
   const bare = join(${JSON.stringify(hub)}, name + ".git"); execFileSync("git", ["init", "-q", "--bare", bare]);
   execFileSync("git", ["-C", source, "remote", "add", remote, bare]);
   if (a.includes("--push")) execFileSync("git", ["-C", source, "push", "-q", "-u", remote, "HEAD"]);
@@ -46,7 +46,7 @@ test("a brain with no remote becomes a private repository named after the compan
   const r = share(root, gh.env);
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /https:\/\/github\.com\/marta\/reflow-brain/); assert.match(r.stdout, /private/);
-  assert.match(gh.calls().join("\n"), /^repo create reflow-brain --private --source .* --remote origin --push$/m);
+  assert.match(gh.calls().join("\n"), /^repo create --private --source .* --remote origin --push -- reflow-brain$/m, "the name comes last, after the option terminator");
   assert.equal(execFileSync("git", ["-C", root, "remote", "get-url", "origin"], { encoding: "utf8" }).trim(), join(gh.hub, "reflow-brain.git"));
   const pushed = execFileSync("git", ["-C", join(gh.hub, "reflow-brain.git"), "ls-tree", "--name-only", "HEAD"], { encoding: "utf8" });
   assert.match(pushed, /^pricing\.md$/m); assert.match(pushed, /^brain$/m); assert.match(pushed, /^strategy\.md$/m);
@@ -56,7 +56,7 @@ test("a brain with no remote becomes a private repository named after the compan
 test("--name picks the repository name; a brain that already has a remote is pushed, never re-created", () => {
   const root = brain(), gh = fakeGh();
   assert.equal(share(root, gh.env, "--name", "acme-gtm").status, 0);
-  assert.match(gh.calls().join("\n"), /repo create acme-gtm --private/);
+  assert.match(gh.calls().join("\n"), /repo create --private .* -- acme-gtm$/m);
   writeFileSync(join(root, "notes.md"), "# Notes\n");
   const again = share(root, gh.env);
   assert.equal(again.status, 0, again.stderr);
@@ -71,4 +71,10 @@ test("without gh, or with gh signed out, it stops and says what to run; nothing 
   const out = share(root, fakeGh({ signedIn: false }).env);
   assert.equal(out.status, 2); assert.match(out.stderr, /gh auth login/); assert.match(out.stderr, /gh auth setup-git/);
   assert.equal(spawnSync("git", ["-C", root, "remote"], { encoding: "utf8" }).stdout.trim(), "", "no remote was added");
+  const gh = fakeGh();
+  for (const bad of ["--delete-branch-on-merge", "-x", ".hidden", "two words"]) {
+    const r = share(root, gh.env, "--name", bad);
+    assert.equal(r.status, 2, `${bad} refused`); assert.match(r.stderr, /not a valid repository name|--name needs a value/, `${bad}: refused before gh`);
+  }
+  assert.doesNotMatch(readFileSync(join(gh.env.PATH.split(":")[0], "calls.log"), "utf8"), /repo create/, "a bad name never reaches gh");
 });

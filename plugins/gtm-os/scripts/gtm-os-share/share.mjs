@@ -39,8 +39,9 @@ if (remotes.length) {
 
 const admin = lib.readAdmin(root) || {};
 const name = String(opt.name || `${lib.handleFor(String(admin.company || "company")) || "company"}-brain`).trim();
-if (!/^[A-Za-z0-9._-]+$/.test(name)) refuse(`${name} is not a valid repository name (letters, digits, dots, hyphens, underscores).`);
-const created = gh("repo", "create", name, "--private", "--source", root, "--remote", "origin", "--push");
+// GitHub's own rule, starting with a letter or digit: a name can never read as a flag to gh, and "--" ends its options anyway.
+if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name)) refuse(`${name} is not a valid repository name (a letter or digit first, then letters, digits, dots, hyphens, underscores).`);
+const created = gh("repo", "create", "--private", "--source", root, "--remote", "origin", "--push", "--", name);
 if (created.status !== 0) refuse(`gh could not create the repository ${name}: ${(created.stderr || created.stdout || "").trim().split("\n")[0]}. If the name is taken, say a different one: push this brain to my GitHub as <name>.`, 1);
 const url = (created.stdout || "").trim().split("\n").find(l => /^https?:\/\//.test(l)) || git("remote", "get-url", "origin");
 lib.logActivity(root, "share", `shared at ${url}`);
