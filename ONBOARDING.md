@@ -125,6 +125,8 @@ update by themselves in the background. When you want a specific workflow:
 | Know what to do next | `/gtm-os-todo` |
 | Pull in what arrived through your tools | `/gtm-os-sync` |
 | Get a one-page brief before a call | `/gtm-os-deepdive` |
+| Decide whether to push, fix, stop or measure growth spend | `/gtm-os-unit-economics` |
+| Fill in the strategy the brain starts with (`strategy.md`), in a 10-15 minute conversation | `/gtm-os-strategy` |
 | Add a PDF, image or deck to the brain | drop it in the chat and say what it belongs to; no command |
 | Change company info, team or tools | `/gtm-os-configure` |
 | Keep the strategy, voice, design system or pricing the work must follow | `/gtm-os-document` |

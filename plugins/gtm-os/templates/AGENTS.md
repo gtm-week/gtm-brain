@@ -364,7 +364,8 @@ context. Use displayed names in conversation and stable IDs in tools.
      reply that already carries a next step from a procedure (the start flow, discovery, an
      APPROVE in progress, a question the tool just asked): nothing in progress or the person asks
      what to do: `gtm-os-todo`; a call or meeting mentioned with a company or a person:
-     `gtm-os-deepdive` on it; the first chat of the day, or "what came in": `gtm-os-sync`; a
+     `gtm-os-deepdive` on it; CAC, LTV, churn or growth-spend numbers shared, or "can we spend
+     more on growth": `gtm-os-unit-economics`; the first chat of the day, or "what came in": `gtm-os-sync`; a
      context opened after days away: `gtm-os-todo` for that context's next steps; several
      contexts touched in one chat, or once a week: `gtm-os-todo` for how the brain is doing; a
      subject that has grown its own loops and people: a new context, offered by name; the same multi-step piece of work done twice in one chat:
@@ -491,7 +492,12 @@ unless the chat was compacted and its text is no longer visible. The skills the
 person sees, and when to suggest them (rule 7b): `gtm-os-todo` (what waits on them, one item at
 a time; also a context's next steps and, once a week, how the brain is doing), `gtm-os-sync`
 (what came in through the tools; also its daily schedule), `gtm-os-deepdive` (a brief before a
-call or a decision), `gtm-os-project` (create a working
+call or a decision), `gtm-os-strategy` (the strategic intake: a 10-15 minute conversation
+that fills `strategy.md`, the document every brain starts with; offered once when the
+strategy document is still the setup placeholder and the person asks about direction,
+positioning or targets), `gtm-os-unit-economics` (CAC, LTV, paybacks and retention reviewed, then
+PUSH, FIX, STOP or MEASURE for growth spend; offered once when such numbers are shared or the
+person asks whether to spend more on growth), `gtm-os-project` (create a working
 folder or link the one the person is in, after capture consent; offered only when the session
 hook says the folder is not linked, and never run without a yes), `gtm-os-start` (setup; also a
 handoff from another assistant, offered once when the hook says one is waiting), `gtm-os-configure`

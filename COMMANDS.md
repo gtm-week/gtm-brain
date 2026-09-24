@@ -12,9 +12,11 @@ to distinguish these workflows from other installed skills.
 | `gtm-os-sync` | GTM OS: Sync | Pull what came in through the connected tools since the last sync, one subagent per tool, and record what matters |
 | `gtm-os-todo` | GTM OS: Todo | What should I do now: everything waiting on you, ordered, walked through one by one |
 | `gtm-os-deepdive` | GTM OS: Deep dive | A one-page brief on an entity or a context, from the notes and the tools read live |
+| `gtm-os-unit-economics` | GTM OS: Unit economics | Lech Kaniuk's unit economics review: CAC, LTV12 and LTV24, LTV:CAC, both paybacks and retention from the chat and the brain, then PUSH, FIX, STOP or MEASURE overall and per acquisition source or segment; offers to keep the decision as a note and the missing inputs as questions |
 | `gtm-os-use-brain` | GTM OS: Use the company brain | Everyday work: remember, recall, where we are |
 | `gtm-os-configure` | GTM OS: Configure GTM OS | Workplace info, team, tools and settings through APPROVE |
 | `gtm-os-skill` | GTM OS: Your skills | Turn a repeated workflow into a Codex skill kept in the brain's `.agents/skills`; install from GitHub, list, remove, share |
+| `gtm-os-strategy` | GTM OS: Strategic intake | A 10-15 minute conversation with a founder or a head of sales, growth or GTM that fills `strategy.md`, the document every brain starts with, mapped silently to Playing to Win; files shared on the way land in `strategy/` |
 | `gtm-os-document` | GTM OS: Documents | The documents the work must follow (strategy, tone of voice, design system, pricing) kept as Markdown at the brain root with their files beside them: add, adopt a hand-written one, list, show, update, approve, remove, check a draft against them. A file in the chat lands beside its owner through use-brain's files reference, no skill to invoke |
 
 Find workflow examples from Overview or Help > Ways to work in Codex.
@@ -449,6 +451,7 @@ brain/admin.md                       workplace info; APPROVE to change
 brain/entities/*.md                     identity and cited briefs
 brain/contexts/<slug>/context.md     the context cover
 brain/contexts/<slug>/memories.jsonl the context's time series, append-only
+strategy.md                          the strategy document, there from setup; gtm-os-strategy fills it
 <slug>.md, <folder>/<slug>.md        the documents the work must follow (kind: document); document tool or a hand edit
 <folder>/<slug>/                     a document's files; add-file.mjs --document, or dropped in by hand
 brain/entities/<id>/                 an entity's files; add-file.mjs --entity

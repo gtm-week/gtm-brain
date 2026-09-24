@@ -101,7 +101,7 @@ test("files: a folder of the document's name beside it; a document alone in its 
 
 test("the line names every document with status, kinds of work, path and file count, and says what to do when there are none", () => {
   const root = brain();
-  assert.match(docs.documentsLine(root), /^documents: none yet\. .*\/gtm-os-document/);
+  assert.match(docs.documentsLine(root), /^documents: Strategy \[draft\] \(strategy, planning\) -> strategy\.md\./, "setup wrote strategy.md, waiting for the intake");
   docs.writeDocument(root, { ...ok, path: "strategy.md", title: "Strategy", applies_to: "strategy, planning", status: "approved" });
   docs.writeDocument(root, { ...ok, path: "brand/design-system.md", title: "Design system", applies_to: "design" });
   mkdirSync(join(root, "brand", "design-system")); writeFileSync(join(root, "brand", "design-system", "tokens.json"), "{}"); writeFileSync(join(root, "brand", "design-system", "logo.svg"), "<svg/>");
@@ -120,17 +120,18 @@ test("the script creates at the root or in a folder, lists, shows, updates, remo
   assert.match(document(root, "--create", "--title", "Tone of voice", "--applies-to", "copy, posts", "--body", VOICE, "--by", "marta-nowak", "--folder", "brand"), /created document brand\/tone-of-voice\.md/);
   assert.equal(lastCommit(root), "Added document brand/tone-of-voice.md");
   assert.ok(existsSync(join(root, "brand", "tone-of-voice.md")));
-  assert.match(document(root, "--create", "--title", "Strategy", "--applies-to", "strategy", "--body", "# Strategy\n\nWin SMB in DACH."), /created document strategy\.md/);
+  assert.match(refused(root, "--create", "--title", "Strategy", "--applies-to", "strategy", "--body", "x").text, /strategy\.md already exists; pass it as --file to adopt it/, "setup's strategy.md is there from day one");
+  assert.match(document(root, "--create", "--title", "Positioning", "--applies-to", "strategy", "--body", "# Positioning\n\nWin SMB in DACH."), /created document positioning\.md/);
   assert.match(document(root, "--list"), /Tone of voice \[draft\] \(copy, posts\) · brand\/tone-of-voice\.md · by marta-nowak/);
   assert.match(document(root, "--show", "tone-of-voice"), /Banned words: synergy/);
   assert.match(document(root, "--update", "tone-of-voice", "--status", "approved"), /updated document brand\/tone-of-voice\.md/);
   assert.equal(lastCommit(root), "Updated document brand/tone-of-voice.md");
   assert.match(readFileSync(join(root, "brand", "tone-of-voice.md"), "utf8"), /^status: approved$/m);
-  assert.deepEqual(JSON.parse(document(root, "--list", "--json")).map(d => [d.slug, d.status, d.files]), [["tone-of-voice", "approved", 0], ["strategy", "draft", 0]]);
+  assert.deepEqual(JSON.parse(document(root, "--list", "--json")).map(d => [d.slug, d.status, d.files]), [["tone-of-voice", "approved", 0], ["positioning", "draft", 0], ["strategy", "draft", 0]]);
   assert.match(refused(root, "--create", "--title", "Tone of voice", "--applies-to", "copy", "--body", "x", "--folder", "brand").text, /already exists/);
   assert.match(refused(root, "--create", "--title", "Bad", "--applies-to", "", "--body", "x").text, /applies_to/);
   assert.match(refused(root, "--create", "--title", "Bad", "--applies-to", "copy", "--body", "x", "--folder", "brain").text, /folder/);
-  assert.match(refused(root, "--update", "nope", "--status", "approved").text, /no such document nope; yours: tone-of-voice, strategy/);
+  assert.match(refused(root, "--update", "nope", "--status", "approved").text, /no such document nope; yours: tone-of-voice, positioning, strategy/);
   assert.match(document(root, "--remove", "tone-of-voice"), /removed document brand\/tone-of-voice\.md/);
   assert.ok(!existsSync(join(root, "brand")));
   assert.equal(lastCommit(root), "Removed document brand/tone-of-voice.md");
@@ -138,16 +139,16 @@ test("the script creates at the root or in a folder, lists, shows, updates, remo
 
 test("--file adopts a Markdown already at the root in place, copies one from outside, and refuses other kinds", () => {
   const root = brain();
-  writeFileSync(join(root, "strategy.md"), "# Strategy\n\nWin SMB in DACH.\n");
-  assert.match(document(root, "--create", "--title", "Strategy", "--applies-to", "strategy, planning", "--file", "strategy.md"), /created document strategy\.md/);
-  const text = readFileSync(join(root, "strategy.md"), "utf8");
-  assert.match(text, /^kind: document$/m); assert.match(text, /Win SMB in DACH\./); assert.equal(text.split("# Strategy").length, 2);
+  writeFileSync(join(root, "plan.md"), "# Plan\n\nWin SMB in DACH.\n");
+  assert.match(document(root, "--create", "--title", "Plan", "--applies-to", "strategy, planning", "--file", "plan.md"), /created document plan\.md/);
+  const text = readFileSync(join(root, "plan.md"), "utf8");
+  assert.match(text, /^kind: document$/m); assert.match(text, /Win SMB in DACH\./); assert.equal(text.split("# Plan").length, 2);
   const outside = join(tmpdir(), `icp-${Date.now()}.md`); writeFileSync(outside, "# ICP\n\nMid-market ops leads.\n");
   assert.match(document(root, "--create", "--title", "ICP", "--applies-to", "targeting", "--file", outside), /created document icp\.md/);
   assert.ok(existsSync(outside));
   writeFileSync(join(root, "deck.pdf"), "pdf");
   assert.match(refused(root, "--create", "--title", "Deck", "--applies-to", "sales", "--file", "deck.pdf").text, /not a Markdown or text file/);
-  assert.match(refused(root, "--create", "--title", "Strategy", "--applies-to", "x", "--file", "strategy.md", "--folder", "plans").text, /already a document/);
+  assert.match(refused(root, "--create", "--title", "Plan", "--applies-to", "x", "--file", "plan.md", "--folder", "plans").text, /already a document/);
 });
 
 test("save commits a document and the files a person dropped beside it by hand; setup wrote the README", () => {
@@ -167,9 +168,9 @@ test("save commits a document and the files a person dropped beside it by hand; 
 const hook = (root, project) => execFileSync("bash", [`${P}/hooks/session-start.sh`], { cwd: project || root, encoding: "utf8", env, input: JSON.stringify({ session_id: "thread-1", cwd: project || root }) });
 test("the session hook names the documents every chat, in the brain and in a linked project, and says when there are none", () => {
   const root = brain();
-  assert.match(hook(root), /documents: none yet/);
+  assert.match(hook(root), /documents: Strategy \[draft\] \(strategy, planning\) -> strategy\.md/);
   document(root, "--create", "--title", "Tone of voice", "--applies-to", "copy, posts", "--body", VOICE, "--folder", "brand");
-  assert.match(hook(root), /documents: Tone of voice \[draft\] \(copy, posts\) -> brand\/tone-of-voice\.md\./);
+  assert.match(hook(root), /documents: Tone of voice \[draft\] \(copy, posts\) -> brand\/tone-of-voice\.md  ·  Strategy \[draft\]/);
   const folder = realpathSync(mkdtempSync(join(tmpdir(), "gtm-os-doc-folder-")));
   execFileSync(process.execPath, [`${P}/skills/gtm-os-project/project.mjs`, ".", "--link", folder, "--slug", "landing", "--contexts", "offer"], { cwd: root, encoding: "utf8", env });
   const inProject = hook(root, folder);

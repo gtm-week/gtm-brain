@@ -24,6 +24,14 @@
     "example": "Help me prepare for my next customer meeting."
   },
   {
+    "id": "gtm-os-unit-economics",
+    "group": "daily",
+    "featured": false,
+    "title": "Review unit economics",
+    "description": "Check CAC, LTV, payback and retention, then decide where growth spend should go.",
+    "example": "Can we spend more on growth? Here are our CAC, ARPU and churn."
+  },
+  {
     "id": "gtm-os-use-brain",
     "group": "knowledge",
     "featured": false,
@@ -69,6 +77,14 @@
     "featured": false,
     "title": "Keep your documents",
     "description": "The strategy, voice, design system, pricing and any document the work must follow, with their files beside them.",
-    "example": "Add strategy.md as a document."
+    "example": "Add our tone of voice as a document."
+  },
+  {
+    "id": "gtm-os-strategy",
+    "group": "setup",
+    "featured": false,
+    "title": "Run the strategic intake",
+    "description": "A 10-15 minute conversation about where the company is going that fills strategy.md, the document every brain starts with.",
+    "example": "Run the strategic intake."
   }
 ]

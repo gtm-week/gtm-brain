@@ -27,6 +27,15 @@ gives each its own files folder. A drag in Finder between these shapes changes n
 The one decision you make is one document or several: the work follows them separately (copy
 reads the voice, a landing page reads the design system), so they are separate files.
 
+## The one you start with
+
+Every brain has `strategy.md` from setup: a draft document that says it is waiting for the
+strategic intake. Say `run the strategic intake` (`/gtm-os-strategy`): a 10-15 minute
+conversation with the founder or the head of sales, growth or GTM fills it in, mapped to
+Playing to Win without ever naming the framework. Decks and notes shared along the way land in
+`strategy/` beside it, and the decisions it surfaces are also notes in the Strategy context.
+Read it, then `approve the strategy`.
+
 ## Making one
 
 Say `add our tone of voice`, `save the design system`, `add strategy.md as a document`, or type

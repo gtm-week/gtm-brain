@@ -621,7 +621,7 @@ test("the document tool creates, lists, shows, updates and removes a document, q
   const root = mkdtempSync(join(tmpdir(), "gtm-os-doc-mcp-")); execFileSync("git", ["init", "-q", root]); execFileSync("git", ["-C", root, "config", "commit.gpgsign", "false"]);
   execFileSync("bash", [`${P}/scripts/gtm-os-setup/setup.sh`, "--company", "Reflow", "--one-liner", "returns automation", "--owner", "Marta Nowak <marta@reflow.io>", "--dashboard", "on-demand"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P, GTM_OS_NO_OPEN: "1" }, stdio: "ignore" });
   const tools = (await rpc("tools/list")).result.tools.map(t => t.name); assert.ok(tools.includes("document")); assert.ok(!tools.includes("guideline"));
-  assert.match((await call("where_we_are", { brain: root })).text, /documents: none yet/);
+  assert.match((await call("where_we_are", { brain: root })).text, /documents: Strategy \[draft\] \(strategy, planning\) -> strategy\.md/);
   const made = await call("document", { brain: root, action: "create", title: "Tone of voice", applies_to: ["Copy", "posts"], body: "Short sentences. No exclamation points.", folder: "brand", by: "marta-nowak" });
   assert.equal(made.isError, false, made.text); assert.match(made.text, /created document brand\/tone-of-voice\.md/);
   assert.match((await call("document", { brain: root, action: "list" })).text, /Tone of voice \[draft\] \(copy, posts\)/);
@@ -632,5 +632,5 @@ test("the document tool creates, lists, shows, updates and removes a document, q
   const bad = await call("document", { brain: root, action: "create", title: "Design system", body: "x" }); assert.equal(bad.isError, true); assert.match(bad.text, /applies_to/);
   const gone = await call("document", { brain: root, action: "remove", ref: "tone-of-voice" }); assert.equal(gone.isError, false, gone.text);
   assert.equal(existsSync(join(root, "brand", "tone-of-voice.md")), false);
-  assert.match((await call("document", { brain: root, action: "list" })).text, /no documents yet/);
+  const left = (await call("document", { brain: root, action: "list" })).text; assert.match(left, /Strategy \[draft\]/); assert.doesNotMatch(left, /Tone of voice/);
 });
