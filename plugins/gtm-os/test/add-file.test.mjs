@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { execFileSync } from 'node:child_process';
 import * as lib from '../lib/brain.mjs';
+import { resolveEntity } from '../lib/entities.mjs';
 const P = new URL('../', import.meta.url).pathname.replace(/\/$/, '');
 function fixture() {
  const root = realpathSync(mkdtempSync(join(tmpdir(), 'gtm-add-file-')));
@@ -62,4 +63,23 @@ test('text is extracted for the notes when an extractor exists, and its absence 
  writeFileSync(join(f.outside, 'scan.pdf'), '%PDF-1.4 not really a pdf');
  const pdf = f.run('--file', join(f.outside, 'scan.pdf'));
  assert.ok(pdf.text === null, 'a broken pdf has no text'); assert.match(pdf.note || '', /no text|could not extract/i);
+});
+
+test('--document lands the file in the document\'s files folder, --entity beside the entity file; the JSON says the owner', () => {
+ const f = fixture();
+ const make = (title, applies) => execFileSync(process.execPath, [join(P, 'scripts/gtm-os-documents/document.mjs'), f.root, '--create', '--title', title, '--applies-to', applies, '--body', 'Blue.', '--folder', 'brand'], { stdio: 'ignore', env: { ...process.env, GTM_OS_NO_COMMIT: '1' } });
+ make('Voice', 'copy'); make('Design system', 'design');   // two documents in brand/: each owns a folder of its own name
+ const kit = join(f.outside, 'ui-kit.fig'); writeFileSync(kit, 'fig');
+ const a = f.run('--file', kit, '--document', 'design-system');
+ assert.deepEqual([a.base, a.path, a.copied, a.owner], ['brain', 'brand/design-system/ui-kit.fig', true, { kind: 'document', ref: 'brand/design-system.md', dir: 'brand/design-system' }]);
+ assert.ok(existsSync(join(f.root, a.path)));
+ lib.addName(f.root, 'Positive Surfer', { kind: 'organization' });
+ const entityPath = resolveEntity(lib.readNames(f.root), 'Positive Surfer')._path;
+ const logo = join(f.outside, 'logo.svg'); writeFileSync(logo, '<svg/>');
+ const b = f.run('--file', logo, '--entity', 'Positive Surfer');
+ assert.equal(b.path, `${entityPath.replace(/\.md$/, '')}/logo.svg`);
+ assert.deepEqual(b.owner, { kind: 'entity', ref: entityPath, dir: entityPath.replace(/\.md$/, '') });
+ assert.match(f.fail('--file', logo, '--entity', 'Nobody Known'), /add_name/);
+ assert.match(f.fail('--file', logo, '--document', 'nope'), /no such document/);
+ assert.match(f.fail('--file', logo, '--document', 'design-system', '--entity', 'Positive Surfer'), /not both/);
 });
