@@ -24,6 +24,14 @@ Follow [question handling](../gtm-os-start/references/questions.md) for native q
 
 ## Add a document
 
+Fast path first: when the request already says the title, the place and the content ("add a
+new md file to the design system with inspirations, first is Callstack"), there is nothing to
+draft and nothing to ask. Call `document` at once (`action: create`, title from their words,
+`folder` beside the document they named when it lives in one, `applies_to` the same kinds of
+work as that document, `body` with what they gave, status draft) and answer in one line with
+the path. Do not read any reference first and do not open a `question`: the person decided.
+The steps below are for a document written from material, where a draft needs confirming.
+
 1. A file the person already wrote: a path in the chat, or "add strategy.md as a document".
    Pass it as `file`; nothing is retyped. A Markdown already at the brain root is adopted where
    it lies (its path does not change); one from outside is copied in. Otherwise the best
