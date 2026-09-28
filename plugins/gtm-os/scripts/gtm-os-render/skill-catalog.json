@@ -8,6 +8,14 @@
     "example": "What should I focus on today?"
   },
   {
+    "id": "gtm-os-workflow",
+    "group": "daily",
+    "featured": false,
+    "title": "Run a workflow",
+    "description": "Start a campaign or another multi-step action from a workflow document, and let the brain track its steps and dates.",
+    "example": "Start the outbound workflow for the Q4 accounts."
+  },
+  {
     "id": "gtm-os-sync",
     "group": "daily",
     "featured": true,
