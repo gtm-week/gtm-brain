@@ -138,3 +138,52 @@ test("runsLine: empty with no run; names the run, its step and the due date; cou
   assert.match(line, /Say nothing about them unless asked/);
   assert.match(wf.runsLine(root, "2026-10-12"), /1 step due: mention it once/);
 });
+
+const script = `${P}/scripts/gtm-os-workflow/workflow.mjs`;
+const workflow = (root, ...args) => execFileSync(process.execPath, [script, ".", ...args], { cwd: root, encoding: "utf8", env }).trimEnd();
+const refusedBy = (root, ...args) => { try { workflow(root, ...args); return null; } catch (e) { return { code: e.status, text: String(e.stderr) }; } };
+const SETTLED = JSON.stringify({ "Target accounts": "the 40 logistics accounts from the ICP", "Why now": "Q4 budget season", Budget: "EUR 2000", "Ad platform": "LinkedIn, Marta", Sequencer: "lemlist" });
+const ready = () => { const root = brain(); for (const name of ["outbound", "ads-then-outbound"]) writeFileSync(join(root, "workflows", `${name}.md`), template(name)); return root; };
+
+test("workflow --list names the shipped workflows with their steps and the runs in progress; --json is the parsed shape", () => {
+  const root = ready();
+  const out = workflow(root, "--list");
+  assert.match(out, /^workflows:\n- ads-then-outbound: Ads, then outbound \[draft\], 4 steps \(workflows\/ads-then-outbound\.md\)\n- outbound: Outbound \[draft\], 4 steps \(workflows\/outbound\.md\)\nruns in progress: none\./);
+  writeFileSync(join(root, "workflows", "broken.md"), template("outbound").replace("## Learn", "## Learned"));
+  assert.match(workflow(root, "--list"), /- broken: does not parse: missing heading "## Learn"/);
+  const json = JSON.parse(workflow(root, "--list", "--json"));
+  assert.deepEqual(Object.keys(json), ["workflows", "runs"]); assert.equal(json.workflows.length, 3);
+});
+
+test("workflow --start refuses an unsettled item, an unknown workflow or context; then writes the brief and step 1", () => {
+  const root = ready();
+  assert.match(refusedBy(root, "--start", "nope", "--context", "offer", "--handle", "acme", "--settled", SETTLED, "--by", "marta").text, /no workflow "nope"; workflows: ads-then-outbound, outbound/);
+  assert.match(refusedBy(root, "--start", "ads-then-outbound", "--context", "nowhere", "--handle", "acme", "--settled", SETTLED, "--by", "marta").text, /no such context: nowhere/);
+  const partial = refusedBy(root, "--start", "ads-then-outbound", "--context", "offer", "--handle", "acme", "--settled", JSON.stringify({ Budget: "EUR 2000" }), "--by", "marta");
+  assert.equal(partial.code, 2); assert.match(partial.text, /not settled: Target accounts, Why now, Ad platform, Sequencer\. Ask through question, then start\./);
+  assert.match(refusedBy(root, "--start", "ads-then-outbound", "--context", "offer", "--handle", "acme", "--settled", SETTLED, "--by", "nobody").text, /"nobody" is not in admin\.md team/);
+  const today = wf.localDate(), id = `ads-then-outbound-${today}-acme`;
+  const out = workflow(root, "--start", "ads-then-outbound", "--context", "offer", "--handle", "Acme", "--settled", SETTLED, "--by", "marta");
+  assert.match(out, new RegExp(`^started ${id} in Our offer: step 1 of 4, Build the target list, due now \\(`));
+  const all = lib.readMemories(root, "offer").filter(m => m.tags.includes(`run:${id}`));
+  assert.equal(all.length, 2);
+  assert.deepEqual(all[0].tags, ["workflow:ads-then-outbound", `run:${id}`, "run-start"]);
+  assert.match(all[0].content, /^Started workflow "Ads, then outbound" as run ads-then-outbound-\d{4}-\d{2}-\d{2}-acme on \d{4}-\d{2}-\d{2}\.\n- Target accounts: the 40 logistics accounts from the ICP\n- Why now: Q4 budget season\n- Budget: EUR 2000\n- Ad platform: LinkedIn, Marta\n- Sequencer: lemlist$/);
+  assert.deepEqual(all[0].authors, ["marta-nowak"]); assert.equal(all[0].kind, "note");
+  assert.deepEqual(all[1].tags, ["workflow:ads-then-outbound", `run:${id}`, "step:1", "step-status:due", `due:${today}`]);
+  assert.match(all[1].content, /^Step 1 of 4, Build the target list: due now\. Starts now\. Pull the accounts that match the ICP/);
+  assert.match(refusedBy(root, "--start", "ads-then-outbound", "--context", "offer", "--handle", "Acme", "--settled", SETTLED, "--by", "marta").text, new RegExp(`run ${id} already exists`));
+  assert.match(workflow(root, "--list"), new RegExp(`runs in progress:\\n- ${id} in Our offer: step 1 of 4, Build the target list, due now`));
+});
+
+test("workflow --status shows every step with its state, the open gate question and the brief", () => {
+  const root = ready(); const today = wf.localDate(), id = `outbound-${today}-q4`;
+  workflow(root, "--start", "outbound", "--context", "offer", "--handle", "Q4", "--settled", JSON.stringify({ "Target accounts": "list A", "Why now": "budget season", Owner: "Marta", Sequencer: "lemlist" }), "--by", "marta");
+  const out = workflow(root, "--status", id);
+  assert.match(out, new RegExp(`^run ${id}: Outbound in Our offer, started ${today} by marta-nowak, in progress\\n`));
+  assert.match(out, /\n1\. Build the target list: due now\n2\. Write the sequence: not started\n3\. Launch: not started \(gate: after 10 days\)\n4\. Read replies and book: not started\n/);
+  assert.match(out, /\nbrief:\n- Target accounts: list A\n/);
+  assert.match(out, /\nnext: do step 1 in this chat through the connected tools, then workflow advance with step 1\.$/);
+  assert.match(refusedBy(root, "--status", "nope").text, /no run "nope"/);
+  assert.equal(JSON.parse(workflow(root, "--status", id, "--json")).current.n, 1);
+});
