@@ -55,4 +55,5 @@ In the run's context, as ordinary notes tagged with the workflow and the run: th
 note per step state (superseded as it changes, so the history stays), the gate questions, and a
 decision at the end with the Learn items. `query` (sql) can read them by tag. Files a run
 produces land in the project folder when the chat is in a project, and otherwise beside the
-workflow in `workflows/<slug>/`.
+workflow in `workflows/<slug>/`, named after the run, since every run of that workflow shares
+the folder.

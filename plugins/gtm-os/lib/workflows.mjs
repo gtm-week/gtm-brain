@@ -68,7 +68,7 @@ export function listRuns(root) {
     const all = lib.readMemories(root, c.slug), effective = new Set(lib.effectiveMemories(all));
     for (const m of all) {
       const t = runTags(m); if (!t.run) continue;
-      if (!runs.has(t.run)) runs.set(t.run, { id: t.run, workflow: t.workflow, context: c.slug, contextTitle: c.title, startedAt: null, by: null, brief: "", steps: [], open: null, ended: null });
+      if (!runs.has(t.run)) runs.set(t.run, { id: t.run, workflow: t.workflow, context: c.slug, contextTitle: c.title, contextStatus: c.status || "active", startedAt: null, by: null, brief: "", steps: [], open: null, ended: null });
       const r = runs.get(t.run), tags = m.tags || [], inForce = effective.has(m);
       if (tags.includes("run-start")) { r.startedAt = m.at; r.by = m.authors?.[0] || null; r.brief = m.content; }
       if (!inForce) continue;
@@ -82,8 +82,10 @@ export function listRuns(root) {
 }
 export const runState = (root, id) => listRuns(root).find(r => r.id === String(id || "")) || null;
 
+/* A run that can move: not ended, and its context still active. A run in an archived context is reported, never nagged about. */
+export const isLive = r => !r.ended && r.contextStatus === "active";
 /* Pending steps whose gate date has passed: what the session and the schedule turn into a due step and a question. */
-export const dueSteps = (root, today = localDate()) => listRuns(root).filter(r => !r.ended && r.current?.status === "pending" && r.current.due && r.current.due <= today).map(r => ({ run: r, step: r.current }));
+export const dueSteps = (root, today = localDate()) => listRuns(root).filter(r => isLive(r) && r.current?.status === "pending" && r.current.due && r.current.due <= today).map(r => ({ run: r, step: r.current }));
 
 /* The state a step enters when the one before it was done on previousDone (YYYY-MM-DD). */
 export function stepDue(step, previousDone) {
@@ -96,7 +98,7 @@ export function stepDue(step, previousDone) {
 
 /* One opening line for the session hook. Instructions for the model: name the runs once, act only when asked. */
 export function runsLine(root, today = localDate()) {
-  const live = listRuns(root).filter(r => !r.ended); if (!live.length) return "";
+  const live = listRuns(root).filter(isLive); if (!live.length) return "";
   const show = r => {
     const w = readWorkflow(root, r.workflow), total = w?.ok ? w.steps.length : r.steps.length, s = r.current, title = s && w?.ok ? w.steps[s.n - 1]?.title : null;
     return `${r.id} in ${r.contextTitle}${s ? `, step ${s.n} of ${total}${title ? ` (${title})` : ""}${s.status === "due" ? ", due now" : s.due ? `, due ${s.due}` : ""}` : ", no step pending"}`;

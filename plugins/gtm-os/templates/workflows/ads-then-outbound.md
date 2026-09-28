@@ -27,12 +27,11 @@ engaged. Shipped with GTM OS as a draft; edit it to the way this company works.
 
 1. **Build the target list** (tool: crm). Pull the accounts that match the ICP; save the list
    as a file of this run.
-2. **Launch the ads** (tool: ads). Brief, creatives, audience from the list. Gate: after 14
-   days.
+2. **Launch the ads** (tool: ads). Brief, creatives, audience from the list.
 3. **Read engagement** (tool: ads). Which accounts engaged most; save the engaged list as a
-   file of this run. Gate: when the engaged accounts are known.
+   file of this run. Gate: after 14 days.
 4. **Outreach to the engaged accounts** (tool: sequencer). Only those; never the accounts
-   that clicked nothing.
+   that clicked nothing. Gate: when the engaged accounts are known.
 
 ## Learn
 

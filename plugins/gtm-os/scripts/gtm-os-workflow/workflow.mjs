@@ -47,7 +47,7 @@ if (opt.list) {
   const lines = ["workflows:", ...workflows.map(w => w.ok ? `- ${w.slug}: ${w.title} [${w.status}], ${w.steps.length} steps (${w.path})` : `- ${w.slug}: does not parse: ${w.problems.join("; ")} (${w.path})`)];
   if (!workflows.length) lines.push("- none yet: a workflow is a document in workflows/ with type: workflow (see WORKFLOWS.md)");
   lines.push(runs.length ? "runs in progress:" : "runs in progress: none.");
-  for (const r of runs) { const w = wf.readWorkflow(root, r.workflow), s = r.current; lines.push(`- ${r.id} in ${r.contextTitle}: ${s ? `step ${s.n} of ${w?.ok ? w.steps.length : r.steps.length}, ${w?.ok ? w.steps[s.n - 1]?.title : "step"}, ${stateLine(s)}` : "no step pending"}${r.open ? " (gate question open)" : ""}`); }
+  for (const r of runs) { const w = wf.readWorkflow(root, r.workflow), s = r.current; lines.push(`- ${r.id} in ${r.contextTitle}: ${!wf.isLive(r) ? `context ${r.contextStatus}; bring it back to continue` : s ? `step ${s.n} of ${w?.ok ? w.steps.length : r.steps.length}, ${w?.ok ? w.steps[s.n - 1]?.title : "step"}, ${stateLine(s)}` : "no step pending"}${r.open && wf.isLive(r) ? " (gate question open)" : ""}`); }
   console.log(lines.join("\n")); process.exit(0);
 }
 
@@ -86,6 +86,7 @@ if (opt.status) {
   if (r.open) lines.push(`waiting on you: ${r.open.content} (question ${r.open.memory})`);
   if (r.brief) lines.push(`brief:\n${r.brief.split("\n").slice(1).join("\n")}`);
   if (r.ended) lines.push(`ended: ${r.ended.content}`);
+  else if (!wf.isLive(r)) lines.push(`context ${r.contextStatus}: bring ${r.contextTitle} back to continue this run; nothing is due while it is ${r.contextStatus}.`);
   else if (r.current) lines.push(r.current.status === "due" ? `next: do step ${r.current.n} in this chat through the connected tools, then workflow advance with step ${r.current.n}.` : `next: nothing until ${r.current.due}; the session and the schedule mark it due.`);
   console.log(lines.join("\n")); process.exit(0);
 }
@@ -103,7 +104,8 @@ const currentStep = (r, w) => {
   const s = r.steps.find(x => x.n === n), cur = r.current;
   if (!cur) refuse(`run ${r.id} has no step pending`);
   if (n !== cur.n) refuse(`step ${n} is ${s ? s.status : "not started"}; the current step is ${cur.n}`);
-  if (cur.status === "pending") refuse(`step ${n} is waiting until ${cur.due}; workflow due marks it, or skip it`);
+  // a pending step whose date has passed is due, whether or not the due check ran yet: the opening line already counts it
+  if (cur.status === "pending" && !(cur.due && cur.due <= wf.localDate())) refuse(`step ${n} is waiting until ${cur.due}; workflow due marks it, or skip it`);
   const def = w.steps[n - 1]; if (!def) refuse(`the workflow no longer has step ${n}; skip it`);
   return { n, cur, def };
 };

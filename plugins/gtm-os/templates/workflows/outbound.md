@@ -29,9 +29,8 @@ with GTM OS as a draft; edit it to the way this company works.
 2. **Write the sequence** (tool: sequencer). Three to four touches, the offer in the first,
    following the tone of voice document when there is one.
 3. **Launch** (tool: sequencer). Load the list, start the sequence, note the start date.
-   Gate: after 10 days.
 4. **Read replies and book** (tool: crm). Replies, meetings booked, bounces; hand warm
-   replies to the owner.
+   replies to the owner. Gate: after 10 days.
 
 ## Learn
 

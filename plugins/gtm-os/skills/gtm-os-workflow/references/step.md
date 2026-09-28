@@ -11,7 +11,8 @@
    A CRM write follows the writes references of gtm-os-use-brain. A file the step produces (a
    target list, a brief) is saved in the project folder when this chat is in a project, and
    otherwise beside the workflow with `add this file to <workflow title>` (the files reference
-   of gtm-os-use-brain), which lands it in `workflows/<slug>/`.
+   of gtm-os-use-brain), which lands it in `workflows/<slug>/`. Put the run's handle in the
+   file name (`acme-q4-target-list.csv`): every run of that workflow shares the folder.
 4. When a gate question is open for this step, the answer is what the person or the connector
    said: pass it as `answer`.
 5. `workflow` with `action: advance`, `run`, `step`, `note` (one or two sentences, what was
