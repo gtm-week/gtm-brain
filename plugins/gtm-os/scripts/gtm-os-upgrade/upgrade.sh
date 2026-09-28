@@ -57,6 +57,15 @@ if [ ! -f strategy.md ]; then
   sed -e "s|{{COMPANY}}|$(printf '%s' "$COMPANY" | sed -e 's/[&|]/\\&/g')|g" -e "s|{{DATE}}|$(date +%F)|g" -e "s|{{VERSION}}|$PLUGIN_VERSION|g" "$T/strategy.md" > strategy.md
   echo "added strategy.md"; changed=1; paths="$paths strategy.md"; added_strategy=1
 fi
+# workflows/ (0.28.0): a brain from before gets the folder with the two shipped workflows once. A folder that
+# exists is never added to, so a deleted shipped workflow stays deleted; a deleted folder comes back.
+added_workflows=0
+if [ ! -d workflows ]; then
+  PLUGIN_VERSION="$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$PLUGIN/.codex-plugin/plugin.json" | head -1)"
+  mkdir -p workflows
+  for f in "$T"/workflows/*.md; do sed -e "s|{{DATE}}|$(date +%F)|g" -e "s|{{VERSION}}|$PLUGIN_VERSION|g" "$f" > "workflows/$(basename "$f")"; done
+  echo "added workflows/ with the two shipped workflows"; changed=1; paths="$paths workflows"; added_workflows=1
+fi
 # What this upgrade did and what it left alone, in the person's words: the last thing they read.
 moved_n="$(printf '%s\n' "$docs_out" | grep -c '^moved ' || true)"; kept_n="$(printf '%s\n' "$docs_out" | grep -c '^kept ' || true)"
 old_files=0; [ -d files ] && old_files="$(find files -type f 2>/dev/null | wc -l | tr -d ' ')"
@@ -65,9 +74,10 @@ echo "upgrade report:"
 [ "$moved_n" -gt 0 ] && echo "  moved $moved_n guideline$([ "$moved_n" = 1 ] || echo s) to the root as a document (say: list the documents)"
 [ "$kept_n" -gt 0 ] && echo "  kept $kept_n guideline$([ "$kept_n" = 1 ] || echo s) in brain/guidelines: a file of that name already sits at the root; adopt or merge by hand"
 [ "$added_strategy" = 1 ] && echo "  added strategy.md, waiting for the strategic intake (say: run the strategic intake)"
+[ "$added_workflows" = 1 ] && echo "  added workflows/: outbound and ads-then-outbound, as drafts (say: start the outbound workflow)"
 [ "$old_files" -gt 0 ] && echo "  $old_files files in files/ from before 0.27 stay where they are; their links keep working. New files land beside a document or a company."
 [ -n "$stray" ] && echo "  folders at the top GTM OS does not use: $stray. A Markdown in them can become a document where it lies (adopt the documents in <folder>/); the rest is yours to move or delete."
-[ "$moved_n" = 0 ] && [ "$kept_n" = 0 ] && [ "$added_strategy" = 0 ] && [ "$old_files" = 0 ] && [ -z "$stray" ] && echo "  nothing to migrate"
+[ "$moved_n" = 0 ] && [ "$kept_n" = 0 ] && [ "$added_strategy" = 0 ] && [ "$added_workflows" = 0 ] && [ "$old_files" = 0 ] && [ -z "$stray" ] && echo "  nothing to migrate"
 git config core.hooksPath .githooks 2>/dev/null || true
 git config gtm-os.lib "$PLUGIN/lib/brain.mjs" 2>/dev/null || true
 # Team handles: the rule is the full name, lowercase, hyphenated. A brain set up before that rule

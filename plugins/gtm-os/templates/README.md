@@ -1,6 +1,6 @@
 # {{COMPANY}} brain
 
-Made with GTM OS. Three kinds of things live in this folder.
+Made with GTM OS. Four kinds of things live in this folder.
 
 - **A document**: something we wrote and the work must follow. `strategy.md` is here from day
   one, waiting for the strategic intake (say `run the strategic intake`); `brand/voice.md`,
@@ -8,6 +8,9 @@ Made with GTM OS. Three kinds of things live in this folder.
   you attach moves it into a folder of its own name with the file beside it
   (`strategy/strategy.md`, `strategy/deck.pdf`). Any folder name works. Wrote one by hand? Say
   `add pricing.md as a document`.
+- **A workflow**: a document in `workflows/` that plays out over time: things to settle before
+  starting, steps with gates, what to read back at the end. Two come with GTM OS as drafts.
+  Say `start the outbound workflow`; the brain keeps the run's state and says when a step is due.
 - **A project**: a folder for one piece of work (`website/`, an event). Make or link one with
   `/gtm-os-project`; open it in Codex and work there. To work on a document, just open its
   folder in Codex: it sees the brain without being linked. Link only folders that hold

@@ -72,6 +72,11 @@ sed -e "s|{{COMPANY}}|$(esc "$COMPANY")|g" "$T/AGENTS.md" > AGENTS.md
 # strategy.md from day one: a draft document waiting for the strategic intake (gtm-os-strategy); a file already there is the person's.
 PLUGIN_VERSION="$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$T/../.codex-plugin/plugin.json" | head -1)"
 [ -f strategy.md ] || sed -e "s|{{COMPANY}}|$(esc "$COMPANY")|g" -e "s|{{DATE}}|$(date +%F)|g" -e "s|{{VERSION}}|$PLUGIN_VERSION|g" "$T/strategy.md" > strategy.md
+# workflows/ from day one (0.28.0): the two shipped workflow documents as drafts; a folder already there is the person's.
+if [ ! -d workflows ]; then
+  mkdir -p workflows
+  for f in "$T"/workflows/*.md; do sed -e "s|{{DATE}}|$(date +%F)|g" -e "s|{{VERSION}}|$PLUGIN_VERSION|g" "$f" > "workflows/$(basename "$f")"; done
+fi
 if [ -f .gitignore ]; then # keep theirs, add ours
   while IFS= read -r line; do grep -qxF -- "$line" .gitignore || printf '%s\n' "$line" >> .gitignore; done < "$T/gitignore"
 else cp "$T/gitignore" .gitignore; fi
@@ -85,7 +90,7 @@ git config gtm-os.lib "$PLUGIN/lib/brain.mjs"
 OWNER_NAME="$(printf '%s' "$PEOPLE_JSON" | node -e 'const p=JSON.parse(require("fs").readFileSync(0,"utf8"))[0];console.log(p.name)')"
 OWNER_EMAIL="$(printf '%s' "$PEOPLE_JSON" | node -e 'const p=JSON.parse(require("fs").readFileSync(0,"utf8"))[0];console.log(p.email)')"
 [ -n "$OWNER_NAME" ] && git config user.name "$OWNER_NAME"; [ -n "$OWNER_EMAIL" ] && git config user.email "$OWNER_EMAIL"
-if git add -- brain AGENTS.md README.md strategy.md .gitignore .githooks && git -c commit.gpgsign=false commit -q -m "setup: $COMPANY brain (gtm-os v0)"; then
+if git add -- brain AGENTS.md README.md strategy.md workflows .gitignore .githooks && git -c commit.gpgsign=false commit -q -m "setup: $COMPANY brain (gtm-os v0)"; then
   echo "gtm-os: brain created for $COMPANY  ·  committed"
 else
   echo "gtm-os: brain created for $COMPANY  ·  written to disk, NOT committed (git is read-only here): say save"

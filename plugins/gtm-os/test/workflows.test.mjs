@@ -299,3 +299,29 @@ test("session maintenance and the scheduled run mark due steps: one gate questio
   assert.equal(runMemories(root, id).filter(m => m.kind === "question").length, 1, "the schedule found the step already due");
   assert.match(readFileSync(join(root, "work", "hooks.log"), "utf8"), /scheduled-run  workflows: no step due/);
 });
+
+test("setup writes workflows/ with the two shipped drafts, committed, dated and versioned", () => {
+  const root = brain();
+  const version = JSON.parse(readFileSync(`${P}/.codex-plugin/plugin.json`, "utf8")).version;
+  for (const name of ["outbound", "ads-then-outbound"]) {
+    const text = readFileSync(join(root, "workflows", `${name}.md`), "utf8");
+    assert.match(text, /^type: workflow$/m); assert.match(text, new RegExp(`^gtm-os: ${version.replace(/\./g, "\\.")}$`, "m")); assert.match(text, /^updated: \d{4}-\d{2}-\d{2}$/m);
+    assert.doesNotMatch(text, /{{/);
+  }
+  assert.equal(wf.listWorkflows(root).every(w => w.ok), true);
+  assert.match(execFileSync("git", ["-C", root, "log", "--format=%s", "--", "workflows"], { encoding: "utf8" }), /setup/);
+  assert.match(readFileSync(join(root, "README.md"), "utf8"), /workflows\//);
+  // setup only runs in an empty folder (it refuses "this folder is not empty"), so a person's own workflows/ can never meet it
+});
+
+test("upgrade adds workflows/ once to a brain without it and never adds a shipped file back into a folder that exists", () => {
+  const root = brain();
+  rmSync(join(root, "workflows"), { recursive: true });
+  const upgrade = () => execFileSync("bash", [`${P}/scripts/gtm-os-upgrade/upgrade.sh`, root], { cwd: root, encoding: "utf8", env });
+  assert.match(upgrade(), /added workflows\/ with the two shipped workflows/);
+  assert.ok(existsSync(join(root, "workflows", "outbound.md"))); assert.ok(existsSync(join(root, "workflows", "ads-then-outbound.md")));
+  rmSync(join(root, "workflows", "outbound.md"));
+  const again = upgrade();
+  assert.doesNotMatch(again, /added workflows/);
+  assert.equal(existsSync(join(root, "workflows", "outbound.md")), false, "a deleted shipped workflow stays deleted");
+});
