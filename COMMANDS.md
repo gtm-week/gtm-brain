@@ -11,6 +11,7 @@ to distinguish these workflows from other installed skills.
 | `gtm-os-start` | GTM OS: Start | The first command in a project: creates the brain here, gets to know the business, connects the tools, opens the dashboard; resumes what is unfinished |
 | `gtm-os-sync` | GTM OS: Sync | Pull what came in through the connected tools since the last sync, one subagent per tool, and record what matters |
 | `gtm-os-todo` | GTM OS: Todo | What should I do now: everything waiting on you, ordered, walked through one by one |
+| `gtm-os-workflow` | GTM OS: Workflows | Start a run of a workflow document (an outbound campaign, ads then outbound), see where it stands, do the next step, skip or abandon; the brain keeps the steps and dates |
 | `gtm-os-deepdive` | GTM OS: Deep dive | A one-page brief on an entity or a context, from the notes and the tools read live |
 | `gtm-os-unit-economics` | GTM OS: Unit economics | Lech Kaniuk's unit economics review: CAC, LTV12 and LTV24, LTV:CAC, both paybacks and retention from the chat and the brain, then PUSH, FIX, STOP or MEASURE overall and per acquisition source or segment; offers to keep the decision as a note and the missing inputs as questions |
 | `gtm-os-use-brain` | GTM OS: Use the company brain | Everyday work: remember, recall, where we are |
@@ -33,7 +34,7 @@ The sections below document the underlying operations, tools, and script paths f
 They are not additional discoverable skills. Tools show outcomes such as "Remembering" or
 "Searching the brain" in chat. Review proposals on the read-only dashboard. APPROVE typed in Codex stays a shell step with its permission prompt.
 Scripts retain their paths for terminal use with
-`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-os/gtm-os/0.27.0`.
+`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-os/gtm-os/0.28.0`.
 
 Legend for "writes": what files the command changes. Nothing else is ever touched.
 
@@ -309,6 +310,22 @@ links keep working). It prints where it landed and the owner; an
 entity file is then attached through `remember` with `asset`. No skill to invoke: use-brain's
 `references/files.md` is the procedure.
 
+## Workflows
+
+### workflow
+*"start the outbound workflow"*, *"where is the campaign"*, *"next step"*, *"skip this step"*,
+*"abandon the run"*, *"list workflows"*
+
+A workflow is a document in `workflows/` with `type: workflow`; a run is its state as memories
+in one context, tagged `workflow:<slug>` and `run:<id>`, one note per step with a `due:` tag,
+a `brain-question` per reached gate. See [WORKFLOWS.md](WORKFLOWS.md).
+
+Tool: `workflow` (`action` list | start | status | advance | skip | abandon | due). Writes:
+`brain/contexts/<context>/memories.jsonl`, one commit per action. `due` is called by session
+maintenance and by the scheduled run with `by` schedule or session; it writes only for a step
+whose date passed and asks its gate question once.
+`node $PLUGIN_ROOT/scripts/gtm-os-workflow/workflow.mjs . --list | --start <slug> --context <ctx> --handle "<name>" --settled '{"Label":"answer"}' --by <handle> | --status <run> | --advance <run> --step <n> [--note ...] [--answer ...] [--actions tool:action:ref,...] [--learned '{...}'] --by <handle> | --skip <run> --step <n> --reason ... --by <handle> | --abandon <run> --reason ... --by <handle> | --due [--today YYYY-MM-DD] --by <handle|schedule|session>`
+
 ## Setup and admin
 
 ### check my machine
@@ -399,7 +416,8 @@ Tool: `propose_admin_change` for the proposal; applying is a shell command with 
 *"set up the weekly compile"*, *"schedule"*
 
 The unattended run: compile every context whose summary is behind, render, save the covers. Two ways: a Scheduled task in
-the Codex app (prompt in `SETUP.md` §11), or `scheduled-run.sh` from launchd or cron.
+the Codex app (prompt in `SETUP.md` §11), or `scheduled-run.sh` from launchd or cron. The scheduled run first marks
+workflow steps whose date passed as due (see [WORKFLOWS.md](WORKFLOWS.md)), then compiles.
 
 Writes: covers and a commit `scheduled: compile ...` (covers only; anything else it touched is
 left uncommitted and listed), `work/hooks.log`.

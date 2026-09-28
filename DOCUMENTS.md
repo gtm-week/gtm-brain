@@ -31,6 +31,12 @@ split. A linked project's folder is never used this way.
 The one decision you make is one document or several: the work follows them separately (copy
 reads the voice, a landing page reads the design system), so they are separate files.
 
+## A document that runs
+
+A document in `workflows/` with `type: workflow` in its frontmatter is a workflow: the same file
+rules, plus three headings the brain reads and a run state it keeps. See
+[WORKFLOWS.md](WORKFLOWS.md).
+
 ## The one you start with
 
 Every brain has `strategy.md` from setup: a draft document that says it is waiting for the

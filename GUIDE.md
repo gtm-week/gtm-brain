@@ -99,6 +99,10 @@ search link. Note citations stay in the dashboard and take you to the supporting
 
 ## Once a week: make it recurring
 
+A campaign is not one chat. Say `start the outbound workflow`: the brain settles what it needs,
+records the run, and tells you at the start of a chat when the next step is due. See
+[WORKFLOWS.md](WORKFLOWS.md).
+
 Codex can refresh every context's summary on a schedule, so Monday morning the summaries are
 current and the dashboard is fresh. In the Codex app:
 
