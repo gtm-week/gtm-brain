@@ -90,4 +90,88 @@ if (opt.status) {
   console.log(lines.join("\n")); process.exit(0);
 }
 
+/* ---------- a run to move: shared checks ---------- */
+const liveRun = id => {
+  const r = wf.runState(root, String(id)); if (!r) refuse(`no run "${id}"; runs: ${wf.listRuns(root).map(x => x.id).join(", ") || "none"}`);
+  if (r.ended) refuse(`run ${r.id} ended (${r.ended.how}) on ${String(r.ended.at).slice(0, 10)}; start a new run`);
+  const ctx = lib.readContext(root, r.context, { includeMemories: false });
+  if (!ctx || ctx.status !== "active") refuse(`context ${r.context} is ${ctx ? ctx.status : "missing"}; bring it back before advancing`);
+  return { r, ctx, w: loaded(r.workflow, r.context) };
+};
+const currentStep = (r, w) => {
+  const n = Number(opt.step); if (!Number.isInteger(n) || n < 1) refuse("--step needs the current step's number");
+  const s = r.steps.find(x => x.n === n), cur = r.current;
+  if (!cur) refuse(`run ${r.id} has no step pending`);
+  if (n !== cur.n) refuse(`step ${n} is ${s ? s.status : "not started"}; the current step is ${cur.n}`);
+  if (cur.status === "pending") refuse(`step ${n} is waiting until ${cur.due}; workflow due marks it, or skip it`);
+  const def = w.steps[n - 1]; if (!def) refuse(`the workflow no longer has step ${n}; skip it`);
+  return { n, cur, def };
+};
+/* After a step closes: the next step opens with its gate, or the run ends with the learn list. Returns the line to print. */
+const openNext = (r, w, n, today, closingLine) => {
+  const next = w.steps[n];
+  if (!next) {
+    const learned = parseJSON(opt.learned, "learned");
+    write(w.context, { kind: "decision", content: `Run ${r.id} finished on ${today}. Learn:\n${w.learn.map(l => `- ${l}: ${String(learned[l] || "").trim() || "not read back yet"}`).join("\n")}`, tags: [...baseTags(w.slug, r.id), "run-done"] });
+    return `${closingLine}; run ${r.id} finished. Read back: ${w.learn.join("; ") || "nothing listed"}`;
+  }
+  const st = wf.stepDue(next, today);
+  stepRecord(w, next, st, r.id, st.status === "pending" ? `Waiting for the gate. ${next.text}` : `Ready now. ${next.text}`);
+  if (st.ask) gateQuestion(w, next, r.id, st.ask);
+  return `${closingLine}; step ${next.n} of ${w.steps.length}, ${next.title}, ${stateLine(st)}${st.ask ? `; asked: ${st.ask}` : ""}`;
+};
+
+/* ---------- advance ---------- */
+if (opt.advance) {
+  needBy();
+  const { r, ctx, w } = liveRun(opt.advance), { n, cur, def } = currentStep(r, w), today = wf.localDate();
+  stepRecord(w, def, { status: "done" }, r.id, `Done on ${today}. ${String(opt.note || "").trim()}${opt.answer ? ` Gate answer: ${String(opt.answer).trim()}` : ""}`.trim(),
+    { supersedes: cur.memory, retracts: r.open?.step === n ? r.open.memory : null, actions: parseActions(opt.actions) });
+  finish(ctx.slug, `workflow: ${r.id} step ${n} done`, openNext(r, w, n, today, `step ${n} done`));
+  process.exit(0);
+}
+
+/* ---------- skip ---------- */
+if (opt.skip) {
+  needBy();
+  if (!String(opt.reason || "").trim()) refuse("--reason is required: why this step is skipped");
+  const { r, ctx, w } = liveRun(opt.skip), today = wf.localDate();
+  const n = Number(opt.step), cur = r.current; if (!cur || n !== cur.n) refuse(`step ${n} is ${r.steps.find(x => x.n === n)?.status || "not started"}; the current step is ${cur?.n ?? "none"}`);
+  const def = w.steps[n - 1] || { n, title: "(no longer in the workflow)", text: "" };
+  stepRecord(w, def, { status: "skipped" }, r.id, `Skipped on ${today}: ${String(opt.reason).trim()}`, { supersedes: cur.memory, retracts: r.open?.step === n ? r.open.memory : null });
+  finish(ctx.slug, `workflow: ${r.id} step ${n} skipped`, openNext(r, w, n, today, `step ${n} skipped (${String(opt.reason).trim()})`));
+  process.exit(0);
+}
+
+/* ---------- abandon ---------- */
+if (opt.abandon) {
+  needBy();
+  if (!String(opt.reason || "").trim()) refuse("--reason is required: why this run stops");
+  const { r, ctx, w } = liveRun(opt.abandon);
+  write(w.context, { kind: "decision", content: `Run ${r.id} abandoned on ${wf.localDate()}: ${String(opt.reason).trim()}`, tags: [...baseTags(w.slug, r.id), "run-abandoned"], retracts: r.open?.memory || null });
+  finish(ctx.slug, `workflow: ${r.id} abandoned`, `run ${r.id} abandoned: ${String(opt.reason).trim()}`);
+  process.exit(0);
+}
+
+/* ---------- due: the automatic check (session maintenance, the schedule), idempotent ---------- */
+if (opt.due) {
+  needBy();
+  const today = String(opt.today || wf.localDate()); if (!/^\d{4}-\d{2}-\d{2}$/.test(today)) refuse("--today must be YYYY-MM-DD");
+  const lines = [];
+  for (const { run: r, step } of wf.dueSteps(root, today)) {
+    const w = wf.readWorkflow(root, r.workflow); if (!w?.ok) { lines.push(`skipped ${r.id}: ${w ? w.problems.join("; ") : "workflow file missing"}`); continue; }
+    const ctx = lib.readContext(root, r.context, { includeMemories: false }); if (!ctx || ctx.status !== "active") { lines.push(`skipped ${r.id}: context ${r.context} is not active`); continue; }
+    const def = w.steps[step.n - 1]; if (!def) { lines.push(`skipped ${r.id}: the workflow no longer has step ${step.n}`); continue; }
+    const wl = { ...w, context: r.context }, ask = def.gate?.kind === "when" ? def.gate.condition : `the gate date ${step.due} has passed; is it time for this step`;
+    stepRecord(wl, def, { status: "due", due: step.due }, r.id, `Due since ${step.due}.`, { supersedes: step.memory });
+    gateQuestion(wl, def, r.id, ask);
+    const c = lib.commit(root, [`brain/contexts/${r.context}/memories.jsonl`, ...lib.ENTITIES_PATHS], `workflow: ${r.id} step ${step.n} due`);
+    lib.logActivity(root, "workflow", `${r.id} step ${step.n} due`);
+    lines.push(`due: ${r.id} step ${step.n} (${def.title}), asked: ${ask} (${c.note})`);
+  }
+  if (lines.some(l => l.startsWith("due:"))) lib.rerender(root);
+  console.log(lines.length ? lines.join("\n") : "no step due");
+  process.exit(0);
+}
+
 refuse("pass --list, --start, --status, --advance, --skip, --abandon or --due");

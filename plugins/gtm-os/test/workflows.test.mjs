@@ -187,3 +187,81 @@ test("workflow --status shows every step with its state, the open gate question 
   assert.match(refusedBy(root, "--status", "nope").text, /no run "nope"/);
   assert.equal(JSON.parse(workflow(root, "--status", id, "--json")).current.n, 1);
 });
+
+const started = (handle = "Acme") => { const root = ready(); const today = wf.localDate(), id = `ads-then-outbound-${today}-${lib.handleFor(handle)}`; workflow(root, "--start", "ads-then-outbound", "--context", "offer", "--handle", handle, "--settled", SETTLED, "--by", "marta"); return { root, id, today }; };
+const runMemories = (root, id) => lib.readMemories(root, "offer").filter(m => m.tags.includes(`run:${id}`));
+
+test("workflow --advance records the step done with its actions, supersedes the old state and opens the next step with its due date", () => {
+  const { root, id, today } = started();
+  assert.match(refusedBy(root, "--advance", id, "--step", "2", "--by", "marta").text, /step 2 is not started; the current step is 1/);
+  const out = workflow(root, "--advance", id, "--step", "1", "--note", "40 accounts pulled from HubSpot.", "--actions", "hubspot:search:list-40", "--by", "marta");
+  assert.match(out, new RegExp(`^step 1 done; step 2 of 4, Launch the ads, waiting, due ${wf.addDays(today, 14)} \\(`));
+  const all = runMemories(root, id);
+  assert.equal(all.length, 4, "start, step 1 due, step 1 done, step 2 pending: the JSONL only grows");
+  const done = all[2]; assert.equal(done.supersedes, all[1].id); assert.deepEqual(done.tags.slice(2), ["step:1", "step-status:done"]);
+  assert.match(done.content, /^Step 1 of 4, Build the target list: done\. Done on \d{4}-\d{2}-\d{2}\. 40 accounts pulled from HubSpot\.$/);
+  assert.deepEqual(done.actions, [{ tool: "hubspot", action: "search", ref: "list-40" }]);
+  assert.deepEqual(all[3].tags.slice(2), ["step:2", "step-status:pending", `due:${wf.addDays(today, 14)}`]);
+  const r = wf.runState(root, id); assert.deepEqual(r.steps.map(s => s.status), ["done", "pending"]); assert.equal(r.current.n, 2);
+  assert.match(refusedBy(root, "--advance", id, "--step", "1", "--by", "marta").text, /step 1 is done; the current step is 2/);
+  assert.match(refusedBy(root, "--advance", id, "--step", "2", "--by", "marta").text, new RegExp(`step 2 is waiting until ${wf.addDays(today, 14)}; workflow due marks it, or skip it`));
+  assert.match(workflow(root, "--status", id), /\n1\. Build the target list: done\n2\. Launch the ads: waiting, due /);
+});
+
+test("workflow --due marks a pending step whose date passed exactly once and asks its gate question; a when gate asks at advance time", () => {
+  const { root, id, today } = started();
+  workflow(root, "--advance", id, "--step", "1", "--by", "marta");
+  assert.equal(workflow(root, "--due", "--today", wf.addDays(today, 13), "--by", "session").trim(), "no step due");
+  const due = wf.addDays(today, 14);
+  const first = workflow(root, "--due", "--today", due, "--by", "schedule");
+  assert.match(first, new RegExp(`^due: ${id} step 2 \\(Launch the ads\\), asked: the gate date ${due} has passed; is it time for this step`));
+  assert.equal(workflow(root, "--due", "--today", due, "--by", "session").trim(), "no step due", "idempotent across the session and the schedule");
+  const all = runMemories(root, id);
+  const dueStep = all.find(m => m.tags.includes("step-status:due") && m.tags.includes("step:2")), q = all.find(m => m.kind === "question");
+  assert.deepEqual(dueStep.authors, ["schedule"]); assert.equal(dueStep.via, "schedule"); assert.equal(dueStep.supersedes, all[3].id);
+  assert.deepEqual(q.tags, ["workflow:ads-then-outbound", `run:${id}`, "step:2", "gate", "brain-question"]);
+  assert.equal(all.filter(m => m.kind === "question").length, 1);
+  assert.equal(wf.runState(root, id).open.memory, q.id);
+  // advancing the due step answers the gate: the question is retracted by the done record, and step 3's when gate asks at once
+  const out = workflow(root, "--advance", id, "--step", "2", "--answer", "two weeks of ads ran", "--by", "marta");
+  assert.match(out, /^step 2 done; step 3 of 4, Read engagement, due now; asked: the engaged accounts are known/);
+  const after = runMemories(root, id);
+  const done2 = after.find(m => m.tags.includes("step:2") && m.tags.includes("step-status:done"));
+  assert.equal(done2.retracts, q.id); assert.match(done2.content, /Gate answer: two weeks of ads ran/);
+  const r = wf.runState(root, id);
+  assert.equal(r.current.n, 3); assert.equal(r.current.status, "due"); assert.equal(r.open.step, 3);
+  assert.match(r.open.content, /^Run .*, step 3 \(Read engagement\): the engaged accounts are known\? Answer this to move the run on\.$/);
+});
+
+test("workflow --advance on the last step ends the run with the learn items; --skip and --abandon say why", () => {
+  const { root, id } = started();
+  workflow(root, "--advance", id, "--step", "1", "--by", "marta");
+  assert.match(refusedBy(root, "--skip", id, "--step", "2", "--by", "marta").text, /--reason is required/);
+  const skipped = workflow(root, "--skip", id, "--step", "2", "--reason", "no ad budget this quarter", "--by", "marta");
+  assert.match(skipped, /^step 2 skipped \(no ad budget this quarter\); step 3 of 4, Read engagement, due now; asked: the engaged accounts are known/);
+  workflow(root, "--advance", id, "--step", "3", "--answer", "12 accounts engaged", "--by", "marta");
+  const end = workflow(root, "--advance", id, "--step", "4", "--learned", JSON.stringify({ "Reply and meeting rate of the outreach, against the last outbound run.": "3 replies, 1 meeting, better than August" }), "--by", "marta");
+  assert.match(end, new RegExp(`^step 4 done; run ${id} finished\\. Read back: `));
+  const r = wf.runState(root, id);
+  assert.equal(r.ended.how, "done"); assert.equal(r.current, null);
+  const decision = runMemories(root, id).find(m => m.kind === "decision");
+  assert.match(decision.content, /^Run .* finished on \d{4}-\d{2}-\d{2}\. Learn:\n- Reply and meeting rate of the outreach, against the last outbound run\.: 3 replies, 1 meeting, better than August\n- Which accounts engaged with the ads but not with the outreach\.: not read back yet$/);
+  assert.ok(decision.tags.includes("run-done"));
+  assert.match(refusedBy(root, "--advance", id, "--step", "4", "--by", "marta").text, /ended \(done\)/);
+  const other = started("Beta");
+  const ab = workflow(other.root, "--abandon", other.id, "--reason", "campaign cancelled", "--by", "marta");
+  assert.match(ab, new RegExp(`^run ${other.id} abandoned: campaign cancelled`));
+  assert.equal(wf.runState(other.root, other.id).ended.how, "abandoned");
+  assert.equal(workflow(other.root, "--list").includes(other.id), false, "an ended run is not in progress");
+});
+
+test("workflow --advance refuses when the run's context is archived and when the workflow lost the step", () => {
+  const { root, id } = started();
+  writeFileSync(join(root, "workflows", "ads-then-outbound.md"), template("ads-then-outbound").replace(/4\. \*\*Outreach to the engaged accounts\*\*[\s\S]*?\n\n## Learn/, "\n## Learn"));
+  assert.match(workflow(root, "--status", id), /\n1\. Build the target list: due now\n2\. Launch the ads: not started/);
+  workflow(root, "--advance", id, "--step", "1", "--by", "marta");
+  assert.match(workflow(root, "--status", id), /step 2 of 3|2\. Launch the ads: waiting/);
+  execFileSync(process.execPath, [`${P}/scripts/gtm-os-contexts/contexts.mjs`, ".", "--archive", "offer"], { cwd: root, env, stdio: "ignore" });
+  assert.equal(lib.readContext(root, "offer").status, "archived");
+  assert.match(refusedBy(root, "--skip", id, "--step", "2", "--reason", "x", "--by", "marta").text, /context offer is archived; bring it back before advancing/);
+});
