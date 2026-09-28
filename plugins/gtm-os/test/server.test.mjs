@@ -634,3 +634,22 @@ test("the document tool creates, lists, shows, updates and removes a document, q
   assert.equal(existsSync(join(root, "brand", "tone-of-voice.md")), false);
   const left = (await call("document", { brain: root, action: "list" })).text; assert.match(left, /Strategy \[draft\]/); assert.doesNotMatch(left, /Tone of voice/);
 });
+
+test("workflow: listed as a tool, lists the shipped workflows, refuses an unsettled start with the labels", async () => {
+  const { result: catalog } = await rpc("tools/list");
+  const tool = catalog.tools.find(t => t.name === "workflow");
+  assert.ok(tool, "workflow is in tools/list"); assert.ok(lib.RESERVED_TOOLS.has("workflow"));
+  assert.deepEqual(tool.inputSchema.properties.action.enum, ["list", "start", "status", "advance", "skip", "abandon", "due"]);
+  // the same bare brain the memory_index test builds: admin.md, one context, no git
+  const brain = mkdtempSync(join(tmpdir(), "gtm-workflow-mcp-"));
+  mkdirSync(join(brain, "brain")); mkdirSync(join(brain, "workflows"));
+  writeFileSync(join(brain, "brain", "admin.md"), lib.renderFrontmatter({ company: "Workflow Fixture", team: [{ name: "Ann Lee", handle: "ann", email: "ann@fixture.test" }] }));
+  lib.writeContext(brain, "offer", { title: "Our offer" });
+  writeFileSync(join(brain, "workflows", "outbound.md"), readFileSync(`${P}/templates/workflows/outbound.md`, "utf8").replace(/{{DATE}}/g, "2026-09-28").replace(/{{VERSION}}/g, "0.28.0"));
+  const listed = await call("workflow", { brain, action: "list" });
+  assert.ok(!listed.isError, listed.text); assert.match(listed.text, /- outbound: Outbound \[draft\], 4 steps/);
+  const refused = await call("workflow", { brain, action: "start", slug: "outbound", context: "offer", handle: "Q4", settled: { Owner: "Ann" }, by: "ann" });
+  assert.equal(refused.isError, true); assert.match(refused.text, /not settled: Target accounts, Why now, Sequencer/);
+  const started = await call("workflow", { brain, action: "start", slug: "outbound", context: "offer", handle: "Q4", settled: { "Target accounts": "list A", "Why now": "budget season", Owner: "Ann", Sequencer: "lemlist" }, by: "ann" });
+  assert.ok(!started.isError, started.text); assert.match(started.text, /^started outbound-\d{4}-\d{2}-\d{2}-q4 in Our offer: step 1 of 4, Build the target list, due now/);
+});
