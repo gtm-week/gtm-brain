@@ -53,3 +53,55 @@ export function parseWorkflow(doc) {
 }
 export const listWorkflows = root => listDocuments(root).filter(d => d.extra?.type === TYPE).map(parseWorkflow).sort((a, b) => a.slug.localeCompare(b.slug));
 export function readWorkflow(root, slug) { const doc = listDocuments(root).find(d => d.extra?.type === TYPE && d.slug === String(slug || "")); return doc ? parseWorkflow(doc) : null; }
+
+/* ---------- runs: state kept as memories in one context ---------- */
+export const WORKFLOW_TAG = "workflow:", RUN_TAG = "run:", STEP_TAG = "step:", STATUS_TAG = "step-status:", DUE_TAG = "due:";
+export const runId = (slug, date, handle) => `${slug}-${date}-${lib.handleFor(String(handle || ""))}`;
+const tagValue = (m, prefix) => { const t = (m.tags || []).find(t => typeof t === "string" && t.startsWith(prefix)); return t ? t.slice(prefix.length) : null; };
+export function runTags(m) { const step = tagValue(m, STEP_TAG); return { workflow: tagValue(m, WORKFLOW_TAG), run: tagValue(m, RUN_TAG), step: step ? Number(step) : null, status: tagValue(m, STATUS_TAG), due: tagValue(m, DUE_TAG) }; }
+
+/* Every run in the brain, newest first. Only effective memories count for state; the run-start note is
+   read whatever happened to it later, so an ended run keeps its brief. */
+export function listRuns(root) {
+  const runs = new Map();
+  for (const c of lib.listContexts(root, { includeMemories: false })) {
+    const all = lib.readMemories(root, c.slug), effective = new Set(lib.effectiveMemories(all));
+    for (const m of all) {
+      const t = runTags(m); if (!t.run) continue;
+      if (!runs.has(t.run)) runs.set(t.run, { id: t.run, workflow: t.workflow, context: c.slug, contextTitle: c.title, startedAt: null, by: null, brief: "", steps: [], open: null, ended: null });
+      const r = runs.get(t.run), tags = m.tags || [], inForce = effective.has(m);
+      if (tags.includes("run-start")) { r.startedAt = m.at; r.by = m.authors?.[0] || null; r.brief = m.content; }
+      if (!inForce) continue;
+      if (t.step && t.status) r.steps[t.step - 1] = { n: t.step, status: t.status, due: t.due, at: m.at, memory: m.id, content: m.content, by: m.authors?.[0] || null };
+      if (m.kind === "question" && t.step) r.open = { step: t.step, memory: m.id, content: m.content };
+      if (tags.includes("run-done") || tags.includes("run-abandoned")) r.ended = { how: tags.includes("run-done") ? "done" : "abandoned", at: m.at, memory: m.id, content: m.content };
+    }
+  }
+  return [...runs.values()].map(r => { const steps = r.steps.filter(Boolean); return { ...r, steps, current: r.ended ? null : steps.find(s => s.status === "pending" || s.status === "due") || null }; })
+    .sort((a, b) => String(b.startedAt || "").localeCompare(String(a.startedAt || "")));
+}
+export const runState = (root, id) => listRuns(root).find(r => r.id === String(id || "")) || null;
+
+/* Pending steps whose gate date has passed: what the session and the schedule turn into a due step and a question. */
+export const dueSteps = (root, today = localDate()) => listRuns(root).filter(r => !r.ended && r.current?.status === "pending" && r.current.due && r.current.due <= today).map(r => ({ run: r, step: r.current }));
+
+/* The state a step enters when the one before it was done on previousDone (YYYY-MM-DD). */
+export function stepDue(step, previousDone) {
+  const g = step?.gate;
+  if (!g) return { status: "due", due: previousDone };
+  if (g.kind === "after") return { status: "pending", due: addDays(previousDone, g.days) };
+  if (g.kind === "on") return { status: g.date <= previousDone ? "due" : "pending", due: g.date };
+  return { status: "due", due: previousDone, ask: g.condition };
+}
+
+/* One opening line for the session hook. Instructions for the model: name the runs once, act only when asked. */
+export function runsLine(root, today = localDate()) {
+  const live = listRuns(root).filter(r => !r.ended); if (!live.length) return "";
+  const show = r => {
+    const w = readWorkflow(root, r.workflow), total = w?.ok ? w.steps.length : r.steps.length, s = r.current, title = s && w?.ok ? w.steps[s.n - 1]?.title : null;
+    return `${r.id} in ${r.contextTitle}${s ? `, step ${s.n} of ${total}${title ? ` (${title})` : ""}${s.status === "due" ? ", due now" : s.due ? `, due ${s.due}` : ""}` : ", no step pending"}`;
+  };
+  const due = live.filter(r => r.current && (r.current.status === "due" || (r.current.due && r.current.due <= today))).length;
+  const tail = due ? `${due} step${due === 1 ? "" : "s"} due: mention it once; on "next step" or "where is the campaign" follow the gtm-os-workflow skill (workflow status, then the step).` : `Say nothing about them unless asked; "where is the campaign" or "next step" follows the gtm-os-workflow skill.`;
+  return `workflows: ${live.length} run${live.length === 1 ? "" : "s"} in progress: ${live.map(show).join("; ")}. ${tail}`;
+}
