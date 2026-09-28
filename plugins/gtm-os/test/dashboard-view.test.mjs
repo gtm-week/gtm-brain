@@ -283,3 +283,15 @@ test('context feed deduplicates pages, preserves progress on error and can retry
  assert.match(p.node('#ch-pane').innerHTML,/All memories loaded/);
  await p.run('loadContextHistory("market")');assert.equal(calls,3);
 });
+
+test('the attention view lists workflow runs with their steps, read-only, and says when there are none', () => {
+  const D = data();
+  let ui = page(D);   // renderQuestions() runs when the client loads, so the panel is filled without navigating
+  assert.match(ui.node('#dq-runs').innerHTML, /No workflow runs yet/);
+  D.runs = [{ id: 'outbound-2026-09-28-q4', workflow: 'outbound', context: 'offer', contextTitle: 'Our offer', startedAt: '2026-09-28T09:00:00.000Z', by: 'alex', brief: '', ended: null,
+    steps: [{ n: 1, status: 'done', due: null }, { n: 2, status: 'pending', due: '2026-10-08' }], open: null, current: { n: 2, status: 'pending', due: '2026-10-08' } }];
+  ui = page(D);
+  const html = ui.node('#dq-runs').innerHTML;
+  assert.match(html, /Workflow runs · 1/); assert.match(html, /outbound-2026-09-28-q4 · Our offer/); assert.match(html, /1 done/); assert.match(html, /2 pending · 2026-10-08/);
+  assert.doesNotMatch(html, /<button|<input|<form/, 'read-only');
+});

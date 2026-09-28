@@ -8,6 +8,7 @@ import { MemoryIndex } from './memory-index.mjs';
 import * as lib from './brain.mjs';
 import { entityStamp } from './entity-stamp.mjs';
 import { memoryStamp } from './memory-journal.mjs';
+import { listRuns } from './workflows.mjs';
 const PAGE = 50, PAGE_BYTES = 512 * 1024;
 const hash = text => createHash('sha256').update(text).digest('hex').slice(0, 20);
 const visible = "m.effective=1 AND NOT EXISTS(SELECT 1 FROM forks f JOIN memories c ON c.rowid=f.memory WHERE f.target=m.id AND c.effective=1)";
@@ -95,7 +96,7 @@ export function dashboardData(root, registry) {
     profile("lists"); const graph = indexedGraph(db, registry, contexts); profile("graph");
     const contextConnections = indexedContextGraph(db, contexts);
     if (revision !== dashboardSourceRevision(root)) throw new Error('Brain changed during dashboard refresh. Retry render_dashboard.');
-    return { contexts, specialContexts, citations, ...lists, totals: { ...totals, ...listTotals }, listHistory, projects, graph, contextConnections, revision };
+    return { contexts, specialContexts, citations, ...lists, totals: { ...totals, ...listTotals }, listHistory, projects, runs: listRuns(root), graph, contextConnections, revision };
   } finally { index.close(); }
 }
 

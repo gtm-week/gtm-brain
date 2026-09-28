@@ -10,6 +10,7 @@ import { assetRows } from '../../lib/assets.mjs';
 import { contextGraph } from "../../lib/context-graph.mjs";
 import { entityGraph } from "../../lib/entity-graph.mjs";
 import { dashboardData, dashboardSourceRevision } from '../../lib/dashboard-data.mjs';
+import { listRuns } from '../../lib/workflows.mjs';
 import { refreshIndexedPages } from '../../lib/entity-pages.mjs';
 import { hasMemoryIndex, openDatabase } from '../../lib/memory-index-store.mjs';
 import { readJSON, writeJSON, renderQueue } from '../../lib/dashboard-refresh.mjs';
@@ -91,6 +92,7 @@ data.skills = skillCatalog(undefined, root);
 const allDocs = listDocuments(root); data.documents = allDocs.map(({ body, ...d }) => ({ ...d, files: documentFiles(root, d, allDocs).length }));
 data.entityGraph = graph;
 data.contextGraph = snapshot?.contextConnections || contextGraph(sourceContexts);
+data.runs = snapshot?.runs || listRuns(root);   // workflow runs (lib/workflows.mjs), read-only on the page
 data.assets = assetRows(root, snapshot?.specialContexts || sourceContexts);
 data.customers = lib.customerOverview(root, { registry: reg, contexts: snapshot?.specialContexts || sourceContexts });
 data.meetings = lib.meetingOverview(root, { by: lib.currentPerson(root) || undefined, registry: reg, contexts: snapshot?.specialContexts || sourceContexts });

@@ -325,3 +325,11 @@ test("upgrade adds workflows/ once to a brain without it and never adds a shippe
   assert.doesNotMatch(again, /added workflows/);
   assert.equal(existsSync(join(root, "workflows", "outbound.md")), false, "a deleted shipped workflow stays deleted");
 });
+
+test("the dashboard data carries the runs; render writes them into the page data", () => {
+  const { root, id } = started();
+  execFileSync(process.execPath, [`${P}/scripts/gtm-os-render/render.mjs`, "."], { cwd: root, env, stdio: "ignore" });
+  const html = readFileSync(join(root, "work", "home", "index.html"), "utf8");
+  const data = JSON.parse(html.match(/<script id="data" type="application\/json">([\s\S]*?)<\/script>/)[1]);
+  assert.equal(data.runs.length, 1); assert.equal(data.runs[0].id, id); assert.equal(data.runs[0].current.n, 1);
+});
