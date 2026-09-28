@@ -265,3 +265,37 @@ test("workflow --advance refuses when the run's context is archived and when the
   assert.equal(lib.readContext(root, "offer").status, "archived");
   assert.match(refusedBy(root, "--skip", id, "--step", "2", "--reason", "x", "--by", "marta").text, /context offer is archived; bring it back before advancing/);
 });
+
+const hook = root => execFileSync("bash", [`${P}/hooks/session-start.sh`], { cwd: root, encoding: "utf8", env, input: JSON.stringify({ session_id: "thread-wf", cwd: root }) });
+
+test("the session hook prints the runs line only when a run is in progress, and stays quiet on a workflow file that does not parse", () => {
+  const root = ready();
+  assert.doesNotMatch(hook(root), /^workflows:/m);
+  workflow(root, "--start", "outbound", "--context", "offer", "--handle", "Q4", "--settled", JSON.stringify({ "Target accounts": "list A", "Why now": "budget", Owner: "Marta", Sequencer: "lemlist" }), "--by", "marta");
+  const out = hook(root);
+  assert.match(out, /^workflows: 1 run in progress: outbound-\d{4}-\d{2}-\d{2}-q4 in Our offer, step 1 of 4 \(Build the target list\), due now\. 1 step due: mention it once/m);
+  writeFileSync(join(root, "workflows", "outbound.md"), template("outbound").replace("## Steps", "## Stages"));
+  const broken = hook(root);
+  assert.match(broken, /^workflows: 1 run in progress: outbound-.* in Our offer, step 1 of 1/m, "the line still prints, from the run's own memories");
+  assert.doesNotMatch(broken, /at .*workflows\.mjs|TypeError|Error:/, "no stack trace in the opening lines");
+});
+
+test("session maintenance and the scheduled run mark due steps: one gate question, by session or schedule", () => {
+  const { root, id, today } = started();
+  workflow(root, "--advance", id, "--step", "1", "--by", "marta");
+  // a fake codex on PATH: the scheduled run calls codex exec for the stale contexts, maintenance's tool check may call it; neither needs a model here
+  const bin = mkdtempSync(join(tmpdir(), "gtm-os-wf-fakecodex-")); writeFileSync(join(bin, "codex"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+  const fake = { ...env, PATH: `${bin}:${process.env.PATH}` };
+  const before = runMemories(root, id).length;
+  execFileSync(process.execPath, [`${P}/hooks/session-maintenance.mjs`, root, "--run"], { cwd: root, env: fake, stdio: "ignore", timeout: 60000 });
+  assert.equal(runMemories(root, id).length, before, "nothing due yet: session maintenance writes nothing");
+  assert.match(readFileSync(join(root, "work", "session-maintenance.json"), "utf8"), /"status":"(done|partial)"/);
+  assert.doesNotMatch(readFileSync(join(root, "work", "session-maintenance.json"), "utf8"), /"workflows"/, "the due check did not fail");
+  workflow(root, "--due", "--today", wf.addDays(today, 14), "--by", "session");
+  const marked = runMemories(root, id);
+  assert.equal(marked.filter(m => m.kind === "question").length, 1);
+  assert.deepEqual(marked.find(m => m.kind === "question").authors, ["session"]);
+  execFileSync("bash", [`${P}/scripts/gtm-os-schedule/scheduled-run.sh`, "."], { cwd: root, env: fake, stdio: "ignore", timeout: 60000 });
+  assert.equal(runMemories(root, id).filter(m => m.kind === "question").length, 1, "the schedule found the step already due");
+  assert.match(readFileSync(join(root, "work", "hooks.log"), "utf8"), /scheduled-run  workflows: no step due/);
+});

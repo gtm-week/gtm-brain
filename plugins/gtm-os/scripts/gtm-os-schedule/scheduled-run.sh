@@ -10,6 +10,12 @@ BRAIN="${1:-.}"; cd "$BRAIN" || exit 1
 [ -f AGENTS.md ] && [ -f brain/admin.md ] || { echo "not a brain: $BRAIN"; exit 1; }
 mkdir -p work
 printf '%s  scheduled-run  start\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log
+# Workflow steps whose gate date passed become a due step and a gate question (lib/workflows.mjs): deterministic, no model.
+if due_out="$(node "$P/scripts/gtm-os-workflow/workflow.mjs" . --due --by schedule 2>&1)"; then
+  printf '%s  scheduled-run  workflows: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$(printf '%s' "$due_out" | tr '\n' ';')" >> work/hooks.log
+else
+  printf '%s  scheduled-run  workflows: due check failed: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$(printf '%s' "$due_out" | tr '\n' ';')" >> work/hooks.log
+fi
 PENDING="$(node "$P/scripts/gtm-os-compile/compile-status.mjs" .)" || { printf '%s  scheduled-run  failed: cannot inspect pending compilation\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log; exit 1; }
 STALE="${PENDING%%|*}"; ENTITIES="${PENDING#*|}"
 if [ -z "$STALE$ENTITIES" ]; then

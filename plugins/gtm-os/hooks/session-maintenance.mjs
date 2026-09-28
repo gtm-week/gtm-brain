@@ -49,6 +49,8 @@ if (process.argv[3] === '--start') {
     const remote = spawnSync('git', ['remote', 'get-url', 'origin'], { cwd: root, timeout: 2000, stdio: 'ignore' });
     if (remote.status === 0) run('pull', 'git', ['pull', '--ff-only', '--quiet']);
     run('tools', process.execPath, [join(plugin, 'scripts/gtm-os-connect/connect.mjs'), root, '--check']);
+    // Workflow steps whose gate date passed become a due step and a gate question; deterministic, no model.
+    run('workflows', process.execPath, [join(plugin, 'scripts/gtm-os-workflow/workflow.mjs'), root, '--due', '--by', 'session']);
     run('dashboard server', process.execPath, [join(plugin, 'server/dash.mjs'), root, '--start'], 8000);
     lib.rerender(root);
   } catch (error) {
