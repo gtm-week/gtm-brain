@@ -1,8 +1,13 @@
 import { buildQuestion, readAnswer } from '../scripts/gtm-os-learn-company/question.mjs';
 
+// A decline or cancel faster than a person can read a form is the host refusing to show it (Codex CLI
+// in some modes declines every form at once): not_shown, never declined, and the chat asks in text.
+export const NOT_SHOWN_MS = 1000;
+const NOT_SHOWN = { status: 'not_shown', note: 'The host closed the form before the person saw it. This is no answer: ask in plain chat text, here and for the rest of this chat.' };
+
 // One interactive request per MCP session. No persistent state or timeout-as-answer.
-export function questionInput(send) {
-  let supported = false, sequence = 0, pending = null;
+export function questionInput(send, now = Date.now) {
+  let supported = false, sequence = 0, pending = null, hidden = false;
   return {
     initialize(capabilities = {}) {
       const e = capabilities?.elicitation;
@@ -13,19 +18,22 @@ export function questionInput(send) {
       const params = buildQuestion(args);
       if (!supported) throw Error('This client does not support MCP input forms. Use an available question control or the dashboard.');
       if (pending) throw Error('A question is already pending. Wait for its answer or cancellation.');
+      if (hidden) return NOT_SHOWN;
+      const sentAt = now();
       const result = await new Promise((resolve, reject) => {
         const id = `gtm-question-${++sequence}`;
         pending = { id, parentId, resolve, reject };
         try { send({ jsonrpc: '2.0', id, method: 'elicitation/create', params }); }
         catch (error) { pending = null; reject(error); }
       });
-      return readAnswer(args, result);
+      if (result?.client && /^(decline|cancel)$/.test(result.result?.action) && now() - sentAt < NOT_SHOWN_MS) { hidden = true; return NOT_SHOWN; }
+      return readAnswer(args, result?.client ? result.result : result);
     },
     receive(message) {
       if (message.method || !pending || message.id !== pending.id) return false;
       const p = pending; pending = null;
       if (message.error) p.reject(Error(`Input form failed: ${message.error.message || 'client error'}`));
-      else p.resolve(message.result);
+      else p.resolve({ client: true, result: message.result });
       return true;
     },
     cancel(parentId) {

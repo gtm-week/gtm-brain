@@ -43,6 +43,8 @@ Keep one question pending. Only `status: answered` from a question tool supplies
 submitted `selections` and/or `text`; preserve both. `declined` skips that question only,
 `cancelled` stops it, and `unanswered` supplies no decision. None of those three authorizes
 dependent work; an `answered` yes does, for the ordinary step it named.
+`not_shown` means the host closed the form before the person could see it: it is no answer
+and no refusal. Ask that question, and the rest of this chat's questions, as plain chat text.
 For async forms, an acknowledgement is not an answer: pause dependent work and keep the
 turn alive with interruptible waits, repeating until an answer or cancellation arrives.
 Never end the turn, even with an empty final response, while an async question is pending.
@@ -421,9 +423,10 @@ context. Use displayed names in conversation and stable IDs in tools.
 ## Skills and tools
 
 The person asks in plain language; the skills they see are listed under Plugin workflows below.
-Call GTM OS tools directly as tools, never inside an exec or script cell: a tool result is content
-parts, not a string to print, and a question form opened inside a cell hangs the turn waiting for
-an approval the person cannot see. A skill file is read once with a plain file read, not through a cell.
+Call GTM OS tools directly when the host lists them as tools. When the host exposes them only
+inside a code or script cell, call them there: that is the host's tool path, not a workaround.
+Either way a tool result is content parts, not a string to print. A skill file is read once with
+a plain file read, not through a cell.
 
 The compile tools are offered only to the scheduled and background runs; a chat queues that
 run through the shell and never compiles itself. For a count, a join or a date range, `query`

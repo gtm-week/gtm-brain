@@ -121,3 +121,15 @@ test('real MCP server exposes a form before a brain exists and resumes the tool 
   child.stdin.end();
   await new Promise(resolve => child.on('exit', resolve));
 });
+
+test("a form the host declines at once was never shown: not_shown, and later questions go to chat text (Maksymilian, 2026-09-30)", async () => {
+  // Codex CLI answered every onboarding_question with declined before anything appeared on screen.
+  let clock = 0; const sent = [], q = questionInput(m => sent.push(m), () => clock);
+  q.initialize({ elicitation: { form: {} } });
+  const slow = q.ask(args, 1); clock += 5000; q.receive({ id: sent.at(-1).id, result: { action: 'decline' } });
+  assert.deepEqual(await slow, { status: 'declined' }, "a person who read the form and declined it declined it");
+  const fast = q.ask(args, 2); clock += 50; q.receive({ id: sent.at(-1).id, result: { action: 'decline' } });
+  assert.equal((await fast).status, 'not_shown');
+  const before = sent.length; assert.equal((await q.ask(args, 3)).status, 'not_shown');
+  assert.equal(sent.length, before, "no further form is sent into a host that hides them");
+});
