@@ -24,7 +24,7 @@ fi
 # Both the empty-folder and brain branches emit the same authored policy.
 interaction_policy() {
   echo "Before the first question that uses a form (question, configuration_question, onboarding_question), read $P/skills/gtm-os-start/references/questions.md once for the tool parameters; not before a plain answer, and not again later."
-  echo "Call GTM OS tools directly as tools, never inside an exec or script cell: a result is content parts (never stringify it), and a question form opened inside a cell hangs the turn."
+  echo "Call GTM OS tools directly when the host lists them as tools. When the host exposes them only inside a code or script cell, call them there: that is the host's tool path, not a workaround. Either way a result is content parts (never stringify it)."
   cat "$P/policies/questions.md" "$P/policies/computer-use.md"
 }
 # In the brain itself Codex has already loaded AGENTS.md, which carries generated copies of both
@@ -38,11 +38,11 @@ brain_interaction_policy() {
   fi
 }
 if [ -z "$where" ] || [ ! -f "$root/brain/admin.md" ]; then
-  # The question policy must also reach this branch before its early return.
-  interaction_policy
-  # An almost empty folder is ready for the person's explicit start request.
+  # An almost empty folder is ready for the person's explicit start request: only there does setup
+  # need the question policy. Any other folder (someone's code repo) gets no GTM OS rules at all.
   # Preserve this real hook session before setup; never infer it from an inherited env.
   if [ -f "$P/lib/brain.mjs" ] && command -v node >/dev/null 2>&1 && printf '%s' "$input" | node -e 'const l=await import(process.argv[1]);const fs=await import("node:fs");const input=fs.readFileSync(0,"utf8");process.exit(l.prepareLandingSession(process.argv[2],input)?0:1)' "$P/lib/brain.mjs" "$root" 2>/dev/null; then
+    interaction_policy
     echo "GTM OS: this folder has no company brain yet. If setup was requested, including in a prepared new-chat prompt, follow the gtm-os-start skill immediately. On a greeting, proactively offer to set up this folder with one native choice; do not require a slash command. A concrete unrelated task comes first. Do not create a brain without a setup request or submitted choice."
   fi
   # a folder that is not a brain and not linked: when this machine knows a brain, the skill is offered once
