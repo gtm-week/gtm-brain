@@ -1,0 +1,102 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>GTM OS 0.28.1</title>
+<style>
+:root{--ink:#0b0b0c;--muted:#6b6b70;--line:#e7e6e1;--bg:#f6f5f1;--card:#fff;--teal:#1e6b68;
+--foil:linear-gradient(100deg,#ff9ad5 0%,#ffd36e 22%,#9df0a8 45%,#7fe3f2 66%,#a9a2ff 84%,#ff9ad5 100%)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1600px;height:900px}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,"SF Pro Display","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;position:relative;overflow:hidden}
+.foil{position:absolute;left:0;right:0;top:0;height:10px;background:var(--foil)}
+.wrap{padding:64px 72px 0}
+header{display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:20px}
+.brand img{width:64px;height:64px;border-radius:14px;box-shadow:0 1px 0 rgba(0,0,0,.06)}
+.brand .name{font-size:34px;font-weight:800;letter-spacing:-.02em}
+.ver{font:600 18px/1 ui-monospace,"SF Mono",Menlo,monospace;padding:9px 14px;border-radius:999px;background:var(--ink);color:#fff;margin-left:4px}
+.cmd{font-size:18px;color:var(--muted)}
+.cmd code{font:600 18px ui-monospace,"SF Mono",Menlo,monospace;color:var(--ink);background:#fff;border:1px solid var(--line);padding:7px 12px;border-radius:10px;margin-left:8px}
+h1{margin-top:52px;font-size:68px;line-height:1.02;font-weight:850;letter-spacing:-.035em;max-width:1200px}
+h1 span{background:var(--foil);-webkit-background-clip:text;background-clip:text;color:transparent;filter:saturate(1.15) brightness(.82)}
+.grid{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:24px;margin-top:48px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:28px 28px 26px;height:430px;display:flex;flex-direction:column}
+.kicker{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.dot{width:10px;height:10px;border-radius:3px;background:var(--foil)}
+.card h2{font-size:28px;font-weight:800;letter-spacing:-.02em;margin:10px 0 20px}
+/* slack queue */
+.row{display:flex;gap:14px;align-items:flex-start;padding:13px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0}
+.av{flex:0 0 38px;height:38px;border-radius:10px;display:grid;place-items:center;font-weight:800;font-size:15px;color:#fff}
+.meta{font-size:14px;color:var(--muted)}
+.meta b{color:var(--ink);font-weight:700}
+.ask{font-size:17px;margin-top:3px;line-height:1.3}
+.wait{margin-left:auto;font:600 13px ui-monospace,"SF Mono",Menlo,monospace;color:#9a3412;background:#fff1e6;padding:4px 8px;border-radius:7px;white-space:nowrap}
+.sugg{margin-top:auto;border-radius:14px;padding:14px 16px;background:#f3f8f7;border:1px solid #d5e7e5}
+.sugg .l{font-size:13px;font-weight:700;color:var(--teal);letter-spacing:.04em;text-transform:uppercase}
+.sugg .t{font-size:17px;margin-top:6px}
+/* workflow */
+.file{font:500 14px ui-monospace,"SF Mono",Menlo,monospace;color:var(--muted);margin:-8px 0 20px}
+.step{display:flex;gap:16px;position:relative;padding-bottom:22px}
+.step:not(.end)::after{content:"";position:absolute;left:13px;top:30px;bottom:0;width:2px;background:var(--line)}
+.n{flex:0 0 28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:14px;border:2px solid var(--ink);background:#fff}
+.n.done{background:var(--ink);color:#fff}
+.st{font-size:18px;font-weight:700}
+.sd{font-size:14px;color:var(--muted);margin-top:3px}
+.tag{font:600 12px ui-monospace,"SF Mono",Menlo,monospace;border:1px solid var(--line);border-radius:6px;padding:2px 6px;margin-left:6px;color:var(--muted);font-weight:600}
+.due{color:var(--teal);font-weight:700}
+/* tokens */
+.big{font-size:84px;font-weight:850;letter-spacing:-.04em;line-height:1}
+.bigcap{font-size:18px;font-weight:600;color:var(--muted);margin-top:8px}
+.big small{font-size:26px;font-weight:700;letter-spacing:-.01em;color:var(--muted);margin-left:6px}
+.bars{margin-top:24px;display:grid;gap:14px}
+.bar .lab{display:flex;justify-content:space-between;font-size:14px;color:var(--muted);margin-bottom:6px}
+.bar .lab b{color:var(--ink)}
+.track{height:14px;border-radius:7px;background:#efeee9;overflow:hidden}
+.fill{height:100%;border-radius:7px}
+.list{margin-top:auto;display:grid;gap:9px;font-size:16px}
+.list div::before{content:"";display:inline-block;width:7px;height:7px;border-radius:2px;background:var(--ink);margin:0 10px 2px 0}
+footer{position:absolute;left:72px;right:72px;bottom:34px;display:flex;justify-content:space-between;font-size:15px;color:var(--muted)}
+</style></head>
+<body>
+<div class="foil"></div>
+<div class="wrap">
+  <header>
+    <div class="brand"><img src="logo.png" alt=""><div class="name">GTM OS</div><div class="ver">0.28.1</div></div>
+    <div class="cmd">In your brain chat, say<code>update GTM OS</code></div>
+  </header>
+
+  <h1>Know who is waiting on you.<br><span>Run plays that track themselves.</span></h1>
+
+  <div class="grid">
+    <section class="card">
+      <div class="kicker"><i class="dot"></i>Slack replies</div>
+      <h2>What's waiting on me in Slack</h2>
+      <div class="row"><div class="av" style="background:#6d5bd0">AK</div><div><div class="meta"><b>Anna K.</b> · DM</div><div class="ask">Can you review the pilot proposal today?</div></div><div class="wait">3h</div></div>
+      <div class="row"><div class="av" style="background:#1e6b68">TM</div><div><div class="meta"><b>Tom M.</b> · #gtm</div><div class="ask">Which topics do we take to the event?</div></div><div class="wait">5h</div></div>
+      <div class="row"><div class="av" style="background:#c2410c">JS</div><div><div class="meta"><b>Jan S.</b> · #leads</div><div class="ask">Is this lead a fit for the pilot?</div></div><div class="wait">1d</div></div>
+      <div class="sugg"><div class="l">Suggested reply, in your style</div><div class="t">"yes, notes by 5. one question on pricing first"</div></div>
+    </section>
+
+    <section class="card">
+      <div class="kicker"><i class="dot"></i>Playbooks</div>
+      <h2>Partner onboarding</h2>
+      <div class="file">workflows/partner-onboarding.md</div>
+      <div class="step"><div class="n done">1</div><div><div class="st">Kickoff call<span class="tag">calendar</span></div><div class="sd">Done, goals agreed</div></div></div>
+      <div class="step"><div class="n">2</div><div><div class="st">Shared deal review<span class="tag">crm</span></div><div class="sd"><span class="due">Due in 14 days</span>, GTM OS reminds you</div></div></div>
+      <div class="step end"><div class="n">3</div><div><div class="st">Read back</div><div class="sd">Joint deals in month one</div></div></div>
+      <div class="sugg" style="margin-top:auto"><div class="l">Just ask</div><div class="t">"I need a playbook for partner onboarding"</div></div>
+    </section>
+
+    <section class="card">
+      <div class="kicker"><i class="dot"></i>Cost</div>
+      <h2>Lighter summaries</h2>
+      <div class="big">6x</div><div class="bigcap">fewer tokens per summary</div>
+      <div class="bars">
+        <div class="bar"><div class="lab"><span>Before</span><b>400k</b></div><div class="track"><div class="fill" style="width:100%;background:#cfcdc6"></div></div></div>
+        <div class="bar"><div class="lab"><span>Now</span><b>63k</b></div><div class="track"><div class="fill" style="width:16%;background:var(--foil)"></div></div></div>
+      </div>
+      <div class="list"><div>One run after you pause</div><div>Setup works on newer Codex and the CLI</div></div>
+    </section>
+  </div>
+</div>
+<footer><span>Nothing is sent and nothing from your DMs is saved.</span><span>Built from daily use on our own company</span></footer>
+</body></html>
