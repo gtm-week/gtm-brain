@@ -283,7 +283,11 @@ const QUESTION_TOOLS = new Set(TOOLS.filter(t => t.inputSchema === questionSchem
 const RUN_ONLY_TOOLS = new Set(["compile_facts", "compile_apply", "compile_entity", "entity_facts"]);
 // The reads that query covers (ALL-204 step 2b): never listed; still answering, marked deprecated, for one release.
 const RETIRED_READS = { recall: "query (memories with search, or object brief)", who_is: "query (entities with search)", list_contexts: "query (contexts)", list_projects: "query (projects)", list_brains: "query (brains)", customer_overview: "query (customers)", meeting_overview: "query (meetings)", advise: "query (health)", where_we_are: "query (status)", guideline: "document" };
-const offered = t => !(QUESTION_TOOLS.has(t.name) && !questions.available()) && !(RUN_ONLY_TOOLS.has(t.name) && !process.env.GTM_OS_RUN) && !(t.name in RETIRED_READS);
+// A summary run (GTM_OS_TOOLSET=compile, set by scripts/gtm-os-compile/run-args.mjs) is listed only what it
+// calls: every other description is re-sent with each of its requests and is pure cost there.
+const COMPILE_TOOLSET = new Set([...RUN_ONLY_TOOLS, "render_dashboard"]);
+const offered = t => process.env.GTM_OS_TOOLSET === "compile" ? COMPILE_TOOLSET.has(t.name)
+  : !(QUESTION_TOOLS.has(t.name) && !questions.available()) && !(RUN_ONLY_TOOLS.has(t.name) && !process.env.GTM_OS_RUN) && !(t.name in RETIRED_READS);
 
 // Allethic supplies memory capture and structured reads; the host keeps its native forms
 // and session operations. One registered tool per operation, with existing names preserved.

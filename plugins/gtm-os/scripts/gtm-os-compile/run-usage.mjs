@@ -21,6 +21,12 @@ for await (const line of createInterface({ input: process.stdin })) {
 }
 if (last) console.log(last.split('\n').slice(-20).join('\n'));
 const at = new Date().toISOString();
+// A slim run loads no plugin hook, so the run's thread is recorded here for the page's link.
+if (thread) try {
+  const lib = await import(new URL('../../lib/brain.mjs', import.meta.url));
+  let known = null; try { known = JSON.parse((await import('node:fs')).readFileSync(join(root, 'work', 'compile.json'), 'utf8')).thread; } catch {}
+  if (known !== thread && lib.RUN_KINDS.includes(by)) lib.recordRunThread(root, by, { session_id: thread });
+} catch {}
 try {
   mkdirSync(join(root, 'work'), { recursive: true });
   appendFileSync(join(root, 'work', 'runs.jsonl'), JSON.stringify({ at, by, thread, turns, ...usage }) + '\n');

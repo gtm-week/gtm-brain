@@ -10,7 +10,7 @@ import * as lib from '../lib/brain.mjs';
 const P=new URL('../',import.meta.url).pathname.replace(/\/$/,'');
 const waitFor=async (fn)=>{for(let i=0;i<200;i++){if(fn())return;await new Promise(r=>setTimeout(r,50))}assert.fail('timed out waiting for worker')};
 
-test('a single saved change starts without a delay override, and another change during the run gets compiled serially',async()=>{
+test('with no batching delay a saved change starts at once, and another change during the run gets compiled serially',async()=>{
  const root=mkdtempSync(join(tmpdir(),'gtm-immediate-')),profile=mkdtempSync(join(tmpdir(),'gtm-immediate-profile-'));
  const env={...process.env,CODEX_HOME:profile,PLUGIN_ROOT:P,GTM_OS_NO_OPEN:'1',GTM_OS_NO_VERSION_CHECK:'1'};
  execFileSync('git',['init','-q',root]);
@@ -36,7 +36,7 @@ test('a single saved change starts without a delay override, and another change 
  })().catch(e=>{console.error(e);process.exitCode=1});
  `,{mode:0o755});
  const live={...env,GTM_OS_NO_COMPILE:'',PATH:bin+':'+process.env.PATH,GTM_OS_COMPILE_RETRY:'0'};
- delete live.GTM_OS_COMPILE_DELAY;
+ live.GTM_OS_COMPILE_DELAY='0';
  const remember=content=>execFileSync(process.execPath,[join(P,'scripts/gtm-os-remember/remember.mjs'),root,'--by','ann','--context','icp','--content',content],{env:live,encoding:'utf8'});
  remember('First change.');
  try{
@@ -69,7 +69,7 @@ test('a run that compiles nothing is blocked, not retried, and new notes wait ou
  const {appendFileSync}=require('node:fs');appendFileSync('work/fake-runs','x');
  for(const e of [{type:'thread.started',thread_id:'t-1'},{type:'item.completed',item:{type:'agent_message',text:'Compilation blocked: the compile tools are unavailable in this run.'}},{type:'turn.completed',usage:{input_tokens:241939,cached_input_tokens:203535,output_tokens:778}}])console.log(JSON.stringify(e));
  `,{mode:0o755});
- const live={...env,GTM_OS_NO_COMPILE:'',PATH:bin+':'+process.env.PATH,GTM_OS_COMPILE_RETRY:'0'};
+ const live={...env,GTM_OS_NO_COMPILE:'',PATH:bin+':'+process.env.PATH,GTM_OS_COMPILE_RETRY:'0',GTM_OS_COMPILE_DELAY:'0'};
  execFileSync(process.execPath,[join(P,'scripts/gtm-os-remember/remember.mjs'),root,'--by','ann','--context','icp','--content','A note to compile.'],{env:live,encoding:'utf8'});
  await waitFor(()=>{try{return JSON.parse(readFileSync(join(root,'work/compile.json'),'utf8')).state==='blocked'&&!existsSync(join(root,'work/compile.lock'))}catch{return false}});
  assert.equal(readFileSync(join(root,'work/fake-runs'),'utf8'),'x','one run, no retries');
@@ -90,4 +90,44 @@ test('a run that compiles nothing is blocked, not retried, and new notes wait ou
 test('the MCP server receives GTM_OS_RUN, or a scheduled run never sees the compile tools',()=>{
  const mcp=JSON.parse(readFileSync(join(P,'.mcp.json'),'utf8'));
  assert.ok(mcp.mcpServers.gtm_os.env_vars.includes('GTM_OS_RUN'),'Codex passes only listed variables to an MCP server');
+});
+
+test('notes are batched: the worker waits until no note has been saved for the delay, then compiles them in one run (2026-10-01)',async()=>{
+ const root=mkdtempSync(join(tmpdir(),'gtm-batch-')),profile=mkdtempSync(join(tmpdir(),'gtm-batch-profile-'));
+ const env={...process.env,CODEX_HOME:profile,PLUGIN_ROOT:P,GTM_OS_NO_OPEN:'1',GTM_OS_NO_VERSION_CHECK:'1'};
+ execFileSync('git',['init','-q',root]);
+ execFileSync('bash',[join(P,'scripts/gtm-os-setup/setup.sh'),'--company','Demo','--one-liner','Test','--owner','Ann Lee <ann@example.invalid>','--dashboard','on-demand'],{cwd:root,env,stdio:'ignore'});
+ const company=lib.readContext(root,'company');
+ lib.writeContext(root,'company',{...company.fm,rule:company.rule,summary:'Done.',now:'',compiled_at:new Date().toISOString()});
+ const bin=join(root,'fake-bin');mkdirSync(bin);
+ writeFileSync(join(bin,'codex'),`#!${process.execPath}
+ const {appendFileSync}=require('node:fs');const {execFileSync}=require('node:child_process');const P=${JSON.stringify(P)};
+ appendFileSync('work/fake-runs','x');
+ const key=execFileSync(process.execPath,[P+'/scripts/gtm-os-compile/compile.mjs','.','--facts','icp'],{encoding:'utf8'}).match(/^as_of: (\\S+)/m)[1];
+ execFileSync(process.execPath,[P+'/scripts/gtm-os-compile/compile.mjs','.','--apply','icp','--by','background','--as-of',key,'--summary','Both notes.','--now',''],{stdio:'ignore'});
+ `,{mode:0o755});
+ const live={...env,GTM_OS_NO_COMPILE:'',PATH:bin+':'+process.env.PATH,GTM_OS_COMPILE_RETRY:'0',GTM_OS_COMPILE_DELAY:'3'};
+ const remember=content=>execFileSync(process.execPath,[join(P,'scripts/gtm-os-remember/remember.mjs'),root,'--by','ann','--context','icp','--content',content],{env:live,encoding:'utf8'});
+ remember('First note.');
+ await new Promise(r=>setTimeout(r,1500));
+ assert.ok(!existsSync(join(root,'work/fake-runs')),'nothing runs while notes are still coming');
+ remember('Second note, inside the delay.');
+ await waitFor(()=>{try{return JSON.parse(readFileSync(join(root,'work/compile.json'),'utf8')).state==='done'&&!existsSync(join(root,'work/compile.lock'))}catch{return false}});
+ assert.equal(readFileSync(join(root,'work/fake-runs'),'utf8'),'x','two notes, one run');
+ assert.equal(lib.readContext(root,'icp').summary,'Both notes.');
+});
+
+test('a summary run is a slim session: only the GTM OS server, its five tools, the procedures in the prompt, the person\'s model kept',()=>{
+ const home=mkdtempSync(join(tmpdir(),'gtm-run-args-'));
+ const args=c=>{writeFileSync(join(home,'config.toml'),c);return execFileSync(process.execPath,[join(P,'scripts/gtm-os-compile/run-args.mjs'),P,'background','icp','e_1'],{env:{...process.env,CODEX_HOME:home},encoding:'utf8'}).split('\0').filter(Boolean)};
+ const slim=args('model = "gpt-5.6-luna"\nmodel_reasoning_effort = "medium"\n\n[plugins."slack@x"]\nenabled = true\n');
+ assert.ok(slim.includes('--ignore-user-config'));
+ assert.ok(slim.includes('model="gpt-5.6-luna"')&&slim.includes('model_reasoning_effort="medium"'));
+ assert.ok(slim.some(a=>/^mcp_servers\.gtm_os\.env=\{GTM_OS_RUN="background",GTM_OS_TOOLSET="compile"\}$/.test(a)));
+ assert.ok(slim.includes('project_doc_max_bytes=0'));
+ const prompt=slim.at(-1);
+ assert.match(prompt,/# Compilation procedure/);assert.match(prompt,/# Entity compilation procedure/);assert.match(prompt,/compile_apply \{brain, context, by, as_of, summary, now\}/);
+ // a custom provider is more than a few keys: the person's whole config is used instead
+ const full=args('model = "x"\nmodel_provider = "azure"\n');
+ assert.ok(!full.includes('--ignore-user-config'));assert.ok(full.includes('--dangerously-bypass-hook-trust'));
 });

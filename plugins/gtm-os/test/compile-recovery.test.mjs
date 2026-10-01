@@ -11,7 +11,7 @@ function fixture(t, data) {
  t.after(()=>rmSync(scratch,{recursive:true,force:true}));
  for(const p of [join(root,'brain'),join(root,'work'),join(fake,'lib'),bin,...['gtm-os-compile','gtm-os-schedule','gtm-os-entities','gtm-os-render'].map(s=>join(fake,'scripts',s))])mkdirSync(p,{recursive:true});
  writeFileSync(join(root,'AGENTS.md'),'# Fixture');writeFileSync(join(root,'brain/admin.md'),'# Fixture');
- for(const file of ['background-compile.sh','compile-status.mjs','worker-lock.mjs','run-bounded.mjs','run-usage.mjs'])copyFileSync(join(plugin,'scripts/gtm-os-compile',file),join(fake,'scripts/gtm-os-compile',file));
+ for(const file of ['background-compile.sh','compile-status.mjs','worker-lock.mjs','run-bounded.mjs','run-usage.mjs','run-args.mjs'])copyFileSync(join(plugin,'scripts/gtm-os-compile',file),join(fake,'scripts/gtm-os-compile',file));
  copyFileSync(join(plugin,'scripts/gtm-os-schedule/scheduled-run.sh'),join(fake,'scripts/gtm-os-schedule/scheduled-run.sh'));
  copyFileSync(join(plugin,'lib/process-lock.mjs'),join(fake,'lib/process-lock.mjs'));
  const dataPath=join(root,'work/test-data.json');writeFileSync(dataPath,JSON.stringify({contexts:['sales'],entities:[],calls:0,...data}));

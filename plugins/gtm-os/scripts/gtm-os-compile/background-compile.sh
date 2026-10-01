@@ -30,6 +30,24 @@ cleanup() {
   fi
 }
 trap cleanup EXIT
+# Batch: a run is a full model session (2026-10-01: about 400k input tokens for one note), so the
+# worker waits until no note has been saved for GTM_OS_COMPILE_DELAY seconds (default 600) and then
+# compiles everything waiting in one run. Notes saved while it waits extend the wait.
+DELAY="${GTM_OS_COMPILE_DELAY:-600}"
+last_note() { node -e 'const fs=require("fs"),p=require("path");let t=0;const d="brain/contexts";try{for(const c of fs.readdirSync(d)){try{t=Math.max(t,fs.statSync(p.join(d,c,"memories.jsonl")).mtimeMs)}catch{}}}catch{}console.log(Math.floor(t/1000))'; }
+# Nothing behind: stop before any wait, with no state written, so the page is never told a summary is coming.
+# HANDLED first: the exit cleanup restarts the worker for any kick it did not see, and an early exit
+# that had not read the kick would restart itself forever.
+HANDLED="$(cat work/compile.kick 2>/dev/null)"
+[ "$(pending 2>/dev/null)" = '|' ] && exit 0
+if [ "$DELAY" -gt 0 ] 2>/dev/null; then
+  while :; do
+    quiet=$(( $(date +%s) - $(last_note) ))
+    [ "$quiet" -ge "$DELAY" ] && break
+    write queued ""
+    sleep $(( DELAY - quiet < 30 ? DELAY - quiet : 30 ))
+  done
+fi
 while :; do
   HANDLED="$(cat work/compile.kick 2>/dev/null)"
   STALE=""

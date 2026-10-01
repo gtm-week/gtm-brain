@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 const P = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 // Keep real installation preferences out of synthetic test brains.
 process.env.CODEX_HOME = mkdtempSync(join(tmpdir(), "gtm-os-test-profile-"));
@@ -558,6 +558,9 @@ test("the background summary run starts nothing when nothing is pending", () => 
   // the page is never told a summary is being written, and no Codex run is started
   execFileSync("bash", [`${P}/scripts/gtm-os-compile/background-compile.sh`, "."], { cwd: b, encoding: "utf8", env: quiet });
   assert.ok(!existsSync(join(b, "work", "compile.json")), "no note is behind: no run, and nothing shown to the person");
+  // and it does not restart itself on the way out (a kick it never read looked new: endless respawn, 2026-10-01)
+  execFileSync("sleep", ["1"]);
+  assert.equal(spawnSync("pgrep", ["-f", `background-compile.sh .*${b.split("/").pop()}`]).status, 1, "no worker left running for this brain");
   assert.equal(execFileSync("git", ["-C", b, "log", "--format=%s", "-1"], { encoding: "utf8" }).trim().startsWith("compile:"), false, "no cover was rewritten");
 });
 

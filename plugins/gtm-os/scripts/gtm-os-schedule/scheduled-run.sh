@@ -26,8 +26,8 @@ echo "stale contexts: $STALE; entity briefs: $ENTITIES"
 # thread on work/compile.json for the page to link, and leaves the person's chat in work/session.json alone.
 export GTM_OS_RUN="$BY"
 HEAD_BEFORE="$(git rev-parse -q --verify HEAD 2>/dev/null)"
-node "$P/scripts/gtm-os-compile/run-bounded.mjs" codex exec --json -s workspace-write --skip-git-repo-check --dangerously-bypass-hook-trust \
-  "You are the scheduled run of the gtm-os-sync skill. Compile these contexts whose summary is behind with by: $BY, following the compilation procedure at $P/skills/gtm-os-use-brain/references/compile.md: $STALE. Then compile these entity briefs with by: $BY using entity_facts and compile_entity, following $P/skills/gtm-os-use-brain/references/entity-compile.md: $ENTITIES. Then render the dashboard. Do not remember anything or edit identity metadata or workplace info. Each compilation tool commits its own result. Report one line per updated brief or context." </dev/null 2>&1 | node "$P/scripts/gtm-os-compile/run-usage.mjs" . "$BY" \
+RUN_ARGS=(); while IFS= read -r -d '' a; do RUN_ARGS+=("$a"); done < <(node "$P/scripts/gtm-os-compile/run-args.mjs" "$P" "$BY" "$STALE" "$ENTITIES")
+node "$P/scripts/gtm-os-compile/run-bounded.mjs" codex "${RUN_ARGS[@]}" </dev/null 2>&1 | node "$P/scripts/gtm-os-compile/run-usage.mjs" . "$BY" \
   || { printf '%s  scheduled-run  failed: codex exec exited with an error or timed out (%s)\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$STALE" >> work/hooks.log; echo "codex exec failed; any completed compilations remain saved"; exit 1; }
 # Verify the scan again before reporting success, even when the model exited normally.
 AFTER="$(node "$P/scripts/gtm-os-compile/compile-status.mjs" .)" || { printf '%s  scheduled-run  failed: cannot verify compilation\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log; exit 1; }
