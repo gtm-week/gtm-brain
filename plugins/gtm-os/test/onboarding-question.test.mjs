@@ -24,6 +24,8 @@ test('forms preserve choice order, support multi-select and free text, and carry
   assert.deepEqual(Object.keys(buildQuestion({ question: 'Website?' }).requestedSchema.properties), ['text']);
   assert.throws(() => buildQuestion({ ...args, options: ['Yes', ' Yes '] }), /distinct/);
   assert.throws(() => buildQuestion({ ...args, autoResolutionMs: 5000 }), /unsupported/);
+  // every GTM OS tool description says to pass brain; a form takes it and ignores it
+  assert.deepEqual(buildQuestion({ ...args, brain: '/x/FDE OS', project: 'site' }), buildQuestion(args));
   assert.throws(() => buildQuestion({ question: 'Choose', multiple: true }), /requires options/);
 });
 
