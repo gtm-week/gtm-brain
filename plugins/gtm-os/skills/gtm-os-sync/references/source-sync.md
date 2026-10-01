@@ -48,6 +48,18 @@ source list and timezone. Use this body with those concrete values:
     Stay quiet if nothing actionable changed. Notify on meaningful changes, failed or
     incomplete refreshes, or required user action. Never claim a failed source was synced.
 
+When Slack is connected and the person's saved Slack scope allows a scan, add these lines to
+the same job by default, and name Slack in the confirmation. When the person wants the queue
+more often than the sync (twice a day, every two hours on weekdays), make it its own job with
+only these lines, and save that cadence in the same preference memory:
+
+    Then list the Slack messages waiting on <handle>'s reply, following <slack-replies.md>
+    with the saved scope and reply style. Read only: never send, react or mark read, and save
+    nothing from the messages. Put the list first in the report; an empty list is one line.
+
+`<slack-replies.md>` is the absolute path of `gtm-os-todo/references/slack-replies.md` in the
+installed plugin.
+
 Set the recurrence in the submitted timezone, and verify the returned task ID, active status,
 timing and target. Only confirmed creation/update means scheduled. If the host cannot configure
 it, persist the accepted choice and blocker as onboarding continuation; report pending setup,

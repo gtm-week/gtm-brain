@@ -3,9 +3,10 @@ name: gtm-os-todo
 description: |
   What should I do now: gather everything that waits on the person across the brain (open
   questions, follow-ups named in the summaries, a proposal to approve, tools to connect,
-  look-alike names to settle), order it, and walk through it one item at a time. Never a
-  summary: those update by themselves. Triggers:
+  look-alike names to settle, Slack messages waiting on a reply), order it, and walk through it
+  one item at a time. Never a summary: those update by themselves. Triggers:
   "/gtm-os-todo", "todo", "what should I do now", "what is waiting on me", "my list".
+  Also "what's waiting on me in Slack", "Slack replies", "who do I owe a reply" (the Slack part alone).
   Also "what's next in pipeline", "where are we with X", "what is pending" (a context's next
   steps, a read) and "how is the brain doing", "advisor", "health check" (three things worth doing).
 allowed-tools: [Bash, Read]
@@ -26,7 +27,9 @@ for current open questions. Load relevant contexts to read their summaries and n
 notes. Use targeted `query` searches for the people and work items those results name.
 Respect result limits; do not describe a truncated list as everything pending.
 Candidates: open questions; follow-ups and dates in summaries and their source memories; a pending
-workplace proposal; tools not connected. Never a summary that is behind: those update by
+workplace proposal; tools not connected; when Slack is connected and its saved scope allows
+a scan, the Slack messages waiting on the person's reply, read live by
+[Slack replies](references/slack-replies.md). Never a summary that is behind: those update by
 themselves and are nobody's todo.
 
 For candidates dependent on external state, check the relevant task, CRM record or latest

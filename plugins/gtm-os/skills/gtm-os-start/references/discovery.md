@@ -237,6 +237,19 @@ list from three sources, in order:
 3. if nothing was observed at all, the meeting-notes tool: ask which they use and offer
    the matching plugin in the same breath (the CRM is already on the floor, below).
 
+**Slack is an option, never the floor.** When the company talks in Slack (named by the person,
+seen in signatures or invites, or the Slack plugin is already installed), offer it once, after
+the floor and in the same turn as the other named tools, with what it unlocks:
+
+> If your team talks in Slack, I can connect it and every morning list the messages waiting on
+> your reply, with links, so you do not have to remember where you owe an answer. Nothing from
+> your DMs is saved in the brain. Want that?
+
+Choices: Yes, connect Slack; No, skip it. A submitted skip goes through `mark_tool` (status
+`skip`) and is never offered again; no answer is not a skip. After connecting, ask the scan scope
+once, as [Slack replies](../../gtm-os-todo/references/slack-replies.md) says, and include Slack
+in the step 4 schedule. When nothing points to Slack, do not bring it up.
+
 Offer at most three per turn, and frame every offer with what it unlocks, for example:
 
 > Your calendar is not connected yet. If you connect it, I can prepare a one-page brief

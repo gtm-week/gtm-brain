@@ -121,6 +121,17 @@ The computer must be on and the app running at that time. If it was not, nothing
 next chat opens with "N new memories since the last compile, compile it now?" and a yes does
 the same by hand.
 
+## Slack: who you owe a reply
+
+If your team talks in Slack, connect it (onboarding offers it, or say `connect Slack`). Then
+`what's waiting on me in Slack` lists the messages where someone waits on your answer, with a
+link and a suggested reply written the way you write. `todo` includes them too, and the
+morning sync can put the list at the top of its report. It reads live and only within the
+scope you chose once; it never sends, reacts or marks anything read, and nothing from your DMs
+is saved in the brain. Your reply style is learned from your own Slack replies, shown to you
+before it is saved, and kept as a short description, never as your messages. The procedure is
+[slack-replies.md](plugins/gtm-os/skills/gtm-os-todo/references/slack-replies.md).
+
 ## Three habits that make it work
 
 1. **Say where you are.** Load the context before you start; Codex keeps you there.

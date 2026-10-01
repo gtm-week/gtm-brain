@@ -766,3 +766,28 @@ test("retired skills live on as references of the eight, and nothing names them 
   const offenders = files.filter(f => !f.includes("/legacy/")).filter(f => readFileSync(f, "utf8").split("\n").some(line => retired.test(line)));
   assert.deepEqual(offenders, [], "these still name a retired skill");
 });
+
+test("Slack replies: optional in onboarding, read live, scope asked once, style learned as a description, nothing stored (2026-10-01)", () => {
+  const ref = readFileSync(`${P}/skills/gtm-os-todo/references/slack-replies.md`, "utf8");
+  const todo = readFileSync(`${P}/skills/gtm-os-todo/SKILL.md`, "utf8");
+  const discovery = readFileSync(`${P}/skills/gtm-os-start/references/discovery.md`, "utf8");
+  const sync = readFileSync(`${P}/skills/gtm-os-sync/references/source-sync.md`, "utf8");
+  assert.match(todo, /\(references\/slack-replies\.md\)/, "todo reaches the procedure");
+  assert.match(todo, /what's waiting on me in Slack/);
+  // onboarding offers it only when Slack is in sight, never as part of the floor, and a skip sticks
+  assert.match(discovery, /Slack is an option, never the floor/);
+  assert.match(discovery, /No, skip it[\s\S]*`mark_tool` \(status\s+`skip`\)/);
+  assert.match(discovery, /When nothing points to Slack, do not bring it up/);
+  // privacy: the scope is the person's choice, saved once; a scheduled run never asks
+  assert.match(ref, /configuration_question/);
+  assert.match(ref, /A\s+scheduled run never asks: no saved scope means no Slack scan/);
+  assert.match(ref, /Read only: never send, react, mark read/);
+  assert.match(ref, /Nothing from the scan by default/);
+  // the style is learned from their own replies, confirmed first, and holds no message content
+  assert.match(ref, /a description, never their messages/);
+  assert.match(ref, /No quotes, names or message content in the memory/);
+  assert.match(ref, /suggest it before saving/);
+  assert.match(ref, /tone of voice document/);
+  assert.match(ref, /never send the person through\s+an APPROVE/);
+  assert.match(sync, /slack-replies\.md/, "the morning run carries the queue");
+});
