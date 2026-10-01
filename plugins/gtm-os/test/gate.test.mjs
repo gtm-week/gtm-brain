@@ -62,6 +62,25 @@ test("a repo that is not a brain and not linked to one passes untouched, .claude
   assert.equal(other("apply_patch", "input", "*** Update File: .claude/settings.json").status, 0);
 });
 
+test("a code repo linked to the brain keeps its own .claude and brain/; the brain's files stay protected by path (Maksymilian, 2026-10-01)", () => {
+  const repo = mkdtempSync(join(tmpdir(), "gtm-os-gate-linked-")); mkdirSync(join(repo, ".git"));
+  writeFileSync(join(repo, "AGENTS.md"), `# repo\n\n<!-- gtm-os project -->\nGTM OS project: app\nGTM OS brain: ${cwd}\n<!-- /gtm-os project -->\n`);
+  const linked = runIn(repo);
+  for (const c of ["cat .claude/settings.json", "printf x > .claude/settings.json", "printf y > brain/admin.md", "echo x >> src/brain/contexts/a/memories.jsonl"]) {
+    const r = linked("exec_command", "cmd", c); assert.equal(r.status, 0, c); assert.equal(r.stdout, "", c);
+  }
+  assert.equal(linked("apply_patch", "input", "*** Update File: .claude/settings.json").status, 0);
+  assert.equal(linked("apply_patch", "input", "*** Update File: brain/admin.md").status, 0);
+  for (const c of [`printf y > ${cwd}/brain/admin.md`, `echo x >> ${cwd}/brain/contexts/a/memories.jsonl`, `rm ${cwd}/brain/ontology.ossie.json`, `printf y > ../${cwd.split("/").pop()}/brain/admin.md`, `printf y > /private${cwd}/brain/admin.md`]) assert.ok(denied(linked("exec_command", "cmd", c)), c);
+  assert.ok(denied(linked("apply_patch", "input", `*** Update File: ${cwd}/brain/admin.md`)));
+  assert.equal(linked("exec_command", "cmd", `cat ${cwd}/brain/admin.md`).status, 0);
+  // a folder inside the brain is the brain's own: everything stays protected there
+  const inner = join(cwd, "inner"); mkdirSync(inner, { recursive: true });
+  writeFileSync(join(inner, "AGENTS.md"), `<!-- gtm-os project -->\nGTM OS project: inner\nGTM OS brain: ${cwd}\n<!-- /gtm-os project -->\n`);
+  assert.ok(denied(runIn(inner)("exec_command", "cmd", "printf y > ../brain/admin.md")));
+  assert.ok(denied(runIn(inner)("exec_command", "cmd", "cat .claude/settings.json")));
+});
+
 test(".claude-plugin and CLAUDE.md are not .claude", () => {
   for (const c of ["cat plugins/x/.claude-plugin/plugin.json", "cat CLAUDE.md"]) assert.equal(run("exec_command", "cmd", c).status, 0, c);
   assert.ok(denied(run("exec_command", "cmd", "cat ~/.claude.json")));

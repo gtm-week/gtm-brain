@@ -6,6 +6,7 @@
 // Writes the pointer block into <path>/AGENTS.md, the entry in work/projects.json and the project's
 // loaded set (work/projects/<slug>/loaded-contexts.json). Nothing under brain/ changes: a project is
 // a tag on notes and a local pointer, never an object, so nothing here commits.
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, rmSync, realpathSync, readFileSync, writeFileSync, lstatSync } from "node:fs";
 import { join, resolve, isAbsolute, basename, dirname, relative, sep } from "node:path";
 import { listCodexProjects } from "../../lib/codex-projects.mjs";
@@ -134,6 +135,9 @@ if (opt.link) {
   lib.logActivity(root, "project", `${opt.create ? "created" : "linked"} ${slug} at ${path}`);
   if (opt.create) console.log(`Created ${title} at ${path}. Work here uses ${admin.company || basename(root)}'s shared company knowledge.`);
   else console.log(`linked ${slug} at ${path} · loaded: ${contexts.join(", ") || "nothing yet"}${inside ? " · inside the brain (its rules are inherited)" : ""}${excluded ? " · excluded from the brain's git on this machine (a personal path)" : ""}${repaired ? ` · replaced a pointer to a brain that was gone (${existing.brain})` : ""}${skillLinks.linked.length ? ` · skills linked: ${skillLinks.linked.join(", ")}` : ""}`);
+  // A code repo's AGENTS.md is usually tracked: the block shows in its git status and, once committed,
+  // in every clone, branch and worktree, with this machine's brain path in it. The person decides.
+  if (!inside) { try { execFileSync("git", ["-C", path, "rev-parse", "--show-toplevel"], { stdio: "ignore" }); console.log(`Git: the link is a block at the end of ${join(path, "AGENTS.md")}, in this git repository. Commit it and every worktree and clone of this repository uses the brain (it names this machine's brain path); leave it uncommitted and only this checkout does. The skill links under .agents/skills are kept out of this repository's git on this machine.`); } catch {} }
   // The owning workflow launches through the shell so native permissions stay in that flow.
   // A link or a successful launcher is not evidence of visibility in Codex's sidebar.
   const quotedPath = "'" + path.replace(/'/g, "'\\''") + "'";

@@ -3,10 +3,11 @@
 // folders (https://learn.chatgpt.com/docs/build-skills, read 2026-09-16); the plugin updater never
 // touches a brain, so these survive updates. This file is the format; the script and the hook go through it.
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, lstatSync, readlinkSync, symlinkSync, unlinkSync, realpathSync } from "node:fs";
-import { join, resolve, sep } from "node:path";
+import { join, relative, resolve, sep } from "node:path";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
-import { handleFor, readProjects } from "./brain.mjs";
+import { gitExcludePath, handleFor, readProjects } from "./brain.mjs";
 
 export const SKILLS_DIR = ".agents/skills";
 export const PREFIX = "gtm-os-";
@@ -88,12 +89,27 @@ const insideBrain = (root, path) => { try { return realpathSync(path).startsWith
 const outsideProjects = root => readProjects(root).filter(p => !insideBrain(root, p.path) && existsSync(p.path));
 const linkPath = (projectPath, id) => join(projectPath, ".agents", "skills", id);
 const isOurLink = (path, root) => { try { return lstatSync(path).isSymbolicLink() && resolve(readlinkSync(path)).startsWith(skillsDir(root) + sep); } catch { return false; } };
+/* A linked folder is usually someone's code repo: the skill links are this machine's, never its
+   history, so each one is listed in that repo's own .git/info/exclude (local, uncommitted, shared by
+   its worktrees). Lines already there, by hand or by a pattern, are left alone. Never fails a link. */
+function excludeLink(path) {
+  try {
+    const dir = resolve(path, ".."), top = execFileSync("git", ["-C", dir, "rev-parse", "--show-toplevel"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+    const file = gitExcludePath(dir); if (!top || !file) return;
+    const line = "/" + relative(realpathSync(top), join(realpathSync(dir), path.split(sep).pop())).split(sep).join("/");
+    const text = existsSync(file) ? readFileSync(file, "utf8") : "";
+    if (text.split("\n").includes(line)) return;
+    try { execFileSync("git", ["-C", top, "check-ignore", "-q", "--no-index", line.slice(1)], { stdio: "ignore" }); return; } catch {}
+    mkdirSync(resolve(file, ".."), { recursive: true });
+    writeFileSync(file, text === "" || text.endsWith("\n") ? text + line + "\n" : text + "\n" + line + "\n");
+  } catch {}
+}
 function ensureLink(root, projectPath, id) {
   const target = join(skillsDir(root), id), path = linkPath(projectPath, id);
-  if (isOurLink(path, root) && resolve(readlinkSync(path)) === target) return false;
+  if (isOurLink(path, root) && resolve(readlinkSync(path)) === target) { excludeLink(path); return false; }
   if (isOurLink(path, root)) unlinkSync(path);
   if (existsSync(path)) throw new Error(`${path} exists and is not a GTM OS link`);
-  mkdirSync(join(projectPath, ".agents", "skills"), { recursive: true }); symlinkSync(target, path, "dir"); return true;
+  mkdirSync(join(projectPath, ".agents", "skills"), { recursive: true }); symlinkSync(target, path, "dir"); excludeLink(path); return true;
 }
 export function linkSkillIntoProjects(root, id) {
   const linked = [], failed = [];

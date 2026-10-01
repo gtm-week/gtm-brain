@@ -72,6 +72,22 @@ test("links skip a project folder that is gone, and never replace a symlink that
   assert.deepEqual(us.unlinkSkillFromProjects(root, "gtm-os-x"), []);
 });
 
+test("a linked code repo never sees the skill links in git status, its worktrees included (Maksymilian, 2026-10-01)", () => {
+  const root = brain(), repo = folder();
+  execFileSync("git", ["init", "-q", repo]); execFileSync("git", ["-C", repo, "-c", "commit.gpgsign=false", "commit", "-q", "--allow-empty", "-m", "init"]);
+  const app = join(repo, "apps", "web"); mkdirSync(app, { recursive: true });
+  assert.match(project(root, "--link", app, "--slug", "web"), /Git: the link is a block .*every worktree/);
+  skill(root, "--create", "--title", "Circle event", "--description", "Create a Circle event.", "--body", "1. Ask.", "--by", "marta-nowak");
+  assert.ok(lstatSync(join(app, ".agents/skills/gtm-os-circle-event")).isSymbolicLink());
+  const exclude = readFileSync(join(repo, ".git/info/exclude"), "utf8");
+  assert.ok(exclude.split("\n").includes("/apps/web/.agents/skills/gtm-os-circle-event"), exclude);
+  const status = execFileSync("git", ["-C", repo, "status", "--porcelain", "--untracked-files=all"], { encoding: "utf8" });
+  assert.doesNotMatch(status, /\.agents/, status);
+  // a second reconcile adds nothing twice
+  us.reconcileProjectSkills(root, "web");
+  assert.equal(readFileSync(join(repo, ".git/info/exclude"), "utf8"), exclude);
+});
+
 test("create writes the skill, links it into linked projects, commits; a second create is refused", () => {
   const root = brain(), external = folder();
   project(root, "--link", external, "--slug", "website");
