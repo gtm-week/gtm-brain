@@ -17,7 +17,10 @@ and tell you, at the start of a chat and on the dashboard, when a step is due.
 ## Writing one
 
 Two come with every brain as drafts, `workflows/outbound.md` and
-`workflows/ads-then-outbound.md`; edit them or copy one. The shape:
+`workflows/ads-then-outbound.md`; edit them or copy one. Or ask in the chat: `I need a playbook
+for partner onboarding` (a playbook is a workflow here). Codex drafts it from what the brain
+knows, shows it once, and saves it as a new draft in `workflows/`; an existing file is never
+replaced. The shape:
 
 - `## Before starting`: a bullet per thing to settle, `**Label**: what it means`. The brain fills
   what it already knows and asks for the rest before a run starts.

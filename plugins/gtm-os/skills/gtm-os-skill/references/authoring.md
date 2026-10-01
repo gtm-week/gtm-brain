@@ -11,10 +11,11 @@ put in only what changes its decisions.
   in the fitting context" rather than restating the remember procedure.
 - A skill that produces a document says where it lands, in its last step. Decisions and
   findings are remembered in the fitting context; a standing document the work must follow
-  (a strategy, a playbook, an ICP definition) is written as a document through the `document`
+  (a strategy, an ICP definition) is written as a document through the `document`
   tool, at the root or in the folder the person names; a draft in progress is written in the
   project folder the chat runs in. A body that only says "write strategy.md" leaves a loose
-  Markdown without the document marker: nothing reads it before the work.
+  Markdown without the document marker: nothing reads it before the work. A playbook is a
+  workflow, written with the `workflow` tool (`action: create`), never a document.
 - Never restate the brain's rulebook, the question policy or the Computer Use policy: every
   chat already has them.
 - Description: one English sentence, what it does and when it applies, at most 200 characters.

@@ -2,5 +2,6 @@
   "0.26.1": "a choice question is one page, and in Plan mode questions go through Codex's own planning question",
   "0.26.2": "a strategy, plan or playbook a chat writes gets a home instead of a loose file at the brain root",
   "0.27.0": "documents replace guidelines, so the rules point at the files work must follow",
-  "0.27.1": "newer Codex runs GTM OS tools only inside a script cell; the old rules forbid that, so setup and tool calls stop"
+  "0.27.1": "newer Codex runs GTM OS tools only inside a script cell; the old rules forbid that, so setup and tool calls stop",
+  "0.28.0": "a playbook is a workflow you can start and track, so asking for one offers the workflows instead of writing a loose document"
 }

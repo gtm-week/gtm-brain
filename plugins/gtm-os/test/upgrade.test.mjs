@@ -174,7 +174,8 @@ test("an offer to refresh the rules always says why: every rule change since the
   const f = fixture(t, "0.27.0");
   const { from, reasons } = rulesReasons(f.root, join(plugin, "templates"));
   assert.equal(from, "0.27.0");
-  assert.deepEqual(reasons, [rulesWhy["0.27.1"]]);
+  assert.deepEqual(reasons, Object.keys(rulesWhy).filter(v => gt(v, "0.27.0")).sort((a, b) => (gt(a, b) ? 1 : -1)).map(v => rulesWhy[v]), "every change since 0.27.0, oldest first");
+  assert.equal(reasons[0], rulesWhy["0.27.1"]);
   const r = f.run(); assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /why \(rules from 0\.27\.0\): newer Codex runs GTM OS tools only inside a script cell/);
   assert.deepEqual(rulesReasons(f.root, join(plugin, "templates")).reasons, [], "refreshed rules are current: nothing to explain");

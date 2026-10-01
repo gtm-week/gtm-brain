@@ -642,7 +642,7 @@ test("workflow: listed as a tool, lists the shipped workflows, refuses an unsett
   const { result: catalog } = await rpc("tools/list");
   const tool = catalog.tools.find(t => t.name === "workflow");
   assert.ok(tool, "workflow is in tools/list"); assert.ok(lib.RESERVED_TOOLS.has("workflow"));
-  assert.deepEqual(tool.inputSchema.properties.action.enum, ["list", "start", "status", "advance", "skip", "abandon", "due"]);
+  assert.deepEqual(tool.inputSchema.properties.action.enum, ["list", "create", "start", "status", "advance", "skip", "abandon", "due"]);
   // the same bare brain the memory_index test builds: admin.md, one context, no git
   const brain = mkdtempSync(join(tmpdir(), "gtm-workflow-mcp-"));
   mkdirSync(join(brain, "brain")); mkdirSync(join(brain, "workflows"));

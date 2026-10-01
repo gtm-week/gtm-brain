@@ -356,3 +356,35 @@ test("the dashboard data carries the runs; render writes them into the page data
   const data = JSON.parse(html.match(/<script id="data" type="application\/json">([\s\S]*?)<\/script>/)[1]);
   assert.equal(data.runs.length, 1); assert.equal(data.runs[0].id, id); assert.equal(data.runs[0].current.n, 1);
 });
+
+test("a playbook is a workflow: create writes a new draft that parses, refuses a broken one and never replaces a file (Maks Majer, 2026-10-01)", () => {
+  const root = brain();
+  const body = `## Before starting
+
+- **Partner**: the company joining the program.
+- **Owner**: who runs the onboarding.
+
+## Steps
+
+1. **Kickoff call** (tool: calendar). Agree goals and the first joint account.
+2. **Shared deal review** (tool: crm). Review the first joint pipeline. Gate: after 14 days
+
+## Learn
+
+- Joint deals opened in the first month.`;
+  const out = workflow(root, "--create", "Partner onboarding", "--body", body, "--applies-to", "partner onboarding", "--by", "marta-nowak");
+  assert.match(out, /created workflows\/partner-onboarding\.md: Partner onboarding, 2 steps, draft/);
+  const w = wf.readWorkflow(root, "partner-onboarding");
+  assert.equal(w.ok, true); assert.equal(w.status, "draft"); assert.deepEqual(w.steps.map(s => s.title), ["Kickoff call", "Shared deal review"]);
+  assert.match(workflow(root, "--list"), /partner-onboarding: Partner onboarding \[draft\], 2 steps/);
+  // the same title again is the person's file now: refused, not replaced
+  const before = readFileSync(join(root, "workflows", "partner-onboarding.md"), "utf8");
+  assert.match(refusedBy(root, "--create", "Partner onboarding", "--body", body, "--by", "marta-nowak").text, /exists already/);
+  assert.equal(readFileSync(join(root, "workflows", "partner-onboarding.md"), "utf8"), before);
+  // a body that would not start is not left behind
+  assert.match(refusedBy(root, "--create", "Broken one", "--body", "## Steps\n\n1. no title here", "--by", "marta-nowak").text, /would not parse: missing heading "## Before starting"/);
+  assert.ok(!existsSync(join(root, "workflows", "broken-one.md")));
+  // the words people use route here, and the rulebook no longer files a playbook as a document
+  assert.match(readFileSync(`${P}/skills/gtm-os-workflow/SKILL.md`, "utf8"), /"I need a playbook"/);
+  assert.match(readFileSync(`${P}/templates/AGENTS.md`, "utf8"), /A playbook\nis a workflow \(gtm-os-workflow\)/);
+});

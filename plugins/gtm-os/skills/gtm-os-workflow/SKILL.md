@@ -1,12 +1,13 @@
 ---
 name: gtm-os-workflow
 description: |
-  Run a workflow: an action that plays out over time (an outbound campaign, ads then outbound)
-  from a workflow document in workflows/, with things to settle before starting, gated steps
-  and a read-back at the end. Start a run, see where it stands, do the next step, skip or
-  abandon. Triggers: "/gtm-os-workflow", "start the outbound workflow", "run the playbook",
-  "where is the campaign", "next step", "skip this step", "abandon the run", "list workflows",
-  "which workflows do we have".
+  Run a workflow (a playbook): an action that plays out over time (an outbound campaign, ads
+  then outbound) from a workflow document in workflows/, with things to settle before starting,
+  gated steps and a read-back at the end. Create one, start a run, see where it stands, do the
+  next step, skip or abandon. Triggers: "/gtm-os-workflow", "start the outbound workflow",
+  "run the playbook", "I need a playbook", "make a playbook for X", "our playbooks",
+  "new workflow", "where is the campaign", "next step", "skip this step", "abandon the run",
+  "list workflows", "which workflows do we have".
 allowed-tools: [Bash, Read]
 ---
 
@@ -16,11 +17,29 @@ A workflow is a document in `workflows/` with `type: workflow`: a "Before starti
 steps with a gate each ("after 14 days", "on 2026-10-03", "when the engaged accounts are known")
 and a "Learn" list. A run is the brain's record of one execution: memories in one context, one per
 step, with due dates. The `workflow` tool is the only writer; never write run state with
-`remember` and never edit a workflow file from here (the person edits it in Finder).
+`remember` and never edit an existing workflow file from here (the person edits it in Finder).
 
 Keep authored brain content in English. Follow [question handling](../gtm-os-start/references/questions.md)
 for native questions. Every step is done in this chat through the connected tools with their
 normal permission prompts, or by the person, who reports it; the tool records, it never acts.
+
+## Playbooks are workflows
+
+People say playbook; GTM OS calls it a workflow, and both mean the same file in `workflows/`.
+When someone asks for a playbook, answer with the workflows: say the ones that exist (`list`),
+offer to start the one that fits, and offer to write a new one when none does. Never write a
+playbook as a document, a skill or a loose Markdown file. Say "workflow" back once, in half a
+sentence ("playbooks live here as workflows"), then use whichever word they use.
+
+## Write a new one
+
+Draft it from what the brain knows and the person's words: what to settle before starting, the
+steps in order with the tool category each uses (crm, email, calendar, sequencer, ads,
+analytics, slack) and a gate where a step waits (after N days, on a date, when something is
+known), and what to read back at the end. Use the shipped drafts in `workflows/` as the model.
+Show it once and ask through `question` (Save it; Change something). Then `workflow` with
+`action: create`, the title, the body with the three headings and `applies_to`. It is saved as
+a draft; the person edits it in Finder like any document, and a run can start at once.
 
 ## Which workflows, which runs
 

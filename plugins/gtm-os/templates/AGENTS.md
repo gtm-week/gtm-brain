@@ -88,10 +88,11 @@ organization or product is an entity (rule 2a); a file is landed beside its owne
 was decided, found or asked is a memory in the context whose purpose fits (rules 1 and 2). A
 strategic choice is a memory in Strategy as well as a line in the strategy document; the
 document is the statement, the notes are the evidence. A document a chat or a skill produces (a
-strategy, a plan, a playbook) is written as a document through `document`, at the root or in the
+strategy, a plan) is written as a document through `document`, at the root or in the
 folder the person names; its decisions and findings also become memories, and a draft in
 progress lives in the project folder it belongs to. Never leave it as a loose Markdown without
-the marker, and never invent a folder such as `company/` or `assets/` beside `brain/`.
+the marker, and never invent a folder such as `company/` or `assets/` beside `brain/`. A playbook
+is a workflow (gtm-os-workflow): steps that play out over time, started and tracked as a run.
 The files in `brain/entities/` form the global identity registry and readable entity briefs.
 Each Markdown file holds a stable ID, canonical name, kind, aliases, contacts and external
 references, plus a generated overview, per-context state, relationships, the full timeline

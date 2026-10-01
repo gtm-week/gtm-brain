@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Workflows: a run of a workflow document as dated memories (lib/workflows.mjs is the format; this is the only writer).
 //   node workflow.mjs <root> --list [--json]
+//   node workflow.mjs <root> --create "<title>" --body "<## Before starting / ## Steps / ## Learn>" [--applies-to "a, b"] --by <handle>
 //   node workflow.mjs <root> --start <slug> --context <ctx> --handle "<name>" --settled '{"Label":"answer"}' --by <handle>
 //   node workflow.mjs <root> --status <run-id> [--json]
 //   node workflow.mjs <root> --advance <run-id> --step <n> [--note "..."] [--answer "..."] [--actions "tool:action:ref,..."] [--learned '{"item":"..."}'] --by <handle>
@@ -18,7 +19,7 @@ const args = process.argv.slice(2); const root = realpathSync(resolve(args[0] &&
 if (!existsSync(join(root, "brain", "admin.md"))) { console.error("no brain here (brain/admin.md missing)."); process.exit(1); }
 const opt = {}; for (let i = 0; i < args.length; i++) if (args[i].startsWith("--")) { const k = args[i].slice(2), v = args[i + 1]; if (v === undefined || v.startsWith("--")) opt[k] = true; else { opt[k] = v; i++; } }
 const refuse = why => { console.error(why); process.exit(2); };
-for (const flag of ["start", "context", "handle", "settled", "by", "status", "advance", "step", "note", "answer", "actions", "learned", "skip", "abandon", "reason", "today"]) if (opt[flag] === true) refuse(`--${flag} needs a value`);
+for (const flag of ["create", "body", "applies-to", "start", "context", "handle", "settled", "by", "status", "advance", "step", "note", "answer", "actions", "learned", "skip", "abandon", "reason", "today"]) if (opt[flag] === true) refuse(`--${flag} needs a value`);
 const AUTOMATIC = new Set(["schedule", "session"]);
 const by = opt.by === undefined ? null : AUTOMATIC.has(String(opt.by)) ? String(opt.by) : lib.teamHandle(root, String(opt.by));
 if (opt.by !== undefined && !by) refuse(`"${opt.by}" is not in admin.md team`);
@@ -49,6 +50,26 @@ if (opt.list) {
   lines.push(runs.length ? "runs in progress:" : "runs in progress: none.");
   for (const r of runs) { const w = wf.readWorkflow(root, r.workflow), s = r.current; lines.push(`- ${r.id} in ${r.contextTitle}: ${!wf.isLive(r) ? `context ${r.contextStatus}; bring it back to continue` : s ? `step ${s.n} of ${w?.ok ? w.steps.length : r.steps.length}, ${w?.ok ? w.steps[s.n - 1]?.title : "step"}, ${stateLine(s)}` : "no step pending"}${r.open && wf.isLive(r) ? " (gate question open)" : ""}`); }
   console.log(lines.join("\n")); process.exit(0);
+}
+
+/* ---------- create: a new workflow document (a "playbook" is a workflow) ---------- */
+// Written as a draft in workflows/<slug>.md, in the shipped drafts' format, and kept only when it parses:
+// a workflow that cannot start is never left behind. An existing file is the person's: never replaced.
+if (opt.create) {
+  needBy();
+  const docs = await import(new URL("../../lib/documents.mjs", import.meta.url));
+  const title = String(opt.create).trim(), slug = title.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64);
+  const applies = opt["applies-to"] || title.toLowerCase(), body = String(opt.body || "");
+  const invalid = docs.validateDocument({ slug, title, applies_to: applies, body, status: "draft", folder: "workflows", root });
+  if (invalid) refuse(invalid);
+  const path = `workflows/${slug}.md`;
+  if (existsSync(join(root, path))) refuse(`${path} exists already; the person edits it, or give the new workflow another title`);
+  let version = ""; try { version = JSON.parse((await import("node:fs")).readFileSync(new URL("../../.codex-plugin/plugin.json", import.meta.url), "utf8")).version; } catch {}
+  docs.writeDocument(root, { path, title, applies_to: applies, status: "draft", by, version, body, extra: { type: wf.TYPE } });
+  const w = wf.readWorkflow(root, slug);
+  if (!w?.ok) { (await import("node:fs")).rmSync(join(root, path), { force: true }); refuse(`not written, the workflow would not parse: ${(w?.problems || ["unreadable"]).join("; ")}`); }
+  const c = lib.commit(root, [path], `workflow: create ${slug}`); lib.logActivity(root, "workflow", `created ${path}`); lib.rerender(root);
+  console.log(`created ${path}: ${w.title}, ${w.steps.length} steps, draft (${c.note}). Start a run with: start the ${slug} workflow.`); process.exit(0);
 }
 
 /* ---------- start ---------- */
