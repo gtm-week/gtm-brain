@@ -752,7 +752,7 @@ export function savePathsFor(root) { return [...BRAIN_PATHS, "README.md", ...doc
 /* Every writer calls this once after writing: everything written is kept at once, one commit per
    change. The message is also the activity line the dashboard shows. GTM_OS_NO_COMMIT (tests,
    dry runs) turns committing off; `always` lets save ignore it. */
-export function commit(root, paths, message, { always = false } = {}) {
+export function commit(root, paths, message, { always = false, push = true } = {}) {
   // Keep identity files and derived evidence views with every brain write.
   if (readAdmin(root) && paths.some(p => /brain(?:\/|$)|context\.md$|memories\.jsonl$/.test(p))) {
     withEntityLock(root, () => { if (!migrateEntities(root)) refreshEntityPages(root); });
@@ -773,7 +773,7 @@ export function commit(root, paths, message, { always = false } = {}) {
     // Shared right away when the brain has a remote; in the background, so a slow network never
     // holds a note. A failed push is retried by the next commit and by the session start's pull.
     let shared = false;
-    try { if (git("remote").trim()) { spawn("git", ["-C", root, "push", "-q"], { detached: true, stdio: "ignore" }).unref(); shared = true; } } catch {}
+    try { const remote = push && pushRemote(git("remote")); if (remote) { spawn("git", ["-C", root, ...PUSH, remote, "HEAD"], { detached: true, stdio: "ignore" }).unref(); shared = true; } } catch {}
     return { ok: true, note: shared ? "kept and shared" : "kept" };
   } catch (e) {
     const err = String(e.stderr || e.message).trim().split("\n").filter(Boolean);
@@ -798,18 +798,24 @@ export function unsavedChanges(root, paths = savePathsFor(root)) {
   paths = paths.filter(p => p.startsWith(":(") || existsSync(join(root, p)));
   try { return execFileSync("git", ['--no-optional-locks', "-C", root, "status", "--short", "--", ...paths], { encoding: "utf8", stdio: "pipe" }).split("\n").filter(Boolean).map(l => ({ state: l.slice(0, 2).trim() || "M", path: l.slice(3) })); } catch { return []; }
 }
+/* Every push names its remote and branch and sets the upstream: a remote the person added by hand
+   (git remote add, no -u) has none, and a bare "git push" then fails in the background with nothing
+   said while the note reads "kept and shared". origin when there is one, else the first remote. */
+export const PUSH = ["push", "-q", "-u"];
+export const pushRemote = list => { const r = String(list || "").split("\n").map(x => x.trim()).filter(Boolean); return r.includes("origin") ? "origin" : r[0] || ""; };
 /* The person's save: commit what unsavedChanges lists, push when there is a remote. */
 export function save(root, message, { covers = false } = {}) {
   if (!covers && existsSync(join(root, "work", "admin.proposed.md"))) return { ok: false, note: "a change to brain/admin.md is waiting for APPROVE; ask for APPROVE or a drop, then save" };
   const paths = covers ? COVER_PATHS : savePathsFor(root);
   const files = unsavedChanges(root, paths);
   if (!files.length) return { ok: true, note: covers ? "nothing to save: no cover changed" : "nothing to save: everything is committed", files };
-  const r = commit(root, paths, String(message || "save").split("\n")[0].slice(0, 120), { always: true });
+  // save pushes in the foreground below; a background push from commit would race it for the ref.
+  const r = commit(root, paths, String(message || "save").split("\n")[0].slice(0, 120), { always: true, push: false });
   if (!r.ok) return { ok: false, note: r.note, files };
   const git = (...a) => execFileSync("git", ["-C", root, ...a], { encoding: "utf8", stdio: "pipe" }).trim();
   const hash = git("rev-parse", "--short", "HEAD");
   let pushed = "no remote, local only";
-  try { const remote = git("remote").split("\n")[0]; if (remote) { execFileSync("git", ["-C", root, "push", "-q"], { stdio: "pipe", timeout: 30000 }); pushed = `pushed to ${remote}`; } }
+  try { const remote = pushRemote(git("remote")); if (remote) { execFileSync("git", ["-C", root, ...PUSH, remote, "HEAD"], { stdio: "pipe", timeout: 30000 }); pushed = `pushed to ${remote}`; } }
   catch (e) { pushed = `commit is local; push failed: ${String(e.stderr || e.message).trim().split("\n")[0].slice(0, 160)}`; }
   logActivity(root, "save", `saved ${hash}: ${files.length} file(s), ${pushed}`);
   return { ok: true, note: `saved ${hash}: ${files.length} file(s)\n${files.map(f => `${f.state} ${f.path}`).join("\n")}\n${pushed}`, hash, files, pushed };
