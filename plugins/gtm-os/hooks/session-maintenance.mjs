@@ -46,8 +46,14 @@ if (process.argv[3] === '--start') {
       const saved = lib.save(root, 'kept: edited by hand outside Codex');
       if (!saved.ok) failures.push('save');
     }
-    const remote = spawnSync('git', ['remote', 'get-url', 'origin'], { cwd: root, timeout: 2000, stdio: 'ignore' });
-    if (remote.status === 0) run('pull', 'git', ['pull', '--ff-only', '--quiet']);
+    const remote = lib.pushRemote(spawnSync('git', ['remote'], { cwd: root, timeout: 2000, encoding: 'utf8' }).stdout);
+    if (remote) {
+      // A remote added by hand has no upstream, so a bare pull fails every session: publish this
+      // branch first (it also sends commits whose background push failed), which sets the upstream.
+      const upstream = spawnSync('git', ['rev-parse', '--abbrev-ref', '@{u}'], { cwd: root, timeout: 2000, stdio: 'ignore' });
+      if (upstream.status !== 0) run('push', 'git', [...lib.PUSH, remote, 'HEAD']);
+      run('pull', 'git', ['pull', '--ff-only', '--quiet']);
+    }
     run('tools', process.execPath, [join(plugin, 'scripts/gtm-os-connect/connect.mjs'), root, '--check']);
     // Workflow steps whose gate date passed become a due step and a gate question; deterministic, no model.
     run('workflows', process.execPath, [join(plugin, 'scripts/gtm-os-workflow/workflow.mjs'), root, '--due', '--by', 'session']);

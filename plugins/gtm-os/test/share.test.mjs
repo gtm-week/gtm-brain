@@ -78,3 +78,20 @@ test("without gh, or with gh signed out, it stops and says what to run; nothing 
   }
   assert.doesNotMatch(readFileSync(join(gh.env.PATH.split(":")[0], "calls.log"), "utf8"), /repo create/, "a bad name never reaches gh");
 });
+
+test("a remote added by hand, with no upstream, still receives every note and every save (Maksymilian, 2026-09-30)", async () => {
+  // git remote add origin <url> plus a plain push leaves no upstream: a bare `git push` failed in the
+  // background while the note said "kept and shared", and the session pull failed every time.
+  const root = brain(), bare = join(mkdtempSync(join(tmpdir(), "gtm-os-share-hand-")), "brain.git");
+  execFileSync("git", ["init", "-q", "--bare", bare]);
+  execFileSync("git", ["-C", root, "remote", "add", "origin", bare]);
+  execFileSync("git", ["-C", root, "push", "-q", "origin", "HEAD"]);
+  const head = () => execFileSync("git", ["-C", bare, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+  const local = () => execFileSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+  const lib = await import(`${P}/lib/brain.mjs`);
+  writeFileSync(join(root, "AGENTS.md"), readFileSync(join(root, "AGENTS.md"), "utf8") + "\nA line added by hand.\n");
+  const saved = lib.save(root, "save by hand");
+  assert.equal(saved.pushed, "pushed to origin");
+  assert.equal(head(), local());
+  assert.match(execFileSync("git", ["-C", root, "rev-parse", "--abbrev-ref", "@{u}"], { encoding: "utf8" }), /^origin\//, "the push set the upstream, so the session pull works");
+});

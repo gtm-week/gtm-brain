@@ -31,7 +31,8 @@ test('session answers proceed while maintenance is blocked; one worker survives 
   writeFileSync(join(bin, 'git'), `#!${process.execPath}
 const fs = require('node:fs'), cp = require('node:child_process');
 const args = process.argv.slice(2);
-if (args[0] === 'remote') process.exit(0);
+if (args[0] === 'remote') { console.log('origin'); process.exit(0); }
+if (args[0] === 'rev-parse' && args.includes('@{u}')) { console.log('origin/main'); process.exit(0); }
 if (args[0] === 'pull') {
   fs.appendFileSync(${JSON.stringify(started)}, 'pull\\n');
   const timer = setInterval(() => { if (fs.existsSync(${JSON.stringify(release)})) { clearInterval(timer); process.exit(1); } }, 50);
