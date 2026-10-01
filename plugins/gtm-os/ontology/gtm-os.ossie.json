@@ -1775,6 +1775,10 @@
                   "type": "string",
                   "description": "Canonical name"
                 },
+                "by": {
+                  "type": "string",
+                  "description": "Who is adding it. Accepted like every writer's by and not recorded: a name has no author."
+                },
                 "aliases": {
                   "type": "array",
                   "items": {

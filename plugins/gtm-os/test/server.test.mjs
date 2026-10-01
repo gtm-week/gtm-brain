@@ -131,6 +131,9 @@ test("formal entities can be created, described and queried through MCP with org
   lib.writeContext(brain, "partners", { title: "Partners" });
   const added = await call("add_name", { brain, name: "Acme Foundation", kind: "organization", subtype: "nonprofit", aliases: ["Acme"] });
   assert.ok(!added.isError, added.text);
+  // the model passes by to every writer; add_name refused it with "add_name.by is not allowed" (FDE OS, 2026-10-01)
+  const withBy = await call("add_name", { brain, by: "ann", name: "Slack", kind: "product" });
+  assert.ok(!withBy.isError, withBy.text);
   const found = await call("query", { brain, object: "entities", filters: { kind: "organization", subtype: "nonprofit" }, search: "Acme" });
   assert.ok(!found.isError, found.text);
   const row = JSON.parse(found.text.split("\n")[1]);
