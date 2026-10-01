@@ -6,7 +6,7 @@
 #   brain/contexts/*/memories.jsonl   denied. Append-only; only the remember tool writes it.
 #   Entity files are editable; their reader validates format and proposes repairs when needed.
 #   brain/ontology.ossie.json         denied. This company's interactions; propose_interaction, then a person approves.
-#   anything under .claude                      denied, reads too. Claude's memory is Claude's;
+#   anything under .claude                      denied, reads too, in a brain or linked folder only. Claude's memory is Claude's;
 #                                               the import path is ~/.gtm-os/handoff.md (IMPORT.md).
 #
 # apply_patch: any mention of a protected path is a write. Shell commands: denied when the
@@ -20,7 +20,11 @@ input="$(cat)"
 tool="$(printf '%s' "$input" | sed -n 's/.*"tool_name":"\([^"]*\)".*/\1/p' | head -1)"
 cwd="$(printf '%s' "$input" | sed -n 's/.*"cwd":"\([^"]*\)".*/\1/p' | head -1)"; [ -n "$cwd" ] && [ -d "$cwd" ] || cwd="$PWD"
 . "$(dirname "${BASH_SOURCE[0]}")/resolve.sh"
-logdir="$cwd"; where="$(gtm_os_resolve "$cwd" 2>/dev/null)" && case "$where" in MISSING*) ;; *) logdir="${where%%$'\t'*}";; esac
+# Only a brain or a folder linked to one has anything to protect: every other repo passes untouched.
+where="$(gtm_os_resolve "$cwd" 2>/dev/null)" || exit 0
+case "$where" in MISSING*|"") exit 0;; esac
+logdir="${where%%$'\t'*}"
+[ -f "$logdir/brain/admin.md" ] || exit 0
 # Patch contents can quote brain paths while editing plugin source. Inspect actual targets only.
 if [ "$tool" = "apply_patch" ]; then
   input="$(printf '%s' "$input" | node -e 'const fs=require("node:fs");const x=JSON.parse(fs.readFileSync(0,"utf8"));const p=typeof x.tool_input==="string"?x.tool_input:x.tool_input?.input||x.tool_input?.patch||"";const targets=p.split(/\n/).filter(l=>/^\*\*\* (?:Add File|Update File|Delete File|Move to): /.test(l));console.log(targets.length?targets.join("\n"):JSON.stringify(x.tool_input))')" || exit 2
@@ -31,7 +35,7 @@ deny() { log DENY; printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","
 # ~/.claude is Claude's own memory, reads included: Codex has no business in it. The only
 # path is IMPORT.md run inside the other assistant, which writes ~/.gtm-os/handoff.md.
 # Checked before the read/write split below, because for this path a read is also denied.
-if printf '%s' "$input" | grep -q '\.claude'; then
+if printf '%s' "$input" | grep -qE '\.claude([./"'"'"'[:space:]]|$)'; then
   deny 'Files under .claude belong to Claude and are off limits, reads included. To import what Claude knows, have Claude read IMPORT.md from the GTM OS repository (or run the plugin gtm-os-export skill with claude -p); it writes ~/.gtm-os/handoff.md, and the gtm-os-start skill reads that.'
 fi
 case "$tool" in

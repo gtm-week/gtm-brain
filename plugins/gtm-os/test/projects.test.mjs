@@ -417,6 +417,10 @@ test("the session hook elsewhere: a pointer to a gone brain says so and stops; a
   const empty = folder();
   const e = hook(empty, "session-start.sh", {}); assert.match(e, /this folder has no company brain yet/); assert.match(e, /not linked to a brain/, "both offers, the start one first");
   assert.ok(e.indexOf("no company brain yet") < e.indexOf("not linked to a brain"));
+  // Someone's code repo is not a setup landing: no question forms or Computer Use rules leak into it (Maksymilian, 2026-10-01).
+  const repo = folder(); mkdirSync(join(repo, ".git")); mkdirSync(join(repo, "src")); writeFileSync(join(repo, "package.json"), "{}"); writeFileSync(join(repo, "src", "index.js"), "");
+  const r = hook(repo, "session-start.sh", {});
+  assert.doesNotMatch(r, /onboarding_question|question tool|Computer Use|no company brain yet/);
 }));
 
 test("turns, tool usage and the gate work from a project cwd and log into the brain with the project", () => {

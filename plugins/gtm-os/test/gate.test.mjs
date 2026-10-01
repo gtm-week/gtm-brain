@@ -4,12 +4,15 @@ process.env.GTM_OS_NO_COMPILE = "1"; // Model runs are opt-in through test doubl
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 const gate = new URL("../hooks/gate-protected-write.sh", import.meta.url).pathname;
+// The gate guards a brain: the folder needs brain/admin.md, as setup writes it.
 const cwd = mkdtempSync(join(tmpdir(), "gtm-os-gate-"));
-const run = (tool, field, text) => spawnSync("bash", [gate], { input: JSON.stringify({ tool_name: tool, cwd, tool_input: { [field]: text } }), cwd, encoding: "utf8" });
+mkdirSync(join(cwd, "brain")); writeFileSync(join(cwd, "brain", "admin.md"), "---\ncompany: Gate Test\n---\n");
+const runIn = dir => (tool, field, text) => spawnSync("bash", [gate], { input: JSON.stringify({ tool_name: tool, cwd: dir, tool_input: { [field]: text } }), cwd: dir, encoding: "utf8" });
+const run = runIn(cwd);
 const denied = r => r.status === 2 && r.stdout.includes('"permissionDecision":"deny"');
 
 test('sed long in-place options are denied for protected files', () => {
@@ -47,4 +50,19 @@ test(".claude is off limits both ways; the export channel and the headless run p
   for (const c of ["cat ~/.claude/CLAUDE.md", "ls -la /Users/x/.claude/projects", "cp -R skill ~/.claude/skills/", "grep company ~/.claude/projects/p/memory/MEMORY.md"]) assert.ok(denied(run("shell_command", "command", c)), c);
   assert.ok(denied(run("apply_patch", "input", "*** Update File: /Users/x/.claude/settings.json")), "apply_patch into .claude");
   for (const c of ['claude -p "Read /p/claude/gtm-os-export/SKILL.md and follow it now"', "cat ~/.gtm-os/claude-export.md", "cat ~/.gtm-os/handoff.md", "rm ~/.gtm-os/handoff.md", "command -v claude"]) assert.equal(run("shell_command", "command", c).status, 0, c);
+});
+
+test("a repo that is not a brain and not linked to one passes untouched, .claude reads included (Maksymilian, 2026-10-01)", () => {
+  // A GTM OS install must not stop work in someone's code repo: no denials and no log written there.
+  const repo = mkdtempSync(join(tmpdir(), "gtm-os-gate-repo-")); mkdirSync(join(repo, ".git"));
+  const other = runIn(repo);
+  for (const c of ["cat .claude/settings.json", "ls ~/.claude/skills", "printf y > brain/admin.md", "echo x >> brain/contexts/a/memories.jsonl"]) {
+    const r = other("exec_command", "cmd", c); assert.equal(r.status, 0, c); assert.equal(r.stdout, "", c);
+  }
+  assert.equal(other("apply_patch", "input", "*** Update File: .claude/settings.json").status, 0);
+});
+
+test(".claude-plugin and CLAUDE.md are not .claude", () => {
+  for (const c of ["cat plugins/x/.claude-plugin/plugin.json", "cat CLAUDE.md"]) assert.equal(run("exec_command", "cmd", c).status, 0, c);
+  assert.ok(denied(run("exec_command", "cmd", "cat ~/.claude.json")));
 });
