@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import * as lib from "../lib/brain.mjs";
-import { legacyTemplates } from "../lib/upgrade-files.mjs";
+import { legacyTemplates, rulesWhy, rulesReasons } from "../lib/upgrade-files.mjs";
 
 const plugin = new URL("../", import.meta.url).pathname;
 function fixture(t, version = null) {
@@ -161,8 +161,23 @@ test("custom instructions are preserved and a proposed replacement is prepared w
 test("the session hook says when a brain's rules are from an older GTM OS, and stays quiet when they are current (ALL-204 step 2a)", t => {
   const legacy = fixture(t, "0.17.5"), current = fixture(t);
   const hook = f => spawnSync("bash", [join(plugin, "hooks/session-start.sh")], { cwd: f.root, env: { ...f.env, PLUGIN_ROOT: plugin, GTM_OS_NO_VERSION_CHECK: "1", GTM_OS_NO_SESSION_MAINTENANCE: "1" }, encoding: "utf8", input: JSON.stringify({ session_id: "r", cwd: f.root }) }).stdout;
-  assert.match(hook(legacy), /are from an older GTM OS[\s\S]*refresh the rules/);
-  assert.doesNotMatch(hook(current), /older GTM OS/);
+  assert.match(hook(legacy), /are from GTM OS 0\.17\.5\. What the newer rules change: [^\n]*script cell[^\n]*refresh the rules/);
+  assert.doesNotMatch(hook(current), /rules \(AGENTS\.md\) are from/);
+});
+
+test("an offer to refresh the rules always says why: every rule change since the brain's version, oldest first", t => {
+  // The newest snapshot is the rules the next release replaced; that release must say what it changed.
+  const versions = Object.keys(legacyTemplates), parts = v => v.split(/[^0-9]+/).filter(Boolean).map(Number);
+  const gt = (a, b) => { const x = parts(a), y = parts(b); for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
+  const newest = versions.reduce((a, b) => (gt(b, a) ? b : a));
+  assert.ok(Object.keys(rulesWhy).some(v => gt(v, newest)), `templates/legacy/why.json needs a line for the release after ${newest}: what its rules change`);
+  const f = fixture(t, "0.27.0");
+  const { from, reasons } = rulesReasons(f.root, join(plugin, "templates"));
+  assert.equal(from, "0.27.0");
+  assert.deepEqual(reasons, [rulesWhy["0.27.1"]]);
+  const r = f.run(); assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /why \(rules from 0\.27\.0\): newer Codex runs GTM OS tools only inside a script cell/);
+  assert.deepEqual(rulesReasons(f.root, join(plugin, "templates")).reasons, [], "refreshed rules are current: nothing to explain");
 });
 
 test("upgrade moves brain/guidelines/*.md to root documents, keeps a slug the root already has, adds README.md", t => {

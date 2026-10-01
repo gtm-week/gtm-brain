@@ -8,8 +8,11 @@ HERE="$(cd "$(dirname "$0")" && pwd)"; PLUGIN="$(cd "$HERE/../.." && pwd)"; T="$
 ROOT="${1:-.}"; cd "$ROOT"
 [ -f brain/admin.md ] || { echo "not a brain: $ROOT"; exit 1; }
 node --input-type=module - "$PLUGIN/lib/upgrade-files.mjs" "$T" <<'JS'
-const { prepareUpgrade } = await import(process.argv[2]);
+const { prepareUpgrade, rulesReasons } = await import(process.argv[2]);
+// Read before anything is replaced: the reasons are counted from the rules this brain has now.
+const { from, reasons } = rulesReasons(".", process.argv[3]);
 const result = prepareUpgrade(".", process.argv[3]);
+if (result.ready && reasons.length) console.log(`why (rules from ${from}): ${reasons.join("; ")}`);
 if (result.backup) console.log(`backup: ${result.backup}`);
 if (!result.ready) {
   console.error(`Rules contain local edits or come from an older unrecognized template. Nothing replaced. Review ${result.proposal} alongside the existing AGENTS.md, preserving local instructions.`);

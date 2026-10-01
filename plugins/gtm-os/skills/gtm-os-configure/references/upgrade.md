@@ -18,6 +18,10 @@ The refresh recognizes current rules and every shipped template in
 validates editable entity files and saves previous instructions under `work/upgrades/before-*`. Company data and
 personal preferences keep their existing format; no setup or context reseeding is needed.
 
+Its report starts with a `why` line: what the newer rules change since this brain's version.
+Pass that on in plain words, the reason that matters most to this person first. An offer to
+refresh always says why the same way; never offer it as a bare "your rules are old".
+
 If the tool reports local edits or an unrecognized older template, it has replaced nothing.
 It leaves a proposed rules file alongside the backup. Explain that custom instructions were
 preserved and show the proposed differences for review. Do not replace the file wholesale,
