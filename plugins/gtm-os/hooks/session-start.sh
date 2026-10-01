@@ -127,8 +127,8 @@ node -e 'const d=await import(process.argv[1]);console.log(d.documentsLine(proce
 # Folders at the top GTM OS does not use (a migrated brain's company/, assets/): named once per set, never touched.
 [ -z "$project" ] && { node -e 'const d=await import(process.argv[1]);const h=d.strayFoldersHint(process.argv[2]);if(h)console.log(h)' "$P/lib/documents.mjs" "$root" 2>/dev/null || true; }
 # Rules from an older GTM OS keep naming tools and habits the plugin has moved on from (ALL-204).
-rules="$(node -e 'const u=await import(process.argv[1]);console.log(u.rulesState(process.argv[2],process.argv[3]))' "$P/lib/upgrade-files.mjs" "$root" "$P/templates" 2>/dev/null)"
-[ "$rules" = legacy ] && echo "GTM OS: this brain's rules (AGENTS.md) are from an older GTM OS. Offer once, in one line, to refresh the rules (upgrade_brain, gtm-os-configure); it backs the old file up and keeps local edits."
+# The offer always carries why: what the newer rules change since this brain's version.
+node -e 'const u=await import(process.argv[1]);const o=u.rulesOffer(process.argv[2],process.argv[3]);if(o)console.log(o)' "$P/lib/upgrade-files.mjs" "$root" "$P/templates" 2>/dev/null || true
 # A newer GTM OS where this install came from: checked in the background at most once a day (a shallow
 # fetch of one ref, never in the hook's own time); the last result is said here and shown on the page.
 if [ -z "${GTM_OS_NO_VERSION_CHECK:-}" ] && [ -f "$P/scripts/gtm-os-update-plugin/check-version.mjs" ] && command -v codex >/dev/null 2>&1; then
