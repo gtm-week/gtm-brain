@@ -34,6 +34,8 @@ Keep one question pending. Only `status: answered` from a question tool supplies
 submitted `selections` and/or `text`; preserve both. `declined` skips that question only,
 `cancelled` stops it, and `unanswered` supplies no decision. None of those three authorizes
 dependent work; an `answered` yes does, for the ordinary step it named.
+`not_shown` means the host closed the form before the person could see it: it is no answer
+and no refusal. Ask that question, and the rest of this chat's questions, as plain chat text.
 For async forms, an acknowledgement is not an answer: pause dependent work and keep the
 turn alive with interruptible waits, repeating until an answer or cancellation arrives.
 Never end the turn, even with an empty final response, while an async question is pending.
