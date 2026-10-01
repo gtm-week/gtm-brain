@@ -168,6 +168,19 @@ you do here, and which contexts this project touches. From then on a chat there 
 own open contexts and every note is tagged with the project; everything is still in the one
 brain, searchable from anywhere. Ask "list projects" to see them, "unlink this project" to stop.
 
+A linked code repository stays yours: its own `.claude/` and `brain/` paths are never blocked,
+and the brain's skill links are kept out of its `git status`. The link itself is a block in the
+repository's `AGENTS.md`: commit it and every clone and worktree uses the brain, or leave it
+uncommitted for this checkout only.
+
+## Parallel threads
+
+Two chats in the same brain folder can run at once: every note is its own commit, and notes are
+only ever added, so threads never wait on each other. If you prefer one git worktree per thread,
+that works too: when a worktree branch is merged back, notes from both sides are kept line by line
+without a conflict, the newer summary is kept, and the contexts that took notes from both sides
+are summarized again.
+
 ## Files, if you ever look
 
 ```

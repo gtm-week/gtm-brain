@@ -90,7 +90,9 @@ git config gtm-os.lib "$PLUGIN/lib/brain.mjs"
 OWNER_NAME="$(printf '%s' "$PEOPLE_JSON" | node -e 'const p=JSON.parse(require("fs").readFileSync(0,"utf8"))[0];console.log(p.name)')"
 OWNER_EMAIL="$(printf '%s' "$PEOPLE_JSON" | node -e 'const p=JSON.parse(require("fs").readFileSync(0,"utf8"))[0];console.log(p.email)')"
 [ -n "$OWNER_NAME" ] && git config user.name "$OWNER_NAME"; [ -n "$OWNER_EMAIL" ] && git config user.email "$OWNER_EMAIL"
-if git add -- brain AGENTS.md README.md strategy.md workflows .gitignore .githooks && git -c commit.gpgsign=false commit -q -m "setup: $COMPANY brain (gtm-os v0)"; then
+# Parallel branches (worktrees) merge notes as lines and keep the newer summary: .gitattributes, post-merge.
+node -e 'const l=await import(process.argv[1]);l.ensureMergeSetup(".")' "$PLUGIN/lib/brain.mjs" 2>/dev/null || true
+if git add -- brain AGENTS.md README.md strategy.md workflows .gitignore .gitattributes .githooks && git -c commit.gpgsign=false commit -q -m "setup: $COMPANY brain (gtm-os v0)"; then
   echo "gtm-os: brain created for $COMPANY  ·  committed"
 else
   echo "gtm-os: brain created for $COMPANY  ·  written to disk, NOT committed (git is read-only here): say save"

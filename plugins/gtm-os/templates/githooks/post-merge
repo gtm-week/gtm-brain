@@ -1,0 +1,17 @@
+#!/bin/sh
+# gtm-os post-merge: after a real merge (two parents: a worktree or a branch merged back, a pull
+# request pulled), each context whose notes came from both sides is listed in work/merge-stale.json,
+# so its summary is compiled again. Notes merge as lines (.gitattributes, merge=union) and the
+# summary kept is one side's; see lib.ensureMergeSetup. A fast-forward pull has one parent: nothing to do.
+git rev-parse -q --verify HEAD^2 >/dev/null 2>&1 || exit 0
+slugs=""
+for f in $(git diff --name-only HEAD^1 HEAD -- 'brain/contexts/*/memories.jsonl'); do
+  git diff --quiet HEAD^2 HEAD -- "$f" && continue
+  slugs="$slugs $(basename "$(dirname "$f")")"
+done
+[ -n "$slugs" ] || exit 0
+lib="${GTM_OS_LIB:-$(git config --get gtm-os.lib 2>/dev/null)}"
+if [ -z "$lib" ] || [ ! -f "$lib" ]; then lib="$(ls -d "$HOME"/.codex/plugins/cache/gtm-os/gtm-os/*/lib/brain.mjs 2>/dev/null | sort -V | tail -1)"; fi
+[ -n "$lib" ] && [ -f "$lib" ] || exit 0
+node -e 'import(process.argv[1]).then(l => { const c = l.markMergeStale(process.argv[2], process.argv.slice(3)); console.log(`gtm-os: notes merged from both sides in ${c.join(", ")}; the summary will be compiled again`); l.kickCompile(process.argv[2]); }).catch(() => {})' "$lib" "$(pwd)" $slugs
+exit 0

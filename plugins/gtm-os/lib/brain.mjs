@@ -6,7 +6,7 @@
 //
 // No dependencies. Node built-ins only.
 
-import { readFileSync, writeFileSync, appendFileSync, existsSync, readdirSync, statSync, lstatSync, realpathSync, mkdirSync , unlinkSync, rmSync, renameSync, linkSync} from "node:fs";
+import { readFileSync, writeFileSync, appendFileSync, existsSync, readdirSync, statSync, lstatSync, realpathSync, mkdirSync , unlinkSync, rmSync, renameSync, linkSync, chmodSync} from "node:fs";
 import { join, isAbsolute, resolve, basename, dirname } from "node:path";
 import { homedir } from "node:os";
 import { createHash, randomUUID } from "node:crypto";
@@ -297,7 +297,7 @@ export function readContext(root, slug, { includeMemories = true } = {}) {
     compiledAt, summary: fm.summary || "", people: fm.people || [], tools: fm.tools || [], related: fm.related || [],
     names: Array.isArray(fm.names) && fm.names.some(x => x && typeof x === "object") ? fm.names.filter(x => x && x.name) : (fm.people || []).map(n => ({ name: n, kind: "person" })),
     whenLoaded, rule, now,
-    memories, manualEdit, lastMemory: last, stale: !!manualEdit.changed || manualEdit.blocked || (memories.length > 0 && (!compiledAt || newer(last, compiledAt))), dir, path: f, fm, body,
+    memories, manualEdit, lastMemory: last, stale: !!manualEdit.changed || manualEdit.blocked || (memories.length > 0 && (!compiledAt || newer(last, compiledAt) || mergeStale(root).includes(slug))), dir, path: f, fm, body,
   };
 }
 /* Old covers keep their bytes until a normal write. Fold their authored boundaries into
@@ -362,6 +362,45 @@ export function seedContexts(root, owner, rules = {}) {
   selectPerson(root, handle);
 }
 
+/* ---------- parallel branches (worktrees, a merged pull request) ----------
+   Notes are append-only lines, so git's union merge keeps both sides' notes without a conflict. A
+   summary is one side's compilation: the merge keeps the newer one whole (merge-cover.mjs), and the
+   post-merge hook lists the contexts that took notes from both sides in work/merge-stale.json. A
+   note from the other branch can be older than the kept summary, so its timestamp alone would never
+   make the context stale; the list does, until the next compilation of that context. */
+export const MERGE_ATTRIBUTES = ["brain/contexts/*/memories.jsonl merge=union", "brain/contexts/*/context.md merge=gtm-os-cover"];
+const mergeStaleFile = root => join(root, "work", "merge-stale.json");
+export function mergeStale(root) { try { return JSON.parse(readFileSync(mergeStaleFile(root), "utf8")).contexts || []; } catch { return []; } }
+export function markMergeStale(root, slugs) {
+  const contexts = [...new Set([...mergeStale(root), ...slugs.filter(s => /^[a-z0-9-]+$/.test(s))])];
+  mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(mergeStaleFile(root), JSON.stringify({ contexts }));
+  return contexts;
+}
+function clearMergeStale(root, slug) {
+  const left = mergeStale(root); if (!left.includes(slug)) return;
+  try { const rest = left.filter(s => s !== slug); if (rest.length) writeFileSync(mergeStaleFile(root), JSON.stringify({ contexts: rest })); else rmSync(mergeStaleFile(root), { force: true }); } catch {}
+}
+/* Setup and every session start: the merge rules in .gitattributes (the person's lines kept), the
+   post-merge hook, and the summary driver in the local git config (shared by worktrees, never by a
+   clone, hence every session). Returns the brain files it changed, for one commit. */
+export function ensureMergeSetup(root) {
+  const plugin = fileURLToPath(new URL("../", import.meta.url)), changed = [];
+  try {
+    execFileSync("git", ["-C", root, "config", "merge.gtm-os-cover.name", "GTM OS: keep the newer compiled summary"], { stdio: "ignore" });
+    execFileSync("git", ["-C", root, "config", "merge.gtm-os-cover.driver", `node ${JSON.stringify(join(plugin, "scripts/gtm-os-compile/merge-cover.mjs"))} %O %A %B`], { stdio: "ignore" });
+  } catch {}
+  try {
+    const file = join(root, ".gitattributes"), text = existsSync(file) ? readFileSync(file, "utf8") : "";
+    const missing = MERGE_ATTRIBUTES.filter(l => !text.split("\n").includes(l));
+    if (missing.length) { writeFileSync(file, (text && !text.endsWith("\n") ? text + "\n" : text) + (text ? "" : "# gtm-os: parallel branches merge notes as lines and keep the newer summary\n") + missing.join("\n") + "\n"); changed.push(".gitattributes"); }
+    if (existsSync(join(root, ".githooks"))) {
+      const hook = join(root, ".githooks", "post-merge"), want = readFileSync(join(plugin, "templates/githooks/post-merge"), "utf8");
+      if (!existsSync(hook) || readFileSync(hook, "utf8") !== want) { writeFileSync(hook, want); chmodSync(hook, 0o755); changed.push(".githooks/post-merge"); }
+    }
+  } catch {}
+  return changed;
+}
+
 /* The cover writer. Every context.md is written here: setup, contexts --new, --fork, compile.
    Frontmatter keys in a fixed order, then "## When loaded" (rule and optional Working guidance).
    Text goes through renderFrontmatter, so titles with colons or quotes survive. */
@@ -392,6 +431,7 @@ export function writeContext(root, slug, { rule, now = "", ...fm }, { reviewedCo
     rmSync(temporary, { force: true }); throw new Error("Context Markdown changed before writing; read compile_facts again");
   }
   renameSync(temporary, path);
+  if (ordered.compiled_at && ordered.compiled_at !== (previous?.text ? parseFrontmatter(previous.text).fm.compiled_at : null)) clearMergeStale(root, slug);
   if (!previous?.blocked || acknowledged) {
     const stateFile = coverStateFile(root, slug); mkdirSync(dirname(stateFile), { recursive: true });
     writeFileSync(`${stateFile}.${process.pid}.tmp`, JSON.stringify({ hash: coverHash(text), text }));
@@ -754,7 +794,7 @@ export function writeProjects(root, projects) { mkdirSync(join(root, "work"), { 
 export const NOT_COMMITTED = "written to disk, NOT committed (git is read-only here): say save";
 export const NOT_COMMITTED_YET = "written to disk, not committed yet: say save to keep it";
 /* What a save covers: the brain and the plugin-owned files, never work/. */
-export const BRAIN_PATHS = ["brain", "AGENTS.md", ".githooks", ".gitignore", ".agents"];
+export const BRAIN_PATHS = ["brain", "AGENTS.md", ".githooks", ".gitignore", ".gitattributes", ".agents"];
 /* Everything save keeps: the engine's paths, the root README, and the documents with their files (lib/documents.mjs). */
 export function savePathsFor(root) { return [...BRAIN_PATHS, "README.md", ...documentSavePaths(root)].filter(p => existsSync(join(root, p))); }
 /* Every writer calls this once after writing: everything written is kept at once, one commit per

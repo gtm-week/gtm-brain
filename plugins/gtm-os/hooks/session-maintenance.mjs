@@ -41,6 +41,9 @@ if (process.argv[3] === '--start') {
   };
   status('running');
   try {
+    // Brains made before 0.28.2 get the merge rules for parallel worktrees once, as their own commit.
+    const merge = lib.ensureMergeSetup(root);
+    if (merge.length) lib.commit(root, merge, 'kept: merge rules for parallel worktrees (notes merge as lines)', { push: false });
     // Keep hand edits before attempting a fast-forward. The shared save path owns commits.
     if (lib.unsavedChanges(root).length) {
       const saved = lib.save(root, 'kept: edited by hand outside Codex');
