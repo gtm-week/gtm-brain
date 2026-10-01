@@ -11,7 +11,7 @@ function fixture(t, data) {
  t.after(()=>rmSync(scratch,{recursive:true,force:true}));
  for(const p of [join(root,'brain'),join(root,'work'),join(fake,'lib'),bin,...['gtm-os-compile','gtm-os-schedule','gtm-os-entities','gtm-os-render'].map(s=>join(fake,'scripts',s))])mkdirSync(p,{recursive:true});
  writeFileSync(join(root,'AGENTS.md'),'# Fixture');writeFileSync(join(root,'brain/admin.md'),'# Fixture');
- for(const file of ['background-compile.sh','compile-status.mjs','worker-lock.mjs','run-bounded.mjs'])copyFileSync(join(plugin,'scripts/gtm-os-compile',file),join(fake,'scripts/gtm-os-compile',file));
+ for(const file of ['background-compile.sh','compile-status.mjs','worker-lock.mjs','run-bounded.mjs','run-usage.mjs'])copyFileSync(join(plugin,'scripts/gtm-os-compile',file),join(fake,'scripts/gtm-os-compile',file));
  copyFileSync(join(plugin,'scripts/gtm-os-schedule/scheduled-run.sh'),join(fake,'scripts/gtm-os-schedule/scheduled-run.sh'));
  copyFileSync(join(plugin,'lib/process-lock.mjs'),join(fake,'lib/process-lock.mjs'));
  const dataPath=join(root,'work/test-data.json');writeFileSync(dataPath,JSON.stringify({contexts:['sales'],entities:[],calls:0,...data}));
@@ -46,8 +46,8 @@ test('productive context and entity passes can exceed three attempts without fai
  const result=f.run();assert.equal(result.status,0,result.stderr);assert.equal(f.data().calls,6);assert.equal(f.state().state,'done');
  assert.doesNotMatch(readFileSync(join(f.root,'work/states.jsonl'),'utf8'),/"state":"failed"/);
 });
-test('three zero-progress passes still stop and release the worker lock',t=>{
- const f=fixture(t,{mode:'no-progress'});assert.equal(f.run().status,1);assert.equal(f.data().calls,3);assert.equal(f.state().state,'failed');assert.equal(existsSync(join(f.root,'work/compile.lock')),false);
+test('a zero-progress pass stops at once, blocked, and releases the worker lock (FDE OS, 2026-10-01: no more retries of a run that compiles nothing)',t=>{
+ const f=fixture(t,{mode:'no-progress'});assert.equal(f.run().status,1);assert.equal(f.data().calls,1);assert.equal(f.state().state,'blocked');assert.equal(existsSync(join(f.root,'work/compile.lock')),false);
 });
 test('hung model runs time out, exhaust retries and release the lock',t=>{
  const f=fixture(t,{mode:'hung'});f.env.GTM_OS_COMPILE_TIMEOUT_MS='1000';

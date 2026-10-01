@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, existsSync, realpathSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { trackBrain } from "./helpers/dash-cleanup.mjs";
 const P = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 process.env.CODEX_HOME = mkdtempSync(join(tmpdir(), "gtm-os-wf-home-"));
@@ -317,7 +317,8 @@ test("session maintenance and the scheduled run mark due steps: one gate questio
   const marked = runMemories(root, id);
   assert.equal(marked.filter(m => m.kind === "question").length, 1);
   assert.deepEqual(marked.find(m => m.kind === "question").authors, ["session"]);
-  execFileSync("bash", [`${P}/scripts/gtm-os-schedule/scheduled-run.sh`, "."], { cwd: root, env: fake, stdio: "ignore", timeout: 60000 });
+  // the fake codex compiles nothing: exit 3 when summaries are behind, after the due check ran
+  assert.ok([0, 3].includes(spawnSync("bash", [`${P}/scripts/gtm-os-schedule/scheduled-run.sh`, "."], { cwd: root, env: fake, stdio: "ignore", timeout: 60000 }).status));
   assert.equal(runMemories(root, id).filter(m => m.kind === "question").length, 1, "the schedule found the step already due");
   assert.match(readFileSync(join(root, "work", "hooks.log"), "utf8"), /scheduled-run  workflows: no step due/);
 });

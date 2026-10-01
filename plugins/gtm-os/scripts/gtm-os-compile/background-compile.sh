@@ -7,7 +7,7 @@ BRAIN="${1:-.}"; cd "$BRAIN" || exit 1
 mkdir -p work
 STATE=work/compile.json; LOCK=work/compile.lock
 now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
-ATTEMPT=1; TRIES=3; HANDLED=""
+ATTEMPT=1; TRIES=3; HANDLED=""; BLOCKED=""
 write() {
   t="$(sed -n 's/.*"thread":"\([^"\\]*\)".*/\1/p' "$STATE" 2>/dev/null | head -1)"
   printf '{"state":"%s","at":"%s","contexts":"%s","attempt":%s,"tries":%s%s}\n' "$1" "$(now)" "${2:-}" "$ATTEMPT" "$TRIES" "${t:+,\"thread\":\"$t\"}" > "$STATE.$$"
@@ -24,7 +24,8 @@ fi
 cleanup() {
   node "$P/scripts/gtm-os-compile/worker-lock.mjs" release "$LOCK" "$TOKEN" || return
   # Close the completion race: a kick that saw our lock must not be lost as we exit.
-  if [ "$(cat work/compile.kick 2>/dev/null)" != "$HANDLED" ]; then
+  # A blocked worker is the exception: another run would compile nothing again.
+  if [ -z "$BLOCKED" ] && [ "$(cat work/compile.kick 2>/dev/null)" != "$HANDLED" ]; then
     bash "$P/scripts/gtm-os-compile/background-compile.sh" "$PWD" >/dev/null 2>&1 &
   fi
 }
@@ -37,7 +38,11 @@ while :; do
     write queued "$STALE"
     node "$P/scripts/gtm-os-render/render.mjs" . >/dev/null 2>&1 || true
     write running "$STALE"
-    if GTM_OS_COMPILE_BY=background bash "$P/scripts/gtm-os-schedule/scheduled-run.sh" .; then
+    GTM_OS_COMPILE_BY=background bash "$P/scripts/gtm-os-schedule/scheduled-run.sh" .; code=$?
+    # 3: the run finished and compiled nothing. Retrying costs a full model run each time and
+    # cannot help; the next kick after the cooldown (lib.COMPILE_COOLDOWN_MS) tries again.
+    if [ "$code" -eq 3 ]; then BLOCKED=1; write blocked "$STALE"; node "$P/scripts/gtm-os-render/render.mjs" . >/dev/null 2>&1 || true; exit 1; fi
+    if [ "$code" -eq 0 ]; then
       if remaining="$(pending)"; then
         if [ "$remaining" = '|' ]; then
           write done "$STALE"; node "$P/scripts/gtm-os-render/render.mjs" . >/dev/null 2>&1 || true

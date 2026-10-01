@@ -1,5 +1,5 @@
 {
   "mcpServers": {
-    "gtm_os": { "command": "node", "args": ["./server/server.mjs"], "cwd": "./", "enabled": true, "startup_timeout_sec": 20, "tool_timeout_sec": 86400 }
+    "gtm_os": { "command": "node", "args": ["./server/server.mjs"], "cwd": "./", "enabled": true, "startup_timeout_sec": 20, "tool_timeout_sec": 86400, "env_vars": ["GTM_OS_RUN"] }
   }
 }

@@ -147,7 +147,7 @@ export function readCompileState(root) {
 }
 export function compileBusy(root) { const s = readCompileState(root); return !!s && (s.state === "queued" || s.state === "running"); }
 /* a failed run that will not try again by itself: the last attempt failed and something is still behind */
-export function compileGaveUp(root) { const s = readCompileState(root); return !!s && s.state === "failed" && (s.attempt || 1) >= (s.tries || 1) && activeContexts(root).some(c => c.stale); }
+export function compileGaveUp(root) { const s = readCompileState(root); return !!s && (s.state === "blocked" || (s.state === "failed" && (s.attempt || 1) >= (s.tries || 1))) && activeContexts(root).some(c => c.stale); }
 /* Every saved memory makes its context eligible immediately. Concurrent changes are
    drained by one worker; an empty plan starts no model run. */
 export function compilePlan(root) {
@@ -166,8 +166,16 @@ export function compilePlan(root) {
   return { pending: times.length, contexts, oldest, wait: 0 };
 }
 /* kick the background run: detached, so the note that caused it returns at once */
+/* After a run that compiled nothing (work/compile.json state blocked), new notes do not start another
+   run for this long: each run is a full model session, and a cause that hid the tools once hides them
+   again. force (the advisor's explicit start) ignores it. */
+export const COMPILE_COOLDOWN_MS = 30 * 60 * 1000;
+export function compileBlocked(root, now = Date.now()) {
+  try { const s = JSON.parse(readFileSync(join(root, "work", "compile.json"), "utf8")); return s.state === "blocked" && now - Date.parse(s.at) < COMPILE_COOLDOWN_MS; } catch { return false; }
+}
 export function kickCompile(root, { force = false } = {}) {
   if (process.env.GTM_OS_NO_COMPILE || process.env.GTM_OS_RUN || !compilePlan(root).pending) return false;
+  if (!force && compileBlocked(root)) return false;
   try { const script = fileURLToPath(new URL("../scripts/gtm-os-compile/background-compile.sh", import.meta.url)); const child = spawn("bash", [script, root], { detached: true, stdio: "ignore", env: { ...process.env, PLUGIN_ROOT: fileURLToPath(new URL("..", import.meta.url)).replace(/[\\/]$/, ""), ...(force ? { GTM_OS_COMPILE_DELAY: "0" } : {}) } }); child.unref(); return true; } catch { return false; }
 }
 

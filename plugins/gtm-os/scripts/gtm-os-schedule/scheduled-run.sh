@@ -25,11 +25,25 @@ echo "stale contexts: $STALE; entity briefs: $ENTITIES"
 # The run tells its own session hook what it is (GTM_OS_RUN): the hook then records this run's
 # thread on work/compile.json for the page to link, and leaves the person's chat in work/session.json alone.
 export GTM_OS_RUN="$BY"
-node "$P/scripts/gtm-os-compile/run-bounded.mjs" codex exec -s workspace-write --skip-git-repo-check --dangerously-bypass-hook-trust \
-  "You are the scheduled run of the gtm-os-sync skill. Compile these contexts whose summary is behind with by: $BY, following the compilation procedure at $P/skills/gtm-os-use-brain/references/compile.md: $STALE. Then compile these entity briefs with by: $BY using entity_facts and compile_entity, following $P/skills/gtm-os-use-brain/references/entity-compile.md: $ENTITIES. Then render the dashboard. Do not remember anything or edit identity metadata or workplace info. Each compilation tool commits its own result. Report one line per updated brief or context." </dev/null 2>&1 | tail -20 \
+HEAD_BEFORE="$(git rev-parse -q --verify HEAD 2>/dev/null)"
+node "$P/scripts/gtm-os-compile/run-bounded.mjs" codex exec --json -s workspace-write --skip-git-repo-check --dangerously-bypass-hook-trust \
+  "You are the scheduled run of the gtm-os-sync skill. Compile these contexts whose summary is behind with by: $BY, following the compilation procedure at $P/skills/gtm-os-use-brain/references/compile.md: $STALE. Then compile these entity briefs with by: $BY using entity_facts and compile_entity, following $P/skills/gtm-os-use-brain/references/entity-compile.md: $ENTITIES. Then render the dashboard. Do not remember anything or edit identity metadata or workplace info. Each compilation tool commits its own result. Report one line per updated brief or context." </dev/null 2>&1 | node "$P/scripts/gtm-os-compile/run-usage.mjs" . "$BY" \
   || { printf '%s  scheduled-run  failed: codex exec exited with an error or timed out (%s)\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$STALE" >> work/hooks.log; echo "codex exec failed; any completed compilations remain saved"; exit 1; }
 # Verify the scan again before reporting success, even when the model exited normally.
-node "$P/scripts/gtm-os-compile/compile-status.mjs" . >/dev/null || { printf '%s  scheduled-run  failed: cannot verify compilation\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log; exit 1; }
+AFTER="$(node "$P/scripts/gtm-os-compile/compile-status.mjs" .)" || { printf '%s  scheduled-run  failed: cannot verify compilation\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log; exit 1; }
+# A run that compiled nothing is a failure, never "done": exit 3 tells the worker to stop instead of
+# retrying (2026-10-01: compile tools hidden from the run, 34 runs in a day, 8M tokens, no summary).
+# Progress is a compile commit by this run ("compile: ..." or "compile entity: ..."): a note saved
+# during the run can leave the same context behind again after it was compiled. Without commits
+# (GTM_OS_NO_COMMIT) the stale lists are compared instead.
+compiled() {
+  if [ -n "$HEAD_BEFORE" ] && [ -z "${GTM_OS_NO_COMMIT:-}" ]; then git log --format=%s "$HEAD_BEFORE..HEAD" 2>/dev/null | grep -q '^compile'
+  else node "$P/scripts/gtm-os-compile/compile-status.mjs" --progress "$PENDING" "$AFTER"; fi
+}
+if [ "$AFTER" != '|' ] && ! compiled; then
+  printf '%s  scheduled-run  failed: no progress, the run compiled nothing (%s)\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$STALE" >> work/hooks.log
+  echo "the run compiled nothing; still behind: $STALE"; exit 3
+fi
 node "$P/scripts/gtm-os-render/render.mjs" . >/dev/null 2>&1 || true
 # Compilation tools keep their own changes through lib.commit. No separate commit path.
 printf '%s  scheduled-run  done: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$STALE" >> work/hooks.log

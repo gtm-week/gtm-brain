@@ -55,3 +55,39 @@ test('a single saved change starts without a delay override, and another change 
  assert.equal(data.compile.state,'done');
  assert.equal(lib.readMemories(root,'icp').length,2);
 });
+
+test('a run that compiles nothing is blocked, not retried, and new notes wait out the cooldown; every run records its tokens (FDE OS, 2026-10-01)',async()=>{
+ // The compile tools were hidden from the run (GTM_OS_RUN never reached the MCP server): every run said
+ // "done", compiled nothing and the worker started again, 34 runs and 8M input tokens in one day.
+ const root=mkdtempSync(join(tmpdir(),'gtm-blocked-')),profile=mkdtempSync(join(tmpdir(),'gtm-blocked-profile-'));
+ const env={...process.env,CODEX_HOME:profile,PLUGIN_ROOT:P,GTM_OS_NO_OPEN:'1',GTM_OS_NO_VERSION_CHECK:'1'};
+ execFileSync('git',['init','-q',root]);
+ execFileSync('bash',[join(P,'scripts/gtm-os-setup/setup.sh'),'--company','Demo','--one-liner','Test','--owner','Ann Lee <ann@example.invalid>','--dashboard','on-demand'],{cwd:root,env,stdio:'ignore'});
+ const bin=join(root,'fake-bin');mkdirSync(bin);
+ // a codex that answers like the blocked runs did: one message, usage, and no compile call
+ writeFileSync(join(bin,'codex'),`#!${process.execPath}
+ const {appendFileSync}=require('node:fs');appendFileSync('work/fake-runs','x');
+ for(const e of [{type:'thread.started',thread_id:'t-1'},{type:'item.completed',item:{type:'agent_message',text:'Compilation blocked: the compile tools are unavailable in this run.'}},{type:'turn.completed',usage:{input_tokens:241939,cached_input_tokens:203535,output_tokens:778}}])console.log(JSON.stringify(e));
+ `,{mode:0o755});
+ const live={...env,GTM_OS_NO_COMPILE:'',PATH:bin+':'+process.env.PATH,GTM_OS_COMPILE_RETRY:'0'};
+ execFileSync(process.execPath,[join(P,'scripts/gtm-os-remember/remember.mjs'),root,'--by','ann','--context','icp','--content','A note to compile.'],{env:live,encoding:'utf8'});
+ await waitFor(()=>{try{return JSON.parse(readFileSync(join(root,'work/compile.json'),'utf8')).state==='blocked'&&!existsSync(join(root,'work/compile.lock'))}catch{return false}});
+ assert.equal(readFileSync(join(root,'work/fake-runs'),'utf8'),'x','one run, no retries');
+ const log=readFileSync(join(root,'work/hooks.log'),'utf8');
+ assert.match(log,/scheduled-run  failed: no progress, the run compiled nothing/);
+ assert.doesNotMatch(log,/scheduled-run  done/);
+ assert.match(log,/scheduled-run  tokens in=241939 cached=203535 out=778 codex:\/\/threads\/t-1/);
+ const run=JSON.parse(readFileSync(join(root,'work/runs.jsonl'),'utf8').trim().split('\n').at(-1));
+ assert.deepEqual([run.by,run.thread,run.input,run.cached,run.output],['background','t-1',241939,203535,778]);
+ // within the cooldown a new note starts nothing; the advisor's explicit start still may
+ assert.equal(lib.compileBlocked(root),true);
+ const saved=process.env.GTM_OS_NO_COMPILE;delete process.env.GTM_OS_NO_COMPILE;
+ try{assert.equal(lib.kickCompile(root),false)}finally{process.env.GTM_OS_NO_COMPILE=saved}
+ assert.equal(lib.compileBlocked(root,Date.now()+lib.COMPILE_COOLDOWN_MS+1000),false,'after the cooldown the next note tries again');
+ assert.equal(lib.compileGaveUp(root),true,'the dashboard says the summaries are stuck');
+});
+
+test('the MCP server receives GTM_OS_RUN, or a scheduled run never sees the compile tools',()=>{
+ const mcp=JSON.parse(readFileSync(join(P,'.mcp.json'),'utf8'));
+ assert.ok(mcp.mcpServers.gtm_os.env_vars.includes('GTM_OS_RUN'),'Codex passes only listed variables to an MCP server');
+});

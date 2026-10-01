@@ -174,7 +174,9 @@ test("the scheduled run compiles stale entities even when all context covers are
   const bin = join(root, "bin"); mkdirSync(bin);
   writeFileSync(join(bin, "codex"), '#!/bin/sh\nprintf "%s" "$*" > work/scheduled-prompt.txt\n', { mode: 0o755 });
   const plugin = new URL("..", import.meta.url).pathname;
-  execFileSync("bash", [join(plugin, "scripts", "gtm-os-schedule", "scheduled-run.sh"), root], { env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, PLUGIN_ROOT: plugin }, stdio: "pipe" });
+  // the fake codex compiles nothing, so the run reports exactly that (exit 3) instead of "done"
+  const r = spawnSync("bash", [join(plugin, "scripts", "gtm-os-schedule", "scheduled-run.sh"), root], { env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, PLUGIN_ROOT: plugin }, encoding: "utf8" });
+  assert.equal(r.status, 3, r.stderr);
   const prompt = readFileSync(join(root, "work", "scheduled-prompt.txt"), "utf8");
   assert.match(prompt, /entity_facts and compile_entity/);
   assert.ok(prompt.includes(lib.resolveEntity(lib.readNames(root), "Chris").id));
