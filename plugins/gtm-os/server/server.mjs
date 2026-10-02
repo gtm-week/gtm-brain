@@ -363,6 +363,11 @@ const WORKFLOWS = `During company work, read ${join(P, "skills/gtm-os-use-brain/
 
 /* ---------- JSON-RPC over stdio ---------- */
 const send = m => process.stdout.write(JSON.stringify(m) + "\n");
+/* What a host is shown: the root of a tool's input schema is a plain object. OpenAI-style hosts
+   reject anyOf, oneOf, allOf, not and enum there, and Codex then offers the tool with no inputs at
+   all (remember() => any, 0.28.2). The rule they state (remember: content or memories) stays
+   enforced where the call runs. */
+const advertised = ({ anyOf, oneOf, allOf, not, enum: _, ...schema }) => schema;
 const questions = questionInput(send);
 const reply = (id, result) => send({ jsonrpc: "2.0", id, result });
 const fail = (id, code, message) => send({ jsonrpc: "2.0", id, error: { code, message } });
@@ -373,7 +378,7 @@ async function handle(req) {
   if (method === "notifications/cancelled") { questions.cancel(params.requestId); return; }
   if (method === "initialize") return reply(id, { protocolVersion: params.protocolVersion || "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "gtm-os", title: "GTM OS", version: VERSION }, instructions: INSTRUCTIONS + "\n" + instructionsText(ontology) + "\n" + WORKFLOWS + "\nGTM OS speaks English. Author brain records in English. Preserve names, IDs, source quotes, and the exact token APPROVE." });
   if (method === "ping") return reply(id, {});
-  if (method === "tools/list") return reply(id, { tools: TOOLS.filter(offered).map(t => ({ name: t.name, title: t.title, description: t.description, inputSchema: t.inputSchema, annotations: { title: t.title, readOnlyHint: t.readOnly, destructiveHint: false, openWorldHint: !!t.openWorld } })) });
+  if (method === "tools/list") return reply(id, { tools: TOOLS.filter(offered).map(t => ({ name: t.name, title: t.title, description: t.description, inputSchema: advertised(t.inputSchema), annotations: { title: t.title, readOnlyHint: t.readOnly, destructiveHint: false, openWorldHint: !!t.openWorld } })) });
   if (method === "tools/call") {
     const tool = TOOLS.find(t => t.name === params.name);
     if (!tool) return fail(id, -32602, `unknown tool ${params.name}`);

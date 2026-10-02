@@ -170,6 +170,8 @@ test("handshake and tool list carry titles and the brain parameter", async () =>
   assert.equal(rem.title, "Remembering"); assert.equal(rem.annotations.readOnlyHint, false);
   assert.deepEqual(rem.inputSchema.required, ["brain", "by"], "content or memories: a turn's findings go in one call");
   assert.deepEqual(rem.inputSchema.properties.memories.items.required, ["content"]);
+  // a root anyOf made Codex offer remember with no inputs at all (0.28.2): every root is a plain object
+  for (const t of result.tools) assert.deepEqual(["anyOf", "oneOf", "allOf", "not", "enum"].filter(k => k in t.inputSchema), [], `${t.name}: root combinator in its advertised schema`);
   assert.ok(names.includes("save") && !names.includes("approve_apply"), "saving is a tool, applying APPROVE stays a shell step");
 });
 
@@ -283,6 +285,12 @@ test("remember takes a turn's findings in one call and reports each entry by pos
   assert.match(r.text, /#2 remembered m_[0-9a-f]{12} in offer · question/);
   const msgs = execFileSync("git", ["-C", root, "log", "--format=%s"], { encoding: "utf8" }).split("\n").filter(Boolean);
   assert.equal(msgs.length - before, 2, "one commit per memory, not one for the call");
+});
+
+test("remember with neither content nor memories is refused where it runs, since the advertised schema no longer says so", async () => {
+  const r = await call("remember", { brain: root, by: "marta" });
+  assert.ok(r.isError, r.text);
+  assert.match(r.text, /remember needs content; remember needs memories/);
 });
 
 test("generated query finds current decisions and preserves the append-only correction history", async () => {
