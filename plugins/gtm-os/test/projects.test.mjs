@@ -446,7 +446,7 @@ test("the dashboard lists the projects and chips a note with its project; the ad
   const html = readFileSync(join(root, "work", "home", "index.html"), "utf8");
   assert.ok(html.includes('id="workspace-folders"') && html.includes("projectChip("), "working folders under Workspace and a project chip on the notes");
   execFileSync("rm", ["-rf", b]);
-  const f = JSON.parse(execFileSync(process.execPath, [`${P}/scripts/gtm-os-advisor/advisor.mjs`, ".", "--json"], { cwd: root, encoding: "utf8", env: { ...env, GTM_OS_NOW: "2026-11-01T00:00:00Z" } })).findings;
+  const f = JSON.parse(execFileSync(process.execPath, [`${P}/scripts/gtm-os-advisor/advisor.mjs`, ".", "--json"], { cwd: root, encoding: "utf8", env: { ...env, GTM_OS_NOW: new Date(Date.now() + 45 * 864e5).toISOString() } })).findings;
   assert.match(f.find(x => x.key === "project-broken")?.what || "", /website.*pointer/, JSON.stringify(f));
   assert.match(f.find(x => x.key === "project-quiet")?.what || "", /curriculum.*no note for/, JSON.stringify(f));
 });
