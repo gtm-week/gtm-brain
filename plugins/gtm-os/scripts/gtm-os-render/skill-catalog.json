@@ -40,6 +40,14 @@
     "example": "Can we spend more on growth? Here are our CAC, ARPU and churn."
   },
   {
+    "id": "gtm-os-market-desk-research",
+    "group": "daily",
+    "featured": false,
+    "title": "Research a market",
+    "description": "A short intake, then sourced desk research on market growth, segments, pains, buyers, competitors and your current right to win.",
+    "example": "Assess the market for our offering in the DACH mid-market."
+  },
+  {
     "id": "gtm-os-use-brain",
     "group": "knowledge",
     "featured": false,

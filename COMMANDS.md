@@ -14,6 +14,7 @@ to distinguish these workflows from other installed skills.
 | `gtm-os-workflow` | GTM OS: Workflows | Start a run of a workflow document (an outbound campaign, ads then outbound), see where it stands, do the next step, skip or abandon; the brain keeps the steps and dates |
 | `gtm-os-deepdive` | GTM OS: Deep dive | A one-page brief on an entity or a context, from the notes and the tools read live |
 | `gtm-os-unit-economics` | GTM OS: Unit economics | Lech Kaniuk's unit economics review: CAC, LTV12 and LTV24, LTV:CAC, both paybacks and retention from the chat and the brain, then PUSH, FIX, STOP or MEASURE overall and per acquisition source or segment; offers to keep the decision as a note and the missing inputs as questions |
+| `gtm-os-market-desk-research` | GTM OS: Market desk research | Chris Pawlak's market desk research: a 5-8 minute intake, a confirmed research frame, 15-30 sourced web and community reads, an interim checkpoint, then `market-desk-research-<slug>.md` with a positioning map and, when the numbers allow, a growth chart; market attractiveness and right to win judged separately, no offering design; accepted conclusions become notes |
 | `gtm-os-use-brain` | GTM OS: Use the company brain | Everyday work: remember, recall, where we are |
 | `gtm-os-configure` | GTM OS: Configure GTM OS | Workplace info, team, tools and settings through APPROVE |
 | `gtm-os-skill` | GTM OS: Your skills | Turn a repeated workflow into a Codex skill kept in the brain's `.agents/skills`; install from GitHub, list, remove, share |
@@ -34,7 +35,7 @@ The sections below document the underlying operations, tools, and script paths f
 They are not additional discoverable skills. Tools show outcomes such as "Remembering" or
 "Searching the brain" in chat. Review proposals on the read-only dashboard. APPROVE typed in Codex stays a shell step with its permission prompt.
 Scripts retain their paths for terminal use with
-`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-os/gtm-os/0.28.2`.
+`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-os/gtm-os/0.29.0`.
 
 Legend for "writes": what files the command changes. Nothing else is ever touched.
 

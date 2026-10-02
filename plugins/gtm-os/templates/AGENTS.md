@@ -368,7 +368,8 @@ context. Use displayed names in conversation and stable IDs in tools.
      APPROVE in progress, a question the tool just asked): nothing in progress or the person asks
      what to do: `gtm-os-todo`; a call or meeting mentioned with a company or a person:
      `gtm-os-deepdive` on it; CAC, LTV, churn or growth-spend numbers shared, or "can we spend
-     more on growth": `gtm-os-unit-economics`; the first chat of the day, or "what came in": `gtm-os-sync`; a
+     more on growth": `gtm-os-unit-economics`; "is this market worth it", a segment or competitors
+     to assess: `gtm-os-market-desk-research`; the first chat of the day, or "what came in": `gtm-os-sync`; a
      context opened after days away: `gtm-os-todo` for that context's next steps; several
      contexts touched in one chat, or once a week: `gtm-os-todo` for how the brain is doing; a
      subject that has grown its own loops and people: a new context, offered by name; the same multi-step piece of work done twice in one chat:
@@ -504,7 +505,10 @@ that fills `strategy.md`, the document every brain starts with; offered once whe
 strategy document is still the setup placeholder and the person asks about direction,
 positioning or targets), `gtm-os-unit-economics` (CAC, LTV, paybacks and retention reviewed, then
 PUSH, FIX, STOP or MEASURE for growth spend; offered once when such numbers are shared or the
-person asks whether to spend more on growth), `gtm-os-project` (create a working
+person asks whether to spend more on growth), `gtm-os-market-desk-research` (a short intake,
+then sourced desk research on a market's growth, segments, pains, buyers, competitors and the
+current right to win, as one report; offered once when the person wants a market or segment
+assessed; a diagnosis, never an offering design), `gtm-os-project` (create a working
 folder or link the one the person is in, after capture consent; offered only when the session
 hook says the folder is not linked, and never run without a yes), `gtm-os-start` (setup; also a
 handoff from another assistant, offered once when the hook says one is waiting), `gtm-os-configure`

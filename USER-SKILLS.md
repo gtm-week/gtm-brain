@@ -7,7 +7,7 @@ one, where it shows up, and how it travels.
 
 A skill is a folder with a `SKILL.md` file that tells Codex how to do one kind of work the same
 way every time (draft the weekly account update, prepare a Circle event, run the sales review).
-GTM OS ships eleven of them (`/gtm-os-todo`, `/gtm-os-sync`, `/gtm-os-deepdive`, ...). From
+GTM OS ships thirteen of them (`/gtm-os-todo`, `/gtm-os-sync`, `/gtm-os-deepdive`, ...). From
 0.22.0 you can add your own. They live inside your company brain folder, they show in Codex
 next to the shipped ones as `/gtm-os-<name>`, they reach everyone who shares the brain, and
 no GTM OS update ever touches them.

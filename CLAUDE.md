@@ -57,7 +57,7 @@ gitignored `.dev-brains`); it never deletes a real brain.
 
 Everything that ships is under `plugins/gtm-os/`. The layers, from the outside in:
 
-- **Skills** (`skills/gtm-os-*/SKILL.md`): the eleven user-facing workflows. Detailed procedures
+- **Skills** (`skills/gtm-os-*/SKILL.md`): the thirteen user-facing workflows. Detailed procedures
   live in each skill's `references/`. These are what people install, so developer workflows never
   go here.
 - **MCP server** (`server/server.mjs`): hand-rolled stdio JSON-RPC, Node built-ins only. Each tool
