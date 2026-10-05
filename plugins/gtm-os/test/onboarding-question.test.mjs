@@ -135,3 +135,13 @@ test("a form the host declines at once was never shown: not_shown, and later que
   const before = sent.length; assert.equal((await q.ask(args, 3)).status, 'not_shown');
   assert.equal(sent.length, before, "no further form is sent into a host that hides them");
 });
+
+test("a decline Codex made itself is not_shown however long it took (Artur, 2026-10-05)", async () => {
+  // Codex in Full access declines every form with fields and marks the answer as its own; the person saw nothing.
+  let clock = 0; const sent = [], q = questionInput(m => sent.push(m), () => clock);
+  q.initialize({ elicitation: { form: {} } });
+  const auto = q.ask(args, 1); clock += 4000; q.receive({ id: sent.at(-1).id, result: { action: 'decline', _meta: { approvals_reviewer: 'auto_review' } } });
+  assert.equal((await auto).status, 'not_shown');
+  const before = sent.length; assert.equal((await q.ask(args, 2)).status, 'not_shown');
+  assert.equal(sent.length, before);
+});

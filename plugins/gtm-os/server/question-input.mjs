@@ -1,8 +1,11 @@
 import { buildQuestion, readAnswer } from '../scripts/gtm-os-learn-company/question.mjs';
 
-// A decline or cancel faster than a person can read a form is the host refusing to show it (Codex CLI
-// in some modes declines every form at once): not_shown, never declined, and the chat asks in text.
-export const NOT_SHOWN_MS = 1000;
+// A decline or cancel the host made itself is the host refusing to show the form: not_shown, never
+// declined, and the chat asks in text. Codex marks its own answers with _meta.approvals_reviewer (Full
+// access and granular mcp_elicitations=false decline every form with fields that way); other hosts and
+// Codex's unmarked auto-deny paths answer faster than a person can read a form.
+export const NOT_SHOWN_MS = 2000;
+const byHost = result => !!result?._meta?.approvals_reviewer;
 const NOT_SHOWN = { status: 'not_shown', note: 'The host closed the form before the person saw it. This is no answer: ask in plain chat text, here and for the rest of this chat.' };
 
 // One interactive request per MCP session. No persistent state or timeout-as-answer.
@@ -26,7 +29,7 @@ export function questionInput(send, now = Date.now) {
         try { send({ jsonrpc: '2.0', id, method: 'elicitation/create', params }); }
         catch (error) { pending = null; reject(error); }
       });
-      if (result?.client && /^(decline|cancel)$/.test(result.result?.action) && now() - sentAt < NOT_SHOWN_MS) { hidden = true; return NOT_SHOWN; }
+      if (result?.client && /^(decline|cancel)$/.test(result.result?.action) && (byHost(result.result) || now() - sentAt < NOT_SHOWN_MS)) { hidden = true; return NOT_SHOWN; }
       return readAnswer(args, result?.client ? result.result : result);
     },
     receive(message) {
