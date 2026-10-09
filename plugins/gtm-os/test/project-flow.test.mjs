@@ -63,16 +63,11 @@ for (const mode of ['existing', 'new']) test(`${mode} project: MCP link, session
   f.call('open_dashboard');
   const url = lib.readDash(f.root).url;
   const getData = async (ready = () => true) => {
-    const deadline = Date.now() + 20000;
+    const deadline = Date.now() + 9000;
     while (true) {
-      try {
-        const res = await fetch(`${url}data.json`); assert.ok(res.ok);
-        const data = await res.json();
-        if (ready(data)) return data;
-      } catch (error) {
-        // A busy full-suite run can briefly interrupt a local socket; keep polling the same server.
-        if (Date.now() >= deadline) throw error;
-      }
+      const res = await fetch(`${url}data.json`); assert.ok(res.ok);
+      const data = await res.json();
+      if (ready(data)) return data;
       assert.ok(Date.now() < deadline, 'the queued dashboard refresh completes');
       await new Promise(done => setTimeout(done, 40));
     }
