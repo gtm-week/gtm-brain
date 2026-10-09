@@ -19,6 +19,7 @@ function fixture(t, data) {
  writeFileSync(join(fake,'scripts/gtm-os-render/render.mjs'),`import fs from 'node:fs'; if(fs.existsSync('work/compile.json'))fs.appendFileSync('work/states.jsonl',fs.readFileSync('work/compile.json','utf8')+'\\n');`);
  writeFileSync(join(bin,'codex'),`#!${process.execPath}
  const fs=require('node:fs'),d=JSON.parse(fs.readFileSync('work/test-data.json','utf8'));d.calls++;
+ if(d.capturePrompt)d.prompt=fs.readFileSync(0,'utf8');
  if(d.mode==='progress'){if(d.contexts.length)d.contexts.shift();else d.entities.shift()}
  if(d.mode==='bad-after'){d.contexts=[];d.bad='entities'}
  fs.writeFileSync('work/test-data.json',JSON.stringify(d));
@@ -45,6 +46,12 @@ test('productive context and entity passes can exceed three attempts without fai
  const f=fixture(t,{mode:'progress',contexts:['one','two','three','four'],entities:['e_one','e_two']});
  const result=f.run();assert.equal(result.status,0,result.stderr);assert.equal(f.data().calls,6);assert.equal(f.state().state,'done');
  assert.doesNotMatch(readFileSync(join(f.root,'work/states.jsonl'),'utf8'),/"state":"failed"/);
+});
+test('the scheduled prompt reaches codex through stdin',t=>{
+ const f=fixture(t,{mode:'progress',capturePrompt:true});
+ const result=f.run();assert.equal(result.status,0,result.stderr);
+ assert.match(f.data().prompt,/compile_apply \{brain, context, by, as_of, summary, now\}/);
+ assert.ok(f.data().prompt.length>1000);
 });
 test('a zero-progress pass stops at once, blocked, and releases the worker lock (FDE OS, 2026-10-01: no more retries of a run that compiles nothing)',t=>{
  const f=fixture(t,{mode:'no-progress'});assert.equal(f.run().status,1);assert.equal(f.data().calls,1);assert.equal(f.state().state,'blocked');assert.equal(existsSync(join(f.root,'work/compile.lock')),false);

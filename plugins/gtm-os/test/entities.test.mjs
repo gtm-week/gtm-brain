@@ -172,7 +172,7 @@ test("the scheduled run compiles stale entities even when all context covers are
   assert.notEqual(lib.compilePlan(root).wait, null);
   writeFileSync(join(root, "AGENTS.md"), "Synthetic test brain.\n");
   const bin = join(root, "bin"); mkdirSync(bin);
-  writeFileSync(join(bin, "codex"), '#!/bin/sh\nprintf "%s" "$*" > work/scheduled-prompt.txt\n', { mode: 0o755 });
+  writeFileSync(join(bin, "codex"), '#!/bin/sh\ncat > work/scheduled-prompt.txt\n', { mode: 0o755 });
   const plugin = new URL("..", import.meta.url).pathname;
   // the fake codex compiles nothing, so the run reports exactly that (exit 3) instead of "done"
   const r = spawnSync("bash", [join(plugin, "scripts", "gtm-os-schedule", "scheduled-run.sh"), root], { env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, PLUGIN_ROOT: plugin }, encoding: "utf8" });

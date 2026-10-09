@@ -6,7 +6,7 @@ if (!command || !Number.isFinite(timeout) || timeout <= 0 || timeout > 86400000)
   console.error('GTM_OS_COMPILE_TIMEOUT_MS must be between 1 and 86400000'); process.exit(2);
 }
 const grouped = process.platform !== 'win32';
-const child = spawn(command, args, { detached: grouped, stdio: ['ignore', 'inherit', 'inherit'] });
+const child = spawn(command, args, { detached: grouped, stdio: ['inherit', 'inherit', 'inherit'] });
 let stopping = false, status = 1, force;
 const signal = name => { try { grouped ? process.kill(-child.pid, name) : child.kill(name); } catch (e) { if (e.code !== 'ESRCH') console.error(e.message); } };
 function stop(code) {
