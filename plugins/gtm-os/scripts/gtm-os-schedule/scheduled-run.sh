@@ -27,7 +27,9 @@ echo "stale contexts: $STALE; entity briefs: $ENTITIES"
 export GTM_OS_RUN="$BY"
 HEAD_BEFORE="$(git rev-parse -q --verify HEAD 2>/dev/null)"
 RUN_ARGS=(); while IFS= read -r -d '' a; do RUN_ARGS+=("$a"); done < <(node "$P/scripts/gtm-os-compile/run-args.mjs" "$P" "$BY" "$STALE" "$ENTITIES")
-node "$P/scripts/gtm-os-compile/run-bounded.mjs" codex "${RUN_ARGS[@]}" </dev/null 2>&1 | node "$P/scripts/gtm-os-compile/run-usage.mjs" . "$BY" \
+PROMPT="${RUN_ARGS[$((${#RUN_ARGS[@]} - 1))]}"
+unset "RUN_ARGS[$((${#RUN_ARGS[@]} - 1))]"
+node "$P/scripts/gtm-os-compile/run-bounded.mjs" codex "${RUN_ARGS[@]}" - < <(printf '%s' "$PROMPT") 2>&1 | node "$P/scripts/gtm-os-compile/run-usage.mjs" . "$BY" \
   || { printf '%s  scheduled-run  failed: codex exec exited with an error or timed out (%s)\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$STALE" >> work/hooks.log; echo "codex exec failed; any completed compilations remain saved"; exit 1; }
 # Verify the scan again before reporting success, even when the model exited normally.
 AFTER="$(node "$P/scripts/gtm-os-compile/compile-status.mjs" .)" || { printf '%s  scheduled-run  failed: cannot verify compilation\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log; exit 1; }

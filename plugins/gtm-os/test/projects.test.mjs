@@ -241,7 +241,8 @@ test("new-project creation refuses occupied names without changing files or regi
 test("projects cannot occupy internal storage, including symlink aliases", () => {
   const root = brain(), outside = folder();
   const rulesBefore = readFileSync(join(root, "AGENTS.md"), "utf8");
-  const excludeBefore = readFileSync(lib.gitExcludePath(root), "utf8");
+  // Git may omit info/exclude in a fresh repository; refusal must preserve either state.
+  const excludeBefore = existsSync(lib.gitExcludePath(root)) ? readFileSync(lib.gitExcludePath(root), "utf8") : null;
   for (const reserved of ["brain", "work", ".git", ".codex", ".agents", "BRAIN", "Work"]) {
     for (const flags of [[], ["--create"]]) {
       for (const path of [join(root, reserved), join(root, reserved, "website")]) {
@@ -253,7 +254,7 @@ test("projects cannot occupy internal storage, including symlink aliases", () =>
   assert.match(refused(root, "--link", join(alias, "website"), "--create").text, /internal storage/);
   assert.ok(!existsSync(join(root, "work/website")));
   assert.equal(readFileSync(join(root, "AGENTS.md"), "utf8"), rulesBefore);
-  assert.equal(readFileSync(lib.gitExcludePath(root), "utf8"), excludeBefore);
+  assert.equal(existsSync(lib.gitExcludePath(root)) ? readFileSync(lib.gitExcludePath(root), "utf8") : null, excludeBefore);
   assert.deepEqual(lib.readProjects(root), []);
   const other = brain(), otherAlias = join(outside, "other-brain"); symlinkSync(other, otherAlias);
   assert.match(refused(root, "--link", join(otherAlias, "website"), "--create").text, /inside another brain/);
