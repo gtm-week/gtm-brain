@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,copyFileSync,existsSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {spawnSync} from 'node:child_process';
+import {spawn,spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 const plugin=fileURLToPath(new URL('../',import.meta.url));
 function fixture(t, data) {
@@ -19,7 +19,7 @@ function fixture(t, data) {
  writeFileSync(join(fake,'scripts/gtm-os-render/render.mjs'),`import fs from 'node:fs'; if(fs.existsSync('work/compile.json'))fs.appendFileSync('work/states.jsonl',fs.readFileSync('work/compile.json','utf8')+'\\n');`);
  writeFileSync(join(bin,'codex'),`#!${process.execPath}
  const fs=require('node:fs'),d=JSON.parse(fs.readFileSync('work/test-data.json','utf8'));d.calls++;
- if(d.capturePrompt)d.prompt=fs.readFileSync(0,'utf8');
+ if(d.capturePrompt){d.prompt=fs.readFileSync(0,'utf8');d.args=process.argv.slice(2)}
  if(d.mode==='progress'){if(d.contexts.length)d.contexts.shift();else d.entities.shift()}
  if(d.mode==='bad-after'){d.contexts=[];d.bad='entities'}
  fs.writeFileSync('work/test-data.json',JSON.stringify(d));
@@ -27,7 +27,7 @@ function fixture(t, data) {
  else process.exit(d.mode==='exit-error'?1:0);
  `,{mode:0o755});
  const env={...process.env,PLUGIN_ROOT:fake,PATH:bin+':'+process.env.PATH,GTM_OS_COMPILE_RETRY:'0',GTM_OS_COMPILE_TIMEOUT_MS:'2000'};
- return {root,env,run:(scheduled=false)=>spawnSync('bash',[join(fake,'scripts',scheduled?'gtm-os-schedule/scheduled-run.sh':'gtm-os-compile/background-compile.sh'),root],{env,encoding:'utf8',timeout:30000}),data:()=>JSON.parse(readFileSync(dataPath,'utf8')),state:()=>JSON.parse(readFileSync(join(root,'work/compile.json'),'utf8'))};
+ return {root,fake,env,run:(scheduled=false)=>spawnSync('bash',[join(fake,'scripts',scheduled?'gtm-os-schedule/scheduled-run.sh':'gtm-os-compile/background-compile.sh'),root],{env,encoding:'utf8',timeout:30000}),data:()=>JSON.parse(readFileSync(dataPath,'utf8')),state:()=>JSON.parse(readFileSync(join(root,'work/compile.json'),'utf8'))};
 }
 for(const bad of ['contexts','entities'])test(`${bad} discovery failure cannot become nothing stale or done`,t=>{
  const f=fixture(t,{contexts:[],bad});
@@ -52,6 +52,31 @@ test('the scheduled prompt reaches codex through stdin',t=>{
  const result=f.run();assert.equal(result.status,0,result.stderr);
  assert.match(f.data().prompt,/compile_apply \{brain, context, by, as_of, summary, now\}/);
  assert.ok(f.data().prompt.length>1000);
+ assert.equal(f.data().args.at(-1),'-');assert.ok(!f.data().args.some(a=>a.includes('compile_apply')));
+});
+test('argument generation failure is logged before codex starts',t=>{
+ const f=fixture(t,{});rmSync(join(f.fake,'scripts/gtm-os-compile/run-args.mjs'));
+ const result=f.run(true);assert.equal(result.status,1);assert.equal(f.data().calls,0);
+ assert.match(readFileSync(join(f.root,'work/hooks.log'),'utf8'),/failed: cannot generate compilation arguments and prompt/);
+});
+test('empty argument generation is rejected before codex starts',t=>{
+ const f=fixture(t,{});writeFileSync(join(f.fake,'scripts/gtm-os-compile/run-args.mjs'),'');
+ const result=f.run(true);assert.equal(result.status,1);assert.equal(f.data().calls,0);
+ assert.match(readFileSync(join(f.root,'work/hooks.log'),'utf8'),/failed: invalid compilation arguments or prompt/);
+});
+test('bounded run sends only its prompt and EOF while caller stdin remains open',async t=>{
+ const root=mkdtempSync(join(tmpdir(),'gtm-prompt-input-'));t.after(()=>rmSync(root,{recursive:true,force:true}));
+ const prompt=join(root,'prompt'),output=join(root,'received'),script=join(root,'reader.cjs');
+ writeFileSync(prompt,'Expected prompt.');
+ writeFileSync(script,`const fs=require('node:fs');fs.writeFileSync(${JSON.stringify(output)},fs.readFileSync(0,'utf8'));`);
+ const child=spawn(process.execPath,[join(plugin,'scripts/gtm-os-compile/run-bounded.mjs'),'--prompt-file',prompt,process.execPath,script],{stdio:['pipe','ignore','pipe']});
+ let stderr='';child.stderr.on('data',chunk=>stderr+=chunk);
+ child.stdin.on('error',()=>{});
+ child.stdin.write('Caller input must stay private.');
+ const result=await new Promise(resolve=>{const timer=setTimeout(()=>{child.kill('SIGKILL');resolve('timeout')},3000);child.on('exit',(code,signal)=>{clearTimeout(timer);resolve({code,signal})})});
+ child.stdin.destroy();
+ assert.deepEqual(result,{code:0,signal:null},stderr);
+ assert.equal(readFileSync(output,'utf8'),'Expected prompt.');
 });
 test('a zero-progress pass stops at once, blocked, and releases the worker lock (FDE OS, 2026-10-01: no more retries of a run that compiles nothing)',t=>{
  const f=fixture(t,{mode:'no-progress'});assert.equal(f.run().status,1);assert.equal(f.data().calls,1);assert.equal(f.state().state,'blocked');assert.equal(existsSync(join(f.root,'work/compile.lock')),false);
@@ -62,9 +87,9 @@ test('hung model runs time out, exhaust retries and release the lock',t=>{
 });
 test('the timeout kills a TERM-resistant descendant even when the group leader exits', {skip:process.platform==='win32'},async t=>{
  const root=mkdtempSync(join(tmpdir(),'gtm-process-timeout-'));t.after(()=>rmSync(root,{recursive:true,force:true}));
- const beats=join(root,'beats'),script=join(root,'leader.cjs');
+ const beats=join(root,'beats'),script=join(root,'leader.cjs'),prompt=join(root,'prompt');writeFileSync(prompt,'');
  writeFileSync(script,`const {spawn}=require('node:child_process');spawn(process.execPath,['-e',${JSON.stringify(`const fs=require('node:fs');process.on('SIGTERM',()=>{});setInterval(()=>fs.appendFileSync(${JSON.stringify(beats)},'x'),20);`)}],{stdio:'inherit'});setInterval(()=>{},1000);`);
- const result=spawnSync(process.execPath,[join(plugin,'scripts/gtm-os-compile/run-bounded.mjs'),process.execPath,script],{env:{...process.env,GTM_OS_COMPILE_TIMEOUT_MS:'750'},encoding:'utf8',timeout:10000});
+ const result=spawnSync(process.execPath,[join(plugin,'scripts/gtm-os-compile/run-bounded.mjs'),'--prompt-file',prompt,process.execPath,script],{env:{...process.env,GTM_OS_COMPILE_TIMEOUT_MS:'750'},encoding:'utf8',timeout:10000});
  assert.equal(result.status,124,result.stderr);const before=readFileSync(beats,'utf8');assert.ok(before.length);
  await new Promise(r=>setTimeout(r,150));assert.equal(readFileSync(beats,'utf8'),before);
 });
