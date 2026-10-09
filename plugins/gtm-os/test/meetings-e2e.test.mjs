@@ -1,7 +1,7 @@
 // Real stdio MCP, disk writes, generated dashboard and shipped client. No production sources.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawn, execFileSync } from 'node:child_process';
@@ -75,4 +75,19 @@ test('MCP E2E: transcript -> anchor -> findings -> correction -> refresh -> dash
   await call('remember', { by: 'ann', context: 'personal-ann', content: 'Daily refresh of work conversations and calendar.', sources: ['user:ann'], meeting_policy: policy });
   const prompt = dailyRefreshPrompt(brain, 'ann'); assert.match(prompt, /submitted policy/); assert.match(prompt, /must not stop other sources or compilation/);
   assert.ok(readFileSync(join(brain, 'brain/contexts/offer/memories.jsonl'), 'utf8').startsWith(before));
+});
+test('daily run closes prompt input without reading an open caller stdin',async t=>{
+  const root=mkdtempSync(join(tmpdir(),'gtm-daily-input-')),bin=join(root,'bin');t.after(()=>rmSync(root,{recursive:true,force:true}));
+  mkdirSync(join(root,'brain'));mkdirSync(join(root,'work'));mkdirSync(bin);
+  writeFileSync(join(root,'brain/admin.md'),lib.renderFrontmatter({company:'Daily Fixture',team:[{name:'Ann Lee',handle:'ann',email:'ann@fixture.test'}]}));
+  writeFileSync(join(bin,'codex'),`#!${process.execPath}\nconst fs=require('node:fs');fs.writeFileSync('work/daily-invocation.json',JSON.stringify({args:process.argv.slice(2),prompt:fs.readFileSync(0,'utf8')}));`,{mode:0o755});
+  const child=spawn(process.execPath,[join(plugin,'scripts/gtm-os-schedule/daily-run.mjs'),root,'ann'],{env:{...process.env,PATH:bin+':'+process.env.PATH},stdio:['pipe','ignore','pipe'],detached:process.platform!=='win32'});
+  let stderr='';child.stderr.on('data',chunk=>stderr+=chunk);child.stdin.on('error',()=>{});
+  child.stdin.write('Caller input must stay private.');
+  const result=await new Promise(resolve=>{const timer=setTimeout(()=>{try{process.platform==='win32'?child.kill('SIGKILL'):process.kill(-child.pid,'SIGKILL')}catch{}resolve('timeout')},6000);child.on('exit',(code,signal)=>{clearTimeout(timer);resolve({code,signal})})});
+  child.stdin.destroy();assert.deepEqual(result,{code:0,signal:null},stderr);
+  const invocation=JSON.parse(readFileSync(join(root,'work/daily-invocation.json'),'utf8'));
+  assert.equal(invocation.args.at(-1),'-');assert.ok(!invocation.args.some(arg=>arg.includes('Daily Fixture')));
+  assert.match(invocation.prompt,/Run GTM OS daily maintenance/);
+  assert.doesNotMatch(invocation.prompt,/Caller input must stay private/);
 });

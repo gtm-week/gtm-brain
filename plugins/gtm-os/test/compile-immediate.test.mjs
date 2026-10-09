@@ -2,7 +2,7 @@ process.env.GTM_OS_NO_WATCH = "1";
 process.env.GTM_OS_NO_COMPILE = '1';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync,readFileSync,writeFileSync,existsSync,mkdirSync} from 'node:fs';
+import {mkdtempSync,readFileSync,writeFileSync,existsSync,mkdirSync,statSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {execFileSync} from 'node:child_process';
@@ -117,17 +117,17 @@ test('notes are batched: the worker waits until no note has been saved for the d
  assert.equal(lib.readContext(root,'icp').summary,'Both notes.');
 });
 
-test('a summary run is a slim session: only the GTM OS server, its five tools, the procedures in the prompt, the person\'s model kept',()=>{
+test('a summary run keeps only GTM OS tools and the person\'s model while putting procedures on stdin',()=>{
  const home=mkdtempSync(join(tmpdir(),'gtm-run-args-'));
- const args=c=>{writeFileSync(join(home,'config.toml'),c);return execFileSync(process.execPath,[join(P,'scripts/gtm-os-compile/run-args.mjs'),P,'background','icp','e_1'],{env:{...process.env,CODEX_HOME:home},encoding:'utf8'}).split('\0').filter(Boolean)};
- const slim=args('model = "gpt-5.6-luna"\nmodel_reasoning_effort = "medium"\n\n[plugins."slack@x"]\nenabled = true\n');
+ const args=c=>{const dir=mkdtempSync(join(tmpdir(),'gtm-run-args-files-')),a=join(dir,'args'),p=join(dir,'prompt');writeFileSync(join(home,'config.toml'),c);execFileSync(process.execPath,[join(P,'scripts/gtm-os-compile/run-args.mjs'),'--files',a,p,P,'background','icp','e_1'],{env:{...process.env,CODEX_HOME:home}});assert.equal(statSync(a).mode&0o777,0o600);assert.equal(statSync(p).mode&0o777,0o600);return {argv:readFileSync(a,'utf8').split('\0').filter(Boolean),prompt:readFileSync(p,'utf8')}};
+ const {argv:slim,prompt}=args('model = "gpt-5.6-luna"\nmodel_reasoning_effort = "medium"\n\n[plugins."slack@x"]\nenabled = true\n');
  assert.ok(slim.includes('--ignore-user-config'));
  assert.ok(slim.includes('model="gpt-5.6-luna"')&&slim.includes('model_reasoning_effort="medium"'));
  assert.ok(slim.some(a=>/^mcp_servers\.gtm_os\.env=\{GTM_OS_RUN="background",GTM_OS_TOOLSET="compile"\}$/.test(a)));
  assert.ok(slim.includes('project_doc_max_bytes=0'));
- const prompt=slim.at(-1);
+ assert.equal(slim.at(-1),'-');assert.ok(!slim.some(a=>a.includes('compile_apply')));
  assert.match(prompt,/# Compilation procedure/);assert.match(prompt,/# Entity compilation procedure/);assert.match(prompt,/compile_apply \{brain, context, by, as_of, summary, now\}/);
  // a custom provider is more than a few keys: the person's whole config is used instead
- const full=args('model = "x"\nmodel_provider = "azure"\n');
+ const {argv:full}=args('model = "x"\nmodel_provider = "azure"\n');
  assert.ok(!full.includes('--ignore-user-config'));assert.ok(full.includes('--dangerously-bypass-hook-trust'));
 });

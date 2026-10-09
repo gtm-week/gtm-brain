@@ -19,8 +19,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   try {
     const root = resolve(process.argv[2] || '.'), by = lib.currentPerson(root, process.argv[3]);
     if (!lib.readAdmin(root) || !by) throw new Error('Pass a brain folder and its confirmed person handle: daily-run.mjs <brain> <by>');
-    const run = spawnSync('codex', ['exec', '-s', 'workspace-write', '--skip-git-repo-check', dailyRefreshPrompt(root, by)], {
-      cwd: root, stdio: 'inherit', env: { ...process.env, GTM_OS_RUN: 'schedule', GTM_OS_NO_COMPILE: '1' },
+    const run = spawnSync('codex', ['exec', '-s', 'workspace-write', '--skip-git-repo-check', '-'], {
+      cwd: root, input: dailyRefreshPrompt(root, by), stdio: ['pipe', 'inherit', 'inherit'],
+      env: { ...process.env, GTM_OS_RUN: 'schedule', GTM_OS_NO_COMPILE: '1' },
     });
     if (run.error) throw run.error;
     process.exitCode = run.status ?? 1;

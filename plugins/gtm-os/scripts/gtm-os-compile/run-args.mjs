@@ -1,16 +1,20 @@
 #!/usr/bin/env node
-// The codex exec arguments of one summary run, NUL-separated for bash (read -d '', bash 3.2 has no mapfile -d).
-//   node run-args.mjs <plugin> <by> "<stale contexts>" "<stale entity ids>"   (run from the brain folder)
+// Write one summary run's NUL-separated Codex arguments and stdin prompt to separate files.
+//   node run-args.mjs --files <args file> <prompt file> <plugin> <by> "<stale contexts>" "<stale entity ids>"
 // A slim session (2026-10-01: a full one cost about 400k input tokens for one note): the person's
 // config is not loaded, so no other plugin, skill or MCP server rides along; the GTM OS server is
 // configured here with GTM_OS_RUN, the brain's AGENTS.md is skipped, and the two procedures are in
 // the prompt, so no turn is spent finding or reading them. The person's model choice is kept. A
 // custom model provider cannot be carried over by a few keys: then the full config is used.
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
-const [plugin, by = 'schedule', stale = '', entities = ''] = process.argv.slice(2);
+const [mode, argsFile, promptFile, plugin, by = 'schedule', stale = '', entities = ''] = process.argv.slice(2);
+if (mode !== '--files' || !argsFile || !promptFile || !plugin) {
+  console.error('Usage: run-args.mjs --files <args file> <prompt file> <plugin> <by> <stale contexts> <stale entity ids>');
+  process.exit(2);
+}
 const read = f => { try { return readFileSync(f, 'utf8'); } catch { return ''; } };
 const config = read(join(process.env.CODEX_HOME || join(homedir(), '.codex'), 'config.toml'));
 // top-level keys only: everything before the first [table]
@@ -44,5 +48,6 @@ if (slim) {
     '-c', 'project_doc_max_bytes=0');
   for (const k of ['model', 'model_reasoning_effort', 'service_tier']) { const v = key(k); if (v) args.push('-c', `${k}=${v}`); }
 } else args.push('--dangerously-bypass-hook-trust');
-args.push(prompt);
-process.stdout.write(args.join('\0') + '\0');
+args.push('-');
+writeFileSync(argsFile, args.join('\0') + '\0', { mode: 0o600 });
+writeFileSync(promptFile, prompt, { mode: 0o600 });

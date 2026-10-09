@@ -26,10 +26,23 @@ echo "stale contexts: $STALE; entity briefs: $ENTITIES"
 # thread on work/compile.json for the page to link, and leaves the person's chat in work/session.json alone.
 export GTM_OS_RUN="$BY"
 HEAD_BEFORE="$(git rev-parse -q --verify HEAD 2>/dev/null)"
-RUN_ARGS=(); while IFS= read -r -d '' a; do RUN_ARGS+=("$a"); done < <(node "$P/scripts/gtm-os-compile/run-args.mjs" "$P" "$BY" "$STALE" "$ENTITIES")
-PROMPT="${RUN_ARGS[$((${#RUN_ARGS[@]} - 1))]}"
-unset "RUN_ARGS[$((${#RUN_ARGS[@]} - 1))]"
-node "$P/scripts/gtm-os-compile/run-bounded.mjs" codex "${RUN_ARGS[@]}" - < <(printf '%s' "$PROMPT") 2>&1 | node "$P/scripts/gtm-os-compile/run-usage.mjs" . "$BY" \
+RUN_DIR="$(mktemp -d work/compile-run.XXXXXX)" || { printf '%s  scheduled-run  failed: cannot prepare compilation prompt\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log; exit 1; }
+trap 'rm -f "$RUN_DIR/args" "$RUN_DIR/prompt"; rmdir "$RUN_DIR"' EXIT
+if ! node "$P/scripts/gtm-os-compile/run-args.mjs" --files "$RUN_DIR/args" "$RUN_DIR/prompt" "$P" "$BY" "$STALE" "$ENTITIES"; then
+  printf '%s  scheduled-run  failed: cannot generate compilation arguments and prompt\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log
+  exit 1
+fi
+if [ ! -f "$RUN_DIR/args" ] || [ ! -f "$RUN_DIR/prompt" ]; then
+  printf '%s  scheduled-run  failed: invalid compilation arguments or prompt\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log
+  exit 1
+fi
+RUN_ARGS=(); while IFS= read -r -d '' a; do RUN_ARGS+=("$a"); done < "$RUN_DIR/args"
+RUN_LAST=""; for a in "${RUN_ARGS[@]}"; do RUN_LAST="$a"; done
+if [ "${RUN_ARGS[0]:-}" != "exec" ] || [ "$RUN_LAST" != "-" ] || [ ! -s "$RUN_DIR/prompt" ]; then
+  printf '%s  scheduled-run  failed: invalid compilation arguments or prompt\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log
+  exit 1
+fi
+node "$P/scripts/gtm-os-compile/run-bounded.mjs" --prompt-file "$RUN_DIR/prompt" codex "${RUN_ARGS[@]}" 2>&1 | node "$P/scripts/gtm-os-compile/run-usage.mjs" . "$BY" \
   || { printf '%s  scheduled-run  failed: codex exec exited with an error or timed out (%s)\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$STALE" >> work/hooks.log; echo "codex exec failed; any completed compilations remain saved"; exit 1; }
 # Verify the scan again before reporting success, even when the model exited normally.
 AFTER="$(node "$P/scripts/gtm-os-compile/compile-status.mjs" .)" || { printf '%s  scheduled-run  failed: cannot verify compilation\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log; exit 1; }
