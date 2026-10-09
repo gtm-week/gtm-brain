@@ -241,7 +241,6 @@ test("new-project creation refuses occupied names without changing files or regi
 test("projects cannot occupy internal storage, including symlink aliases", () => {
   const root = brain(), outside = folder();
   const rulesBefore = readFileSync(join(root, "AGENTS.md"), "utf8");
-  // Git may omit info/exclude in a fresh repository; refusal must preserve either state.
   const excludeBefore = existsSync(lib.gitExcludePath(root)) ? readFileSync(lib.gitExcludePath(root), "utf8") : null;
   for (const reserved of ["brain", "work", ".git", ".codex", ".agents", "BRAIN", "Work"]) {
     for (const flags of [[], ["--create"]]) {
