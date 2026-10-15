@@ -16,8 +16,14 @@ In Running for you, follow [daily sync setup](../gtm-os-sync/references/source-s
 source sync, explain why fresh evidence matters, and configure the submitted schedule before
 claiming it is active. Reuse prior choices and explicit skips.
 
-When onboarding completes, include the [short skills introduction](references/skills-tour.md)
-in the closing reply so the person knows where to find workflows and examples in the dashboard.
+When onboarding completes, end the closing reply with one first task, never a list of commands
+or "start working normally". If a calendar passed its read test, read its next few days once and
+pick the first meeting with someone outside the company (this read only picks the task; save
+nothing from it): "Prep my meeting with <name> (<company>)
+on <day>." Else, for a recent customer thread that email or the CRM returned: "Where do we stand
+with <company>?" Else: `/gtm-os-todo What should I focus on today?` Put only that sentence in a
+code block and the one line of why outside it; use only names and dates a read returned, and never make
+`/gtm-os-project` the first task. Details: [the first task](references/skills-tour.md).
 
 Follow [continuation](references/continuation.md) during active onboarding: setup saves the pending flag; keep moving until completion or a real blocker. A returning person with a pending request does not need to type a continuation command.
 
