@@ -34,7 +34,7 @@ const asked = c => QUESTION_TOOLS.includes(c.tool);
 const noIdentityWrites = calls => !calls.some(c => ['merge_entities', 'add_name', 'update_entity', 'archive_entity', 'undo_entity_merge'].includes(c.tool));
 const noConnectorSweep = calls => !calls.some(c => /^fixture_(mail|calendar)/.test(c.tool));
 const noRepeatedReads = calls => { const reads = calls.filter(c => ['who_is', 'recall', 'query'].includes(c.tool)).map(c => JSON.stringify([c.tool, c.arguments])); return new Set(reads).size === reads.length; };
-const model = process.env.GTM_OS_EVAL_MODEL || "gpt-5.6-sol";   // local testing; a person's own chats use whatever they chose
+const model = process.env.GTM_OS_EVAL_MODEL || "gpt-5.6-luna";   // local testing; a person's own chats use whatever they chose
 
 /* a company with a month of notes: decisions, a question, people, tools and actions, so a run has
    something to find, correct and summarise. Deterministic; the same brain every time. */

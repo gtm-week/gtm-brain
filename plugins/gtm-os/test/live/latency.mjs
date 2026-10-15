@@ -4,7 +4,7 @@
 // hooks and skills are exactly what a person gets). Fixture connectors (connector-fixture.mjs)
 // stand in for Slack, mail and calendar, so what is measured is what the model does around a
 // connector call. A follow-up resumes the same chat, to see what a second turn reads again.
-//   node plugins/gtm-os/test/live/latency.mjs [--runs 5] [--model gpt-5.6-sol] [--setups plain,brain]
+//   node plugins/gtm-os/test/live/latency.mjs [--runs 5] [--model gpt-5.6-luna] [--setups plain,brain]
 //     [--prompt "..."] [--followup "..."] [--trust-hooks]
 // --trust-hooks runs plugin hooks in a throwaway profile, where a CLI install leaves them untrusted.
 // Prints per-run rows and medians; writes latency-report.json next to the scratch folders.
@@ -17,7 +17,7 @@ import { execFileSync, spawn } from "node:child_process";
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
 const runs = Number(opt("--runs", 5));
-const model = opt("--model", process.env.GTM_OS_EVAL_MODEL || "gpt-5.6-sol");
+const model = opt("--model", process.env.GTM_OS_EVAL_MODEL || "gpt-5.6-luna");
 const prompt = opt("--prompt", "What was the last message posted in the #general Slack channel? Answer in one line.");
 const followup = opt("--followup", "");
 const setups = opt("--setups", "plain,brain").split(",");

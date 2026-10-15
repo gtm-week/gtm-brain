@@ -16,7 +16,7 @@ const base = resolve(process.env.GTM_OS_EVAL_DIR || join(repository, 'work/onboa
 mkdirSync(base, { recursive: true });
 const artifacts = mkdtempSync(join(base, 'run-'));
 const profile = join(artifacts, 'profile'); mkdirSync(profile);
-const model = process.env.GTM_OS_EVAL_MODEL || 'gpt-5.6-sol';
+const model = process.env.GTM_OS_EVAL_MODEL || 'gpt-5.6-luna';
 const env = { ...process.env, PATH: dirname(process.execPath) + ':' + process.env.PATH,
   CODEX_HOME: profile, GTM_OS_EVAL_PROFILE: profile, GTM_OS_EVAL_COMMIT: '1',
   PLUGIN_ROOT: plugin, GTM_OS_NO_COMMIT: '', GTM_OS_NO_OPEN: '1', GTM_OS_NO_COMPILE: '1', GTM_OS_NO_WATCH: '1',
@@ -47,6 +47,10 @@ const cases = [
       { prompt: "Hi, I'm back." }, { prompt: business, business: true }] },
   { name: 'active-control', version: 2, status: 'pending', steps: 5,
     turns: [{ prompt: "I'm back.", finish: true }, { prompt: "Hi, I'm back." }, { prompt: business, business: true }] },
+  // The closing reply's first task: built from a connected calendar's next external meeting.
+  { name: 'close-with-calendar', version: 2, status: 'pending', steps: 5, fixture: 'onboarding-calendar',
+    outcomes: { 2: 'Google Calendar connected; read test passed (fixture_calendar_upcoming).' },
+    turns: [{ prompt: "I'm back.", finish: true, firstTask: /Krzysztof|Bergstrom/i }] },
 ];
 
 function seed(scenario, root) {
@@ -59,7 +63,7 @@ function seed(scenario, root) {
   if (scenario.context === 'gtm') lib.writeContext(root, 'gtm', { title: 'Legacy GTM', rule: 'Earlier company onboarding records.' });
   const context = scenario.context || 'company';
   if (scenario.status) note(root, context, `Onboarding: ${scenario.status} v${scenario.version} on 2026-09-01.`);
-  for (let i = 0; i < scenario.steps; i++) note(root, context, `Onboarding step ${i + 1} (${titles[i]}): ${outcomes[i]}`);
+  for (let i = 0; i < scenario.steps; i++) note(root, context, `Onboarding step ${i + 1} (${titles[i]}): ${scenario.outcomes?.[i] || outcomes[i]}`);
   note(root, 'company', 'Imported the handoff from the previous assistant; reviewed with Marta.');
   script(root, 'scripts/gtm-os-entities/entities.mjs', ['--add', 'Krzysztof Pawlak']);
   script(root, 'scripts/gtm-os-entities/entities.mjs', ['--add', 'Bergstrom Home', '--kind', 'company']);
@@ -95,7 +99,8 @@ async function dashboard(root) {
   if (!embedded) throw Error('Dashboard has no embedded data');
   const data = JSON.parse(embedded[1]);
   const rendered = page(data, { html, live: true, route: '' });
-  const prompt = new URL(rendered.node('#chat-about').href).searchParams.get('prompt');
+  // The React Overview has no legacy chat link: no prompt to read is not a setup prompt.
+  let prompt = ''; try { prompt = new URL(rendered.node('#chat-about')?.href).searchParams.get('prompt') || ''; } catch {}
   return { state: data.onboarding, cardVisible: !!rendered.node('#h-onboard').innerHTML,
     promptsSetup: /saved progress|unfinished step|GT[M ]*OS setup/i.test(prompt), address, htmlHash: createHash('sha256').update(html).digest('hex') };
 }
@@ -120,7 +125,7 @@ ${turn.prompt}`;
   const args = ['exec', '--ignore-user-config', '--ephemeral', '--json', '--sandbox', 'read-only', '-C', root, '-m', model,
     '-c', 'features.apps=false', '-c', 'approval_policy="never"',
     '-c', `mcp_servers.gtm_os_eval.command=${JSON.stringify(process.execPath)}`,
-    '-c', `mcp_servers.gtm_os_eval.args=${JSON.stringify([join(plugin, 'test/live/tool-routing-proxy.mjs'), root, trace, 'Skip for now|^Skip$', 'onboarding', '', plugin])}`,
+    '-c', `mcp_servers.gtm_os_eval.args=${JSON.stringify([join(plugin, 'test/live/tool-routing-proxy.mjs'), root, trace, 'Skip for now|^Skip$', scenario.fixture || 'onboarding', '', plugin])}`,
     // Codex filters the MCP child environment. Pass fixture isolation and commit mode
     // explicitly; relying on the CLI's environment silently kept the proxy in dry-run mode.
     ...Object.entries({ GTM_OS_EVAL_PROFILE: profile, GTM_OS_EVAL_COMMIT: '1', GTM_OS_NO_WATCH: '1', TMPDIR: artifacts })
@@ -149,7 +154,7 @@ ${turn.prompt}`;
   const view = await dashboard(root);
   const checks = {
     process: processResult.code === 0 && !processResult.timedOut,
-    catalog: records.some(r => r.kind === 'catalog' && r.tools.some(t => t.name === 'where_we_are')),
+    catalog: records.some(r => r.kind === 'catalog' && r.tools.some(t => t.name === 'query')),
     productionBuild: records.some(r => r.kind === 'build' && r.server === join(plugin, 'server/server.mjs')),
     answered: !!text,
     noToolErrors: !records.some(r => r.kind === 'result' && (r.error || r.result?.isError)),
@@ -168,6 +173,12 @@ ${turn.prompt}`;
     checks.noOnboardingTalk = !/onboard|setting up GTM|set up GTM|resume setup/i.test(text);
   }
   checks.questions = turn.finish ? questions.length === 1 && /project|folder/i.test(questions[0].message) : questions.length === 0;
+  if (turn.finish) {
+    // The closing names one task to send, in a copyable block, never a new project first.
+    const block = (text.match(/```[a-z]*\n([\s\S]*?)```/) || [])[1] || '';
+    checks.firstTaskBlock = !!block.trim() && !/gtm-os-project/.test(block);
+    if (turn.firstTask) checks.firstTaskFromSource = turn.firstTask.test(block);
+  }
   if (turn.business) checks.businessAnswer = /security/i.test(text) && /Krzysztof|Pawlak/i.test(text);
   const result = { name: label, status: Object.values(checks).every(Boolean) ? 'pass' : 'fail', checks,
     ...processResult, elapsed_ms: Date.now() - started, tools: calls.map(c => c.tool),

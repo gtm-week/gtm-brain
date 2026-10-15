@@ -5,7 +5,7 @@ import { createInterface } from "node:readline";
 import { appendFileSync, realpathSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { meetingFixtureTools, meetingFixtureResult } from './meeting-source-fixture.mjs';
+import { meetingFixtureTools, meetingFixtureResult, upcomingCalendarTool, upcomingCalendarResult } from './meeting-source-fixture.mjs';
 import { hubspotWriteTools, createHubspotWriteFixture } from './hubspot-write-fixture.mjs';
 import { attioWriteTools, createAttioWriteFixture } from './attio-write-fixture.mjs';
 import { crmFixtureTools, crmFixtureResult } from './crm-search-fixture.mjs';
@@ -50,7 +50,7 @@ createInterface({ input: child.stdout }).on("line", line => {
   if (response.method === "elicitation/create") return answerForm(response);
   const request = pending.get(response.id); pending.delete(response.id);
   if (request?.method === "tools/list") {
-    response.result.tools = [...response.result.tools.filter(t => allowed.has(t.name)), connector, ...(meetingFixture === "meetings" ? meetingFixtureTools : []), ...crmTools, fallback];
+    response.result.tools = [...response.result.tools.filter(t => allowed.has(t.name)), connector, ...(meetingFixture === "meetings" ? meetingFixtureTools : []), ...(meetingFixture === "onboarding-calendar" ? [upcomingCalendarTool] : []), ...crmTools, fallback];
     log({ kind: "catalog", tools: response.result.tools });
   }
   if (request?.method === "tools/call") log({ kind: "result", id: response.id, tool: request.params.name, result: response.result, error: response.error });
@@ -77,7 +77,12 @@ createInterface({ input: process.stdin }).on("line", line => {
     }
     if (name === "computer_use") return result(request.id, "Simulation only: UI fallback attempted. No UI access or writes occurred.", true);
     if (name === "attio_move_deal") return result(request.id, `ok: ${args?.deal || "the deal"} is now at stage ${args?.stage || "?"} in Attio (simulated).`);
-    if (meetingFixture === "onboarding" && name === "list_projects" && args?.brain === root) {
+    if (meetingFixture === "onboarding-calendar" && name === upcomingCalendarTool.name) {
+      const data = upcomingCalendarResult();
+      log({ kind: "result", id: request.id, tool: name, result: data });
+      return result(request.id, JSON.stringify(data));
+    }
+    if (meetingFixture?.startsWith("onboarding") && name === "list_projects" && args?.brain === root) {
       const data = { projects: [], codex: { status: "unavailable", projects: [], note: "Synthetic fixture: no host project catalog. Ask the person about existing folders or an explicit skip." } };
       log({ kind: "result", id: request.id, tool: name, result: data });
       return result(request.id, JSON.stringify(data));

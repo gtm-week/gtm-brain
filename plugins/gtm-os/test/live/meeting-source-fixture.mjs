@@ -5,6 +5,15 @@ export const meetingFixtureTools = [
   tool('fixture_notes_read', 'Meeting notes (simulated): read the source content by ID. Preserves direct source link and known event dates.', { id: { type: 'string' } }),
   tool('fixture_calendar_list', 'Calendar (simulated): read current/upcoming events for the selected primary work calendar.'),
 ];
+// A connected calendar with an external meeting two days out, for the first task onboarding suggests.
+export const upcomingCalendarTool = tool('fixture_calendar_upcoming', 'Google Calendar (simulated, connected; read test passed): list events on the primary work calendar for the next seven days.');
+export function upcomingCalendarResult(now = new Date()) {
+  const day = n => new Date(now.getTime() + n * 86400000).toISOString().slice(0, 10);
+  return { calendar: 'marta@example.test', events: [
+    { title: 'Team standup', start: `${day(1)}T08:30:00Z`, attendees: ['Marta Nowak'] },
+    { title: 'Bergstrom Home: security review', start: `${day(2)}T13:00:00Z`, attendees: ['Marta Nowak', 'Krzysztof Pawlak <krzysztof@bergstrom.example.test>'] },
+  ] };
+}
 export function meetingFixtureResult(name, args) {
   if (name === 'fixture_notes_list') return args?.cursor === 'page-2'
     ? { account: 'work', records: [{ id: 'empty-2', title: 'Upcoming planning' }], next_cursor: null }

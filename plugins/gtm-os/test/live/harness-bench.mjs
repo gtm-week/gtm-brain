@@ -11,7 +11,7 @@
 // Every answer is checked by code, no judge. Exit 1 when plain or brain does worse than bare:
 // fewer tasks solved, a larger fixed prompt than the budget, or GTM OS tools called for the
 // puzzle. Time is reported and warned on, never failed: it is too noisy for a gate.
-//   node plugins/gtm-os/test/live/harness-bench.mjs [--runs 2] [--jobs 4] [--model gpt-5.6-sol] [--tasks coding,reasoning,connector]
+//   node plugins/gtm-os/test/live/harness-bench.mjs [--runs 2] [--jobs 4] [--model gpt-5.6-luna] [--tasks coding,reasoning,connector]
 // Budget: GTM_OS_BENCH_MAX_OVERHEAD (extra input tokens on the puzzle, default 14000).
 // Runs from .githooks/pre-push before a push to main; the person's own profile is never touched
 // apart from reading auth.json to sign in.
@@ -24,7 +24,7 @@ import { execFileSync, spawn, spawnSync } from "node:child_process";
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
 const runs = Number(opt("--runs", 2)), jobs = Number(opt("--jobs", 4));
-const model = opt("--model", process.env.GTM_OS_EVAL_MODEL || "gpt-5.6-sol");
+const model = opt("--model", process.env.GTM_OS_EVAL_MODEL || "gpt-5.6-luna");
 const maxOverhead = Number(process.env.GTM_OS_BENCH_MAX_OVERHEAD || 14000);
 const plugin = fileURLToPath(new URL("../../", import.meta.url));
 const repo = fileURLToPath(new URL("../../../../", import.meta.url));
@@ -166,7 +166,8 @@ for (const task of tasks) {
   if (!solved(bare)) warnings.push(`${task}: unsolved without the plugin too (check the task or the model)`);
   for (const kind of ["plain", "brain"]) {
     const r = by(kind);
-    if (solved(r) < solved(bare)) failures.push(`${task}: ${kind} solved ${solved(r)}/${r.length}, bare ${solved(bare)}/${bare.length}`);
+    // A task bare Codex does not solve every time is at the model's edge: a miss there is noise, not the plugin.
+    if (solved(r) < solved(bare)) (solved(bare) === bare.length ? failures : warnings).push(`${task}: ${kind} solved ${solved(r)}/${r.length}, bare ${solved(bare)}/${bare.length}${solved(bare) === bare.length ? "" : " (bare is not reliable on this model, so not a failure)"}`);
     if (wall(r) > 2 * wall(bare) && wall(r) - wall(bare) > 30000) warnings.push(`${task}: ${kind} median ${(wall(r) / 1000).toFixed(0)}s against bare ${(wall(bare) / 1000).toFixed(0)}s`);
     if (task === "coding" && med(r.map(x => x.gtm_calls)) > 0) warnings.push(`coding: ${kind} reached for GTM OS tools on a coding task`);
     if (task === "reasoning") {
@@ -178,6 +179,8 @@ for (const task of tasks) {
   }
 }
 console.log(); console.table(table);
+// No run used a token: Codex never reached a model (unsupported model, sign-in), so nothing was compared.
+if (rows.every(r => !r.input_tokens)) failures.push(`no run reached the model ${model} (0 input tokens everywhere); check the model and the Codex sign-in, or pass --model`);
 writeFileSync(join(artifacts, "harness-bench.json"), JSON.stringify({ model, runs, tasks, maxOverhead, artifacts, failures, warnings, rows }, null, 2));
 for (const w of warnings) console.log(`warn: ${w}`);
 for (const f of failures) console.log(`FAIL: ${f}`);

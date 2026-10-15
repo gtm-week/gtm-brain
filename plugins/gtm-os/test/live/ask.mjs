@@ -1,7 +1,7 @@
 // Ask the agent a question in this brain and watch which tools it uses, as it uses them.
 //   cd <brain>; node <plugin>/test/live/ask.mjs "What do we know about Castorama?"
 //   ... --write    let it write (workspace-write); default is read-only, so nothing lands in the brain
-//   ... --model m  the model codex exec runs; default gpt-5.6-sol for local testing (a person's own chats use whatever they chose)
+//   ... --model m  the model codex exec runs; default gpt-5.6-luna for local testing (a person's own chats use whatever they chose)
 // Runs `codex exec --json` here (your account, the installed plugin, this folder's brain) and
 // prints one line per tool call: GTM OS tools with their outcome, shell commands, other servers,
 // and Computer Use (Codex runs it as the MCP server cua_repl) with the title the agent gave it.
@@ -16,7 +16,7 @@ const tag = tool => generatedTools.has(tool) ? " (allethic)" : "";
 
 const args = process.argv.slice(2);
 const write = args.includes("--write");
-const model = args.includes("--model") ? args[args.indexOf("--model") + 1] : "gpt-5.6-sol";
+const model = args.includes("--model") ? args[args.indexOf("--model") + 1] : "gpt-5.6-luna";
 const question = args.filter((a, i) => a !== "--write" && a !== "--model" && args[i - 1] !== "--model").join(" ").trim();
 if (!question) { console.error('usage: node ask.mjs "your question" [--write]'); process.exit(1); }
 
