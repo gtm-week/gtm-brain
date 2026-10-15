@@ -63,17 +63,16 @@ assert.equal(median([4, 1, 3, 2]), 2.5);
 assert.equal(median([7]), 7);
 console.log("ok");
 `;
-const PUZZLE = `Five people, Ada, Ben, Cyd, Dan and Eve, sit in seats 1 to 5 in a row (seat 1 is the left end). Each drinks one of tea, coffee, juice, water and milk, all different.
-1. Ada sits somewhere to the left of Ben.
-2. The tea drinker and the coffee drinker sit next to each other.
-3. Cyd sits in seat 3.
-4. Cyd drinks neither water nor tea.
-5. The juice drinker sits in seat 1.
-6. Eve sits in seat 5.
-7. Eve drinks neither milk nor coffee.
-8. Dan sits next to the water drinker.
-9. Ben drinks neither coffee nor milk.
-Who drinks milk, and in which seat? Reply with exactly one line in the form NAME SEAT, for example: Ada 1`;
+// One solution (checked by brute force): Ana dog, Bo bird, Cy cat, Di fish. Small enough that bare
+// Codex solves it every time, so a miss with the plugin is the plugin, not the model's edge.
+const PUZZLE = `Four people, Ana, Bo, Cy and Di, sit in seats 1 to 4 in a row (seat 1 is the left end). Each owns one of a cat, a dog, a fish and a bird, all different.
+1. Bo sits in seat 2.
+2. Ana sits directly to the left of Bo.
+3. The fish owner sits in seat 4.
+4. Cy does not own the fish.
+5. The cat owner sits next to Di.
+6. Ana does not own the bird.
+Who owns the bird, and in which seat? Reply with exactly one line in the form NAME SEAT, for example: Cy 3`;
 
 const TASKS = {
   coding: {
@@ -89,7 +88,7 @@ const TASKS = {
   reasoning: {
     prompt: PUZZLE,
     sandbox: "read-only",
-    check: (root, answer) => /^\s*Dan 4\s*$/.test(answer) ? null : `answer ${JSON.stringify(answer.slice(0, 60))}`,
+    check: (root, answer) => /^\s*Bo 2\s*$/.test(answer) ? null : `answer ${JSON.stringify(answer.slice(0, 60))}`,
   },
   connector: {
     prompt: "What was the last message posted in the #general Slack channel? Answer in one line.",
