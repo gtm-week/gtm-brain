@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { sourceVersion } from "../../lib/plugin-source.mjs";
+import { sourceVersion, retiredSource, SHIPPING_SOURCE } from "../../lib/plugin-source.mjs";
 const root = process.argv[2] && !process.argv[2].startsWith("--") ? process.argv[2] : ".";
 const P = fileURLToPath(new URL("../..", import.meta.url)).replace(/[\\/]$/, "");
 const codexHome = process.env.CODEX_HOME || join(homedir(), ".codex");
@@ -37,6 +37,8 @@ try {
     type = s.sourceType; src = s.source || s.url || s.repo || null; ref = s.ref || s.branch || null;
     if (!src) throw new Error("the marketplace source has no location");
   }
+  // A retired source stays at its last release; the latest is the shipping one's, and the update moves the install there.
+  if (type === "git" && retiredSource(src)) { src = SHIPPING_SOURCE; ref = null; }
   state.source = type; state.ref = ref;
   const remote = sourceVersion({ type, source: src, ref, codexHome });   // lib/plugin-source.mjs: the same fetch update.mjs relies on
   if (!remote.version) throw new Error(remote.error);

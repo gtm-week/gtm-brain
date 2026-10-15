@@ -9,6 +9,12 @@ import { execFileSync } from "node:child_process";
 const run = (cmd, args, ms = 20000) => execFileSync(cmd, args, { encoding: "utf8", timeout: ms, stdio: ["ignore", "pipe", "ignore"], maxBuffer: 4 * 1024 * 1024 });
 const versionOf = json => { try { return JSON.parse(json).version || null; } catch { return null; } };
 
+/* gtm-week/onboarding shipped GTM OS until 0.26.0 and its context-v0 branch stays frozen there.
+   An install from it is pointed at the repository that ships: check-version reads the latest
+   release from there, update.mjs moves the configured source. */
+export const SHIPPING_SOURCE = "gtm-week/gtm-os";
+export const retiredSource = src => /(^|github\.com[/:])gtm-week\/onboarding(\.git)?\/?$/.test(src || "");
+
 /* owner/repo is GitHub; anything else is a URL or a path git can fetch from. */
 export const sourceUrl = src => /^[\w.-]+\/[\w.-]+$/.test(src) ? `https://github.com/${src}` : src;
 

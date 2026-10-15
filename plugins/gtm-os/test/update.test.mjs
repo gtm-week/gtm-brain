@@ -71,7 +71,12 @@ if (command === config.fail) { console.error("private credential in stderr"); pr
 const statePath = join(process.env.CODEX_HOME, "installation.json");
 const state = JSON.parse(readFileSync(statePath, "utf8"));
 if (command === "plugin marketplace list --json") console.log(JSON.stringify({ marketplaces:
-  config.missing ? [] : [{ name: "gtm-os", root: process.env.UPDATE_TEST_MARKET, marketplaceSource: { sourceType: config.source || "git", source: config.sourceRepo || process.env.UPDATE_TEST_MARKET, ref: "release" } }] }));
+  config.missing || state.removed ? [] : [{ name: "gtm-os", root: process.env.UPDATE_TEST_MARKET, marketplaceSource: { sourceType: config.source || "git", source: state.moved ? process.env.UPDATE_TEST_MARKET : config.sourceRepo || process.env.UPDATE_TEST_MARKET, ref: "release" } }] }));
+else if (command === "plugin marketplace remove gtm-os") writeFileSync(statePath, JSON.stringify({ ...state, removed: true }));
+else if (args[0] === "plugin" && args[1] === "marketplace" && args[2] === "add") {
+  if (args[3] === "gtm-week/gtm-os" && config.addFails) { console.error("private credential in stderr"); process.exit(1); }
+  writeFileSync(statePath, JSON.stringify({ ...state, removed: false, moved: args[3] === "gtm-week/gtm-os" }));
+}
 else if (command === "plugin list --marketplace gtm-os --json") console.log(JSON.stringify({ installed:
   !state.installed ? [] : [{ pluginId: "gtm-os@gtm-os", ...state, enabled: !config.disabled && !(state.added && config.badVerify) }] }));
 else if (command === "plugin add gtm-os@gtm-os") {
@@ -127,6 +132,24 @@ test("Git update refreshes only GTM OS, installs, then verifies", t => {
   ]);
   assert.match(r.stdout, /0.3.0 -> 0.4.0/);
   assert.match(r.stdout, /Quit and reopen/);
+});
+test("an install from the retired gtm-week/onboarding source moves to gtm-week/gtm-os on update", t => {
+  const onboarding = "https://github.com/gtm-week/onboarding.git";
+  const check = run(t, "--check", { sourceRepo: onboarding });
+  assert.equal(check.status, 0, check.stderr);
+  assert.match(check.stdout, /retired gtm-week\/onboarding .*update GTM OS, and it moves to gtm-week\/gtm-os/);
+  assert.ok(!check.calls.some(c => c.includes("remove")), "a check never changes the source");
+  const r = run(t, "--update", { sourceRepo: onboarding });
+  assert.equal(r.status, 0, r.stderr);
+  assert.deepEqual(r.calls.slice(1, 4), [["plugin", "marketplace", "remove", "gtm-os"], ["plugin", "marketplace", "add", "gtm-week/gtm-os"], ["plugin", "marketplace", "list", "--json"]]);
+  assert.match(r.stdout, /moved from the retired gtm-week\/onboarding repository .* to gtm-week\/gtm-os/);
+  assert.match(r.stdout, /0.3.0 -> 0.4.0/);
+});
+test("a failed move puts the retired source back instead of leaving none", t => {
+  const r = run(t, "--update", { sourceRepo: "gtm-week/onboarding", addFails: true });
+  assert.equal(r.status, 1);
+  assert.deepEqual(r.calls.at(-1), ["plugin", "marketplace", "add", "gtm-week/onboarding", "--ref", "release"]);
+  assert.match(r.stderr, /while moving to the current source/); assert.doesNotMatch(r.stderr, /private credential/);
 });
 test("a Git update stops when Codex's copy of the marketplace is behind GitHub, and says how to sign git in", t => {
   // "GitHub" holds 0.5.0; Codex's marketplace snapshot stayed at 0.4.0 because git had no credentials to fetch

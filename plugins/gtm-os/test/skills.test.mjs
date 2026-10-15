@@ -355,6 +355,11 @@ test("connect matches tools against the live catalog: by id, by display name, sh
   assert.match(again, /- Gmail\s+installed\s+\(as of 20\d\d-[^)]+\)\s+read test: ok \(3 subjects\)/); assert.match(again, /- Granola\s+available, not installed\s+\(as of/);
   assert.doesNotMatch(again, /- Gmail\s+available/);
   assert.equal(JSON.parse(readFileSync(join(cr, "work", "tools.json"), "utf8")).gmail.status, "installed");
+  // a real list runs past node's 1 MB default buffer: the check still reads it, no ENOBUFS
+  const big = mkdtempSync(join(tmpdir(), "gtm-os-cbig-"));
+  writeFileSync(join(big, "codex"), `#!/bin/sh\necho 'Marketplace \`openai-curated-remote\`'\ni=0; while [ $i -lt 12000 ]; do echo "filler-$i@openai-curated-remote     not installed       1.0  /some/long/source/path/for/a/plugin/that/pads/the/line/out"; i=$((i+1)); done\necho 'granola@openai-curated-remote     installed, enabled  1.0.0   x'\n`); execFileSync("chmod", ["755", join(big, "codex")]);
+  const large = execFileSync(process.execPath, [`${P}/scripts/gtm-os-connect/connect.mjs`, ".", "--check"], { cwd: cr, encoding: "utf8", env: { ...process.env, PATH: `${big}:${process.env.PATH}`, GTM_OS_CATALOG_DIR: cat } });
+  assert.doesNotMatch(large, /codex plugin list failed/); assert.match(large, /- Granola\s+installed/);
 });
 
 test("the floor: HubSpot is suggested as the CRM before anyone names one, Attio when it is the one installed; a decline sticks and the advisor stops", () => {

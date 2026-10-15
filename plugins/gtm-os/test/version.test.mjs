@@ -92,3 +92,9 @@ test("after an update the page shows the running version and the hook re-checks 
   const settled = state(root).checkedAt; hook(); await new Promise(r => setTimeout(r, 1500));
   assert.equal(state(root).checkedAt, settled, "same version, recent check: nothing re-checked");
 });
+
+test("the retired gtm-week/onboarding source is recognized in every spelling Codex stores, and nothing else is", async () => {
+  const { retiredSource } = await import("../lib/plugin-source.mjs");
+  for (const s of ["gtm-week/onboarding", "https://github.com/gtm-week/onboarding", "https://github.com/gtm-week/onboarding.git", "git@github.com:gtm-week/onboarding.git"]) assert.ok(retiredSource(s), s);
+  for (const s of ["gtm-week/gtm-os", "https://github.com/gtm-week/gtm-os.git", "/Users/x/onboarding", "https://github.com/other/onboarding.git", null]) assert.ok(!retiredSource(s), String(s));
+});

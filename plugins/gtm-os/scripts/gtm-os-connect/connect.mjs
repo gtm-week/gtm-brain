@@ -55,7 +55,8 @@ const plugins = new Map();   // id -> { id, marketplace, display, state: enabled
 const put = (id, more) => plugins.set(id, { id, marketplace: REMOTE, display: null, state: "unknown", policy: "AVAILABLE", ...(plugins.get(id) || {}), ...more });
 let listed = false;
 try {
-  const output = execFileSync("codex", ["plugin", "list"], { encoding: "utf8", timeout: Number(process.env.GTM_OS_CODEX_TIMEOUT) || 60000 });
+  // The full list runs past 1 MB (node's default buffer, ENOBUFS) once the curated catalog is listed.
+  const output = execFileSync("codex", ["plugin", "list"], { encoding: "utf8", timeout: Number(process.env.GTM_OS_CODEX_TIMEOUT) || 60000, maxBuffer: 64 * 1024 * 1024 });
   listed = true; // A successful empty list is still a successful check.
   for (const line of output.split("\n")) {
     const m = line.match(/^(\S+)@(\S+)\s+(installed|not installed)(?:,\s*(enabled|disabled))?/); if (!m) continue;

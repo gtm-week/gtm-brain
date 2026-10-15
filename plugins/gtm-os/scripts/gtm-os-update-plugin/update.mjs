@@ -6,7 +6,7 @@ import { join, resolve } from "node:path";
 import { homedir } from "node:os";
 import { hookTrust, trustSummary } from "../../hooks/trust-hooks.mjs";
 import { pluginVersion, olderVersion, verifyRuntime } from "../../lib/plugin-runtime.mjs";
-import { sourceVersion } from "../../lib/plugin-source.mjs";
+import { sourceVersion, retiredSource, SHIPPING_SOURCE } from "../../lib/plugin-source.mjs";
 
 const args = process.argv.slice(2);
 if (args[0] && !args[0].startsWith("--")) args.shift(); // MCP runner supplies its cwd.
@@ -31,16 +31,35 @@ const cached = version => {
   return join(codexHome, "plugins/cache/gtm-os/gtm-os", version);
 };
 let installationAttempted = false;
+const RETIRED_NOTE = "the retired gtm-week/onboarding repository (frozen at 0.26.0)";
 
 try {
   // The MCP runner starts us inside the installed plugin. Codex may remove that folder
   // during add; later commands and hook approval must not inherit a deleted cwd.
   process.chdir(codexHome);
-  const market = JSON.parse(codex("marketplace", "list", "--json"))
+  const configured = () => JSON.parse(codex("marketplace", "list", "--json"))
     .marketplaces?.find(m => m.name === "gtm-os");
-  const source = market?.marketplaceSource;
+  let market = configured();
+  let source = market?.marketplaceSource;
   if (!source || !["git", "local"].includes(source.sourceType)) {
     throw new Error("GTM OS has no supported configured marketplace source. Use the installation flow.");
+  }
+  // Upgrading the retired source never reaches a newer release: an update moves the install to the one that ships.
+  const retired = source.sourceType === "git" && retiredSource(source.source || source.url || source.repo);
+  if (retired && mode === "--check") console.log(`Source: ${RETIRED_NOTE}; say: update GTM OS, and it moves to ${SHIPPING_SOURCE}.`);
+  if (retired && mode === "--update") {
+    stage = "moving to the current source";
+    const old = source.source || source.url || source.repo, ref = source.ref || source.branch;
+    codex("marketplace", "remove", "gtm-os");
+    try { codex("marketplace", "add", SHIPPING_SOURCE); }
+    catch (error) {
+      // Leave the person with the source they had, never with none.
+      try { codex("marketplace", "add", old, ...(ref ? ["--ref", ref] : [])); } catch {}
+      throw error;
+    }
+    market = configured(); source = market?.marketplaceSource;
+    if (!source) throw new Error(`Codex did not register ${SHIPPING_SOURCE}. Retry the update.`);
+    console.log(`Source: moved from ${RETIRED_NOTE} to ${SHIPPING_SOURCE}.`);
   }
   stage = "checking the installed plugin";
   const before = installed();
