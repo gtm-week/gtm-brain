@@ -78,7 +78,8 @@ The marker is a memory, so it travels with the repo:
 
 - kind `note`, context `company` (`gtm` in an older brain), content
   `Onboarding: pending v2 since YYYY-MM-DD.`, superseded on completion by
-  `Onboarding: completed v2 on YYYY-MM-DD.`. Reuse setup's existing marker ID.
+  `Onboarding: completed v2 on YYYY-MM-DD.`, which remember writes itself when the last step
+  outcome is saved. Reuse setup's existing marker ID.
 - An explicit request to stop onboarding writes `Onboarding: dismissed v2 on YYYY-MM-DD.`,
   superseding the pending marker. It suppresses reminders even after a software update;
   a later explicit resume request writes pending again, preserving previous outcomes.
@@ -423,7 +424,7 @@ or unverified automation. Keep the accepted choice as continuation with its bloc
 submitted manual-sync or summaries-only choice remains valid.
 
 During new onboarding, do not close before the existing-project choice has an applied selection or an explicit
-skip, no-existing-projects or defer outcome. Write the `completed v2` marker (supersede the pending record). If the one-time refresh was
+skip, no-existing-projects or defer outcome. Saving the last step outcome writes the `completed v2` marker itself (remember says so); do not write another. If the one-time refresh was
 accepted, follow [compilation](../../gtm-os-use-brain/references/compile.md) for each onboarding
 context whose summary is behind, after all step outcomes and the marker are written. If
 refresh was declined, keep that choice and report the deferred refresh. Render the dashboard.

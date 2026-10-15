@@ -15,11 +15,12 @@
 // Budget: GTM_OS_BENCH_MAX_OVERHEAD (extra input tokens on the puzzle, default 14000).
 // Runs from .githooks/pre-push before a push to main; the person's own profile is never touched
 // apart from reading auth.json to sign in.
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, existsSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, existsSync, readdirSync } from "node:fs";
 import { tmpdir, homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync, spawn, spawnSync } from "node:child_process";
+import { stopBrainWatcher } from "../../lib/brain.mjs";
 
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
@@ -185,4 +186,7 @@ writeFileSync(join(artifacts, "harness-bench.json"), JSON.stringify({ model, run
 for (const w of warnings) console.log(`warn: ${w}`);
 for (const f of failures) console.log(`FAIL: ${f}`);
 console.log(`\n${failures.length ? "harness bench FAILED" : "harness bench passed"}; traces and report in ${artifacts}`);
+// The plugin's MCP server starts a detached file watcher for every brain it serves; a bench brain is
+// thrown away, so its watcher must not outlive the run (a few dozen left behind stalled later pushes).
+for (const d of readdirSync(artifacts)) if (existsSync(join(artifacts, d, "brain", "admin.md"))) stopBrainWatcher(join(artifacts, d));
 process.exit(failures.length ? 1 : 0);

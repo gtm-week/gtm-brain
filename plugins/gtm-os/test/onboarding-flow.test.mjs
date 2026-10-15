@@ -164,15 +164,13 @@ test("onboarding crosses fresh MCP contexts from setup to approved profile, expl
   assert.doesNotMatch(f.hook(), /Onboarding state:/, 'completed onboarding is one sentence, not every step in every chat');
   assert.doesNotMatch(f.hook(), /^PROJECT /m, 'onboarding stays in its brain chat');
   const viewer = page(data, { html: readFileSync(join(f.root, 'work/home/index.html'), 'utf8') });
-  assert.equal(viewer.node('#h-onboard').innerHTML, '', 'all saved outcomes clear the card before the final bookkeeping marker');
+  assert.equal(viewer.node('#h-onboard').innerHTML, '', 'all saved outcomes clear the card');
   assert.match(data.onboarding.steps.find(s => s.n === 6).outcome, /both linked; Personal hobby excluded/);
-  const logPath = join(f.root, "brain/contexts/company/memories.jsonl");
-  const priorLog = readFileSync(logPath, "utf8");
-  f.remember(`Onboarding: completed v${ONBOARDING_VERSION} on 2026-09-05.`, { supersedes: pending });
-  data = f.render();
-  assert.equal(data.onboarding.status, "completed");
+  // The last outcome closed the pending marker in the same write: no second memory for the model to forget.
+  assert.equal(data.onboarding.status, "completed"); assert.equal(data.onboarding.completion, "marker");
+  const closing = effectiveMemories(readMemories(f.root, "company")).filter(m => /^Onboarding: completed v2 on \d{4}-\d\d-\d\d\.$/.test(m.content));
+  assert.equal(closing.length, 1); assert.equal(closing[0].supersedes, pending); assert.deepEqual(closing[0].authors, ["alex-example"]);
   assert.deepEqual(data.onboarding.steps.map(s => s.n), [1, 2, 3, 4, 5, 6]);
-  assert.ok(readFileSync(logPath, "utf8").startsWith(priorLog), "completion only appends");
   assert.ok(!effectiveMemories(readMemories(f.root, "company")).some(m => m.id === pending));
   assert.doesNotMatch(f.hook(), /ONBOARDING /, "a fresh session does not restart completed onboarding");
   assert.equal(f.run("git", ["status", "--short"]).trim(), "", "every production writer committed its files");
@@ -455,12 +453,28 @@ test('setup persists the start flag in git and fresh MCP readers recover the nex
   assert.match(f.hook(), /next: 4 \(What is going on\)/);
 });
 
+test('an outcome saved without its step title still counts, and the last one closes onboarding', t => {
+  const f = fixture(t);
+  f.call('setup_brain', { folder: f.root, company: 'Synthetic Example', one_liner: 'Synthetic testing',
+    owner: 'Alex Example <alex@example.invalid>', dashboard: 'on-demand' });
+  const titles = ['Who you are','Company profile','Your tools','What is going on','Running for you'];
+  titles.forEach((title, i) => f.remember(`Onboarding step ${i + 1} (${title}): Done by Alex.`));
+  assert.equal(readOnboarding(f.root).status, 'pending');
+  const out = f.call('remember', { by: 'alex-example', context: 'company', kind: 'note', content: 'Onboarding step 6: Alex skipped project folders for now.' });
+  assert.match(out, /all onboarding steps saved[^\n]*end this reply with the closing/);
+  const state = readOnboarding(f.root);
+  assert.equal(state.completion, 'marker'); assert.equal(state.steps.find(s => s.n === 6).title, 'Your projects');
+  assert.equal(f.run('git', ['status', '--short', '--', 'brain']).trim(), '', 'the closing marker is committed with the outcome');
+});
+
 test('saved outcomes close a stale pending flag without a final interview or marker write', t => {
   const f = fixture(t);
   f.call('setup_brain', { folder: f.root, company: 'Synthetic Example', one_liner: 'Synthetic testing',
     owner: 'Alex Example <alex@example.invalid>', dashboard: 'on-demand' });
   const titles = ['Who you are','Company profile','Your tools','What is going on','Running for you','Your projects'];
-  titles.forEach((title, i) => f.remember(`Onboarding step ${i + 1} (${title}): Completed or explicitly skipped by Alex.`));
+  // Outcomes saved before remember closed the marker itself: a brain from an older version.
+  titles.forEach((title, i) => appendMemory(f.root, 'company', { authors: ['alex-example'], content: `Onboarding step ${i + 1} (${title}): Completed or explicitly skipped by Alex.` }));
+  f.run('git', ['add', '-A', 'brain']); f.run('git', ['-c', 'commit.gpgsign=false', 'commit', '-qm', 'older outcomes']);
   const before = readFileSync(join(f.root, 'brain/contexts/company/memories.jsonl'), 'utf8');
   assert.equal(readOnboarding(f.root).next, null);
   assert.equal(readOnboarding(f.root).status, 'completed');
@@ -474,6 +488,8 @@ test('saved outcomes close a stale pending flag without a final interview or mar
   assert.equal(readOnboarding(f.root).required, false);
   assert.equal(readOnboarding(f.root).next, null);
   assert.doesNotMatch(f.hook(), /ONBOARDING /);
+  f.remember('Onboarding step 6 (Your projects): Alex linked nothing.');
+  assert.equal(readOnboarding(f.root).status, 'dismissed', 'an outcome saved after a dismissal never closes it as completed');
   f.remember('Onboarding: pending v2 since 2026-09-06.', { supersedes: dismissed });
   assert.equal(readOnboarding(f.root).next, null, 'saved outcomes cannot create a mandatory closing loop');
   assert.equal(readOnboarding(f.root).status, 'completed');

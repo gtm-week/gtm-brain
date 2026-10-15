@@ -1065,7 +1065,7 @@ export function effectiveMemories(list) {
 }
 /* Timestamps compare as instants, whatever their precision (older records have minutes). */
 export const newer = (a, b) => Date.parse(a) > Date.parse(b);
-export { ONBOARDING_VERSION, readOnboarding, seedOnboarding, onboardingInstruction } from './onboarding.mjs';
+export { ONBOARDING_VERSION, readOnboarding, seedOnboarding, onboardingInstruction, closeOnboardingFromOutcomes } from './onboarding.mjs';
 /* A snapshot key of a memory list: compile reads the facts under one key and applies under the
    same key, so a memory added, corrected or retracted in between is noticed. */
 export const snapshotKey = list => list.length ? "s_" + createHash("sha256").update(list.map(m => m.id).join("\n")).digest("hex").slice(0, 12) : "none";

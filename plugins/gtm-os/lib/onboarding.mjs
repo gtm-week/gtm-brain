@@ -32,8 +32,9 @@ export function readOnboarding(root) {
   const version = head ? Number(head[2]) : null;
   const steps = [];
   for (const m of mem) {
-    const s = m.content.match(/^Onboarding step ([1-6]) \(([^)]*)\):\s*([\s\S]+)/);
-    if (s && s[3].trim()) steps.push({ n: Number(s[1]), title: s[2], outcome: s[3].trim(), at: m.at });
+    // The title is the documented form; an outcome saved without it still counts for its step.
+    const s = m.content.match(/^Onboarding step ([1-6])(?: \(([^)]*)\))?:\s*([\s\S]+)/);
+    if (s && s[3].trim()) steps.push({ n: Number(s[1]), title: s[2] || STEPS[Number(s[1]) - 1][0], outcome: s[3].trim(), at: m.at });
   }
   steps.sort((a, b) => a.n - b.n || Date.parse(a.at) - Date.parse(b.at));
   // Completion is independent of the installed workflow version. Older v1 onboarding
@@ -67,6 +68,16 @@ export function seedOnboarding(root, by) {
   if (!author) throw new Error('Onboarding needs the confirmed creator from setup');
   appendMemory(root, state.context, { authors: [author], content: `Onboarding: pending v${ONBOARDING_VERSION} since ${new Date().toISOString().slice(0, 10)}.`, tags: ['onboarding'] });
   return readOnboarding(root);
+}
+
+// The last missing step outcome completes onboarding: close the pending marker in the same
+// write, so completion never depends on the model remembering a second memory. Returns the
+// marker it wrote, or null when there was nothing to close.
+export function closeOnboardingFromOutcomes(root, authors) {
+  const state = readOnboarding(root);
+  if (state.completion !== 'outcomes' || !state.marker_id) return null;
+  return appendMemory(root, state.context, { authors, tags: ['onboarding'], supersedes: state.marker_id,
+    content: `Onboarding: completed v${state.version || ONBOARDING_VERSION} on ${new Date().toISOString().slice(0, 10)}.` }).rec;
 }
 
 export function onboardingInstruction(root, { project, unattended = !!process.env.GTM_OS_RUN } = {}) {

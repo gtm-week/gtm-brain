@@ -155,8 +155,13 @@ for (let i = 0; i < entries.length; i++) {
   for (const inf of inferred) lines.push(`${at(n)}took "${inf.mention}" as ${inf.name} (first name of one known entity). If it is someone else, say so: remember again with new_names ["${inf.mention}"].`);
   const missed = lib.candidateEntities(e.content, people, names);
   if (missed.length) lines.push(`${at(n)}names in this note not yet registered as entities: ${missed.map(x => `"${x}"`).join(", ")}. For each that is a person, organization or product, call add_name with its kind now (company and team are organization subtypes; no need to ask when it is plain from the note); the note counts for it from then on. Skip the rest.`);
+  // The last step outcome closes onboarding in the same commit: no separate marker to forget.
+  const closed = /^Onboarding step [1-6][ :]/.test(rec.content) ? lib.closeOnboardingFromOutcomes(root, rec.authors) : null;
+  const closedIn = closed && lib.readOnboarding(root).context;
+  if (closed) lines.push(`${at(n)}all onboarding steps saved: recorded "${closed.content}" in ${closedIn} (${closed.id}); do not write another completion marker. Onboarding just finished in this chat: end this reply with the closing gtm-os-start describes (what connected, what was learned, the first task).`);
   // one commit per memory: git history stays readable as one commit, one memory
-  lines.push(`${at(n)}${lib.commit(root, [`brain/contexts/${ctx}/memories.jsonl`, ...lib.ENTITIES_PATHS], `remember: ${ctx} ${rec.kind} by ${rec.authors.join(",")}`).note}`);
+  const closedPath = closed ? [`brain/contexts/${closedIn}/memories.jsonl`] : [];
+  lines.push(`${at(n)}${lib.commit(root, [`brain/contexts/${ctx}/memories.jsonl`, ...closedPath, ...lib.ENTITIES_PATHS], `remember: ${ctx} ${rec.kind} by ${rec.authors.join(",")}`).note}`);
   kept.push({ n, id: rec.id, ctx });
 }
 
