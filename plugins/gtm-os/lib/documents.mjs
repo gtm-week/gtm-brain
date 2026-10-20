@@ -8,6 +8,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync, rmdirSync, renameSync, statSync } from "node:fs";
 import { join, dirname, basename, relative, sep } from "node:path";
 import { handleFor, parseFrontmatter, renderFrontmatter, readProjects } from "./brain.mjs";
+import { HOST_DIRS } from "./host.mjs";
 
 export const KIND = "document";
 export const STATUSES = ["draft", "approved"];
@@ -18,8 +19,8 @@ export const HEADER_LINE = "Made with GTM OS. This document lives in the brain f
 // What the course expects first; said by the hook while there are none.
 export const SUGGESTED = ["strategy", "tone of voice", "design system", "target customer definition", "pricing"];
 // The engine and the machine's own folders: never a document's home.
-export const SKIP_DIRS = new Set(["brain", "work", "files", ".agents", ".githooks", ".git", ".obsidian", ".codex", "node_modules"]);
-const ROOT_KEEP = new Set(["AGENTS.md", "README.md"]);
+export const SKIP_DIRS = new Set(["brain", "work", "files", ".agents", ".githooks", ".git", ".obsidian", ...HOST_DIRS, "node_modules"]);
+const ROOT_KEEP = new Set(["AGENTS.md", "CLAUDE.md", "README.md"]);
 const posix = p => p.split(sep).join("/");
 const FOLDER = /^[a-z0-9][a-z0-9-]*(\/[a-z0-9][a-z0-9-]*)?$/;
 

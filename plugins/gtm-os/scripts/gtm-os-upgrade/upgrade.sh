@@ -23,6 +23,9 @@ COMPANY="$(sed -n 's/^company:[[:space:]]*//p' brain/admin.md | head -1 | sed 's
 changed=0
 tmp="$(mktemp)"; sed -e "s|{{COMPANY}}|$(printf '%s' "$COMPANY" | sed -e 's/[&|]/\\&/g')|g" "$T/AGENTS.md" > "$tmp"
 if ! cmp -s "$tmp" AGENTS.md; then cp "$tmp" AGENTS.md; echo "updated AGENTS.md"; changed=1; fi; rm -f "$tmp"
+# 0.30.0: Claude Code reads CLAUDE.md; a marked block imports AGENTS.md, the person's own lines stay.
+shim="$(node --input-type=module -e 'const l=await import(process.argv[1]);if(l.ensureRulebookShim("."))console.log("changed")' "$PLUGIN/lib/brain.mjs")"
+[ "$shim" = changed ] && { echo "updated CLAUDE.md (imports AGENTS.md for Claude Code)"; changed=1; }
 mkdir -p .githooks
 if ! cmp -s "$T/githooks/pre-commit" .githooks/pre-commit 2>/dev/null; then cp "$T/githooks/pre-commit" .githooks/pre-commit; chmod +x .githooks/pre-commit; echo "updated .githooks/pre-commit"; changed=1; fi
 # .gitignore: theirs is kept, ours is added line by line (the same merge setup does).
@@ -31,7 +34,7 @@ if [ -f .gitignore ]; then
   [ "$added" = 1 ] && { echo "updated .gitignore (added the plugin's lines, kept yours)"; changed=1; }
 else cp "$T/gitignore" .gitignore; echo "updated .gitignore"; changed=1; fi
 # Migrate legacy registries into permanent identity files without rewriting memories.
-paths="AGENTS.md .githooks .gitignore"
+paths="AGENTS.md CLAUDE.md .githooks .gitignore"
 entity_change="$(node --input-type=module -e 'const lib=await import(process.argv[1]); if(lib.migrateEntities("."))console.log("changed")' "$PLUGIN/lib/brain.mjs")"
 if [ "$entity_change" = "changed" ]; then
   echo "migrated entity identities and kinds (original files backed up in work/entity-migration)"

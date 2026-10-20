@@ -14,6 +14,8 @@ brain="${where%%$'\t'*}"; project="${where#*$'\t'}"
 tool="$(printf '%s' "$input" | sed -n 's/.*"tool_name":"\([^"]*\)".*/\1/p' | head -1)"; [ -n "$tool" ] || exit 0
 server=""; name="$tool"
 case "$tool" in mcp__*__*) rest="${tool#mcp__}"; server="${rest%%__*}"; name="${rest#*__}";; esac
+# Claude Code prefixes plugin and claude.ai servers (plugin_gtm-os_gtm_os, claude_ai_Gmail): the connector is what counts.
+case "$server" in plugin_*|claude_ai_*) server="$(node "$(dirname "${BASH_SOURCE[0]}")/../lib/host.mjs" mcp-server "$server" 2>/dev/null || printf '%s' "$server")";; esac
 computer=false; [ "$server" = "cua_repl" ] && computer=true
 title="$(printf '%s' "$input" | sed -n 's/.*"title":"\([^"]*\)".*/\1/p' | head -1)"
 error=false; printf '%s' "$input" | grep -qE '"isError":true|"status":"failed"|"outcome":"error"' && error=true

@@ -3,6 +3,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as lib from "./brain.mjs";
+import { CHAT_KINDS } from "./host.mjs";
 
 export const CUSTOMER_STATUSES = ["customer", "prospect", "former_customer", "not_customer", "unknown"];
 const object = (v, keys) => v && typeof v === "object" && !Array.isArray(v) && Object.keys(v).every(k => keys.includes(k));
@@ -17,7 +18,7 @@ export function validateCustomerEvidence({ customer, customer_coverage, source =
     if (!object(customer, ["entity", "status", "basis", "observed_at", "reference"]) || !nonempty(customer.entity) || !CUSTOMER_STATUSES.includes(customer.status) || !["user", "source"].includes(customer.basis) || !date(customer.observed_at) || (customer.reference !== undefined && !refOK(customer.reference))) errors.push("customer needs entity, status, basis (user | source), observed_at (ISO UTC), and optional reference {kind, ref}");
     if (kind !== "note") errors.push("customer evidence must be a note");
     if (customer?.basis === "user" && !source.some(s => s?.kind === "user" && nonempty(s.ref))) errors.push("user-confirmed customer evidence needs a user:<handle or conversation> source");
-    if (customer?.basis === "source" && !source.some(s => s && !["codex", "memory", "user"].includes(s.kind) && nonempty(s.ref))) errors.push("customer source evidence needs an external source pointer");
+    if (customer?.basis === "source" && !source.some(s => s && ![...CHAT_KINDS, "memory", "user"].includes(s.kind) && nonempty(s.ref))) errors.push("customer source evidence needs an external source pointer");
   }
   if (customer_coverage !== undefined) {
     const c = customer_coverage;
@@ -68,11 +69,11 @@ export function customerOverview(root, { registry = lib.readNames(root), context
     // Retain the latest observation from each source record (or source kind).
     const bySource = new Map();
     for (const m of notes.filter(m => m.customer.basis === "source")) {
-      const key = m.customer.reference ? JSON.stringify(m.customer.reference) : [...new Set(m.source.filter(s => !["codex", "memory"].includes(s.kind)).map(s => s.kind))].sort().join("|");
+      const key = m.customer.reference ? JSON.stringify(m.customer.reference) : [...new Set(m.source.filter(s => ![...CHAT_KINDS, "memory"].includes(s.kind)).map(s => s.kind))].sort().join("|");
       if (!bySource.has(key)) bySource.set(key, m);
     }
     const conflicts = [...bySource.values()].filter(m => m.customer.status !== chosen.customer.status);
-    const refs = uniqueRefs([...(e.references || []), ...notes.flatMap(m => [...(m.customer.reference ? [m.customer.reference] : []), ...m.source.filter(s => !["codex", "memory", "user"].includes(s.kind))])]);
+    const refs = uniqueRefs([...(e.references || []), ...notes.flatMap(m => [...(m.customer.reference ? [m.customer.reference] : []), ...m.source.filter(s => ![...CHAT_KINDS, "memory", "user"].includes(s.kind))])]);
     return { id: e.id, name: e.name, kind: e.kind, status: chosen.customer.status, basis: chosen.customer.basis, observed_at: chosen.customer.observed_at, recorded_at: chosen.at,
       context: chosen.context, memory: chosen.id, summary: chosen.content, references: refs, conflicts: conflicts.map(evidence), history: notes.map(evidence) };
   }).sort((a, b) => a.name.localeCompare(b.name));

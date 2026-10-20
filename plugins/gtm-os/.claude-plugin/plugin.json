@@ -1,0 +1,28 @@
+{
+  "name": "gtm-os",
+  "version": "0.30.0",
+  "description": "Shared company memory for priorities, customers and follow-ups",
+  "author": {
+    "name": "GTM Tech Week"
+  },
+  "license": "MIT",
+  "keywords": [
+    "gtm",
+    "revenue",
+    "brain",
+    "memory",
+    "contexts"
+  ],
+  "hooks": "./hooks/claude-hooks.json",
+  "mcpServers": {
+    "gtm_os": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/server/server.mjs"
+      ],
+      "env": {
+        "GTM_OS_HOST": "claude"
+      }
+    }
+  }
+}

@@ -23,7 +23,8 @@ test("shared policies and memory fields are current in every generated surface",
 test("source edits flag drift without writing, then update every copy and remove stale batch fields", t => {
   const root = mkdtempSync(join(tmpdir(), "gtm-derived-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
-  const files = [script, ontology, policy, "plugins/gtm-os/policies/computer-use.md", ...documents];
+  const files = [script, ontology, policy, "plugins/gtm-os/policies/computer-use.md", ...documents,
+    "plugins/gtm-os/lib/host.mjs", "plugins/gtm-os/.codex-plugin/plugin.json", "plugins/gtm-os/hooks.json"];
   for (const file of files) {
     mkdirSync(dirname(join(root, file)), { recursive: true });
     copyFileSync(join(repo, file), join(root, file));

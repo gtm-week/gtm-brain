@@ -24,6 +24,7 @@ import { requestDashboardRefresh } from './dashboard-refresh.mjs';
 import { MEETING_FIELDS, validateMeetingEvidence, prepareMeetingMemory, duplicateMeetingMemory, meetingMetadata } from './meetings.mjs';
 export { meetingOverview, meetingSourceSuggestions, validateMeetingEvidence, prepareMeetingMemory, meetingMetadata } from './meetings.mjs';
 import { validateCustomerEvidence, guardCustomerCorrection } from "./customers.mjs";
+import { host, hostId, HOST_DIRS } from "./host.mjs";
 export { customerOverview, customerIdentity, validateCustomerEvidence, guardCustomerCorrection } from "./customers.mjs";
 export { updateEntity, mergeEntities, archiveEntity, undoEntityMerge } from "./entity-lifecycle.mjs";
 export { entityFacts, entityBrief, entityRecords, compileEntity, resolveEntity, refreshEntityPages, staleEntities, entityEvidenceIndex, entityType, ENTITY_FORMAT } from "./entities.mjs";
@@ -174,7 +175,7 @@ export function compileBlocked(root, now = Date.now()) {
   try { const s = JSON.parse(readFileSync(join(root, "work", "compile.json"), "utf8")); return s.state === "blocked" && now - Date.parse(s.at) < COMPILE_COOLDOWN_MS; } catch { return false; }
 }
 export function kickCompile(root, { force = false } = {}) {
-  if (process.env.GTM_OS_NO_COMPILE || process.env.GTM_OS_RUN || !compilePlan(root).pending) return false;
+  if (process.env.GTM_OS_NO_COMPILE || process.env.GTM_OS_RUN || !host().compiles() || !compilePlan(root).pending) return false;
   if (!force && compileBlocked(root)) return false;
   try { const script = fileURLToPath(new URL("../scripts/gtm-os-compile/background-compile.sh", import.meta.url)); const child = spawn("bash", [script, root], { detached: true, stdio: "ignore", env: { ...process.env, PLUGIN_ROOT: fileURLToPath(new URL("..", import.meta.url)).replace(/[\\/]$/, ""), ...(force ? { GTM_OS_COMPILE_DELAY: "0" } : {}) } }); child.unref(); return true; } catch { return false; }
 }
@@ -765,12 +766,27 @@ export function writePointer(dir, { brain, slug, title, company, inside = false 
   if (text.includes(POINTER_START)) throw new Error("already a project");
   mkdirSync(dir, { recursive: true });
   writeFileSync(file, text ? text.replace(/\n*$/, "\n\n") + pointerBlock({ brain: resolve(brain), slug, title, company, inside }) : pointerBlock({ brain: resolve(brain), slug, title, company, inside }));
+  ensureRulebookShim(dir);
 }
-export function removePointer(dir) {
-  const file = join(dir, "AGENTS.md"); let text; try { text = readFileSync(file, "utf8"); } catch { return false; }
-  const a = text.indexOf(POINTER_START), b = text.indexOf(POINTER_END); if (a < 0 || b < 0) return false;
-  const rest = (text.slice(0, a) + text.slice(b + POINTER_END.length)).replace(/\n{3,}$/, "\n").replace(/^\n+$/, "");
+/* Claude Code reads CLAUDE.md, not AGENTS.md: a marked block importing AGENTS.md makes the one rulebook
+   (and a project's pointer) load there too. Appended to a CLAUDE.md the person keeps, never rewritten.
+   Returns true when it wrote. */
+export const RULEBOOK_SHIM_START = "<!-- gtm-os rulebook -->", RULEBOOK_SHIM_END = "<!-- /gtm-os rulebook -->";
+export function ensureRulebookShim(dir) {
+  const file = join(dir, "CLAUDE.md"); let text = ""; try { text = readFileSync(file, "utf8"); } catch {}
+  if (/^@AGENTS\.md\s*$/m.test(text)) return false;
+  const block = `${RULEBOOK_SHIM_START}\n@AGENTS.md\n${RULEBOOK_SHIM_END}\n`;
+  writeFileSync(file, text ? text.replace(/\n*$/, "\n\n") + block : block); return true;
+}
+const cutBlock = (file, start, end) => {
+  let text; try { text = readFileSync(file, "utf8"); } catch { return false; }
+  const a = text.indexOf(start), b = text.indexOf(end); if (a < 0 || b < 0) return false;
+  const rest = (text.slice(0, a) + text.slice(b + end.length)).replace(/\n{3,}$/, "\n").replace(/^\n+$/, "");
   if (rest.trim()) writeFileSync(file, rest); else rmSync(file); return true;
+};
+export function removePointer(dir) {
+  if (!cutBlock(join(dir, "AGENTS.md"), POINTER_START, POINTER_END)) return false;
+  cutBlock(join(dir, "CLAUDE.md"), RULEBOOK_SHIM_START, RULEBOOK_SHIM_END); return true;
 }
 /* Where the brain is, from any working directory: cwd is a brain; or cwd or an ancestor up to the git
    root (or the filesystem root) carries the pointer block. Mirrored by hooks/resolve.sh for the shell hooks. */
@@ -794,7 +810,7 @@ export function writeProjects(root, projects) { mkdirSync(join(root, "work"), { 
 export const NOT_COMMITTED = "written to disk, NOT committed (git is read-only here): say save";
 export const NOT_COMMITTED_YET = "written to disk, not committed yet: say save to keep it";
 /* What a save covers: the brain and the plugin-owned files, never work/. */
-export const BRAIN_PATHS = ["brain", "AGENTS.md", ".githooks", ".gitignore", ".gitattributes", ".agents"];
+export const BRAIN_PATHS = ["brain", "AGENTS.md", "CLAUDE.md", ".githooks", ".gitignore", ".gitattributes", ".agents"];
 /* Everything save keeps: the engine's paths, the root README, and the documents with their files (lib/documents.mjs). */
 export function savePathsFor(root) { return [...BRAIN_PATHS, "README.md", ...documentSavePaths(root)].filter(p => existsSync(join(root, p))); }
 /* Every writer calls this once after writing: everything written is kept at once, one commit per
@@ -886,6 +902,8 @@ export function setupBlockers(root, { landing = false } = {}) {
     const path = join(root, name);
     if (lstatSync(path).isSymbolicLink()) return true;
     if ((landing ? /^(\.git|\.DS_Store)$/ : /^(\.git|README(\.md|\.txt)?|\.gitignore|\.DS_Store)$/).test(name)) return false;
+    // An assistant's own folder (Claude Code writes .claude/settings.local.json on a first permission).
+    if (HOST_DIRS.includes(name)) return false;
     if (name !== "work") return true;
     try {
       const files = readdirSync(path);
@@ -975,7 +993,7 @@ export function writeSession(root, input, project = null) {
   let i = input; if (typeof input === "string") { try { i = JSON.parse(input || "{}"); } catch { i = {}; } }
   if (!i || !i.session_id) return null;
   mkdirSync(projectDir(root, project), { recursive: true });
-  const s = { session_id: i.session_id, cwd: i.cwd || "", at: new Date().toISOString() };
+  const s = { session_id: i.session_id, cwd: i.cwd || "", at: new Date().toISOString(), host: hostId() };
   writeFileSync(join(projectDir(root, project), "session.json"), JSON.stringify(s, null, 1)); return s;
 }
 /* Open a URL in the default handler. The dashboard uses the host's Codex pane instead. */
@@ -994,6 +1012,13 @@ export function openExternal(url) {
 
 /* ---------- the chat and the dashboard server (both local, in work/) ---------- */
 export function readSession(root, project = null) { try { return JSON.parse(readFileSync(join(projectDir(root, project), "session.json"), "utf8")); } catch { return null; } }
+/* APPROVE counts only as the person's own last message in this chat: the last prompt hooks/turns.sh
+   logged for the session (any session when the hook names none) starts with the word. */
+export function approvedByPerson(root, session = "") {
+  let prompts = [];
+  try { prompts = readFileSync(join(root, "work", "turns.jsonl"), "utf8").split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(t => t && t.kind === "prompt" && (!session || t.session === session)); } catch {}
+  return /^\s*APPROVE\b/.test(prompts.at(-1)?.text || "");
+}
 export function readDash(root) {
   try { const s = JSON.parse(readFileSync(join(root, "work", "dash.json"), "utf8")); process.kill(s.pid, 0); return s; } catch { return null; }
 }

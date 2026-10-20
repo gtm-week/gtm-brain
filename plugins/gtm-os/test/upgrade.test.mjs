@@ -12,7 +12,8 @@ import { legacyTemplates, rulesWhy, rulesReasons } from "../lib/upgrade-files.mj
 const plugin = new URL("../", import.meta.url).pathname;
 function fixture(t, version = null) {
   const root = mkdtempSync(join(tmpdir(), "gtm-upgrade-release-"));
-  t.after(() => rmSync(root, { recursive: true, force: true }));
+  // The detached render worker can still be writing work/home: retry instead of racing it.
+  t.after(() => rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }));
   const env = { ...process.env, CODEX_HOME: join(root, "profile"), GTM_OS_NO_COMMIT: "1", GTM_OS_NO_OPEN: "1", GTM_OS_NO_COMPILE: "1" };
   const setup = spawnSync("bash", [join(plugin, "scripts/gtm-os-setup/setup.sh"), "--company", "Upgrade Co", "--one-liner", "Testing", "--owner", "Ann Lee <ann@example.test>"], { cwd: root, env, encoding: "utf8" });
   assert.equal(setup.status, 0, setup.stderr);

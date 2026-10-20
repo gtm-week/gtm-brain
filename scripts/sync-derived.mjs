@@ -1,7 +1,8 @@
 // Keep self-contained instructions and the static MCP schema aligned with their sources.
 // Run from any directory: node /path/to/repo/scripts/sync-derived.mjs [--check]
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { dirname } from "node:path";
 
 const root = new URL("../", import.meta.url);
 const check = process.argv.includes("--check");
@@ -42,8 +43,32 @@ properties.memories.items.properties = Object.fromEntries(Object.entries(propert
   .filter(([name]) => !["by", "project", "memories"].includes(name)).map(([name, schema]) => [name, slim(schema, ["content", "sources"].includes(name))]));
 outputs.set(ontologyPath, JSON.stringify(ontology, null, 2) + "\n");
 
+// Claude Code installs the same plugin folder. Its declarations come from the Codex ones, which stay
+// byte for byte as they are: old updaters check .mcp.json, and Codex hook trust is a hash of hooks.json.
+// GTM_OS_HOST=claude in every Claude declaration is how lib/host.mjs knows where it runs.
+const { CLAUDE_TOOLS } = await import(new URL("plugins/gtm-os/lib/host.mjs", root));
+const json = value => JSON.stringify(value, null, 2) + "\n";
+const codexManifest = JSON.parse(read("plugins/gtm-os/.codex-plugin/plugin.json"));
+const { name, version, description, author, license, keywords } = codexManifest;
+outputs.set("plugins/gtm-os/.claude-plugin/plugin.json", json({ name, version, description, author, license, keywords,
+  hooks: "./hooks/claude-hooks.json",
+  // Same name as the root .mcp.json entry, which Claude Code also reads: this one replaces it.
+  mcpServers: { gtm_os: { command: "node", args: ["${CLAUDE_PLUGIN_ROOT}/server/server.mjs"], env: { GTM_OS_HOST: "claude" } } } }));
+outputs.set(".claude-plugin/marketplace.json", json({ name: "gtm-os", owner: author, description,
+  plugins: [{ name, source: "./plugins/gtm-os", description, version }] }));
+const codexHooks = JSON.parse(read("plugins/gtm-os/hooks.json"));
+const claudeMatcher = { PreToolUse: [...CLAUDE_TOOLS.edit, ...CLAUDE_TOOLS.shell].join("|"), SessionStart: "startup|resume|clear|compact" };
+outputs.set("plugins/gtm-os/hooks/claude-hooks.json", json({ description: codexHooks.description,
+  hooks: Object.fromEntries(Object.entries(codexHooks.hooks).map(([event, groups]) => [event, groups.map(g => ({
+    matcher: claudeMatcher[event] || g.matcher,
+    hooks: g.hooks.map(({ statusMessage, ...h }) => {
+      if (!h.command.startsWith('bash "${PLUGIN_ROOT}/')) throw new Error(`hooks.json ${event}: unexpected command ${h.command}`);
+      return { ...h, command: h.command.replace('bash "${PLUGIN_ROOT}/', 'GTM_OS_HOST=claude PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT}" bash "${CLAUDE_PLUGIN_ROOT}/') };
+    }) }))])) }));
+
 // Prepare every output before writing, so a missing marker cannot leave a partial refresh.
-const stale = [...outputs].filter(([path, text]) => read(path) !== text);
+const current = path => { try { return read(path); } catch { return null; } };
+const stale = [...outputs].filter(([path, text]) => current(path) !== text);
 if (check) {
   for (const [path] of stale) console.error(`Out of date: ${path}`);
   if (stale.length) {
@@ -52,6 +77,7 @@ if (check) {
   }
 } else {
   for (const [path, text] of stale) {
+    mkdirSync(dirname(fileURLToPath(new URL(path, root))), { recursive: true });
     writeFileSync(new URL(path, root), text);
     console.log(`Updated ${fileURLToPath(new URL(path, root))}`);
   }

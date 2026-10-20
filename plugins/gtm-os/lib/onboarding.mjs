@@ -1,6 +1,7 @@
 // Onboarding is a workflow over append-only memories, not another ontology object.
 import { resolve } from 'node:path';
 import { readMemories, effectiveMemories, readContext, appendMemory, currentPerson, teamHandle } from './brain.mjs';
+import { host } from './host.mjs';
 
 export const ONBOARDING_VERSION = 2;
 const STEPS = [
@@ -110,5 +111,5 @@ export function onboardingInstruction(root, { project, unattended = !!process.en
 
 export function onboardingResumeLink(root) {
   const prompt = 'I am back to finish setting up GTM OS. Read my saved progress and carry out the next unfinished step, reusing my recorded answers.';
-  return 'codex://threads/new?path=' + encodeURIComponent(resolve(root)) + '&prompt=' + encodeURIComponent(prompt);
+  return host().newChatLink(resolve(root), prompt);
 }

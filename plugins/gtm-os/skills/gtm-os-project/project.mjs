@@ -11,6 +11,7 @@ import { existsSync, mkdirSync, rmSync, realpathSync, readFileSync, writeFileSyn
 import { join, resolve, isAbsolute, basename, dirname, relative, sep } from "node:path";
 import { listCodexProjects } from "../../lib/codex-projects.mjs";
 import { listDocuments } from "../../lib/documents.mjs";
+import { HOST_DIRS } from "../../lib/host.mjs";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const us = await import(new URL("../../lib/user-skills.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = resolve(args[0] && !args[0].startsWith("--") ? args.shift() : ".");
@@ -70,7 +71,7 @@ if (opt.link) {
   if (same(path, root)) refuse(`${path} is the brain itself: the brain is never a project.`);
   const rootReal = realpathSync(root), effectivePath = prospectivePath(path);
   if (below(effectivePath, rootReal)) refuse(`${path} contains the brain; a brain workspace cannot be linked as a project.`);
-  const reserved = new Set(["brain", "work", ".git", ".codex", ".agents"]);
+  const reserved = new Set(["brain", "work", ".git", ...HOST_DIRS, ".agents"]);
   for (const [base, target] of [[root, path], [rootReal, effectivePath]]) {
     if (reserved.has(relative(base, target).split(sep)[0].toLowerCase())) refuse(`${path} is GTM OS internal storage; choose a project folder beside brain/ and work/.`);
   }

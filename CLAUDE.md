@@ -124,13 +124,17 @@ work/                                  gitignored: dashboard, loaded set, tools.
 `plugins/gtm-os/templates/AGENTS.md` and `skills/gtm-os-start/references/questions.md`. The batch
 memory schema in the ontology is derived from `remember.input_schema.properties` the same way.
 Edit the source, run `node scripts/sync-derived.mjs`, commit source and output together.
-`templates/legacy/` snapshots are immutable fixtures and are excluded.
+`templates/legacy/` snapshots are immutable fixtures and are excluded. The Claude Code declarations
+(`plugins/gtm-os/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`,
+`plugins/gtm-os/hooks/claude-hooks.json`) are derived from `.codex-plugin/plugin.json` and `hooks.json`
+the same way; never edit them by hand.
 
 ## Shipping a change
 
 Anything under `plugins/gtm-os/` that users should receive needs a version bump in
 `.codex-plugin/plugin.json`, and the same number in the cache paths in `SETUP.md` and
-`COMMANDS.md` (a test holds them together). Changing `templates/AGENTS.md` first requires a
+`COMMANDS.md` (a test holds them together), then `node scripts/sync-derived.mjs`: the Claude Code
+manifest, marketplace and hooks file are generated from the Codex ones and carry the version. Changing `templates/AGENTS.md` first requires a
 snapshot of the outgoing file in `templates/legacy/AGENTS-<old version>.md` plus a
 `templates/legacy/manifest.json` entry. After editing `hooks.json`, re-run `./dev-install.sh` or
 the hooks stay silently off.

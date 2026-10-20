@@ -16,6 +16,7 @@ import { createInterface } from "node:readline";
 import { loadOntology, buildTools, instructionsText } from "../vendor/allethic/index.mjs";
 import { createFilesBackend } from "./files-backend.mjs";
 import { createMemoryReader } from "./memory-reader.mjs";
+import { host } from "../lib/host.mjs";
 import { validateValue } from "../vendor/allethic/validation.mjs";
 
 const P = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -122,7 +123,7 @@ const TOOLS = [
       const url = started.out.trim().split("\n").pop() || "";
       const r = await run(brain, "gtm-os-render/render.mjs");
       if (!/^http:/.test(url)) return text(`${r.out}${started.err}\nThe dashboard server did not start; the page is at work/home/index.html.`, true);
-      return text(`${r.out}\nDashboard: ${url}  Open it in the in-app browser using open_in_codex with target {type: \"browser\", url: this exact address}, reusing the dashboard tab. This local page needs no login. If the host cannot open the pane, give the URL as a link. Never use Computer Use, Chrome, shell open or web search for the dashboard.`);
+      return text(`${r.out}\n${host().texts.dashboardOpened(url)}`);
     } },
   { name: "advise", title: "Checking how the brain is doing", readOnly: true,
     description: "A health check of the brain from its files: summaries behind or failing, questions nobody answered, tools listed but not connected, names that may be one entity, quiet or empty contexts, people known by a first name only, notes without sources, rules that grew, what every chat loads. Returns three things worth doing and one for this week. Reads only.",
@@ -170,11 +171,11 @@ const TOOLS = [
     inputSchema: schema({ folder: str("The folder the person is in (absolute path); optional") }, []),
     async call({ folder, brain }) {
       const sh = (cmd, args) => new Promise(res => execFile(cmd, args, { timeout: 15000, env: process.env }, (e, out, err) => res(e ? null : String(out || err || "").trim().split("\n")[0])));
-      const [codex, git, login] = await Promise.all([sh("codex", ["--version"]), sh("git", ["--version"]), sh("codex", ["login", "status"])]);
+      const [assistant, git] = await Promise.all([host().environment(sh), sh("git", ["--version"])]);
       const dir = folder || brain || process.cwd(); let what = "not there";
       // the same test setup applies: .git, a README, .gitignore and the plugin's own work/session.json do not count
       try { const files = lib.setupBlockers(dir); what = existsSync(join(dir, "brain", "admin.md")) ? "a brain (set up already)" : files.length ? `not empty (${files.slice(0, 5).join(", ")}${files.length > 5 ? ", ..." : ""}): setup needs an empty folder` : "empty: ready for setup"; } catch {}
-      const lines = [`node ${process.version}`, codex ? codex.replace(/^codex-cli\s*/, "codex ") : "codex: not on PATH (the app's own binary still runs this plugin)", login ? `codex sign-in: ${login}` : "codex sign-in: unknown", git ? git.replace(/^git version /, "git ") : "git: not found (setup needs it)", `folder ${dir}: ${what}`];
+      const lines = [`node ${process.version}`, ...assistant, git ? git.replace(/^git version /, "git ") : "git: not found (setup needs it)", `folder ${dir}: ${what}`];
       if (isBrain(dir)) lines.push(lib.onboardingInstruction(dir));
       return text(lines.join("\n"), !git);
     } },

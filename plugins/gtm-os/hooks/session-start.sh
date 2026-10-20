@@ -5,6 +5,8 @@ set -u
 input="$(cat 2>/dev/null || true)"   # the hook's JSON: session_id, cwd, ...
 P="${PLUGIN_ROOT:-}"
 . "$(dirname "${BASH_SOURCE[0]}")/resolve.sh"
+# What differs between Codex and Claude Code: a line of text, or whether this machine can do something.
+H="$(dirname "${BASH_SOURCE[0]}")/../lib/host.mjs"
 cwd="$(pwd)"; project=""; root="$cwd"
 where="$(gtm_os_resolve "$cwd")" || where=""
 case "$where" in
@@ -27,11 +29,12 @@ interaction_policy() {
   echo "Call GTM OS tools directly when the host lists them as tools. When the host exposes them only inside a code or script cell, call them there: that is the host's tool path, not a workaround. Either way a result is content parts (never stringify it)."
   cat "$P/policies/questions.md" "$P/policies/computer-use.md"
 }
-# In the brain itself Codex has already loaded AGENTS.md, which carries generated copies of both
-# policies: printing them again costs every request of the chat. A linked project folder's AGENTS.md
-# is only a pointer, and an old brain may predate the generated blocks, so those still get them.
+# In the brain itself the host has already loaded AGENTS.md (Claude Code through CLAUDE.md), which
+# carries generated copies of both policies: printing them again costs every request of the chat. A
+# linked project folder's AGENTS.md is only a pointer, and an old brain may predate the generated
+# blocks or the CLAUDE.md import, so those still get them.
 brain_interaction_policy() {
-  if [ -z "$project" ] && grep -q '<!-- generated: questions' "$root/AGENTS.md" 2>/dev/null && grep -q '<!-- generated: computer-use' "$root/AGENTS.md" 2>/dev/null; then
+  if [ -z "$project" ] && node "$H" rulebook "$root" 2>/dev/null && grep -q '<!-- generated: questions' "$root/AGENTS.md" 2>/dev/null && grep -q '<!-- generated: computer-use' "$root/AGENTS.md" 2>/dev/null; then
     echo "Before the first question that uses a form (question, configuration_question, onboarding_question), read $P/skills/gtm-os-start/references/questions.md once for the tool parameters; not before a plain answer, and not again later."
   else
     interaction_policy
@@ -75,13 +78,16 @@ if [ -n "$project" ]; then
 elif [ -n "${GTM_OS_RUN:-}" ]; then
   :
 elif [ -n "$url" ] && [ "$mode" = "always" ]; then
-  echo "Dashboard: $url (saved view in the Codex pane; open only when asked using open_in_codex, never as a prerequisite to answering; no login or Chrome needed)."
+  node "$H" text dashboardAlways "$url"
 elif [ -n "$url" ]; then
-  echo "Dashboard: $url (this brain opens it on demand in the Codex pane; only when someone asks; admin.md dashboard: on-demand)."
+  node "$H" text dashboardOnDemand "$url"
 fi
 echo "brain: $(basename "$root")  ·  admin: brain/admin.md (always loaded)"
-# Other Codex threads are linked, never entered: the person opens them, or not.
-echo "Never switch this chat to another Codex thread and never open one for the person. When another thread is worth checking (the summary run, a scheduled run, an onboarding run, the chat a memory came from as its codex: source), say it in one line and give its link, codex://threads/<id>; the click is theirs. Agents you delegate to report back here."
+# Other chats are linked, never entered: the person opens them, or not.
+node "$H" text chats
+# Claude Code reads CLAUDE.md: without its AGENTS.md import (a brain from before 0.30) the rulebook is named here.
+rules_dir="$root"; [ -n "$project" ] && rules_dir="$cwd"
+node "$H" rulebook "$rules_dir" 2>/dev/null || node "$H" text rulebook "$root"
 node -e 'const l=await import(process.argv[1]);const p=l.currentPerson(process.argv[2]);if(p)console.log("Current person: "+p+" (resolved from this checkout and validated against the team). Reuse this as by; do not ask who the user is again.")' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
 brain_interaction_policy
 echo "Answer the person's request using relevant saved evidence. Never open, inspect or refresh the dashboard before an ordinary answer. Maintenance runs in the background; external source sync runs only when requested or by an approved schedule. An explicit dashboard or sync request follows its normal workflow."
@@ -106,7 +112,9 @@ if [ -n "$loaded" ] && [ -f "$P/scripts/gtm-os-load/load.mjs" ]; then
   echo; echo "Re-loading what was loaded last time${project:+ in project $project}: $loaded"
   lo="$( cd "$root" && node "$P/scripts/gtm-os-load/load.mjs" . $loaded --only --last 0 ${project:+--project "$project"} 2>/dev/null )"; printf '%s\n' "$lo"
   # compile: background: a separate run updates them; the chat never compiles and never offers to
-  if printf '%s' "$lo" | grep -q 'summary updating'; then
+  if printf '%s' "$lo" | grep -q 'summary updating' && ! node "$H" can compile; then
+    echo; node "$H" text noCompile
+  elif printf '%s' "$lo" | grep -q 'summary updating'; then
     ( cd "$root" && node -e 'const l=await import(process.argv[1]);l.kickCompile(".")' "$P/lib/brain.mjs" >/dev/null 2>&1 & )
     echo; echo "compile: background (brain/admin.md): the summaries that are behind will be updated by a separate run shortly (after each saved change). Use those words, 'summary updating shortly'; never 'behind', never compile or offer to compile in this chat."
   fi
@@ -119,7 +127,7 @@ if [ -f "$root/work/tools.json" ]; then
   tools="$(node -e 'try{const t=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));console.log(Object.values(t).map(x=>`${(x.tool||"").toLowerCase().replace(/\s*\(.*\)$/,"")} ${x.status==="installed"?(x.test==="ok"?"●":"○"):x.declined?"skipped":"✕"}`).join("  "))}catch{console.log("")}' "$root/work/tools.json")"
   [ -n "$tools" ] && echo "tools: $tools   (● read test ok, ○ installed not tested, ✕ not connected, skipped = declined, never offered again; say: connect my tools)"
 else
-  echo "tools: not checked yet in this Codex. Say: connect my tools."
+  node "$H" text toolsUnchecked
 fi
 # The documents (root Markdown with kind: document): what the work must follow, named every chat so rule 11
 # has something to point at; absolute paths in a linked project, where the landing pages get built.
@@ -133,14 +141,14 @@ node -e 'const w=await import(process.argv[1]);const l=w.runsLine(process.argv[2
 node -e 'const u=await import(process.argv[1]);const o=u.rulesOffer(process.argv[2],process.argv[3]);if(o)console.log(o)' "$P/lib/upgrade-files.mjs" "$root" "$P/templates" 2>/dev/null || true
 # A newer GTM OS where this install came from: checked in the background at most once a day (a shallow
 # fetch of one ref, never in the hook's own time); the last result is said here and shown on the page.
-if [ -z "${GTM_OS_NO_VERSION_CHECK:-}" ] && [ -f "$P/scripts/gtm-os-update-plugin/check-version.mjs" ] && command -v codex >/dev/null 2>&1; then
+if [ -z "${GTM_OS_NO_VERSION_CHECK:-}" ] && [ -f "$P/scripts/gtm-os-update-plugin/check-version.mjs" ] && node "$H" can update-check; then
   # due: no check yet, a check older than a day, or a check made by another version of the plugin (ALL-211)
   due="$(node -e 'try{const s=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")),v=JSON.parse(require("fs").readFileSync(process.argv[2],"utf8")).version;console.log(Date.now()-Date.parse(s.checkedAt||0)>86400000||s.installed!==v?"yes":"")}catch{console.log("yes")}' "$root/work/plugin-version.json" "$P/.codex-plugin/plugin.json")"
   [ -n "$due" ] && ( cd "$root" && nohup node "$P/scripts/gtm-os-update-plugin/check-version.mjs" . >/dev/null 2>&1 & )
 fi
 pv="$(node -e 'try{const s=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));if(s.status==="newer")console.log(`${s.latest} (installed ${s.installed})`)}catch{}' "$root/work/plugin-version.json" 2>/dev/null)"
 pv_latest="${pv%% *}"; pv_installed="${pv#*installed }"; pv_installed="${pv_installed%)}"
-[ -n "$pv" ] && echo "GTM OS UPDATE available: $pv. Offer once, in one line, in these words: \"You are on $pv_installed, GTM OS $pv_latest is available. Say: update GTM OS. When it finishes, quit and reopen Codex, then start a new chat in this folder.\" Never run it without a yes (skill gtm-os-configure). If the update says Codex's copy is behind GitHub, the fix is git's own GitHub sign-in: gh auth login, then gh auth setup-git."
+[ -n "$pv" ] && node "$H" can update-check && echo "GTM OS UPDATE available: $pv. Offer once, in one line, in these words: \"You are on $pv_installed, GTM OS $pv_latest is available. Say: update GTM OS. When it finishes, quit and reopen Codex, then start a new chat in this folder.\" Never run it without a yes (skill gtm-os-configure). If the update says Codex's copy is behind GitHub, the fix is git's own GitHub sign-in: gh auth login, then gh auth setup-git."
 echo "Dashboard maintenance requested in the background. Use open_dashboard when the person asks to see it."
 printf '%s  SessionStart  loaded=%s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "${loaded:-none}" >> "$root/work/hooks.log"
 exit 0

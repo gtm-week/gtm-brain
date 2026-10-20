@@ -23,6 +23,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { prepareAsset, assetSummary } from '../../lib/assets.mjs';
 import { join } from "node:path";
+import { isChatSource } from "../../lib/host.mjs";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
 const opt = { source: [], action: [] };
@@ -45,10 +46,11 @@ if (args.includes("--project") && (opt.project === undefined || opt.project === 
 const project = opt.project || null;
 if (project) { const known = lib.readProjects(root).map(p => p.slug); if (!known.includes(project)) die(`no project ${project}; projects: ${known.join(", ") || "none"}`, 2); }
 const loaded = lib.readLoaded(root, project);
-// The chat this note came from is a source too: codex:<thread id>, from work/session.json (the
-// session hook writes it). A separate run (GTM_OS_RUN: the background summary run, a dashboard
-// job, a scheduled run) is nobody's conversation, so it attaches nothing.
-const chat = process.env.GTM_OS_RUN ? null : lib.readSession(root, project)?.session_id || null;
+// The chat this note came from is a source too: codex:<thread id> or claude:<session id>, from
+// work/session.json (the session hook writes it with its host). A separate run (GTM_OS_RUN: the
+// background summary run, a dashboard job, a scheduled run) is nobody's conversation, so it attaches nothing.
+const session = process.env.GTM_OS_RUN ? null : lib.readSession(root, project);
+const chat = session?.session_id || null, chatKind = session?.host || "codex";
 const authors = list(opt.by).map(w => { const h = lib.teamHandle(root, w); if (!h) die(`"${w}" is not in admin.md team`); return h; });
 if (!authors.length) die("need --by <person>");
 
@@ -98,7 +100,7 @@ const problems = entries.map((e, i) => {
   }
   return null;
 }).filter(Boolean);
-const withChat = source => chat && !source.some(s => s.kind === "codex") ? [...source, { kind: "codex", ref: chat }] : source;
+const withChat = source => chat && !source.some(isChatSource) ? [...source, { kind: chatKind, ref: chat }] : source;
 if (problems.length) die(`nothing remembered: ${problems.join("; ")}. Fix these and call again with all the entries.`);
 for (let i = 0; i < entries.length; i++) {
   const e = entries[i] || {}, n = i + 1;
@@ -119,7 +121,7 @@ for (let i = 0; i < entries.length; i++) {
   }
   if (e.customer) {
     const entity = lib.resolveEntity(lib.readNames(root), customerName);
-    const refs = list => JSON.stringify(list.filter(s => s.kind !== "codex").map(s => [s.kind, s.ref]).sort());
+    const refs = list => JSON.stringify(list.filter(s => !isChatSource(s)).map(s => [s.kind, s.ref]).sort());
     const prior = lib.effectiveMemories(lib.readMemories(root, ctx)).find(m => m.customer && !m.retracts &&
       lib.resolveEntity(lib.readNames(root), m.customer.entity)?.id === entity?.id && m.content === e.content.trim() &&
       ["status", "basis", "observed_at"].every(k => m.customer[k] === e.customer[k]) &&

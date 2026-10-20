@@ -33,10 +33,13 @@ if [ -n "${where#*$'\t'}" ]; then
   real_root="$(cd "$logdir" && pwd -P)"
   case "$(cd "$cwd" && pwd -P)/" in "$real_root"/*) ;; *) outside=1;; esac
 fi
-# Patch contents can quote brain paths while editing plugin source. Inspect actual targets only.
-if [ "$tool" = "apply_patch" ]; then
-  input="$(printf '%s' "$input" | node -e 'const fs=require("node:fs");const x=JSON.parse(fs.readFileSync(0,"utf8"));const p=typeof x.tool_input==="string"?x.tool_input:x.tool_input?.input||x.tool_input?.patch||"";const targets=p.split(/\n/).filter(l=>/^\*\*\* (?:Add File|Update File|Delete File|Move to): /.test(l));console.log(targets.length?targets.join("\n"):JSON.stringify(x.tool_input))')" || exit 2
-fi
+session="$(printf '%s' "$input" | sed -n 's/.*"session_id":"\([^"]*\)".*/\1/p' | head -1)"
+# What to check comes from lib/host.mjs: an edit's targets only (patch contents can quote brain paths
+# while editing plugin source), a Claude shell call's command only (its payload always names
+# ~/.claude), a Codex shell call's whole payload. foreign is the other assistant's home folder.
+gi="$(printf '%s' "$input" | node "$(dirname "${BASH_SOURCE[0]}")/../lib/host.mjs" gate-input)" || exit 2
+kind="${gi%%$'\n'*}"; gi="${gi#*$'\n'}"; foreign="${gi%%$'\n'*}"; gi="${gi#*$'\n'}"
+foreign_reason="${gi%%$'\n'*}"; input="${gi#*$'\n'}"
 # Outside the brain a brain/ path is the repo's own unless it runs through the brain's folder.
 if [ -n "$outside" ]; then
   # bash 3.2 splits a pattern at a literal slash even inside quotes: patterns go through variables.
@@ -48,20 +51,32 @@ fi
 paths="$(printf '%s' "$input" | grep -oE 'brain/[A-Za-z0-9_./-]+' | sort -u | tr '\n' ' ')"
 log() { mkdir -p "$logdir/work" 2>/dev/null; printf '%s  PreToolUse  %-5s  paths=%s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$1" "${paths:-none}" >> "$logdir/work/hooks.log" 2>/dev/null || true; }
 deny() { log DENY; printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"%s"}}\n' "$1"; printf 'gtm-os: %s\n' "$1" >&2; exit 2; }
-# ~/.claude is Claude's own memory, reads included: Codex has no business in it. The only
-# path is IMPORT.md run inside the other assistant, which writes ~/.gtm-os/handoff.md.
-# Checked before the read/write split below, because for this path a read is also denied.
-if [ -z "$outside" ] && printf '%s' "$input" | grep -qE '\.claude([./"'"'"'[:space:]]|$)'; then
-  deny 'Files under .claude belong to Claude and are off limits, reads included. To import what Claude knows, have Claude read IMPORT.md from the GTM OS repository (or run the plugin gtm-os-export skill with claude -p); it writes ~/.gtm-os/handoff.md, and the gtm-os-start skill reads that.'
+# The other assistant's home (~/.claude under Codex, ~/.codex under Claude Code) is its own memory,
+# reads included. The only path is IMPORT.md run inside the other assistant, which writes
+# ~/.gtm-os/handoff.md. Checked before the read/write split below, because a read is also denied.
+if [ -z "$outside" ] && printf '%s' "$input" | grep -qE "\\.${foreign#.}"'([./"'"'"'[:space:]]|$)'; then
+  deny "$foreign_reason"
 fi
-case "$tool" in
-  apply_patch|"") ;;
+# APPROVE is the person's word, not the model's: applying a proposal needs this chat's last prompt
+# (work/turns.jsonl, written by turns.sh) to start with APPROVE. Auto modes skip the permission prompt.
+if [ "$kind" != edit ] && printf '%s' "$input" | grep -q 'gtm-os-approve/approve\.mjs' && printf '%s' "$input" | grep -qE -- '--(apply|interaction)'; then
+  node -e 'const l=await import(process.argv[1]);process.exit(l.approvedByPerson(process.argv[2],process.argv[3])?0:1)' "$(dirname "${BASH_SOURCE[0]}")/../lib/brain.mjs" "$logdir" "$session" 2>/dev/null \
+    || deny 'Applying a proposal needs the person to type APPROVE as their own last message in this chat. Ask them to type APPROVE; never run it on another answer.'
+fi
+case "$kind:$tool" in
+  edit:*|*:) ;;
   *) # a shell command: only writes are denied
-    if ! printf '%s' "$input" | grep -qE '(>|\\u003e|\btee\b|sed +(--in-place(=|[[:space:]]|$)|-[a-zA-Z]*i)|perl +-[a-zA-Z]*i|\brm\b|\bmv\b|\bcp\b|\btruncate\b|writeFile|open\([^)]*["'"'"'](w|a)|\bdd\b|\bpython3? +-c\b)'; then
+    if ! printf '%s' "$input" | grep -qE '(>|\\u003e|\btee\b|sed +(--in-place(=|[[:space:]]|$)|-[a-zA-Z]*i)|perl +-[a-zA-Z]*i|\brm\b|\bmv\b|\bcp\b|\btruncate\b|writeFile|appendFile|open\([^)]*["'"'"'](w|a)|\bdd\b|\bpython3? +-c\b)'; then
       printf '%s\n' "$input" >/dev/null; exit 0
     fi;;
 esac
 
+# The prompt log is the evidence APPROVE is checked against: only the turns hook writes it. Any
+# spelling counts (cd work && ... turns.jsonl). Like every path rule here this is a guard, not a
+# sandbox: the host's own permission prompt stays the second factor.
+if printf '%s' "$input" | grep -q 'turns\.jsonl'; then
+  deny 'work/turns.jsonl is the record of what the person typed and is written only by GTM OS itself.'
+fi
 if printf '%s' "$input" | grep -qE 'brain/contexts/[^/"]+/memories\.jsonl'; then
   deny 'memories.jsonl is append-only and written only by the remember tool. Use remember.'
 fi

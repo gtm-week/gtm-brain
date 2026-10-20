@@ -1,0 +1,15 @@
+{
+  "name": "gtm-os",
+  "owner": {
+    "name": "GTM Tech Week"
+  },
+  "description": "Shared company memory for priorities, customers and follow-ups",
+  "plugins": [
+    {
+      "name": "gtm-os",
+      "source": "./plugins/gtm-os",
+      "description": "Shared company memory for priorities, customers and follow-ups",
+      "version": "0.30.0"
+    }
+  ]
+}

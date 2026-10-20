@@ -80,7 +80,7 @@ for (const mode of ['existing', 'new']) test(`${mode} project: MCP link, session
   if (mode === 'new') {
     assert.match(linked, /Created Website Test/);
     assert.doesNotMatch(linked, /channels|loaded:/i);
-    assert.deepEqual(readdirSync(project), ['AGENTS.md']);
+    assert.deepEqual(readdirSync(project), ['AGENTS.md', 'CLAUDE.md'], 'the pointer, and its import for Claude Code');
     assert.deepEqual(lib.readLoaded(f.root, slug), []);
   }
   const pointer = lib.readPointer(project);
@@ -189,6 +189,7 @@ for (const mode of ['existing', 'new']) test(`${mode} project: MCP link, session
   const notesBefore = readFileSync(join(f.root, 'brain/contexts/market/memories.jsonl'), 'utf8');
   f.call('unlink_project', { slug });
   assert.equal(lib.readPointer(project), null);
+  assert.equal(existsSync(join(project, 'CLAUDE.md')), false, 'the Claude Code import goes with the pointer');
   assert.equal(readFileSync(join(f.root, 'brain/contexts/market/memories.jsonl'), 'utf8'), notesBefore);
   let unlinked = await getData(); const unlinkDeadline = Date.now() + 9000;
   while (unlinked.projects.some(p => p.slug === slug) && Date.now() < unlinkDeadline) {

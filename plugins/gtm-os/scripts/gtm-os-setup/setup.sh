@@ -67,6 +67,8 @@ node -e 'const l=await import(process.argv[1]); l.writeNames(".", l.readNames(".
 
 # 3. AGENTS.md, gitignore, hooks
 sed -e "s|{{COMPANY}}|$(esc "$COMPANY")|g" "$T/AGENTS.md" > AGENTS.md
+# Claude Code reads CLAUDE.md: it imports the same rulebook.
+node -e 'const l=await import(process.argv[1]);l.ensureRulebookShim(".")' "$PLUGIN/lib/brain.mjs"
 # The root README says what goes where (documents, projects, brain/); a README the person wrote stays.
 [ -f README.md ] || sed -e "s|{{COMPANY}}|$(esc "$COMPANY")|g" "$T/README.md" > README.md
 # strategy.md from day one: a draft document waiting for the strategic intake (gtm-os-strategy); a file already there is the person's.
@@ -92,7 +94,7 @@ OWNER_EMAIL="$(printf '%s' "$PEOPLE_JSON" | node -e 'const p=JSON.parse(require(
 [ -n "$OWNER_NAME" ] && git config user.name "$OWNER_NAME"; [ -n "$OWNER_EMAIL" ] && git config user.email "$OWNER_EMAIL"
 # Parallel branches (worktrees) merge notes as lines and keep the newer summary: .gitattributes, post-merge.
 node -e 'const l=await import(process.argv[1]);l.ensureMergeSetup(".")' "$PLUGIN/lib/brain.mjs" 2>/dev/null || true
-if git add -- brain AGENTS.md README.md strategy.md workflows .gitignore .gitattributes .githooks && git -c commit.gpgsign=false commit -q -m "setup: $COMPANY brain (gtm-os v0)"; then
+if git add -- brain AGENTS.md CLAUDE.md README.md strategy.md workflows .gitignore .gitattributes .githooks && git -c commit.gpgsign=false commit -q -m "setup: $COMPANY brain (gtm-os v0)"; then
   echo "gtm-os: brain created for $COMPANY  ·  committed"
 else
   echo "gtm-os: brain created for $COMPANY  ·  written to disk, NOT committed (git is read-only here): say save"
