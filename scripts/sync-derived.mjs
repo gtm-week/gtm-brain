@@ -50,12 +50,14 @@ const { CLAUDE_TOOLS } = await import(new URL("plugins/gtm-os/lib/host.mjs", roo
 const json = value => JSON.stringify(value, null, 2) + "\n";
 const codexManifest = JSON.parse(read("plugins/gtm-os/.codex-plugin/plugin.json"));
 const { name, version, description, author, license, keywords } = codexManifest;
-outputs.set("plugins/gtm-os/.claude-plugin/plugin.json", json({ name, version, description, author, license, keywords,
+// The version lives in plugin.json only (the docs: never in both). The app shows displayName; Claude Code has no logo field (validate rejects one).
+const { displayName } = codexManifest.interface, category = codexManifest.interface.category.toLowerCase();
+outputs.set("plugins/gtm-os/.claude-plugin/plugin.json", json({ name, displayName, version, description, author, license, keywords,
   hooks: "./hooks/claude-hooks.json",
   // Same name as the root .mcp.json entry, which Claude Code also reads: this one replaces it.
   mcpServers: { gtm_os: { command: "node", args: ["${CLAUDE_PLUGIN_ROOT}/server/server.mjs"], env: { GTM_OS_HOST: "claude" } } } }));
 outputs.set(".claude-plugin/marketplace.json", json({ name: "gtm-os", owner: author, description,
-  plugins: [{ name, source: "./plugins/gtm-os", description, version }] }));
+  plugins: [{ name, displayName, source: "./plugins/gtm-os", description, category }] }));
 const codexHooks = JSON.parse(read("plugins/gtm-os/hooks.json"));
 const claudeMatcher = { PreToolUse: [...CLAUDE_TOOLS.edit, ...CLAUDE_TOOLS.shell].join("|"), SessionStart: "startup|resume|clear|compact" };
 outputs.set("plugins/gtm-os/hooks/claude-hooks.json", json({ description: codexHooks.description,

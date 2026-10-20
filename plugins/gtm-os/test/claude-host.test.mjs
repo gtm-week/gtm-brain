@@ -47,7 +47,8 @@ test("Claude declarations are generated from the Codex ones and name only script
   const codex = JSON.parse(readFileSync(join(P, ".codex-plugin/plugin.json"), "utf8"));
   const manifest = JSON.parse(readFileSync(join(P, ".claude-plugin/plugin.json"), "utf8"));
   const market = JSON.parse(readFileSync(join(repo, ".claude-plugin/marketplace.json"), "utf8"));
-  assert.equal(manifest.version, codex.version); assert.equal(market.plugins[0].version, codex.version);
+  assert.equal(manifest.version, codex.version); assert.equal(market.plugins[0].version, undefined, "plugin.json alone holds the version");
+  assert.equal(manifest.displayName, codex.interface.displayName); assert.equal(market.plugins[0].displayName, codex.interface.displayName);
   assert.equal(market.plugins[0].source, "./plugins/gtm-os");
   assert.equal(manifest.mcpServers.gtm_os.env.GTM_OS_HOST, "claude");
   const hooks = JSON.parse(readFileSync(join(P, manifest.hooks), "utf8")).hooks;

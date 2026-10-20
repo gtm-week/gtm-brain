@@ -18,15 +18,18 @@ For a walkthrough, see [Getting started](ONBOARDING.md).
 
 ## Set up GTM OS in Claude Code (beta)
 
-In Claude Code 2.1.275 or later, run:
+In Claude Code, run:
 
 ```text
-/plugin install gtm-os --marketplace gtm-week/gtm-os
+/plugin marketplace add gtm-week/gtm-os
+/plugin install gtm-os@gtm-os
 ```
 
-On an older version, run `/plugin marketplace add gtm-week/gtm-os` first, then `/plugin install gtm-os@gtm-os`.
-You need GitHub access to this private repository, the same as for Codex. Then make an empty folder,
-start `claude` in it and say: set up a company brain here.
+In the Claude desktop app:
+1. Choose Add marketplace, enter `https://github.com/gtm-week/gtm-os.git` and click Add.
+2. Click Sync.
+3. Install gtm-os from the marketplace. You need GitHub access to this private repository, the same as for Codex.
+Then make an empty folder, start a session in it and say: set up a company brain here.
 
 These work as they do in Codex:
 - setup and onboarding
@@ -39,7 +42,8 @@ The dashboard opens as a link in your browser.
 
 Not in the beta yet:
 - Context summaries compile only when Codex is also installed on the machine.
-- Update GTM OS with `/plugin update gtm-os@gtm-os`, then `/reload-plugins`.
+- Updates are not automatic for this marketplace: turn on auto-update under `/plugin` > Marketplaces > gtm-os,
+  or run `/plugin update gtm-os@gtm-os`, then `/reload-plugins`.
 - Connector checks (connect my tools) and the dashboard's chat buttons are Codex-only.
 - Some skill texts still name Codex.
 
