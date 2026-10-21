@@ -28,8 +28,9 @@ const read = path => { try { return readFileSync(join(brain, path), "utf8"); } c
 
 let session = null;
 function turn(prompt) {
-  const r = spawnSync("claude", ["-p", "--plugin-dir", plugin, "--model", model, "--permission-mode", "bypassPermissions",
-    "--output-format", "json", ...(session ? ["--resume", session] : []), prompt], { cwd: brain, env, encoding: "utf8", timeout: 600_000 });
+  const r = spawnSync("claude", ["-p", "--plugin-dir", plugin, "--model", model, "--permission-mode", "default",
+    // only what the four turns need: the GTM OS tools, Read, Edit for the guard, node for the APPROVE step
+    "--allowedTools", "mcp__plugin_gtm-os_gtm_os__*", "Read", "Edit", "Bash(node:*)", "--output-format", "json", ...(session ? ["--resume", session] : []), prompt], { cwd: brain, env, encoding: "utf8", timeout: 600_000 });
   let out = {}; try { out = JSON.parse(r.stdout); } catch {}
   session ||= out.session_id;
   return String(out.result || r.stderr || "").replace(/\s+/g, " ").slice(0, 300);
