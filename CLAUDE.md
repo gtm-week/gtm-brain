@@ -28,6 +28,7 @@ node --test --test-name-pattern='<regex>' plugins/gtm-os/test/brain.test.mjs   #
 
 node plugins/gtm-os/test/live/harness-bench.mjs         # live Codex A/B: bare / plugin / brain on 3 tasks (~4 min)
 node plugins/gtm-os/test/live/tool-routing.mjs skills   # live Codex through five skills on a seeded brain; one case: skill-todo
+node plugins/gtm-os/test/live/claude-smoke.mjs          # live Claude Code: setup, the admin.md guard, go ahead vs APPROVE (~2 min)
 
 node scripts/sync-derived.mjs                           # regenerate derived blocks and schema
 node scripts/sync-derived.mjs --check                   # report drift only (the suite runs this)
@@ -48,7 +49,8 @@ not `*.test.mjs` files and are not part of the suite.
 the harness bench when the push changes anything under `plugins/gtm-os/` but `test/`. The bench
 fails when the plugin makes Codex solve fewer tasks than without it, adds more prompt tokens than
 `GTM_OS_BENCH_MAX_OVERHEAD`, or calls GTM OS tools for a self-contained puzzle.
-`GTM_OS_SKIP_BENCH=1 git push` skips it.
+`GTM_OS_SKIP_BENCH=1 git push` skips it. Then, when `claude` is on PATH, the Claude Code smoke runs the
+same checkout through four `claude -p` turns; `GTM_OS_SKIP_CLAUDE=1` skips it.
 
 `dev-reset.sh` only wipes a folder that is empty or that it created itself (tracked in the
 gitignored `.dev-brains`); it never deletes a real brain.

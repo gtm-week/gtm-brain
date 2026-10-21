@@ -208,6 +208,9 @@ in a brain, in throwaway Codex profiles with this checkout installed. It fails w
 costs solved tasks, adds more prompt tokens than `GTM_OS_BENCH_MAX_OVERHEAD` (default 14000) or
 calls GTM OS tools for the puzzle. Traces of every run stay in its artifacts folder.
 `GTM_OS_SKIP_BENCH=1 git push` skips it.
+Then [the Claude Code smoke](plugins/gtm-os/test/live/claude-smoke.mjs) runs this checkout in `claude -p`
+(setup, the guard on `admin.md`, "go ahead" refused, APPROVE applied), so a fix for one host
+cannot quietly break the other. `GTM_OS_SKIP_CLAUDE=1 git push` skips it.
 
 ## Maintaining shared text and schemas
 

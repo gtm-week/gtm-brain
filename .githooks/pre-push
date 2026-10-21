@@ -5,6 +5,7 @@
 # Enabled by ./dev-install.sh (git config core.hooksPath .githooks).
 #   GTM_OS_SKIP_BENCH=1 git push    skip the benchmark (say why in the PR or commit)
 #   GTM_OS_SKIP_TESTS=1 git push    skip the suite too
+#   GTM_OS_SKIP_CLAUDE=1 git push   skip the Claude Code smoke (setup, guard, APPROVE; about 2 minutes)
 set -eu
 root="$(git rev-parse --show-toplevel)"
 zero=0000000000000000000000000000000000000000
@@ -26,3 +27,7 @@ if [ -z "$changed" ]; then echo "pre-push: nothing under plugins/gtm-os/ changed
 if [ "${GTM_OS_SKIP_BENCH:-}" = 1 ]; then echo "pre-push: harness bench skipped (GTM_OS_SKIP_BENCH=1)"; exit 0; fi
 echo "pre-push: harness bench (bare / plain / brain, about 4 minutes)"
 node "$root/plugins/gtm-os/test/live/harness-bench.mjs" </dev/null
+if [ "${GTM_OS_SKIP_CLAUDE:-}" = 1 ]; then echo "pre-push: Claude Code smoke skipped (GTM_OS_SKIP_CLAUDE=1)"; exit 0; fi
+command -v claude >/dev/null || { echo "pre-push: claude not on PATH, Claude Code smoke skipped"; exit 0; }
+echo "pre-push: Claude Code smoke (setup, guard, APPROVE; about 2 minutes)"
+node "$root/plugins/gtm-os/test/live/claude-smoke.mjs" </dev/null
