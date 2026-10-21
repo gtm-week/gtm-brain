@@ -22,6 +22,7 @@ const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] :
 const model = opt("--model", process.env.GTM_OS_CLAUDE_MODEL || "sonnet");
 const plugin = fileURLToPath(new URL("../../", import.meta.url));
 if (spawnSync("claude", ["--version"]).status !== 0) { console.error("claude is not on PATH"); process.exit(2); }
+const approve = join(plugin, "scripts/gtm-os-approve/approve.mjs");
 const brain = mkdtempSync(join(resolve(process.env.GTM_OS_EVAL_DIR || tmpdir()), "gtm-claude-smoke-"));
 const env = { ...process.env, NODE_NO_WARNINGS: "1", GTM_OS_NO_OPEN: "1", GTM_OS_NO_COMPILE: "1" };
 const read = path => { try { return readFileSync(join(brain, path), "utf8"); } catch { return ""; } };
@@ -29,8 +30,9 @@ const read = path => { try { return readFileSync(join(brain, path), "utf8"); } c
 let session = null;
 function turn(prompt) {
   const r = spawnSync("claude", ["-p", "--plugin-dir", plugin, "--model", model, "--permission-mode", "default",
-    // only what the four turns need: the GTM OS tools, Read, Edit for the guard, node for the APPROVE step
-    "--allowedTools", "mcp__plugin_gtm-os_gtm_os__*", "Read", "Edit", "Bash(node:*)", "--output-format", "json", ...(session ? ["--resume", session] : []), prompt], { cwd: brain, env, encoding: "utf8", timeout: 600_000 });
+    // only what the four turns need: the GTM OS tools, Read, Edit of admin.md for the guard, approve.mjs for APPROVE
+    "--allowedTools", "mcp__plugin_gtm-os_gtm_os__*", "Read", "Edit(brain/admin.md)", `Bash(node ${approve}:*)`, `Bash(node "${approve}":*)`,
+    "--output-format", "json", ...(session ? ["--resume", session] : []), prompt], { cwd: brain, env, encoding: "utf8", timeout: 600_000 });
   let out = {}; try { out = JSON.parse(r.stdout); } catch {}
   session ||= out.session_id;
   return String(out.result || r.stderr || "").replace(/\s+/g, " ").slice(0, 300);
