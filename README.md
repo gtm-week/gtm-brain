@@ -42,8 +42,9 @@ The dashboard opens as a link in your browser.
 
 Not in the beta yet:
 - Context summaries compile only when Codex is also installed on the machine.
-- Updates are not automatic for this marketplace: turn on auto-update under `/plugin` > Marketplaces > gtm-os,
-  or run `/plugin update gtm-os@gtm-os`, then `/reload-plugins`.
+- Updates are not automatic for this marketplace. From 0.30.3, GTM OS says when a new version is out:
+  say "update GTM OS", then `/reload-plugins`. On an older version, run
+  `claude plugin marketplace update gtm-os && claude plugin update gtm-os@gtm-os` once.
 - Connector checks (connect my tools) and the dashboard's chat buttons are Codex-only.
 - Some skill texts still name Codex.
 

@@ -161,3 +161,50 @@ test("gate input: Codex apply_patch targets only, Codex shell the whole payload,
   assert.deepEqual([gateInput(shell, {}).kind, gateInput(shell, {}).text], ["raw", shell]);
   assert.equal(gateInput(shell, claude).kind, "raw", "a Codex tool name means nothing to the Claude parser");
 });
+
+// A fake `claude plugin`: the marketplace is a folder whose plugins/gtm-os is this checkout, the install a JSON file.
+function fakeClaude(t, state) {
+  const dir = mkdtempSync(join(tmpdir(), "gtm-os-fake-claude-")), market = join(dir, "market");
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  mkdirSync(join(market, "plugins"), { recursive: true }); execFileSync("ln", ["-s", P, join(market, "plugins", "gtm-os")]);
+  writeFileSync(join(dir, "state.json"), JSON.stringify(state)); writeFileSync(join(dir, "calls"), "");
+  writeFileSync(join(dir, "claude"), `#!/usr/bin/env node
+const fs = require("fs"), d = ${JSON.stringify(dir)}, a = process.argv.slice(2), s = JSON.parse(fs.readFileSync(d + "/state.json", "utf8"));
+fs.appendFileSync(d + "/calls", a.join(" ") + "\\n");
+const v = JSON.parse(fs.readFileSync(${JSON.stringify(join(P, ".codex-plugin/plugin.json"))}, "utf8")).version;
+if (a.join(" ") === "plugin list --json") console.log(JSON.stringify(s.version ? [{ id: "gtm-os@gtm-os", version: s.version, scope: "user", enabled: s.enabled, installPath: ${JSON.stringify(P)} }] : []));
+else if (a.join(" ") === "plugin marketplace list --json") console.log(JSON.stringify([{ name: "gtm-os", source: "directory", path: ${JSON.stringify(market)}, installLocation: ${JSON.stringify(market)} }]));
+else if (a[1] === "update" || a[1] === "install") fs.writeFileSync(d + "/state.json", JSON.stringify({ ...s, version: v }));
+else if (a.join(" ") !== "plugin marketplace update gtm-os") process.exit(2);
+`, { mode: 0o755 });
+  const run = (script, ...args) => spawnSync(process.execPath, [join(P, "scripts/gtm-os-update-plugin", script), ...args], { cwd: dir, encoding: "utf8",
+    env: { ...process.env, ...claude, PATH: `${dir}:${process.env.PATH}`, CLAUDE_CONFIG_DIR: dir } });
+  return { dir, run, calls: () => readFileSync(join(dir, "calls"), "utf8").trim().split("\n") };
+}
+
+test("Claude Code: update_plugin runs the Claude updater, which refreshes through claude plugin and says /reload-plugins", t => {
+  assert.equal(host(claude).plugin.updateScript, "update-claude.mjs"); assert.equal(host({}).plugin.updateScript, "update.mjs");
+  const f = fakeClaude(t, { version: "0.29.0", enabled: true });
+  const r = f.run("update-claude.mjs", "--update");
+  assert.equal(r.status, 0, r.stderr);
+  const v = JSON.parse(readFileSync(join(P, ".codex-plugin/plugin.json"), "utf8")).version;
+  assert.match(r.stdout, new RegExp(`GTM OS refreshed: 0\\.29\\.0 -> ${v.replaceAll(".", "\\.")}`));
+  assert.match(r.stdout, /Connector: GTM OS .* starts and lists \d+ tools/);
+  assert.match(r.stdout, /\/reload-plugins/); assert.doesNotMatch(r.stdout, /Codex/);
+  assert.deepEqual(f.calls().filter(c => !c.endsWith("--json")), ["plugin marketplace update gtm-os", "plugin update gtm-os@gtm-os --scope user"]);
+});
+
+test("Claude Code: a disabled plugin is not updated, and says where to enable it", t => {
+  const f = fakeClaude(t, { version: "0.29.0", enabled: false });
+  const r = f.run("update-claude.mjs", "--update");
+  assert.equal(r.status, 1); assert.match(r.stderr, /disabled\. Enable it in Claude Code \(\/plugin\)/);
+  assert.ok(!f.calls().some(c => c.startsWith("plugin update")), "nothing installed");
+});
+
+test("Claude Code: the version check reads claude plugin, and the offer says /reload-plugins", t => {
+  const f = fakeClaude(t, { version: "0.29.0", enabled: true });
+  const r = f.run("check-version.mjs", f.dir);
+  assert.match(r.stdout, /is available \(installed 0\.29\.0\); say: update GTM OS/);
+  assert.match(host(claude).texts.updateOffer("0.29.0", "0.30.3"), /run \/reload-plugins or start a new session/);
+  assert.match(host({}).texts.updateOffer("0.29.0", "0.30.3"), /quit and reopen Codex/, "Codex says what it always said");
+});

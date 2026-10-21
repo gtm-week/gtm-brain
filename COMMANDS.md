@@ -35,7 +35,7 @@ The sections below document the underlying operations, tools, and script paths f
 They are not additional discoverable skills. Tools show outcomes such as "Remembering" or
 "Searching the brain" in chat. Review proposals on the read-only dashboard. APPROVE typed in Codex stays a shell step with its permission prompt.
 Scripts retain their paths for terminal use with
-`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-os/gtm-os/0.30.2`.
+`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-os/gtm-os/0.30.3`.
 
 Legend for "writes": what files the command changes. Nothing else is ever touched.
 

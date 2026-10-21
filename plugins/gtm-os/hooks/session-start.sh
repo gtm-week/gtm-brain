@@ -148,7 +148,7 @@ if [ -z "${GTM_OS_NO_VERSION_CHECK:-}" ] && [ -f "$P/scripts/gtm-os-update-plugi
 fi
 pv="$(node -e 'try{const s=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));if(s.status==="newer")console.log(`${s.latest} (installed ${s.installed})`)}catch{}' "$root/work/plugin-version.json" 2>/dev/null)"
 pv_latest="${pv%% *}"; pv_installed="${pv#*installed }"; pv_installed="${pv_installed%)}"
-[ -n "$pv" ] && node "$H" can update-check && echo "GTM OS UPDATE available: $pv. Offer once, in one line, in these words: \"You are on $pv_installed, GTM OS $pv_latest is available. Say: update GTM OS. When it finishes, quit and reopen Codex, then start a new chat in this folder.\" Never run it without a yes (skill gtm-os-configure). If the update says Codex's copy is behind GitHub, the fix is git's own GitHub sign-in: gh auth login, then gh auth setup-git."
+[ -n "$pv" ] && node "$H" can update-check && node "$H" text updateOffer "$pv_installed" "$pv_latest"
 echo "Dashboard maintenance requested in the background. Use open_dashboard when the person asks to see it."
 printf '%s  SessionStart  loaded=%s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "${loaded:-none}" >> "$root/work/hooks.log"
 exit 0

@@ -12,7 +12,9 @@
    Depends on nothing in lib/, so lib/brain.mjs can import it. */
 import { existsSync, readFileSync } from "node:fs";
 import { delimiter, join } from "node:path";
+import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
+import { execFileSync } from "node:child_process";
 
 export const HOSTS = ["codex", "claude"];
 /* A memory names the chat it came from as {kind: <host>, ref: <chat id>}. Before 0.30 every chat was
@@ -29,6 +31,7 @@ export function hostId(env = process.env) {
   if (!HOSTS.includes(id)) throw new Error(`GTM_OS_HOST must be ${HOSTS.join(" or ")}, not ${id}`);
   return id;
 }
+const cli = (cmd, args) => JSON.parse(execFileSync(cmd, args, { encoding: "utf8", timeout: 60000, stdio: ["ignore", "pipe", "ignore"], maxBuffer: 4 * 1024 * 1024 }));
 const onPath = cmd => (process.env.PATH || "").split(delimiter).some(d => d && existsSync(join(d, cmd)));
 
 const ADAPTERS = {
@@ -37,6 +40,16 @@ const ADAPTERS = {
     compiles: () => true,
     newChatLink: (path, prompt) => `codex://threads/new?path=${encodeURIComponent(path)}&prompt=${encodeURIComponent(prompt)}`,
     updateCheck: () => onPath("codex"),
+    // Where GTM OS is installed from and which version is installed, as the host's plugin manager reports it.
+    plugin: {
+      home: () => process.env.CODEX_HOME || join(homedir(), ".codex"),
+      installed: () => cli("codex", ["plugin", "list", "--marketplace", "gtm-os", "--json"]).installed?.find(p => p.pluginId === "gtm-os@gtm-os" && p.installed)?.version || null,
+      marketplace: () => {
+        const s = cli("codex", ["plugin", "marketplace", "list", "--json"]).marketplaces?.find(x => x.name === "gtm-os")?.marketplaceSource;
+        return s ? { type: s.sourceType, source: s.source || s.url || s.repo || null, ref: s.ref || s.branch || null } : null;
+      },
+      updateScript: "update.mjs",
+    },
     rulebookLoaded: dir => existsSync(join(dir, "AGENTS.md")),
     foreign: { dir: ".claude", reason: "Files under .claude belong to Claude and are off limits, reads included. To import what Claude knows, have Claude read IMPORT.md from the GTM OS repository (or run the plugin gtm-os-export skill with claude -p); it writes ~/.gtm-os/handoff.md, and the gtm-os-start skill reads that." },
     texts: {
@@ -47,6 +60,7 @@ const ADAPTERS = {
       toolsUnchecked: () => "tools: not checked yet in this Codex. Say: connect my tools.",
       noCompile: () => "",
       rulebook: () => "",
+      updateOffer: (installed, latest) => `GTM OS UPDATE available: ${latest} (installed ${installed}). Offer once, in one line, in these words: "You are on ${installed}, GTM OS ${latest} is available. Say: update GTM OS. When it finishes, quit and reopen Codex, then start a new chat in this folder." Never run it without a yes (skill gtm-os-configure). If the update says Codex's copy is behind GitHub, the fix is git's own GitHub sign-in: gh auth login, then gh auth setup-git.`,
     },
     async environment(sh) {
       const [codex, login] = await Promise.all([sh("codex", ["--version"]), sh("codex", ["login", "status"])]);
@@ -65,7 +79,19 @@ const ADAPTERS = {
     compiles: () => onPath("codex"),
     // Prefilled, not sent: the person presses Enter (claude-cli://open, Claude Code 2.1+).
     newChatLink: (path, prompt) => `claude-cli://open?q=${encodeURIComponent(prompt)}&cwd=${encodeURIComponent(path)}`,
-    updateCheck: () => false,
+    updateCheck: () => onPath("claude"),
+    plugin: {
+      home: () => process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude"),
+      installed: () => cli("claude", ["plugin", "list", "--json"]).find(p => p.id === "gtm-os@gtm-os")?.version || null,
+      // A marketplace added from GitHub or a git URL is git; one added from a folder (dev-install.sh --claude) is local.
+      marketplace: () => {
+        const m = cli("claude", ["plugin", "marketplace", "list", "--json"]).find(x => x.name === "gtm-os");
+        if (!m) return null;
+        const git = m.url || m.repo, path = m.path || (m.source === "directory" ? m.installLocation : null);
+        return git ? { type: "git", source: git, ref: m.ref || null } : path ? { type: "local", source: path, ref: null } : { type: m.source, source: null, ref: null };
+      },
+      updateScript: "update-claude.mjs",
+    },
     // Claude Code reads CLAUDE.md; the brain's carries the @AGENTS.md import (lib.ensureRulebookShim).
     rulebookLoaded: dir => { try { return /^@AGENTS\.md\s*$/m.test(readFileSync(join(dir, "CLAUDE.md"), "utf8")); } catch { return false; } },
     foreign: { dir: ".codex", reason: "Files under .codex belong to Codex and are off limits, reads included." },
@@ -76,6 +102,7 @@ const ADAPTERS = {
       chats: () => "Each chat is a Claude Code session; a memory saved here names it as its claude:<session id> source. To revisit one, the person runs claude --resume <id> in this folder; never resume or open another session yourself. Agents you delegate to report back here.",
       toolsUnchecked: () => "tools: connector checks are not available in Claude Code yet. Use the MCP tools this session lists.",
       noCompile: () => "compile: summaries are not compiled on this machine yet (GTM OS runs them through Codex, which is not installed here). Say 'summary waiting'; never say 'updating shortly', never compile or offer to compile in this chat. Answer from the notes.",
+      updateOffer: (installed, latest) => `GTM OS UPDATE available: ${latest} (installed ${installed}). Offer once, in one line, in these words: "You are on ${installed}, GTM OS ${latest} is available. Say: update GTM OS. When it finishes, run /reload-plugins or start a new session in this folder." Never run it without a yes (skill gtm-os-configure). If the update says Claude's copy is behind GitHub, the fix is git's own GitHub sign-in: gh auth login, then gh auth setup-git.`,
       rulebook: root => `Rulebook: read ${root}/AGENTS.md now and follow it, every session (Claude Code loads CLAUDE.md, and this folder's CLAUDE.md does not import AGENTS.md yet; say: upgrade the GTM OS rules).`,
     },
     async environment(sh) {
