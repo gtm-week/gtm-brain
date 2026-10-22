@@ -181,6 +181,7 @@ one already read in this chat is still in context, so reuse it instead of readin
 | Change a context's title or standing instructions | [Edit a context](references/edit-context.md) | `edit_context` |
 | Record, correct, forget, or answer a question | [Memory recording](references/remember.md) | `remember` |
 | Find prior knowledge, count or join it, or build a person view | [Recall](references/recall.md) | `query` (memories with search; `sql` for counts, joins and dates; brief for a person view) |
+| How healthy a deal is, what is missing before the next call | [Deal health](references/deal-health.md) | `query` (deal; search = the company) |
 | Resolve, update, merge, archive, restore or split an identity; open its brief | [Entities](references/entities.md) | `query` (entities), `add_name`, `update_entity`, `merge_entities`, `archive_entity`, `undo_entity_merge`; `query` (brief) |
 | Refresh a cited entity brief | [Entity compilation](references/entity-compile.md) | the background run; `query` (memories by entity) to read the evidence |
 | Update a summary, or release one paused by a manual edit | [Compilation](references/compile.md) | the background worker, queued through the shell; no compile tool in a chat |

@@ -5,7 +5,7 @@ process.env.GTM_OS_NO_COMMIT = "1";
 // over the memory index, with the dashboard's visibility rules baked into the views.
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawn } from "node:child_process";
@@ -102,4 +102,20 @@ test("2b: the ten read tools leave the chat's catalog, still answer as deprecate
   const ranked = await call("query", { brain: root, object: "entities", search: "Zientara", candidates: [{ id: "1", name: "Artur Ziętara", emails: ["artur@fixture.test"], reference: { kind: "hubspot/work", ref: "https://crm.fixture.test/1" } }] });
   assert.ok(!ranked.isError, ranked.text); assert.equal(JSON.parse(ranked.text).scope, "supplied source candidates only");
   const described = await call("describe_object", { brain: root, name: "brief" }); assert.ok(!described.isError); assert.match(described.text, /brief/);
+});
+
+test("deal: the MEDDPICC rubric and every memory about the company with its ID; deal_scoring: off turns it off", async () => {
+  const { root } = brain();
+  const deal = await call("query", { brain: root, object: "deal", search: "Castorama" });
+  assert.ok(!deal.isError, deal.text);
+  assert.match(deal.text, /^deal: Castorama \(e_[0-9a-f]+\) · \d+ memories, newest \d{4}-\d\d-\d\d/m);
+  for (const element of ["Metrics", "Economic buyer", "Decision criteria", "Decision process", "Paper process", "Identify pain", "Champion", "Competition"]) assert.match(deal.text, new RegExp(`\\*\\*${element}\\*\\*`));
+  assert.match(deal.text, /^\[m_[0-9a-f]+\] \d{4}-\d\d-\d\d · \w+ · \w+ · .*60-day pilot/m, "each memory carries the ID to cite");
+  assert.doesNotMatch(deal.text, /Turning it off/, "the switch is for the person, not the score");
+  assert.ok((await call("query", { brain: root, object: "deal" })).isError, "deal needs the company");
+  assert.match((await call("describe_object", { brain: root, name: "deal" })).text, /MEDDPICC/);
+  const admin = join(root, "brain", "admin.md");
+  writeFileSync(admin, readFileSync(admin, "utf8").replace(/^dashboard: .*$/m, m => `${m}\ndeal_scoring: off`));
+  const off = await call("query", { brain: root, object: "deal", search: "Castorama" });
+  assert.match(off.text, /^Deal scoring is off in this brain/); assert.doesNotMatch(off.text, /60-day pilot/);
 });

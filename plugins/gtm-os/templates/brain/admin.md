@@ -6,6 +6,7 @@ team:
 {{TEAM_BLOCK}}
 tools: [{{TOOLS}}]
 dashboard: {{DASHBOARD}}
+deal_scoring: on
 protected: true
 ---
 

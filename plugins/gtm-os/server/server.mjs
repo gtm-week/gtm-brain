@@ -330,9 +330,9 @@ const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [colu
   const query = byName("query"), describe = byName("describe_object"), objects = byName("list_objects");
   const datasets = [...query.inputSchema.properties.object.enum];
   const base = query.call, describeBase = describe.call, objectsBase = objects.call;
-  query.description = "The one read: rows of one object, newest first (exact filters, free-text search with alias expansion, limit), or one read-only SQL SELECT over the memory index (memories, members, contexts, entities, keywords; describe_object shows the columns) for counts, joins and dates. Derived reads by object: status (where we are: contexts, loaded set, tools, onboarding; call it first), brief (an entity's cited one-page view; search = the name), projects, brains, customers, meetings, health (how the brain is doing). An entities search resolves a name, alias, email or typo to ranked candidates. Answer from the rows; no rows means say so.";
+  query.description = "The one read: rows of one object, newest first (exact filters, free-text search with alias expansion, limit), or one read-only SQL SELECT over the memory index (memories, members, contexts, entities, keywords; describe_object shows the columns) for counts, joins and dates. Derived reads by object: status (where we are: contexts, loaded set, tools, onboarding; call it first), brief (an entity's cited one-page view; search = the name), deal (one deal's MEDDPICC rubric and every memory about it, to score with cited IDs; search = the company), projects, brains, customers, meetings, health (how the brain is doing). An entities search resolves a name, alias, email or typo to ranked candidates. Answer from the rows; no rows means say so.";
   query.inputSchema = { ...query.inputSchema, required: [], properties: { ...query.inputSchema.properties,
-    object: { ...query.inputSchema.properties.object, enum: [...datasets, ...Object.keys(VIEWS)] },
+    object: { ...query.inputSchema.properties.object, enum: [...datasets, ...Object.keys(VIEWS), "deal"] },
     sql: { type: "string", description: "One SELECT (or WITH ... SELECT) over memories, members, contexts, entities and keywords. Read-only; at most limit rows (default 200)." },
     candidates: { type: "array", items: { type: "object", additionalProperties: true }, description: "With object entities and search: rank this bounded shortlist a CRM returned instead of the registry; no connector calls." },
     project: PROJECT } };
@@ -340,12 +340,14 @@ const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [colu
     if (sql) { try { return text(table(await memoryReader.read(brain, "sql", { sql, limit }))); } catch (e) { return text(e.message, true); } }
     if (!object) return text("Pass object or sql: query needs one of them.", true);
     if (object === "brief") return search ? original.get("recall")({ brain, entity: search, ...(filters?.context ? { context: filters.context } : {}), ...(project ? { project } : {}) }) : text("brief needs search: the entity name, alias, email or id.", true);
+    if (object === "deal") return search ? run(brain, "gtm-os-recall/deal-health.mjs", ["--entity", search]).then(result) : text("deal needs search: the company name, alias or id.", true);
     if (VIEWS[object]) return original.get(VIEWS[object])(object === "brains" ? {} : { brain, ...(project ? { project } : {}), ...(filters && typeof filters === "object" ? filters : {}) });   // a view's options travel in filters (projects: include_available; meetings: its options)
     if (object === "entities" && search && !filters) return original.get("who_is")({ brain, name: search, ...(candidates ? { candidates } : {}) });
     return base({ brain, object, ...(search !== undefined ? { search } : {}), ...(filters !== undefined ? { filters } : {}), ...(limit !== undefined ? { limit } : {}) });
   };
-  describe.inputSchema = { ...describe.inputSchema, properties: { ...describe.inputSchema.properties, name: { ...describe.inputSchema.properties.name, enum: [...datasets, ...Object.keys(VIEWS)] } } };
+  describe.inputSchema = { ...describe.inputSchema, properties: { ...describe.inputSchema.properties, name: { ...describe.inputSchema.properties.name, enum: [...datasets, ...Object.keys(VIEWS), "deal"] } } };
   describe.call = async args => {
+    if (args.name === "deal") return text("deal: a derived read (query with object deal, search = the company). Returns the MEDDPICC rubric and every memory about that company, newest first, with IDs; score each element confirmed, weak or missing from those memories only, citing IDs, then ask about what is missing. Reads only. Off when brain/admin.md has deal_scoring: off.");
     if (VIEWS[args.name]) return text(`${args.name}: a derived read (query with object ${args.name}${args.name === "brief" ? ", search = the entity; filters.context for one perspective" : ""}). ${byName(VIEWS[args.name]).description}`);
     const r = await describeBase(args);
     if (!r.isError && r.content?.[0] && SQL_SCHEMA[args.name]) r.content[0].text += `\nSQL view ${args.name}: ${SQL_SCHEMA[args.name]}\nAlso in SQL: ${Object.keys(SQL_SCHEMA).filter(k => k !== args.name).join(", ")} (query with sql).`;

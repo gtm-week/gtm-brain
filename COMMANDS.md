@@ -35,7 +35,7 @@ The sections below document the underlying operations, tools, and script paths f
 They are not additional discoverable skills. Tools show outcomes such as "Remembering" or
 "Searching the brain" in chat. Review proposals on the read-only dashboard. APPROVE typed in Codex stays a shell step with its permission prompt.
 Scripts retain their paths for terminal use with
-`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-os/gtm-os/0.30.3`.
+`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-os/gtm-os/0.30.4`.
 
 Legend for "writes": what files the command changes. Nothing else is ever touched.
 
@@ -93,6 +93,20 @@ applies it too. `approve.mjs <root> --interaction --by <person>` is the only wri
 advisor only suggests one, from an action recorded three times in a month: a brain check never writes a proposal.
 
 Tool: `propose_interaction`. Writes: `work/interaction.proposed.json` (local).
+
+### deal health
+*"how healthy is the Nowa Deweloper deal?"*, *"what am I missing before the call with Acme?"*
+
+Scores one deal on MEDDPICC (metrics, economic buyer, decision criteria, decision process, paper
+process, pain, champion, competition) from the memories about that company only. Each element is
+confirmed, weak or missing, and every score cites the memory it rests on; the missing ones become
+up to three questions for the next conversation. It reads only and saves nothing: answers are
+remembered like any finding and the next read scores them. The rubric is
+`skills/gtm-os-use-brain/references/deal-health.md`.
+
+Tool: `query` with object `deal` and search = the company. Off for a brain whose `brain/admin.md`
+front matter has `deal_scoring: off` (new brains get `deal_scoring: on`; a brain without the line
+has it on). The line is workplace info, so it changes through APPROVE.
 
 ### recall
 *"what do we know about the TCO?"*, *"did we ever talk about Berlin?"*, *"tell me about Pierre Aubert"*
