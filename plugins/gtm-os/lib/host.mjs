@@ -60,7 +60,7 @@ const ADAPTERS = {
       toolsUnchecked: () => "tools: not checked yet in this Codex. Say: connect my tools.",
       noCompile: () => "",
       rulebook: () => "",
-      updateOffer: (installed, latest) => `GTM OS UPDATE available: ${latest} (installed ${installed}). Offer once, in one line, in these words: "You are on ${installed}, GTM OS ${latest} is available. Say: update GTM OS. When it finishes, quit and reopen Codex, then start a new chat in this folder." Never run it without a yes (skill gtm-os-configure). If the update says Codex's copy is behind GitHub, the fix is git's own GitHub sign-in: gh auth login, then gh auth setup-git.`,
+      updateOffer: (installed, latest) => `GTM OS UPDATE available: ${latest} (installed ${installed}). Offer once, in one line, in these words: "You are on ${installed}, GTM OS ${latest} is available. Say: update GTM OS. When it finishes, quit and reopen Codex, then start a new chat in this folder." Add that line to your first reply, at its end, even when the reply resumes onboarding or answers a request. Never run it without a yes (skill gtm-os-configure). If the update says Codex's copy is behind GitHub, the fix is git's own GitHub sign-in: gh auth login, then gh auth setup-git.`,
     },
     async environment(sh) {
       const [codex, login] = await Promise.all([sh("codex", ["--version"]), sh("codex", ["login", "status"])]);
@@ -102,7 +102,7 @@ const ADAPTERS = {
       chats: () => "Each chat is a Claude Code session; a memory saved here names it as its claude:<session id> source. To revisit one, the person runs claude --resume <id> in this folder; never resume or open another session yourself. Agents you delegate to report back here.",
       toolsUnchecked: () => "tools: connector checks are not available in Claude Code yet. Use the MCP tools this session lists.",
       noCompile: () => "compile: summaries are not compiled on this machine yet (GTM OS runs them through Codex, which is not installed here). Say 'summary waiting'; never say 'updating shortly', never compile or offer to compile in this chat. Answer from the notes.",
-      updateOffer: (installed, latest) => `GTM OS UPDATE available: ${latest} (installed ${installed}). Offer once, in one line, in these words: "You are on ${installed}, GTM OS ${latest} is available. Say: update GTM OS. When it finishes, run /reload-plugins or start a new session in this folder." Never run it without a yes (skill gtm-os-configure). If the update says Claude's copy is behind GitHub, the fix is git's own GitHub sign-in: gh auth login, then gh auth setup-git.`,
+      updateOffer: (installed, latest) => `GTM OS UPDATE available: ${latest} (installed ${installed}). Offer once, in one line, in these words: "You are on ${installed}, GTM OS ${latest} is available. Say: update GTM OS. When it finishes, run /reload-plugins or start a new session in this folder." Add that line to your first reply, at its end, even when the reply resumes onboarding or answers a request. Never run it without a yes (skill gtm-os-configure). If the update says Claude's copy is behind GitHub, the fix is git's own GitHub sign-in: gh auth login, then gh auth setup-git.`,
       rulebook: root => `Rulebook: read ${root}/AGENTS.md now and follow it, every session (Claude Code loads CLAUDE.md, and this folder's CLAUDE.md does not import AGENTS.md yet; say: upgrade the GTM OS rules).`,
     },
     async environment(sh) {
