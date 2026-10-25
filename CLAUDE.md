@@ -18,7 +18,7 @@ the checkout (`/brain/` and `/work/` are gitignored as a safety net).
 
 ## Commands
 
-Node 22.13+ (the memory index uses `node:sqlite`), git. Runtime code has no npm dependencies, so
+Node 22.16+ or 24+ (the memory index uses `node:sqlite` with FTS5), git. Runtime code has no npm dependencies, so
 there is no install step and no linter.
 
 ```bash
@@ -86,8 +86,8 @@ Everything that ships is under `plugins/gtm-os/`. The layers, from the outside i
 
 ### Two ontologies, two kinds of tools
 
-`ontology/gtm-os.ossie.json` describes the plugin's own interactions. At startup the vendored
-Allethic engine (`vendor/allethic/`) turns it into first-class MCP tools (`remember`, `query`,
+`ontology/gtm-os.ossie.json` describes the plugin's own interactions. At startup the ontology
+layer (`lib/ontology/`, ported from Allethic) turns it into first-class MCP tools (`remember`, `query`,
 `describe_object`, `list_objects`, ...) backed by `server/files-backend.mjs`. `server.mjs` then
 extends the generated `query` with derived views (status, brief, customers, meetings, health, ...)
 and a read-only SQL mode over the memory index.
@@ -97,8 +97,9 @@ brain at startup, so these can never be registered as tools: they are listed per
 through the single fixed tool `interact`. New ones go through `propose_interaction` and the APPROVE
 gate.
 
-`vendor/allethic/` is a pinned copy (commit and per-file hashes in `VERSION.json`). Never edit it
-in place; refresh it with `node plugins/gtm-os/vendor/refresh-allethic.mjs <local-checkout> <full-sha>`.
+`lib/ontology/` is GTM OS code: it loads Ossie files with the `ALLETHIC` extension block and
+generates the tools. Keep the `ALLETHIC` block name; every company's `brain/ontology.ossie.json`
+carries it.
 
 ### The memory index
 

@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
 import * as lib from "../lib/brain.mjs";
 import { createFilesBackend } from "../server/files-backend.mjs";
-import { loadOntology, buildTools } from "../vendor/allethic/index.mjs";
+import { loadOntology, buildTools } from "../lib/ontology/index.mjs";
 
 process.env.GTM_OS_NO_COMMIT = "1";
 process.env.GTM_OS_NO_COMPILE = "1";

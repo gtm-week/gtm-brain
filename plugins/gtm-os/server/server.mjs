@@ -13,11 +13,11 @@ import { fileURLToPath } from "node:url";
 import { inputSchema as questionSchema } from "../scripts/gtm-os-learn-company/question.mjs";
 import { questionInput } from "./question-input.mjs";
 import { createInterface } from "node:readline";
-import { loadOntology, buildTools, instructionsText } from "../vendor/allethic/index.mjs";
+import { loadOntology, buildTools, instructionsText } from "../lib/ontology/index.mjs";
 import { createFilesBackend } from "./files-backend.mjs";
 import { createMemoryReader } from "./memory-reader.mjs";
 import { host } from "../lib/host.mjs";
-import { validateValue } from "../vendor/allethic/validation.mjs";
+import { validateValue } from "../lib/ontology/validation.mjs";
 
 const P = dirname(dirname(fileURLToPath(import.meta.url)));
 const lib = await import(join(P, "lib", "brain.mjs"));

@@ -1,5 +1,5 @@
 // Synthetic connector contracts. These do not call Attio, HubSpot, mail or calendar.
-import { validateValue } from '../../vendor/allethic/validation.mjs';
+import { validateValue } from '../../lib/ontology/validation.mjs';
 const text = { type: 'string' };
 const tool = (name, description, properties, required = []) => ({ name, description: `${description} Synthetic test only.`, inputSchema: { type: 'object', properties, required, additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } });
 const limit = { type: 'integer', minimum: 1, maximum: 25 };

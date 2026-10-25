@@ -10,7 +10,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import * as lib from '../lib/brain.mjs';
 import { prepareAsset, resolveAssetFile, assetRows, validateAsset } from '../lib/assets.mjs';
 import { createFilesBackend } from '../server/files-backend.mjs';
-import { loadOntology, buildTools } from '../vendor/allethic/index.mjs';
+import { loadOntology, buildTools } from '../lib/ontology/index.mjs';
 const P = new URL('../', import.meta.url).pathname.replace(/\/$/, '');
 const logo = '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="60"><rect width="120" height="60" fill="teal"/><text x="12" y="36" fill="white">DEMO</text></svg>';
 function fixture() {

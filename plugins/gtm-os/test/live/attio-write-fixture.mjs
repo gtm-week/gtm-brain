@@ -1,5 +1,5 @@
 // Evaluation-only contracts, not a claim about the installed Attio app's schemas.
-import { validateValue } from '../../vendor/allethic/validation.mjs';
+import { validateValue } from '../../lib/ontology/validation.mjs';
 const string = { type: 'string' };
 const object = { type: 'string', enum: ['people', 'companies', 'deals'] };
 const tool = (name, description, properties, required, write = false) => ({ name: `attio_${name}`,

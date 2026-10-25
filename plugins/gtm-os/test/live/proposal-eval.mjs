@@ -14,8 +14,8 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 import * as lib from "../../lib/brain.mjs";
-import { loadOntology } from "../../vendor/allethic/ontology.mjs";
-import { hostCatalog, proposeActions } from "../../vendor/allethic/review.mjs";
+import { loadOntology } from "../../lib/ontology/ontology.mjs";
+import { hostCatalog, proposeActions } from "../../lib/ontology/review.mjs";
 import { judge } from "./judge.mjs";
 
 const plugin = fileURLToPath(new URL("../../", import.meta.url)).replace(/\/$/, "");

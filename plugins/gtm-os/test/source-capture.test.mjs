@@ -3,7 +3,7 @@ process.env.GTM_OS_NO_COMPILE = "1"; // Model runs are opt-in through test doubl
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseSources } from '../lib/brain.mjs';
-import { loadOntology, buildTools } from '../vendor/allethic/index.mjs';
+import { loadOntology, buildTools } from '../lib/ontology/index.mjs';
 
 test('source parsing preserves original links, provider IDs, account selectors, commas and fragments',()=>{
  const gmail='https://mail.google.com/mail/u/2/#all/returned-id';

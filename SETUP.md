@@ -1,7 +1,7 @@
 # gtm-os v0: setup and test manual
 
 For anyone picking this up (Łukasz first). Everything here runs locally on macOS or Linux:
-Codex, git, Node 22+. No accounts, no servers.
+Codex, git, Node 22.16+ or 24+. No accounts, no servers.
 
 Branch: `main`. This manual
 grows with the steps: each section is a step you can run and check.
@@ -12,7 +12,7 @@ grows with the steps: each section is a step you can run and check.
   `check_environment` tool: node, codex and its sign-in, git, and whether the folder is ready;
   nothing to type in a terminal. The ChatGPT desktop app works too;
   the CLI is used below because it is easier to describe.
-- Node 22+ (`node --version`), git.
+- Node 22.16+ or 24+ (`node --version`), git.
 - Hooks are the guardrails (the safety locks): the session refresh and the write gate. Codex
   runs a plugin's hooks only after they are approved, and installing does not approve them,
   so the install ends with `trust-hooks.mjs --trust` (below). Without it the brain still works
@@ -33,7 +33,7 @@ gh auth login && gh auth setup-git                                     # once; b
 codex plugin marketplace add gtm-week/gtm-os   # straight from GitHub (verified)
 codex plugin add gtm-os@gtm-os
 node "$(ls -d ~/.codex/plugins/cache/gtm-os/gtm-os/*/ | sort -V | tail -1)hooks/trust-hooks.mjs" --trust   # approve the hooks; installing does not
-codex plugin list | grep gtm-os                                      # installed, enabled, 0.30.5
+codex plugin list | grep gtm-os                                      # installed, enabled, 0.30.6
 ```
 
 The install is a snapshot of the configured branch. In the Codex app, say **"update GTM OS"**
@@ -85,7 +85,7 @@ new chat in Codex on the test folder (restart the app only if old skills linger)
 Set this once in your shell; the scripts below use it:
 
 ```bash
-export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-os/gtm-os/0.30.5
+export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-os/gtm-os/0.30.6
 ```
 
 The last install line approves the plugin's hooks; it ends with `Safety locks: on`. Codex does
@@ -272,7 +272,7 @@ Search across every context, loaded or not. Uses Node's built-in SQLite full-tex
 kept in `work/memory-index.sqlite` and updated when source files change; nothing to install, nothing committed.
 The disk-backed cache also serves exact memory queries. It is rebuildable from the brain files,
 uses a small page cache, and reads source records incrementally. Keyword indexing requires
-`node:sqlite`, available without a feature flag in Node 22.13+ and current newer releases.
+`node:sqlite` with FTS5: Node 22.16+ or 24+ (22.13-22.15 and 23 lack it).
 
 In Codex:
 

@@ -1,5 +1,5 @@
 // A stdio MCP server over the generated surface. JSON-RPC, one message per line, Node built-ins
-// only, so a plugin can vendor this file and run it with nothing installed.
+// only.
 import { createInterface } from "node:readline";
 import { buildTools, instructionsText } from "./surface.mjs";
 

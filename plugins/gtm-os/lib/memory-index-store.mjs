@@ -4,7 +4,10 @@ import { existsSync, mkdirSync, renameSync, rmSync, lstatSync, writeFileSync } f
 import { join } from 'node:path';
 let DatabaseSync;
 try { ({ DatabaseSync } = await import('node:sqlite')); } catch {}
-export const hasMemoryIndex = () => typeof DatabaseSync?.prototype.function === 'function';
+// Node 22.13-22.15 and 23 ship node:sqlite without FTS5; the index needs both.
+const fts5 = () => { const db = new DatabaseSync(':memory:'); try { db.exec('CREATE VIRTUAL TABLE t USING fts5(x)'); return true; } catch { return false; } finally { db.close(); } };
+let indexable;
+export const hasMemoryIndex = () => indexable ??= typeof DatabaseSync?.prototype.function === 'function' && fts5();
 export const indexPath = root => join(root, 'work/memory-index.sqlite');
 const resetPath = root => join(root, 'work/memory-index.reset');
 export const cacheResetPending = root => existsSync(resetPath(root));
@@ -19,7 +22,7 @@ export function openDatabase(path, { readOnly = false } = {}) {
 }
 export function cacheLock(root, timeoutMs = 1000) {
   if (!Number.isInteger(timeoutMs) || timeoutMs < 0 || timeoutMs > 60000) throw new Error('Invalid memory cache lock timeout');
-  if (!hasMemoryIndex()) throw new Error('Indexed search requires Node 22.13+ or a current newer release. Update Node.');
+  if (!hasMemoryIndex()) throw new Error('Indexed search requires Node 22.16+ or 24+ (SQLite with FTS5). Update Node.');
   mkdirSync(join(root, 'work'), { recursive: true });
   let db;
   try { db = openDatabase(join(root, 'work/memory-index-lock.sqlite')); }

@@ -356,8 +356,8 @@ test("a declined tool the person tests again is offered again", async () => {
 });
 
 test("the interactions are the ontology's: none hand-written twice, names and titles unchanged", async () => {
-  const { compareCatalog } = await import("../vendor/allethic/review.mjs");
-  const { loadOntology } = await import("../vendor/allethic/ontology.mjs");
+  const { compareCatalog } = await import("../lib/ontology/review.mjs");
+  const { loadOntology } = await import("../lib/ontology/ontology.mjs");
   const onto = await loadOntology(`${P}/ontology/gtm-os.ossie.json`);
   const { result } = await rpc("tools/list");
   const r = compareCatalog(onto, result.tools);

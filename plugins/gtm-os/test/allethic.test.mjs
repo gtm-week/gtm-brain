@@ -2,17 +2,7 @@ process.env.GTM_OS_NO_WATCH = "1";
 process.env.GTM_OS_NO_COMPILE = "1"; // Model runs are opt-in through test doubles.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
-import { createHash } from "node:crypto";
-import { loadOntology, buildTools } from "../vendor/allethic/index.mjs";
-
-test("vendored files match the pinned upstream manifest", () => {
-  const root = new URL("../vendor/allethic/", import.meta.url);
-  const manifest = JSON.parse(readFileSync(new URL("VERSION.json", root)));
-  assert.match(manifest.commit, /^[0-9a-f]{40}$/);
-  for (const [file, expected] of Object.entries(manifest.files)) assert.equal(createHash("sha256").update(readFileSync(new URL(file, root))).digest("hex"), expected.sha256, file);
-  for (const file of readdirSync(root).filter(f => f.endsWith(".mjs"))) assert.ok(manifest.files[file], `untracked vendor module: ${file}`);
-});
+import { loadOntology, buildTools } from "../lib/ontology/index.mjs";
 
 test("model retains batch, name confirmation and stable tool names without duplicate objects", async () => {
   const model = await loadOntology(new URL("../ontology/gtm-os.ossie.json", import.meta.url).pathname);

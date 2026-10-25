@@ -6,17 +6,6 @@ Keep authored brain content in English. Preserve names, source quotes and the ex
 The person stays in the Codex app. Run the update for them; do not ask them to open a
 terminal or paste commands. This works without a company brain in the current folder.
 
-## Refresh the Allethic engine
-
-A normal plugin update installs the Allethic engine bundled with that GTM OS version,
-including its pinned `vendor/allethic/VERSION.json`. No separate engine download is needed.
-
-For "refresh Allethic" or an explicit request to include newer upstream engine changes,
-follow [engine refresh](allethic.md) in a GTM OS source checkout. This updates
-the bundle and tests it before installation. If both are requested, refresh and test the
-engine first, then update the plugin from the source containing those changes. An ordinary
-plugin update does not independently track Allethic's main branch.
-
 ## Refresh an existing brain
 
 For "upgrade the brain", "refresh the rules", or "update AGENTS.md", read

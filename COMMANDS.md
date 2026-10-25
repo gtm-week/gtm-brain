@@ -35,7 +35,7 @@ The sections below document the underlying operations, tools, and script paths f
 They are not additional discoverable skills. Tools show outcomes such as "Remembering" or
 "Searching the brain" in chat. Review proposals on the read-only dashboard. APPROVE typed in Codex stays a shell step with its permission prompt.
 Scripts retain their paths for terminal use with
-`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-os/gtm-os/0.30.5`.
+`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-os/gtm-os/0.30.6`.
 
 Legend for "writes": what files the command changes. Nothing else is ever touched.
 
@@ -454,12 +454,6 @@ The GitHub connector inside Codex is a different login and does not help git.
 Check mode does not fetch the remote or establish whether an update is available.
 For missing tools or a missing plugin version, ask "repair the GTM OS update". Codex checks
 the installed files before choosing between a source refresh and an app restart.
-
-The installed update includes GTM OS's pinned Allethic engine. Ask "refresh Allethic" in
-the plugin source checkout to update that bundle from upstream and test it through the
-[engine-refresh procedure](plugins/gtm-os/skills/gtm-os-configure/references/allethic.md).
-This source refresh changes `plugins/gtm-os/vendor/allethic/`; installation is a separate
-step of the same workflow when requested.
 
 An update asked for in a brain refreshes that brain's rules in the same step (`brain`): the newly
 installed version's upgrader runs right after the verified install and prints its report, so

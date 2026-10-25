@@ -1,5 +1,5 @@
 // Evaluation-only contracts. These are not installed HubSpot tool schemas or REST payloads.
-import { validateValue } from '../../vendor/allethic/validation.mjs';
+import { validateValue } from '../../lib/ontology/validation.mjs';
 const str = { type: 'string' };
 const object = { type: 'string', enum: ['contacts', 'companies', 'deals', 'notes', 'tasks'] };
 const tool = (name, description, properties, required, write = false) => ({ name: `hubspot_${name}`, description: `${description} Synthetic CRM only.`, inputSchema: { type: 'object', properties, required, additionalProperties: false }, annotations: { readOnlyHint: !write, destructiveHint: false, openWorldHint: false } });

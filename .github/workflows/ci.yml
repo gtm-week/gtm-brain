@@ -1,0 +1,50 @@
+# The checks a contributor runs before a push, on every push and pull request.
+# The live benchmarks (test/live/) need Codex and Claude sign-ins and stay local, in .githooks/pre-push.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node: ["22.16", "24"]  # the first releases whose node:sqlite has FTS5 (not 22.13-22.15, not 23)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Git identity for the brains the tests commit to
+        run: |
+          git config --global user.name "CI"
+          git config --global user.email "ci@example.com"
+          git config --global init.defaultBranch main
+      - name: Test suite
+        run: node --test 'plugins/gtm-os/test/*.test.mjs'
+      - name: Derived text and schema in sync
+        run: node scripts/sync-derived.mjs --check
+
+  dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.16"
+          cache: npm
+          cache-dependency-path: frontend/dashboard/package-lock.json
+      - run: npm ci --prefix frontend/dashboard
+      - run: npm run build --prefix frontend/dashboard
+      - name: Committed dashboard assets match the source
+        run: |
+          drift="$(git status --porcelain plugins/gtm-os/scripts/gtm-os-render/ui/)"
+          [ -z "$drift" ] || { echo "$drift"; echo "Rebuild the dashboard: npm run build --prefix frontend/dashboard, then commit plugins/gtm-os/scripts/gtm-os-render/ui/"; exit 1; }

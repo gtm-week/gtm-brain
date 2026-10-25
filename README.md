@@ -237,3 +237,7 @@ Bump the plugin version and the paths in SETUP.md and COMMANDS.md when shipping 
 For each module release, follow the update invariants and release checks:
 users start fresh on the first participant release; preserve their data and entry points through
 subsequent releases, validate before installation, and keep brain refresh repeatable.
+
+## License
+
+MIT, see [LICENSE](LICENSE). The dashboard bundles third-party code and fonts under their own licenses: [THIRD-PARTY-NOTICES.md](plugins/gtm-os/scripts/gtm-os-render/ui/THIRD-PARTY-NOTICES.md), [FONT-LICENSE.md](plugins/gtm-os/scripts/gtm-os-render/ui/FONT-LICENSE.md), [SHADCN-LICENSE.md](plugins/gtm-os/scripts/gtm-os-render/ui/SHADCN-LICENSE.md).

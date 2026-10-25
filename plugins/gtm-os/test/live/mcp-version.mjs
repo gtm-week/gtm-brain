@@ -19,9 +19,7 @@ createInterface({ input: child.stdout }).on("line", line => { let m; try { m = J
 const hello = await call("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "mcp-version", version: "1" } });
 child.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n");
 const { tools = [] } = await call("tools/list");
-const engine = (() => { try { return JSON.parse(fs.readFileSync(join(root, "vendor", "allethic", "VERSION.json"), "utf8")).commit.slice(0, 12); } catch { return null; } })();
 console.log(`root     ${root}`);
 console.log(`server   GTM OS ${hello?.serverInfo?.version ?? "no version in initialize"}`);
 console.log(`tools    ${tools.length}: ${tools.map(t => t.name).join(", ")}`);
-console.log(`allethic ${engine ? `vendored, commit ${engine}` : "not bundled in this version"}`);
 child.stdin.end();
