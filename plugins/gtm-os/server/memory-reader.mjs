@@ -1,5 +1,10 @@
 // One lazy worker per server, never one per brain or query. SQLite work stays off MCP's loop.
 import { Worker } from 'node:worker_threads';
+import { homedir } from 'node:os';
+// A worker cannot start in a deleted folder, and Codex replaces the plugin folder the server was
+// started in when it refreshes a Git marketplace mid-session. process.cwd() is cached and still
+// answers, so re-enter the folder by path (the new copy), or home when it is gone.
+const keepCwd = () => { try { process.chdir(process.cwd()); } catch { process.chdir(homedir()); } };
 export function createMemoryReader({ idleMs = 30000, timeoutMs = 60000, maxPending = 32 } = {}) {
   let worker = null, active = null, idle = null, next = 0;
   const queue = [];
@@ -15,6 +20,7 @@ export function createMemoryReader({ idleMs = 30000, timeoutMs = 60000, maxPendi
     if (!queue.length) { idle = setTimeout(() => stop(), idleMs); idle.unref(); return; }
     clearTimeout(idle);
     if (!worker) {
+      keepCwd();
       const current = new Worker(new URL('./memory-worker.mjs', import.meta.url), { resourceLimits: { maxOldGenerationSizeMb: 64, maxYoungGenerationSizeMb: 8 } }); worker = current;
       current.on('message', message => {
         if (worker !== current || !active || active.id !== message.id) return;

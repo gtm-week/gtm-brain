@@ -153,6 +153,17 @@ test('one queued worker returns stable concurrent search results, bounds admissi
   } finally { await bounded.close(); }
 });
 
+test('the reader still starts after the folder the server was started in is replaced (a Git marketplace refresh)', () => {
+  const root = fixture(); note(root, 'Pilot signed.');
+  const started = mkdtempSync(join(tmpdir(), 'gtm-memory-cwd-'));
+  const script = join(mkdtempSync(join(tmpdir(), 'gtm-memory-cwd-script-')), 'replace.mjs');
+  writeFileSync(script, `import { rmSync, mkdirSync } from 'node:fs'; import { createMemoryReader } from ${JSON.stringify(new URL('../server/memory-reader.mjs', import.meta.url).href)};
+rmSync(process.cwd(), { recursive: true }); mkdirSync(process.cwd());
+const r = createMemoryReader(); console.log(await r.read(${JSON.stringify(root)}, 'count')); await r.close();\n`);
+  const out = execFileSync(process.execPath, ['--disable-warning=ExperimentalWarning', script], { cwd: started, encoding: 'utf8' });
+  assert.equal(out.trim(), '1');
+});
+
 test('normal appends and corrections touch only affected visibility rows and require no historical hashing', () => {
   const root = fixture(), origin = note(root, 'Origin quartz.');
   for (let n = 0; n < 60; n++) note(root, `Unrelated evidence ${n}.`);

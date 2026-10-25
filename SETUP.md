@@ -33,7 +33,7 @@ gh auth login && gh auth setup-git                                     # once; b
 codex plugin marketplace add gtm-week/gtm-os   # straight from GitHub (verified)
 codex plugin add gtm-os@gtm-os
 node "$(ls -d ~/.codex/plugins/cache/gtm-os/gtm-os/*/ | sort -V | tail -1)hooks/trust-hooks.mjs" --trust   # approve the hooks; installing does not
-codex plugin list | grep gtm-os                                      # installed, enabled, 0.30.6
+codex plugin list | grep gtm-os                                      # installed, enabled, 0.30.7
 ```
 
 The install is a snapshot of the configured branch. In the Codex app, say **"update GTM OS"**
@@ -85,7 +85,7 @@ new chat in Codex on the test folder (restart the app only if old skills linger)
 Set this once in your shell; the scripts below use it:
 
 ```bash
-export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-os/gtm-os/0.30.6
+export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-os/gtm-os/0.30.7
 ```
 
 The last install line approves the plugin's hooks; it ends with `Safety locks: on`. Codex does
