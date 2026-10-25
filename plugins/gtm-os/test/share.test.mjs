@@ -66,7 +66,9 @@ test("--name picks the repository name; a brain that already has a remote is pus
 
 test("without gh, or with gh signed out, it stops and says what to run; nothing changes", () => {
   const root = brain();
-  const noGh = share(root, { ...baseEnv, PATH: mkdtempSync(join(tmpdir(), "gtm-os-share-empty-")) + ":/usr/bin:/bin" });
+  const bin = mkdtempSync(join(tmpdir(), "gtm-os-share-nogh-")); // node and git only: CI images keep gh in /usr/bin
+  for (const cmd of ["node", "git"]) writeFileSync(join(bin, cmd), `#!/bin/sh\nexec "${execFileSync("sh", ["-c", `command -v ${cmd}`], { encoding: "utf8" }).trim()}" "$@"\n`, { mode: 0o755 });
+  const noGh = share(root, { ...baseEnv, PATH: bin });
   assert.equal(noGh.status, 2); assert.match(noGh.stderr, /gh/); assert.match(noGh.stderr, /brew install gh|cli\.github\.com/);
   const out = share(root, fakeGh({ signedIn: false }).env);
   assert.equal(out.status, 2); assert.match(out.stderr, /gh auth login/); assert.match(out.stderr, /gh auth setup-git/);
