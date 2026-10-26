@@ -8,12 +8,12 @@ import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import * as lib from "../lib/brain.mjs";
 import { legacyTemplates, rulesWhy, rulesReasons } from "../lib/upgrade-files.mjs";
+import { removeBrain } from "./helpers/dash-cleanup.mjs";
 
 const plugin = new URL("../", import.meta.url).pathname;
 function fixture(t, version = null) {
   const root = mkdtempSync(join(tmpdir(), "gtm-upgrade-release-"));
-  // The detached render worker can still be writing work/home: retry instead of racing it.
-  t.after(() => rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }));
+  t.after(() => removeBrain(root));
   const env = { ...process.env, CODEX_HOME: join(root, "profile"), GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_COMPILE: "1" };
   const setup = spawnSync("bash", [join(plugin, "scripts/gtm-brain-setup/setup.sh"), "--company", "Upgrade Co", "--one-liner", "Testing", "--owner", "Ann Lee <ann@example.test>"], { cwd: root, env, encoding: "utf8" });
   assert.equal(setup.status, 0, setup.stderr);

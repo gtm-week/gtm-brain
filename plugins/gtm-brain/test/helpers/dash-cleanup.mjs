@@ -4,9 +4,10 @@
 // An unstopped server keeps a port and file watchers for as long as the machine is up; enough of
 // them and the suite stalls instead of failing, which reads like a hang rather than a leak.
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { after } from "node:test";
+import { dashboardRefreshState } from "../../lib/dashboard-refresh.mjs";
 
 const tracked = new Map();
 
@@ -20,6 +21,17 @@ after(stopTrackedDashboards);
 export function trackBrain(root, plugin) {
   tracked.set(root, plugin);
   return root;
+}
+
+// The render worker is detached too, and keeps writing work/home after the test that queued it
+// returns; on a slow runner it outlasts any retry budget. Wait for the brain's own render to
+// settle (bounded), then remove the folder with retries for whatever else is still closing.
+export async function removeBrain(root, timeoutMs = 30000) {
+  for (const end = Date.now() + timeoutMs; Date.now() < end && existsSync(root);) {
+    if (!["pending", "running"].includes(dashboardRefreshState(root).status)) break;
+    await new Promise(done => setTimeout(done, 100));
+  }
+  rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
 }
 
 export function stopTrackedDashboards() {
