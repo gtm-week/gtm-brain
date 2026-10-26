@@ -2,6 +2,7 @@ process.env.GTM_BRAIN_NO_WATCH = "1";
 process.env.GTM_BRAIN_NO_SESSION_MAINTENANCE = "1"; // Covered by session-maintenance.test.mjs.
 process.env.GTM_BRAIN_NO_COMPILE = "1"; // Model runs are opt-in through test doubles.
 // Projects: a folder linked to a brain by a pointer block in its AGENTS.md, its own loaded set, a tag on its notes.
+process.env.GTM_BRAIN_NO_HOOK_CHECK = "1"; // the hooks-off check talks to a real Codex; hooks-notice.test covers it with a fake one
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, realpathSync, symlinkSync } from "node:fs";

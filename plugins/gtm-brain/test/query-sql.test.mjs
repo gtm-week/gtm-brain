@@ -3,6 +3,7 @@ process.env.GTM_BRAIN_NO_COMPILE = "1";
 process.env.GTM_BRAIN_NO_COMMIT = "1";
 // One read tool (ALL-204 step 2a): query gains views for the derived reads and a read-only SQL mode
 // over the memory index, with the dashboard's visibility rules baked into the views.
+process.env.GTM_BRAIN_NO_HOOK_CHECK = "1"; // the hooks-off check talks to a real Codex; hooks-notice.test covers it with a fake one
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";

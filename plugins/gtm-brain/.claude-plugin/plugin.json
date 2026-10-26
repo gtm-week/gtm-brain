@@ -1,7 +1,7 @@
 {
   "name": "gtm-brain",
   "displayName": "GTM Brain",
-  "version": "0.31.0",
+  "version": "0.31.1",
   "description": "Persistent ICP, customer evidence and playbook progress for GTM engineers",
   "author": {
     "name": "GTM Tech Week"

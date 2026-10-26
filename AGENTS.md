@@ -114,10 +114,13 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
 - A hook runs only while Codex holds the approval for its declaration: `config.toml` keeps a
   `trusted_hash` per hook and `codex plugin add` writes none, so a hook installed by a command
   is enabled and silent. `hooks/trust-hooks.mjs` writes that approval; `dev-install.sh`,
-  `update.mjs` and the install flow all run it. The hash covers `hooks.json` (command, matcher,
-  timeout, status message), not the script body and not the installed path: editing a hook
-  script or bumping the version keeps the approval, editing `hooks.json` drops it. After any
-  change to `hooks.json`, re-run `./dev-install.sh` or the hooks stay off without saying so.
+  `update.mjs` and the install flow all run it. Before Codex 0.164 the hash covered only
+  `hooks.json` (command, matcher, timeout, status message). From 0.164 Codex also keeps a
+  `trusted_content_hash` of the plugin's files (`currentHash` is "declaration/contents"), so any
+  change to the plugin, a version bump included, switches every hook off until it is approved
+  again. `update.mjs` re-approves; an update the Codex app makes itself does not, so the MCP
+  server checks once per start and tells the person (`host.texts.hooksOff`). After any change to
+  the plugin, re-run `./dev-install.sh` or the hooks stay off without saying so.
 - A change under `plugins/gtm-brain/` that people should receive bumps the version in
   `.codex-plugin/plugin.json`. `check-version.mjs` compares that number with the installed one,
   and the dashboard, the hook and the advisor all read its answer: everything shipped without a

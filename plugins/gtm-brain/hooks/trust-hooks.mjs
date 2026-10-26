@@ -15,7 +15,7 @@
 import { spawn } from "node:child_process";
 
 export const PLUGIN_ID = "gtm-brain@gtm-brain";
-const STALE = new Set(["untrusted", "modified"]); // a hook in either state does not run
+export const STALE = new Set(["untrusted", "modified"]); // a hook in either state does not run
 
 // One app-server conversation: initialize, ask, optionally write, exit.
 async function appServer(calls, timeout = 30000) {

@@ -29,7 +29,7 @@ codex plugin marketplace add gtm-week/gtm-brain   # straight from GitHub (verifi
 codex plugin marketplace upgrade gtm-brain        # refresh an existing marketplace snapshot
 codex plugin add gtm-brain@gtm-brain
 node "$(ls -d ~/.codex/plugins/cache/gtm-brain/gtm-brain/*/ | sort -V | tail -1)hooks/trust-hooks.mjs" --trust   # approve the hooks; installing does not
-codex plugin list | grep gtm-brain                                      # installed, enabled, 0.31.0
+codex plugin list | grep gtm-brain                                      # installed, enabled, 0.31.1
 ```
 
 The install is a snapshot of the configured branch. In the Codex app, say **"update GTM Brain"**
@@ -81,7 +81,7 @@ new chat in Codex on the test folder (restart the app only if old skills linger)
 Set this once in your shell; the scripts below use it:
 
 ```bash
-export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.31.0
+export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.31.1
 ```
 
 The last install line approves the plugin's hooks; it ends with `Safety locks: on`. Codex does
