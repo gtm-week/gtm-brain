@@ -1,24 +1,105 @@
-# GTM OS
+# GTM Brain
 
-GTM OS helps your team keep company knowledge, customer conversations and priorities in one place.
+**For GTM engineers building research, account and campaign workflows in Codex.**
 
-Open source under the [MIT license](LICENSE). Runs locally with Node 22.16+ or 24+.
+A new chat should not mean pasting your ICP again, hunting down the last customer conversation,
+or reconstructing where a playbook stopped. GTM Brain keeps your ICP, offer, customer evidence
+and playbook progress in local files that your agent can use across chats and linked projects.
 
-## Set up GTM OS in Codex
+It installs as the **`gtm-os` plugin**. Open source under [MIT](LICENSE).
+[Codex](#install-in-codex) is the primary host; [Claude Code support is in beta](#claude-code-beta).
 
-Open a new chat in the **Codex desktop app**, paste this prompt, and send it:
+## What it solves
+
+| The work you keep repeating | What GTM Brain does |
+| --- | --- |
+| **Re-explaining who you sell to and why you win.** Every research or campaign chat needs the same ICP, offer, proof and messaging rules. | Keeps those as standing documents and shared context. Linked project folders use the same brain, so a new project can reuse what you have already established. |
+| **Reconstructing an account from CRM records, emails and call notes.** The useful detail is scattered, and yesterday's summary may miss today's change. | Builds a sourced account brief from retained evidence and targeted reads of connected tools: where things stand, who is involved, what happened and what remains unanswered. |
+| **Losing the state of a multi-step GTM playbook.** The prompt is saved, but which step ran, what is due and what needs approval are not. | Keeps reusable playbooks with tracked runs, steps, dates and approval gates. Resume a run in chat with its recorded progress. |
+| **Getting a GTM recommendation you cannot check.** Market claims lack evidence; CAC and LTV use incompatible inputs. | Runs sourced market research and unit-economics reviews that expose evidence, assumptions and missing inputs. You can inspect the basis for the conclusion. |
+
+## Install in Codex
+
+Requires the **Codex desktop app** and **Node 22.16+ (22.x) or Node 24+**. The guided installer checks your environment.
+
+Open a new Codex chat and send:
 
 ```text
 Read https://github.com/gtm-week/gtm-os/blob/main/INSTALL.md and follow it exactly. Read nothing else in that repository.
 ```
 
-Codex will install GTM OS, help you open your GTM OS project, and guide you through company
-setup and connecting your tools. Follow the choices and permission prompts it shows.
-The plugin is public; no GitHub invitation or sign-in is required to download it.
+Follow the setup and permission prompts. Codex installs the plugin, opens your working folder,
+and guides you through your business context and tool connections. No GitHub invitation or
+sign-in is required to download the plugin.
 
-For a walkthrough, see [Getting started](ONBOARDING.md).
+[First-use walkthrough](ONBOARDING.md) · [Everyday guide](GUIDE.md) · [Manual installation](#manual-installation)
 
-## Set up GTM OS in Claude Code (beta)
+## Put it to work
+
+These are example requests, not preloaded data. The answers depend on the context you provide
+and the tools you connect.
+
+### Before an account meeting
+
+> Brief me on this account. What did they ask for, who is involved, and what is still unanswered?
+
+Get a one-page brief with a dated timeline, source links, open questions and a proposed next
+step. The agent checks the relevant connected sources when the answer needs current information.
+
+### Before entering a new segment
+
+> Research this segment against our ICP and offer. What are the buying pains, who buys, and what evidence supports the fit?
+
+Get a sourced market diagnosis that uses your existing strategy and customer evidence.
+Findings, hypotheses and gaps stay separate, so a plausible market story does not pass as proof.
+
+### When a campaign spans more than one chat
+
+> Turn this outbound process into a playbook with steps and approval gates. Then show me where the current run stands.
+
+Keep the process and each run's progress together. The agent can carry out a step through a
+connected tool with the required permission, or record a step you completed yourself.
+Playbooks track work; execution happens in chat, with human decisions where the process requires them.
+
+### Before increasing acquisition spend
+
+> Compare CAC, LTV and payback for paid search, outbound and referrals. Show the inputs and assumptions. Where should we push, fix, stop or measure?
+
+Get a unit-economics review with comparable periods, explicit assumptions and missing data
+called out. The review makes a recommendation; budget and campaign changes remain separate actions.
+
+### After a useful process becomes repeatable
+
+> Make this research process a skill I can reuse in our other projects.
+
+Keep your own skills in the brain and use them from linked project folders. Plugin updates
+preserve them. See the [command reference](COMMANDS.md) for all thirteen workflows, including
+strategy, source sync, documents and project setup.
+
+## What you own, and what you connect
+
+Your brain is stored in readable local files:
+
+- **Contexts** group knowledge about a topic, with a summary and instructions for working on it.
+- **Memories** retain dated evidence and source references in append-only JSONL.
+- **Entities** identify people, organizations and products, with stable IDs and cited briefs.
+- **Documents** hold the ICP, offer, strategy, pricing and writing rules that future work should follow.
+
+You can inspect the files or ask to open the read-only dashboard. Notes are saved immediately.
+By default, background summaries update after ten minutes without a new note; you can request
+an earlier refresh. The dashboard opens when you ask for it.
+
+CRM, email, calendar and meeting sources come through the host's connected integrations, with
+their own accounts and permissions. GTM Brain retains useful findings and source links; it does
+not mirror every record. A broad source sync runs when requested or on a schedule you approve.
+Relevant content is processed by your AI host and connected services, so local storage does
+not mean offline AI processing.
+
+Protected workplace settings require `APPROVE`. External actions use the host's normal
+permission flow. See [GUIDE.md](GUIDE.md) for the working model and [COMMANDS.md](COMMANDS.md)
+for the files each operation reads or changes.
+
+## Claude Code (beta)
 
 In Claude Code, run:
 
@@ -28,127 +109,27 @@ In Claude Code, run:
 ```
 
 In the Claude desktop app:
-1. Choose Add marketplace, enter `https://github.com/gtm-week/gtm-os.git` and click Add.
-2. Click Sync.
-3. Install gtm-os from the marketplace.
-Then make an empty folder, start a session in it and say: set up a company brain here.
 
-These work as they do in Codex:
-- setup and onboarding
-- remember, briefs and questions over the brain
-- linked projects
-- the guard on protected files
-- APPROVE
+1. Choose Add marketplace and enter `https://github.com/gtm-week/gtm-os.git`.
+2. Click Sync, then install `gtm-os`.
+3. Open an empty folder, start a session and say: "Set up a company brain here."
 
+Setup, memory, briefs, questions, linked projects and protected-file approvals are supported.
 The dashboard opens as a link in your browser.
 
-Not in the beta yet:
-- Context summaries compile only when Codex is also installed on the machine.
-- Updates are not automatic for this marketplace. From 0.30.3, GTM OS says when a new version is out:
-  say "update GTM OS", then `/reload-plugins`. On an older version, run
-  `claude plugin marketplace update gtm-os && claude plugin update gtm-os@gtm-os` once.
-- Connector checks (connect my tools) and the dashboard's chat buttons are Codex-only.
-- Some skill texts still name Codex.
+Current beta limitations:
 
-## How GTM OS works
-
-A company brain for a revenue team, as a Codex plugin. Three formal objects, kept in the team's own git repo:
-
-- **Context**: a context of work (`pipeline`, `marketing`, `gtm`, yours). A cover page with a summary,
-  how to behave when loaded, people mentioned, tools used, related contexts.
-- **Memory**: one record in a context's append-only time series. Who, when, via what, which tools,
-  which people, what happened.
-- **Entity**: a person, organization or product with a stable ID, aliases and external references,
-  stored in an editable Markdown file with a cited brief. Companies and teams are organization subtypes.
-
-Plus **admin**: the workplace info (company, what we sell, to whom, team, tools), written at setup.
-
-Customer, partner and employer describe relationships supported by context memories. Entities are
-queryable through the ontology catalog and linked to those memories by stable IDs. Deals remain
-context information; meetings/events will have a separate abstraction in a later version.
-Customer identities, source links and dated relationship evidence are retained during onboarding, including customers absent from CRM. The Customers view shows known relationships and scoped coverage; current operational questions use live tools.
-
-## How it fits together
-
-```mermaid
-flowchart LR
-  subgraph person["Person"]
-    chat["Codex chat<br/>load · remember · recall · compile · save"]
-    browser["Browser<br/>the dashboard"]
-  end
-
-  subgraph plugin["gtm-os plugin (~/.codex/plugins)"]
-    skills["skills/*<br/>workflow skills + internal procedures"]
-    hooks["hooks<br/>SessionStart · PreToolUse gate"]
-    lib["lib/brain.mjs<br/>the file format: read, validate, append"]
-    skills --> lib
-    hooks --> lib
-  end
-
-  subgraph brain["The brain (their private git repo)"]
-    admin["brain/admin.md<br/>workplace info · APPROVE to change"]
-    names["brain/entities/*.md<br/>identity and cited briefs"]
-    ctx["brain/contexts/&lt;slug&gt;/context.md<br/>summary · rules · people · tools"]
-    mem["brain/contexts/&lt;slug&gt;/memories.jsonl<br/>append-only notes"]
-    work["work/ (ignored)<br/>dashboard · loaded set · tools · logs"]
-  end
-
-  subgraph tools["Tools, source evidence and live checks"]
-    crm["HubSpot / Attio"]
-    mail["Gmail · Calendar"]
-    notes["Granola"]
-  end
-
-  chat -->|"skills"| skills
-  lib -->|"writes"| mem
-  lib -->|"compile writes"| ctx
-  lib -->|"approve writes"| admin
-  lib -->|"names, remember write"| names
-  lib -->|"render writes"| work
-  work --> browser
-  chat -->|"official Codex plugins"| crm
-  chat --> mail
-  chat --> notes
-  schedule["Scheduled run<br/>app task or launchd"] -->|"compile what is behind · render · save covers"| skills
-  hooks -.->|"deny direct edits"| admin
-  hooks -.->|"deny direct edits"| mem
-```
-
-Three objects, shared library writers. Workflow skills coordinate small MCP operations, with detailed internal procedures loaded as needed; every write goes
-through `lib/brain.mjs`, with two named exceptions (`setup` composes the first `admin.md` from
-its template, `approve` replaces it after APPROVE); the hooks deny the model any other route to
-the protected files. Memories retain append-only evidence; entity files maintain identities and
-cited briefs; context covers are compiled from memories. The dashboard reads all three objects.
-
-```mermaid
-sequenceDiagram
-  participant P as Person
-  participant C as Codex
-  participant B as Brain files
-  participant T as Tools (live)
-
-  Note over C: session start: hook re-loads last contexts, lists what is new, opens the dashboard
-  P->>C: "load pipeline"
-  C->>B: read context.md + last memories
-  P->>C: "Pierre asked for a TCO before 12.09"
-  C->>B: remember → memories.jsonl (append)
-  P->>C: "what do we know about the CFO?"
-  C->>B: recall across all contexts
-  C-->>P: hits, grouped by context
-  P->>C: "yes, compile"
-  C->>B: read all memories of pipeline
-  C->>B: write summary + Now paragraph into context.md
-  P->>C: "is Attio connected?"
-  C->>T: read one deal
-  C-->>P: "read 1 of 57 deals"
-  Note over C,B: every write is kept at once (one commit per change)
-```
+- Background context summaries require Codex to be installed on the same machine.
+- Marketplace updates are manual. From version 0.30.3, say "update GTM OS" when prompted,
+  then run `/reload-plugins`. On older versions, first run
+  `claude plugin marketplace update gtm-os && claude plugin update gtm-os@gtm-os`.
+- Connector checks and the dashboard's chat buttons are Codex-only.
+- Some skill instructions still name Codex.
 
 ## Manual installation
 
-For the guided setup, use the Codex prompt at the top of this page.
-
-To install by hand from the public marketplace:
+<details>
+<summary>Codex CLI installation and hook approval</summary>
 
 ```bash
 codex plugin marketplace add gtm-week/gtm-os
@@ -157,90 +138,39 @@ codex plugin add gtm-os@gtm-os
 node "$(ls -d ~/.codex/plugins/cache/gtm-os/gtm-os/*/ | sort -V | tail -1)hooks/trust-hooks.mjs" --trust
 ```
 
-The upgrade line refreshes an existing marketplace snapshot. The final line approves the
-plugin's hooks, which installing does not do: without it they are
-installed and enabled but never run. Then, in a new chat in an empty project folder, send
-"Set up GTM OS here" (or `/gtm-os-start`). `ONBOARDING.md` is the one page to hand a new
-person: install to first use. `GUIDE.md` is the ten-minute guide for the person using it. `SETUP.md` is the install and test
-manual, `COMMANDS.md` lists every command and what it touches.
+The upgrade line refreshes an existing marketplace snapshot. The final line explicitly approves
+the plugin's hooks, which installation alone does not do. Without that approval, the installed
+hooks do not run. In a new chat in an empty project folder, send "Set up GTM OS here" or
+`/gtm-os-start`.
 
-## Layout
+See [SETUP.md](SETUP.md) for installation and verification details.
 
-```
-.agents/plugins/marketplace.json
-plugins/gtm-os/
-  .codex-plugin/plugin.json
-  hooks.json  hooks/          SessionStart (list contexts), PreToolUse (protect admin, memories);
-                              trust-hooks.mjs approves them in Codex, which installing does not do
-  .mcp.json  server/          the operations as MCP tools (Remembering, Searching the brain, ...);
-                              dash.mjs serves the read-only dashboard and revision events
-  lib/                        the file format: read, append, write covers, commit; no dependencies
-  skills/                     the thirteen workflows a person can ask for (all prefixed gtm-os-): start,
-                              todo, sync, workflow, deepdive, strategy, unit-economics,
-                              market-desk-research, project, configure, skill, document, use-brain; what
-                              they used to be as separate skills lives on as their references
-    gtm-os-use-brain/references/    load, create and edit contexts, remember, recall, names, compile,
-                              dashboard, manual save
-    gtm-os-configure/references/ workplace approval, connect tools, update plugin
-    gtm-os-start/references/  onboarding, the handoff import
-  scripts/gtm-os-*/           the operation scripts the MCP server, hooks and skills run (no SKILL.md)
-  templates/                  AGENTS.md, brain/admin.md, .gitignore, the pre-commit hook
-  test/                       node --test 'plugins/gtm-os/test/*.test.mjs' 
-dev-install.sh                install this checkout into Codex, no GitHub round trip
-```
+</details>
 
-The plugin ships from `gtm-week/gtm-os`, branch `main`.
+## Documentation and contributions
 
-| Document | Purpose |
+| Document | Use it for |
 | --- | --- |
+| [ONBOARDING.md](ONBOARDING.md) | Installation through first use |
+| [GUIDE.md](GUIDE.md) | Working with your brain day to day |
+| [COMMANDS.md](COMMANDS.md) | Workflows, tools and the files they touch |
 | [INSTALL.md](INSTALL.md) | Standalone instructions for the installing agent |
-| [ONBOARDING.md](ONBOARDING.md) | Guided first-use walkthrough |
-| [GUIDE.md](GUIDE.md) | Everyday usage for the person using the brain |
-| [COMMANDS.md](COMMANDS.md) | Tool and command reference, including files written |
-| [SETUP.md](SETUP.md) | Manual installation and contributor verification |
+| [SETUP.md](SETUP.md) | Manual installation and verification |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Architecture, source layout and release checks |
 
-Describe a feature in its owning reference and link to it from the other guides. Shared
-agent policies are embedded automatically where an agent needs a self-contained document.
+Found a problem or have a concrete workflow to improve? [Open an issue](https://github.com/gtm-week/gtm-os/issues).
 
-## Before pushing to main
+### Before pushing to main
 
-`./dev-install.sh` points git at [.githooks/](.githooks/). Before a push to `main`, the pre-push
-hook runs the test suite, then [the harness bench](plugins/gtm-os/test/live/harness-bench.mjs)
-when the push changes what ships. The bench runs three tasks (a coding fix, a logic puzzle, a
-connector question) through `codex exec` without the plugin, with it in an ordinary folder and
-in a brain, in throwaway Codex profiles with this checkout installed. It fails when the plugin
-costs solved tasks, adds more prompt tokens than `GTM_OS_BENCH_MAX_OVERHEAD` (default 14000) or
-calls GTM OS tools for the puzzle. Traces of every run stay in its artifacts folder.
-`GTM_OS_SKIP_BENCH=1 git push` skips it.
-Then [the Claude Code smoke](plugins/gtm-os/test/live/claude-smoke.mjs) runs this checkout in `claude -p`
-(setup, the guard on `admin.md`, "go ahead" refused, APPROVE applied), so a fix for one host
-cannot quietly break the other. `GTM_OS_SKIP_CLAUDE=1 git push` skips it.
+Contributor checks and live host tests are documented in [CONTRIBUTING.md](CONTRIBUTING.md#before-pushing-to-main).
 
-## Maintaining shared text and schemas
+### Maintaining shared text and schemas
 
-Run `node scripts/sync-derived.mjs` after changing either source below. Commit the source
-and its generated changes together. `node scripts/sync-derived.mjs --check` reports drift
-without writing; the normal test suite runs that check too.
-
-- Question and Computer Use policy sources live in [plugins/gtm-os/policies/](plugins/gtm-os/policies/).
-  The script fills marked blocks in contributor instructions, installation instructions,
-  the brain template and the question reference. The session hook reads these sources
-  directly for both empty folders and existing brains.
-- In [the ontology](plugins/gtm-os/ontology/gtm-os.ossie.json), edit the single-memory fields
-  under `remember.input_schema.properties`. The script derives `memories.items.properties`
-  from them, excluding the call-level `by`, `project` and batch envelope. The static JSON
-  remains ready for the tool generator; edit only the single-memory field definitions.
-
-[The compatibility manifest](plugins/gtm-os/templates/legacy/manifest.json) is the upgrade
-matrix for both runtime and tests. Before editing the brain template, snapshot its outgoing
-contents as `templates/legacy/AGENTS-<old version>.md` and add the manifest entry. Identical
-releases may share one file (0.8.1 and 0.8.2 do). These are immutable fixtures, excluded from
-policy generation: exact comparison lets upgrades preserve personal instruction edits.
-Bump the plugin version and the paths in SETUP.md and COMMANDS.md when shipping changes.
-For each module release, follow the update invariants and release checks:
-users start fresh on the first participant release; preserve their data and entry points through
-subsequent releases, validate before installation, and keep brain refresh repeatable.
+Policy generation, schema checks and upgrade invariants are documented in [CONTRIBUTING.md](CONTRIBUTING.md#maintaining-shared-text-and-schemas).
 
 ## License
 
-MIT, see [LICENSE](LICENSE). The dashboard bundles third-party code and fonts under their own licenses: [THIRD-PARTY-NOTICES.md](plugins/gtm-os/scripts/gtm-os-render/ui/THIRD-PARTY-NOTICES.md), [FONT-LICENSE.md](plugins/gtm-os/scripts/gtm-os-render/ui/FONT-LICENSE.md), [SHADCN-LICENSE.md](plugins/gtm-os/scripts/gtm-os-render/ui/SHADCN-LICENSE.md).
+[MIT](LICENSE). Bundled dashboard dependencies and fonts retain their own licenses:
+[third-party notices](plugins/gtm-os/scripts/gtm-os-render/ui/THIRD-PARTY-NOTICES.md),
+[font license](plugins/gtm-os/scripts/gtm-os-render/ui/FONT-LICENSE.md) and
+[shadcn license](plugins/gtm-os/scripts/gtm-os-render/ui/SHADCN-LICENSE.md).
