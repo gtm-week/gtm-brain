@@ -62,10 +62,19 @@ for (const mode of ['existing', 'new']) test(`${mode} project: MCP link, session
   assert.equal(existsSync(project), mode === 'existing');
   f.call('open_dashboard');
   const url = lib.readDash(f.root).url;
+  // The test blocks its own event loop in spawnSync for seconds at a time, so a kept-alive
+  // connection the server already closed can be reused and reset (ECONNRESET on slow macOS CI).
+  // Retry a failed connection the way a browser retries a GET, within the same deadline.
+  const get = async (path = '', opts) => {
+    for (const end = Date.now() + 9000; ;) {
+      try { return await fetch(`${url}${path}`, opts); }
+      catch (e) { if (Date.now() > end || opts?.signal?.aborted) throw e; await new Promise(done => setTimeout(done, 100)); }
+    }
+  };
   const getData = async (ready = () => true) => {
     const deadline = Date.now() + 9000;
     while (true) {
-      const res = await fetch(`${url}data.json`); assert.ok(res.ok);
+      const res = await get('data.json'); assert.ok(res.ok);
       const data = await res.json();
       if (ready(data)) return data;
       assert.ok(Date.now() < deadline, 'the queued dashboard refresh completes');
@@ -143,7 +152,7 @@ for (const mode of ['existing', 'new']) test(`${mode} project: MCP link, session
     kind: 'note', content: 'Research-only control note.' }, other);
   const before = await getData(d => d.questions.some(q => q.id === questionId)
     && d.contexts.some(c => c.memories.some(m => m.content === 'Research-only control note.')));
-  const html = await (await fetch(url)).text();
+  const html = await (await get()).text();
   const listed = before.projects.find(p => p.slug === slug);
   assert.equal(listed.path, project); assert.equal(listed.pointer, true);
   assert.ok(before.questions.some(q => q.id === questionId));
@@ -159,7 +168,7 @@ for (const mode of ['existing', 'new']) test(`${mode} project: MCP link, session
   // Observe real revision events, answer in a fresh MCP process, and verify removal after refresh
   // without running compile or asking the dashboard to perform an action.
   const abort = new AbortController();
-  const events = await fetch(`${url}events`, { signal: abort.signal });
+  const events = await get('events', { signal: abort.signal });
   const reader = events.body.getReader();
   const timeout = setTimeout(() => abort.abort(), 10000);
   try {
@@ -181,7 +190,7 @@ for (const mode of ['existing', 'new']) test(`${mode} project: MCP link, session
     assert.ok(after.decisions.some(m => m.retracts === questionId));
     assert.equal(lib.readContext(f.root, 'market').compiledAt, compiledBefore);
     ui.run('refreshPage()');
-    const fresh = page(after, { saved: ui.saved, html: await (await fetch(url)).text() });
+    const fresh = page(after, { saved: ui.saved, html: await (await get()).text() });
     assert.equal(fresh.run('view'), 'projects'); assert.equal(fresh.run('projectSlug'), slug);
     assert.match(fresh.node('#project-detail').innerHTML, /Yes, record October 15/);
     assert.doesNotMatch(new URL(fresh.run('chatDraft().href')).searchParams.get('prompt'), /open questions/);
