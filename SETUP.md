@@ -20,17 +20,13 @@ grows with the steps: each section is a step you can run and check.
 
 ## 1. Install the plugin
 
-The repo is private: you need to be a collaborator, and **git itself** needs your GitHub
-credentials (`gh auth login` then `gh auth setup-git`, once). Codex fetches the marketplace
-with git, and git does not use the GitHub connector you signed into inside Codex: that is a
-different login, and "GitHub connector authenticated" says nothing about git. Without git's
-own sign-in the marketplace add fails with "Missing or invalid credentials", and later updates
-quietly keep Codex's old copy; `update GTM OS` now notices that ("Codex's copy of GTM OS is X,
-GitHub has Y") and tells you to run the two commands.
+The plugin source is public and MIT-licensed. Codex fetches the marketplace with git;
+no GitHub invitation or sign-in is required to download it. GitHub authentication is
+needed only if you later choose to share your own private company brain through GitHub.
 
 ```bash
-gh auth login && gh auth setup-git                                     # once; brew install gh if missing
 codex plugin marketplace add gtm-week/gtm-os   # straight from GitHub (verified)
+codex plugin marketplace upgrade gtm-os        # refresh an existing marketplace snapshot
 codex plugin add gtm-os@gtm-os
 node "$(ls -d ~/.codex/plugins/cache/gtm-os/gtm-os/*/ | sort -V | tail -1)hooks/trust-hooks.mjs" --trust   # approve the hooks; installing does not
 codex plugin list | grep gtm-os                                      # installed, enabled, 0.30.7

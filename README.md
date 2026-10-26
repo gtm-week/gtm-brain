@@ -2,6 +2,8 @@
 
 GTM OS helps your team keep company knowledge, customer conversations and priorities in one place.
 
+Open source under the [MIT license](LICENSE). Runs locally with Node 22.16+ or 24+.
+
 ## Set up GTM OS in Codex
 
 Open a new chat in the **Codex desktop app**, paste this prompt, and send it:
@@ -12,7 +14,7 @@ Read https://github.com/gtm-week/gtm-os/blob/main/INSTALL.md and follow it exact
 
 Codex will install GTM OS, help you open your GTM OS project, and guide you through company
 setup and connecting your tools. Follow the choices and permission prompts it shows.
-You need GitHub access to this private repository.
+The plugin is public; no GitHub invitation or sign-in is required to download it.
 
 For a walkthrough, see [Getting started](ONBOARDING.md).
 
@@ -28,7 +30,7 @@ In Claude Code, run:
 In the Claude desktop app:
 1. Choose Add marketplace, enter `https://github.com/gtm-week/gtm-os.git` and click Add.
 2. Click Sync.
-3. Install gtm-os from the marketplace. You need GitHub access to this private repository, the same as for Codex.
+3. Install gtm-os from the marketplace.
 Then make an empty folder, start a session in it and say: set up a company brain here.
 
 These work as they do in Codex:
@@ -146,16 +148,17 @@ sequenceDiagram
 
 For the guided setup, use the Codex prompt at the top of this page.
 
-By hand. The repo is private. Once, so git can reach it: `gh auth login && gh auth setup-git`
-(`brew install gh` if missing). Then:
+To install by hand from the public marketplace:
 
 ```bash
 codex plugin marketplace add gtm-week/gtm-os
+codex plugin marketplace upgrade gtm-os
 codex plugin add gtm-os@gtm-os
 node "$(ls -d ~/.codex/plugins/cache/gtm-os/gtm-os/*/ | sort -V | tail -1)hooks/trust-hooks.mjs" --trust
 ```
 
-The third line approves the plugin's hooks, which installing does not do: without it they are
+The upgrade line refreshes an existing marketplace snapshot. The final line approves the
+plugin's hooks, which installing does not do: without it they are
 installed and enabled but never run. Then, in a new chat in an empty project folder, send
 "Set up GTM OS here" (or `/gtm-os-start`). `ONBOARDING.md` is the one page to hand a new
 person: install to first use. `GUIDE.md` is the ten-minute guide for the person using it. `SETUP.md` is the install and test
