@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Before a push to main: the test suite, then the harness benchmark when the push changes what
-# ships (anything under plugins/gtm-os/ but its tests). The benchmark runs real `codex exec` turns
-# on the Codex sign-in, about 4 minutes; see plugins/gtm-os/test/live/harness-bench.mjs.
+# ships (anything under plugins/gtm-brain/ but its tests). The benchmark runs real `codex exec` turns
+# on the Codex sign-in, about 4 minutes; see plugins/gtm-brain/test/live/harness-bench.mjs.
 # Enabled by ./dev-install.sh (git config core.hooksPath .githooks).
-#   GTM_OS_SKIP_BENCH=1 git push    skip the benchmark (say why in the PR or commit)
-#   GTM_OS_SKIP_TESTS=1 git push    skip the suite too
-#   GTM_OS_SKIP_CLAUDE=1 git push   skip the Claude Code smoke (setup, guard, APPROVE; about 2 minutes)
+#   GTM_BRAIN_SKIP_BENCH=1 git push    skip the benchmark (say why in the PR or commit)
+#   GTM_BRAIN_SKIP_TESTS=1 git push    skip the suite too
+#   GTM_BRAIN_SKIP_CLAUDE=1 git push   skip the Claude Code smoke (setup, guard, APPROVE; about 2 minutes)
 set -eu
 root="$(git rev-parse --show-toplevel)"
 zero=0000000000000000000000000000000000000000
@@ -14,20 +14,20 @@ while read -r _ lsha rref rsha; do
   [ "$rref" = refs/heads/main ] && [ "$lsha" != "$zero" ] || continue
   tomain=1
   if [ "$rsha" = "$zero" ] || ! git cat-file -e "$rsha" 2>/dev/null; then changed="unknown base"; continue; fi
-  changed="$changed$(git diff --name-only "$rsha" "$lsha" -- plugins/gtm-os ':(exclude)plugins/gtm-os/test')"
+  changed="$changed$(git diff --name-only "$rsha" "$lsha" -- plugins/gtm-brain ':(exclude)plugins/gtm-brain/test')"
 done
 [ "$tomain" = 1 ] || exit 0
-[ "${GTM_OS_SKIP_TESTS:-}" = 1 ] && { echo "pre-push: tests skipped (GTM_OS_SKIP_TESTS=1)"; exit 0; }
+[ "${GTM_BRAIN_SKIP_TESTS:-}" = 1 ] && { echo "pre-push: tests skipped (GTM_BRAIN_SKIP_TESTS=1)"; exit 0; }
 
 echo "pre-push: test suite"
-node --test "$root/plugins/gtm-os/test/*.test.mjs" </dev/null >/dev/null 2>&1 || {
-  echo "pre-push: the test suite failed; run node --test 'plugins/gtm-os/test/*.test.mjs'"; exit 1; }
+node --test "$root/plugins/gtm-brain/test/*.test.mjs" </dev/null >/dev/null 2>&1 || {
+  echo "pre-push: the test suite failed; run node --test 'plugins/gtm-brain/test/*.test.mjs'"; exit 1; }
 
-if [ -z "$changed" ]; then echo "pre-push: nothing under plugins/gtm-os/ changed, harness bench skipped"; exit 0; fi
-if [ "${GTM_OS_SKIP_BENCH:-}" = 1 ]; then echo "pre-push: harness bench skipped (GTM_OS_SKIP_BENCH=1)"; exit 0; fi
+if [ -z "$changed" ]; then echo "pre-push: nothing under plugins/gtm-brain/ changed, harness bench skipped"; exit 0; fi
+if [ "${GTM_BRAIN_SKIP_BENCH:-}" = 1 ]; then echo "pre-push: harness bench skipped (GTM_BRAIN_SKIP_BENCH=1)"; exit 0; fi
 echo "pre-push: harness bench (bare / plain / brain, about 4 minutes)"
-node "$root/plugins/gtm-os/test/live/harness-bench.mjs" </dev/null
-if [ "${GTM_OS_SKIP_CLAUDE:-}" = 1 ]; then echo "pre-push: Claude Code smoke skipped (GTM_OS_SKIP_CLAUDE=1)"; exit 0; fi
+node "$root/plugins/gtm-brain/test/live/harness-bench.mjs" </dev/null
+if [ "${GTM_BRAIN_SKIP_CLAUDE:-}" = 1 ]; then echo "pre-push: Claude Code smoke skipped (GTM_BRAIN_SKIP_CLAUDE=1)"; exit 0; fi
 command -v claude >/dev/null || { echo "pre-push: claude not on PATH, Claude Code smoke skipped"; exit 0; }
 echo "pre-push: Claude Code smoke (setup, guard, APPROVE; about 2 minutes)"
-node "$root/plugins/gtm-os/test/live/claude-smoke.mjs" </dev/null
+node "$root/plugins/gtm-brain/test/live/claude-smoke.mjs" </dev/null

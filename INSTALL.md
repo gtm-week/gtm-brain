@@ -1,7 +1,7 @@
-# INSTALL.md: agent instructions for installing GTM OS
+# INSTALL.md: agent instructions for installing GTM Brain
 
 You are a coding agent a person has pointed at this file (or this repo) and asked to set
-up GTM OS. The person may be non-technical. Run everything yourself, ask permission when
+up GTM Brain. The person may be non-technical. Run everything yourself, ask permission when
 your harness requires it, and speak in plain words. Do not paste command output at them;
 say what happened.
 
@@ -17,11 +17,11 @@ a pause they feel.
 the person to type a yes in chat. And never bundle a risky command with routine ones:
 the whole bundle then needs authorization and shows nothing for it. One risky action
 per command, preceded by one plain line about what the click approves ("the app will
-ask to allow opening your GTM OS project"). Batch freely everything that needs
+ask to allow opening your GTM Brain project"). Batch freely everything that needs
 no authorization.
 
-<!-- generated: questions; edit plugins/gtm-os/policies/questions.md -->
-Ask through the GTM OS question tool named for the purpose whenever available: `onboarding_question`
+<!-- generated: questions; edit plugins/gtm-brain/policies/questions.md -->
+Ask through the GTM Brain question tool named for the purpose whenever available: `onboarding_question`
 for first-run setup only, `configuration_question` for tools, connections and settings, and
 `question` for everyday and creative work (which context, same as X?, which direction or photo?).
 The host labels the call by the tool's name, so the name is the person's only cue to what kind
@@ -34,7 +34,7 @@ person expects there, and it shows the choices and their own answer on one page.
 Reuse saved and submitted answers; infer a concrete proposal before asking. Use structured
 questions proactively for missing information and decisions in the person's current mode.
 Do not ask them to enable Plan mode or experimental settings, call a plan-only tool outside
-Plan mode, or perform writes when restricted to planning. If GTM OS questions are unavailable,
+Plan mode, or perform writes when restricted to planning. If GTM Brain questions are unavailable,
 prefer a blocking question tool when its current contract allows it, then an async form.
 Use a plain text question only when an appropriate structured control is unavailable.
 
@@ -86,8 +86,8 @@ When the app offers a scoped remembered permission, describe exactly what it cov
 never ask for unrestricted access. Do not ask for a second chat confirmation for an
 installation action the person already requested.
 
-<!-- generated: computer-use; edit plugins/gtm-os/policies/computer-use.md -->
-Do the work through the tools. The GTM OS MCP tools, and any other MCP server configured for the
+<!-- generated: computer-use; edit plugins/gtm-brain/policies/computer-use.md -->
+Do the work through the tools. The GTM Brain MCP tools, and any other MCP server configured for the
 session, are the supported path and the one that leaves a record. Computer Use, meaning driving an
 application's own interface with screenshots, clicks and keystrokes, is not a substitute for a tool
 call, and never a way around a missing permission or a tool that returned nothing. Use it only for
@@ -109,7 +109,7 @@ not establish MCP health: keep browser verification separate from connector read
 For an approved website step requiring an existing login, use the person's connected Chrome
 session in the intended profile. The embedded browser has a separate profile and does not
 reuse that login. If Chrome is unavailable, explain the missing connection and follow
-gtm-os-configure/references/chrome-session.md; never silently switch to the embedded browser
+gtm-brain-configure/references/chrome-session.md; never silently switch to the embedded browser
 or ask for another login there. If the intended Chrome session itself needs sign-in, let the
 person handle its native prompt. A prior setup choice is not authorization for future website
 reads. The local dashboard needs no login and always belongs in the Codex pane.
@@ -125,7 +125,7 @@ offer an Allow choice that cannot lift it, or try another control mechanism to e
 ## How to talk
 
 Speak in outcomes, never in components. The person does not know what a plugin, a
-marketplace, a hook, a repo, Node or git is, and installing GTM OS must not require them
+marketplace, a hook, a repo, Node or git is, and installing GTM Brain must not require them
 to learn. The words plugin, marketplace, hook, repo, branch, JSON, CLI, Node, git, script
 and path do not appear in anything you say to them; commands and their names stay in your
 tool calls. Substitutions:
@@ -133,7 +133,7 @@ tool calls. Substitutions:
 - checking prerequisites -> "checking this computer has everything it needs"
 - enabling hooks -> "turning on the safety locks so nothing important changes without your
   say-so"
-- marketplace add + plugin add -> "installing GTM OS"
+- marketplace add + plugin add -> "installing GTM Brain"
 - verifying -> "done, and I checked it works"
 
 The test for every line you say: would it make sense to someone who has never opened a
@@ -145,8 +145,25 @@ world, not yours.
 
 ## What you are installing
 
-GTM OS is a Codex plugin: a company brain for a revenue team, kept as plain text in the
+GTM Brain is a Codex plugin: a company brain for a revenue team, kept as plain text in the
 person's own git repo. This repo is the plugin. Branch: `main`.
+
+## Existing installations under the previous name
+
+Before installing, inspect `codex plugin list --json`. If `gtm-os@gtm-os` is installed,
+this is a migration, not a new brain. Use the following explicit migration, which verifies
+the new connector and hooks before removing the old plugin registration:
+
+```bash
+migration_dir="$(mktemp -d "${TMPDIR:-/tmp}/gtm-brain-migrate.XXXXXX")"
+git clone --depth 1 https://github.com/gtm-week/gtm-brain.git "$migration_dir/source"
+node "$migration_dir/source/scripts/migrate-install.mjs" codex
+```
+
+After success, restart Codex, return to the same working folder and use `upgrade_brain` to
+refresh its rules. Preserve local edits through the normal upgrade review. Never create a
+replacement brain, rename the working folder or rewrite its memories. Stop here for an
+existing installation; the new-brain steps below do not apply.
 
 ## Steps
 
@@ -163,9 +180,9 @@ Check each step before the next. Report progress as you go, one line per step.
 2. **Install the plugin.** If you are reading this file from GitHub, install from there:
 
    ```bash
-   codex plugin marketplace add gtm-week/gtm-os
-   codex plugin marketplace upgrade gtm-os
-   codex plugin add gtm-os@gtm-os
+   codex plugin marketplace add gtm-week/gtm-brain
+   codex plugin marketplace upgrade gtm-brain
+   codex plugin add gtm-brain@gtm-brain
    ```
 
    The upgrade line matters on a machine that already had the marketplace: `add` keeps the
@@ -177,7 +194,7 @@ Check each step before the next. Report progress as you go, one line per step.
 
    ```bash
    codex plugin marketplace add /absolute/path/to/this/folder
-   codex plugin add gtm-os@gtm-os
+   codex plugin add gtm-brain@gtm-brain
    ```
 
 3. **Turn on the safety locks.** Installing does not switch them on: Codex keeps them off
@@ -189,25 +206,25 @@ Check each step before the next. Report progress as you go, one line per step.
    ```
 
    `<plugin>` is the folder you installed from: a local checkout is
-   `<that folder>/plugins/gtm-os`, a GitHub install is
-   `~/.codex/plugins/cache/gtm-os/gtm-os/<version>`. It prints one line per lock and ends
+   `<that folder>/plugins/gtm-brain`, a GitHub install is
+   `~/.codex/plugins/cache/gtm-brain/gtm-brain/<version>`. It prints one line per lock and ends
    with `Safety locks: on`; anything else means they are still off, so say so plainly and
    do not report the installation as finished. Say one line before running it (see How to
    talk); this is the person's approval, so do not bundle it with anything else.
 
-4. **Verify:** `codex plugin list | grep gtm-os` must say installed and enabled.
+4. **Verify:** `codex plugin list | grep gtm-brain` must say installed and enabled.
 
    Do not run the Claude handoff during install; onboarding offers it itself later, at
    the tools step, inside the brain's own chat.
 5. **Hand over one small step at a time.** Installing is all this file does. First say exactly:
-   "Now create a new, empty project in Codex called GTM OS and tell me when it's ready."
-   Once it is ready, give the next action only: open a new chat there and send "Set up GTM OS here".
+   "Now create a new, empty project in Codex called GTM Brain and tell me when it's ready."
+   Once it is ready, give the next action only: open a new chat there and send "Set up GTM Brain here".
    Do not present the whole installation and onboarding checklist at once. The sequence is:
 
    1. In the Codex app, create a project: an empty folder, wherever they keep work, called
-      GTM OS (the app shows the folder name as the project name).
+      GTM Brain (the app shows the folder name as the project name).
    2. Open a new chat in that project.
-   3. Send "Set up GTM OS here" (a slash command is optional). GTM OS takes it from there:
+   3. Send "Set up GTM Brain here" (a slash command is optional). GTM Brain takes it from there:
       it creates the brain in that folder, gets to know the business, connects the tools
       and opens the dashboard next to the chat.
 
@@ -224,7 +241,7 @@ Check each step before the next. Report progress as you go, one line per step.
 Explain the failure simply and what to do. Known cases:
 
 - **Marketplace add fails:** check network and that the repo URL is reachable. Retry once.
-- **Plugin add fails after a marketplace change:** run `codex plugin add gtm-os@gtm-os`
+- **Plugin add fails after a marketplace change:** run `codex plugin add gtm-brain@gtm-brain`
   again; re-adding is safe.
 - **The safety locks stay off:** `trust-hooks.mjs` reaches Codex through its app-server, so
   it needs the installed plugin and a working `codex` command. Retry once after the install
@@ -234,7 +251,7 @@ Explain the failure simply and what to do. Known cases:
 ## Scope
 
 Install. Nothing else: the brain is created by
-`/gtm-os-start` in the person's own project, in their next chat, where the plugin's hooks
+`/gtm-brain-start` in the person's own project, in their next chat, where the plugin's hooks
 and skills are active.
 
 ## New brain defaults

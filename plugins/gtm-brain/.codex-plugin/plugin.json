@@ -1,0 +1,46 @@
+{
+  "name": "gtm-brain",
+  "version": "0.31.0",
+  "description": "Persistent ICP, customer evidence and playbook progress for GTM engineers",
+  "author": {
+    "name": "GTM Tech Week"
+  },
+  "license": "MIT",
+  "keywords": [
+    "gtm",
+    "revenue",
+    "brain",
+    "memory",
+    "contexts"
+  ],
+  "skills": "./skills/",
+  "hooks": "./hooks.json",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "GTM Brain",
+    "shortDescription": "Persistent ICP, customer evidence and playbook progress for GTM engineers",
+    "longDescription": "Keep your ICP, offer, customer evidence and playbook progress across chats. Research markets, prepare sourced account briefs, run GTM playbooks and review acquisition economics in Codex. Local Markdown and JSONL, with connected tools using their own permissions. Learn more at https://gtm-brain.ai/.",
+    "developerName": "GTM Tech Week",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Set up a new company brain in this folder",
+      "What should I focus on today? Show my priorities and follow-ups",
+      "What changed since last time in the contexts I have open?",
+      "Sync the latest customer updates from my connected tools",
+      "Capture the decisions and next steps from these meeting notes",
+      "Brief me on a company or person, with sources",
+      "Create a context for a new customer opportunity",
+      "Link this project folder to my existing company brain",
+      "Refresh the summaries and open the dashboard"
+    ],
+    "brandColor": "#B8FF00",
+    "composerIcon": "./assets/logo.png",
+    "logo": "./assets/logo.png",
+    "logoDark": "./assets/logo.png"
+  }
+}

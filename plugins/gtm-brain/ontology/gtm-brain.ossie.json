@@ -1,0 +1,2394 @@
+{
+  "version": "0.2.0.dev0",
+  "name": "gtm_brain",
+  "description": "Three objects: contexts, append-only memories, and entities with stable identities and cited briefs.",
+  "ai_context": {
+    "instructions": "Use list_objects and describe_object to discover contexts, memories and entities. Query entities by id, kind, subtype, aliases or contexts; use the returned stable ID to query memories with filters.entities. Collection filters match membership. Relationships describe these key links; query reads one object at a time. Use remember for findings and decisions, including batches. Query memories for exact filters over effective evidence; corrections and withdrawals are applied. For broad keyword search use query with search; for a readable entity brief, query with object brief. Entity identity is global; roles and relationships stay contextual claims supported by memories. Reading a context does not load it: use load_context. Never substitute computer use for a missing or failed MCP operation without explicit approval."
+  },
+  "datasets": [
+    {
+      "name": "contexts",
+      "primary_key": [
+        "slug"
+      ],
+      "description": "Shared knowledge about a topic: a standing rule the assistant follows when it is loaded, a compiled summary, and working guidance. Company, strategy, market, icp and offer exist from the start; pipeline, marketing and key accounts are opened as work needs them.",
+      "ai_context": {
+        "instructions": "Load a context before working in it. Its summary is compiled from its memories and can be behind; the memories are the truth.",
+        "synonyms": [
+          "context",
+          "kontekst"
+        ],
+        "examples": [
+          "Which contexts are behind?",
+          "What is the rule for pipeline?"
+        ]
+      },
+      "fields": [
+        {
+          "name": "slug",
+          "expression": "slug",
+          "data_type": "String",
+          "description": "lowercase-hyphenated identifier, e.g. pipeline"
+        },
+        {
+          "name": "title",
+          "expression": "title",
+          "data_type": "String"
+        },
+        {
+          "name": "status",
+          "expression": "status",
+          "data_type": "String",
+          "description": "active or archived"
+        },
+        {
+          "name": "rule",
+          "expression": "rule",
+          "data_type": "String",
+          "description": "Standing instructions: the purpose of this context, meaningful boundaries and how the assistant works whenever it is loaded"
+        },
+        {
+          "name": "summary",
+          "expression": "summary",
+          "data_type": "String",
+          "description": "Compiled from the memories; every sentence traceable to one"
+        },
+        {
+          "name": "now",
+          "expression": "now",
+          "data_type": "String",
+          "description": "Working guidance: reusable methods learned from effective memories, with supporting memory IDs. May be empty. Standing instructions stay in rule; current status and immediate next steps belong in summary and source follow-ups."
+        },
+        {
+          "name": "people",
+          "expression": "people",
+          "data_type": "String[]",
+          "description": "Entities mentioned in this context's memories"
+        },
+        {
+          "name": "tools",
+          "expression": "tools",
+          "data_type": "String[]",
+          "description": "Tools used in this context"
+        },
+        {
+          "name": "forked_from",
+          "expression": "forked_from",
+          "data_type": "String",
+          "description": "The context this one was forked out of, if any"
+        },
+        {
+          "name": "last_active",
+          "expression": "last_active",
+          "data_type": "DateTime"
+        },
+        {
+          "name": "compiled_at",
+          "expression": "compiled_at",
+          "data_type": "DateTime",
+          "description": "When this context summary was last refreshed. This is not an event date or live source verification; older than the newest recorded memory means the summary is behind."
+        },
+        {
+          "name": "memories",
+          "expression": "memories",
+          "data_type": "Integer",
+          "description": "How many effective memories it holds"
+        },
+        {
+          "name": "stale",
+          "data_type": "Boolean",
+          "description": "Whether memories are newer than the compiled summary."
+        }
+      ]
+    },
+    {
+      "name": "memories",
+      "primary_key": [
+        "id"
+      ],
+      "description": "One record per outcome, decision, finding or open question, in exactly one context, append-only. A memory that corrects another names it in supersedes; one that withdraws another names it in retracts. Readers show the latest and hide the retracted.",
+      "ai_context": {
+        "instructions": "Search here before answering anything about the past. Cite the context and date of what you found; no hits means say so, never guess.",
+        "synonyms": [
+          "notes",
+          "notatki",
+          "memory"
+        ],
+        "examples": [
+          "What happened with Bergstrom last week?",
+          "Which questions are still open in pipeline?"
+        ]
+      },
+      "fields": [
+        {
+          "name": "id",
+          "expression": "id",
+          "data_type": "String",
+          "description": "m_ and twelve hex characters"
+        },
+        {
+          "name": "context",
+          "expression": "context",
+          "data_type": "String",
+          "description": "The slug of the context it belongs to"
+        },
+        {
+          "name": "at",
+          "expression": "at",
+          "data_type": "DateTimeTz",
+          "description": "When this memory was recorded, assigned at capture. This is not the event date."
+        },
+        {
+          "name": "authors",
+          "expression": "authors",
+          "data_type": "String[]",
+          "description": "Handles of the people it was recorded for"
+        },
+        {
+          "name": "via",
+          "expression": "via",
+          "data_type": "String",
+          "description": "codex, human or schedule"
+        },
+        {
+          "name": "kind",
+          "expression": "kind",
+          "data_type": "String",
+          "description": "note, decision or question"
+        },
+        {
+          "name": "content",
+          "expression": "content",
+          "data_type": "String",
+          "description": "A brief, what changed, or one sentence identifying a linked artifact Include dates in the text when relevant to the conversation, retaining source precision and uncertainty; at is only the recording timestamp."
+        },
+        {
+          "name": "tools",
+          "expression": "tools",
+          "data_type": "String[]"
+        },
+        {
+          "name": "people",
+          "expression": "people",
+          "data_type": "String[]",
+          "description": "Canonical entity names, resolved through entities"
+        },
+        {
+          "name": "source",
+          "expression": "source",
+          "data_type": "Opaque",
+          "description": "Where it comes from: a list of {kind, ref}, e.g. gmail:19faef"
+        },
+        {
+          "name": "actions",
+          "expression": "actions",
+          "data_type": "Opaque",
+          "description": "What was done: a list of {tool, action, ref}"
+        },
+        {
+          "name": "supersedes",
+          "expression": "supersedes",
+          "data_type": "String",
+          "description": "The memory id this one corrects"
+        },
+        {
+          "name": "retracts",
+          "expression": "retracts",
+          "data_type": "String",
+          "description": "The memory id this one withdraws"
+        },
+        {
+          "name": "tags",
+          "expression": "tags",
+          "data_type": "String[]"
+        },
+        {
+          "name": "asset",
+          "expression": "asset",
+          "data_type": "Opaque",
+          "description": "Optional entity attachment: entity, label, role, status and file {base, path, project?, machine?}. Resolve project paths through this computer’s linked folder; local references do not transfer files. Use recall for resolved file locations."
+        },
+        {
+          "name": "entities",
+          "expression": "entities",
+          "data_type": "String[]",
+          "description": "Stable entity IDs. Historical records are resolved through aliases without rewriting stored memories."
+        },
+        {
+          "name": "customer",
+          "expression": "customer",
+          "data_type": "Opaque",
+          "description": "Evidenced customer relationship, even without tasks or a CRM record. User corrections use basis=user and user:<handle> source. Refreshes use basis=source and never supersede user evidence. observed_at dates the evidence."
+        },
+        {
+          "name": "customer_coverage",
+          "expression": "customer_coverage",
+          "data_type": "Opaque",
+          "description": "Coverage of a named customer list or search. Record in a separate call after capture. Complete requires every record captured and no unresolved entries. Never implies all customers are known."
+        },
+        {
+          "name": "meeting",
+          "expression": "meeting",
+          "data_type": "Opaque",
+          "description": "Record a sourced conversation observation as kind=note. A transcript, recording or human account can evidence occurrence; calendar/pending cannot. Recollection needs basis=user and a user source. The first write creates an anchor; same reference reuses it. Read query (meetings) first. Calendar/CRM matches are optional. Source URLs belong in sources. Additional matched sources use meeting_id. Capture completeness describes this artifact, not all company meetings."
+        },
+        {
+          "name": "meeting_id",
+          "expression": "meeting_id",
+          "data_type": "String",
+          "description": "Original anchor memory ID returned by remember. Required for linked outcomes and additional matched sources. Save the anchor first in a separate call. Stable across corrections. Never invent IDs or match solely on title/time."
+        },
+        {
+          "name": "meeting_capture",
+          "expression": "meeting_capture",
+          "data_type": "Opaque",
+          "description": "Per-person relevance assessment or explicit override. User evidence needs a user source. Skip this one targets one meeting; always capture targets the series. Missing CRM or calendar membership never establishes irrelevance."
+        },
+        {
+          "name": "meeting_policy",
+          "expression": "meeting_policy",
+          "data_type": "Opaque",
+          "description": "Submitted capture preferences, in the author's existing personal context with a user source. sources/calendars name the confirmed connected scopes. Does not configure account access or install a scheduler. Daily refresh may precede compilation in one maintenance run."
+        },
+        {
+          "name": "meeting_coverage",
+          "expression": "meeting_coverage",
+          "data_type": "Opaque",
+          "description": "Write in a separate call after checking kept/held/failed results. Counts must sum to scanned. Complete means this source scope was checked and handled, with no remaining pages or unresolved items. Partial and unavailable preserve retry state. Calendar failure does not block meeting capture or compilation."
+        }
+      ]
+    },
+    {
+      "name": "entities",
+      "primary_key": [
+        "id"
+      ],
+      "description": "A person, organization or product with a global stable identity. Stored in brain/entities/*.md with readable cited briefs. Evidence remains in context memories.",
+      "ai_context": {
+        "synonyms": [
+          "people",
+          "organizations",
+          "companies",
+          "products",
+          "teams",
+          "identity registry"
+        ],
+        "instructions": "Use kind person, organization or product; teams and companies are organization subtypes. query entities with filters.contexts for a context perspective, or search a name/email/alias. Then query memories with filters.entities set to the returned ID and optionally filters.context. Use query (brief) for its readable brief. add_name creates identities or adds unclaimed aliases. update_entity edits by stable ID. merge_entities previews and applies explicit merges; archive_entity with undo restores archived identities, and undo_entity_merge reverses a recorded merge. Query defaults to active entities; filter status to include archives, or id for direct lookup; compile_entity refreshes a cited view. Never infer customer status or employment from identity kind or shared mentions."
+      },
+      "fields": [
+        {
+          "name": "id",
+          "expression": "id",
+          "data_type": "String",
+          "description": "Stable entity ID, e_ followed by 16 hex characters. Retired IDs resolve to their surviving identity."
+        },
+        {
+          "name": "name",
+          "expression": "name",
+          "data_type": "String",
+          "description": "Canonical name."
+        },
+        {
+          "name": "kind",
+          "expression": "kind",
+          "data_type": "String",
+          "description": "person, organization or product. Customer, partner and employer are relationships, not kinds."
+        },
+        {
+          "name": "subtype",
+          "expression": "subtype",
+          "data_type": "String",
+          "description": "Optional organization category, e.g. company or team. Null when unspecified. Legacy company/team kinds map here."
+        },
+        {
+          "name": "aliases",
+          "expression": "aliases",
+          "data_type": "String[]",
+          "description": "Confirmed alternate names; exact filters match an alias."
+        },
+        {
+          "name": "emails",
+          "expression": "emails",
+          "data_type": "String[]",
+          "description": "Known email addresses; shared mailboxes alone do not prove identity."
+        },
+        {
+          "name": "not_same",
+          "expression": "not_same",
+          "data_type": "String[]",
+          "description": "Names explicitly confirmed to be different identities."
+        },
+        {
+          "name": "previous_ids",
+          "expression": "previous_ids",
+          "data_type": "String[]",
+          "description": "Retired IDs preserved after confirmed merges."
+        },
+        {
+          "name": "references",
+          "expression": "references",
+          "data_type": "Opaque",
+          "description": "Confirmed external identifiers and profile URLs as kind/ref records."
+        },
+        {
+          "name": "identity_sources",
+          "expression": "identity_sources",
+          "data_type": "Opaque",
+          "description": "Sources supporting identity metadata."
+        },
+        {
+          "name": "path",
+          "expression": "path",
+          "data_type": "String",
+          "description": "Permanent Markdown path relative to the brain folder; null for an unmigrated legacy identity."
+        },
+        {
+          "name": "created_at",
+          "expression": "created_at",
+          "data_type": "DateTime",
+          "description": "When this identity file was created, if known."
+        },
+        {
+          "name": "updated_at",
+          "expression": "updated_at",
+          "data_type": "DateTime",
+          "description": "When identity metadata last changed, if known; not an event date."
+        },
+        {
+          "name": "compiled_at",
+          "expression": "compiled_at",
+          "data_type": "DateTime",
+          "description": "When the entity brief was compiled; not live verification."
+        },
+        {
+          "name": "latest_evidence_at",
+          "expression": "latest_evidence_at",
+          "data_type": "DateTime",
+          "description": "Latest recording timestamp among effective supporting memories."
+        },
+        {
+          "name": "stale",
+          "expression": "stale",
+          "data_type": "Boolean",
+          "description": "Whether the brief needs recompilation against current evidence."
+        },
+        {
+          "name": "contexts",
+          "expression": "contexts",
+          "data_type": "String[]",
+          "description": "Context slugs with current or historical evidence about this entity. Membership links to contexts.slug."
+        },
+        {
+          "name": "memories",
+          "expression": "memories",
+          "data_type": "String[]",
+          "description": "Effective supporting memory IDs, including each context copy. Withdrawn and replaced claims are excluded. Links to memories.id."
+        },
+        {
+          "name": "status",
+          "expression": "status",
+          "data_type": "String",
+          "description": "active or archived. Queries default to active unless id or status is filtered; counts show active identities."
+        },
+        {
+          "name": "merge_ids",
+          "expression": "merge_ids",
+          "data_type": "String[]",
+          "description": "Durable merge recovery IDs. Use undo_entity_merge to preview a reversal."
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "name": "memory_context",
+      "left_dataset": "memories",
+      "left_keys": [
+        "context"
+      ],
+      "right_dataset": "contexts",
+      "right_keys": [
+        "slug"
+      ],
+      "join_type": "many_to_one"
+    },
+    {
+      "name": "context_fork",
+      "left_dataset": "contexts",
+      "left_keys": [
+        "forked_from"
+      ],
+      "right_dataset": "contexts",
+      "right_keys": [
+        "slug"
+      ],
+      "join_type": "many_to_one"
+    },
+    {
+      "name": "memory_entities",
+      "left_dataset": "memories",
+      "left_keys": [
+        "entities"
+      ],
+      "right_dataset": "entities",
+      "right_keys": [
+        "id"
+      ],
+      "join_type": "many_to_many"
+    },
+    {
+      "name": "entity_contexts",
+      "left_dataset": "entities",
+      "left_keys": [
+        "contexts"
+      ],
+      "right_dataset": "contexts",
+      "right_keys": [
+        "slug"
+      ],
+      "join_type": "many_to_many"
+    }
+  ],
+  "custom_extensions": [
+    {
+      "vendor_name": "ALLETHIC",
+      "data": {
+        "actions": [
+          {
+            "name": "remember",
+            "tool_name": "remember",
+            "title": "Remembering",
+            "object": "memories",
+            "returns": "Opaque",
+            "description": "Record what happened during work: a decision, an action done, a finding, a meeting, a question or its answer. The only memory writer, append-only. One memory per distinct outcome; pass a whole turn's findings in one call through memories, each entry with its own context. Write first when the context is clear, then confirm by quoting the note back as the tool echoes it, with its context, in one line. Corrections supersede an old id; withdrawals and answers retract it. An entry naming someone who may already be known is held back: ask (same as X?), then add_name or new_names, and resend only that entry. Attachments (asset), customers (customer, customer_coverage) and meetings (meeting, meeting_id, meeting_capture, meeting_policy, meeting_coverage) follow the remember, customers and meetings references.",
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "by": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Handle, name or email of the person you work for (from brain/admin.md team). Several: comma separated."
+                },
+                "project": {
+                  "type": "string",
+                  "description": "The project the session hook named for this chat (its slug); omit in the brain's own chat."
+                },
+                "memories": {
+                  "type": "array",
+                  "minItems": 1,
+                  "description": "One entry per finding, the same fields as the single-note form; each entry may name its own context. Prefer one call per turn.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "content": {
+                        "type": "string",
+                        "description": "A brief, what changed, or one sentence identifying an artifact. Include names and subject. Keep relevant dates in the text with source precision and uncertainty; do not invent dates or add them to timeless facts. Plain hyphens.",
+                        "minLength": 1
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "note",
+                          "decision",
+                          "question"
+                        ]
+                      },
+                      "context": {
+                        "type": "string"
+                      },
+                      "tools": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "people": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "companies": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "sources": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "Where it comes from, provider:reference. When a connector returns a direct URL (url, web_url, webUrl, permalink), save that exact URL with its provider. If no direct URL is returned, keep provider:ID. Never invent a link. This chat is added automatically."
+                      },
+                      "actions": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "supersedes": {
+                        "type": "string"
+                      },
+                      "retracts": {
+                        "type": "string"
+                      },
+                      "tags": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "new_names": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "asset": {
+                        "type": "object",
+                        "properties": {
+                          "entity": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "label": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "role": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "draft",
+                              "approved",
+                              "retired"
+                            ]
+                          },
+                          "path": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "entity",
+                          "label",
+                          "role"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "customer": {
+                        "type": "object",
+                        "properties": {
+                          "entity": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "customer",
+                              "prospect",
+                              "former_customer",
+                              "not_customer",
+                              "unknown"
+                            ]
+                          },
+                          "basis": {
+                            "type": "string",
+                            "enum": [
+                              "user",
+                              "source"
+                            ]
+                          },
+                          "observed_at": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "reference": {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "ref": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "ref"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "entity",
+                          "status",
+                          "basis",
+                          "observed_at"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "customer_coverage": {
+                        "type": "object",
+                        "properties": {
+                          "tool": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "scope": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "complete",
+                              "partial",
+                              "unavailable"
+                            ]
+                          },
+                          "checked_at": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "scanned": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "total": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "unresolved": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "tool",
+                          "scope",
+                          "status",
+                          "checked_at",
+                          "scanned",
+                          "total",
+                          "unresolved"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "meeting": {
+                        "type": "object",
+                        "properties": {
+                          "title": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "reference": {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "account": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "ref": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "account",
+                              "ref"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "evidence": {
+                            "type": "string",
+                            "enum": [
+                              "transcript",
+                              "recording",
+                              "notes",
+                              "summary",
+                              "recollection",
+                              "calendar",
+                              "pending"
+                            ]
+                          },
+                          "occurrence": {
+                            "type": "string",
+                            "enum": [
+                              "happened",
+                              "planned",
+                              "unknown",
+                              "cancelled"
+                            ]
+                          },
+                          "basis": {
+                            "type": "string",
+                            "enum": [
+                              "source",
+                              "user"
+                            ]
+                          },
+                          "observed_at": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "occurred_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "scheduled_at": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "participants": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "name": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "role": {
+                                  "type": "string",
+                                  "enum": [
+                                    "attended",
+                                    "invited",
+                                    "mentioned"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "name",
+                                "role"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "series": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "revision": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "capture": {
+                            "type": "string",
+                            "enum": [
+                              "complete",
+                              "partial",
+                              "pending",
+                              "unavailable"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "title",
+                          "reference",
+                          "evidence",
+                          "occurrence",
+                          "basis",
+                          "observed_at",
+                          "occurred_at",
+                          "participants",
+                          "capture"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "meeting_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "meeting_capture": {
+                        "type": "object",
+                        "properties": {
+                          "by": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "scope": {
+                            "type": "string",
+                            "enum": [
+                              "meeting",
+                              "series"
+                            ]
+                          },
+                          "target": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "include",
+                              "skip",
+                              "review"
+                            ]
+                          },
+                          "basis": {
+                            "type": "string",
+                            "enum": [
+                              "user",
+                              "source"
+                            ]
+                          },
+                          "reason": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "by",
+                          "scope",
+                          "target",
+                          "status",
+                          "basis",
+                          "reason"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "meeting_policy": {
+                        "type": "object",
+                        "properties": {
+                          "by": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "sources": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          },
+                          "calendars": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          },
+                          "include": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          },
+                          "exclude": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          },
+                          "calendar_refresh": {
+                            "type": "string",
+                            "enum": [
+                              "daily",
+                              "off"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "by",
+                          "sources",
+                          "calendars",
+                          "include",
+                          "exclude",
+                          "calendar_refresh"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "meeting_coverage": {
+                        "type": "object",
+                        "properties": {
+                          "by": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "tool": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "account": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "scope": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "checked_at": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "complete",
+                              "partial",
+                              "unavailable"
+                            ]
+                          },
+                          "scanned": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "captured": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "skipped": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "unresolved": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "remaining": {
+                            "type": "boolean"
+                          },
+                          "cursor": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "by",
+                          "tool",
+                          "account",
+                          "scope",
+                          "checked_at",
+                          "status",
+                          "scanned",
+                          "captured",
+                          "skipped",
+                          "unresolved",
+                          "remaining"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "content"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "content": {
+                  "type": "string",
+                  "description": "A brief, what changed, or one sentence identifying an artifact. Include names and subject. Keep relevant dates in the text with source precision and uncertainty; do not invent dates or add them to timeless facts. Plain hyphens.",
+                  "minLength": 1
+                },
+                "kind": {
+                  "type": "string",
+                  "description": "note (default) | decision | question",
+                  "enum": [
+                    "note",
+                    "decision",
+                    "question"
+                  ]
+                },
+                "context": {
+                  "type": "string",
+                  "description": "Context slug; omit when exactly one is loaded"
+                },
+                "tools": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Tools actually used, e.g. [\"attio\", \"gmail\"]"
+                },
+                "people": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Names mentioned, including people, products and teams. Text in content alone does not link names."
+                },
+                "companies": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Company names the source identifies (e.g. client Castorama); registered and linked in this call."
+                },
+                "sources": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Where it comes from, provider:reference. When a connector returns a direct URL (url, web_url, webUrl, permalink), save that exact URL with its provider. If no direct URL is returned, keep provider:ID. Never invent a link. This chat is added automatically."
+                },
+                "actions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "What was done, tool:action:ref, one per action"
+                },
+                "supersedes": {
+                  "type": "string",
+                  "description": "Memory id this one corrects"
+                },
+                "retracts": {
+                  "type": "string",
+                  "description": "Memory id this one withdraws"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Free tags"
+                },
+                "new_names": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Names the person confirmed as new after the tool held an entry back; never filled on a guess."
+                },
+                "asset": {
+                  "type": "object",
+                  "description": "Attach one local file to an existing entity; one relationship per memory; supersedes replaces or retires it. See the remember reference.",
+                  "properties": {
+                    "entity": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Existing canonical entity or exact alias. Register a new entity with add_name first."
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Human readable name, e.g. Reflow primary logo"
+                    },
+                    "role": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Relationship role, e.g. primary-logo, portrait, product-photo, screenshot or document"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "draft",
+                        "approved",
+                        "retired"
+                      ],
+                      "description": "Default draft. Approved only when the user approved it."
+                    },
+                    "path": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Local file path; relative to the selected project or the brain. Omit with supersedes to keep the prior file."
+                    }
+                  },
+                  "required": [
+                    "entity",
+                    "label",
+                    "role"
+                  ],
+                  "additionalProperties": false
+                },
+                "customer": {
+                  "type": "object",
+                  "description": "An evidenced customer relationship, even without a CRM record. See the customers reference.",
+                  "properties": {
+                    "entity": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Name or stable ID. Also include companies for a company; person is the default."
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "customer",
+                        "prospect",
+                        "former_customer",
+                        "not_customer",
+                        "unknown"
+                      ]
+                    },
+                    "basis": {
+                      "type": "string",
+                      "enum": [
+                        "user",
+                        "source"
+                      ]
+                    },
+                    "observed_at": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "ISO UTC evidence observation date."
+                    },
+                    "reference": {
+                      "type": "object",
+                      "description": "Optional stable per-entity source record, e.g. the CRM record URL; never a whole list or thread.",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "ref": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "ref"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "entity",
+                    "status",
+                    "basis",
+                    "observed_at"
+                  ],
+                  "additionalProperties": false
+                },
+                "customer_coverage": {
+                  "type": "object",
+                  "description": "Coverage of one named customer list or search, recorded in a separate call after capture. See the customers reference.",
+                  "properties": {
+                    "tool": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "scope": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "complete",
+                        "partial",
+                        "unavailable"
+                      ]
+                    },
+                    "checked_at": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "ISO UTC check date."
+                    },
+                    "scanned": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "total": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Source-reported total; null if unknown."
+                    },
+                    "unresolved": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "tool",
+                    "scope",
+                    "status",
+                    "checked_at",
+                    "scanned",
+                    "total",
+                    "unresolved"
+                  ],
+                  "additionalProperties": false
+                },
+                "meeting": {
+                  "type": "object",
+                  "description": "A sourced conversation observation (kind note); the first write creates the anchor, the same reference reuses it. See the meetings reference.",
+                  "properties": {
+                    "title": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "reference": {
+                      "type": "object",
+                      "description": "Source identity, reused across repeat imports. Never use a meeting title as a source ID.",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "Provider, e.g. granola or user"
+                        },
+                        "account": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "Stable connected account/workspace or user handle; include calendar identity for calendar records"
+                        },
+                        "ref": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "Stable source record ID; exact direct source URL goes in sources"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "account",
+                        "ref"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "evidence": {
+                      "type": "string",
+                      "enum": [
+                        "transcript",
+                        "recording",
+                        "notes",
+                        "summary",
+                        "recollection",
+                        "calendar",
+                        "pending"
+                      ]
+                    },
+                    "occurrence": {
+                      "type": "string",
+                      "enum": [
+                        "happened",
+                        "planned",
+                        "unknown",
+                        "cancelled"
+                      ]
+                    },
+                    "basis": {
+                      "type": "string",
+                      "enum": [
+                        "source",
+                        "user"
+                      ]
+                    },
+                    "observed_at": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Source observation/update time, ISO UTC including seconds; preserve on retries."
+                    },
+                    "occurred_at": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Actual conversation date, UTC timestamp or YYYY-MM-DD at source precision; null if unknown."
+                    },
+                    "scheduled_at": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Optional calendar planned time, UTC timestamp or date only."
+                    },
+                    "participants": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "description": "Only explicit attendance evidence permits attended. Names resolve through existing identities.",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "attended",
+                              "invited",
+                              "mentioned"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "role"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "series": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Optional provider/account/calendar/recurring-series scoped reference, for explicit series rules."
+                    },
+                    "revision": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Optional provider revision or content fingerprint, stable on retry."
+                    },
+                    "capture": {
+                      "type": "string",
+                      "enum": [
+                        "complete",
+                        "partial",
+                        "pending",
+                        "unavailable"
+                      ],
+                      "description": "Content availability of this artifact: complete, partial, pending (a source still processing) or unavailable."
+                    }
+                  },
+                  "required": [
+                    "title",
+                    "reference",
+                    "evidence",
+                    "occurrence",
+                    "basis",
+                    "observed_at",
+                    "occurred_at",
+                    "participants",
+                    "capture"
+                  ],
+                  "additionalProperties": false
+                },
+                "meeting_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "The anchor memory id remember returned, for linked outcomes and additional matched sources; never invented."
+                },
+                "meeting_capture": {
+                  "type": "object",
+                  "description": "Per-person relevance assessment or explicit override for a meeting. See the meetings reference.",
+                  "properties": {
+                    "by": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Confirmed author handle"
+                    },
+                    "scope": {
+                      "type": "string",
+                      "enum": [
+                        "meeting",
+                        "series"
+                      ]
+                    },
+                    "target": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Original anchor ID for meeting, or exact meeting.series string for series"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "include",
+                        "skip",
+                        "review"
+                      ]
+                    },
+                    "basis": {
+                      "type": "string",
+                      "enum": [
+                        "user",
+                        "source"
+                      ]
+                    },
+                    "reason": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "by",
+                    "scope",
+                    "target",
+                    "status",
+                    "basis",
+                    "reason"
+                  ],
+                  "additionalProperties": false
+                },
+                "meeting_policy": {
+                  "type": "object",
+                  "description": "Submitted capture preferences, saved in the author's personal context with a user source. See the meetings reference.",
+                  "properties": {
+                    "by": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Confirmed author handle"
+                    },
+                    "sources": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "calendars": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "include": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "exclude": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "calendar_refresh": {
+                      "type": "string",
+                      "enum": [
+                        "daily",
+                        "off"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "by",
+                    "sources",
+                    "calendars",
+                    "include",
+                    "exclude",
+                    "calendar_refresh"
+                  ],
+                  "additionalProperties": false
+                },
+                "meeting_coverage": {
+                  "type": "object",
+                  "description": "Coverage of one meeting source scope, written in a separate call after checking results. See the meetings reference.",
+                  "properties": {
+                    "by": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "tool": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "account": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "scope": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Exact searched source/window; separate calendars from transcription sources."
+                    },
+                    "checked_at": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "ISO UTC including seconds"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "complete",
+                        "partial",
+                        "unavailable"
+                      ]
+                    },
+                    "scanned": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "captured": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "skipped": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "unresolved": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "remaining": {
+                      "type": "boolean"
+                    },
+                    "cursor": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Optional retry/page cursor; never a credential."
+                    }
+                  },
+                  "required": [
+                    "by",
+                    "tool",
+                    "account",
+                    "scope",
+                    "checked_at",
+                    "status",
+                    "scanned",
+                    "captured",
+                    "skipped",
+                    "unresolved",
+                    "remaining"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "by"
+              ],
+              "anyOf": [
+                {
+                  "required": [
+                    "content"
+                  ]
+                },
+                {
+                  "required": [
+                    "memories"
+                  ]
+                }
+              ],
+              "additionalProperties": false
+            }
+          },
+          {
+            "name": "compile_apply",
+            "tool_name": "compile_apply",
+            "title": "Writing the summary",
+            "object": "contexts",
+            "returns": "Opaque",
+            "description": "Write the current summary and Working guidance from effective memories. Summary: 3 to 6 sentences covering the situation and supported immediate next steps, every sentence traceable to a memory. Working guidance (now): only reusable methods learned from memories, including evidenced tool usage, with memory IDs for each method. Revalidate prior methods and remove unsupported or superseded advice; pass an empty string when none remain. Do not repeat standing instructions, current status or one-off tasks in guidance. Older guidance may mix methods and actions: keep supported actions in the summary and their source follow-ups. Keeps the standing rule. Refuses if memories or Markdown changed after compile_facts. Manual edits pause compilation until reviewed in Codex; never overwrite them silently.",
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "reviewed_cover": {
+                  "type": "string",
+                  "description": "Exact reviewed_cover hash returned by compile_facts for manual edits. Only after the person explicitly confirms replacement of that reviewed version, with their factual changes preserved in memories or standing instructions. Never supply in background or scheduled runs."
+                },
+                "context": {
+                  "type": "string",
+                  "description": "Context slug"
+                },
+                "by": {
+                  "type": "string",
+                  "description": "Your handle: the person's handle, or schedule"
+                },
+                "as_of": {
+                  "type": "string",
+                  "description": "The as_of id from compile_facts"
+                },
+                "summary": {
+                  "type": "string",
+                  "description": "Current situation and supported immediate next steps, owners and dates when known; every sentence traceable to effective memories"
+                },
+                "now": {
+                  "type": "string",
+                  "description": "Working guidance: reusable methods supported by effective memories, with memory IDs. Revalidate prior lessons. No standing-rule repetition, status updates or one-off tasks. Required string; use an empty string when no useful methods remain."
+                }
+              },
+              "required": [
+                "context",
+                "by",
+                "as_of",
+                "summary",
+                "now"
+              ],
+              "additionalProperties": false
+            }
+          },
+          {
+            "name": "new_context",
+            "tool_name": "new_context",
+            "title": "Opening a context",
+            "object": "contexts",
+            "returns": "Opaque",
+            "description": "Create and load a context only for an explicit user request to create it or user agreement to a concrete proposal. Check existing and archived contexts first. Propose only for distinct purpose, sustained work and useful separation. Ordinary customers remain identity references in memories in existing contexts; compose their view through query (brief) and live sources. A dedicated customer context is exceptional for a key strategic account needing separate scope and guidance. Entity mentions, CRM imports, repeated meetings, tool calls and one-off tasks do not authorize creation. Do not infer agreement. Confirm successful creation in one line. Never create admin or personal preference contexts here; use configure for personal preferences.",
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "slug": {
+                  "type": "string",
+                  "description": "lowercase-hyphenated slug"
+                },
+                "title": {
+                  "type": "string",
+                  "description": "Title"
+                },
+                "rule": {
+                  "type": "string",
+                  "description": "Standing instructions in English: purpose, meaningful boundaries and how Codex should work here"
+                },
+                "project": {
+                  "type": "string",
+                  "description": "The project the session hook named for this chat (its slug). Omit in the brain's own chat."
+                }
+              },
+              "required": [
+                "slug",
+                "title",
+                "rule"
+              ],
+              "additionalProperties": false
+            }
+          },
+          {
+            "name": "fork_context",
+            "tool_name": "fork_context",
+            "title": "Forking a context",
+            "object": "contexts",
+            "returns": "Opaque",
+            "description": "Make a new context out of one thread inside an existing one, after the person confirmed: standing rule copied, including its purpose and boundaries, memories matching the filter copied with a source pointing at the original. The original keeps everything.",
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "from": {
+                  "type": "string",
+                  "description": "Existing context slug"
+                },
+                "slug": {
+                  "type": "string",
+                  "description": "New slug"
+                },
+                "title": {
+                  "type": "string",
+                  "description": "Title of the new context"
+                },
+                "filter": {
+                  "type": "string",
+                  "description": "Keyword that selects the memories to copy"
+                },
+                "project": {
+                  "type": "string",
+                  "description": "The project the session hook named for this chat (its slug). Omit in the brain's own chat."
+                }
+              },
+              "required": [
+                "from",
+                "slug",
+                "title"
+              ],
+              "additionalProperties": false
+            }
+          },
+          {
+            "name": "edit_context",
+            "tool_name": "edit_context",
+            "title": "Editing a context",
+            "object": "contexts",
+            "returns": "Opaque",
+            "description": "Change a context's title or standing rule, including purpose, boundaries and how Codex works when loaded. Only the fields given change; the summary and Working guidance are kept. Never the notes.",
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "slug": {
+                  "type": "string",
+                  "description": "Context slug"
+                },
+                "title": {
+                  "type": "string",
+                  "description": "New title"
+                },
+                "rule": {
+                  "type": "string",
+                  "description": "The whole standing instruction, including purpose and meaningful boundaries, in English"
+                }
+              },
+              "required": [
+                "slug"
+              ],
+              "additionalProperties": false
+            }
+          },
+          {
+            "name": "archive_context",
+            "tool_name": "archive_context",
+            "title": "Archiving a context",
+            "object": "contexts",
+            "returns": "Opaque",
+            "description": "Archive a context after the person confirmed: its cover gets status archived, it is unloaded and no longer offered; its memories stay in the files and in search. undo: true makes it active again. Never delete a context.",
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "slug": {
+                  "type": "string",
+                  "description": "Context slug"
+                },
+                "undo": {
+                  "type": "boolean",
+                  "description": "true to unarchive"
+                },
+                "project": {
+                  "type": "string",
+                  "description": "The project the session hook named for this chat (its slug). Omit in the brain's own chat."
+                }
+              },
+              "required": [
+                "slug"
+              ],
+              "additionalProperties": false
+            }
+          },
+          {
+            "name": "add_name",
+            "tool_name": "add_name",
+            "title": "Adding a name",
+            "returns": "Opaque",
+            "description": "Create an Entity or add unclaimed aliases, emails and references. This never merges two existing identities: use merge_entities for that. For renaming, replacing or removing metadata use update_entity with a current stable ID. Kinds: person, organization, product; legacy company/team map to organization subtypes. Facts and relationships stay in context memories. Never infer an identity match.",
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Canonical name"
+                },
+                "by": {
+                  "type": "string",
+                  "description": "Who is adding it. Accepted like every writer's by and not recorded: a name has no author."
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Other names or spellings"
+                },
+                "email": {
+                  "type": "string",
+                  "description": "Email"
+                },
+                "kind": {
+                  "type": "string",
+                  "description": "person (default), organization or product. Legacy company and team are accepted and normalized to organization with that subtype.",
+                  "enum": [
+                    "person",
+                    "organization",
+                    "product",
+                    "company",
+                    "team"
+                  ]
+                },
+                "not_same": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Names the person says this one is NOT, e.g. [\"Nestle\"] for Nestle Poland"
+                },
+                "references": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string"
+                      },
+                      "ref": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "ref"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "description": "Confirmed external identifiers and profile URLs"
+                },
+                "sources": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string"
+                      },
+                      "ref": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "ref"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "description": "Evidence supporting identity or contact mappings. A shared mailbox alone never proves identity."
+                },
+                "subtype": {
+                  "type": "string",
+                  "description": "Organization category such as company, team, nonprofit or community. Omit to retain; empty string clears. Only organizations have a subtype."
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "additionalProperties": false
+            },
+            "object": "entities"
+          },
+          {
+            "name": "compile_entity",
+            "tool_name": "compile_entity",
+            "title": "Compiling an entity brief",
+            "returns": "Opaque",
+            "description": "Compile a permanent entity brief from entity_facts. Every claim cites current relevant memory IDs; context perspectives cite only that context. Keep dates, scope, interpretations and disagreements explicit. Does not create facts or rewrite memories. Refuses outdated as_of. Follow the entity compilation procedure in gtm-brain-use-brain.",
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "entity": {
+                  "type": "string"
+                },
+                "by": {
+                  "type": "string"
+                },
+                "as_of": {
+                  "type": "string"
+                },
+                "brief": {
+                  "type": "object",
+                  "properties": {
+                    "overview": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "text": {
+                            "type": "string"
+                          },
+                          "memories": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "minItems": 1
+                          },
+                          "interpretation": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "text",
+                          "memories"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "contexts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "context": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string"
+                                },
+                                "memories": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "minItems": 1
+                                },
+                                "interpretation": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "text",
+                                "memories"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "open_threads": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string"
+                                },
+                                "memories": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "minItems": 1
+                                },
+                                "interpretation": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "text",
+                                "memories"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "context",
+                          "summary",
+                          "open_threads"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "relationships": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "text": {
+                            "type": "string"
+                          },
+                          "memories": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "minItems": 1
+                          },
+                          "interpretation": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "text",
+                          "memories"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "overview",
+                    "contexts",
+                    "relationships"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "entity",
+                "by",
+                "as_of",
+                "brief"
+              ],
+              "additionalProperties": false
+            },
+            "object": "entities"
+          },
+          {
+            "name": "update_entity",
+            "tool_name": "update_entity",
+            "title": "Updating an entity",
+            "returns": "Opaque",
+            "description": "Edit identity metadata by current stable ID. set replaces fields; add unions lists; remove removes list values after set/add. Rename keeps the former name as an alias unless explicitly removed. IDs, file paths, handwritten Markdown and context memories are preserved. Unknown or colliding metadata is refused. Roles and facts belong in memories.",
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "entity": {
+                  "type": "string",
+                  "description": "Current stable entity ID from query entities. Resolve retired IDs before writing."
+                },
+                "by": {
+                  "type": "string",
+                  "description": "Team member handle recording the change; required when applying."
+                },
+                "set": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "person",
+                        "organization",
+                        "product"
+                      ]
+                    },
+                    "subtype": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "aliases": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "emails": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "not_same": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "references": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string"
+                          },
+                          "ref": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "ref"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "identity_sources": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string"
+                          },
+                          "ref": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "ref"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false
+                },
+                "add": {
+                  "type": "object",
+                  "properties": {
+                    "aliases": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "emails": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "not_same": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "references": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string"
+                          },
+                          "ref": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "ref"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "identity_sources": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string"
+                          },
+                          "ref": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "ref"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false
+                },
+                "remove": {
+                  "type": "object",
+                  "properties": {
+                    "aliases": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "emails": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "not_same": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "references": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string"
+                          },
+                          "ref": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "ref"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "identity_sources": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string"
+                          },
+                          "ref": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "ref"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "entity",
+                "by"
+              ],
+              "additionalProperties": false
+            },
+            "object": "entities"
+          },
+          {
+            "name": "merge_entities",
+            "tool_name": "merge_entities",
+            "title": "Merging entities",
+            "returns": "Opaque",
+            "description": "Join two existing identities only when the person has confirmed they are the same. First omit as_of to preview source into target: target ID and name survive. Review affected contexts and conflicts; resolve differences explicitly and preview again. Then apply with the returned as_of, same resolution, and by. Preserves retired IDs, source file notes and memory history. Returns a durable merge_id for undo_entity_merge.",
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "source": {
+                  "type": "string",
+                  "description": "Current stable entity ID from query entities. Resolve retired IDs before writing."
+                },
+                "target": {
+                  "type": "string",
+                  "description": "Current stable entity ID from query entities. Resolve retired IDs before writing."
+                },
+                "by": {
+                  "type": "string",
+                  "description": "Team member handle recording the change; required when applying."
+                },
+                "as_of": {
+                  "type": "string",
+                  "description": "Exact as_of from a fresh preview with the same arguments and resolution. Omit to preview. A revision is not user authorization."
+                },
+                "resolution": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "person",
+                        "organization",
+                        "product"
+                      ]
+                    },
+                    "subtype": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "allow_distinct": {
+                      "type": "boolean",
+                      "description": "Explicitly override an earlier confirmed different-identity assertion."
+                    },
+                    "references": {
+                      "type": "string",
+                      "enum": [
+                        "combine",
+                        "source",
+                        "target"
+                      ],
+                      "description": "Resolve conflicting external references by combining or choosing one identity's references."
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "source",
+                "target"
+              ],
+              "additionalProperties": false
+            },
+            "object": "entities"
+          },
+          {
+            "name": "archive_entity",
+            "tool_name": "archive_entity",
+            "title": "Archiving or restoring an entity",
+            "returns": "Opaque",
+            "description": "Archive an identity from active directory and query results, preserving ID, Markdown, citations and memories. Set undo true to restore it. This does not erase data or remove contextual facts. Use only for requested removal or restoration; repeat calls are idempotent.",
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "entity": {
+                  "type": "string",
+                  "description": "Current stable entity ID from query entities. Resolve retired IDs before writing."
+                },
+                "by": {
+                  "type": "string",
+                  "description": "Team member handle recording the change; required when applying."
+                },
+                "undo": {
+                  "type": "boolean",
+                  "description": "true restores an archived identity; omitted or false archives."
+                }
+              },
+              "required": [
+                "entity",
+                "by"
+              ],
+              "additionalProperties": false
+            },
+            "object": "entities"
+          },
+          {
+            "name": "undo_entity_merge",
+            "tool_name": "undo_entity_merge",
+            "title": "Reversing an entity merge",
+            "returns": "Opaque",
+            "description": "Restore the two identities from a recorded merge. Obtain merge_id from merge_entities or query entities merge_ids. Omit as_of for preview, review conflicts and notes recorded under the survivor, then apply with the returned as_of and by. Identity and handwritten changes after the merge block automatic undo; undo later dependent merges first. Compiled brief refreshes are allowed. Memories stay append-only; later survivor-ID memories remain with the survivor. Old merges without recovery records require a reviewed file-history repair.",
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "merge_id": {
+                  "type": "string"
+                },
+                "by": {
+                  "type": "string",
+                  "description": "Team member handle recording the change; required when applying."
+                },
+                "as_of": {
+                  "type": "string",
+                  "description": "Exact as_of from a fresh preview with the same arguments and resolution. Omit to preview. A revision is not user authorization."
+                }
+              },
+              "required": [
+                "merge_id"
+              ],
+              "additionalProperties": false
+            },
+            "object": "entities"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,17 +1,17 @@
 {
-  "name": "gtm-os",
+  "name": "gtm-brain",
   "interface": {
-    "displayName": "GTM OS"
+    "displayName": "GTM Brain"
   },
   "plugins": [
     {
-      "name": "gtm-os",
-      "displayName": "GTM OS",
+      "name": "gtm-brain",
+      "displayName": "GTM Brain",
       "source": {
         "source": "local",
-        "path": "./plugins/gtm-os"
+        "path": "./plugins/gtm-brain"
       },
-      "description": "Shared company memory for priorities, customers and follow-ups",
+      "description": "Persistent ICP, customer evidence and playbook progress for GTM engineers",
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"

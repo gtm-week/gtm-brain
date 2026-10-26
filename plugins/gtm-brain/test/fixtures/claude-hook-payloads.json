@@ -1,0 +1,113 @@
+{
+ "SessionStart": {
+  "session_id": "7cbc75f5-9ae6-4ce5-af6e-10edee821c9d",
+  "transcript_path": "{{home}}/.claude/projects/-proj/7cbc75f5-9ae6-4ce5-af6e-10edee821c9d.jsonl",
+  "cwd": "{{cwd}}",
+  "hook_event_name": "SessionStart",
+  "source": "startup"
+ },
+ "UserPromptSubmit": {
+  "session_id": "7cbc75f5-9ae6-4ce5-af6e-10edee821c9d",
+  "transcript_path": "{{home}}/.claude/projects/-proj/7cbc75f5-9ae6-4ce5-af6e-10edee821c9d.jsonl",
+  "cwd": "{{cwd}}",
+  "prompt_id": "085ce441-7fb0-4d61-94e2-97c2433c4a9c",
+  "permission_mode": "bypassPermissions",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "Write note.txt"
+ },
+ "PreToolUse:Write": {
+  "session_id": "7cbc75f5-9ae6-4ce5-af6e-10edee821c9d",
+  "transcript_path": "{{home}}/.claude/projects/-proj/7cbc75f5-9ae6-4ce5-af6e-10edee821c9d.jsonl",
+  "cwd": "{{cwd}}",
+  "prompt_id": "085ce441-7fb0-4d61-94e2-97c2433c4a9c",
+  "permission_mode": "bypassPermissions",
+  "effort": {
+   "level": "medium"
+  },
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Write",
+  "tool_input": {
+   "file_path": "{{cwd}}/note.txt",
+   "content": "hi"
+  },
+  "tool_use_id": "toolu_0131fyGnn84CKjRHPWSjn26h"
+ },
+ "PreToolUse:Edit": {
+  "session_id": "7cbc75f5-9ae6-4ce5-af6e-10edee821c9d",
+  "transcript_path": "{{home}}/.claude/projects/-proj/7cbc75f5-9ae6-4ce5-af6e-10edee821c9d.jsonl",
+  "cwd": "{{cwd}}",
+  "prompt_id": "085ce441-7fb0-4d61-94e2-97c2433c4a9c",
+  "permission_mode": "bypassPermissions",
+  "effort": {
+   "level": "medium"
+  },
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Edit",
+  "tool_input": {
+   "file_path": "{{cwd}}/note.txt",
+   "old_string": "hi",
+   "new_string": "hello",
+   "replace_all": false
+  },
+  "tool_use_id": "toolu_01E1wZHrDbFW4N22Jdot7Vxg"
+ },
+ "PreToolUse:Bash": {
+  "session_id": "7cbc75f5-9ae6-4ce5-af6e-10edee821c9d",
+  "transcript_path": "{{home}}/.claude/projects/-proj/7cbc75f5-9ae6-4ce5-af6e-10edee821c9d.jsonl",
+  "cwd": "{{cwd}}",
+  "prompt_id": "085ce441-7fb0-4d61-94e2-97c2433c4a9c",
+  "permission_mode": "bypassPermissions",
+  "effort": {
+   "level": "medium"
+  },
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+   "command": "ls",
+   "description": "List files in current directory"
+  },
+  "tool_use_id": "toolu_017Se1SZmohZBBaSsK86L74G"
+ },
+ "PostToolUse:mcpcheck_environment": {
+  "session_id": "7cbc75f5-9ae6-4ce5-af6e-10edee821c9d",
+  "transcript_path": "{{home}}/.claude/projects/-proj/7cbc75f5-9ae6-4ce5-af6e-10edee821c9d.jsonl",
+  "cwd": "{{cwd}}",
+  "prompt_id": "085ce441-7fb0-4d61-94e2-97c2433c4a9c",
+  "permission_mode": "bypassPermissions",
+  "effort": {
+   "level": "medium"
+  },
+  "hook_event_name": "PostToolUse",
+  "tool_name": "mcp__plugin_gtm-brain_gtm_brain__check_environment",
+  "tool_input": {
+   "folder": "{{cwd}}"
+  },
+  "tool_response": [
+   {
+    "type": "text",
+    "text": "node v24.12.0"
+   }
+  ],
+  "tool_use_id": "toolu_01GCyLRkqSMCWp6axs1D39h1",
+  "duration_ms": 187,
+  "mcp_server": {
+   "name": "plugin:gtm-brain:gtm_brain",
+   "source": "plugin"
+  }
+ },
+ "Stop": {
+  "session_id": "7cbc75f5-9ae6-4ce5-af6e-10edee821c9d",
+  "transcript_path": "{{home}}/.claude/projects/-proj/7cbc75f5-9ae6-4ce5-af6e-10edee821c9d.jsonl",
+  "cwd": "{{cwd}}",
+  "prompt_id": "085ce441-7fb0-4d61-94e2-97c2433c4a9c",
+  "permission_mode": "bypassPermissions",
+  "effort": {
+   "level": "medium"
+  },
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "last_assistant_message": "done",
+  "background_tasks": [],
+  "session_crons": []
+ }
+}

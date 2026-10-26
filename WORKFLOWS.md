@@ -1,6 +1,6 @@
-# Workflows in GTM OS
+# Workflows in GTM Brain
 
-GTM OS 0.28.0. An action that plays out over time, such as an outbound campaign or two weeks of
+GTM Brain 0.28.0. An action that plays out over time, such as an outbound campaign or two weeks of
 ads followed by outreach to the accounts that engaged: what to settle before starting, the steps
 with their gates, and what to read back at the end. The brain keeps each run's state and says
 when a step is due.

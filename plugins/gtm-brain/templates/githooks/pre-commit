@@ -1,0 +1,26 @@
+#!/bin/sh
+# gtm-brain v0 pre-commit: every staged memories.jsonl must be valid, line by line, and must keep
+# what HEAD already has as an unchanged prefix (append-only). Installed by setup and upgrade
+# via: git config core.hooksPath .githooks
+# A memories file is never deleted or renamed: that would drop or move records.
+gone="$(git diff --cached --name-status | grep -E '^(D|R[0-9]*)[[:space:]]' | grep -E 'brain/contexts/[^/]+/memories\.jsonl' || true)"
+[ -n "$gone" ] && { echo "gtm-brain: memories are append-only; a deleted or renamed memories file is refused:" >&2; echo "$gone" | sed 's/^/    /' >&2; exit 1; }
+staged="$(git diff --cached --name-only --diff-filter=ACM | grep -E '^brain/contexts/[^/]+/memories\.jsonl$')"
+[ -z "$staged" ] && exit 0
+# The lib: GTM_BRAIN_LIB, else git config gtm-brain.lib (set by setup, upgrade and every session start),
+# else the newest installed gtm-brain plugin. A clone without the plugin cannot validate, so it refuses.
+lib="${GTM_BRAIN_LIB:-$(git config --get gtm-brain.lib 2>/dev/null)}"
+if [ -z "$lib" ] || [ ! -f "$lib" ]; then lib="$(ls -d "$HOME"/.codex/plugins/cache/gtm-brain/gtm-brain/*/lib/brain.mjs 2>/dev/null | sort -V | tail -1)"; fi
+[ -n "$lib" ] && [ -f "$lib" ] || { echo "gtm-brain: cannot validate memories: the gtm-brain plugin is not installed on this machine (git config gtm-brain.lib). Install it, or commit with GTM_BRAIN_SKIP_VALIDATE=1." >&2; [ "${GTM_BRAIN_SKIP_VALIDATE:-}" = 1 ] && exit 0 || exit 1; }
+tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
+fail=0
+for f in $staged; do
+  git show ":$f" > "$tmp/next"; git show "HEAD:$f" > "$tmp/prev" 2>/dev/null || : > "$tmp/prev"
+  out="$(node -e '
+    import(process.argv[1]).then(l => {
+      const fs = require("fs"); const errs = l.validateMemoriesFile(process.argv[3], process.argv[4]);
+      const v = l.appendOnlyViolation(fs.readFileSync(process.argv[2], "utf8"), fs.readFileSync(process.argv[3], "utf8")); if (v) errs.push(v);
+      if (errs.length) { console.log(errs.join("\n")); process.exit(1); }
+    })' "$lib" "$tmp/prev" "$tmp/next" "$(basename "$(dirname "$f")")" 2>&1)" || { echo "gtm-brain: $f is not valid:"; echo "$out" | sed 's/^/    /'; fail=1; }
+done
+exit $fail

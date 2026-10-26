@@ -1,0 +1,29 @@
+{
+  "name": "gtm-brain",
+  "displayName": "GTM Brain",
+  "version": "0.31.0",
+  "description": "Persistent ICP, customer evidence and playbook progress for GTM engineers",
+  "author": {
+    "name": "GTM Tech Week"
+  },
+  "license": "MIT",
+  "keywords": [
+    "gtm",
+    "revenue",
+    "brain",
+    "memory",
+    "contexts"
+  ],
+  "hooks": "./hooks/claude-hooks.json",
+  "mcpServers": {
+    "gtm_brain": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/server/server.mjs"
+      ],
+      "env": {
+        "GTM_BRAIN_HOST": "claude"
+      }
+    }
+  }
+}

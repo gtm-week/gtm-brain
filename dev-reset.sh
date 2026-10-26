@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Total reset for onboarding testing: wipe the test brain, refresh the gtm-os plugin from
+# Total reset for onboarding testing: wipe the test brain, refresh the gtm-brain plugin from
 # this checkout (dev-install.sh), and leave a fresh empty folder for the next run.
 #   ./dev-reset.sh [brain-folder]     default: ~/Desktop/test-brain
 # Then start a new chat in Codex on the brain folder (restart the app only if old skills linger).
@@ -12,7 +12,7 @@ BRAIN="${1:-$HOME/Desktop/test-brain}"
 case "$BRAIN" in /*) ;; *) BRAIN="$PWD/$BRAIN" ;; esac
 REG="$R/.dev-brains"
 # Inventory schedules before any destructive action, including when the folder is absent.
-node "$R/plugins/gtm-os/test/live/reset-preflight.mjs" "$BRAIN"
+node "$R/plugins/gtm-brain/test/live/reset-preflight.mjs" "$BRAIN"
 
 if [ -e "$BRAIN" ]; then
   if [ ! -d "$BRAIN" ]; then echo "$BRAIN exists and is not a folder" >&2; exit 1; fi
@@ -22,7 +22,7 @@ if [ -e "$BRAIN" ]; then
     exit 1
   fi
   # Stop the dashboard server the old brain may have left running, then wipe.
-  [ -f "$BRAIN/work/dash.json" ] && node "$R/plugins/gtm-os/server/dash.mjs" "$BRAIN" --stop 2>/dev/null || true
+  [ -f "$BRAIN/work/dash.json" ] && node "$R/plugins/gtm-brain/server/dash.mjs" "$BRAIN" --stop 2>/dev/null || true
   rm -rf "$BRAIN"
   echo "wiped $BRAIN"
 fi

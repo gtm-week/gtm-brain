@@ -1,15 +1,15 @@
 {
-  "name": "gtm-os",
+  "name": "gtm-brain",
   "owner": {
     "name": "GTM Tech Week"
   },
-  "description": "Shared company memory for priorities, customers and follow-ups",
+  "description": "Persistent ICP, customer evidence and playbook progress for GTM engineers",
   "plugins": [
     {
-      "name": "gtm-os",
-      "displayName": "GTM OS",
-      "source": "./plugins/gtm-os",
-      "description": "Shared company memory for priorities, customers and follow-ups",
+      "name": "gtm-brain",
+      "displayName": "GTM Brain",
+      "source": "./plugins/gtm-brain",
+      "description": "Persistent ICP, customer evidence and playbook progress for GTM engineers",
       "category": "productivity"
     }
   ]

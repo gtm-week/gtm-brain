@@ -1,12 +1,12 @@
-# Getting started with GTM OS
+# Getting started with GTM Brain
 
-This page takes you from nothing installed to working with GTM OS. You do three things:
+This page takes you from nothing installed to working with GTM Brain. You do three things:
 paste one prompt, create a project, send one message. Codex does the rest and asks you
 when it needs a decision. No terminal, no forms to fill in.
 
 ## What you get
 
-GTM OS gives your team a **company brain**: a folder on your computer where Codex keeps
+GTM Brain gives your team a **company brain**: a folder on your computer where Codex keeps
 what it knows about your business. It holds contexts of work (Our company, Strategy, Market,
 Target customers, Our offer, plus your personal context), the notes in each, and your
 company's workplace info: who you are, who is on the team, which tools you use.
@@ -19,8 +19,8 @@ business from what it can see and from your corrections, not from a questionnair
 
 Three things only you can do:
 
-1. **Install the Codex desktop app and sign in.** GTM OS runs inside it.
-2. **Have access to GTM OS.** It is shared privately through GitHub. The person who invited
+1. **Install the Codex desktop app and sign in.** GTM Brain runs inside it.
+2. **Have access to GTM Brain.** It is shared privately through GitHub. The person who invited
    you gives your GitHub account access; without it the installation cannot download.
 3. **Know your work logins**: email, calendar and CRM. You sign in to them yourself during
    setup. Sign-ins stay on your machine; the brain never holds a password.
@@ -29,22 +29,22 @@ Three things only you can do:
 
 | Step | You do | Codex does |
 |---|---|---|
-| 1. Install | Paste one prompt in any Codex chat | Checks the computer, installs GTM OS, turns on the safety locks |
-| 2. Project | Create an empty folder called GTM OS, open a new chat in it | Nothing yet |
-| 3. Set up | Send "Set up GTM OS here" | Creates the brain, learns your business, connects your tools, opens the dashboard |
+| 1. Install | Paste one prompt in any Codex chat | Checks the computer, installs GTM Brain, turns on the safety locks |
+| 2. Project | Create an empty folder called GTM Brain, open a new chat in it | Nothing yet |
+| 3. Set up | Send "Set up GTM Brain here" | Creates the brain, learns your business, connects your tools, opens the dashboard |
 | After | Work in plain language | Remembers, recalls, keeps summaries up to date |
 
-## Step 1: install GTM OS
+## Step 1: install GTM Brain
 
 Open the Codex app, start a chat in any folder, and paste:
 
-> Read https://github.com/gtm-week/gtm-os/blob/main/INSTALL.md and follow it
+> Read https://github.com/gtm-week/gtm-brain/blob/main/INSTALL.md and follow it
 > exactly. Read nothing else in that repository.
 
 What happens:
 
 - Codex checks this computer has everything it needs and installs what is missing.
-- It installs GTM OS.
+- It installs GTM Brain.
 - It turns on the **safety locks**: the safeguards that stop anything important in your
   brain changing without your say-so. The app shows an Approve button for this. Click it.
 - It finishes by telling you the next step. It does not create your project for you.
@@ -55,14 +55,14 @@ You never need to type a yes in the chat.
 ## Step 2: create your project
 
 In the Codex app, create a new project: an **empty folder**, wherever you keep your work,
-called **GTM OS**. The app shows the folder name as the project name. Then open a
+called **GTM Brain**. The app shows the folder name as the project name. Then open a
 **new chat** in that project.
 
-The folder must be empty. GTM OS never takes over a folder that already has files in it.
+The folder must be empty. GTM Brain never takes over a folder that already has files in it.
 
-## Step 3: send "Set up GTM OS here"
+## Step 3: send "Set up GTM Brain here"
 
-In that new chat, send **Set up GTM OS here**. Typing `/gtm-os-start` does the same. From
+In that new chat, send **Set up GTM Brain here**. Typing `/gtm-brain-start` does the same. From
 here Codex drives and you correct. It asks one question at a time, usually as choices you
 click, with room to type a correction.
 
@@ -82,7 +82,7 @@ The dashboard opens next to the chat, with a card showing these six steps and wh
    sources and plays the picture back for you to correct.
 5. **Running for you.** It recommends a daily sync so the brain stays fresh, and proposes
    one or two other useful things drawn from what it saw. Each is set up only on your yes.
-6. **Your projects.** It asks which of your existing Codex projects GTM OS should follow.
+6. **Your projects.** It asks which of your existing Codex projects GTM Brain should follow.
    Choose the ones whose future work should feed the brain, or skip. Your existing files
    and conversations stay where they are.
 
@@ -107,11 +107,11 @@ If you have been using Claude Code, Cursor, Gemini or another assistant for comp
 it already knows your tools, your people and the deals in motion. Setup offers this at its
 close; it also works any time later. In that assistant, paste:
 
-> Read https://github.com/gtm-week/gtm-os/blob/main/IMPORT.md and follow it
+> Read https://github.com/gtm-week/gtm-brain/blob/main/IMPORT.md and follow it
 > exactly. Read nothing else in that repository.
 
 It writes one file on your machine for you to review. Nothing is sent anywhere. Then, in
-the GTM OS chat, say **"import from claude"**: every line is played back, you confirm, and
+the GTM Brain chat, say **"import from claude"**: every line is played back, you confirm, and
 what you confirm is filed with its source. Workplace facts still go through APPROVE.
 
 ## Your first week
@@ -122,32 +122,32 @@ update by themselves in the background. When you want a specific workflow:
 
 | You want to | Type |
 |---|---|
-| Know what to do next | `/gtm-os-todo` |
-| Pull in what arrived through your tools | `/gtm-os-sync` |
-| Get a one-page brief before a call | `/gtm-os-deepdive` |
-| Decide whether to push, fix, stop or measure growth spend | `/gtm-os-unit-economics` |
-| Assess a market, its segments and competitors against what you can prove today | `/gtm-os-market-desk-research` |
-| Fill in the strategy the brain starts with (`strategy.md`), in a 10-15 minute conversation | `/gtm-os-strategy` |
+| Know what to do next | `/gtm-brain-todo` |
+| Pull in what arrived through your tools | `/gtm-brain-sync` |
+| Get a one-page brief before a call | `/gtm-brain-deepdive` |
+| Decide whether to push, fix, stop or measure growth spend | `/gtm-brain-unit-economics` |
+| Assess a market, its segments and competitors against what you can prove today | `/gtm-brain-market-desk-research` |
+| Fill in the strategy the brain starts with (`strategy.md`), in a 10-15 minute conversation | `/gtm-brain-strategy` |
 | Add a PDF, image or deck to the brain | drop it in the chat and say what it belongs to; no command |
-| Change company info, team or tools | `/gtm-os-configure` |
-| Keep the strategy, voice, design system or pricing the work must follow | `/gtm-os-document` |
-| Turn something you do repeatedly into a reusable skill | `/gtm-os-skill` |
+| Change company info, team or tools | `/gtm-brain-configure` |
+| Keep the strategy, voice, design system or pricing the work must follow | `/gtm-brain-document` |
+| Turn something you do repeatedly into a reusable skill | `/gtm-brain-skill` |
 
 The **dashboard** is view-only: what needs you, open questions, contexts, notes, sources,
 customers and companies. "Chat about this" opens a prepared Codex conversation; press Send
 to begin. All decisions and changes happen in the chat, never in the dashboard.
 
-When a newer GTM OS is out, the dashboard shows it under Admin and the chat mentions it
-once. Say **"update GTM OS"**, then start a new chat.
+When a newer GTM Brain is out, the dashboard shows it under Admin and the chat mentions it
+once. Say **"update GTM Brain"**, then start a new chat.
 
 ## Three kinds of skills
 
-Type `/` in Codex and every skill looks the same. They are three kinds. **Shipped with GTM OS**
-(`/gtm-os-todo`, `/gtm-os-strategy`, ...): they come with the plugin, update with it, and are
-not yours to edit. **Yours, in this brain**: made with `/gtm-os-skill` or installed from
+Type `/` in Codex and every skill looks the same. They are three kinds. **Shipped with GTM Brain**
+(`/gtm-brain-todo`, `/gtm-brain-strategy`, ...): they come with the plugin, update with it, and are
+not yours to edit. **Yours, in this brain**: made with `/gtm-brain-skill` or installed from
 GitHub; they live in the brain's `.agents/skills`, travel with the brain, and teammates get
 them. **Codex's own, on this machine**: made with Codex's `$skill-creator`; they live in
-`~/.agents/skills`, are yours alone, and GTM OS never sees or updates them. Say `list my
+`~/.agents/skills`, are yours alone, and GTM Brain never sees or updates them. Say `list my
 skills` to see the three groups; when you ask for a skill inside a brain, Codex makes the
 second kind and says so.
 
@@ -162,14 +162,14 @@ if it is not, Codex tells you exactly that and stops.
 ## Work in your own folders
 
 The brain is one folder; your work does not have to move into it. To connect another folder
-(your website, your curriculum), type `/gtm-os-project` in Codex. It creates a new project
+(your website, your curriculum), type `/gtm-brain-project` in Codex. It creates a new project
 folder or links one you already have, and asks before capturing any work done there. From
 the next chat in that folder, what you do lands in the brain tagged with that project, and
 each project keeps its own open contexts, so two projects never mix. The dashboard lists
 your projects. The brain folder stays the place for company-wide work. What goes where
 (notes, documents, project folders) is in [GUIDE.md](GUIDE.md#files-if-you-ever-look).
 
-On macOS, GTM OS asks Codex to open the linked folder for you. If it does not appear in
+On macOS, GTM Brain asks Codex to open the linked folder for you. If it does not appear in
 the sidebar, choose **New project** (or **+** beside Projects) and select the folder path
 given in the reply: press **Cmd+Shift+G** in the folder picker, paste the path, press
 **Return**, then **Open**. In the ChatGPT desktop app, use **Projects > New project** and
@@ -179,12 +179,12 @@ add that folder. Then start a new chat in it.
 
 | What you see | What to do |
 |---|---|
-| Codex cannot read the install page or download GTM OS | Your GitHub account has no access yet, or this computer is not signed in to GitHub. Ask the person who invited you, then say "sign me in to GitHub and try again". |
-| "Safety locks" are reported as off | Everything else still works. Say "turn on the GTM OS safety locks"; the app may also offer to review them when you open the project. Accept. |
-| Setup says the folder is not empty | Create a fresh empty folder as a new project and send "Set up GTM OS here" there. |
+| Codex cannot read the install page or download GTM Brain | Your GitHub account has no access yet, or this computer is not signed in to GitHub. Ask the person who invited you, then say "sign me in to GitHub and try again". |
+| "Safety locks" are reported as off | Everything else still works. Say "turn on the GTM Brain safety locks"; the app may also offer to review them when you open the project. Accept. |
+| Setup says the folder is not empty | Create a fresh empty folder as a new project and send "Set up GTM Brain here" there. |
 | A tool will not connect | Skip it and carry on. Later, say "connect my tools" to retry. |
 | You closed the chat mid-setup | Open a new chat in the same project and say "hi". Setup resumes. |
-| GTM OS commands are missing after an update | Quit Codex completely, reopen it, start a new chat. |
+| GTM Brain commands are missing after an update | Quit Codex completely, reopen it, start a new chat. |
 
 ## Read next
 

@@ -29,7 +29,7 @@ jobs:
           git config --global user.email "ci@example.com"
           git config --global init.defaultBranch main
       - name: Test suite
-        run: node --test 'plugins/gtm-os/test/*.test.mjs'
+        run: node --test 'plugins/gtm-brain/test/*.test.mjs'
       - name: Derived text and schema in sync
         run: node scripts/sync-derived.mjs --check
 
@@ -46,5 +46,5 @@ jobs:
       - run: npm run build --prefix frontend/dashboard
       - name: Committed dashboard assets match the source
         run: |
-          drift="$(git status --porcelain plugins/gtm-os/scripts/gtm-os-render/ui/)"
-          [ -z "$drift" ] || { echo "$drift"; echo "Rebuild the dashboard: npm run build --prefix frontend/dashboard, then commit plugins/gtm-os/scripts/gtm-os-render/ui/"; exit 1; }
+          drift="$(git status --porcelain plugins/gtm-brain/scripts/gtm-brain-render/ui/)"
+          [ -z "$drift" ] || { echo "$drift"; echo "Rebuild the dashboard: npm run build --prefix frontend/dashboard, then commit plugins/gtm-brain/scripts/gtm-brain-render/ui/"; exit 1; }

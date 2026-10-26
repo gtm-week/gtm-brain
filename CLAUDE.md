@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The contributor invariants live in AGENTS.md and apply here in full: @AGENTS.md
 
-AGENTS.md is written for Codex, the host GTM OS runs in. Its "Default onboarding interaction" and
+AGENTS.md is written for Codex, the host GTM Brain runs in. Its "Default onboarding interaction" and
 "Computer Use" sections are generated blocks describing how the plugin behaves inside a company
 brain (the `onboarding_question` / `configuration_question` / `question` tools do not exist in a
 Claude Code session). When working on this repo from Claude Code, the section that binds you is
@@ -12,7 +12,7 @@ Claude Code session). When working on this repo from Claude Code, the section th
 
 ## What this repo is
 
-The source of `gtm-os`, a Codex plugin that keeps a revenue team's "company brain" in the team's
+The source of `gtm-brain`, a Codex plugin that keeps a revenue team's "company brain" in the team's
 own git repo. This repo is the plugin, never a brain: test brains live in a scratch folder outside
 the checkout (`/brain/` and `/work/` are gitignored as a safety net).
 
@@ -22,44 +22,44 @@ Node 22.16+ or 24+ (the memory index uses `node:sqlite` with FTS5), git. Runtime
 there is no install step and no linter.
 
 ```bash
-node --test 'plugins/gtm-os/test/*.test.mjs'            # whole suite (quote the glob in zsh)
-node --test plugins/gtm-os/test/brain.test.mjs          # one file
-node --test --test-name-pattern='<regex>' plugins/gtm-os/test/brain.test.mjs   # one test
+node --test 'plugins/gtm-brain/test/*.test.mjs'            # whole suite (quote the glob in zsh)
+node --test plugins/gtm-brain/test/brain.test.mjs          # one file
+node --test --test-name-pattern='<regex>' plugins/gtm-brain/test/brain.test.mjs   # one test
 
-node plugins/gtm-os/test/live/harness-bench.mjs         # live Codex A/B: bare / plugin / brain on 3 tasks (~4 min)
-node plugins/gtm-os/test/live/tool-routing.mjs skills   # live Codex through five skills on a seeded brain; one case: skill-todo
-node plugins/gtm-os/test/live/claude-smoke.mjs          # live Claude Code: setup, the admin.md guard, go ahead vs APPROVE (~2 min)
+node plugins/gtm-brain/test/live/harness-bench.mjs         # live Codex A/B: bare / plugin / brain on 3 tasks (~4 min)
+node plugins/gtm-brain/test/live/tool-routing.mjs skills   # live Codex through five skills on a seeded brain; one case: skill-todo
+node plugins/gtm-brain/test/live/claude-smoke.mjs          # live Claude Code: setup, the admin.md guard, go ahead vs APPROVE (~2 min)
 
 node scripts/sync-derived.mjs                           # regenerate derived blocks and schema
 node scripts/sync-derived.mjs --check                   # report drift only (the suite runs this)
 
 npm ci --prefix frontend/dashboard                      # dashboard frontend, only when touching it
-npm run build --prefix frontend/dashboard               # writes plugins/gtm-os/scripts/gtm-os-render/ui/
+npm run build --prefix frontend/dashboard               # writes plugins/gtm-brain/scripts/gtm-brain-render/ui/
 
 ./dev-install.sh                                        # install this checkout into Codex, then start a new chat
 ./dev-reset.sh [brain-folder]                           # wipe the test brain (default ~/Desktop/test-brain) and reinstall
 ```
 
 Run the suite before every commit that touches `lib/`, a skill script, a server or a hook. Tests
-build throwaway brains with `setup` and set `GTM_OS_NO_COMMIT` where committing must stay off.
-`plugins/gtm-os/test/live/` holds benchmarks and fixtures that talk to real connectors; they are
+build throwaway brains with `setup` and set `GTM_BRAIN_NO_COMMIT` where committing must stay off.
+`plugins/gtm-brain/test/live/` holds benchmarks and fixtures that talk to real connectors; they are
 not `*.test.mjs` files and are not part of the suite.
 
 `.githooks/pre-push` (enabled by `./dev-install.sh`) runs the suite before a push to `main`, then
-the harness bench when the push changes anything under `plugins/gtm-os/` but `test/`. The bench
+the harness bench when the push changes anything under `plugins/gtm-brain/` but `test/`. The bench
 fails when the plugin makes Codex solve fewer tasks than without it, adds more prompt tokens than
-`GTM_OS_BENCH_MAX_OVERHEAD`, or calls GTM OS tools for a self-contained puzzle.
-`GTM_OS_SKIP_BENCH=1 git push` skips it. Then, when `claude` is on PATH, the Claude Code smoke runs the
-same checkout through four `claude -p` turns; `GTM_OS_SKIP_CLAUDE=1` skips it.
+`GTM_BRAIN_BENCH_MAX_OVERHEAD`, or calls GTM Brain tools for a self-contained puzzle.
+`GTM_BRAIN_SKIP_BENCH=1 git push` skips it. Then, when `claude` is on PATH, the Claude Code smoke runs the
+same checkout through four `claude -p` turns; `GTM_BRAIN_SKIP_CLAUDE=1` skips it.
 
 `dev-reset.sh` only wipes a folder that is empty or that it created itself (tracked in the
 gitignored `.dev-brains`); it never deletes a real brain.
 
 ## Architecture
 
-Everything that ships is under `plugins/gtm-os/`. The layers, from the outside in:
+Everything that ships is under `plugins/gtm-brain/`. The layers, from the outside in:
 
-- **Skills** (`skills/gtm-os-*/SKILL.md`): the thirteen user-facing workflows. Detailed procedures
+- **Skills** (`skills/gtm-brain-*/SKILL.md`): the thirteen user-facing workflows. Detailed procedures
   live in each skill's `references/`. These are what people install, so developer workflows never
   go here.
 - **MCP server** (`server/server.mjs`): hand-rolled stdio JSON-RPC, Node built-ins only. Each tool
@@ -67,9 +67,9 @@ Everything that ships is under `plugins/gtm-os/`. The layers, from the outside i
   text. `run()` resolves a script under `scripts/` first, then `skills/`, which is why old script
   paths stay valid. Some tools are filtered out of `tools/list` but still answer `tools/call`:
   the question forms (only when the client supports forms), the compile tools (only when
-  `GTM_OS_RUN` is set, i.e. scheduled and background runs) and the retired reads that `query`
+  `GTM_BRAIN_RUN` is set, i.e. scheduled and background runs) and the retired reads that `query`
   now covers.
-- **Operation scripts** (`scripts/gtm-os-*/`): one folder per operation (remember, load, compile,
+- **Operation scripts** (`scripts/gtm-brain-*/`): one folder per operation (remember, load, compile,
   render, setup, approve, upgrade, ...). No `SKILL.md`; they are run by the server, the hooks and
   the skills.
 - **lib** (`lib/brain.mjs` plus focused modules): the file format and the only write path. Records,
@@ -79,14 +79,14 @@ Everything that ships is under `plugins/gtm-os/`. The layers, from the outside i
   opening lines; the PreToolUse gate denies direct edits to protected files (`admin.md`,
   `memories.jsonl`, the company ontology); PostToolUse and turn hooks log usage. They only run once
   `hooks/trust-hooks.mjs` has written the approval hash for the current `hooks.json`.
-- **Dashboard**: `scripts/gtm-os-render/render.mjs` builds `work/home/index.html` from the brain
+- **Dashboard**: `scripts/gtm-brain-render/render.mjs` builds `work/home/index.html` from the brain
   files; `server/dash.mjs` serves it on 127.0.0.1, read-only, with revision events. The React
-  Overview is built from `frontend/dashboard/` into `scripts/gtm-os-render/ui/` and committed, so
+  Overview is built from `frontend/dashboard/` into `scripts/gtm-brain-render/ui/` and committed, so
   users never run npm. The legacy HTML client remains as the fallback and hosts the evidence views.
 
 ### Two ontologies, two kinds of tools
 
-`ontology/gtm-os.ossie.json` describes the plugin's own interactions. At startup the ontology
+`ontology/gtm-brain.ossie.json` describes the plugin's own interactions. At startup the ontology
 layer (`lib/ontology/`, ported from Allethic) turns it into first-class MCP tools (`remember`, `query`,
 `describe_object`, `list_objects`, ...) backed by `server/files-backend.mjs`. `server.mjs` then
 extends the generated `query` with derived views (status, brief, customers, meetings, health, ...)
@@ -97,7 +97,7 @@ brain at startup, so these can never be registered as tools: they are listed per
 through the single fixed tool `interact`. New ones go through `propose_interaction` and the APPROVE
 gate.
 
-`lib/ontology/` is GTM OS code: it loads Ossie files with the `ALLETHIC` extension block and
+`lib/ontology/` is GTM Brain code: it loads Ossie files with the `ALLETHIC` extension block and
 generates the tools. Keep the `ALLETHIC` block name; every company's `brain/ontology.ossie.json`
 carries it.
 
@@ -122,19 +122,19 @@ work/                                  gitignored: dashboard, loaded set, tools.
 
 ## Derived text
 
-`plugins/gtm-os/policies/questions.md` and `computer-use.md` are the sources for the marked blocks
-(`<!-- generated: <name>; edit plugins/gtm-os/policies/<name>.md -->`) in `AGENTS.md`, `INSTALL.md`,
-`plugins/gtm-os/templates/AGENTS.md` and `skills/gtm-os-start/references/questions.md`. The batch
+`plugins/gtm-brain/policies/questions.md` and `computer-use.md` are the sources for the marked blocks
+(`<!-- generated: <name>; edit plugins/gtm-brain/policies/<name>.md -->`) in `AGENTS.md`, `INSTALL.md`,
+`plugins/gtm-brain/templates/AGENTS.md` and `skills/gtm-brain-start/references/questions.md`. The batch
 memory schema in the ontology is derived from `remember.input_schema.properties` the same way.
 Edit the source, run `node scripts/sync-derived.mjs`, commit source and output together.
 `templates/legacy/` snapshots are immutable fixtures and are excluded. The Claude Code declarations
-(`plugins/gtm-os/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`,
-`plugins/gtm-os/hooks/claude-hooks.json`) are derived from `.codex-plugin/plugin.json` and `hooks.json`
+(`plugins/gtm-brain/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`,
+`plugins/gtm-brain/hooks/claude-hooks.json`) are derived from `.codex-plugin/plugin.json` and `hooks.json`
 the same way; never edit them by hand.
 
 ## Shipping a change
 
-Anything under `plugins/gtm-os/` that users should receive needs a version bump in
+Anything under `plugins/gtm-brain/` that users should receive needs a version bump in
 `.codex-plugin/plugin.json`, and the same number in the cache paths in `SETUP.md` and
 `COMMANDS.md` (a test holds them together), then `node scripts/sync-derived.mjs`: the Claude Code
 manifest, marketplace and hooks file are generated from the Codex ones and carry the version. Changing `templates/AGENTS.md` first requires a
@@ -149,4 +149,4 @@ Describe a feature once, in its owning document, and link from the others: `INST
 `GUIDE.md` (everyday use), `COMMANDS.md` (every tool and command and the files it writes),
 `SETUP.md` (manual install and contributor verification), `DOCUMENTS.md` (documents
 feature), `USER-SKILLS.md`, `IMPORT.md` (its text is duplicated word for word as the body of
-`plugins/gtm-os/claude/gtm-os-export/SKILL.md`; keep the two in step).
+`plugins/gtm-brain/claude/gtm-brain-export/SKILL.md`; keep the two in step).

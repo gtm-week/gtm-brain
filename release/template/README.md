@@ -1,17 +1,17 @@
-# GTM OS release graphics
+# GTM Brain release graphics
 
 One look for every release post. Copy `release.html`, change the words, render, check it.
 
-    cp release/template/release.html release/template/gtm-os-0.29.0.html
-    bash release/template/render.sh release/template/gtm-os-0.29.0.html release/template/gtm-os-0.29.0.png
+    cp release/template/release.html release/template/gtm-brain-0.29.0.html
+    bash release/template/render.sh release/template/gtm-brain-0.29.0.html release/template/gtm-brain-0.29.0.png
 
-`gtm-os-0.28.1.png` is the reference: the first graphic in this style.
+`gtm-brain-0.28.1.png` is the reference: the first graphic in this style.
 
 ## The style
 
 - Canvas 1600x900, rendered at 2x. Warm off-white background `#f6f5f1`, ink `#0b0b0c`, muted
   `#6b6b70`, hairlines `#e7e6e1`, white cards with a 1px hairline and 22px corners.
-- The logo (`logo.png`, the GTM Tech Week foil mark) top left, 64px, beside "GTM OS" in heavy
+- The logo (`logo.png`, the GTM Tech Week foil mark) top left, 64px, beside "GTM Brain" in heavy
   type and the version in a black monospace pill. Top right: the one command to run.
 - The foil gradient (pink, yellow, green, cyan, violet) is an accent only: the 10px strip on
   top, the second line of the headline, the small square before each card label, one bar.

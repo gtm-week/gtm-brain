@@ -1,6 +1,6 @@
-# Your documents in GTM OS
+# Your documents in GTM Brain
 
-GTM OS 0.27.0. Where the strategy, the tone of voice, the design system, the pricing and any
+GTM Brain 0.27.0. Where the strategy, the tone of voice, the design system, the pricing and any
 other document the work must follow live, how Codex is made to follow them, and how they get
 made. Before 0.27.0 these were "guidelines" in `brain/guidelines/`; the upgrade moves them.
 
@@ -40,7 +40,7 @@ rules, plus three headings the brain reads and a run state it keeps. See
 ## The one you start with
 
 Every brain has `strategy.md` from setup: a draft document that says it is waiting for the
-strategic intake. Say `run the strategic intake` (`/gtm-os-strategy`): a 10-15 minute
+strategic intake. Say `run the strategic intake` (`/gtm-brain-strategy`): a 10-15 minute
 conversation with the founder or the head of sales, growth or GTM fills it in, mapped to
 Playing to Win without ever naming the framework. Decks and notes shared along the way land in
 `strategy/` beside it, and the decisions it surfaces are also notes in the Strategy context.
@@ -49,7 +49,7 @@ Read it, then `approve the strategy`.
 ## Making one
 
 Say `add our tone of voice`, `save the design system`, `add strategy.md as a document`, or type
-`/gtm-os-document`. A file you already wrote goes in as it is; one already at the top of the
+`/gtm-brain-document`. A file you already wrote goes in as it is; one already at the top of the
 brain folder is adopted where it lies. Otherwise Codex writes the document from what the
 company already says (the website, the last deck, existing posts, what is already in Our offer
 and Target customers). It shows the title, the place and the first rules, and asks: "Add it as

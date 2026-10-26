@@ -1,30 +1,30 @@
-# GTM OS workflows and operations
+# GTM Brain workflows and operations
 
 Ask for the outcome in plain language. The plugin exposes workflow skills; internal
 operations remain available to the agent and do not need their own skill commands.
-Every identifier starts with `gtm-os-`, and every display name starts with `GTM OS:`
+Every identifier starts with `gtm-brain-`, and every display name starts with `GTM Brain:`
 to distinguish these workflows from other installed skills.
 
 | Skill identifier | Display name | What it does |
 |---|---|---|
-| `gtm-os-project` | GTM OS: Projects | Create a project folder, or link an existing one to your brain; repair, unlink, list |
-| `gtm-os-start` | GTM OS: Start | The first command in a project: creates the brain here, gets to know the business, connects the tools, opens the dashboard; resumes what is unfinished |
-| `gtm-os-sync` | GTM OS: Sync | Pull what came in through the connected tools since the last sync, one subagent per tool, and record what matters |
-| `gtm-os-todo` | GTM OS: Todo | What should I do now: everything waiting on you, ordered, walked through one by one |
-| `gtm-os-workflow` | GTM OS: Workflows | Start a run of a workflow document (an outbound campaign, ads then outbound), see where it stands, do the next step, skip or abandon; the brain keeps the steps and dates |
-| `gtm-os-deepdive` | GTM OS: Deep dive | A one-page brief on an entity or a context, from the notes and the tools read live |
-| `gtm-os-unit-economics` | GTM OS: Unit economics | Lech Kaniuk's unit economics review: CAC, LTV12 and LTV24, LTV:CAC, both paybacks and retention from the chat and the brain, then PUSH, FIX, STOP or MEASURE overall and per acquisition source or segment; offers to keep the decision as a note and the missing inputs as questions |
-| `gtm-os-market-desk-research` | GTM OS: Market desk research | Chris Pawlak's market desk research: a 5-8 minute intake, a confirmed research frame, 15-30 sourced web and community reads, an interim checkpoint, then `market-desk-research-<slug>.md` with a positioning map and, when the numbers allow, a growth chart; market attractiveness and right to win judged separately, no offering design; accepted conclusions become notes |
-| `gtm-os-use-brain` | GTM OS: Use the company brain | Everyday work: remember, recall, where we are |
-| `gtm-os-configure` | GTM OS: Configure GTM OS | Workplace info, team, tools and settings through APPROVE |
-| `gtm-os-skill` | GTM OS: Your skills | Turn a repeated workflow into a Codex skill kept in the brain's `.agents/skills`; install from GitHub, list, remove, share |
-| `gtm-os-strategy` | GTM OS: Strategic intake | A 10-15 minute conversation with a founder or a head of sales, growth or GTM that fills `strategy.md`, the document every brain starts with, mapped silently to Playing to Win; files shared on the way land in `strategy/` |
-| `gtm-os-document` | GTM OS: Documents | The documents the work must follow (strategy, tone of voice, design system, pricing) kept as Markdown at the brain root with their files beside them: add, adopt a hand-written one, list, show, update, approve, remove, check a draft against them. A file in the chat lands beside its owner through use-brain's files reference, no skill to invoke |
+| `gtm-brain-project` | GTM Brain: Projects | Create a project folder, or link an existing one to your brain; repair, unlink, list |
+| `gtm-brain-start` | GTM Brain: Start | The first command in a project: creates the brain here, gets to know the business, connects the tools, opens the dashboard; resumes what is unfinished |
+| `gtm-brain-sync` | GTM Brain: Sync | Pull what came in through the connected tools since the last sync, one subagent per tool, and record what matters |
+| `gtm-brain-todo` | GTM Brain: Todo | What should I do now: everything waiting on you, ordered, walked through one by one |
+| `gtm-brain-workflow` | GTM Brain: Workflows | Start a run of a workflow document (an outbound campaign, ads then outbound), see where it stands, do the next step, skip or abandon; the brain keeps the steps and dates |
+| `gtm-brain-deepdive` | GTM Brain: Deep dive | A one-page brief on an entity or a context, from the notes and the tools read live |
+| `gtm-brain-unit-economics` | GTM Brain: Unit economics | Lech Kaniuk's unit economics review: CAC, LTV12 and LTV24, LTV:CAC, both paybacks and retention from the chat and the brain, then PUSH, FIX, STOP or MEASURE overall and per acquisition source or segment; offers to keep the decision as a note and the missing inputs as questions |
+| `gtm-brain-market-desk-research` | GTM Brain: Market desk research | Chris Pawlak's market desk research: a 5-8 minute intake, a confirmed research frame, 15-30 sourced web and community reads, an interim checkpoint, then `market-desk-research-<slug>.md` with a positioning map and, when the numbers allow, a growth chart; market attractiveness and right to win judged separately, no offering design; accepted conclusions become notes |
+| `gtm-brain-use-brain` | GTM Brain: Use the company brain | Everyday work: remember, recall, where we are |
+| `gtm-brain-configure` | GTM Brain: Configure GTM Brain | Workplace info, team, tools and settings through APPROVE |
+| `gtm-brain-skill` | GTM Brain: Your skills | Turn a repeated workflow into a Codex skill kept in the brain's `.agents/skills`; install from GitHub, list, remove, share |
+| `gtm-brain-strategy` | GTM Brain: Strategic intake | A 10-15 minute conversation with a founder or a head of sales, growth or GTM that fills `strategy.md`, the document every brain starts with, mapped silently to Playing to Win; files shared on the way land in `strategy/` |
+| `gtm-brain-document` | GTM Brain: Documents | The documents the work must follow (strategy, tone of voice, design system, pricing) kept as Markdown at the brain root with their files beside them: add, adopt a hand-written one, list, show, update, approve, remove, check a draft against them. A file in the chat lands beside its owner through use-brain's files reference, no skill to invoke |
 
 Find workflow examples from Overview or Help > Ways to work in Codex.
 Each entry explains the workflow, shows an example and its command, and opens a prepared
 Codex message in the brain workspace. Review it and press Send to begin. You can also type
-the command in an existing project chat. The list covers shipped GTM OS skills only.
+the command in an existing project chat. The list covers shipped GTM Brain skills only.
 
 Requests such as "remember this", "load pipeline", "what do we know about Acme?", and
 "update the summaries" still work. During company work, the agent records new information
@@ -35,7 +35,7 @@ The sections below document the underlying operations, tools, and script paths f
 They are not additional discoverable skills. Tools show outcomes such as "Remembering" or
 "Searching the brain" in chat. Review proposals on the read-only dashboard. APPROVE typed in Codex stays a shell step with its permission prompt.
 Scripts retain their paths for terminal use with
-`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-os/gtm-os/0.30.7`.
+`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.31.0`.
 
 Legend for "writes": what files the command changes. Nothing else is ever touched.
 
@@ -52,7 +52,7 @@ chat re-loads what was loaded last time, so you only say `load` to change contex
 
 "unload marketing" drops one and keeps the rest.
 Tool: `load_context`. Writes: `work/loaded-contexts.json` (local).
-`node $PLUGIN_ROOT/scripts/gtm-os-load/load.mjs . pipeline [--last 15]`, `... gtm --only`, `... --clear`
+`node $PLUGIN_ROOT/scripts/gtm-brain-load/load.mjs . pipeline [--last 15]`, `... gtm --only`, `... --clear`
 
 ### remember
 *"remember that Pierre asked for a three-year TCO before 12.09"*, *"note this"*, *"log that we decided ..."*,
@@ -68,7 +68,7 @@ descriptive source pointer is enough; duplicate reads add nothing.
 
 Tool: `remember`. Writes: `brain/contexts/<slug>/memories.jsonl` (append), `brain/entities/` (new
 people). Kept at once.
-`node $PLUGIN_ROOT/scripts/gtm-os-remember/remember.mjs . --by <handle> --kind note --content "..." [--context <slug>] [--tools "attio"] [--people "Pierre Aubert"] [--source gmail:<id>] [--action "gmail:sent email:<id>"] [--supersedes m_x] [--retracts m_x]`
+`node $PLUGIN_ROOT/scripts/gtm-brain-remember/remember.mjs . --by <handle> --kind note --content "..." [--context <slug>] [--tools "attio"] [--people "Pierre Aubert"] [--source gmail:<id>] [--action "gmail:sent email:<id>"] [--supersedes m_x] [--retracts m_x]`
 
 ### interact
 *"move the Castorama deal to proposal"*, *"send the proposal to Bergstrom"*: whatever this company
@@ -102,7 +102,7 @@ process, pain, champion, competition) from the memories about that company only.
 confirmed, weak or missing, and every score cites the memory it rests on; the missing ones become
 up to three questions for the next conversation. It reads only and saves nothing: answers are
 remembered like any finding and the next read scores them. The rubric is
-`skills/gtm-os-use-brain/references/deal-health.md`.
+`skills/gtm-brain-use-brain/references/deal-health.md`.
 
 Tool: `query` with object `deal` and search = the company. Off for a brain whose `brain/admin.md`
 front matter has `deal_scoring: off` (new brains get `deal_scoring: on`; a brain without the line
@@ -125,7 +125,7 @@ The MCP reader starts one worker when needed and releases it after 30 seconds id
 reads one record at a time with a 4 MiB record limit; queries return at most 2 MiB, with an explicit
 error asking for a narrower query if that bound would be exceeded. No partial result is reported
 as complete. There are at most 32 pending indexed reads per server, with 64 KiB per query input.
-`node $PLUGIN_ROOT/scripts/gtm-os-recall/recall.mjs . "<query>"`, `... --person "<name>"`
+`node $PLUGIN_ROOT/scripts/gtm-brain-recall/recall.mjs . "<query>"`, `... --person "<name>"`
 
 ### memory_index
 *"is search up to date?"*, *"finish indexing this import"*, *"rebuild the search index"*
@@ -143,7 +143,7 @@ Normal appends use bounded local writer receipts, and manual edits fall back to 
 or a rebuild of the affected context. Entity changes rematch candidate notes from a separate text
 and reference index, including old spellings and shared aliases.
 
-`node $PLUGIN_ROOT/scripts/gtm-os-advisor/memory-index.mjs . --mode status`
+`node $PLUGIN_ROOT/scripts/gtm-brain-advisor/memory-index.mjs . --mode status`
 
 ### compile
 *"compile"*, *"compile pipeline"*, *"update the summaries"*, or "yes" when Codex offers it
@@ -159,11 +159,11 @@ one. Runs unattended on the schedule.
 
 Tools: `compile_facts`, `compile_apply`. Writes: `brain/contexts/<slug>/context.md`; kept at once.
 A separate run does it by itself (`background-compile.sh`, state in `work/compile.json`): immediately after each saved change and at chat start; changes during a run get a follow-up pass; the chat only compiles when asked.
-Model passes have a 15-minute timeout (`GTM_OS_COMPILE_TIMEOUT_MS` overrides it in milliseconds).
+Model passes have a 15-minute timeout (`GTM_BRAIN_COMPILE_TIMEOUT_MS` overrides it in milliseconds).
 Failed scans and timed-out runs enter the three-attempt retry path; completed compilations stay
 saved. Successful passes that reduce the pending context or entity set continue without using
 the failure budget. Locks verify process identity and release only their own ownership token.
-`node $PLUGIN_ROOT/scripts/gtm-os-compile/compile.mjs . --stale | --facts <slug> | --apply <slug> --by <handle> --as-of <id from --facts> --summary "..." --now "..."`
+`node $PLUGIN_ROOT/scripts/gtm-brain-compile/compile.mjs . --stale | --facts <slug> | --apply <slug> --by <handle> --as-of <id from --facts> --summary "..." --now "..."`
 `--now ""` clears guidance when no useful methods remain. Omitting `--now` is an error.
 `--apply` refuses when a memory arrived after `--facts`, so a summary never covers less than the cover claims.
 
@@ -193,7 +193,7 @@ Correcting a wrong sentence means forgetting the note behind its pill, not editi
 
 Tools: `render_dashboard` (rebuild), `open_dashboard` (rebuild, start the server, open the browser). Writes: `work/home/` (local); `work/dash.json`, `work/session.json`
 (the chat the session hook recorded).
-`node $PLUGIN_ROOT/scripts/gtm-os-render/render.mjs . && open work/home/index.html`
+`node $PLUGIN_ROOT/scripts/gtm-brain-render/render.mjs . && open work/home/index.html`
 
 ### save
 *"save"*, *"commit my notes"*
@@ -221,7 +221,7 @@ the person's own step in a terminal); when it is not, the reply says exactly tha
 changes. Codex asks once before creating the repository, since it publishes the folder.
 
 Tool: `share_brain` (`name` optional). Writes: the git remote `origin`, a push; the repository on GitHub.
-`node $PLUGIN_ROOT/scripts/gtm-os-share/share.mjs . [--name <repository>]`
+`node $PLUGIN_ROOT/scripts/gtm-brain-share/share.mjs . [--name <repository>]`
 
 ## Contexts
 
@@ -236,7 +236,7 @@ themes and splits of accumulated material are proposed first. Admin and personal
 keep their canonical homes; they are not created again for each topic or session.
 
 Tools: `list_contexts`, `new_context`. Writes: `brain/contexts/<slug>/context.md` and an empty `memories.jsonl`; kept at once.
-`node $PLUGIN_ROOT/scripts/gtm-os-contexts/contexts.mjs .`, `... --new <slug> "<Title>" "<rule>"`, `... --json`
+`node $PLUGIN_ROOT/scripts/gtm-brain-contexts/contexts.mjs .`, `... --new <slug> "<Title>" "<rule>"`, `... --json`
 
 ### archive
 *"archive berlin-expansion"*, *"unarchive berlin-expansion"*
@@ -246,7 +246,7 @@ listed or offered. Its memories stay in the files and in search. Nothing is dele
 confirms first. Unarchive brings it back. Deleting a folder is your own git operation.
 
 Tool: `archive_context`. Writes: `brain/contexts/<slug>/context.md` (status).
-`node $PLUGIN_ROOT/scripts/gtm-os-contexts/contexts.mjs . --archive <slug>`, `... --unarchive <slug>`
+`node $PLUGIN_ROOT/scripts/gtm-brain-contexts/contexts.mjs . --archive <slug>`, `... --unarchive <slug>`
 
 ### fork
 *"Bergstrom is becoming its own thing; fork it out of pipeline"*
@@ -258,7 +258,7 @@ a copied memory once. Codex offers a fork when many memories in one context are 
 initiative.
 
 Tool: `fork_context`. Writes: the new `brain/contexts/<slug>/`.
-`node $PLUGIN_ROOT/scripts/gtm-os-contexts/contexts.mjs . --fork pipeline bergstrom "Bergstrom Home" --filter bergstrom`
+`node $PLUGIN_ROOT/scripts/gtm-brain-contexts/contexts.mjs . --fork pipeline bergstrom "Bergstrom Home" --filter bergstrom`
 
 ### entities
 *"who is Chris?"*, *"Chris is Krzysztof Pawlak, email chris@reflow.io"*, *"Telli is a company"*, *"what names do we have?"*
@@ -288,7 +288,7 @@ Local refresh diagnostics: `work/entity-pages.json`, `work/render-state.json`, `
 These checkpoints and the paged files under `work/home/` are disposable, never another source
 of identity or memory truth. Page/data publication is serialized across explicit and queued renders.
 Legacy registry files migrate on the first write or `upgrade_brain`, with originals backed up.
-`node $PLUGIN_ROOT/scripts/gtm-os-entities/entities.mjs .`, `... --add "Name" --alias "a, b" --email x@y`, `... --who chris`
+`node $PLUGIN_ROOT/scripts/gtm-brain-entities/entities.mjs .`, `... --add "Name" --alias "a, b" --email x@y`, `... --who chris`
 
 ## Documents
 
@@ -310,14 +310,14 @@ Markdown without the marker is not a document until adopted. See [DOCUMENTS.md](
 Tool: `document` (`action` create | list | show | files | update | remove; `ref` is a slug or a path,
 `folder` places a new one). Writes: the document file, one commit each. `guideline` is the retired
 name, hidden from the tool list, answering with the same result for one more version.
-`node $PLUGIN_ROOT/scripts/gtm-os-documents/document.mjs . --create --title "Tone of voice" --applies-to "copy, outreach, posts" --body "..." [--folder brand] [--status approved] [--by handle]`
+`node $PLUGIN_ROOT/scripts/gtm-brain-documents/document.mjs . --create --title "Tone of voice" --applies-to "copy, outreach, posts" --body "..." [--folder brand] [--status approved] [--by handle]`
 `... --create --title "Strategy" --applies-to "strategy, planning" --file strategy.md` (a Markdown already at the root is adopted in place; one from outside is copied in)
 `... --list [--json]`, `... --show tone-of-voice`, `... --files design-system`, `... --update brand/tone-of-voice --status approved`, `... --remove tone-of-voice`
 
 ### A file for a document or an entity
 *a path or a dropped file with "add this to the design system"*, *"this is the Acme logo"*
 
-`node $PLUGIN_ROOT/skills/gtm-os-add-file/add-file.mjs . --file <path> [--document <ref> | --entity "<name>"]`
+`node $PLUGIN_ROOT/skills/gtm-brain-add-file/add-file.mjs . --file <path> [--document <ref> | --entity "<name>"]`
 lands the file beside its owner: the document's files folder, or `brain/entities/<id>/` next to the
 entity file. With no owner named it refuses, so nothing lands in the brain unasked (the
 `files/<yyyy-mm>/` fallback is gone since 0.27.0; files landed there earlier stay and their
@@ -339,7 +339,7 @@ Tool: `workflow` (`action` list | start | status | advance | skip | abandon | du
 `brain/contexts/<context>/memories.jsonl`, one commit per action. `due` is called by session
 maintenance and by the scheduled run with `by` schedule or session; it writes only for a step
 whose date passed and asks its gate question once.
-`node $PLUGIN_ROOT/scripts/gtm-os-workflow/workflow.mjs . --list | --start <slug> --context <ctx> --handle "<name>" --settled '{"Label":"answer"}' --by <handle> | --status <run> | --advance <run> --step <n> [--note ...] [--answer ...] [--actions tool:action:ref,...] [--learned '{...}'] --by <handle> | --skip <run> --step <n> --reason ... --by <handle> | --abandon <run> --reason ... --by <handle> | --due [--today YYYY-MM-DD] --by <handle|schedule|session>`
+`node $PLUGIN_ROOT/scripts/gtm-brain-workflow/workflow.mjs . --list | --start <slug> --context <ctx> --handle "<name>" --settled '{"Label":"answer"}' --by <handle> | --status <run> | --advance <run> --step <n> [--note ...] [--answer ...] [--actions tool:action:ref,...] [--learned '{...}'] --by <handle> | --skip <run> --step <n> --reason ... --by <handle> | --abandon <run> --reason ... --by <handle> | --due [--today YYYY-MM-DD] --by <handle|schedule|session>`
 
 ## Setup and admin
 
@@ -359,10 +359,10 @@ for each of `pipeline`, `marketing`, `gtm`. Creates `brain/admin.md`, the three 
 Handles are full names, lowercase, hyphenated (`maciej-konczal`).
 
 Tool: `setup_brain`. Writes: everything in a new brain; the first commit.
-`bash $PLUGIN_ROOT/scripts/gtm-os-setup/setup.sh --company X --one-liner "..." --owner "Name <email>" --team "Name <email>, ..." --tools "Attio (CRM), Gmail" [--pipeline "..."] [--marketing "..."] [--gtm "..."]`
+`bash $PLUGIN_ROOT/scripts/gtm-brain-setup/setup.sh --company X --one-liner "..." --owner "Name <email>" --team "Name <email>, ..." --tools "Attio (CRM), Gmail" [--pipeline "..."] [--marketing "..."] [--gtm "..."]`
 
 ### new project / link project
-During onboarding, GTM OS asks which existing Codex projects to follow. `list_projects` with
+During onboarding, GTM Brain asks which existing Codex projects to follow. `list_projects` with
 `include_available: true` reads the host's project catalog and reports complete, partial or
 unavailable coverage. Selected projects are linked with the submitted capture consent; skips
 are saved for the person. Onboarding stays in its current chat. If the catalog cannot supply
@@ -371,19 +371,19 @@ as the sixth onboarding step. Completed v1 onboarding resumes only this new choi
 
 *"create a project for the curriculum at ~/curriculum"*, *"link this folder"*, *"unlink this project"*, *"list projects"*
 
-`/gtm-os-project` creates `<brain-root>/<project-slug>/` by default, beside `brain/`
+`/gtm-brain-project` creates `<brain-root>/<project-slug>/` by default, beside `brain/`
 and `work/`. It reuses the known brain and name, combines the destination and capture consent
 in one question when needed, and handles relevant existing context in the background. No
 context selection or matching context creation is needed. An explicit alternative location
 is respected. The tool uses `create: true` to refuse occupied destinations and protects the
 brain's internal storage, including paths through symlinks.
-`/gtm-os-project` connects an existing folder where it already lives, preserving its
+`/gtm-brain-project` connects an existing folder where it already lives, preserving its
 files and instructions. It also repairs broken connections, unlinks projects, and lists them. The former
-`/gtm-os-project` workflow is now Link Project.
+`/gtm-brain-project` workflow is now Link Project.
 
 An external linked folder stays one working project. For several new projects, use separate
-folders directly inside the GTM OS workspace. Nested or overlapping linked projects are
-refused, including aliases; existing application directories and files stay intact. GTM OS
+folders directly inside the GTM Brain workspace. Nested or overlapping linked projects are
+refused, including aliases; existing application directories and files stay intact. GTM Brain
 does not scaffold another brain or move the existing project as part of this flow.
 
 Both keep memories in the central brain, tagged with the project, and give the project its own
@@ -399,7 +399,7 @@ the folder linked. An existing task in the brain keeps its brain-wide scope.
 Tools: `list_brains`, `link_project`, `unlink_project`, `list_projects`. Writes: the pointer
 block in the project's `AGENTS.md`, plus `work/projects.json` and the project's loaded set
 inside the brain. The underlying script path remains stable:
-`node $PLUGIN_ROOT/skills/gtm-os-project/project.mjs . --link <path> [--create] [--slug s] [--title "T"] [--contexts a,b] [--by handle]`, `... --unlink <slug>`, `... --list`
+`node $PLUGIN_ROOT/skills/gtm-brain-project/project.mjs . --link <path> [--create] [--slug s] [--title "T"] [--contexts a,b] [--by handle]`, `... --unlink <slug>`, `... --list`
 
 ### connect
 *"connect my tools"*, *"is HubSpot connected?"*
@@ -413,19 +413,19 @@ offers fixes unasked. Saying it runs the read tests too. Installs on a yes per t
 yours and lives in your Codex.
 
 Tools: `check_tools`, `mark_tool`. Writes: `work/tools.json` (local); installs Codex plugins on request.
-`node $PLUGIN_ROOT/scripts/gtm-os-connect/connect.mjs . --check`, `... --mark <tool> ok|fail "note"`
+`node $PLUGIN_ROOT/scripts/gtm-brain-connect/connect.mjs . --check`, `... --mark <tool> ok|fail "note"`
 
 ### approve
 *"change what we sell to also include UK retailers"*, then `APPROVE`
 
 The only way `brain/admin.md` changes. Codex writes the full proposed file to
 `work/admin.proposed.md`, shows the diff, waits for the literal word `APPROVE`. Then the
-script writes an audit line to `~/.gtm-os/approvals.log` (outside the sandbox, so Codex asks
+script writes an audit line to `~/.gtm-brain/approvals.log` (outside the sandbox, so Codex asks
 your permission a second time), replaces the file, commits with your handle. Only team members
 can approve. "ok" or "yes" is not APPROVE.
 
-Tool: `propose_admin_change` for the proposal; applying is a shell command with your permission. Writes: `brain/admin.md`, `~/.gtm-os/approvals.log`, a commit.
-`node $PLUGIN_ROOT/scripts/gtm-os-approve/approve.mjs . --diff`, `... --apply --by <handle|name|email>`
+Tool: `propose_admin_change` for the proposal; applying is a shell command with your permission. Writes: `brain/admin.md`, `~/.gtm-brain/approvals.log`, a commit.
+`node $PLUGIN_ROOT/scripts/gtm-brain-approve/approve.mjs . --diff`, `... --apply --by <handle|name|email>`
 
 ### schedule
 *"set up the weekly compile"*, *"schedule"*
@@ -436,10 +436,10 @@ workflow steps whose date passed as due (see [WORKFLOWS.md](WORKFLOWS.md)), then
 
 Writes: covers and a commit `scheduled: compile ...` (covers only; anything else it touched is
 left uncommitted and listed), `work/hooks.log`.
-`bash $PLUGIN_ROOT/scripts/gtm-os-schedule/scheduled-run.sh /path/to/brain`
+`bash $PLUGIN_ROOT/scripts/gtm-brain-schedule/scheduled-run.sh /path/to/brain`
 
-### gtm-os-configure
-*"update GTM OS"*, *"check the installed GTM OS version"*
+### gtm-brain-configure
+*"update GTM Brain"*, *"check the installed GTM Brain version"*
 
 Runs from the Codex app, even without a brain. Checks the installed plugin or refreshes it
 from its configured repository and branch. A local development install refreshes from its
@@ -448,20 +448,20 @@ the installed copy afterward. After a verified update, quit and reopen Codex, th
 new chat in the same folder. Existing brains resume without setup.
 Codex's marketplace copy is a snapshot; when git cannot fetch (no GitHub sign-in for git,
 offline), "upgrade" leaves it where it was. Before installing, the update fetches the source's
-own `plugin.json` and stops when Codex's copy is behind it: "Codex's copy of GTM OS is X,
+own `plugin.json` and stops when Codex's copy is behind it: "Codex's copy of GTM Brain is X,
 GitHub has Y", with the fix (`gh auth login`, then `gh auth setup-git`, then update again).
 The GitHub connector inside Codex is a different login and does not help git.
 Check mode does not fetch the remote or establish whether an update is available.
-For missing tools or a missing plugin version, ask "repair the GTM OS update". Codex checks
+For missing tools or a missing plugin version, ask "repair the GTM Brain update". Codex checks
 the installed files before choosing between a source refresh and an app restart.
 
 An update asked for in a brain refreshes that brain's rules in the same step (`brain`): the newly
 installed version's upgrader runs right after the verified install and prints its report, so
-`update GTM OS` alone is enough there. Other brains are offered "refresh the rules" when next opened.
+`update GTM Brain` alone is enough there. Other brains are offered "refresh the rules" when next opened.
 
 Tool: `update_plugin` (`mode: check | update`, `brain` optional). Writes: Codex's plugin installation and
 marketplace cache when updating. No brain files.
-`node $PLUGIN_ROOT/scripts/gtm-os-update-plugin/update.mjs --check`, `... --update`; `check-version.mjs <root>` asks the source whether a newer version exists (the hook runs it daily in the background; the dashboard and the advisor read `work/plugin-version.json`)
+`node $PLUGIN_ROOT/scripts/gtm-brain-update-plugin/update.mjs --check`, `... --update`; `check-version.mjs <root>` asks the source whether a newer version exists (the hook runs it daily in the background; the dashboard and the advisor read `work/plugin-version.json`)
 
 ### Refresh brain rules
 *"upgrade the brain"*, *"refresh the rules"*
@@ -472,7 +472,7 @@ backups when needed. Contexts, memories, workplace settings and personal prefere
 
 Tool: `upgrade_brain`. Writes: `AGENTS.md`, `.githooks/pre-commit`, `.gitignore`, upgrade
 backups, and identity files only when migration is needed.
-`bash $PLUGIN_ROOT/scripts/gtm-os-upgrade/upgrade.sh .`
+`bash $PLUGIN_ROOT/scripts/gtm-brain-upgrade/upgrade.sh .`
 
 ## What runs by itself
 
@@ -488,7 +488,7 @@ backups, and identity files only when migration is needed.
   them (reads pass); the skills are the only writers. Best effort, logged in `work/hooks.log`.
 - **Before any commit**: every staged `memories.jsonl` is validated line by line and must keep
   the committed records unchanged (append-only). Without the plugin on the machine the commit
-  is refused (`GTM_OS_SKIP_VALIDATE=1` to override once).
+  is refused (`GTM_BRAIN_SKIP_VALIDATE=1` to override once).
 - **After every write**: the writer keeps what it wrote. Everything Codex writes is kept at once: one commit per change, in your name, shared when the
   brain has a remote. You never say save. `save` exists for edits made by hand outside Codex (a
   cover changed in an editor, names fixed by hand). APPROVE commits the workplace info; the
@@ -502,21 +502,21 @@ brain/admin.md                       workplace info; APPROVE to change
 brain/entities/*.md                     identity and cited briefs
 brain/contexts/<slug>/context.md     the context cover
 brain/contexts/<slug>/memories.jsonl the context's time series, append-only
-strategy.md                          the strategy document, there from setup; gtm-os-strategy fills it
+strategy.md                          the strategy document, there from setup; gtm-brain-strategy fills it
 <slug>.md, <folder>/<slug>.md        the documents the work must follow (kind: document); document tool or a hand edit
 <folder>/<slug>/                     a document's files; add-file.mjs --document, or dropped in by hand
 brain/entities/<id>/                 an entity's files; add-file.mjs --entity
 README.md                            what goes where, written by setup and by the first upgrade
 AGENTS.md                            the rules Codex reads every session
 work/                                local, ignored: dashboard, loaded set, tools, logs, proposals
-~/.gtm-os/approvals.log              who approved what, outside every brain
+~/.gtm-brain/approvals.log              who approved what, outside every brain
 ```
 
-Customer overview: `customer_overview` reads the retained relationships, source links, dates, disagreements and scoped coverage. Capture through `remember.customer`; record `remember.customer_coverage` after capture in a separate call. Internal CLI: `node scripts/gtm-os-entities/entities.mjs <brain> --customers`.
+Customer overview: `customer_overview` reads the retained relationships, source links, dates, disagreements and scoped coverage. Capture through `remember.customer`; record `remember.customer_coverage` after capture in a separate call. Internal CLI: `node scripts/gtm-brain-entities/entities.mjs <brain> --customers`.
 
 ## Meeting capture
 
-Ask GTM OS to capture a transcript or meeting note from a connected tool, or describe a
+Ask GTM Brain to capture a transcript or meeting note from a connected tool, or describe a
 conversation directly. It keeps the source, actual date when known, participants and useful
 findings together; a calendar or CRM match is optional. Ask to show meetings, correct an
 account, skip one occurrence, or always capture a named series. These preferences apply to you.
@@ -524,4 +524,4 @@ account, skip one occurrence, or always capture a named series. These preference
 Daily maintenance can refresh meeting sources and calendar references before compiling
 summaries. Configure capture scopes and timing in chat. A failed calendar refresh does not
 block meeting capture or compilation. The system-scheduler entry point is
-`scripts/gtm-os-schedule/daily-run.mjs <brain> <confirmed-handle>` under the installed plugin.
+`scripts/gtm-brain-schedule/daily-run.mjs <brain> <confirmed-handle>` under the installed plugin.

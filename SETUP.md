@@ -1,4 +1,4 @@
-# gtm-os v0: setup and test manual
+# gtm-brain v0: setup and test manual
 
 For anyone picking this up (Łukasz first). Everything here runs locally on macOS or Linux:
 Codex, git, Node 22.16+ or 24+. No accounts, no servers.
@@ -25,22 +25,22 @@ no GitHub invitation or sign-in is required to download it. GitHub authenticatio
 needed only if you later choose to share your own private company brain through GitHub.
 
 ```bash
-codex plugin marketplace add gtm-week/gtm-os   # straight from GitHub (verified)
-codex plugin marketplace upgrade gtm-os        # refresh an existing marketplace snapshot
-codex plugin add gtm-os@gtm-os
-node "$(ls -d ~/.codex/plugins/cache/gtm-os/gtm-os/*/ | sort -V | tail -1)hooks/trust-hooks.mjs" --trust   # approve the hooks; installing does not
-codex plugin list | grep gtm-os                                      # installed, enabled, 0.30.7
+codex plugin marketplace add gtm-week/gtm-brain   # straight from GitHub (verified)
+codex plugin marketplace upgrade gtm-brain        # refresh an existing marketplace snapshot
+codex plugin add gtm-brain@gtm-brain
+node "$(ls -d ~/.codex/plugins/cache/gtm-brain/gtm-brain/*/ | sort -V | tail -1)hooks/trust-hooks.mjs" --trust   # approve the hooks; installing does not
+codex plugin list | grep gtm-brain                                      # installed, enabled, 0.31.0
 ```
 
-The install is a snapshot of the configured branch. In the Codex app, say **"update GTM OS"**
-to use `gtm-os-configure`: Codex checks the candidate connector, refreshes the plugin and
+The install is a snapshot of the configured branch. In the Codex app, say **"update GTM Brain"**
+to use `gtm-brain-configure`: Codex checks the candidate connector, refreshes the plugin and
 verifies the installed connector. Follow the two actions it gives you: quit and reopen Codex,
 then open its prepared chat in the same folder and press Send. If onboarding is unfinished,
 your saved progress and next step carry over; you do not need to type a continuation command. It keeps the
 configured source and branch. Local development installs refresh from their checkout.
 Company brain files are unchanged.
 
-If a connector reports a missing plugin version, ask Codex to **"repair the GTM OS update"**.
+If a connector reports a missing plugin version, ask Codex to **"repair the GTM Brain update"**.
 It checks whether the installed files need repair or the app needs a restart. Do not remove
 the plugin or re-run onboarding. A version check runs in the background; installing the
 update runs when requested, so it cannot interrupt a working session unannounced.
@@ -48,8 +48,8 @@ update runs when requested, so it cannot interrupt a working session unannounced
 The manual equivalent for a Git marketplace is:
 
 ```bash
-codex plugin marketplace upgrade gtm-os
-codex plugin add gtm-os@gtm-os
+codex plugin marketplace upgrade gtm-brain
+codex plugin add gtm-brain@gtm-brain
 ```
 
 After these manual commands, run the installed `update.mjs --check` and
@@ -66,7 +66,7 @@ To work on the plugin itself, clone the repo and install from the checkout inste
 no upgrade command:
 
 ```bash
-git clone git@github.com:gtm-week/gtm-os.git && cd gtm-os
+git clone git@github.com:gtm-week/gtm-brain.git && cd gtm-brain
 ./dev-install.sh                              # switches the marketplace to this folder and installs
 ./dev-install.sh                              # again after any change, then start a new chat
 ./dev-reset.sh                                # wipe the test brain AND refresh, to run onboarding from zero
@@ -81,15 +81,15 @@ new chat in Codex on the test folder (restart the app only if old skills linger)
 Set this once in your shell; the scripts below use it:
 
 ```bash
-export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-os/gtm-os/0.30.7
+export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.31.0
 ```
 
 The last install line approves the plugin's hooks; it ends with `Safety locks: on`. Codex does
 not ask by itself: a hook installed from a command is enabled and silent until approved, and a
-release that changes `hooks.json` drops the approval again (an update through "update GTM OS"
+release that changes `hooks.json` drops the approval again (an update through "update GTM Brain"
 puts it back; `./dev-install.sh` does the same for a checkout).
 
-In a chat the skills run as GTM OS tools: you see "Remembering", "Searching the brain",
+In a chat the skills run as GTM Brain tools: you see "Remembering", "Searching the brain",
 "Writing the summary", "Saving" with the plugin's icon, not shell commands. One thing is still a
 shell command, so Codex asks your permission: applying an APPROVE.
 
@@ -100,7 +100,7 @@ mkdir ~/brain-try && cd ~/brain-try
 codex
 ```
 
-In a new Codex chat in the empty project, send `/gtm-os-start`.
+In a new Codex chat in the empty project, send `/gtm-brain-start`.
 Setup reuses known answers and asks only for missing information. It creates Our company
 (`company`), Strategy (`strategy`), Market (`market`), Target customers (`icp`), Our offer
 (`offer`) and the creator's personal context. The dashboard and background summaries use
@@ -114,13 +114,13 @@ cat brain/admin.md                          # your answers; team with handles li
 cat brain/contexts/company/context.md       # Our company: identity, team and internal work
 ls brain/contexts/*/                        # context.md + memories.jsonl (empty) per context
 git log --oneline                           # one commit: setup
-git config gtm-os.lib                       # the pre-commit hook finds the lib through this
+git config gtm-brain.lib                       # the pre-commit hook finds the lib through this
 ```
 
 Without Codex, the same from a script:
 
 ```bash
-bash $PLUGIN_ROOT/scripts/gtm-os-setup/setup.sh --company Reflow --one-liner "returns automation for EU retailers" \
+bash $PLUGIN_ROOT/scripts/gtm-brain-setup/setup.sh --company Reflow --one-liner "returns automation for EU retailers" \
   --owner "Marta Nowak <marta@reflow.io>" --team "Tomek Zielinski <tomek@reflow.io>" \
   --tools "Attio (CRM), Gmail, Granola" --pipeline "Attio is our CRM; read deals live."
 ```
@@ -133,18 +133,18 @@ bash $PLUGIN_ROOT/scripts/gtm-os-setup/setup.sh --company Reflow --one-liner "re
    Expected: Codex writes `work/admin.proposed.md`, shows the diff, asks you to type APPROVE.
    It does **not** edit the file (a hook denies that; see `work/hooks.log`).
 2. Type `APPROVE`.
-   Expected: the script tries to write an audit line to `~/.gtm-os/approvals.log`, which is
+   Expected: the script tries to write an audit line to `~/.gtm-brain/approvals.log`, which is
    outside the sandbox, so **Codex asks you to allow the command**. Allow it. Then:
    *applied and committed <hash>, approved by <your handle>*.
-3. `git log -1` shows the commit; `tail ~/.gtm-os/approvals.log` shows the audit line.
+3. `git log -1` shows the commit; `tail ~/.gtm-brain/approvals.log` shows the audit line.
 4. Try "ok" instead of APPROVE on another change: nothing is applied.
 
 Without Codex:
 
 ```bash
 sed 's/returns automation/returns automation, also UK/' brain/admin.md > work/admin.proposed.md
-node $PLUGIN_ROOT/scripts/gtm-os-approve/approve.mjs . --diff
-node $PLUGIN_ROOT/scripts/gtm-os-approve/approve.mjs . --apply --by marta@reflow.io      # name, email or handle of a team member
+node $PLUGIN_ROOT/scripts/gtm-brain-approve/approve.mjs . --diff
+node $PLUGIN_ROOT/scripts/gtm-brain-approve/approve.mjs . --apply --by marta@reflow.io      # name, email or handle of a team member
 ```
 
 ## 4. Contexts and memories (step 2: contexts, load, remember)
@@ -170,11 +170,11 @@ In Codex:
 Without Codex:
 
 ```bash
-node $PLUGIN_ROOT/scripts/gtm-os-contexts/contexts.mjs .
-node $PLUGIN_ROOT/scripts/gtm-os-load/load.mjs . pipeline
-node $PLUGIN_ROOT/scripts/gtm-os-remember/remember.mjs . --by marta@reflow.io --kind action --tools "gmail" \
+node $PLUGIN_ROOT/scripts/gtm-brain-contexts/contexts.mjs .
+node $PLUGIN_ROOT/scripts/gtm-brain-load/load.mjs . pipeline
+node $PLUGIN_ROOT/scripts/gtm-brain-remember/remember.mjs . --by marta@reflow.io --kind action --tools "gmail" \
   --people "Pierre Aubert" --content "Sent Pierre the TCO." --source gmail:19faefe8 --action "gmail:sent email:19faefe8"
-node $PLUGIN_ROOT/scripts/gtm-os-contexts/contexts.mjs . --new berlin-expansion "Berlin expansion" "Everything about the Berlin office."
+node $PLUGIN_ROOT/scripts/gtm-brain-contexts/contexts.mjs . --new berlin-expansion "Berlin expansion" "Everything about the Berlin office."
 ```
 
 ## 5. Who is who (step 2b: names)
@@ -197,9 +197,9 @@ In Codex:
 Without Codex:
 
 ```bash
-node $PLUGIN_ROOT/scripts/gtm-os-entities/entities.mjs . --add "Krzysztof Pawlak" --alias "Chris, Pawlak" --email chris@reflow.io
-node $PLUGIN_ROOT/scripts/gtm-os-entities/entities.mjs . --who chris
-node $PLUGIN_ROOT/scripts/gtm-os-entities/entities.mjs .
+node $PLUGIN_ROOT/scripts/gtm-brain-entities/entities.mjs . --add "Krzysztof Pawlak" --alias "Chris, Pawlak" --email chris@reflow.io
+node $PLUGIN_ROOT/scripts/gtm-brain-entities/entities.mjs . --who chris
+node $PLUGIN_ROOT/scripts/gtm-brain-entities/entities.mjs .
 ```
 
 Entity files are editable. Keep their expected frontmatter format; the reader reports the
@@ -228,9 +228,9 @@ In Codex, after a few memories in `pipeline`:
 Without Codex (you write the prose yourself):
 
 ```bash
-node $PLUGIN_ROOT/scripts/gtm-os-compile/compile.mjs . --stale
-node $PLUGIN_ROOT/scripts/gtm-os-compile/compile.mjs . --facts pipeline
-node $PLUGIN_ROOT/scripts/gtm-os-compile/compile.mjs . --apply pipeline --as-of <as_of from --facts> --by marta \
+node $PLUGIN_ROOT/scripts/gtm-brain-compile/compile.mjs . --stale
+node $PLUGIN_ROOT/scripts/gtm-brain-compile/compile.mjs . --facts pipeline
+node $PLUGIN_ROOT/scripts/gtm-brain-compile/compile.mjs . --apply pipeline --as-of <as_of from --facts> --by marta \
   --summary "Bergstrom Home is the active opportunity. Confirm its renewal owner. ..." --now ""
 ```
 
@@ -285,8 +285,8 @@ In Codex:
 Without Codex:
 
 ```bash
-node $PLUGIN_ROOT/scripts/gtm-os-recall/recall.mjs . "TCO"
-node $PLUGIN_ROOT/scripts/gtm-os-recall/recall.mjs . --person "Pierre Aubert"
+node $PLUGIN_ROOT/scripts/gtm-brain-recall/recall.mjs . "TCO"
+node $PLUGIN_ROOT/scripts/gtm-brain-recall/recall.mjs . --person "Pierre Aubert"
 ```
 
 ## 9. Saving (git in the app)
@@ -316,7 +316,7 @@ confirms the name and filter, then *forked pipeline -> bergstrom: 2 of 5 memorie
 Codex should also offer this itself when many memories in one context are about one account.
 
 ```bash
-node $PLUGIN_ROOT/scripts/gtm-os-contexts/contexts.mjs . --fork pipeline bergstrom "Bergstrom Home" --filter bergstrom
+node $PLUGIN_ROOT/scripts/gtm-brain-contexts/contexts.mjs . --fork pipeline bergstrom "Bergstrom Home" --filter bergstrom
 ```
 
 ## 11. The scheduled run (step 7)
@@ -325,7 +325,7 @@ Compile every context whose summary is behind, render, save the covers, on a sch
 
 **A. Codex app, Scheduled tasks.** In the project, create a scheduled task with this text:
 
-> Run the gtm-os-sync skill as the scheduled run: compile every context whose summary is behind with by: schedule, render the
+> Run the gtm-brain-sync skill as the scheduled run: compile every context whose summary is behind with by: schedule, render the
 > dashboard.
 > Do nothing else.
 
@@ -334,10 +334,10 @@ Weekly (Sunday 20:00) or nightly. Run it in the local project. Computer on, app 
 **B. launchd or cron**, no app needed:
 
 ```bash
-bash $PLUGIN_ROOT/scripts/gtm-os-schedule/scheduled-run.sh ~/brain-try      # run it once by hand first
+bash $PLUGIN_ROOT/scripts/gtm-brain-schedule/scheduled-run.sh ~/brain-try      # run it once by hand first
 ```
 
-Then the plist in `scripts/gtm-os-schedule/launchd.plist.example` (replace the two paths, load with
+Then the plist in `scripts/gtm-brain-schedule/launchd.plist.example` (replace the two paths, load with
 `launchctl`), or a cron line. Both call `codex exec`, so Codex must be signed in.
 
 Check: `git log --oneline | head` shows `scheduled: compile pipeline`; `work/hooks.log` has
@@ -364,7 +364,7 @@ when prompted. Then *"is HubSpot connected?"*: Codex reads one deal and records
 Without Codex:
 
 ```bash
-node $PLUGIN_ROOT/scripts/gtm-os-connect/connect.mjs . --check
+node $PLUGIN_ROOT/scripts/gtm-brain-connect/connect.mjs . --check
 codex plugin add attio@openai-curated-remote
 ```
 
@@ -375,10 +375,10 @@ whether the sign-in is really one click, and what the read test returns.
 ## What is where
 
 ```
-plugins/gtm-os/
+plugins/gtm-brain/
   lib/brain.mjs              the file format: read, validate, append. Everything goes through it.
   skills/<workflow>/SKILL.md user workflow; references/ holds internal procedures
-  skills/gtm-os-*/           operation scripts keep their existing paths
+  skills/gtm-brain-*/           operation scripts keep their existing paths
   hooks/                     SessionStart (lists contexts), PreToolUse (protects admin.md, memories.jsonl)
   templates/                 AGENTS.md, admin.md, pre-commit hook, gitignore
 ```
@@ -396,19 +396,19 @@ work/                                   ignored: loaded-contexts.json, hooks.log
 ## When something is off
 
 - Codex offers a skill that does not exist (`init`): the app cached an old skill list. Start a
-  new chat, then quit and reopen the app. If it persists: `codex plugin add gtm-os@gtm-os` again.
+  new chat, then quit and reopen the app. If it persists: `codex plugin add gtm-brain@gtm-brain` again.
 - The hook never fires: the hooks are not approved (`work/hooks.log` is empty in that case).
   `node <plugin>/hooks/trust-hooks.mjs` reports each hook; `--trust` approves them.
-- A local install (`./dev-install.sh`) works in chats but GTM OS is missing from the app's Plugins
+- A local install (`./dev-install.sh`) works in chats but GTM Brain is missing from the app's Plugins
   tab: the tab lists a local marketplace only when its folder is a trusted project. Open the
   checkout as a project in Codex and accept the trust prompt. `codex plugin list` shows the truth
   either way.
 - A local install goes back to an older version every time the app starts: a second checkout
   that Codex trusts still has `.agents/plugins/marketplace.json` with the marketplace name
-  `gtm-os`, and the app reinstalls from it at launch whatever `config.toml` says. Rename or remove
+  `gtm-brain`, and the app reinstalls from it at launch whatever `config.toml` says. Rename or remove
   that manifest in the other checkout, then run `./dev-install.sh` again.
 - `codex exec` hangs: add `</dev/null`. Hooks under exec need `--dangerously-bypass-hook-trust`.
-- Pre-commit says the plugin is not installed: `git config gtm-os.lib <path to plugins/gtm-os/lib/brain.mjs>`,
+- Pre-commit says the plugin is not installed: `git config gtm-brain.lib <path to plugins/gtm-brain/lib/brain.mjs>`,
   or open the folder in Codex once (the session hook sets it).
 - Pre-commit says a record "was changed" or "removed": memories are append-only. Restore the
   file (`git checkout brain/contexts/<slug>/memories.jsonl`) and record the correction with
@@ -424,7 +424,7 @@ Chat about this is a navigation link; changes and approvals happen in Codex.
 
 The write gate and the pre-commit hook stop the model, and you, from editing the protected files
 by mistake: a direct edit is denied, a changed or removed memory is refused at commit, admin
-changes need the word APPROVE plus Codex's own permission prompt for the audit line. The GTM OS
+changes need the word APPROVE plus Codex's own permission prompt for the audit line. The GTM Brain
 tools run outside the sandbox and commit only through `save`, on your word. They do not
 stop a determined person with the terminal: `git commit --no-verify`, a rewritten history, or
 Codex run with full access and no sandbox all get past them. The audit is the git history on the

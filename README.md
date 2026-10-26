@@ -1,4 +1,8 @@
+<a href="https://gtm-brain.ai/"><img src="plugins/gtm-brain/assets/logo.png" alt="GTM Brain" width="128" height="128"></a>
+
 # GTM Brain
+
+[Website](https://gtm-brain.ai/) · [Install](#install-in-codex) · [Design direction](DESIGN.md)
 
 **For GTM engineers building research, account and campaign workflows in Codex.**
 
@@ -6,7 +10,7 @@ A new chat should not mean pasting your ICP again, hunting down the last custome
 or reconstructing where a playbook stopped. GTM Brain keeps your ICP, offer, customer evidence
 and playbook progress in local files that your agent can use across chats and linked projects.
 
-It installs as the **`gtm-os` plugin**. Open source under [MIT](LICENSE).
+It installs as the **`gtm-brain` plugin**. Open source under [MIT](LICENSE).
 [Codex](#install-in-codex) is the primary host; [Claude Code support is in beta](#claude-code-beta).
 
 ## What it solves
@@ -20,12 +24,14 @@ It installs as the **`gtm-os` plugin**. Open source under [MIT](LICENSE).
 
 ## Install in Codex
 
+Already using the previous plugin? Follow the [rename migration](MIGRATING.md) to keep your existing brain and switch installations safely.
+
 Requires the **Codex desktop app** and **Node 22.16+ (22.x) or Node 24+**. The guided installer checks your environment.
 
 Open a new Codex chat and send:
 
 ```text
-Read https://github.com/gtm-week/gtm-os/blob/main/INSTALL.md and follow it exactly. Read nothing else in that repository.
+Read https://github.com/gtm-week/gtm-brain/blob/main/INSTALL.md and follow it exactly. Read nothing else in that repository.
 ```
 
 Follow the setup and permission prompts. Codex installs the plugin, opens your working folder,
@@ -104,14 +110,14 @@ for the files each operation reads or changes.
 In Claude Code, run:
 
 ```text
-/plugin marketplace add gtm-week/gtm-os
-/plugin install gtm-os@gtm-os
+/plugin marketplace add gtm-week/gtm-brain
+/plugin install gtm-brain@gtm-brain
 ```
 
 In the Claude desktop app:
 
-1. Choose Add marketplace and enter `https://github.com/gtm-week/gtm-os.git`.
-2. Click Sync, then install `gtm-os`.
+1. Choose Add marketplace and enter `https://github.com/gtm-week/gtm-brain.git`.
+2. Click Sync, then install `gtm-brain`.
 3. Open an empty folder, start a session and say: "Set up a company brain here."
 
 Setup, memory, briefs, questions, linked projects and protected-file approvals are supported.
@@ -120,9 +126,9 @@ The dashboard opens as a link in your browser.
 Current beta limitations:
 
 - Background context summaries require Codex to be installed on the same machine.
-- Marketplace updates are manual. From version 0.30.3, say "update GTM OS" when prompted,
+- Marketplace updates are manual. From version 0.30.3, say "update GTM Brain" when prompted,
   then run `/reload-plugins`. On older versions, first run
-  `claude plugin marketplace update gtm-os && claude plugin update gtm-os@gtm-os`.
+  `claude plugin marketplace update gtm-brain && claude plugin update gtm-brain@gtm-brain`.
 - Connector checks and the dashboard's chat buttons are Codex-only.
 - Some skill instructions still name Codex.
 
@@ -132,16 +138,16 @@ Current beta limitations:
 <summary>Codex CLI installation and hook approval</summary>
 
 ```bash
-codex plugin marketplace add gtm-week/gtm-os
-codex plugin marketplace upgrade gtm-os
-codex plugin add gtm-os@gtm-os
-node "$(ls -d ~/.codex/plugins/cache/gtm-os/gtm-os/*/ | sort -V | tail -1)hooks/trust-hooks.mjs" --trust
+codex plugin marketplace add gtm-week/gtm-brain
+codex plugin marketplace upgrade gtm-brain
+codex plugin add gtm-brain@gtm-brain
+node "$(ls -d ~/.codex/plugins/cache/gtm-brain/gtm-brain/*/ | sort -V | tail -1)hooks/trust-hooks.mjs" --trust
 ```
 
 The upgrade line refreshes an existing marketplace snapshot. The final line explicitly approves
 the plugin's hooks, which installation alone does not do. Without that approval, the installed
-hooks do not run. In a new chat in an empty project folder, send "Set up GTM OS here" or
-`/gtm-os-start`.
+hooks do not run. In a new chat in an empty project folder, send "Set up GTM Brain here" or
+`/gtm-brain-start`.
 
 See [SETUP.md](SETUP.md) for installation and verification details.
 
@@ -158,7 +164,7 @@ See [SETUP.md](SETUP.md) for installation and verification details.
 | [SETUP.md](SETUP.md) | Manual installation and verification |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Architecture, source layout and release checks |
 
-Found a problem or have a concrete workflow to improve? [Open an issue](https://github.com/gtm-week/gtm-os/issues).
+Found a problem or have a concrete workflow to improve? [Open an issue](https://github.com/gtm-week/gtm-brain/issues).
 
 ### Before pushing to main
 
@@ -171,6 +177,6 @@ Policy generation, schema checks and upgrade invariants are documented in [CONTR
 ## License
 
 [MIT](LICENSE). Bundled dashboard dependencies and fonts retain their own licenses:
-[third-party notices](plugins/gtm-os/scripts/gtm-os-render/ui/THIRD-PARTY-NOTICES.md),
-[font license](plugins/gtm-os/scripts/gtm-os-render/ui/FONT-LICENSE.md) and
-[shadcn license](plugins/gtm-os/scripts/gtm-os-render/ui/SHADCN-LICENSE.md).
+[third-party notices](plugins/gtm-brain/scripts/gtm-brain-render/ui/THIRD-PARTY-NOTICES.md),
+[font license](plugins/gtm-brain/scripts/gtm-brain-render/ui/FONT-LICENSE.md) and
+[shadcn license](plugins/gtm-brain/scripts/gtm-brain-render/ui/SHADCN-LICENSE.md).

@@ -1,15 +1,15 @@
-# IMPORT.md: agent instructions for handing what you know to GTM OS
+# IMPORT.md: agent instructions for handing what you know to GTM Brain
 
 You are an AI assistant (Claude Code, Cursor, Gemini, Codex in another project, any
 other) that a person has pointed at this file and asked to hand what you know about
-their company to GTM OS, the company brain they run in Codex. Read this file only;
+their company to GTM Brain, the company brain they run in Codex. Read this file only;
 nothing else in this repository matters to you. Run everything yourself and speak in
-plain words. Nothing leaves the machine: you write one file, GTM OS reads it later.
+plain words. Nothing leaves the machine: you write one file, GTM Brain reads it later.
 
-> For humans: you set up GTM OS, and the assistant you were using before already knows
+> For humans: you set up GTM Brain, and the assistant you were using before already knows
 > things about your company: who you are, what you sell, your tools, the people, the
-> deals in motion. This collects that into one file you review, so GTM OS does not ask
-> what your old assistant could have answered. Then, back in the GTM OS chat, say
+> deals in motion. This collects that into one file you review, so GTM Brain does not ask
+> what your old assistant could have answered. Then, back in the GTM Brain chat, say
 > "import from claude" (or "import the handoff").
 
 ## What to gather (read-only)
@@ -28,7 +28,7 @@ assistant's folders. In order:
 
 Never take the person's name or email from git or GitHub: a machine's git identity is
 often a noreply or personal address. If a name is not in your memory, leave the section
-out; GTM OS asks the person directly.
+out; GTM Brain asks the person directly.
 
 ## What never goes in
 
@@ -40,7 +40,7 @@ out; GTM OS asks the person directly.
 
 ## The file
 
-Write `~/.gtm-os/handoff.md` (create the folder; the older name `claude-export.md` in
+Write `~/.gtm-brain/handoff.md` (create the folder; the older name `claude-export.md` in
 the same folder is still read). Markdown with frontmatter, sections in this order, one
 fact per line, every line ending with its source in parentheses, plain hyphens only, no
 long dashes:
@@ -53,9 +53,9 @@ confirmed: true | false
 sources: [global instructions, memory (3 files), conversation]
 ---
 
-# Company context handoff for GTM OS
+# Company context handoff for GTM Brain
 
-Facts below are hypotheses for GTM OS to confirm with the person, never truth.
+Facts below are hypotheses for GTM Brain to confirm with the person, never truth.
 
 ## Who
 - Marta Nowak <marta@reflow.io> (global instructions)
@@ -83,8 +83,8 @@ frontmatter and one line saying so; an honest empty export beats a padded one.
 
 Interactive session: show the draft in the chat first, let the person strike lines, then
 write with `confirmed: true`. Headless run (no person to ask): write without showing and
-set `confirmed: false`, so GTM OS walks the person through it before trusting a line.
+set `confirmed: false`, so GTM Brain walks the person through it before trusting a line.
 
-After writing, say where the file is and what happens next: in the GTM OS chat in Codex
-they say "import from claude"; GTM OS also notices the file by itself at the start of the
+After writing, say where the file is and what happens next: in the GTM Brain chat in Codex
+they say "import from claude"; GTM Brain also notices the file by itself at the start of the
 next chat. They can delete the file at any time if they change their mind.

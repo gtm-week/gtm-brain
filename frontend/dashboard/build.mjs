@@ -3,7 +3,7 @@ import {execFileSync} from 'node:child_process';
 import {mkdirSync,copyFileSync,readFileSync,readdirSync,writeFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 const root=fileURLToPath(new URL('.',import.meta.url));
-const out=new URL('../../plugins/gtm-os/scripts/gtm-os-render/ui/',import.meta.url);
+const out=new URL('../../plugins/gtm-brain/scripts/gtm-brain-render/ui/',import.meta.url);
 mkdirSync(out,{recursive:true});
 const {metafile}=await build({absWorkingDir:root,entryPoints:['src/main.tsx'],bundle:true,minify:true,format:'iife',target:['chrome110'],jsx:'automatic',outfile:fileURLToPath(new URL('dashboard.js',out)),define:{'process.env.NODE_ENV':'"production"'},legalComments:'external',metafile:true});
 execFileSync(process.execPath,['node_modules/tailwindcss/lib/cli.js','-i','src/style.css','-o',fileURLToPath(new URL('dashboard.css',out)),'--minify'],{cwd:root,stdio:'inherit'});

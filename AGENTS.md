@@ -1,14 +1,14 @@
-# gtm-os: contributor notes
+# gtm-brain: contributor notes
 
 This repo is the plugin, not a brain. Test brains live in a scratch folder (`setup` creates one).
-If someone opens this repo in Codex to try GTM OS: do not improvise an installation from SETUP.md
+If someone opens this repo in Codex to try GTM Brain: do not improvise an installation from SETUP.md
 or run checks in the shell; send them to SETUP.md's install command and an empty folder, where
 the plugin's `check_environment` and `setup_brain` tools do the work.
 
 ## Default onboarding interaction
 
-<!-- generated: questions; edit plugins/gtm-os/policies/questions.md -->
-Ask through the GTM OS question tool named for the purpose whenever available: `onboarding_question`
+<!-- generated: questions; edit plugins/gtm-brain/policies/questions.md -->
+Ask through the GTM Brain question tool named for the purpose whenever available: `onboarding_question`
 for first-run setup only, `configuration_question` for tools, connections and settings, and
 `question` for everyday and creative work (which context, same as X?, which direction or photo?).
 The host labels the call by the tool's name, so the name is the person's only cue to what kind
@@ -21,7 +21,7 @@ person expects there, and it shows the choices and their own answer on one page.
 Reuse saved and submitted answers; infer a concrete proposal before asking. Use structured
 questions proactively for missing information and decisions in the person's current mode.
 Do not ask them to enable Plan mode or experimental settings, call a plan-only tool outside
-Plan mode, or perform writes when restricted to planning. If GTM OS questions are unavailable,
+Plan mode, or perform writes when restricted to planning. If GTM Brain questions are unavailable,
 prefer a blocking question tool when its current contract allows it, then an async form.
 Use a plain text question only when an appropriate structured control is unavailable.
 
@@ -68,8 +68,8 @@ thinking; do not paraphrase or clean up their language.
 
 ## Computer Use
 
-<!-- generated: computer-use; edit plugins/gtm-os/policies/computer-use.md -->
-Do the work through the tools. The GTM OS MCP tools, and any other MCP server configured for the
+<!-- generated: computer-use; edit plugins/gtm-brain/policies/computer-use.md -->
+Do the work through the tools. The GTM Brain MCP tools, and any other MCP server configured for the
 session, are the supported path and the one that leaves a record. Computer Use, meaning driving an
 application's own interface with screenshots, clicks and keystrokes, is not a substitute for a tool
 call, and never a way around a missing permission or a tool that returned nothing. Use it only for
@@ -91,7 +91,7 @@ not establish MCP health: keep browser verification separate from connector read
 For an approved website step requiring an existing login, use the person's connected Chrome
 session in the intended profile. The embedded browser has a separate profile and does not
 reuse that login. If Chrome is unavailable, explain the missing connection and follow
-gtm-os-configure/references/chrome-session.md; never silently switch to the embedded browser
+gtm-brain-configure/references/chrome-session.md; never silently switch to the embedded browser
 or ask for another login there. If the intended Chrome session itself needs sign-in, let the
 person handle its native prompt. A prior setup choice is not authorization for future website
 reads. The local dashboard needs no login and always belongs in the Codex pane.
@@ -99,7 +99,7 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
 
 ## Contributor invariants
 
-- Shared question and Computer Use policies are authored in `plugins/gtm-os/policies/`.
+- Shared question and Computer Use policies are authored in `plugins/gtm-brain/policies/`.
   Run `node scripts/sync-derived.mjs` after editing them or the single-memory input fields
   in the ontology. It refreshes the marked instruction blocks and batch schema; tests
   enforce `--check`. Historical templates are excluded. See [README.md](README.md#maintaining-shared-text-and-schemas).
@@ -107,10 +107,10 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
   organization and product; company and team are organization subtypes. Roles and relationships
   are supported by context memories. Meeting evidence stays in context memories; it is not a
   separate object type.
-- GTM OS is English-only: conversations, dashboard labels, user-facing commands and brain
+- GTM Brain is English-only: conversations, dashboard labels, user-facing commands and brain
   records. There is no language preference to read, save or ask about. Keep tool identifiers,
   CLI flags, and the APPROVE token stable.
-- `plugins/gtm-os/lib/` is the file format; skills and hooks go through it.
+- `plugins/gtm-brain/lib/` is the file format; skills and hooks go through it.
 - A hook runs only while Codex holds the approval for its declaration: `config.toml` keeps a
   `trusted_hash` per hook and `codex plugin add` writes none, so a hook installed by a command
   is enabled and silent. `hooks/trust-hooks.mjs` writes that approval; `dev-install.sh`,
@@ -118,7 +118,7 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
   timeout, status message), not the script body and not the installed path: editing a hook
   script or bumping the version keeps the approval, editing `hooks.json` drops it. After any
   change to `hooks.json`, re-run `./dev-install.sh` or the hooks stay off without saying so.
-- A change under `plugins/gtm-os/` that people should receive bumps the version in
+- A change under `plugins/gtm-brain/` that people should receive bumps the version in
   `.codex-plugin/plugin.json`. `check-version.mjs` compares that number with the installed one,
   and the dashboard, the hook and the advisor all read its answer: everything shipped without a
   bump is invisible, so nobody is ever offered it. The cache path in SETUP.md and COMMANDS.md
@@ -127,10 +127,10 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
   version in `templates/legacy/manifest.json`, shared by the upgrader and its test matrix.
   Preserve these snapshots unchanged; they distinguish shipped instructions from personal edits.
 - Developer skills live in `.agents/skills/` of the onboarding repository, which Codex reads when it is opened in that checkout;
-  `plugins/gtm-os/skills/` is what people install into a company brain. A developer workflow
+  `plugins/gtm-brain/skills/` is what people install into a company brain. A developer workflow
   shipped there sits in every user's skill list one prompt away from writing scratch files into
-  their folder. `gtm-os-review-tools` is the example.
-- Two kinds of interactions: the plugin's, described in `plugins/gtm-os/ontology/gtm-os.ossie.json`
+  their folder. `gtm-brain-review-tools` is the example.
+- Two kinds of interactions: the plugin's, described in `plugins/gtm-brain/ontology/gtm-brain.ossie.json`
   and generated as first-class tools; a company's, described in its `brain/ontology.ossie.json`,
   listed per brain by the catalog tools and run through the one fixed tool `interact`. Codex lists a
   server's tools once, at startup, and the server does not know the brain then, so company
@@ -157,14 +157,14 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
   (authorized for ALL-187). Build dependencies live in `frontend/dashboard/`; ship the prebuilt
   assets with the plugin, with no npm install or network dependency for users.
 - Two hosts, one plugin folder: Codex and Claude Code (beta, 0.30). `lib/host.mjs` is the only place that
-  knows which one runs (`GTM_OS_HOST`, set only by the generated Claude declarations; unset is Codex) and
+  knows which one runs (`GTM_BRAIN_HOST`, set only by the generated Claude declarations; unset is Codex) and
   holds every difference: texts, links, tool names, what the machine can do. A test fails on a host branch
   anywhere else. Codex's `hooks.json`, `.mcp.json` and manifest stay the source; the Claude files are
   generated by `scripts/sync-derived.mjs`. `via` stays `codex` for a chat on either host (older versions
   reject other values); the host is the chat source's kind (`codex:` or `claude:`).
 - No em dashes anywhere. Plain hyphens.
-- The plugin ships from `gtm-week/gtm-os`, branch `main`.
-- Tests: `node --test 'plugins/gtm-os/test/*.test.mjs'` (Node's own runner, no dependencies).
+- The plugin ships from `gtm-week/gtm-brain`, branch `main`.
+- Tests: `node --test 'plugins/gtm-brain/test/*.test.mjs'` (Node's own runner, no dependencies).
   `brain.test.mjs` covers the lib, `skills.test.mjs` runs the scripts on a brain made by setup,
   `server.test.mjs` drives the MCP server, `dash.test.mjs` the dashboard server and the session
   hook. Run them before every commit that touches `lib/`, a skill script, a server or the hook.
@@ -175,9 +175,9 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
   operation, each runs the skill's script in the brain). The server runs outside the sandbox, so
   every writer commits what it wrote at once (`lib.commit`, pushed in the background when there
   is a remote); `save` keeps edits made by hand. Applying an APPROVE stays a shell step with
-  Codex's permission prompt. `GTM_OS_NO_COMMIT` turns committing off for tests and dry runs. A new operation is a script plus a tool entry; add its instructions to the owning workflow.
+  Codex's permission prompt. `GTM_BRAIN_NO_COMMIT` turns committing off for tests and dry runs. A new operation is a script plus a tool entry; add its instructions to the owning workflow.
   Skills are user workflows, not one entry per operation. Internal procedures live in their
-  `references/` folders. Existing script paths under `skills/gtm-os-*/` stay stable even when
+  `references/` folders. Existing script paths under `skills/gtm-brain-*/` stay stable even when
   that directory has no `SKILL.md`.
 - What is in `lib/brain.mjs` and why: the format (records, covers, names, the loaded set) and
   the things every writer needs right after writing (commit, activity line, re-render, session and

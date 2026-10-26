@@ -6,7 +6,7 @@ Lucide icons and Tailwind CSS. The checked-in shadcn components come from the of
 
 Run `npm ci --prefix frontend/dashboard`, then `npm run build --prefix frontend/dashboard`.
 Commit source, package-lock.json and generated assets under
-`plugins/gtm-os/scripts/gtm-os-render/ui/` together. Users do not run npm; the Node renderer
+`plugins/gtm-brain/scripts/gtm-brain-render/ui/` together. Users do not run npm; the Node renderer
 copies the prebuilt assets into the read-only dashboard. No CDN, remote fonts or external
 runtime scripts are loaded.
 

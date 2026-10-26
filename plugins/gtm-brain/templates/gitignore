@@ -1,0 +1,6 @@
+# gtm-brain brain. Derived files and machine-specific things stay out of git.
+work/
+.obsidian/
+.DS_Store
+.env
+.env.*

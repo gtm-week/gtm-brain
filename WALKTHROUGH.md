@@ -1,4 +1,4 @@
-# GTM OS: step-by-step setup, with troubleshooting
+# GTM Brain: step-by-step setup, with troubleshooting
 
 <!--
 Source of truth for the Circle onboarding guide. Paste the rendered Markdown into Circle's
@@ -6,10 +6,10 @@ editor, then convert each prefixed blockquote into a callout:
   ✅ You should see  -> green callout    💡 Tip -> blue callout
   ⚠️ Warning         -> yellow callout   🛠 If it goes wrong -> red/grey callout
 HTML comments like this one carry Linear ticket references for maintainers; they do not
-paste into Circle. Version referenced: GTM OS 0.27.0.
+paste into Circle. Version referenced: GTM Brain 0.27.0.
 -->
 
-This guide takes you from nothing to a working GTM OS in about 30 minutes, one click at a
+This guide takes you from nothing to a working GTM Brain in about 30 minutes, one click at a
 time. Each step says what to do, what you should see, and what to do if you see something
 else. If you get stuck anywhere, jump to **Troubleshooting index** at the end.
 
@@ -17,15 +17,15 @@ else. If you get stuck anywhere, jump to **Troubleshooting index** at the end.
 
 ## 1. Before you start
 
-You need three things GTM OS cannot do for you:
+You need three things GTM Brain cannot do for you:
 
 - **The Codex desktop app**, installed and signed in with your ChatGPT account.
-- **A GitHub account.** GTM OS is distributed from a private GitHub repository; you will be
+- **A GitHub account.** GTM Brain is distributed from a private GitHub repository; you will be
   invited to it. You will not need to use GitHub after that.
-- **A Mac.** GTM OS runs locally on your machine; nothing is hosted.
+- **A Mac.** GTM Brain runs locally on your machine; nothing is hosted.
 
-> ⚠️ **Windows:** GTM OS is recommended on a Mac and **has not been tested on Windows**.
-> It may run if Git for Windows is installed first (it provides the tools GTM OS's safety
+> ⚠️ **Windows:** GTM Brain is recommended on a Mac and **has not been tested on Windows**.
+> It may run if Git for Windows is installed first (it provides the tools GTM Brain's safety
 > locks need), but folders will not open automatically and custom skills need Windows
 > developer mode. If you are on Windows, ask in the community before you start, and expect
 > to be the first.
@@ -43,16 +43,16 @@ You need three things GTM OS cannot do for you:
 1. Fill in the access form at **https://forms.gle/rWsHoPutCdD7Vcuo9** with your **GitHub
    username** (not your email). Your username is the part after `github.com/` on your
    profile page.
-2. Within a few minutes, GitHub emails you an invitation to the `gtm-week/gtm-os`
+2. Within a few minutes, GitHub emails you an invitation to the `gtm-week/gtm-brain`
    repository. Open it and click **Accept invitation**.
 
 > ⚠️ **Warning: you must accept the invitation.** Filling in the form is not enough. Until
-> you click **Accept invitation** in GitHub's email, you have no access to GTM OS and the
+> you click **Accept invitation** in GitHub's email, you have no access to GTM Brain and the
 > install in step 4 will fail. If you cannot find the email, go to
-> **github.com/gtm-week/gtm-os** while signed in to GitHub; a pending invitation shows
+> **github.com/gtm-week/gtm-brain** while signed in to GitHub; a pending invitation shows
 > a banner with an Accept button.
 
-> ✅ **You should see:** the `gtm-week/gtm-os` repository page opens on GitHub without
+> ✅ **You should see:** the `gtm-week/gtm-brain` repository page opens on GitHub without
 > a 404. You are in.
 
 > 🛠 **If it goes wrong:**
@@ -77,7 +77,7 @@ yours. Codex learns your business from what it can see and from your corrections
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"background":"#0c0c0d","primaryColor":"#141415","primaryTextColor":"#ededec","primaryBorderColor":"#2a2a2b","lineColor":"#97948c","clusterBkg":"#101011","clusterBorder":"#2a2a2b","fontFamily":"Inter, system-ui, sans-serif","fontSize":"22px"},"flowchart":{"wrappingWidth":270,"nodeSpacing":36,"rankSpacing":70,"subGraphTitleMargin":{"top":10,"bottom":36}}}}%%
 flowchart TB
-  you["You, in a Codex chat"] --> os["GTM OS<br/>keeps every change"]
+  you["You, in a Codex chat"] --> os["GTM Brain<br/>keeps every change"]
   tools["Your tools<br/>Gmail · Calendar · HubSpot"] --> os
 
   subgraph brain["Your company brain · one folder on your Mac"]
@@ -106,25 +106,25 @@ flowchart TB
 
 ---
 
-## 4. Install GTM OS
+## 4. Install GTM Brain
 
 1. Open the **Codex app**.
 2. Start a new chat in any folder (it does not matter which yet).
 3. Paste this and press Enter:
 
-   > Read https://github.com/gtm-week/gtm-os/blob/main/INSTALL.md and follow it
+   > Read https://github.com/gtm-week/gtm-brain/blob/main/INSTALL.md and follow it
    > exactly. Read nothing else in that repository.
 
 4. Codex will show **permission prompts** as it goes. Each one names what it is about to
    do. Read the line, then click **Approve**. Expect roughly:
    - checking this computer has everything it needs
-   - installing GTM OS
+   - installing GTM Brain
    - turning on the safety locks (see the warning below)
 
 > ⚠️ **Warning:** Do not skip the **safety locks** prompt (Codex may call it "trust
 > hooks"). The locks do two things: they make every chat open where the last one ended
 > (your dashboard, your loaded contexts, auto-save), and they stop anything important
-> changing without your say-so. Without them GTM OS still works, but you will have to
+> changing without your say-so. Without them GTM Brain still works, but you will have to
 > drive everything by hand. <!-- ALL-126 -->
 
 > ✅ **You should see:** Codex says installation is done and it checked it works, then
@@ -132,7 +132,7 @@ flowchart TB
 > long checklist.
 
 > 💡 **Tip:** To confirm the version at any time: in the Codex app open **Settings >
-> Plugins** (or say "which GTM OS version do I have?" in a chat). This guide was written
+> Plugins** (or say "which GTM Brain version do I have?" in a chat). This guide was written
 > for **0.27.0**. <!-- ALL-183 asks for the click-level version check -->
 
 > 🛠 **If it goes wrong:**
@@ -150,22 +150,22 @@ flowchart TB
 
 ---
 
-## 5. Create your GTM OS project
+## 5. Create your GTM Brain project
 
 <!-- ALL-185/191/150: project creation vs linking; ALL-183 wants click-level steps -->
 
 1. In the Codex app sidebar, click **New project** (or the **+** beside Projects).
-2. Create an **empty folder**, wherever you keep your work, called **GTM OS**.
+2. Create an **empty folder**, wherever you keep your work, called **GTM Brain**.
    The folder name is what the app shows as the project name.
 3. Select that folder and open a **new chat** in it.
-4. The first time, the app may ask whether to trust GTM OS's hooks. Click **Accept**.
+4. The first time, the app may ask whether to trust GTM Brain's hooks. Click **Accept**.
 
 > ⚠️ **Warning:** The folder must be **empty**. Do not point setup at a folder that already
-> has your documents in it; GTM OS makes its own structure there. Your existing work
+> has your documents in it; GTM Brain makes its own structure there. Your existing work
 > folders are linked later (step 9), not used as the brain.
 
-> ✅ **You should see:** a fresh chat in a project called GTM OS. On a greeting
-> ("hi"), Codex offers to set up GTM OS here.
+> ✅ **You should see:** a fresh chat in a project called GTM Brain. On a greeting
+> ("hi"), Codex offers to set up GTM Brain here.
 
 > 🛠 **If it goes wrong:**
 > - **"Setup says the folder is not empty."** Create a new empty folder and use that. A
@@ -179,7 +179,7 @@ flowchart TB
 
 ## 6. Run setup
 
-1. In the chat you just opened, type **`/gtm-os-start`** (or simply "start") and press
+1. In the chat you just opened, type **`/gtm-brain-start`** (or simply "start") and press
    Enter.
 2. From here Codex drives and you correct. It will:
    - check the machine and create the brain in your project
@@ -270,7 +270,7 @@ mistakes the brain makes from assumptions and unanswered questions. If you skipp
 1. In the Codex app, open your brain project, then **Scheduled tasks**, then new task.
 2. Paste as the task:
 
-   > Run the gtm-os-sync skill as the scheduled run: compile every context whose summary is
+   > Run the gtm-brain-sync skill as the scheduled run: compile every context whose summary is
    > behind with by: schedule, render the dashboard. Do nothing else.
 
 3. Timing: daily (06:00) or weekly (Sunday 20:00). Choose **run in the local project**.
@@ -283,7 +283,7 @@ mistakes the brain makes from assumptions and unanswered questions. If you skipp
 > 🛠 **If it goes wrong:**
 > - **The task ran but nothing changed.** Check it is set to run **in the local project**,
 >   not a background copy.
-> - **You want to sync now.** `/gtm-os-sync` in the brain project.
+> - **You want to sync now.** `/gtm-brain-sync` in the brain project.
 
 ---
 
@@ -291,21 +291,21 @@ mistakes the brain makes from assumptions and unanswered questions. If you skipp
 
 <!-- ALL-185, ALL-191, ALL-150, ALL-175; wording from ALL-187 -->
 
-**A working folder is where you do the work. A context is the shared knowledge GTM OS brings
+**A working folder is where you do the work. A context is the shared knowledge GTM Brain brings
 into that work.** You do not work inside the brain folder.
 
 There are two different actions. Do not mix them up:
 
-| You want | Say | What GTM OS does |
+| You want | Say | What GTM Brain does |
 |---|---|---|
-| a **new** folder for a piece of work | `/gtm-os-project`, choose **New** | creates it as a subfolder of the brain, with the contexts you pick |
-| GTM OS to follow an **existing** folder | open that folder as a Codex project, `/gtm-os-project`, choose **Link** | attaches it as it is, flat; nothing is moved or restructured |
+| a **new** folder for a piece of work | `/gtm-brain-project`, choose **New** | creates it as a subfolder of the brain, with the contexts you pick |
+| GTM Brain to follow an **existing** folder | open that folder as a Codex project, `/gtm-brain-project`, choose **Link** | attaches it as it is, flat; nothing is moved or restructured |
 
 After linking, every chat in that folder opens with its own contexts and every note is
 tagged with the folder. It is all still one brain, searchable from anywhere. Say **"list
 projects"** to see them, **"unlink this project"** to stop.
 
-> 💡 **Tip:** Setup asks at the end which existing Codex projects GTM OS should follow.
+> 💡 **Tip:** Setup asks at the end which existing Codex projects GTM Brain should follow.
 > Pick the ones whose future work should feed the brain, or skip; skips are remembered.
 > Your existing files and chats are **not** imported by this choice.
 
@@ -320,17 +320,17 @@ projects"** to see them, **"unlink this project"** to stop.
 
 ---
 
-## 10. Updating GTM OS
+## 10. Updating GTM Brain
 
 <!-- ALL-130, ALL-154 -->
 
-You will learn about a new version two ways: the dashboard **Home** shows "GTM OS x.y.z is
+You will learn about a new version two ways: the dashboard **Home** shows "GTM Brain x.y.z is
 available; you have a.b.c" with an **Update** button, and the chat mentions it once. Codex
 never updates without your yes.
 
 The procedure, every time:
 
-1. Say **"update GTM OS"** in any chat in the brain project (or click **Update**).
+1. Say **"update GTM Brain"** in any chat in the brain project (or click **Update**).
 2. Let the verification finish. Codex checks the new version before installing it and
    refuses broken candidates and downgrades.
 3. **Fully quit and reopen Codex** (Cmd+Q, not just close the window).
@@ -344,10 +344,10 @@ The procedure, every time:
 > locks still on (an update re-approves them for you).
 
 > 🛠 **If it goes wrong:**
-> - **"Connector points to a missing plugin version".** Say **"repair the GTM OS update"**.
+> - **"Connector points to a missing plugin version".** Say **"repair the GTM Brain update"**.
 >   Codex checks whether files need repair or the app just needs a restart. <!-- ALL-154 -->
 > - **Codex told you to remove the installation.** Do not. You are on an old version's
->   advice; quit, reopen, and say "repair the GTM OS update".
+>   advice; quit, reopen, and say "repair the GTM Brain update".
 > - **Codex offers to "refresh the rules".** Say yes; it updates the brain's standing
 >   instructions to the shipped version and changes nothing else.
 > - **Update does not go through after a repair and a restart.** Report it (section 13)
@@ -362,11 +362,11 @@ The procedure, every time:
 If you have been using Claude Code (or Cursor, Gemini, another assistant) for company work,
 it already knows your tools, people and deals. In **that assistant**, paste:
 
-> Read https://github.com/gtm-week/gtm-os/blob/main/IMPORT.md and follow it
+> Read https://github.com/gtm-week/gtm-brain/blob/main/IMPORT.md and follow it
 > exactly. Read nothing else in that repository.
 
 It writes one file on your machine for you to review; nothing is sent anywhere. Then, in
-the GTM OS chat, say **"import from claude"**. Every line is played back, you confirm, and
+the GTM Brain chat, say **"import from claude"**. Every line is played back, you confirm, and
 what you confirm is filed with its source. Workplace facts still go through APPROVE.
 
 ---
@@ -432,7 +432,7 @@ The problem first, then what to do, grouped by the section it belongs to.
 ***"Remembered" shows only names***\
 **→ Update**
 
-***New `/gtm-os-` command missing***\
+***New `/gtm-brain-` command missing***\
 **→ Quit and reopen Codex**
 
 ***Codex writes to-dos after sync***\
@@ -471,10 +471,10 @@ The problem first, then what to do, grouped by the section it belongs to.
 ### Updating (step 10)
 
 ***"Missing plugin version"***\
-**→ "repair the GTM OS update"**
+**→ "repair the GTM Brain update"**
 
 ***Codex says to remove the installation***\
-**→ Do not; quit, reopen, "repair the GTM OS update"**
+**→ Do not; quit, reopen, "repair the GTM Brain update"**
 
 ---
 
@@ -484,7 +484,7 @@ The problem first, then what to do, grouped by the section it belongs to.
 
 Before reporting, do the reset once:
 
-1. Say **"update GTM OS"** and let it finish (step 10).
+1. Say **"update GTM Brain"** and let it finish (step 10).
 2. **Quit and reopen Codex** (Cmd+Q).
 3. Start a **new chat** in the brain project.
 
@@ -511,8 +511,8 @@ From here the brain earns its keep one sentence at a time. Three habits for this
 - **Say what happened.** A decision, an answer, something sent: one line each.
 - **Say yes to compile.** A summary that is behind is a brain that half-knows.
 
-Before a call, `/gtm-os-deepdive`. When you do not know what to do next, `/gtm-os-todo`.
+Before a call, `/gtm-brain-deepdive`. When you do not know what to do next, `/gtm-brain-todo`.
 On Monday morning the summaries will be current and the dashboard fresh, without you doing
 anything.
 
-Welcome to GTM OS. See you in the community.
+Welcome to GTM Brain. See you in the community.

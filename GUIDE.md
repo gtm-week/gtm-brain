@@ -17,7 +17,7 @@ does not copy your data.
 
 ## Day one
 
-1. With GTM OS installed, open a new chat in an empty project and send **`/gtm-os-start`**.
+1. With GTM Brain installed, open a new chat in an empty project and send **`/gtm-brain-start`**.
    Setup reuses what is known, asks for missing details, and explains the six starting contexts together.
    It also asks which existing Codex projects to follow. Select their names or skip; selected
    folders are linked to your brain while you stay in the onboarding chat. Future notes carry
@@ -109,7 +109,7 @@ current and the dashboard is fresh. In the Codex app:
 1. Open your brain's project, then **Scheduled tasks**, then new task.
 2. Paste this as the task:
 
-   > Run the gtm-os-sync skill as the scheduled run: compile every context whose summary is behind with by: schedule, render the dashboard. Do nothing else.
+   > Run the gtm-brain-sync skill as the scheduled run: compile every context whose summary is behind with by: schedule, render the dashboard. Do nothing else.
 
 3. Timing: weekly, Sunday 20:00 (or nightly at 06:00). Choose **run in the local project**, not
    a background copy, so it updates your real brain.
@@ -130,7 +130,7 @@ morning sync can put the list at the top of its report. It reads live and only w
 scope you chose once; it never sends, reacts or marks anything read, and nothing from your DMs
 is saved in the brain. Your reply style is learned from your own Slack replies, shown to you
 before it is saved, and kept as a short description, never as your messages. The procedure is
-[slack-replies.md](plugins/gtm-os/skills/gtm-os-todo/references/slack-replies.md).
+[slack-replies.md](plugins/gtm-brain/skills/gtm-brain-todo/references/slack-replies.md).
 
 ## Three habits that make it work
 
@@ -150,9 +150,9 @@ before it is saved, and kept as a short description, never as your messages. The
 
 ## Work in your own folders
 
-For a new folder, run `/gtm-os-project` in Codex and choose its name, location, brain,
-and contexts. For an existing folder, use `/gtm-os-project`. Both ask before capturing
-work. On macOS, GTM OS then asks Codex to open the linked folder automatically, using normal
+For a new folder, run `/gtm-brain-project` in Codex and choose its name, location, brain,
+and contexts. For an existing folder, use `/gtm-brain-project`. Both ask before capturing
+work. On macOS, GTM Brain then asks Codex to open the linked folder automatically, using normal
 system permissions. Start a new task in that project.
 
 If it is not visible in the sidebar, choose **New project** (or **+** beside Projects) and
@@ -163,7 +163,7 @@ it and start a **New task** / **New chat**. These steps also work when automatic
 unavailable; the folder is already linked.
 
 You do not work inside the brain folder; you work where your work is. In any folder you have
-opened as a Codex project, say `/gtm-os-project`: it asks which brain, whether to capture what
+opened as a Codex project, say `/gtm-brain-project`: it asks which brain, whether to capture what
 you do here, and which contexts this project touches. From then on a chat there starts with its
 own open contexts and every note is tagged with the project; everything is still in the one
 brain, searchable from anywhere. Ask "list projects" to see them, "unlink this project" to stop.
@@ -229,7 +229,7 @@ this to investigate and retry. Invalid context files show the detected format pr
 ## Photos, logos and other entity files
 
 Tell Codex: "Attach this file as Reflow's primary logo." Supply its local path, and say whether
-it is approved or a draft. The file stays where it is. GTM OS records its connection to Reflow
+it is approved or a draft. The file stays where it is. GTM Brain records its connection to Reflow
 and shows it under Assets on the entity page. Images have previews and an Open file link;
 other files have Download file. Chat about this handles changes.
 
