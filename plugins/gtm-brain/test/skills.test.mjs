@@ -1,6 +1,7 @@
 process.env.GTM_BRAIN_NO_WATCH = "1";
 process.env.GTM_BRAIN_NO_COMPILE = "1"; // Model runs are opt-in through test doubles.
 // End-to-end tests of the skill scripts on a brain made by setup.sh. Run: node --test plugins/gtm-brain/test
+process.env.GTM_BRAIN_NO_HOOK_CHECK = "1"; // the hooks-off check talks to a real Codex; hooks-notice.test covers it with a fake one
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from "node:fs";

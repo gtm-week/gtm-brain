@@ -17,6 +17,8 @@ import { loadOntology, buildTools, instructionsText } from "../lib/ontology/inde
 import { createFilesBackend } from "./files-backend.mjs";
 import { createMemoryReader } from "./memory-reader.mjs";
 import { host } from "../lib/host.mjs";
+import { hookTrust, STALE } from "../hooks/trust-hooks.mjs";
+import { homedir } from "node:os";
 import { validateValue } from "../lib/ontology/validation.mjs";
 
 const P = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -364,6 +366,21 @@ const INSTRUCTIONS = "GTM Brain: the company brain in this workspace. Pass the w
 
 const WORKFLOWS = `During company work, read ${join(P, "skills/gtm-brain-use-brain/SKILL.md")} and the internal procedure relevant to the task. Read ${join(P, "skills/gtm-brain-configure/SKILL.md")} for workplace changes and APPROVE. Read ${join(P, "skills/gtm-brain-configure/references/update-plugin.md")} for plugin updates or brain refresh. Internal operations remain tools; the person does not need to invoke a separate skill for each one.`;
 
+/* ---------- Hooks that stopped running ---------- */
+// The hooks cannot say they are off, so the server does: one background check per server, started by the
+// first tool call so startup stays fast, and one line on a later result when any GTM Brain hook is off.
+let hooksOff = null, hooksTold = false;
+function checkHooks(brain) {
+  if (hooksOff !== null || process.env.GTM_BRAIN_NO_HOOK_CHECK || process.env.GTM_BRAIN_RUN || !host().hookCheck()) return;
+  hooksOff = false;
+  hookTrust({ cwd: isBrain(brain) ? brain : homedir() }).then(hooks => { hooksOff = hooks.some(h => STALE.has(h.status) && h.enabled !== false); }, () => {});
+}
+function withHooksNotice(result) {
+  if (!hooksOff || hooksTold || !host().texts.hooksOff()) return result;
+  hooksTold = true;
+  return { ...result, content: [...(result.content || []), { type: "text", text: host().texts.hooksOff() }] };
+}
+
 /* ---------- JSON-RPC over stdio ---------- */
 const send = m => process.stdout.write(JSON.stringify(m) + "\n");
 /* What a host is shown: the root of a tool's input schema is a plain object. OpenAI-style hosts
@@ -387,8 +404,9 @@ async function handle(req) {
     if (!tool) return fail(id, -32602, `unknown tool ${params.name}`);
     const args = params.arguments || {};
     if (!tool.noBrain && !isBrain(args.brain)) return reply(id, brainError(args.brain));
+    checkHooks(args.brain);
     // Every writer script logs its change (lib.commit) and re-renders the dashboard itself.
-    try { return reply(id, await tool.call(args, id)); } catch (e) { return reply(id, text(`${tool.name} failed: ${e.message}`, true)); }
+    try { return reply(id, withHooksNotice(await tool.call(args, id))); } catch (e) { return reply(id, text(`${tool.name} failed: ${e.message}`, true)); }
   }
   if (method === "prompts/list") return reply(id, { prompts: [] });
   if (method === "resources/list") return reply(id, { resources: [] });

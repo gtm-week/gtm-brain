@@ -9,14 +9,16 @@ import { verifyRuntime } from '../lib/plugin-runtime.mjs';
 const moduleUrl = new URL('../../../scripts/migrate-install.mjs', import.meta.url);
 const plugin = fileURLToPath(new URL('../', import.meta.url));
 const oldId='gtm-os@gtm-os', nextId='gtm-brain@gtm-brain';
+// The version this checkout ships: the migration verifies the installed files against it.
+const VERSION=JSON.parse(readFileSync(join(plugin,'.codex-plugin/plugin.json'),'utf8')).version;
 async function migration(t, host, fault) {
   const dir=mkdtempSync(join(tmpdir(),'brain-install-rename-')); t.after(()=>rmSync(dir,{recursive:true,force:true}));
-  const cache=join(dir,'plugins/cache/gtm-brain/gtm-brain');mkdirSync(cache,{recursive:true});symlinkSync(plugin,join(cache,'0.31.0'),'dir');
+  const cache=join(dir,'plugins/cache/gtm-brain/gtm-brain');mkdirSync(cache,{recursive:true});symlinkSync(plugin,join(cache,VERSION),'dir');
   const state={old:true,next:false,market:false,events:[]};
   const command=(name,args)=>{
     const cmd=args.join(' ');state.events.push(cmd);
     if(cmd==='plugin list --json') {
-      const rows=[...(state.old?[{pluginId:oldId,id:oldId,installed:true,enabled:true,scope:'project',projectPath:process.cwd()}]:[]),...(state.next?[{pluginId:nextId,id:nextId,installed:true,enabled:true,scope:'project',projectPath:process.cwd(),version:'0.31.0',installPath:plugin}]:[])];
+      const rows=[...(state.old?[{pluginId:oldId,id:oldId,installed:true,enabled:true,scope:'project',projectPath:process.cwd()}]:[]),...(state.next?[{pluginId:nextId,id:nextId,installed:true,enabled:true,scope:'project',projectPath:process.cwd(),version:VERSION,installPath:plugin}]:[])];
       return JSON.stringify(host==='codex'?{installed:rows}:rows);
     }
     if(cmd==='plugin marketplace list --json') {const rows=state.market?[{name:'gtm-brain'}]:[];return JSON.stringify(host==='codex'?{marketplaces:rows}:rows);}
@@ -54,7 +56,7 @@ const fs=require('node:fs');const args=process.argv.slice(2);const stateFile=${J
 let state={next:false,old:true,events:[]};try{state=JSON.parse(fs.readFileSync(stateFile))}catch{}
 state.events.push({args,cwd:process.cwd()});
 const old={id:'gtm-os@gtm-os',scope:${JSON.stringify(scope)},enabled:true,projectPath:${JSON.stringify(project)}};
-const next={id:'gtm-brain@gtm-brain',scope:${JSON.stringify(scope)},enabled:true,version:'0.31.0',installPath:${JSON.stringify(plugin)},projectPath:${JSON.stringify(project)}};
+const next={id:'gtm-brain@gtm-brain',scope:${JSON.stringify(scope)},enabled:true,version:${JSON.stringify(VERSION)},installPath:${JSON.stringify(plugin)},projectPath:${JSON.stringify(project)}};
 let out='';
 if(args[1]==='list')out=JSON.stringify([...(state.old?[old]:[]),...(state.next?[next]:[])]);
 else if(args[1]==='marketplace')out='[]';
@@ -79,7 +81,7 @@ test('Claude does not retire the old project plugin because a replacement exists
     events.push(args);
     if(args[1]==='list')return JSON.stringify([
       {id:oldId,scope:'project',enabled:true,projectPath:project},
-      {id:nextId,scope:'project',enabled:true,version:'0.31.0',installPath:plugin,projectPath:other}
+      {id:nextId,scope:'project',enabled:true,version:VERSION,installPath:plugin,projectPath:other}
     ]);
     if(args[1]==='marketplace')return JSON.stringify([{name:'gtm-brain'}]);
     if(args[1]==='install')throw new Error('installation failed');
