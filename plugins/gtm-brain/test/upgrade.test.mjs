@@ -144,6 +144,19 @@ test("legacy registry and v1 files upgrade together without losing IDs, source h
   const recall = lib.entityBrief(root, acme.id);
   assert.ok(JSON.stringify(recall).includes("original-terms"));
 });
+test("entity files written before the GTM OS rename stay readable and upgrade to the current format", t => {
+  const { root, run } = fixture(t);
+  const person = lib.readNames(root).find(e => e.name === "Ann Lee");
+  const path = join(root, person._path);
+  for (const old of ["gtm-os-entity-v2", "gtm-os-entity-v1"]) {
+    writeFileSync(path, readFileSync(path, "utf8").replace(/^format: .*$/m, `format: ${old}`));
+    assert.equal(lib.resolveEntity(lib.readNames(root), person.id).name, "Ann Lee");
+  }
+  const result = run();
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(readFileSync(path, "utf8"), new RegExp(`^format: ${lib.ENTITY_FORMAT}$`, "m"));
+  assert.equal(lib.resolveEntity(lib.readNames(root), person.id)._path, person._path);
+});
 test("custom instructions are preserved and a proposed replacement is prepared without partial upgrade", t => {
   const { root, run } = fixture(t);
   const custom = readFileSync(join(root, "AGENTS.md"), "utf8") + "\nKeep customer attachments local.\n";

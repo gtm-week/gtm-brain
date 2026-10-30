@@ -8,6 +8,8 @@ import { refreshIndexedPages } from './entity-pages.mjs';
 import { hasMemoryIndex } from './memory-index-store.mjs';
 
 export const ENTITY_FORMAT = "gtm-brain-entity-v2";
+// Brains written before the GTM OS -> GTM Brain rename carry the gtm-os names; migration rewrites them.
+const LEGACY_FORMATS = ["gtm-brain-entity-v1", "gtm-os-entity-v2", "gtm-os-entity-v1"];
 export const ENTITY_KINDS = ["person", "organization", "product"];
 export function entityType(kind = "person", subtype = null) {
   if (["company", "team"].includes(kind)) {
@@ -224,7 +226,7 @@ export function readEntityFiles(root) {
     const path = join(dir, file);
     if (lstatSync(path).isSymbolicLink()) throw new Error(`Entity file must not be a symbolic link: ${file}`);
     const relative = `brain/entities/${file}`, original = readFileSync(path, "utf8"), { fm, body, header } = parseEntityText(original, relative);
-    if (![ENTITY_FORMAT, "gtm-brain-entity-v1"].includes(fm.format)) invalid(relative, "format", `expected ${ENTITY_FORMAT} or legacy gtm-brain-entity-v1`, `restore the format version from file history`);
+    if (![ENTITY_FORMAT, ...LEGACY_FORMATS].includes(fm.format)) invalid(relative, "format", `expected ${ENTITY_FORMAT} or legacy ${LEGACY_FORMATS.join(", ")}`, `restore the format version from file history`);
     if (!idOK(fm.id)) invalid(relative, "id", "expected e_ followed by 16 lowercase hexadecimal characters", "restore this entity's stable ID from file history; do not invent a replacement ID");
     if (fm.redirect) { if (!idOK(fm.redirect)) invalid(relative, "redirect", "expected a stable entity ID", "restore the destination ID from the confirmed merge"); continue; }
     if (typeof fm.name !== "string" || !fm.name.trim()) invalid(relative, "name", "expected a non-empty name", "restore the intended canonical name as a string");
