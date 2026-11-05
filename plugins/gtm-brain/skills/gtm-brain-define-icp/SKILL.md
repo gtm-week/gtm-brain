@@ -5,7 +5,8 @@ description: |
   company examples, firmographics, exclusions, buying committee, problems, awareness and
   buying readiness. Reuse the brain's evidence and keep one draft ICP document.
   Triggers: "/gtm-brain-define-icp", "define our ICP", "ideal customer profile interview",
-  "refine our target customer definition". Not market desk research or campaign execution.
+  "refine our target customer definition". Not market desk research, campaign execution or
+  saving an ICP already written (gtm-brain-document).
 metadata:
   author: Chris Pawlak
 allowed-tools: [Bash, Read]

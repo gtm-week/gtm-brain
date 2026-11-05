@@ -372,7 +372,7 @@ context. Use displayed names in conversation and stable IDs in tools.
      what to do: `gtm-brain-todo`; a call or meeting mentioned with a company or a person:
      `gtm-brain-deepdive` on it; CAC, LTV, churn or growth-spend numbers shared, or "can we spend
      more on growth": `gtm-brain-unit-economics`; "is this market worth it", a segment or competitors
-     to assess: `gtm-brain-market-desk-research`; the first chat of the day, or "what came in": `gtm-brain-sync`; a
+     to assess: `gtm-brain-market-desk-research`; the person wants to define or rework who to target, with no ICP written to save ("define our ICP", "who is our ideal customer"): `gtm-brain-define-icp`; the first chat of the day, or "what came in": `gtm-brain-sync`; a
      context opened after days away: `gtm-brain-todo` for that context's next steps; several
      contexts touched in one chat, or once a week: `gtm-brain-todo` for how the brain is doing; a
      subject that has grown its own loops and people: a new context, offered by name; the same multi-step piece of work done twice in one chat:
@@ -511,7 +511,10 @@ PUSH, FIX, STOP or MEASURE for growth spend; offered once when such numbers are 
 person asks whether to spend more on growth), `gtm-brain-market-desk-research` (a short intake,
 then sourced desk research on a market's growth, segments, pains, buyers, competitors and the
 current right to win, as one report; offered once when the person wants a market or segment
-assessed; a diagnosis, never an offering design), `gtm-brain-project` (create a working
+assessed; a diagnosis, never an offering design), `gtm-brain-define-icp` (Chris Pawlak's interview
+on company fit, buying roles and readiness, kept as one draft ICP document; offered once when the
+person wants to define or rework who to target; an ICP they already wrote is saved with
+`gtm-brain-document` instead), `gtm-brain-project` (create a working
 folder or link the one the person is in, after capture consent; offered only when the session
 hook says the folder is not linked, and never run without a yes), `gtm-brain-start` (setup; also a
 handoff from another assistant, offered once when the hook says one is waiting), `gtm-brain-configure`

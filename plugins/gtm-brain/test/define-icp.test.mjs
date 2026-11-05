@@ -38,12 +38,24 @@ test('update behavioral gate requires existing-document read, consent, draft wri
 test('persisted-output gate detects lost evidence and missing method sections', () => {
   const text = 'Reconciliation reviews happen every Monday. Cedar Demo current customer. Birch Demo desired account. Only two examples. Future-fit. Influencers Champions Main decision makers Blockers. Unaware Problem aware Solution aware Your solution aware Most aware. Need now Budget Trust in us. Unknown authority.';
   assert.ok(icpBodyChecks(text));
-  for (const part of ['Monday', 'Birch Demo', 'Future-fit', 'Most aware', 'Need now', 'Trust in us']) assert.equal(icpBodyChecks(text.replace(part, '')), false, part);
+  for (const part of ['Monday', 'Birch Demo', 'Future-fit', 'Solution aware ', 'Most aware', 'Need now', 'Trust in us']) assert.equal(icpBodyChecks(text.replace(part, '')), false, part);
+  assert.equal(icpBodyChecks(text.replace('Only two examples.', 'Focus on 20-200 stores.')), false, 'a store range is not the missing-example flag');
   assert.equal(icpBodyChecks(text + ' Market-validated.'), false);
 });
 
 test('interview response check accepts a truthful no-write acknowledgement', () => {
   const check = icpCases.find(c => c.name === 'skill-define-icp-interview').responseCheck;
   assert.ok(check('Question asked. Nothing was saved.'));
+  assert.ok(check('I have not saved a draft.'));
   assert.equal(check('This is a validated ICP.'), false);
+  assert.equal(check('I saved a draft ICP.'), false);
+});
+
+test('a plain request reaches Define ICP and a written ICP still goes to documents', () => {
+  const rules = readFileSync(new URL('../templates/AGENTS.md', import.meta.url), 'utf8');
+  const documents = readFileSync(new URL('../skills/gtm-brain-document/SKILL.md', import.meta.url), 'utf8');
+  assert.match(rules, /define or rework who to target[^:]*: `gtm-brain-define-icp`/);
+  assert.match(rules, /`gtm-brain-define-icp` \(Chris Pawlak's interview/);
+  assert.match(documents, /use gtm-brain-define-icp; this skill saves one that is already written/);
+  assert.match(documents, /An ICP the person already wrote is added here/);
 });

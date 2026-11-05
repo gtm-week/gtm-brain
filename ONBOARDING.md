@@ -127,6 +127,7 @@ update by themselves in the background. When you want a specific workflow:
 | Get a one-page brief before a call | `/gtm-brain-deepdive` |
 | Decide whether to push, fix, stop or measure growth spend | `/gtm-brain-unit-economics` |
 | Assess a market, its segments and competitors against what you can prove today | `/gtm-brain-market-desk-research` |
+| Define who to target: company fit, buying roles and readiness, kept as one draft | `/gtm-brain-define-icp` |
 | Fill in the strategy the brain starts with (`strategy.md`), in a 10-15 minute conversation | `/gtm-brain-strategy` |
 | Add a PDF, image or deck to the brain | drop it in the chat and say what it belongs to; no command |
 | Change company info, team or tools | `/gtm-brain-configure` |

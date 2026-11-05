@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { listDocuments, readDocument, writeDocument } from '../../lib/documents.mjs';
 
-const isWrite = c => ['remember', 'new_context', 'fork_context', 'edit_context', 'archive_context', 'add_name', 'update_entity', 'interact', 'compile_apply', 'skill', 'computer_use', 'attio_move_deal'].includes(c.tool)
+const isWrite = c => ['remember', 'new_context', 'fork_context', 'edit_context', 'archive_context', 'add_name', 'update_entity', 'merge_entities', 'archive_entity', 'undo_entity_merge', 'compile_entity', 'interact', 'compile_apply', 'skill', 'save', 'propose_admin_change', 'propose_interaction', 'computer_use', 'attio_move_deal'].includes(c.tool)
   || (c.tool === 'document' && !['list', 'show', 'files'].includes(c.arguments?.action));
 const readsICP = calls => calls.some(c => c.tool === 'load_context' && c.arguments?.contexts?.includes('icp'));
 const readsDocuments = calls => calls.some(c => c.tool === 'document' && c.arguments?.action === 'list');
@@ -24,10 +24,10 @@ export const updateRoute = calls => {
 export const icpBodyChecks = text => [
   /Monday/i,
   /Cedar Demo/, /Birch Demo/,
-  /desired|target account/i, /two|2|fewer than three/i,
+  /desired|target account/i, /\b(?:two|2)\s+(?:\w+\s+)?(?:examples?|compan|accounts?)|fewer than three|no third/i,
   /future.fit|future opportunity|future segment/i,
   /Influencers/i, /Champions/i, /Main decision makers|MDMs/i, /Blockers/i,
-  /Unaware/i, /Problem aware/i, /Solution aware/i, /Your solution aware/i, /Most aware/i,
+  /Unaware/i, /Problem aware/i, /(?<!your )solution aware/i, /Your solution aware/i, /Most aware/i,
   /Need now/i, /Budget/i, /Trust in us/i,
   /hypothes|unknown|unverified/i,
 ].every(re => re.test(text)) && !/market.validated|validated ICP|guaranteed budget/i.test(text)
@@ -45,7 +45,8 @@ export const icpCases = [
     name: 'skill-define-icp-interview', workflow: 'gtm-brain-define-icp', judge: 'advisory',
     prompt: '/gtm-brain-define-icp Help define our ICP. We sell returns automation. Cedar Demo is our only customer example; Birch Demo is a desired account, not a customer. I cannot provide a third, even anonymously. Use those two and move beyond examples to the broader company pattern. Ask only the next focused question, then stop this turn. Do not save anything yet.',
     calls: interviewRoute,
-    responseCheck: text => /question|pattern|fit|compan|nothing.*saved/i.test(text) && !/validated ICP/i.test(text),
+    responseCheck: text => !/market.validated|validated ICP/i.test(text)
+      && !/(?<!not |n't |never )\b(?:saved|created|wrote|updated)\b[^.\n]*\b(?:draft|document|ICP|profile)\b/i.test(text),
     verify: (root, { before, after, trace }) => JSON.stringify(before) === JSON.stringify(after)
       && !listDocuments(root).some(d => /customer.fit|ideal.customer/i.test(d.title))
       && (() => {

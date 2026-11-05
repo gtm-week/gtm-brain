@@ -229,7 +229,7 @@ Keep this to one simple table:
 | Budget | Useful clue and stronger evidence of available funds. | Amount/range, owner and approval route where known. |
 | Trust in us | Prior touchpoint or credible proof that matters. | What persuades the committee and what is still missing. |
 
-Use business-specific content. Clearly distinguish clues from confirmation, and unknown from failed qualification. Do not add the previous lengthy account-evidence, awareness-journey or prospecting-handoff tables.
+Use business-specific content. Clearly distinguish clues from confirmation, and unknown from failed qualification. Do not add account-evidence, awareness-journey or prospecting-handoff tables.
 
 ### 5. What still needs clarification
 
