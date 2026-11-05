@@ -13,6 +13,7 @@ to distinguish these workflows from other installed skills.
 | `gtm-brain-todo` | GTM Brain: Todo | What should I do now: everything waiting on you, ordered, walked through one by one |
 | `gtm-brain-workflow` | GTM Brain: Workflows | Start a run of a workflow document (an outbound campaign, ads then outbound), see where it stands, do the next step, skip or abandon; the brain keeps the steps and dates |
 | `gtm-brain-deepdive` | GTM Brain: Deep dive | A one-page brief on an entity or a context, from the notes and the tools read live |
+| `gtm-brain-define-icp` | GTM Brain: Define ICP | Chris Pawlak's exploratory interview: company examples, fit and exclusions, buying committee, awareness and readiness; reuses brain evidence and keeps one formal draft ICP document |
 | `gtm-brain-unit-economics` | GTM Brain: Unit economics | Lech Kaniuk's unit economics review: CAC, LTV12 and LTV24, LTV:CAC, both paybacks and retention from the chat and the brain, then PUSH, FIX, STOP or MEASURE overall and per acquisition source or segment; offers to keep the decision as a note and the missing inputs as questions |
 | `gtm-brain-market-desk-research` | GTM Brain: Market desk research | Chris Pawlak's market desk research: a 5-8 minute intake, a confirmed research frame, 15-30 sourced web and community reads, an interim checkpoint, then `market-desk-research-<slug>.md` with a positioning map and, when the numbers allow, a growth chart; market attractiveness and right to win judged separately, no offering design; accepted conclusions become notes |
 | `gtm-brain-use-brain` | GTM Brain: Use the company brain | Everyday work: remember, recall, where we are |
@@ -35,7 +36,7 @@ The sections below document the underlying operations, tools, and script paths f
 They are not additional discoverable skills. Tools show outcomes such as "Remembering" or
 "Searching the brain" in chat. Review proposals on the read-only dashboard. APPROVE typed in Codex stays a shell step with its permission prompt.
 Scripts retain their paths for terminal use with
-`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.31.2`.
+`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.31.3`.
 
 Legend for "writes": what files the command changes. Nothing else is ever touched.
 

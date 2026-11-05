@@ -73,8 +73,8 @@ test('copy prompt copies the exact command and example without navigating',async
  assert.match(p.node('#copy-status-'+s.id).textContent,/Copied/);assert.equal(p.run('view'),'home');
 });
 
-test('the person can ask for twelve skills, the ones onboarding and rule 7b name plus gtm-brain-workflow (0.28.0, offered by the opening line); the rest are references (ALL-204 step 4, ALL-218)',()=>{
- assert.deepEqual(skillCatalog().map(s=>s.id).sort(),['gtm-brain-configure','gtm-brain-deepdive','gtm-brain-document','gtm-brain-market-desk-research','gtm-brain-project','gtm-brain-skill','gtm-brain-start','gtm-brain-strategy','gtm-brain-sync','gtm-brain-todo','gtm-brain-unit-economics','gtm-brain-use-brain','gtm-brain-workflow']);
+test('the person can ask for fourteen shipped workflows; internal procedures remain references',()=>{
+ assert.deepEqual(skillCatalog().map(s=>s.id).sort(),['gtm-brain-configure','gtm-brain-deepdive','gtm-brain-define-icp','gtm-brain-document','gtm-brain-market-desk-research','gtm-brain-project','gtm-brain-skill','gtm-brain-start','gtm-brain-strategy','gtm-brain-sync','gtm-brain-todo','gtm-brain-unit-economics','gtm-brain-use-brain','gtm-brain-workflow']);
 });
 
 test('a brain with a skill of its own gets a "yours" group after the shipped ones; the shipped set is unchanged',()=>{

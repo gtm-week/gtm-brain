@@ -1,6 +1,6 @@
 // Opt-in cases for the skills that had none: one prompt per skill, the state it must leave,
 // the tools it must and must not call. Run them through the isolated Codex harness:
-//   node plugins/gtm-brain/test/live/tool-routing.mjs skills            all five
+//   node plugins/gtm-brain/test/live/tool-routing.mjs skills            all skill cases
 //   node plugins/gtm-brain/test/live/tool-routing.mjs skill-todo        one
 // The fixture is the seeded brain of tool-routing.mjs (offer, icp, strategy, market; Bergstrom
 // Home, Castorama, Krzysztof Pawlak) with no tool connected. Model outcomes are evidence for
@@ -20,7 +20,10 @@ const noWrites = calls => !calls.some(c => ["remember", "new_context", "fork_con
 const status = calls => calls.some(c => c.tool === "query" && c.arguments?.object === "status");
 const firstIndex = (calls, pred) => calls.findIndex(pred);
 
+import { icpCases } from './icp-cases.mjs';
+
 export const skillCases = [
+  ...icpCases,
   {
     judge: "advisory", name: "skill-todo", workflow: "gtm-brain-todo", answer: "later|leave|skip|not now",
     prompt: "/gtm-brain-todo What is waiting on me?",

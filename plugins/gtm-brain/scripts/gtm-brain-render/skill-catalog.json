@@ -48,6 +48,14 @@
     "example": "Assess the market for our offering in the DACH mid-market."
   },
   {
+    "id": "gtm-brain-define-icp",
+    "group": "daily",
+    "featured": false,
+    "title": "Define our ICP",
+    "description": "Chris Pawlak's interview on company fit, buying roles, awareness and readiness, kept as one working draft.",
+    "example": "Define our ideal customer profile using what we already know."
+  },
+  {
     "id": "gtm-brain-use-brain",
     "group": "knowledge",
     "featured": false,
