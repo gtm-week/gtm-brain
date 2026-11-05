@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve, dirname } from 'node:path';
-import { interviewRoute, updateRoute, icpBodyChecks } from './live/icp-cases.mjs';
+import { interviewRoute, updateRoute, icpBodyChecks, icpCases } from './live/icp-cases.mjs';
 import { documentSlug, documentPathFor } from '../lib/documents.mjs';
 const file = fileURLToPath(new URL('../skills/gtm-brain-define-icp/SKILL.md', import.meta.url));
 const skill = readFileSync(file, 'utf8');
@@ -40,4 +40,10 @@ test('persisted-output gate detects lost evidence and missing method sections', 
   assert.ok(icpBodyChecks(text));
   for (const part of ['Monday', 'Birch Demo', 'Future-fit', 'Most aware', 'Need now', 'Trust in us']) assert.equal(icpBodyChecks(text.replace(part, '')), false, part);
   assert.equal(icpBodyChecks(text + ' Market-validated.'), false);
+});
+
+test('interview response check accepts a truthful no-write acknowledgement', () => {
+  const check = icpCases.find(c => c.name === 'skill-define-icp-interview').responseCheck;
+  assert.ok(check('Question asked. Nothing was saved.'));
+  assert.equal(check('This is a validated ICP.'), false);
 });

@@ -45,7 +45,7 @@ export const icpCases = [
     name: 'skill-define-icp-interview', workflow: 'gtm-brain-define-icp', judge: 'advisory',
     prompt: '/gtm-brain-define-icp Help define our ICP. We sell returns automation. Cedar Demo is our only customer example; Birch Demo is a desired account, not a customer. I cannot provide a third, even anonymously. Use those two and move beyond examples to the broader company pattern. Ask only the next focused question, then stop this turn. Do not save anything yet.',
     calls: interviewRoute,
-    responseCheck: text => !/saved|created.*document|validated ICP/i.test(text),
+    responseCheck: text => /question|pattern|fit|compan|nothing.*saved/i.test(text) && !/validated ICP/i.test(text),
     verify: (root, { before, after, trace }) => JSON.stringify(before) === JSON.stringify(after)
       && !listDocuments(root).some(d => /customer.fit|ideal.customer/i.test(d.title))
       && (() => {
