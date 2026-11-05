@@ -22,7 +22,7 @@ export const updateRoute = calls => {
     && /customer-fit/.test(calls[update].arguments?.ref || '');
 };
 export const icpBodyChecks = text => [
-  /Archive signal: manual reconciliation/i,
+  /Monday/i,
   /Cedar Demo/, /Birch Demo/,
   /desired|target account/i, /two|2|fewer than three/i,
   /future.fit|future opportunity|future segment/i,
@@ -34,7 +34,7 @@ export const icpBodyChecks = text => [
   && !/decision maker[^.\n]*because[^.\n]*KPI/i.test(text);
 const seedICP = root => writeDocument(root, {
   path: 'customer-fit.md', title: 'Customer fit', applies_to: ['targeting', 'outreach'], status: 'approved', by: 'marta-nowak',
-  body: '# Customer fit\n\nArchive signal: manual reconciliation. Interview evidence, not market validation.\n',
+  body: '# Customer fit\n\nArchive evidence: reconciliation reviews happen every Monday. Interview evidence, not market validation.\n',
 });
 const evidence = root => {
   const d = readDocument(root, 'customer-fit');
@@ -68,6 +68,6 @@ export const icpCases = [
         && docs.filter(d => /customer.fit|ideal.customer/i.test(d.title)).length === 1 && icpBodyChecks(d.body);
     },
     evidence,
-    expect: 'Update the existing Customer fit through document after one native confirmation, preserving its archive signal, title, path and scope, and changing approved to draft. Five output parts with all five awareness rows and Need now/Budget/Trust in us. Explicitly distinguish one actual customer from a desired account, insufficient examples, company outcomes from persona KPIs, unknown authority from titles, current fit from future conditions, clues from confirmed budget/trust, and unvalidated hypotheses from evidence. No fabricated third example, budget, authority or minimum awareness threshold. No memories or external changes. Link the saved draft and identify a material gap.',
+    expect: 'Update the existing Customer fit through document after one native confirmation, preserving its Monday reconciliation-review evidence, title, path and scope, and changing approved to draft. Five output parts with all five awareness rows and Need now/Budget/Trust in us. Explicitly distinguish one actual customer from a desired account, insufficient examples, company outcomes from persona KPIs, unknown authority from titles, current fit from future conditions, clues from confirmed budget/trust, and unvalidated hypotheses from evidence. No fabricated third example, budget, authority or minimum awareness threshold. No memories or external changes. Link the saved draft and identify a material gap.',
   },
 ];

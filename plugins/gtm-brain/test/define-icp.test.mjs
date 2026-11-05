@@ -36,8 +36,8 @@ test('update behavioral gate requires existing-document read, consent, draft wri
   assert.equal(updateRoute(valid.map(c => c.arguments.action === 'update' ? call('document', { action: 'update', status: 'approved' }) : c)), false);
 });
 test('persisted-output gate detects lost evidence and missing method sections', () => {
-  const text = 'Archive signal: manual reconciliation. Cedar Demo current customer. Birch Demo desired account. Only two examples. Future-fit. Influencers Champions Main decision makers Blockers. Unaware Problem aware Solution aware Your solution aware Most aware. Need now Budget Trust in us. Unknown authority.';
+  const text = 'Reconciliation reviews happen every Monday. Cedar Demo current customer. Birch Demo desired account. Only two examples. Future-fit. Influencers Champions Main decision makers Blockers. Unaware Problem aware Solution aware Your solution aware Most aware. Need now Budget Trust in us. Unknown authority.';
   assert.ok(icpBodyChecks(text));
-  for (const part of ['Archive signal: manual reconciliation', 'Birch Demo', 'Future-fit', 'Most aware', 'Need now', 'Trust in us']) assert.equal(icpBodyChecks(text.replace(part, '')), false, part);
+  for (const part of ['Monday', 'Birch Demo', 'Future-fit', 'Most aware', 'Need now', 'Trust in us']) assert.equal(icpBodyChecks(text.replace(part, '')), false, part);
   assert.equal(icpBodyChecks(text + ' Market-validated.'), false);
 });

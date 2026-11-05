@@ -37,7 +37,8 @@ Prefer an existing ICP regardless of its title or location; do not make a second
 its filename differs. Ask a focused question only when multiple candidates make the destination
 ambiguous. Before proposing an update, read the selected document through `document` (`action: show`);
 a listing or remembered excerpt is not its full content. Preserve useful prior evidence and
-mark corrections, hypotheses and unknowns.
+mark corrections, hypotheses and unknowns. Keep prior supporting observations that the new
+interview does not repeat; silence is not a correction or permission to discard evidence.
 Fictional demonstrations must never become real company evidence.
 
 ## 2. Interview
