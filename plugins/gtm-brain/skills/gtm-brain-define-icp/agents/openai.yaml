@@ -1,0 +1,4 @@
+interface:
+  display_name: "GTM Brain: Define ICP"
+  short_description: "Define company fit, buying roles and readiness through an interview"
+  default_prompt: "Use $gtm-brain-define-icp to define our ideal customer profile from existing evidence and a focused interview."

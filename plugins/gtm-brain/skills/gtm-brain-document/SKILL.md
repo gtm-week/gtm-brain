@@ -5,7 +5,8 @@ description: |
   pricing and any other document the work must follow, kept as Markdown at the brain root with
   their files beside them. Triggers: "/gtm-brain-document", "add our tone of voice", "save the
   design system", "add strategy.md as a document", "our ICP definition", "check this against
-  our documents", "list the documents", "approve the strategy".
+  our documents", "list the documents", "approve the strategy". To work out an ICP through an
+  interview, use gtm-brain-define-icp; this skill saves one that is already written.
 allowed-tools: [Bash, Read]
 ---
 
@@ -31,6 +32,10 @@ draft and nothing to ask. Call `document` at once (`action: create`, title from 
 work as that document, `body` with what they gave, status draft) and answer in one line with
 the path. Do not read any reference first and do not open a `question`: the person decided.
 The steps below are for a document written from material, where a draft needs confirming.
+
+A request to define or rework an ICP with nothing written yet belongs to
+[Define ICP](../gtm-brain-define-icp/SKILL.md), which interviews first and then keeps the draft.
+An ICP the person already wrote is added here like any other document.
 
 1. A file the person already wrote: a path in the chat, or "add strategy.md as a document".
    Pass it as `file`; nothing is retyped. A Markdown already at the brain root is adopted where

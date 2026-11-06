@@ -6,5 +6,6 @@
   "0.28.0": "a playbook is a workflow you can start and track, so asking for one offers the workflows instead of writing a loose document",
   "0.29.0": "a market desk research skill is offered when someone wants a market, segment or competitors assessed",
   "0.30.2": "a choice offered as a chat button is a whole answer, and the tools the team uses are no longer filed as product entities",
-  "0.31.0": "the product and commands are now named GTM Brain; existing notes, identities and linked projects stay in place"
+  "0.31.0": "the product and commands are now named GTM Brain; existing notes, identities and linked projects stay in place",
+  "0.32.0": "a Define ICP interview is offered when someone wants to define or rework who to target"
 }

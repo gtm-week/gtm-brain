@@ -27,7 +27,7 @@ node --test plugins/gtm-brain/test/brain.test.mjs          # one file
 node --test --test-name-pattern='<regex>' plugins/gtm-brain/test/brain.test.mjs   # one test
 
 node plugins/gtm-brain/test/live/harness-bench.mjs         # live Codex A/B: bare / plugin / brain on 3 tasks (~4 min)
-node plugins/gtm-brain/test/live/tool-routing.mjs skills   # live Codex through five skills on a seeded brain; one case: skill-todo
+node plugins/gtm-brain/test/live/tool-routing.mjs skills   # live Codex through the skill cases on a seeded brain; one case: skill-todo
 node plugins/gtm-brain/test/live/claude-smoke.mjs          # live Claude Code: setup, the admin.md guard, go ahead vs APPROVE (~2 min)
 
 node scripts/sync-derived.mjs                           # regenerate derived blocks and schema
@@ -59,7 +59,7 @@ gitignored `.dev-brains`); it never deletes a real brain.
 
 Everything that ships is under `plugins/gtm-brain/`. The layers, from the outside in:
 
-- **Skills** (`skills/gtm-brain-*/SKILL.md`): the thirteen user-facing workflows. Detailed procedures
+- **Skills** (`skills/gtm-brain-*/SKILL.md`): the fourteen user-facing workflows. Detailed procedures
   live in each skill's `references/`. These are what people install, so developer workflows never
   go here.
 - **MCP server** (`server/server.mjs`): hand-rolled stdio JSON-RPC, Node built-ins only. Each tool

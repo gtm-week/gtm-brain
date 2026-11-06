@@ -92,7 +92,7 @@ called out. The review makes a recommendation; budget and campaign changes remai
 > Make this research process a skill I can reuse in our other projects.
 
 Keep your own skills in the brain and use them from linked project folders. Plugin updates
-preserve them. See the [command reference](COMMANDS.md) for all thirteen workflows, including
+preserve them. See the [command reference](COMMANDS.md) for all fourteen workflows, including
 strategy, source sync, documents and project setup.
 
 ## How GTM Brain works
@@ -276,7 +276,7 @@ does not mean offline AI processing.
 
 ## Built-in workflows
 
-Ask for an outcome in ordinary language, or invoke one of the thirteen shipped skills:
+Ask for an outcome in ordinary language, or invoke one of the fourteen shipped skills:
 
 | Command | Use it for |
 | --- | --- |
@@ -284,6 +284,7 @@ Ask for an outcome in ordinary language, or invoke one of the thirteen shipped s
 | `/gtm-brain-use-brain` | Recall evidence, save findings and resume everyday work. |
 | `/gtm-brain-deepdive` | Build a sourced brief on an account, person, deal or context. |
 | `/gtm-brain-market-desk-research` | Assess a segment, buying pains, alternatives and evidence for fit. |
+| `/gtm-brain-define-icp` | Define company fit, buying roles and readiness with Chris Pawlak's interview; keep one draft ICP. |
 | `/gtm-brain-unit-economics` | Compare CAC, LTV, payback and retention with explicit inputs and gaps. |
 | `/gtm-brain-strategy` | Work through a strategic intake and maintain the strategy document. |
 | `/gtm-brain-workflow` | Create a playbook, start a run and advance through its steps and gates. |
@@ -367,8 +368,8 @@ plugins/gtm-brain/
   .mcp.json  server/          the operations as MCP tools (Remembering, Searching the brain, ...);
                               dash.mjs serves the read-only dashboard and revision events
   lib/                        shared readers, validators, writers, search and identity logic; Node built-ins
-  skills/                     the thirteen workflows a person can ask for (all prefixed gtm-brain-): start,
-                              todo, sync, workflow, deepdive, strategy, unit-economics,
+  skills/                     the fourteen workflows a person can ask for (all prefixed gtm-brain-): start,
+                              todo, sync, workflow, deepdive, strategy, unit-economics, define-icp,
                               market-desk-research, project, configure, skill, document, use-brain; what
                               they used to be as separate skills lives on as their references
     gtm-brain-use-brain/references/    load, create and edit contexts, remember, recall, names, compile,
