@@ -28,8 +28,9 @@ Use a plain text question only when an appropriate structured control is unavail
 Explain why the answer matters before the widget. Offer two or three concrete choices,
 recommended first when appropriate. A choice question is one page: the host shows each field
 on its own page, so `text_label` next to `options` adds a second step. Pass it only when a note
-is really needed. When another answer is likely, let the last choice name it (Different company,
-Needs corrections) and ask the follow-up as a free-text question; do not add a bare Other option.
+is really needed. The form ends every choice question with Something else and, when it is picked,
+asks for the typed answer in the same call, so do not add your own Other option. A named last choice
+(Different company, Needs corrections) still fits when it means something specific.
 When the form is not shown and the choices become chat buttons, each one sends a whole answer:
 never a half sentence for the person to finish ("A different company: "); ask for the rest next.
 Use genuine multi-select for independent choices only when the tool's schema supports it;
@@ -119,7 +120,10 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
   `trusted_content_hash` of the plugin's files (`currentHash` is "declaration/contents"), so any
   change to the plugin, a version bump included, switches every hook off until it is approved
   again. `update.mjs` re-approves; an update the Codex app makes itself does not, so the MCP
-  server checks once per start and tells the person (`host.texts.hooksOff`). After any change to
+  server checks once per start and tells the person (`host.texts.hooksOff`). Off means waiting for
+  review or switched off in Codex (`enabled = false`), and `--trust` switches those back on. The
+  server also reads what the hooks leave (`work/tool-usage.jsonl`, `work/hooks.log`), so it notices
+  without a Codex CLI on the PATH, and writes `work/hooks-off.json` for the dashboard. After any change to
   the plugin, re-run `./dev-install.sh` or the hooks stay off without saying so.
 - A change under `plugins/gtm-brain/` that people should receive bumps the version in
   `.codex-plugin/plugin.json`. `check-version.mjs` compares that number with the installed one,

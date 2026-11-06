@@ -1,4 +1,4 @@
-import { buildQuestion, readAnswer } from '../scripts/gtm-brain-learn-company/question.mjs';
+import { buildQuestion, buildFollowUp, elseChoice, readAnswer, withFollowUp } from '../scripts/gtm-brain-learn-company/question.mjs';
 
 // A decline or cancel the host made itself is the host refusing to show the form: not_shown, never
 // declined, and the chat asks in text. Codex marks its own answers with _meta.approvals_reviewer (Full
@@ -11,6 +11,17 @@ const NOT_SHOWN = { status: 'not_shown', note: 'The host closed the form before 
 // One interactive request per MCP session. No persistent state or timeout-as-answer.
 export function questionInput(send, now = Date.now) {
   let supported = false, sequence = 0, pending = null, hidden = false;
+  async function form(params, parentId, args, first) {
+    const sentAt = now();
+    const result = await new Promise((resolve, reject) => {
+      const id = `gtm-question-${++sequence}`;
+      pending = { id, parentId, resolve, reject };
+      try { send({ jsonrpc: '2.0', id, method: 'elicitation/create', params }); }
+      catch (error) { pending = null; reject(error); }
+    });
+    if (result?.client && /^(decline|cancel)$/.test(result.result?.action) && (byHost(result.result) || (first && now() - sentAt < NOT_SHOWN_MS))) { hidden = true; return NOT_SHOWN; }
+    return readAnswer(args, result?.client ? result.result : result);
+  }
   return {
     initialize(capabilities = {}) {
       const e = capabilities?.elicitation;
@@ -22,15 +33,11 @@ export function questionInput(send, now = Date.now) {
       if (!supported) throw Error('This client does not support MCP input forms. Use an available question control or the dashboard.');
       if (pending) throw Error('A question is already pending. Wait for its answer or cancellation.');
       if (hidden) return NOT_SHOWN;
-      const sentAt = now();
-      const result = await new Promise((resolve, reject) => {
-        const id = `gtm-question-${++sequence}`;
-        pending = { id, parentId, resolve, reject };
-        try { send({ jsonrpc: '2.0', id, method: 'elicitation/create', params }); }
-        catch (error) { pending = null; reject(error); }
-      });
-      if (result?.client && /^(decline|cancel)$/.test(result.result?.action) && (byHost(result.result) || now() - sentAt < NOT_SHOWN_MS)) { hidden = true; return NOT_SHOWN; }
-      return readAnswer(args, result?.client ? result.result : result);
+      const first = await form(params, parentId, args, true);
+      if (first.status !== 'answered' || !first.selections.includes(elseChoice(args))) return first;
+      // The person picked Something else: ask for their own words in the same call. They have just seen
+      // a form, so a quick close here is their answer, not a host that hides forms.
+      return withFollowUp(args, first, await form(buildFollowUp(args), parentId, { question: args.question }, false));
     },
     receive(message) {
       if (message.method || !pending || message.id !== pending.id) return false;

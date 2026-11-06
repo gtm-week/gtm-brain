@@ -152,5 +152,6 @@ pv="$(node -e 'try{const s=JSON.parse(require("fs").readFileSync(process.argv[1]
 pv_latest="${pv%% *}"; pv_installed="${pv#*installed }"; pv_installed="${pv_installed%)}"
 [ -n "$pv" ] && node "$H" can update-check && node "$H" text updateOffer "$pv_installed" "$pv_latest"
 echo "Dashboard maintenance requested in the background. Use open_dashboard when the person asks to see it."
+rm -f "$root/work/hooks-off.json" 2>/dev/null   # this hook ran: the safety locks are on
 printf '%s  SessionStart  loaded=%s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "${loaded:-none}" >> "$root/work/hooks.log"
 exit 0
