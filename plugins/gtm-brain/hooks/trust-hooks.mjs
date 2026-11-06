@@ -16,6 +16,8 @@ import { spawn } from "node:child_process";
 
 export const PLUGIN_ID = "gtm-brain@gtm-brain";
 export const STALE = new Set(["untrusted", "modified"]); // a hook in either state does not run
+// Off is also a hook switched off in Codex (hooks.state."<key>".enabled = false): installed, approved, silent.
+export const hookOff = hook => STALE.has(hook.trustStatus ?? hook.status) || hook.enabled === false;
 
 // One app-server conversation: initialize, ask, optionally write, exit.
 async function appServer(calls, timeout = 30000) {
@@ -62,10 +64,14 @@ export async function hookTrust({ trust = false, cwd = process.cwd(), pluginId =
   return appServer(async call => {
     const listed = await call("hooks/list", { cwds: [cwd] });
     const hooks = (listed?.data || []).flatMap(entry => entry.hooks || []).filter(hook => hook.pluginId === pluginId);
-    const stale = hooks.filter(hook => STALE.has(hook.trustStatus));
+    const stale = hooks.filter(hookOff);
+    // The person asked for the safety locks on ("update GTM Brain"): a hook switched off is switched back on.
     if (trust && stale.length) {
       await call("config/batchWrite", {
-        edits: stale.map(hook => ({ keyPath: `hooks.state."${hook.key}".trusted_hash`, value: hook.currentHash, mergeStrategy: "upsert" })),
+        edits: stale.flatMap(hook => [
+          ...(STALE.has(hook.trustStatus) ? [{ keyPath: `hooks.state."${hook.key}".trusted_hash`, value: hook.currentHash, mergeStrategy: "upsert" }] : []),
+          ...(hook.enabled === false ? [{ keyPath: `hooks.state."${hook.key}".enabled`, value: true, mergeStrategy: "upsert" }] : []),
+        ]),
         reloadUserConfig: true,
       });
     }
@@ -73,7 +79,7 @@ export async function hookTrust({ trust = false, cwd = process.cwd(), pluginId =
       event: hook.eventName,
       status: trust && stale.includes(hook) ? "trusted" : hook.trustStatus,
       approved: trust && stale.includes(hook),
-      enabled: hook.enabled,
+      enabled: trust && stale.includes(hook) ? true : hook.enabled,
     }));
   });
 }
@@ -82,7 +88,7 @@ export async function hookTrust({ trust = false, cwd = process.cwd(), pluginId =
 export function trustSummary(hooks) {
   if (!hooks.length) return "Safety locks: no GTM Brain hooks found; the plugin is not installed in this Codex.";
   const approved = hooks.filter(hook => hook.approved).length;
-  const waiting = hooks.filter(hook => STALE.has(hook.status) || !hook.enabled).length;
+  const waiting = hooks.filter(hookOff).length;
   if (waiting) return `Safety locks: ${waiting} of ${hooks.length} not running yet; they need a review in Codex.`;
   return approved ? `Safety locks: on (${approved} approved just now).` : "Safety locks: on.";
 }

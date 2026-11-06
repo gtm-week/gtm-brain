@@ -120,7 +120,10 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
   `trusted_content_hash` of the plugin's files (`currentHash` is "declaration/contents"), so any
   change to the plugin, a version bump included, switches every hook off until it is approved
   again. `update.mjs` re-approves; an update the Codex app makes itself does not, so the MCP
-  server checks once per start and tells the person (`host.texts.hooksOff`). After any change to
+  server checks once per start and tells the person (`host.texts.hooksOff`). Off means waiting for
+  review or switched off in Codex (`enabled = false`), and `--trust` switches those back on. The
+  server also reads what the hooks leave (`work/tool-usage.jsonl`, `work/hooks.log`), so it notices
+  without a Codex CLI on the PATH, and writes `work/hooks-off.json` for the dashboard. After any change to
   the plugin, re-run `./dev-install.sh` or the hooks stay off without saying so.
 - A change under `plugins/gtm-brain/` that people should receive bumps the version in
   `.codex-plugin/plugin.json`. `check-version.mjs` compares that number with the installed one,

@@ -70,12 +70,21 @@ test("nothing to approve leaves the config alone", t => {
   assert.match(r.stdout, /Safety locks: on\./);
 });
 
-test("another plugin's hooks and a disabled hook are not treated as ours", t => {
-  const r = run(t, [hook("stop", "untrusted", { pluginId: "browser@openai-bundled" }), hook("sessionStart", "trusted", { enabled: false })], ["--trust"]);
+test("another plugin's hooks are not treated as ours", t => {
+  const r = run(t, [hook("stop", "untrusted", { pluginId: "browser@openai-bundled" })], ["--trust"]);
   assert.equal(r.status, 0, r.stderr);
   assert.equal(r.edits, null);
-  assert.match(r.stdout, /sessionStart: trusted \(disabled\)/);
-  assert.match(r.stdout, /not running yet/);
+});
+
+test("a GTM Brain hook switched off is reported, and --trust switches it back on (Artur, 2026-11-06)", t => {
+  // "update GTM Brain" is the person asking for the safety locks on; an approved but disabled hook never runs.
+  const report = run(t, [hook("sessionStart", "trusted", { enabled: false })]);
+  assert.match(report.stdout, /sessionStart: trusted \(disabled\)/);
+  assert.match(report.stdout, /not running yet/);
+  const r = run(t, [hook("sessionStart", "trusted", { enabled: false })], ["--trust"]);
+  assert.equal(r.status, 0, r.stderr);
+  assert.deepEqual(r.edits, [{ keyPath: 'hooks.state."gtm-brain@gtm-brain:hooks.json:sessionStart:0:0".enabled', value: true, mergeStrategy: "upsert" }]);
+  assert.match(r.stdout, /Safety locks: on \(1 approved just now\)/);
 });
 
 test("no GTM Brain hooks says the plugin is not installed here", t => {

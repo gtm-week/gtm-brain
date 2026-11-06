@@ -7,7 +7,7 @@
 // person's name; nothing waits for a "save". The save tool keeps edits made by hand outside Codex.
 // APPROVE typed in the chat stays a shell step so Codex asks permission for the audit line.
 import { execFile } from "node:child_process";
-import { existsSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { inputSchema as questionSchema } from "../scripts/gtm-brain-learn-company/question.mjs";
@@ -17,7 +17,7 @@ import { loadOntology, buildTools, instructionsText } from "../lib/ontology/inde
 import { createFilesBackend } from "./files-backend.mjs";
 import { createMemoryReader } from "./memory-reader.mjs";
 import { host } from "../lib/host.mjs";
-import { hookTrust, STALE } from "../hooks/trust-hooks.mjs";
+import { hookTrust, hookOff } from "../hooks/trust-hooks.mjs";
 import { homedir } from "node:os";
 import { validateValue } from "../lib/ontology/validation.mjs";
 
@@ -367,13 +367,36 @@ const INSTRUCTIONS = "GTM Brain: the company brain in this workspace. Pass the w
 const WORKFLOWS = `During company work, read ${join(P, "skills/gtm-brain-use-brain/SKILL.md")} and the internal procedure relevant to the task. Read ${join(P, "skills/gtm-brain-configure/SKILL.md")} for workplace changes and APPROVE. Read ${join(P, "skills/gtm-brain-configure/references/update-plugin.md")} for plugin updates or brain refresh. Internal operations remain tools; the person does not need to invoke a separate skill for each one.`;
 
 /* ---------- Hooks that stopped running ---------- */
-// The hooks cannot say they are off, so the server does: one background check per server, started by the
-// first tool call so startup stays fast, and one line on a later result when any GTM Brain hook is off.
-let hooksOff = null, hooksTold = false;
+// The hooks cannot say they are off, so the server does: one line on a later result, once per server.
+// Two signals. Codex's own hook list, read in the background on the first call (a hook waiting for
+// review or switched off). And what the hooks leave behind, which needs no Codex on the PATH: the
+// PostToolUse hook logs every GTM Brain call to work/tool-usage.jsonl and SessionStart logs to
+// work/hooks.log. A call that left no line after HOOK_WAIT_MS, in a brain with no hook line for a day
+// before it, means they are not running (Artur, 2026-11-06: disabled hooks, no notice).
+const HOOK_WAIT_MS = Number(process.env.GTM_BRAIN_HOOK_WAIT_MS) || 15000;
+const HOOK_DAY_MS = 864e5;
+let hooksOff = null, hooksTold = false, probe = null;
+function tail(file) { try { const s = readFileSync(file, "utf8"); return s.slice(-65536).split("\n"); } catch { return []; } }
+function hookActivity(brain, since) {
+  const used = tail(join(brain, "work", "tool-usage.jsonl")).some(l => { try { return Date.parse(JSON.parse(l).at) >= since; } catch { return false; } });
+  return used || tail(join(brain, "work", "hooks.log")).some(l => / SessionStart /.test(l) && new Date(l.slice(0, 19).replace(" ", "T")).getTime() >= since);
+}
+function hooksAreOff(brain, how) {
+  hooksOff = true;
+  try { if (isBrain(brain)) writeFileSync(join(brain, "work", "hooks-off.json"), JSON.stringify({ at: new Date().toISOString(), how }) + "\n"); } catch {}
+}
 function checkHooks(brain) {
-  if (hooksOff !== null || process.env.GTM_BRAIN_NO_HOOK_CHECK || process.env.GTM_BRAIN_RUN || !host().hookCheck()) return;
-  hooksOff = false;
-  hookTrust({ cwd: isBrain(brain) ? brain : homedir() }).then(hooks => { hooksOff = hooks.some(h => STALE.has(h.status) && h.enabled !== false); }, () => {});
+  if (hooksOff || process.env.GTM_BRAIN_NO_HOOK_CHECK || process.env.GTM_BRAIN_RUN || !host().texts.hooksOff()) return;
+  if (hooksOff === null) {
+    hooksOff = false;
+    if (host().hookCheck()) hookTrust({ cwd: isBrain(brain) ? brain : homedir() }).then(hooks => { if (hooks.some(hookOff)) hooksAreOff(brain, "codex"); }, () => {});
+  }
+  if (!isBrain(brain)) return;
+  if (!probe) { probe = { brain, at: Date.now() }; return; }
+  if (probe.done || Date.now() - probe.at < HOOK_WAIT_MS) return;
+  probe.done = true;
+  if (hookActivity(probe.brain, probe.at - HOOK_DAY_MS)) { try { rmSync(join(probe.brain, "work", "hooks-off.json"), { force: true }); } catch {} }
+  else hooksAreOff(probe.brain, "silent");
 }
 function withHooksNotice(result) {
   if (!hooksOff || hooksTold || !host().texts.hooksOff()) return result;
