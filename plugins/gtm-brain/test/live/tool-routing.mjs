@@ -15,6 +15,7 @@ import { attioMetrics } from './attio-write-fixture.mjs';
 import { judge } from "./judge.mjs";
 import { contextRoutingCases } from './context-routing-cases.mjs';
 import { skillCases } from './skill-cases.mjs';
+import { icpRoutingCases } from './icp-cases.mjs';
 
 // GTM_BRAIN_PLUGIN points the same cases at another build of the plugin: the baseline a before/after claim needs
 const plugin = process.env.GTM_BRAIN_PLUGIN ? process.env.GTM_BRAIN_PLUGIN.replace(/\/?$/, "/") : fileURLToPath(new URL("../../", import.meta.url));
@@ -65,6 +66,7 @@ const cases = [
   ...attioWriteCases,
   ...hubspotWriteCases,
   ...skillCases,
+  ...icpRoutingCases(),
   { name: 'dashboard-chrome', workflow: 'gtm-brain-use-brain',
     prompt: 'Open the brain dashboard. It is configured to use a separate Chrome window.',
     prepare: root => { const path = join(root, 'brain', 'admin.md'); writeFileSync(path, readFileSync(path, 'utf8').replace('dashboard: always', 'dashboard: always\ndashboard_browser: chrome')); },

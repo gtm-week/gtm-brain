@@ -71,10 +71,9 @@ export const icpCases = [
     evidence,
     expect: 'Update the existing Customer fit through document after one native confirmation, preserving its Monday reconciliation-review evidence, title, path and scope, and changing approved to draft. Five output parts with all five awareness rows and Need now/Budget/Trust in us. Explicitly distinguish one actual customer from a desired account, insufficient examples, company outcomes from persona KPIs, unknown authority from titles, current fit from future conditions, clues from confirmed budget/trust, and unvalidated hypotheses from evidence. No fabricated third example, budget, authority or minimum awareness threshold. No memories or external changes. Link the saved draft and identify a material gap.',
   },
-  ...routingCases(),
 ];
 
-// Plain requests with no slash command: rule 7b offers Define ICP, or the interview starts at once.
+// Plain requests with no slash command, so not skill cases: rule 7b offers Define ICP, or the interview starts at once.
 // A written ICP still goes straight to documents with no interview.
 // Interview questions are free text; a save confirmation carries choices.
 const interviewAsk = c => c.tool === 'question' && !c.arguments?.options?.length
@@ -94,11 +93,11 @@ export const plainRequestRouted = (calls, text) => savedAfterConsent(calls) && n
 export const writtenICPRoute = calls => calls.filter(isWrite).length === 1
   && calls.some(c => c.tool === 'document' && c.arguments?.action === 'create')
   && !calls.some(interviewAsk) && noForms(calls);
-function routingCases() {
+export function icpRoutingCases() {
   let seen = [];   // the harness evaluates calls before responseCheck in the same case
   return [
     {
-      name: 'skill-define-icp-plain', workflow: 'gtm-brain-use-brain', judge: 'advisory',
+      name: 'icp-plain', workflow: 'gtm-brain-use-brain', judge: 'advisory',
       prompt: 'We need to define our ICP. Who should we be targeting?',
       calls: calls => { seen = calls; return savedAfterConsent(calls) && noForms(calls); },
       responseCheck: text => plainRequestRouted(seen, text),
@@ -107,7 +106,7 @@ function routingCases() {
       expect: 'Offer gtm-brain-define-icp by name once, or start its interview with a question about target companies. No memories; at most one ICP draft, saved only after the Keep as a draft confirmation.',
     },
     {
-      name: 'skill-define-icp-written', workflow: 'gtm-brain-use-brain', judge: 'advisory', answer: 'draft|yes|add',
+      name: 'icp-written', workflow: 'gtm-brain-use-brain', judge: 'advisory', answer: 'draft|yes|add',
       prompt: 'Add this as our ICP document, as a draft:\n\n# Ideal customer profile\n\nRetailers with 20-200 stores and manual returns reconciliation. Exclude companies without returns.',
       calls: calls => writtenICPRoute(calls),
       verify: (root, { before, after }) => JSON.stringify(before) === JSON.stringify(after)
