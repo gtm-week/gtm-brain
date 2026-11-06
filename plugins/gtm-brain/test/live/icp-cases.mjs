@@ -71,4 +71,48 @@ export const icpCases = [
     evidence,
     expect: 'Update the existing Customer fit through document after one native confirmation, preserving its Monday reconciliation-review evidence, title, path and scope, and changing approved to draft. Five output parts with all five awareness rows and Need now/Budget/Trust in us. Explicitly distinguish one actual customer from a desired account, insufficient examples, company outcomes from persona KPIs, unknown authority from titles, current fit from future conditions, clues from confirmed budget/trust, and unvalidated hypotheses from evidence. No fabricated third example, budget, authority or minimum awareness threshold. No memories or external changes. Link the saved draft and identify a material gap.',
   },
+  ...routingCases(),
 ];
+
+// Plain requests with no slash command: rule 7b offers Define ICP, or the interview starts at once.
+// A written ICP still goes straight to documents with no interview.
+// Interview questions are free text; a save confirmation carries choices.
+const interviewAsk = c => c.tool === 'question' && !c.arguments?.options?.length
+  && /compan|customer|example|industr|segment|pattern|target/i.test(c.arguments?.question || '');
+const noForms = calls => !calls.some(c => ['configuration_question', 'onboarding_question'].includes(c.tool));
+// The harness answers every free-text question "yes" and picks the first choice, so the interview may run
+// on to a saved draft. That is fine when the one write is a document saved after the "Keep as a draft" form.
+const savedAfterConsent = calls => {
+  const writes = calls.filter(isWrite);
+  if (!writes.length) return true;
+  const at = calls.indexOf(writes[0]);
+  return writes.length === 1 && writes[0].tool === 'document' && ['create', 'update'].includes(writes[0].arguments?.action)
+    && calls.slice(0, at).some(c => c.tool === 'question' && /Keep as a draft/.test(JSON.stringify(c.arguments || {})));
+};
+export const plainRequestRouted = (calls, text) => savedAfterConsent(calls) && noForms(calls)
+  && (/gtm-brain-define-icp|Define ICP/i.test(text) || interviewAsk(calls.find(c => c.tool === 'question') || {}));
+export const writtenICPRoute = calls => calls.filter(isWrite).length === 1
+  && calls.some(c => c.tool === 'document' && c.arguments?.action === 'create')
+  && !calls.some(interviewAsk) && noForms(calls);
+function routingCases() {
+  let seen = [];   // the harness evaluates calls before responseCheck in the same case
+  return [
+    {
+      name: 'skill-define-icp-plain', workflow: 'gtm-brain-use-brain', judge: 'advisory',
+      prompt: 'We need to define our ICP. Who should we be targeting?',
+      calls: calls => { seen = calls; return savedAfterConsent(calls) && noForms(calls); },
+      responseCheck: text => plainRequestRouted(seen, text),
+      verify: (root, { before, after }) => JSON.stringify(before) === JSON.stringify(after)
+        && listDocuments(root).filter(d => /customer.fit|ideal.customer|icp/i.test(d.title)).length <= 1,
+      expect: 'Offer gtm-brain-define-icp by name once, or start its interview with a question about target companies. No memories; at most one ICP draft, saved only after the Keep as a draft confirmation.',
+    },
+    {
+      name: 'skill-define-icp-written', workflow: 'gtm-brain-use-brain', judge: 'advisory', answer: 'draft|yes|add',
+      prompt: 'Add this as our ICP document, as a draft:\n\n# Ideal customer profile\n\nRetailers with 20-200 stores and manual returns reconciliation. Exclude companies without returns.',
+      calls: calls => writtenICPRoute(calls),
+      verify: (root, { before, after }) => JSON.stringify(before) === JSON.stringify(after)
+        && listDocuments(root).filter(d => /manual returns reconciliation/.test(d.body)).length === 1,
+      expect: 'Create the document from the given text through document create, with no interview question and no memories.',
+    },
+  ];
+}

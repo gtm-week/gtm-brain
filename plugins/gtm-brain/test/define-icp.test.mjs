@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve, dirname } from 'node:path';
-import { interviewRoute, updateRoute, icpBodyChecks, icpCases } from './live/icp-cases.mjs';
+import { interviewRoute, updateRoute, icpBodyChecks, icpCases, plainRequestRouted, writtenICPRoute } from './live/icp-cases.mjs';
 import { documentSlug, documentPathFor } from '../lib/documents.mjs';
 const file = fileURLToPath(new URL('../skills/gtm-brain-define-icp/SKILL.md', import.meta.url));
 const skill = readFileSync(file, 'utf8');
@@ -58,4 +58,25 @@ test('a plain request reaches Define ICP and a written ICP still goes to documen
   assert.match(rules, /`gtm-brain-define-icp` \(Chris Pawlak's interview/);
   assert.match(documents, /use gtm-brain-define-icp; this skill saves one that is already written/);
   assert.match(documents, /An ICP the person already wrote is added here/);
+});
+
+test('plain-request gates: offer or interview without writes; a written ICP is created without an interview', () => {
+  const ask = call('question', { question: 'Which companies are your best customers?' });
+  assert.ok(plainRequestRouted([], 'I can run /gtm-brain-define-icp to work it out with you.'));
+  assert.ok(plainRequestRouted([...reads, ask], 'Question asked.'));
+  assert.ok(plainRequestRouted([...reads, ask, ask], 'Question asked.'));
+  assert.equal(plainRequestRouted([call('question', { question: 'Which context should I use?' }), ask], 'Question asked.'), false);
+  assert.equal(plainRequestRouted([], 'Here is your ICP: retailers.'), false);
+  assert.equal(plainRequestRouted([call('document', { action: 'create' })], 'Saved. Run gtm-brain-define-icp to refine.'), false);
+  const keep = call('question', { question: 'Keep this?', options: ['Keep as a draft', 'Change something'] });
+  assert.ok(plainRequestRouted([...reads, ask, keep, call('document', { action: 'create' })], 'Draft kept.'));
+  assert.equal(plainRequestRouted([...reads, ask, keep, call('document', { action: 'create' }), call('remember')], 'Draft kept.'), false);
+  assert.equal(plainRequestRouted([...reads, ask, call('remember')], 'Noted.'), false);
+  const create = call('document', { action: 'create', title: 'Ideal customer profile' });
+  assert.ok(writtenICPRoute([call('document', { action: 'list' }), create]));
+  assert.ok(writtenICPRoute([call('question', { question: 'Add Ideal customer profile as a draft?', options: ['Add it as a draft', 'Change something'] }), create]));
+  assert.ok(plainRequestRouted([call('question', { question: 'Name at least three companies that are great customers for us.' })], 'Question asked.'));
+  assert.equal(writtenICPRoute([ask, create]), false);
+  assert.equal(writtenICPRoute([create, call('remember')]), false);
+  assert.equal(writtenICPRoute([call('document', { action: 'list' })]), false);
 });
