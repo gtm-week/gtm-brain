@@ -28,8 +28,9 @@ Use a plain text question only when an appropriate structured control is unavail
 Explain why the answer matters before the widget. Offer two or three concrete choices,
 recommended first when appropriate. A choice question is one page: the host shows each field
 on its own page, so `text_label` next to `options` adds a second step. Pass it only when a note
-is really needed. When another answer is likely, let the last choice name it (Different company,
-Needs corrections) and ask the follow-up as a free-text question; do not add a bare Other option.
+is really needed. The form ends every choice question with Something else and, when it is picked,
+asks for the typed answer in the same call, so do not add your own Other option. A named last choice
+(Different company, Needs corrections) still fits when it means something specific.
 When the form is not shown and the choices become chat buttons, each one sends a whole answer:
 never a half sentence for the person to finish ("A different company: "); ask for the rest next.
 Use genuine multi-select for independent choices only when the tool's schema supports it;

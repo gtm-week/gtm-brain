@@ -5,14 +5,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
-import { buildQuestion, readAnswer, inputSchema as buildQuestionSchema } from '../scripts/gtm-brain-learn-company/question.mjs';
+import { buildQuestion, readAnswer, SOMETHING_ELSE, inputSchema as buildQuestionSchema } from '../scripts/gtm-brain-learn-company/question.mjs';
 import { questionInput } from '../server/question-input.mjs';
 
 const args = { question: 'Connect Gmail?', options: ['Yes, go ahead', 'No, skip it'] };
 
 test('forms preserve choice order, support multi-select and free text, and carry no default or timeout', () => {
   const single = buildQuestion(args);
-  assert.deepEqual(single.requestedSchema.properties.selection.enum, args.options);
+  assert.deepEqual(single.requestedSchema.properties.selection.enum, [...args.options, SOMETHING_ELSE]);
   assert.equal(buildQuestion({ ...args, text_label: 'Add a note' }).requestedSchema.properties.text.type, 'string');
   // a model passes text_label: "" to mean "no note field"; that is omission, never a refusal
   assert.deepEqual(Object.keys(buildQuestion({ ...args, text_label: '' }).requestedSchema.properties), Object.keys(single.requestedSchema.properties));
@@ -21,7 +21,7 @@ test('forms preserve choice order, support multi-select and free text, and carry
   assert.equal(single.requestedSchema.properties.selection.default, undefined);
   const multi = buildQuestion({ ...args, multiple: true });
   assert.equal(multi.requestedSchema.properties.selection.type, 'array');
-  assert.deepEqual(multi.requestedSchema.properties.selection.items.enum, args.options);
+  assert.deepEqual(multi.requestedSchema.properties.selection.items.enum, [...args.options, SOMETHING_ELSE]);
   assert.deepEqual(Object.keys(buildQuestion({ question: 'Website?' }).requestedSchema.properties), ['text']);
   assert.throws(() => buildQuestion({ ...args, options: ['Yes', ' Yes '] }), /distinct/);
   assert.throws(() => buildQuestion({ ...args, autoResolutionMs: 5000 }), /unsupported/);
@@ -64,6 +64,31 @@ test('only submitted data supplies answers; cancellation, empty input and invali
   assert.throws(() => readAnswer(args, { action: 'accept', content: { selection: 'invented' } }), /invalid selection/);
   assert.throws(() => readAnswer(args, { action: 'accept', content: { selection: args.options } }), /selection type/);
   assert.deepEqual(readAnswer({ ...args, multiple: true }, { action: 'accept', content: { selection: args.options } }).selections, args.options);
+});
+
+test('every choice question can take the person\'s own words on one page: Something else opens a typed answer (Artur, 2026-11-06)', async () => {
+  // The form offered only the model's choices; a person whose answer was not among them could not give it.
+  assert.deepEqual(Object.keys(buildQuestion(args).requestedSchema.properties), ['selection']);
+  assert.deepEqual(buildQuestion({ ...args, options: ['A', 'Other'] }).requestedSchema.properties.selection.enum, ['A', 'Other'], 'never offered twice');
+  const ask = async (a, answers) => {
+    const sent = [], q = questionInput(m => { sent.push(m); queueMicrotask(() => q.receive({ id: m.id, result: answers.shift() })); });
+    q.initialize({ elicitation: { form: {} } });
+    return { answer: await q.ask(a, 1), sent };
+  };
+  const typed = await ask(args, [{ action: 'accept', content: { selection: SOMETHING_ELSE } }, { action: 'accept', content: { text: 'Only the read-only collaborators' } }]);
+  assert.deepEqual(typed.answer, { status: 'answered', selections: [], text: 'Only the read-only collaborators' });
+  assert.equal(typed.sent.length, 2);
+  assert.deepEqual(Object.keys(typed.sent[1].params.requestedSchema.properties), ['text']);
+  assert.equal(typed.sent[1].params.message, args.question);
+  const picked = await ask(args, [{ action: 'accept', content: { selection: args.options[0] } }]);
+  assert.equal(picked.sent.length, 1, 'a listed choice is still one page');
+  const mixed = await ask({ ...args, multiple: true }, [{ action: 'accept', content: { selection: [args.options[0], SOMETHING_ELSE] } }, { action: 'accept', content: { text: 'and Slack' } }]);
+  assert.deepEqual(mixed.answer, { status: 'answered', selections: [args.options[0]], text: 'and Slack' });
+  const own = await ask({ ...args, options: ['A', 'Other'] }, [{ action: 'accept', content: { selection: 'Other' } }, { action: 'accept', content: { text: 'C' } }]);
+  assert.deepEqual(own.answer, { status: 'answered', selections: [], text: 'C' }, 'the model\'s own Other opens the typed answer too');
+  // Closing the typed answer is that outcome, never a choice of "Something else"; a quick close is the person's.
+  assert.deepEqual((await ask(args, [{ action: 'accept', content: { selection: SOMETHING_ELSE } }, { action: 'cancel' }])).answer, { status: 'cancelled' });
+  assert.deepEqual((await ask(args, [{ action: 'accept', content: { selection: SOMETHING_ELSE } }, { action: 'accept', content: {} }])).answer, { status: 'unanswered' });
 });
 
 test('input transport negotiates support, correlates responses and refuses competing questions', async () => {
