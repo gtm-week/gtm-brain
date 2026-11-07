@@ -1,7 +1,8 @@
 # Your own skills in GTM Brain
 
 GTM Brain 0.22.0. For Artur and for course participants: what a skill of your own is, how you make
-one, where it shows up, and how it travels.
+one, where it shows up, and how it travels. A skill meant for every brain, shipped with the
+plugin, is a pull request: see [skill-template/](skill-template/README.md).
 
 ## The idea in one paragraph
 
