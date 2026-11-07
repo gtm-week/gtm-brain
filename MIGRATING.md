@@ -21,8 +21,9 @@ The migration installs `gtm-brain@gtm-brain`, verifies its connector and enables
 hooks, then removes the old `gtm-os@gtm-os` registration. A failed verification keeps the old
 plugin. If the new installation already exists, it is verified before anything is retired.
 
-Restart Codex, open the **same working folder** and ask to refresh the brain rules. The normal
-upgrade process backs up old instructions and pauses on personal edits. Do not run setup again.
+Restart Codex and open the **same working folder**. Rules with no edits of yours are refreshed on
+their own in the first chat, with a backup; rules with personal edits are offered a refresh, which
+pauses so they can be merged. Do not run setup again.
 
 ## Claude Code
 

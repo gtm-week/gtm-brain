@@ -1,6 +1,7 @@
 // Protect locally edited instructions before refreshing plugin-owned files.
 import { existsSync, readFileSync, mkdirSync, copyFileSync, writeFileSync, mkdtempSync } from "node:fs";
 import { join, dirname } from "node:path";
+import { spawnSync } from "node:child_process";
 import { readAdmin, readNames } from "./brain.mjs";
 
 // Shared with the upgrade matrix tests. Aliases point to the same immutable snapshot.
@@ -11,13 +12,30 @@ export const legacyTemplates = JSON.parse(readFileSync(new URL("../templates/leg
 export const rulesWhy = JSON.parse(readFileSync(new URL("../templates/legacy/why.json", import.meta.url), "utf8"));
 const versionParts = v => String(v).split(/[^0-9]+/).filter(Boolean).map(Number);
 const newer = (a, b) => { const x = versionParts(a), y = versionParts(b); for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
+/* Rules that only drop lines from a shipped version carry nothing of the person's: a build between
+   two releases (FDE OS, 2026-11-07: 0.27.0 less 3 lines). Anything added is an edit; so is dropping
+   more than a tenth, which is someone cutting the rules down rather than an older build. */
+export function onlyDrops(current, shipped) {
+  if (current === shipped) return true;
+  const have = current.split("\n"), ship = shipped.split("\n");
+  if (ship.length - have.length > ship.length / 10) return false;
+  let i = 0;
+  for (const line of ship) if (i < have.length && have[i] === line) i++;
+  return i === have.length;
+}
+const shippedMatches = (templates, company, current) => {
+  const render = file => readFileSync(join(templates, "legacy", file), "utf8").replaceAll("{{COMPANY}}", company);
+  const exact = Object.entries(legacyTemplates).filter(([, file]) => render(file) === current).map(([v]) => v);
+  return exact.length ? exact : Object.entries(legacyTemplates).filter(([, file]) => onlyDrops(current, render(file))).map(([v]) => v);
+};
 /* The newest shipped version whose rules the brain's AGENTS.md matches (null when current, custom
    or missing) and the reasons for every rule change since then, oldest first. */
 export function rulesReasons(root, templates) {
   const company = readAdmin(root)?.company; const path = join(root, "AGENTS.md");
   if (!company || !existsSync(path)) return { from: null, reasons: [] };
   const current = readFileSync(path, "utf8");
-  const matches = Object.entries(legacyTemplates).filter(([, file]) => readFileSync(join(templates, "legacy", file), "utf8").replaceAll("{{COMPANY}}", company) === current).map(([v]) => v);
+  if (current === readFileSync(join(templates, "AGENTS.md"), "utf8").replaceAll("{{COMPANY}}", company)) return { from: null, reasons: [] };
+  const matches = shippedMatches(templates, company, current);
   if (!matches.length) return { from: null, reasons: [] };
   const from = matches.reduce((a, b) => (newer(b, a) ? b : a));
   const reasons = Object.entries(rulesWhy).filter(([v]) => newer(v, from)).sort(([a], [b]) => (newer(a, b) ? 1 : -1)).map(([, why]) => why);
@@ -31,6 +49,20 @@ export function rulesOffer(root, templates) {
   return `GTM Brain: this brain's rules (AGENTS.md) are from GTM Brain ${from}. What the newer rules change: ${why}. Offer once, in one line, to refresh the rules (upgrade_brain, gtm-brain-configure), and say why in plain words from that list, the reason that matters most for this person first; it backs the old file up and keeps local edits.`;
 }
 
+/* Session start: rules from an older GTM Brain that hold nothing of the person's are refreshed here,
+   the same upgrade a yes to the offer runs ("why i have to do it? it should be automatic", Maciej,
+   2026-11-07). Edited rules, or an upgrade that fails, keep the offer; the old file is backed up. */
+export function autoRefresh(root, templates) {
+  if (rulesState(root, templates) !== "legacy") return "";
+  const { from, reasons } = rulesReasons(root, templates);
+  const run = spawnSync("bash", [join(templates, "..", "scripts/gtm-brain-upgrade/upgrade.sh"), root], { encoding: "utf8", timeout: 30000 });
+  if (run.status !== 0) return rulesOffer(root, templates);
+  const backup = run.stdout.match(/^backup: (.*)$/m)?.[1];
+  const also = (run.stdout.split("upgrade report:\n")[1] ?? "").split("\n").filter(l => l.startsWith("  ") && !l.includes("nothing to migrate")).map(l => l.trim());
+  const why = reasons.length ? reasons.join("; ") : "they name tools and habits the plugin has moved on from";
+  return `GTM Brain refreshed this brain's rules (AGENTS.md) from GTM Brain ${from} on its own: they held no edits of the person's.${backup ? ` The old file is kept in ${backup}.` : ""} What the newer rules change: ${why}. Say so in one line, in plain words, the change that matters most for this person first; do not ask, it is done.${also.length ? ` The refresh also: ${also.join("; ")}.` : ""}`;
+}
+
 /* Where a brain's rules stand against the plugin: current, a shipped older version (legacy),
    edited by hand (custom), or missing. The session hook says so; nothing is changed here. */
 export function rulesState(root, templates) {
@@ -39,7 +71,7 @@ export function rulesState(root, templates) {
   const render = file => readFileSync(file, "utf8").replaceAll("{{COMPANY}}", company);
   const current = readFileSync(path, "utf8");
   if (current === render(join(templates, "AGENTS.md"))) return "current";
-  return [...new Set(Object.values(legacyTemplates))].some(file => render(join(templates, "legacy", file)) === current) ? "legacy" : "custom";
+  return [...new Set(Object.values(legacyTemplates))].some(file => onlyDrops(current, render(join(templates, "legacy", file)))) ? "legacy" : "custom";
 }
 export function prepareUpgrade(root, templates) {
   const company = readAdmin(root)?.company;
@@ -71,7 +103,7 @@ export function prepareUpgrade(root, templates) {
       copyFileSync(join(root, file), dest);
     }
   }
-  if (current !== null && current !== target && !previous.includes(current)) {
+  if (current !== null && current !== target && !previous.some(shipped => onlyDrops(current, shipped))) {
     const proposal = join(backup, "AGENTS.proposed.md");
     writeFileSync(proposal, target);
     return { ready: false, backup, proposal };

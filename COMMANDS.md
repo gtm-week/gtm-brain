@@ -36,7 +36,7 @@ The sections below document the underlying operations, tools, and script paths f
 They are not additional discoverable skills. Tools show outcomes such as "Remembering" or
 "Searching the brain" in chat. Review proposals on the read-only dashboard. APPROVE typed in Codex stays a shell step with its permission prompt.
 Scripts retain their paths for terminal use with
-`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.33.1`.
+`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.33.3`.
 
 Legend for "writes": what files the command changes. Nothing else is ever touched.
 
@@ -458,7 +458,7 @@ the installed files before choosing between a source refresh and an app restart.
 
 An update asked for in a brain refreshes that brain's rules in the same step (`brain`): the newly
 installed version's upgrader runs right after the verified install and prints its report, so
-`update GTM Brain` alone is enough there. Other brains are offered "refresh the rules" when next opened.
+`update GTM Brain` alone is enough there. Other brains refresh their rules on their own when next opened; only rules with edits of the person's are offered "refresh the rules" instead.
 
 Tool: `update_plugin` (`mode: check | update`, `brain` optional). Writes: Codex's plugin installation and
 marketplace cache when updating. No brain files.
@@ -470,6 +470,10 @@ marketplace cache when updating. No brain files.
 After a plugin update: refreshes `AGENTS.md`, the pre-commit hook and `.gitignore` in an
 existing brain. Validates editable identities first and migrates legacy identity files with
 backups when needed. Contexts, memories, workplace settings and personal preferences remain.
+The session hook runs it on its own when a brain's rules are an older shipped version, or one with a
+few of its lines dropped (a build between releases), and says so in one line; rules with the
+person's own lines are left alone and offered instead, and a refresh asked for then pauses with a
+proposed file to merge.
 
 Tool: `upgrade_brain`. Writes: `AGENTS.md`, `.githooks/pre-commit`, `.gitignore`, upgrade
 backups, and identity files only when migration is needed.

@@ -139,8 +139,8 @@ node -e 'const w=await import(process.argv[1]);const l=w.runsLine(process.argv[2
 # Folders at the top GTM Brain does not use (a migrated brain's company/, assets/): named once per set, never touched.
 [ -z "$project" ] && { node -e 'const d=await import(process.argv[1]);const h=d.strayFoldersHint(process.argv[2]);if(h)console.log(h)' "$P/lib/documents.mjs" "$root" 2>/dev/null || true; }
 # Rules from an older GTM Brain keep naming tools and habits the plugin has moved on from (ALL-204).
-# The offer always carries why: what the newer rules change since this brain's version.
-node -e 'const u=await import(process.argv[1]);const o=u.rulesOffer(process.argv[2],process.argv[3]);if(o)console.log(o)' "$P/lib/upgrade-files.mjs" "$root" "$P/templates" 2>/dev/null || true
+# Unedited ones are refreshed here; edited ones get the offer. Both say why: what the newer rules change.
+node -e 'const u=await import(process.argv[1]);const o=u.autoRefresh(process.argv[2],process.argv[3]);if(o)console.log(o)' "$P/lib/upgrade-files.mjs" "$root" "$P/templates" 2>/dev/null || true
 # A newer GTM Brain where this install came from: checked in the background at most once a day (a shallow
 # fetch of one ref, never in the hook's own time); the last result is said here and shown on the page.
 if [ -z "${GTM_BRAIN_NO_VERSION_CHECK:-}" ] && [ -f "$P/scripts/gtm-brain-update-plugin/check-version.mjs" ] && node "$H" can update-check; then
