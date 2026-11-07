@@ -383,3 +383,13 @@ test('customer relationships use the same source controls as other entity eviden
  assert.match(html,/example.com/);assert.match(html,/Attio/);
  assert.doesNotMatch(html,/Open in url|open_with_url/);
 });
+
+test(`contexts show no in-use label and open the one with the newest note`,()=>{
+ const D=fixture();
+ D.contexts.push({...context('pricing',[{...memory('m_bbbbbb','Price change','pricing'),at:'2026-11-06T10:00:00Z'}]),loaded:false,lastMemory:'2026-11-06T10:00:00Z'});
+ D.contexts[0].lastMemory='2026-09-14T10:00:00Z';
+ const p=page(D);p.run('show("contexts")');
+ assert.doesNotMatch(p.node('#context-directory').innerHTML+p.node('#ch-pane').innerHTML,/In use/);
+ assert.match(p.node('#ch-pane').innerHTML,/id="context-title"[^>]*>pricing/);
+ assert.equal(p.run('D.loaded.join(",")'),'market');
+});
