@@ -259,3 +259,16 @@ test("--files lists what a document owns; the old guideline.mjs path still runs"
   const old = execFileSync(process.execPath, [`${P}/scripts/gtm-brain-guidelines/guideline.mjs`, ".", "--list"], { cwd: root, encoding: "utf8", env });
   assert.match(old, /Design system \[draft\]/);
 });
+
+test("upgrade refreshes a README a release wrote and keeps one the person edited", () => {
+  const up = root => execFileSync("bash", [`${P}/scripts/gtm-brain-upgrade/upgrade.sh`, root], { cwd: root, encoding: "utf8", env: { ...env, GTM_BRAIN_NO_COMMIT: "1" } });
+  const old = readFileSync(`${P}/templates/legacy/readme/0.31.0.md`, "utf8").replaceAll("{{COMPANY}}", "Reflow");
+  const shipped = brain(); writeFileSync(join(shipped, "README.md"), old);
+  assert.match(up(shipped), /updated README\.md/);
+  const now = readFileSync(join(shipped, "README.md"), "utf8");
+  assert.match(now, /^# Reflow brain/m); assert.match(now, /## What goes where/); assert.match(now, /`work\/`/);
+  assert.doesNotMatch(up(shipped), /README/);
+  const edited = brain(); writeFileSync(join(edited, "README.md"), old + "\nOur own note.\n");
+  assert.doesNotMatch(up(edited), /README/);
+  assert.match(readFileSync(join(edited, "README.md"), "utf8"), /Our own note\./);
+});

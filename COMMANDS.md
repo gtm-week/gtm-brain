@@ -36,7 +36,7 @@ The sections below document the underlying operations, tools, and script paths f
 They are not additional discoverable skills. Tools show outcomes such as "Remembering" or
 "Searching the brain" in chat. Review proposals on the read-only dashboard. APPROVE typed in Codex stays a shell step with its permission prompt.
 Scripts retain their paths for terminal use with
-`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.33.4`.
+`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.33.5`.
 
 Legend for "writes": what files the command changes. Nothing else is ever touched.
 
@@ -511,7 +511,7 @@ strategy.md                          the strategy document, there from setup; gt
 <slug>.md, <folder>/<slug>.md        the documents the work must follow (kind: document); document tool or a hand edit
 <folder>/<slug>/                     a document's files; add-file.mjs --document, or dropped in by hand
 brain/entities/<id>/                 an entity's files; add-file.mjs --entity
-README.md                            what goes where, written by setup and by the first upgrade
+README.md                            what goes where; setup writes it, upgrade refreshes it while unedited
 AGENTS.md                            the rules Codex reads every session
 work/                                local, ignored: dashboard, loaded set, tools, logs, proposals
 ~/.gtm-brain/approvals.log              who approved what, outside every brain

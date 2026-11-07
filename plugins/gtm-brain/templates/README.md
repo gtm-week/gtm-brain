@@ -1,21 +1,40 @@
 # {{COMPANY}} brain
 
-Made with GTM Brain. Four kinds of things live in this folder.
+Made with GTM Brain. This page says what goes where. Codex follows the same rules, so a file is
+always in one of the places below.
 
-- **A document**: something we wrote and the work must follow. `strategy.md` is here from day
-  one, waiting for the strategic intake (say `run the strategic intake`); `brand/voice.md`,
-  `pricing/pricing.md` come as you add them. One Markdown file is the document; the first file
-  you attach moves it into a folder of its own name with the file beside it
-  (`strategy/strategy.md`, `strategy/deck.pdf`). Any folder name works. Wrote one by hand? Say
-  `add pricing.md as a document`.
-- **A workflow**: a document in `workflows/` that plays out over time: things to settle before
-  starting, steps with gates, what to read back at the end. Two come with GTM Brain as drafts.
-  Say `start the outbound workflow`; the brain keeps the run's state and says when a step is due.
-- **A project**: a folder for one piece of work (`website/`, an event). Make or link one with
-  `/gtm-brain-project`; open it in Codex and work there. To work on a document, just open its
-  folder in Codex: it sees the brain without being linked. Link only folders that hold
-  deliverables; a folder that holds documents is refused.
-- **`brain/`**: what Codex remembers: notes by topic, people, companies. Read it; let Codex write
-  it. `work/` is scratch and stays out of git.
+## What goes where
 
-Nothing else belongs at this level. Did it happen? Say it in the chat; Codex notes it.
+| You have | It goes in | Who writes it |
+| --- | --- | --- |
+| Something the work must follow: strategy, tone of voice, pricing, design system | `<name>.md` at this level, e.g. `pricing.md` | you, or Codex when you ask |
+| A file for that document: a deck, a slide template, an Excel | a folder of the same name, e.g. `pricing/pricing.md` with `pricing/model.xlsx` | Codex moves the document into the folder when the first file arrives |
+| A process that runs over time, with steps | `workflows/` | two drafts come with GTM Brain; edit them freely |
+| One piece of work with deliverables (a website, an event) | its own folder, linked with `/gtm-brain-project` | you |
+| Something that happened: a meeting, a call, a decision, a finding | `brain/contexts/<topic>/` | Codex, when you say it in the chat |
+| A person, company or product | `brain/entities/<id>.md`, its files (a logo, a photo) in `brain/entities/<id>/` | Codex; you can edit the text |
+| Company profile: name, team, tools | `brain/admin.md` | Codex proposes, you type APPROVE |
+| Your own Codex skills | `.agents/skills/` | you or Codex |
+
+`strategy.md` is here from day one, waiting for `run the strategic intake`. A file with no owner
+is not stored: Codex asks what it belongs to.
+
+## Inside `brain/`
+
+- `contexts/<topic>/memories.jsonl`: every note, one per line, never edited. Corrections are new notes.
+- `contexts/<topic>/context.md`: the summary of those notes, rewritten by Codex.
+- `entities/`: who and what the notes are about. One file each, shared by every topic and project.
+- `admin.md`: the company profile. Protected.
+- `ontology.ossie.json`: actions your own tools can run. Protected.
+
+A project is not a separate memory. Its notes go into the same contexts, tagged with the project,
+so people and companies stay shared.
+
+## Not yours to edit
+
+- `AGENTS.md`, `CLAUDE.md`: the rules Codex and Claude follow in this folder.
+- `work/`: this computer's scratch: the dashboard, logs, the search index. Not in git, rebuilt
+  when needed, safe to delete.
+
+Nothing else belongs at this level: a `company/` or `assets/` folder is a container nobody reads.
+Did it happen? Say it in the chat; Codex notes it.
