@@ -35,7 +35,8 @@ brain valid and commit every write; the hooks refuse a direct edit of `brain/adm
      `description`, `example`. The dashboard lists skills from here, group by group, so put the
      entry after the last one of its group, not at the end of the file.
    - `plugins/gtm-brain/test/skill-catalog.test.mjs`: add the id to the list of shipped skills
-     in "the person can ask for ... shipped workflows".
+     in "the person can ask for ... shipped workflows". The test compares a sorted list, so put the id in
+     alphabetical order.
    - The skill tables in `README.md`, `COMMANDS.md` and `ONBOARDING.md`: one row each.
    - The skill count ("fourteen") in `README.md`, `CLAUDE.md`, `CONTRIBUTING.md` and
      `USER-SKILLS.md`, plus the skill list in the layout blocks of `README.md` and `CONTRIBUTING.md`.
@@ -63,6 +64,10 @@ For a vendor such as Zynt, the contract between your tool and the brain:
 
 - **The connector is yours, the sign-in is the person's.** They add your MCP server in Codex and
   sign in there. The brain never holds a key or a token.
+- **GTM Brain does not see your connector yet.** Its tool check only knows official Codex plugins.
+  A server added by hand is not in the tools list or on the dashboard, and `gtm-brain-configure`
+  cannot install it. So put your own connect steps in the skill, check your tools are callable
+  first, and when they are not, say so and show those steps.
 - **The brain keeps pointers, not your data.** A signal or a news item becomes one short note in
   the right context, with `sources` set to `yourtool:<url or id>`. Raw lists, exports and payloads
   stay with you.
