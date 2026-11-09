@@ -94,7 +94,12 @@ document is the statement, the notes are the evidence. A document a chat or a sk
 strategy, a plan) is written as a document through `document`, at the root or in the
 folder the person names; its decisions and findings also become memories, and a draft in
 progress lives in the project folder it belongs to. Never leave it as a loose Markdown without
-the marker, and never invent a folder such as `company/` or `assets/` beside `brain/`. A playbook
+the marker, and never invent a folder such as `company/` or `assets/` beside `brain/`. Work built for a task (a
+deck, a site, an export, a batch of downloads) goes in a linked project folder
+(gtm-brain-project), never at the brain root; with no project yet, offer one before building. A
+raw source (transcripts, a zip, a dump) lands beside the document, person, company or product it
+belongs to, and is unpacked under `work/`, never at the root; only what is worth keeping becomes
+a document or notes. A playbook
 is a workflow (gtm-brain-workflow): steps that play out over time, started and tracked as a run.
 The files in `brain/entities/` form the global identity registry and readable entity briefs.
 Each Markdown file holds a stable ID, canonical name, kind, aliases, contacts and external

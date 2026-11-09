@@ -900,6 +900,16 @@ function landingSession(root, input) {
     return session;
   } catch { return null; }
 }
+/* A folder too broad to be a brain: every chat there works at the brain root, so downloads and builds land
+   among the person's own files (Artur, 2026-11-06: a brain in his home folder). The name or "" when fine. */
+export function broadFolder(dir) {
+  const real = p => { try { return realpathSync(p); } catch { return p; } };
+  const here = real(dir), home = real(homedir());
+  if (here === home) return "your home folder";
+  if (here === dirname(home) || here === dirname(here)) return "a system folder";
+  return ["Desktop", "Documents", "Downloads"].find(name => here === real(join(home, name))) || "";
+}
+
 /* Before setup, work may contain only the session captured from actual hook stdin.
    Never adopt unrelated work files or follow bootstrap symlinks. The same check governs
    the empty-folder opener and setup, so capturing a chat does not make its folder dirty. */

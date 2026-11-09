@@ -182,7 +182,7 @@ add that folder. Then start a new chat in it.
 |---|---|
 | Codex cannot read the install page or download GTM Brain | Your GitHub account has no access yet, or this computer is not signed in to GitHub. Ask the person who invited you, then say "sign me in to GitHub and try again". |
 | "Safety locks" are reported as off | Everything else still works. Say "turn on the GTM Brain safety locks"; the app may also offer to review them when you open the project. Accept. |
-| Setup says the folder is not empty | Create a fresh empty folder as a new project and send "Set up GTM Brain here" there. |
+| Setup says the folder is not empty, or too broad | Create a fresh empty folder as a new project and send "Set up GTM Brain here" there. |
 | A tool will not connect | Skip it and carry on. Later, say "connect my tools" to retry. |
 | You closed the chat mid-setup | Open a new chat in the same project and say "hi". Setup resumes. |
 | GTM Brain commands are missing after an update | Quit Codex completely, reopen it, start a new chat. |

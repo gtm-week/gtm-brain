@@ -28,6 +28,8 @@ for (let dir = process.cwd(); ; dir = dirname(dir)) {
   if (dirname(dir) === dir) break;
 }
 NODE
+broad="$(node -e 'const l=await import(process.argv[1]);console.log(l.broadFolder("."))' "$PLUGIN/lib/brain.mjs")"
+[ -z "$broad" ] || { echo "gtm-brain: this is $broad, too broad for a brain: every chat here would leave its downloads and builds among your own files. Create a folder of its own, such as ~/Documents/$COMPANY Brain, open it and set up there." >&2; exit 1; }
 others="$(node -e 'const l=await import(process.argv[1]);console.log(l.setupBlockers(".").join("\n"))' "$PLUGIN/lib/brain.mjs")"
 [ -z "$others" ] || { echo "gtm-brain: this folder is not empty ($(printf '%s' "$others" | tr '\n' ' ')). Setup creates its own repo, hooks and git identity here; use an empty folder." >&2; exit 1; }
 [ "$TEAM" = "none" ] && TEAM=""

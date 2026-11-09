@@ -298,3 +298,21 @@ test("upgrade pulls a document into the folder of its own name that sits beside 
   assert.ok(!existsSync(join(root, "design-system.md"))); assert.match(readFileSync(join(root, "design-system", "design-system.md"), "utf8"), /^status: approved$/m);
   assert.doesNotMatch(run().stdout, /moved design-system\.md/, "a second run has nothing to move");
 });
+
+test("setup refuses a folder too broad for a brain, before writing anything, and says where to go", t => {
+  const home = mkdtempSync(join(tmpdir(), "gtm-broad-home-")); t.after(() => rmSync(home, { recursive: true, force: true }));
+  const desktop = join(home, "Desktop"), fine = join(home, "Documents", "Reflow Brain"); mkdirSync(desktop); mkdirSync(fine, { recursive: true });
+  const setup = cwd => spawnSync("bash", [join(plugin, "scripts/gtm-brain-setup/setup.sh"), "--company", "Reflow", "--one-liner", "Testing", "--owner", "Ann Lee <ann@example.test>"], { cwd, env: { ...process.env, HOME: home, CODEX_HOME: join(home, "profile"), GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_COMPILE: "1" }, encoding: "utf8" });
+  for (const [cwd, name] of [[home, "your home folder"], [desktop, "Desktop"], [join(home, "Documents"), "Documents"]]) {
+    const r = setup(cwd);
+    assert.equal(r.status, 1); assert.match(r.stderr, new RegExp(`this is ${name}, too broad[^\\n]*~/Documents/Reflow Brain`));
+    assert.equal(existsSync(join(cwd, "brain")), false);
+  }
+  const ok = setup(fine); assert.equal(ok.status, 0, ok.stderr); assert.equal(existsSync(join(fine, "brain/admin.md")), true);
+});
+
+test("the rules say where work output and raw sources go", () => {
+  const rules = readFileSync(join(plugin, "templates/AGENTS.md"), "utf8").replace(/\s+/g, " ");
+  assert.match(rules, /Work built for a task \(a deck, a site, an export, a batch of downloads\) goes in a linked project folder/);
+  assert.match(rules, /A raw source \(transcripts, a zip, a dump\) lands beside the document, person, company or product it belongs to, and is unpacked under `work\/`, never at the root/);
+});

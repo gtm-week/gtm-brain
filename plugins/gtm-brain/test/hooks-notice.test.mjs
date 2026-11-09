@@ -74,10 +74,11 @@ test("a hook switched off in Codex is off too: reported once (Artur, 2026-11-06)
 
 function brainFolder(t) {
   // HOME is the throwaway folder too: setup registers the brain in ~/.codex/gtm-brain, never the real one.
-  const root = mkdtempSync(join(tmpdir(), "gtm-brain-hooks-brain-"));
-  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const home = mkdtempSync(join(tmpdir(), "gtm-brain-hooks-brain-")), root = join(home, "brain");
+  t.after(() => rmSync(home, { recursive: true, force: true }));
+  mkdirSync(root);
   const P = new URL("..", import.meta.url).pathname;
-  execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "Reflow", "--one-liner", "returns automation", "--owner", "Marta Nowak <marta@reflow.io>"], { cwd: root, env: { ...process.env, HOME: root, PLUGIN_ROOT: P, GTM_BRAIN_NO_COMMIT: "1" }, stdio: "ignore" });
+  execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "Reflow", "--one-liner", "returns automation", "--owner", "Marta Nowak <marta@reflow.io>"], { cwd: root, env: { ...process.env, HOME: home, PLUGIN_ROOT: P, GTM_BRAIN_NO_COMMIT: "1" }, stdio: "ignore" });
   return root;
 }
 
