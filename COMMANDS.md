@@ -36,7 +36,7 @@ The sections below document the underlying operations, tools, and script paths f
 They are not additional discoverable skills. Tools show outcomes such as "Remembering" or
 "Searching the brain" in chat. Review proposals on the read-only dashboard. APPROVE typed in Codex stays a shell step with its permission prompt.
 Scripts retain their paths for terminal use with
-`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.33.7`.
+`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.33.8`.
 
 Legend for "writes": what files the command changes. Nothing else is ever touched.
 
@@ -413,7 +413,7 @@ plugins that `admin.md` does not mention. The check itself runs at every session
 offers fixes unasked. Saying it runs the read tests too. Installs on a yes per tool. Sign-in is
 yours and lives in your Codex.
 
-Tools: `check_tools`, `mark_tool`. Writes: `work/tools.json` (local); installs Codex plugins on request.
+Tools: `check_tools`, `mark_tool`. Also reads remote MCP servers from Codex's `config.toml`. Writes: `work/tools.json` (local); installs Codex plugins on request.
 `node $PLUGIN_ROOT/scripts/gtm-brain-connect/connect.mjs . --check`, `... --mark <tool> ok|fail "note"`
 
 ### approve

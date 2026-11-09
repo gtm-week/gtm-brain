@@ -46,6 +46,13 @@ If the check ends with *"installed in Codex but not in admin.md tools: linear, g
 offer once: *"You have Linear and Google Calendar connected; add them to the tools list?"* On
 yes, propose the `admin.md` change through the `gtm-brain-configure` workplace-change procedure (the person types APPROVE).
 
+## Step 1c: MCP servers added by hand
+
+The check also reads remote MCP servers from Codex's `config.toml`. One that matches a tool in
+`admin.md` counts as installed. One that does not (*"connected as MCP servers, not in admin.md
+tools: Zynt"*) is on the dashboard already, as installed and untested, with no APPROVE. Offer once
+to add it to the company profile. A tool used outside Codex has no entry and stays listed only.
+
 ## Step 2: choose once, install the selected tools
 
 An explicit "connect Gmail and Google Calendar" request in Codex authorizes installing those named tools. Do not ask for another yes per tool.
@@ -89,6 +96,10 @@ For "no official plugin" tools: say the tool will work by export or paste, and c
 relevant context's rule says so (`Granola: export the transcript and drop it in`).
 
 ## Step 3: read test, per installed tool
+
+Codex lists a chat's tools when the chat starts. If a tool was connected in this chat and its
+tools are not here, say so and ask the person to open a new chat and run the read test there.
+Never use the tool's website instead.
 
 Call the plugin's smallest read operation yourself and report what came back in one line:
 

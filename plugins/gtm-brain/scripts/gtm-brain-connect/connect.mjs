@@ -73,7 +73,16 @@ try {
     if (c.fetched_at && (!catalogAt || c.fetched_at > catalogAt)) catalogAt = c.fetched_at;
   }
 } catch {}
-for (const p of plugins.values()) if (!p.display) p.display = p.id.startsWith("app-") ? null : p.id.replace(/-/g, " ").replace(/\b\w/g, ch => ch.toUpperCase());
+// An installed plugin the catalog cache misses keeps an opaque app-... id; its own manifest still has the name.
+const codexHome = process.env.CODEX_HOME || join(homedir(), ".codex");
+const manifestName = p => {
+  try {
+    const dir = join(codexHome, "plugins", "cache", p.marketplace, p.id);
+    for (const version of readdirSync(dir)) { const m = JSON.parse(readFileSync(join(dir, version, ".codex-plugin", "plugin.json"), "utf8")); const name = m.interface?.displayName || m.displayName; if (name) return name; }
+  } catch {}
+  return null;
+};
+for (const p of plugins.values()) if (!p.display) p.display = p.id.startsWith("app-") ? manifestName(p) : p.id.replace(/-/g, " ").replace(/\b\w/g, ch => ch.toUpperCase());
 
 /* ---------- matching a tool name to a plugin ---------- */
 const norm = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]/g, "");
@@ -101,6 +110,15 @@ const prefer = (list, nk) => [...list].sort((a, b) => (b.state === "enabled") - 
 
 /* ---------- the report ---------- */
 const previous = Object.values(state);
+/* Remote MCP servers added to Codex by hand (ZYNT, Pocket): not plugins, so `codex plugin list` never names them.
+   Local command servers are left out: those are developer tools, not a GTM person's. */
+const DEV = new Set(["github", "vercel", "supabase", "data-analytics", "openai-developers"]);
+const mcpServers = (() => {
+  let text; try { text = readFileSync(join(codexHome, "config.toml"), "utf8"); } catch { return []; }
+  return [...text.matchAll(/^\[mcp_servers\.(?:"([^"]+)"|([A-Za-z0-9_-]+))\]\s*\n((?:^(?!\[).*\n?)*)/gm)]
+    .filter(m => /^\s*url\s*=/m.test(m[3])).map(m => m[1] || m[2]).filter(s => !DEV.has(s) && norm(s) !== "gtmbrain");
+})();
+const mcpFor = tool => { const nk = norm(key(tool)); return mcpServers.find(s => norm(s).length >= 3 && nk.startsWith(norm(s))) || null; };
 const rows = [];
 for (const tool of admin.tools || []) {
   const { plugin: p, also } = findPlugin(tool); const prev = state[key(tool)] || {};
@@ -108,7 +126,8 @@ for (const tool of admin.tools || []) {
     : p.state === "enabled" ? "installed" : p.state === "disabled" ? "installed, disabled" : "available, not installed";
   // Without `codex plugin list` the install state is unknown: the last known one stands, never a guess.
   if (!listed) status = prev.status && prev.status !== "not checked" ? prev.status : "not checked (codex plugin list failed)";
-  state[key(tool)] = { ...prev, suggested: false, tool, plugin: p ? p.id : prev.plugin || null, marketplace: p ? p.marketplace : prev.marketplace || null, display: p ? p.display : prev.display || null, status, ...(listed ? { checked_at: new Date().toISOString() } : {}) };
+  const server = status === "installed" ? null : mcpFor(tool); if (server) status = "installed";
+  state[key(tool)] = { ...prev, suggested: false, mcp: false, tool, plugin: server || (p ? p.id : prev.plugin || null), marketplace: p ? p.marketplace : prev.marketplace || null, display: p ? p.display : prev.display || null, status, ...(listed ? { checked_at: new Date().toISOString() } : {}) };
   rows.push({ tool, p, also, status, test: prev.test || null, note: prev.note || "", stale: !listed && !!prev.checked_at ? prev.checked_at : null });
 }
 /* ---------- the floor: email, calendar and the CRM are suggested even before admin.md names them ----------
@@ -120,6 +139,10 @@ for (const tool of admin.tools || []) {
    connect picker and the session status line show it from the very first check. Recomputed each
    run; disappears the moment admin.md names a tool that covers it. */
 if (listed) for (const k of Object.keys(state)) if (state[k] && state[k].suggested) delete state[k];
+// Connected by hand and not in admin.md: on the page as they are, no APPROVE needed. Gone from config.toml, gone here.
+const manual = mcpServers.filter(s => !(admin.tools || []).some(t => mcpFor(t) === s));
+for (const k of Object.keys(state)) if (state[k] && state[k].mcp && !manual.some(s => key(s) === k)) delete state[k];
+for (const s of manual) state[key(s)] = { ...(state[key(s)] || {}), tool: state[key(s)]?.tool || s.replace(/[-_]+/g, " ").replace(/\b\w/g, ch => ch.toUpperCase()), plugin: s, status: "installed", mcp: true, suggested: false };
 const covered = re => rows.some(r => re.test(norm(r.tool)) || (r.p && re.test(norm(r.p.id))));
 const SUGGEST = [{ re: /mail/, ids: ["gmail", "outlook-email"] }, { re: /calendar/, ids: ["google-calendar"] },
   { re: /crm|hubspot|attio|salesforce|pipedrive|zoho|freshsales|^close$|closeio|folk|nutshell/, ids: ["hubspot", "attio"], why: p => p.id === "hubspot" ? "the CRM: the course gives you HubSpot; say so if yours is Attio" : `the CRM: ${p.display || p.id} is installed here` }];
@@ -134,7 +157,7 @@ if (listed) for (const { re, ids, why } of SUGGEST) {
   state[key(tool)] = { ...prev, tool, plugin: p.id, marketplace: p.marketplace, display: p.display, status, suggested: true, checked_at: new Date().toISOString() };
   suggested.push({ tool, status, p, why: typeof why === "function" ? why(p) : why, declined: !!prev.declined });
 }
-for (const k of Object.keys(state)) if (!(state[k] && state[k].suggested) && !(admin.tools || []).some(t => key(t) === k)) delete state[k]; // a tool removed from admin.md leaves the record
+for (const k of Object.keys(state)) if (!(state[k] && (state[k].suggested || state[k].mcp)) && !(admin.tools || []).some(t => key(t) === k)) delete state[k]; // a tool removed from admin.md leaves the record
 writeFileSync(wf, JSON.stringify(state, null, 1));
 console.log(`tools in admin.md: ${rows.length}${listed ? "" : " · codex plugin list failed: install state as last checked, not re-checked now"}${catalogAt ? ` · catalog as of ${lib.localDateTime(catalogAt)}` : " · no catalog cache yet (open the Codex app once)"}`);
 for (const r of rows) {
@@ -145,10 +168,10 @@ for (const r of rows) {
 }
 // installed official plugins that admin.md does not mention: offer to add them. Codex's own defaults
 // (installed by default) and developer plugins are left out; they are not a GTM person's tools.
-const DEV = new Set(["github", "vercel", "supabase", "data-analytics", "openai-developers"]);
 const known = new Set(rows.map(r => r.p && r.p.id).filter(Boolean));
-const extra = candidates().filter(p => p.state === "enabled" && !known.has(p.id) && !DEV.has(p.id) && p.policy !== "INSTALLED_BY_DEFAULT").map(p => p.display || p.id);
+const extra = candidates().filter(p => p.state === "enabled" && !known.has(p.id) && !DEV.has(p.id) && p.policy !== "INSTALLED_BY_DEFAULT" && !mcpServers.some(m => norm(p.display).startsWith(norm(m)))).map(p => p.display || p.id);
 if (extra.length) console.log(`\ninstalled in Codex but not in admin.md tools: ${extra.join(", ")}. Offer to add them (gtm-brain-configure workplace-change procedure).`);
+if (manual.length) console.log(`\nconnected as MCP servers, not in admin.md tools: ${manual.map(s => state[key(s)].tool).join(", ")}. They are on the dashboard already; offer once to add them to the company profile (gtm-brain-configure workplace-change procedure).`);
 for (const s of suggested) {
   if (s.declined) { console.log(`\ndeclined earlier: ${s.tool} (not offered again unless they ask)`); continue; }
   console.log(`\nsuggested (${s.why || "the pulse of the company"}, not yet in admin.md): ${s.tool}  ${s.status}`);
