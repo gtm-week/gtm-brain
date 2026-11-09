@@ -372,17 +372,18 @@ const WORKFLOWS = `During company work, read ${join(P, "skills/gtm-brain-use-bra
 // review or switched off). And what the hooks leave behind, which needs no Codex on the PATH: the
 // PostToolUse hook logs every GTM Brain call to work/tool-usage.jsonl and SessionStart logs to
 // work/hooks.log. A call that left no line after HOOK_WAIT_MS, in a brain with no hook line for a day
-// before it, means they are not running (Artur, 2026-11-06: disabled hooks, no notice).
+// before it, means they are not running (Artur, 2026-11-06: disabled hooks, no notice). That signal
+// is the one for a missing or old codex CLI, which "update GTM Brain" needs, so it names Codex's settings.
 const HOOK_WAIT_MS = Number(process.env.GTM_BRAIN_HOOK_WAIT_MS) || 15000;
 const HOOK_DAY_MS = 864e5;
-let hooksOff = null, hooksTold = false, probe = null;
+let hooksOff = null, hooksHow = null, hooksTold = false, probe = null;
 function tail(file) { try { const s = readFileSync(file, "utf8"); return s.slice(-65536).split("\n"); } catch { return []; } }
 function hookActivity(brain, since) {
   const used = tail(join(brain, "work", "tool-usage.jsonl")).some(l => { try { return Date.parse(JSON.parse(l).at) >= since; } catch { return false; } });
   return used || tail(join(brain, "work", "hooks.log")).some(l => / SessionStart /.test(l) && new Date(l.slice(0, 19).replace(" ", "T")).getTime() >= since);
 }
 function hooksAreOff(brain, how) {
-  hooksOff = true;
+  hooksOff = true; hooksHow = how;
   try { if (isBrain(brain)) writeFileSync(join(brain, "work", "hooks-off.json"), JSON.stringify({ at: new Date().toISOString(), how }) + "\n"); } catch {}
 }
 function checkHooks(brain) {
@@ -401,7 +402,7 @@ function checkHooks(brain) {
 function withHooksNotice(result) {
   if (!hooksOff || hooksTold || !host().texts.hooksOff()) return result;
   hooksTold = true;
-  return { ...result, content: [...(result.content || []), { type: "text", text: host().texts.hooksOff() }] };
+  return { ...result, content: [...(result.content || []), { type: "text", text: host().texts.hooksOff(hooksHow) }] };
 }
 
 /* ---------- JSON-RPC over stdio ---------- */

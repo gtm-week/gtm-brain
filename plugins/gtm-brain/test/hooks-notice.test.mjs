@@ -88,6 +88,9 @@ test("hooks that leave no trace are off, with no Codex on the PATH to ask: line,
   assert.equal(asked, false);
   assert.equal(texts.filter(x => x.includes("GTM BRAIN SAFETY LOCKS OFF")).length, 1, texts.join("\n---\n"));
   assert.equal(JSON.parse(readFileSync(join(brain, "work", "hooks-off.json"), "utf8")).how, "silent");
+  const told = texts.find(x => x.includes("GTM BRAIN SAFETY LOCKS OFF"));
+  assert.match(told, /In Codex settings, approve GTM Brain's hooks and switch them on/);
+  assert.doesNotMatch(told, /Say: update GTM Brain/, "the update needs the codex CLI this case lacks");
 });
 
 test("a hook line from today means they run: no line, and an old dashboard state is cleared", async t => {
