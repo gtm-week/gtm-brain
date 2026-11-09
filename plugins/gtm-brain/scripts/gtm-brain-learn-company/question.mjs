@@ -8,7 +8,8 @@ const OR_LABEL = 'Or type an answer';
 // choices would be a second page on every question (2026-09-21). A choice the model wrote that already
 // means this ("Other", "Something else") plays the part, so it is never offered twice.
 export const SOMETHING_ELSE = 'Something else';
-const ELSE = /^(other|something else|none of (these|the above))\b/i;
+// Only the bare words: "Other company" or "Something else entirely" is a real choice, which must not lose the typed answer.
+const ELSE = /^(other|something else|none of (these|the above))[.:!]?$/i;
 export const elseChoice = args => args.options?.find(o => ELSE.test(o.trim())) ?? SOMETHING_ELSE;
 const choices = args => args.options && (args.options.some(o => ELSE.test(o.trim())) ? args.options : [...args.options, SOMETHING_ELSE]);
 
