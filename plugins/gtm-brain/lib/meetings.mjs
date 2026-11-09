@@ -185,6 +185,7 @@ export function meetingOverview(root, { by, meeting_id, entity, from, to, state,
 export function meetingCaptureStatus(root, overview) {
   if (!overview.coverage.length && !existsSync(join(root, 'work/sync.json'))) return 'No sync has finished in this brain, so meetings appear only when you ask for one. Say: set up the daily sync.';
   if (!overview.policies.length) return 'Sync skips meetings until capture is set up for you. Say: capture my meetings.';
+  if (!overview.coverage.length) return 'Meeting capture is set up, but no meeting source has been checked yet, so meetings may be missing.';
   return null;
 }
 

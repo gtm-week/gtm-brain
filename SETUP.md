@@ -29,7 +29,7 @@ codex plugin marketplace add gtm-week/gtm-brain   # straight from GitHub (verifi
 codex plugin marketplace upgrade gtm-brain        # refresh an existing marketplace snapshot
 codex plugin add gtm-brain@gtm-brain
 node "$(ls -d ~/.codex/plugins/cache/gtm-brain/gtm-brain/*/ | sort -V | tail -1)hooks/trust-hooks.mjs" --trust   # approve the hooks; installing does not
-codex plugin list | grep gtm-brain                                      # installed, enabled, 0.33.6
+codex plugin list | grep gtm-brain                                      # installed, enabled, 0.33.7
 ```
 
 The install is a snapshot of the configured branch. In the Codex app, say **"update GTM Brain"**
