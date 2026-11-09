@@ -470,10 +470,11 @@ marketplace cache when updating. No brain files.
 After a plugin update: refreshes `AGENTS.md`, the pre-commit hook and `.gitignore` in an
 existing brain. Validates editable identities first and migrates legacy identity files with
 backups when needed. Contexts, memories, workplace settings and personal preferences remain.
-The session hook refreshes `AGENTS.md` on its own, and only that file, when it is exactly a recent
-shipped version with no other upgrade step still to run, and says so in one line. Older brains, edited
-rules and scheduled runs are offered "refresh the rules" instead; a refresh of edited rules pauses
-with a proposed file to merge.
+The session hook refreshes `AGENTS.md` on its own when it is exactly a recent shipped version with no
+other upgrade step still to run, and says so in one line. Older brains, edited rules and scheduled
+runs are offered "refresh the rules" instead; a refresh of edited rules pauses with a proposed file
+to merge. It also refreshes `README.md`, silently, when that is exactly what a release wrote. Each
+refresh commits only its own file.
 
 Tool: `upgrade_brain`. Writes: `AGENTS.md`, `.githooks/pre-commit`, `.gitignore`, upgrade
 backups, and identity files only when migration is needed.
