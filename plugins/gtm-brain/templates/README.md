@@ -33,8 +33,8 @@ so people and companies stay shared.
 ## Not yours to edit
 
 - `AGENTS.md`, `CLAUDE.md`: the rules Codex and Claude follow in this folder.
-- `work/`: this computer's scratch: the dashboard, logs, the search index. Not in git, rebuilt
-  when needed, safe to delete.
+- `work/`: this computer's working files: the dashboard, logs and search index, plus the projects
+  linked here and the backups from upgrades. Not in git. Leave it alone: deleting it loses those.
 
 Nothing else belongs at this level: a `company/` or `assets/` folder is a container nobody reads.
 Did it happen? Say it in the chat; Codex notes it.

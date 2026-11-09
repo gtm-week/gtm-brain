@@ -1,5 +1,5 @@
 // Protect locally edited instructions before refreshing plugin-owned files.
-import { existsSync, readFileSync, mkdirSync, copyFileSync, writeFileSync, mkdtempSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, mkdirSync, copyFileSync, writeFileSync, mkdtempSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { readAdmin, readNames, commit } from "./brain.mjs";
 
@@ -57,6 +57,19 @@ export function autoRefresh(root, templates) {
   commit(root, ["AGENTS.md"], "upgrade: rules refreshed");
   const why = reasons.length ? reasons.join("; ") : "they name tools and habits the plugin has moved on from";
   return `GTM Brain refreshed this brain's rules (AGENTS.md) from GTM Brain ${from} on its own: they were exactly the shipped text.${backup ? ` The old file is kept in ${backup}.` : ""} What the newer rules change: ${why}. Say so in one line, in plain words, the change that matters most for this person first; do not ask, it is done.`;
+}
+
+/* The README refreshed at chat start, like the rules: only when it is exactly what a release wrote,
+   and committing nothing else. Scheduled runs leave it for the next chat. */
+export function refreshReadme(root, templates) {
+  const company = readAdmin(root)?.company, path = join(root, "README.md");
+  if (process.env.GTM_BRAIN_RUN || !company || !existsSync(path)) return false;
+  const render = file => readFileSync(file, "utf8").replaceAll("{{COMPANY}}", company);
+  const current = readFileSync(path, "utf8"), next = render(join(templates, "README.md")), shipped = join(templates, "legacy", "readme");
+  if (current === next || !readdirSync(shipped).some(f => f.endsWith(".md") && render(join(shipped, f)) === current)) return false;
+  writeFileSync(path, next);
+  commit(root, ["README.md"], "upgrade: README refreshed");
+  return true;
 }
 
 /* Where a brain's rules stand against the plugin: current, a shipped older version (legacy),

@@ -316,3 +316,30 @@ test("the rules say where work output and raw sources go", () => {
   assert.match(rules, /Work built for a task \(a deck, a site, an export, a batch of downloads\) goes in a linked project folder/);
   assert.match(rules, /A raw source \(transcripts, a zip, a dump\) lands beside the document, person, company or product it belongs to, and is unpacked under `work\/`, never at the root/);
 });
+
+test("the session hook refreshes a README a release wrote, commits only it, and leaves an edited one alone", t => {
+  const old = readFileSync(join(plugin, "templates/legacy/readme/0.31.0.md"), "utf8").replaceAll("{{COMPANY}}", "Upgrade Co");
+  const target = readFileSync(join(plugin, "templates/README.md"), "utf8").replaceAll("{{COMPANY}}", "Upgrade Co");
+  const f = fixture(t), git = (...a) => spawnSync("git", ["-C", f.root, ...a], { encoding: "utf8" }).stdout;
+  writeFileSync(join(f.root, "README.md"), old);
+  spawnSync("git", ["-C", f.root, "add", "-A"]); spawnSync("git", ["-C", f.root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "base"]);
+  writeFileSync(join(f.root, "pricing.md"), "HALF WRITTEN\n");
+  sessionHook(f, { GTM_BRAIN_NO_COMMIT: "" });
+  assert.equal(readFileSync(join(f.root, "README.md"), "utf8"), target);
+  assert.deepEqual(git("show", "--name-only", "--format=", "HEAD").trim().split("\n"), ["README.md"]);
+  assert.match(git("status", "--porcelain"), /pricing\.md/);
+
+  const edited = fixture(t); writeFileSync(join(edited.root, "README.md"), old + "\nOur own note.\n");
+  sessionHook(edited);
+  assert.match(readFileSync(join(edited.root, "README.md"), "utf8"), /Our own note\./);
+
+  const scheduled = fixture(t); writeFileSync(join(scheduled.root, "README.md"), old);
+  sessionHook(scheduled, { GTM_BRAIN_RUN: "1" });
+  assert.equal(readFileSync(join(scheduled.root, "README.md"), "utf8"), old);
+});
+
+test("the README does not call work/ safe to delete", () => {
+  const readme = readFileSync(join(plugin, "templates/README.md"), "utf8");
+  assert.doesNotMatch(readme, /safe to delete/);
+  assert.match(readme, /`work\/`[^\n]*\n[^\n]*deleting it loses those/);
+});
