@@ -22,7 +22,7 @@ import { readEntityFiles, writeEntityFiles, entityId, entityType, ENTITY_FORMAT,
 import { appendMemoryBytes } from './memory-journal.mjs';
 import { requestDashboardRefresh } from './dashboard-refresh.mjs';
 import { MEETING_FIELDS, validateMeetingEvidence, prepareMeetingMemory, duplicateMeetingMemory, meetingMetadata } from './meetings.mjs';
-export { meetingOverview, meetingSourceSuggestions, validateMeetingEvidence, prepareMeetingMemory, meetingMetadata } from './meetings.mjs';
+export { meetingOverview, meetingCaptureStatus, meetingSourceSuggestions, validateMeetingEvidence, prepareMeetingMemory, meetingMetadata } from './meetings.mjs';
 import { validateCustomerEvidence, guardCustomerCorrection } from "./customers.mjs";
 import { host, hostId, HOST_DIRS } from "./host.mjs";
 export { customerOverview, customerIdentity, validateCustomerEvidence, guardCustomerCorrection } from "./customers.mjs";

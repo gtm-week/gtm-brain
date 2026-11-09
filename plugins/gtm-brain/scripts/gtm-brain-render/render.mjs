@@ -98,6 +98,7 @@ data.runs = snapshot?.runs || listRuns(root);   // workflow runs (lib/workflows.
 data.assets = assetRows(root, snapshot?.specialContexts || sourceContexts);
 data.customers = lib.customerOverview(root, { registry: reg, contexts: snapshot?.specialContexts || sourceContexts });
 data.meetings = lib.meetingOverview(root, { by: lib.currentPerson(root) || undefined, registry: reg, contexts: snapshot?.specialContexts || sourceContexts });
+data.meetings.captureStatus = lib.meetingCaptureStatus(root, data.meetings);
 for (const c of contexts) c.summaryPlaceholder = !c.compiledAt && c.summary === "Nothing here yet.";
 // Prebuilt frontend assets keep installation and rendering independent of npm.
 mkdirSync(join(outDir, 'ui', 'fonts'), {recursive:true});

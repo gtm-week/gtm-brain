@@ -131,6 +131,8 @@ if [ -f "$root/work/tools.json" ]; then
 else
   node "$H" text toolsUnchecked
 fi
+# Why meetings may be missing: said to the model, so a bare count is never read as "no meetings".
+node -e 'const l=await import(process.argv[1]);const r=process.argv[2],s=l.meetingCaptureStatus(r,l.meetingOverview(r,{by:l.currentPerson(r)||undefined}));if(s)console.log(`meeting capture: ${s} Say this if the person asks about meetings or a meeting is missing; do not raise it otherwise.`)' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
 # The documents (root Markdown with kind: document): what the work must follow, named every chat so rule 11
 # has something to point at; absolute paths in a linked project, where the landing pages get built.
 node -e 'const d=await import(process.argv[1]);console.log(d.documentsLine(process.argv[2],{absolute:!!process.argv[3]}))' "$P/lib/documents.mjs" "$root" "$project" 2>/dev/null || true

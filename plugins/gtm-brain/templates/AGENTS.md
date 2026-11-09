@@ -138,7 +138,7 @@ An entity mention creates an identity reference, never an automatic context.
 Entities are formal objects, queryable through `list_objects`, `describe_object` and `query`.
 Use `query` on entities, then its stable ID in a memories query with `filters.entities`.
 Customer, partner, competitor and employer are contextual relationships supported by memories.
-Deals remain context information; meetings/events are deferred to a later version. Memories retain customer relationships, source links and scoped coverage, plus other findings; a context's
+Deals and meetings remain context information, not objects of their own. Memories retain customer relationships, source links and scoped coverage, plus other findings; a context's
 cover says which tool to read live.
 
 ## Dates and freshness
@@ -564,7 +564,8 @@ checked scopes and unresolved entries. Missing from CRM is never proof of non-cu
 ## Meeting evidence
 
 When a tool returns a transcript, recording or meeting note, or a person recounts a conversation,
-follow the use-brain workflow reference `meetings.md`. Read `query` (meetings); capture an
+follow the use-brain workflow reference `meetings.md`. This holds when the meeting is read for
+something else: a draft stays unrecorded, the meeting behind it is captured. Read `query` (meetings); capture an
 observation through `remember.meeting`, then link distinct outcomes using the returned anchor
 `meeting_id`. Preserve source IDs and original links. Transcription evidence and direct notes
 drive capture without CRM or calendar prerequisites. Invitations are plans, not attendance.

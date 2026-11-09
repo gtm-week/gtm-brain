@@ -81,7 +81,7 @@ new chat in Codex on the test folder (restart the app only if old skills linger)
 Set this once in your shell; the scripts below use it:
 
 ```bash
-export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.33.6
+export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.33.7
 ```
 
 The last install line approves the plugin's hooks; it ends with `Safety locks: on`. Codex does

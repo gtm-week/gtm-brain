@@ -9,5 +9,6 @@
   "0.31.0": "the product and commands are now named GTM Brain; existing notes, identities and linked projects stay in place",
   "0.32.0": "a Define ICP interview is offered when someone wants to define or rework who to target",
   "0.33.0": "every choice question ends with Something else, which lets the person type their own answer",
-  "0.33.6": "work built for a task goes in a project folder and raw sources beside their owner, so the brain root stays clean"
+  "0.33.6": "work built for a task goes in a project folder and raw sources beside their owner, so the brain root stays clean",
+  "0.33.7": "a meeting read for another task, such as a draft, is still captured in the brain"
 }
