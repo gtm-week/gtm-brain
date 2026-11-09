@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import * as lib from "../lib/brain.mjs";
-import { legacyTemplates, rulesWhy, rulesReasons, rulesState, onlyDrops } from "../lib/upgrade-files.mjs";
+import { legacyTemplates, rulesWhy, rulesReasons, rulesState, autoRefresh } from "../lib/upgrade-files.mjs";
 import { removeBrain } from "./helpers/dash-cleanup.mjs";
 
 const plugin = new URL("../", import.meta.url).pathname;
@@ -172,36 +172,66 @@ test("custom instructions are preserved and a proposed replacement is prepared w
   assert.ok(readFileSync(join(folder, backup, "AGENTS.proposed.md"), "utf8").includes("Operational answers"));
 });
 
-test("the session hook refreshes unedited old rules itself, says so once, and leaves edited rules alone (ALL-204, b-7)", t => {
-  const legacy = fixture(t, "0.17.5"), current = fixture(t), edited = fixture(t, "0.17.5");
-  const hook = f => spawnSync("bash", [join(plugin, "hooks/session-start.sh")], { cwd: f.root, env: { ...f.env, PLUGIN_ROOT: plugin, GTM_BRAIN_NO_VERSION_CHECK: "1", GTM_BRAIN_NO_SESSION_MAINTENANCE: "1" }, encoding: "utf8", input: JSON.stringify({ session_id: "r", cwd: f.root }) }).stdout;
+const sessionHook = (f, env = {}) => spawnSync("bash", [join(plugin, "hooks/session-start.sh")], { cwd: f.root, env: { ...f.env, PLUGIN_ROOT: plugin, GTM_BRAIN_NO_VERSION_CHECK: "1", GTM_BRAIN_NO_SESSION_MAINTENANCE: "1", ...env }, encoding: "utf8", input: JSON.stringify({ session_id: "r", cwd: f.root }) }).stdout;
+
+test("the session hook refreshes unedited recent rules itself, says so once, and leaves edited rules alone", t => {
+  const legacy = fixture(t, "0.31.2"), current = fixture(t), edited = fixture(t, "0.31.2");
   const target = readFileSync(join(plugin, "templates/AGENTS.md"), "utf8").replaceAll("{{COMPANY}}", "Upgrade Co");
   const old = readFileSync(join(legacy.root, "AGENTS.md"), "utf8");
-  assert.match(hook(legacy), /refreshed this brain's rules \(AGENTS\.md\) from GTM Brain 0\.17\.5 on its own[^\n]*kept in [^\n]*work\/upgrades\/before-[^\n]*script cell[^\n]*do not ask, it is done/);
+  assert.match(sessionHook(legacy), /refreshed this brain's rules \(AGENTS\.md\) from GTM Brain 0\.31\.2 on its own[^\n]*kept in [^\n]*work\/upgrades\/before-[^\n]*do not ask, it is done/);
   assert.equal(readFileSync(join(legacy.root, "AGENTS.md"), "utf8"), target);
   const backup = readdirSync(join(legacy.root, "work/upgrades"))[0];
   assert.equal(readFileSync(join(legacy.root, "work/upgrades", backup, "AGENTS.md"), "utf8"), old);
-  assert.doesNotMatch(hook(legacy), /rules \(AGENTS\.md\)/, "said once: the next chat finds the rules current");
-  assert.doesNotMatch(hook(current), /rules \(AGENTS\.md\)/);
+  assert.doesNotMatch(sessionHook(legacy), /rules \(AGENTS\.md\)/, "said once: the next chat finds the rules current");
+  assert.doesNotMatch(sessionHook(current), /rules \(AGENTS\.md\)/);
   const mine = old + "\nKeep customer attachments local.\n";
   writeFileSync(join(edited.root, "AGENTS.md"), mine);
-  assert.doesNotMatch(hook(edited), /refreshed this brain's rules/);
+  assert.doesNotMatch(sessionHook(edited), /refreshed this brain's rules/);
   assert.equal(readFileSync(join(edited.root, "AGENTS.md"), "utf8"), mine, "a line of the person's is never replaced without them");
 });
 
-test("rules that only drop a few lines of a shipped version are unedited; added lines or a gutted file are edits (FDE OS, 2026-11-07)", t => {
-  const shipped = readFileSync(join(plugin, "templates/legacy", legacyTemplates["0.27.0"]), "utf8").replaceAll("{{COMPANY}}", "Upgrade Co");
-  const lines = shipped.split("\n");
-  const between = [...lines.slice(0, 100), ...lines.slice(103)].join("\n");
-  assert.equal(onlyDrops(between, shipped), true);
-  assert.equal(onlyDrops(between + "\nOur own rule.", shipped), false);
-  assert.equal(onlyDrops(lines.slice(0, 20).join("\n"), shipped), false, "cutting the rules down is someone's edit");
-  assert.equal(onlyDrops("", shipped), false);
-  const f = fixture(t); writeFileSync(join(f.root, "AGENTS.md"), between);
-  assert.equal(rulesState(f.root, join(plugin, "templates")), "legacy");
-  assert.equal(rulesReasons(f.root, join(plugin, "templates")).from, "0.27.0");
-  const r = f.run(); assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /updated AGENTS\.md/);
+test("the automatic refresh changes only AGENTS.md: deleted files stay deleted, files stay where they are", t => {
+  const f = fixture(t, "0.31.2");
+  rmSync(join(f.root, "strategy.md"), { force: true }); rmSync(join(f.root, "workflows"), { recursive: true, force: true });
+  mkdirSync(join(f.root, "brain/guidelines"), { recursive: true }); writeFileSync(join(f.root, "brain/guidelines/tone.md"), "# Tone\n");
+  writeFileSync(join(f.root, "pricing.md"), "HALF WRITTEN\n"); mkdirSync(join(f.root, "pricing"), { recursive: true });
+  assert.match(sessionHook(f), /refreshed this brain's rules/);
+  assert.equal(existsSync(join(f.root, "strategy.md")), false);
+  assert.equal(existsSync(join(f.root, "workflows")), false);
+  assert.equal(existsSync(join(f.root, "brain/guidelines/tone.md")), true);
+  assert.equal(readFileSync(join(f.root, "pricing.md"), "utf8"), "HALF WRITTEN\n");
+});
+
+test("the automatic refresh commits only AGENTS.md, leaving the person's unfinished work out", t => {
+  const f = fixture(t, "0.31.2"), git = (...a) => spawnSync("git", ["-C", f.root, ...a], { encoding: "utf8" }).stdout;
+  spawnSync("git", ["-C", f.root, "add", "-A"]); spawnSync("git", ["-C", f.root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "base"]);
+  writeFileSync(join(f.root, "draft.md"), "HALF WRITTEN\n");
+  const env = { ...process.env }; delete process.env.GTM_BRAIN_NO_COMMIT;
+  t.after(() => { process.env = env; });
+  process.env.GIT_AUTHOR_NAME = process.env.GIT_COMMITTER_NAME = "t"; process.env.GIT_AUTHOR_EMAIL = process.env.GIT_COMMITTER_EMAIL = "t@t";
+  assert.match(autoRefresh(f.root, join(plugin, "templates")), /refreshed this brain's rules/);
+  assert.equal(git("show", "--name-only", "--format=", "HEAD").trim(), "AGENTS.md");
+  assert.match(git("status", "--short"), /\?\? draft\.md/);
+});
+
+test("old rules with migrations still to run, and a run with nobody present, keep the offer and change nothing", t => {
+  const old = fixture(t, "0.17.5"), scheduled = fixture(t, "0.31.2");
+  const before = readFileSync(join(old.root, "AGENTS.md"), "utf8"), recent = readFileSync(join(scheduled.root, "AGENTS.md"), "utf8");
+  assert.match(sessionHook(old), /are from GTM Brain 0\.17\.5\. What the newer rules change: [^\n]*script cell[^\n]*refresh the rules/);
+  assert.equal(readFileSync(join(old.root, "AGENTS.md"), "utf8"), before);
+  assert.match(sessionHook(scheduled, { GTM_BRAIN_RUN: "1" }), /are from GTM Brain 0\.31\.2/);
+  assert.equal(readFileSync(join(scheduled.root, "AGENTS.md"), "utf8"), recent);
+});
+
+test("deleting lines from shipped rules is an edit of the person's: kept, never refreshed on its own", t => {
+  const f = fixture(t, "0.32.0"), lines = readFileSync(join(f.root, "AGENTS.md"), "utf8").split("\n");
+  const trimmed = [...lines.slice(0, 100), ...lines.slice(140)].join("\n");
+  writeFileSync(join(f.root, "AGENTS.md"), trimmed);
+  assert.equal(rulesState(f.root, join(plugin, "templates")), "custom");
+  assert.doesNotMatch(sessionHook(f), /refreshed this brain's rules/);
+  assert.equal(readFileSync(join(f.root, "AGENTS.md"), "utf8"), trimmed);
+  assert.equal(f.run().status, 2, "an asked-for refresh pauses with a proposed file");
+  assert.equal(readFileSync(join(f.root, "AGENTS.md"), "utf8"), trimmed);
 });
 
 test("an offer to refresh the rules always says why: every rule change since the brain's version, oldest first", t => {

@@ -348,9 +348,9 @@ The procedure, every time:
 >   Codex checks whether files need repair or the app just needs a restart. <!-- ALL-154 -->
 > - **Codex told you to remove the installation.** Do not. You are on an old version's
 >   advice; quit, reopen, and say "repair the GTM Brain update".
-> - **Codex offers to "refresh the rules".** Rules without edits of yours refresh on their own;
->   this offer means yours have lines of your own. Say yes; it pauses
->   with a proposed file so your lines can be merged in, and changes nothing else.
+> - **Codex offers to "refresh the rules".** Recent rules without edits of yours refresh on
+>   their own; this offer means yours are older or have changes of your own. Say yes. If they have
+>   your own changes, it pauses with a proposed file so they can be merged in.
 > - **Update does not go through after a repair and a restart.** Report it (section 13)
 >   with the version shown under Admin.
 

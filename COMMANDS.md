@@ -458,7 +458,7 @@ the installed files before choosing between a source refresh and an app restart.
 
 An update asked for in a brain refreshes that brain's rules in the same step (`brain`): the newly
 installed version's upgrader runs right after the verified install and prints its report, so
-`update GTM Brain` alone is enough there. Other brains refresh their rules on their own when next opened; only rules with edits of the person's are offered "refresh the rules" instead.
+`update GTM Brain` alone is enough there. Other brains refresh unedited recent rules on their own when next opened; the rest are offered "refresh the rules".
 
 Tool: `update_plugin` (`mode: check | update`, `brain` optional). Writes: Codex's plugin installation and
 marketplace cache when updating. No brain files.
@@ -470,10 +470,10 @@ marketplace cache when updating. No brain files.
 After a plugin update: refreshes `AGENTS.md`, the pre-commit hook and `.gitignore` in an
 existing brain. Validates editable identities first and migrates legacy identity files with
 backups when needed. Contexts, memories, workplace settings and personal preferences remain.
-The session hook runs it on its own when a brain's rules are an older shipped version, or one with a
-few of its lines dropped (a build between releases), and says so in one line; rules with the
-person's own lines are left alone and offered instead, and a refresh asked for then pauses with a
-proposed file to merge.
+The session hook refreshes `AGENTS.md` on its own, and only that file, when it is exactly a recent
+shipped version with no other upgrade step still to run, and says so in one line. Older brains, edited
+rules and scheduled runs are offered "refresh the rules" instead; a refresh of edited rules pauses
+with a proposed file to merge.
 
 Tool: `upgrade_brain`. Writes: `AGENTS.md`, `.githooks/pre-commit`, `.gitignore`, upgrade
 backups, and identity files only when migration is needed.
