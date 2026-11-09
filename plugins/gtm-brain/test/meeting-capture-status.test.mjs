@@ -18,14 +18,15 @@ function brain(t) {
 const hook = f => spawnSync("bash", [join(plugin, "hooks/session-start.sh")], { cwd: f.root, env: { ...f.env, PLUGIN_ROOT: plugin, GTM_BRAIN_NO_VERSION_CHECK: "1", GTM_BRAIN_NO_SESSION_MAINTENANCE: "1" }, encoding: "utf8", input: JSON.stringify({ session_id: "r", cwd: f.root }) }).stdout;
 const synced = root => { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(join(root, "work/sync.json"), "{}\n"); };
 
-test("the status says no sync, then no capture settings, then no source checked, then nothing", t => {
+test("the status says no sync, then no capture settings, then no source read, then nothing", t => {
   const { root } = brain(t), none = { coverage: [], policies: [] };
   assert.match(lib.meetingCaptureStatus(root, none), /No sync has finished/);
   assert.match(lib.meetingCaptureStatus(root, { ...none, coverage: [{}] }), /Sync skips meetings/, "a coverage record proves a sync ran");
   synced(root);
   assert.match(lib.meetingCaptureStatus(root, none), /Sync skips meetings/);
-  assert.match(lib.meetingCaptureStatus(root, { coverage: [], policies: [{}] }), /no meeting source has been checked yet/);
-  assert.equal(lib.meetingCaptureStatus(root, { coverage: [{}], policies: [{}] }), null);
+  assert.match(lib.meetingCaptureStatus(root, { coverage: [], policies: [{}] }), /no meeting source has been read yet/);
+  assert.match(lib.meetingCaptureStatus(root, { coverage: [{ status: "unavailable" }], policies: [{}] }), /no meeting source has been read yet/, "a source that could not be read proves nothing");
+  assert.equal(lib.meetingCaptureStatus(root, { coverage: [{ status: "unavailable" }, { status: "partial" }], policies: [{}] }), null);
 });
 
 test("the chat start and the rendered page carry the status", t => {

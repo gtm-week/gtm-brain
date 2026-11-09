@@ -341,5 +341,5 @@ test("the session hook refreshes a README a release wrote, commits only it, and 
 test("the README does not call work/ safe to delete", () => {
   const readme = readFileSync(join(plugin, "templates/README.md"), "utf8");
   assert.doesNotMatch(readme, /safe to delete/);
-  assert.match(readme, /`work\/`[^\n]*\n[^\n]*deleting it loses those/);
+  assert.match(readme, /`work\/`[^\n]*\n[^\n]*deleting it unlinks those projects/);
 });
