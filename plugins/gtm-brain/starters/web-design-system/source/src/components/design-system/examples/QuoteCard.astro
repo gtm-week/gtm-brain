@@ -1,0 +1,29 @@
+---
+import DsBlock from "../DsBlock.astro";
+import DsStage from "../DsStage.astro";
+import DsState from "../DsState.astro";
+import DsProps from "../DsProps.astro";
+import QuoteCard from "../../ui/QuoteCard.astro";
+
+interface Props {
+  /** A small preview for the overview grid. */
+  thumb?: boolean;
+}
+const { thumb = false } = Astro.props;
+---
+
+{
+  thumb ? (
+    <div class="w-80 scale-75"><QuoteCard quote="A short quote." name="Ada Lovelace" role="Head of Finance" /></div>
+  ) : (
+    <>
+      <DsBlock title="Variants" description="featured for the one that leads the testimonials.">
+        <DsStage layout="states" tone="muted" cols={2} class="items-stretch">
+          <DsState label="featured" class="h-full items-stretch"><QuoteCard featured quote="A short quote that leads the testimonials." name="Ada Lovelace" role="Head of Finance, Company" /></DsState>
+          <DsState label="default" class="h-full items-stretch"><QuoteCard quote="A quote from a customer, in their own words, a sentence or two long." name="Grace Hopper" role="COO, Company" /></DsState>
+        </DsStage>
+      </DsBlock>
+      <DsBlock title="Props"><DsProps of="components/ui/QuoteCard" /></DsBlock>
+    </>
+  )
+}

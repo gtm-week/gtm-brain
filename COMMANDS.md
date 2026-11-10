@@ -8,6 +8,10 @@ to distinguish these workflows from other installed skills.
 | Skill identifier | Display name | What it does |
 |---|---|---|
 | `gtm-brain-project` | GTM Brain: Projects | Create a project folder, or link an existing one to your brain; repair, unlink, list |
+| `gtm-brain-design-system` | GTM Brain: Build our design system | Set up or reuse the shared website and follow Brian's design extraction and review procedure |
+| `gtm-brain-add-section` | GTM Brain: Add a reusable section | Extend the website library from a source page or new brief |
+| `gtm-brain-build-landing-page` | GTM Brain: Build a landing page | Compose a local campaign page from company context and shared sections |
+| `gtm-brain-publish-website` | GTM Brain: Publish the website | Prepare a hosted preview and publish the reviewed shared site when requested |
 | `gtm-brain-start` | GTM Brain: Start | The first command in a project: creates the brain here, gets to know the business, connects the tools, opens the dashboard; resumes what is unfinished |
 | `gtm-brain-sync` | GTM Brain: Sync | Pull what came in through the connected tools since the last sync, one subagent per tool, and record what matters |
 | `gtm-brain-todo` | GTM Brain: Todo | What should I do now: everything waiting on you, ordered, walked through one by one |
@@ -36,7 +40,7 @@ The sections below document the underlying operations, tools, and script paths f
 They are not additional discoverable skills. Tools show outcomes such as "Remembering" or
 "Searching the brain" in chat. Review proposals on the read-only dashboard. APPROVE typed in Codex stays a shell step with its permission prompt.
 Scripts retain their paths for terminal use with
-`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.32.0`.
+`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.33.0`.
 
 Legend for "writes": what files the command changes. Nothing else is ever touched.
 
@@ -400,7 +404,31 @@ the folder linked. An existing task in the brain keeps its brain-wide scope.
 Tools: `list_brains`, `link_project`, `unlink_project`, `list_projects`. Writes: the pointer
 block in the project's `AGENTS.md`, plus `work/projects.json` and the project's loaded set
 inside the brain. The underlying script path remains stable:
-`node $PLUGIN_ROOT/skills/gtm-brain-project/project.mjs . --link <path> [--create] [--slug s] [--title "T"] [--contexts a,b] [--by handle]`, `... --unlink <slug>`, `... --list`
+`node $PLUGIN_ROOT/skills/gtm-brain-project/project.mjs . --link <path> [--create] [--starter web-design-system] [--slug s] [--title "T"] [--contexts a,b] [--by handle]`, `... --unlink <slug>`, `... --list`
+
+### Build and publish a company website
+
+Start with `/gtm-brain-design-system` or "Build our design system from our website".
+It reuses the company's shared website project or creates `<brain-root>/website` through
+`link_project` with `create: true` and `starter: "web-design-system"`, after capture consent.
+This prepares a local Git repository from the bundled source. Dependency installation and
+local preview startup follow through the shell, in the same chat. Existing folders remain
+untouched; a verified interrupted starter can resume without recopying its source.
+
+Brian Woloszczak and Peakout's four original procedures remain in the project's
+`docs/workflows/`. GTM Brain supplies project selection, company knowledge and a draft
+document pointing to the working system. Design values stay with the code and manual.
+New campaigns add pages to the same component library. Updates never replace company code.
+
+`/gtm-brain-add-section` accepts a source URL/heading or a new brief, including interactive
+sections. `/gtm-brain-build-landing-page` uses the company's strategy, ICP, offer and voice,
+then composes existing sections. Both return local previews. The calculator is an optional
+lesson example, not a dedicated skill.
+
+`/gtm-brain-publish-website` runs on a separate request. It prepares a Vercel preview,
+respects visibility and access choices, and releases only after review. Building alone
+does not push or deploy. See the
+[source preservation and packaging contract](plugins/gtm-brain/starters/web-design-system/README.md).
 
 ### connect
 *"connect my tools"*, *"is HubSpot connected?"*

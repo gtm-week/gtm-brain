@@ -1,0 +1,31 @@
+---
+import DsBlock from "../DsBlock.astro";
+import DsStage from "../DsStage.astro";
+import DsProps from "../DsProps.astro";
+import FaqItem from "../../ui/FaqItem.astro";
+
+interface Props {
+  /** A small preview for the overview grid. */
+  thumb?: boolean;
+}
+const { thumb = false } = Astro.props;
+---
+
+{
+  thumb ? (
+    <div class="w-64"><FaqItem question="A question?" answer="The answer." /><FaqItem question="Another one?" answer="The answer." /></div>
+  ) : (
+    <>
+      <DsBlock title="A list" description="One open at a time: opening a question closes the one beside it, and the answer slides open.">
+        <DsStage layout="start">
+          <div class="w-full max-w-measure-lg">
+            <FaqItem open question="A question people ask?" answer="The answer, in a sentence or two. Plain words." />
+            <FaqItem question="Another question people ask?" answer="The answer, in a sentence or two." />
+            <FaqItem question="A third question?" answer="The answer, in a sentence or two." />
+          </div>
+        </DsStage>
+      </DsBlock>
+      <DsBlock title="Props"><DsProps of="components/ui/FaqItem" /></DsBlock>
+    </>
+  )
+}

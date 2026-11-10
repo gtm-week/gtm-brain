@@ -1,0 +1,79 @@
+---
+/**
+ * Items in a row that scrolls sideways and snaps, with two arrows that move it one item at
+ * a time (from lg; a phone swipes). The row runs past the column to the band's edges, so
+ * the next card shows beyond the page's edge instead of being cut at the column, while the
+ * first card still starts on the column. The band (Section) is the container it measures.
+ * Put the section's header in the `header` slot: the arrows sit beside it.
+ */
+import ArrowButton from "./ArrowButton.astro";
+
+interface Props {
+  /** Names the row for screen readers. */
+  label: string;
+  class?: string;
+}
+const { label, class: className } = Astro.props;
+---
+
+<div data-carousel class:list={["flex flex-col gap-6 md:gap-8", className]}>
+  <div class="flex items-end justify-between gap-6">
+    <div class="min-w-0 flex-1"><slot name="header" /></div>
+    <div class="hidden shrink-0 gap-2 lg:flex">
+      <ArrowButton direction="left" label="Previous" data-step="-1" disabled />
+      <ArrowButton label="Next" data-step="1" />
+    </div>
+  </div>
+  <div data-carousel-track role="region" aria-label={label} tabindex="0" class="carousel-track flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth">
+    <slot />
+  </div>
+</div>
+
+<style>
+  /* Out to the band's edges and back in by the same amount, so the first item starts on
+     the column. 50cqw is half the band; 50% half the column. The snap's inset is set by the
+     script in px: a percentage in scroll-padding counts the track, not the column. */
+  .carousel-track {
+    margin-inline: calc(50% - 50cqw);
+    padding-inline: calc(50cqw - 50%);
+    scrollbar-width: none;
+  }
+  .carousel-track::-webkit-scrollbar {
+    display: none;
+  }
+  .carousel-track > :global(*) {
+    flex-shrink: 0;
+    scroll-snap-align: start;
+  }
+</style>
+
+<script>
+  for (const carousel of document.querySelectorAll<HTMLElement>("[data-carousel]")) {
+    const track = carousel.querySelector<HTMLElement>("[data-carousel-track]")!;
+    const [back, next] = carousel.querySelectorAll<HTMLButtonElement>("[data-step]");
+
+    /* One step is one item and the gap after it. */
+    const step = () => {
+      const item = track.firstElementChild as HTMLElement | null;
+      return item ? item.offsetWidth + parseFloat(getComputedStyle(track).columnGap || "0") : track.clientWidth;
+    };
+    const update = () => {
+      back.disabled = track.scrollLeft <= 1;
+      next.disabled = track.scrollLeft + track.clientWidth >= track.scrollWidth - 1;
+    };
+    for (const button of [back, next]) {
+      button.addEventListener("click", () =>
+        track.scrollBy({ left: Number(button.dataset.step) * step(), behavior: "smooth" }),
+      );
+    }
+    /* Snap items to the column, not the band's edge. */
+    const inset = () => {
+      track.style.scrollPaddingInline = getComputedStyle(track).paddingLeft;
+      update();
+    };
+    track.addEventListener("scroll", update, { passive: true });
+    addEventListener("resize", inset);
+    inset();
+    track.scrollTo({ left: 0, behavior: "instant" });
+  }
+</script>

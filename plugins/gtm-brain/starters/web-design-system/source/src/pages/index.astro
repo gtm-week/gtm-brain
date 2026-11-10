@@ -1,0 +1,64 @@
+---
+/**
+ * A placeholder page, composed from the starter's sections the way your landing page
+ * will be: sections in order, each given its copy as props. Replace the copy with yours,
+ * or the page with your own once you have fed the design system your sections.
+ */
+import Base from "../layouts/Base.astro";
+import Navbar from "../components/layout/Navbar.astro";
+import Footer from "../components/layout/Footer.astro";
+import Hero from "../sections/Hero.astro";
+import Features from "../sections/Features.astro";
+import CtaBand from "../sections/CtaBand.astro";
+import { ChartLine, CreditCard, Receipt } from "@lucide/astro";
+---
+
+<Base
+  title="A page built on a design system"
+  description="A placeholder page built from the starter's sections. Fill the design system from your site, then build your own page from it."
+>
+  <Navbar />
+  <main>
+    <Hero
+      tagline="Placeholder page"
+      heading="A headline that says what you do."
+      muted="And what it changes for your customer."
+      lead="Everything on this page comes from the design system. Fill its foundations from your site and this page turns into yours."
+      actions={[
+        { label: "Open the design system", href: "/design-system" },
+        { label: "See the sections", href: "/design-system/sections" },
+      ]}
+    />
+    <Features
+      tagline="How it works"
+      heading="Three steps."
+      muted="Each one builds on the last."
+      features={[
+        {
+          icon: CreditCard,
+          title: "Fill the foundations",
+          text: "Colours, type and radii from your site, laid onto the tokens.",
+          href: "/design-system/foundations",
+        },
+        {
+          icon: Receipt,
+          title: "Feed it your sections",
+          text: "Sections you like from your site, rebuilt on these components.",
+          href: "/design-system/sections",
+        },
+        {
+          icon: ChartLine,
+          title: "Build the page",
+          text: "Compose a landing page from the sections and put it live.",
+          href: "/design-system",
+        },
+      ]}
+    />
+    <CtaBand
+      heading="A closing line that asks for the action."
+      lead="One sentence on what happens next."
+      actions={[{ label: "Open the design system", href: "/design-system" }]}
+    />
+  </main>
+  <Footer />
+</Base>

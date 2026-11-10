@@ -72,6 +72,38 @@
     "example": "Create a new project for our website."
   },
   {
+    "id": "gtm-brain-design-system",
+    "group": "projects",
+    "featured": false,
+    "title": "Build our design system",
+    "description": "Use Brian Woloszczak and Peakout's starter to build a reusable web design system from your existing brand.",
+    "example": "Build our design system from our company website."
+  },
+  {
+    "id": "gtm-brain-add-section",
+    "group": "projects",
+    "featured": false,
+    "title": "Add a reusable section",
+    "description": "Extend your shared website library with a section from a source page or a new brief.",
+    "example": "Add a comparison table to our website's reusable sections."
+  },
+  {
+    "id": "gtm-brain-build-landing-page",
+    "group": "projects",
+    "featured": false,
+    "title": "Build a landing page",
+    "description": "Use your offer, audience and voice to compose a campaign page from the shared design system.",
+    "example": "Build a follow-up page for our event leads and show me the local preview."
+  },
+  {
+    "id": "gtm-brain-publish-website",
+    "group": "projects",
+    "featured": false,
+    "title": "Publish the website",
+    "description": "Prepare a Vercel preview and release the reviewed shared website when requested.",
+    "example": "Prepare a hosted preview of our website and keep its access private."
+  },
+  {
     "id": "gtm-brain-start",
     "group": "setup",
     "featured": false,

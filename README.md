@@ -92,7 +92,7 @@ called out. The review makes a recommendation; budget and campaign changes remai
 > Make this research process a skill I can reuse in our other projects.
 
 Keep your own skills in the brain and use them from linked project folders. Plugin updates
-preserve them. See the [command reference](COMMANDS.md) for all fourteen workflows, including
+preserve them. See the [command reference](COMMANDS.md) for all eighteen workflows, including
 strategy, source sync, documents and project setup.
 
 ## How GTM Brain works
@@ -276,7 +276,7 @@ does not mean offline AI processing.
 
 ## Built-in workflows
 
-Ask for an outcome in ordinary language, or invoke one of the fourteen shipped skills:
+Ask for an outcome in ordinary language, or invoke one of the eighteen shipped skills:
 
 | Command | Use it for |
 | --- | --- |
@@ -291,9 +291,19 @@ Ask for an outcome in ordinary language, or invoke one of the fourteen shipped s
 | `/gtm-brain-sync` | Pull relevant updates from connected sources and retain useful findings. |
 | `/gtm-brain-todo` | Review what is waiting on you across the brain and connected tools. |
 | `/gtm-brain-project` | Create or link a working folder to the shared brain. |
+| `/gtm-brain-design-system` | Build a web design system from the company's existing brand. |
+| `/gtm-brain-add-section` | Add a reusable website section from a source or brief. |
+| `/gtm-brain-build-landing-page` | Compose and preview a campaign page in the shared website. |
+| `/gtm-brain-publish-website` | Prepare a hosted preview and publish the reviewed website. |
 | `/gtm-brain-document` | Maintain the ICP, offer, pricing, voice and other standing documents. |
 | `/gtm-brain-skill` | Turn a repeated process into your own reusable skill. |
 | `/gtm-brain-configure` | Change workplace information, tools and settings through the approval flow. |
+
+The web workflows use Brian Woloszczak and Peakout's GTM Tech Week starter. GTM Brain
+bundles its pinned source unchanged, adapts only its packaging and connects it to company
+knowledge. Each company reuses one website project for its design system and campaign
+pages. Building finishes with a local preview; publishing is a separate request.
+See the [preservation contract and lesson references](plugins/gtm-brain/starters/web-design-system/README.md).
 
 ## Claude Code (beta)
 
@@ -368,9 +378,10 @@ plugins/gtm-brain/
   .mcp.json  server/          the operations as MCP tools (Remembering, Searching the brain, ...);
                               dash.mjs serves the read-only dashboard and revision events
   lib/                        shared readers, validators, writers, search and identity logic; Node built-ins
-  skills/                     the fourteen workflows a person can ask for (all prefixed gtm-brain-): start,
+  skills/                     the eighteen workflows a person can ask for (all prefixed gtm-brain-): start,
                               todo, sync, workflow, deepdive, strategy, unit-economics, define-icp,
-                              market-desk-research, project, configure, skill, document, use-brain; what
+                              market-desk-research, project, configure, skill, document, use-brain,
+                              design-system, add-section, build-landing-page, publish-website; what
                               they used to be as separate skills lives on as their references
     gtm-brain-use-brain/references/    load, create and edit contexts, remember, recall, names, compile,
                               dashboard, manual save
@@ -378,6 +389,7 @@ plugins/gtm-brain/
     gtm-brain-start/references/  onboarding, the handoff import
   scripts/gtm-brain-*/           the operation scripts the MCP server, hooks and skills run (no SKILL.md)
   templates/                  AGENTS.md, brain/admin.md, .gitignore, the pre-commit hook
+  starters/web-design-system/ Brian/Peakout's unchanged source snapshot and preservation manifest
   test/                       node --test 'plugins/gtm-brain/test/*.test.mjs'
 frontend/dashboard/           React dashboard source; built assets ship with the plugin
 scripts/sync-derived.mjs       generate shared policy blocks, schemas and host declarations

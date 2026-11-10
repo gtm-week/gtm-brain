@@ -1,0 +1,42 @@
+---
+/**
+ * A text link. `inline` sits in a sentence (underlined); `arrow` stands alone
+ * ("Read the report →"). Links off the site open in a new tab.
+ */
+import type { HTMLAttributes } from "astro/types";
+import { ArrowRight } from "@lucide/astro";
+import Icon from "./Icon.astro";
+
+type Props = Omit<HTMLAttributes<"a">, "class"> & {
+  href: string;
+  variant?: "inline" | "arrow";
+  class?: string;
+};
+const { href, variant = "inline", class: className, ...rest } = Astro.props;
+
+const external = href.startsWith("http");
+const variants = {
+  inline:
+    "text-ink-1 underline decoration-line-2 underline-offset-4 transition-colors hover:decoration-line-brand focus-visible:decoration-line-brand focus-visible:outline-none",
+  arrow:
+    "group inline-flex items-center gap-1.5 font-medium text-ink-1 underline decoration-transparent underline-offset-4 transition-colors hover:text-ink-2 focus-visible:decoration-line-brand focus-visible:outline-none",
+} as const;
+---
+
+<a
+  href={href}
+  target={external ? "_blank" : undefined}
+  rel={external ? "noopener noreferrer" : undefined}
+  class:list={["rounded-sm", variants[variant], className]}
+  {...rest}
+>
+  <slot />{
+    variant === "arrow" && (
+      <Icon
+        icon={ArrowRight}
+        size="sm"
+        class="transition-transform group-hover:translate-x-0.5"
+      />
+    )
+  }
+</a>

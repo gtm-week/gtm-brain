@@ -1,0 +1,48 @@
+---
+import DesignSystem from "../../../layouts/DesignSystem.astro";
+import DsBlock from "../../../components/design-system/DsBlock.astro";
+import DsFrame from "../../../components/design-system/DsFrame.astro";
+import DsTiers from "../../../components/design-system/DsTiers.astro";
+import { gutter, bandPadding, frameWidth, breakpoints } from "../../../components/design-system/tokens";
+
+const [md, lg] = breakpoints;
+const tiers = [
+  { name: "Phone", range: `up to ${md.px - 1}` },
+  { name: "Tablet", range: `${md.px}–${lg.px - 1}` },
+  { name: "Desktop", range: `${lg.px} and up` },
+].map((tier, i) => ({
+  ...tier,
+  values: [
+    { label: "Gutter, left and right", value: `${gutter[i]} px` },
+    { label: "Band padding, top and bottom", value: `${bandPadding[i]} px` },
+    { label: "Column, at most", value: `${frameWidth} px` },
+  ],
+}));
+const code = `<!-- the band: its background, edge to edge -->
+<Section tone="muted">
+  <!-- the gutter, the column, the padding -->
+  <Container>
+    <SectionHeader heading="…" />
+  </Container>
+</Section>`;
+---
+
+<DesignSystem
+  title="Frame"
+  lead="Section is the band and its background; Container inside it is the gutter, the column and the band's padding: the only place they live, so no section writes its own."
+>
+  <DsBlock
+    title="Every band"
+    description="The real Section and Container in three tones. Choose a width: each band prints its column's edge, its width and its padding."
+  >
+    <DsFrame src="/design-system/preview/frame" title="The frame" switcher />
+  </DsBlock>
+
+  <DsBlock title="The values" description="Read from Container.astro and global.css (max-w-frame). The column is centred.">
+    <DsTiers tiers={tiers} />
+  </DsBlock>
+
+  <DsBlock title="In a section" description="Every section is this pair; what goes inside is the section's own.">
+    <pre class="overflow-x-auto rounded-sm border border-line bg-surface-2 p-6 text-small text-ink-1"><code>{code}</code></pre>
+  </DsBlock>
+</DesignSystem>

@@ -1,0 +1,40 @@
+---
+import DsBlock from "../DsBlock.astro";
+import DsStage from "../DsStage.astro";
+import DsProps from "../DsProps.astro";
+import SectionHeader from "../../ui/SectionHeader.astro";
+import Tagline from "../../ui/Tagline.astro";
+import Heading from "../../ui/Heading.astro";
+
+interface Props {
+  /** A small preview for the overview grid. */
+  thumb?: boolean;
+}
+const { thumb = false } = Astro.props;
+---
+
+{
+  thumb ? (
+    <div class="flex flex-col gap-2"><Tagline>Tagline</Tagline><Heading level={3} size="h5" muted="And the detail.">A heading.</Heading></div>
+  ) : (
+    <>
+      <DsBlock title="Left" description="Tagline, heading with an optional muted tail, lead, actions. The default.">
+        <DsStage layout="start">
+          <SectionHeader
+            tagline="Section tagline"
+            heading="A heading that states the point."
+            muted="A grey tail that adds the detail."
+            lead="A lead paragraph that explains it in one or two sentences."
+            actions={[{ label: "Primary action", href: "#" }, { label: "Second action", href: "#" }]}
+          />
+        </DsStage>
+      </DsBlock>
+      <DsBlock title="Centre" description="For a closing band or a short section.">
+        <DsStage>
+          <SectionHeader align="center" tagline="Section tagline" heading="A centred heading." lead="One line under it." />
+        </DsStage>
+      </DsBlock>
+      <DsBlock title="Props"><DsProps of="components/ui/SectionHeader" /></DsBlock>
+    </>
+  )
+}

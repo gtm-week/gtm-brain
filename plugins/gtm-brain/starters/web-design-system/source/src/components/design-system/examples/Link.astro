@@ -1,0 +1,38 @@
+---
+import DsBlock from "../DsBlock.astro";
+import DsStage from "../DsStage.astro";
+import DsState from "../DsState.astro";
+import DsProps from "../DsProps.astro";
+import Link from "../../ui/Link.astro";
+
+interface Props {
+  /** A small preview for the overview grid. */
+  thumb?: boolean;
+}
+const { thumb = false } = Astro.props;
+---
+
+{
+  thumb ? (
+    <Link href="#" variant="arrow">Read the report</Link>
+  ) : (
+    <>
+      <DsBlock title="Variants" description="inline sits in a sentence; arrow stands alone. Links off the site open in a new tab.">
+        <DsStage>
+          <p class="text-ink-2">Read <Link href="#">the pricing page</Link> first.</p>
+          <Link href="#" variant="arrow">Read the report</Link>
+        </DsStage>
+      </DsBlock>
+      <DsBlock title="States">
+        <DsStage layout="states" cols={3}>
+          <DsState label="inline"><Link href="#">The pricing page</Link></DsState>
+          <DsState label="inline, hover"><Link href="#" data-state="hover">The pricing page</Link></DsState>
+          <DsState label="arrow"><Link href="#" variant="arrow">Read the report</Link></DsState>
+          <DsState label="arrow, hover"><Link href="#" variant="arrow" data-state="hover">Read the report</Link></DsState>
+          <DsState label="focus"><Link href="#" variant="arrow" data-state="focus">Read the report</Link></DsState>
+        </DsStage>
+      </DsBlock>
+      <DsBlock title="Props"><DsProps of="components/ui/Link" /></DsBlock>
+    </>
+  )
+}

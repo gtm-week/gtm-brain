@@ -30,6 +30,7 @@ export const CHAT_KINDS = HOSTS;
 export const isChatSource = s => !!s && CHAT_KINDS.includes(s.kind);
 /* Each host's own home folder in a project: the other host's is off limits to the gate. */
 export const HOST_DIRS = [".codex", ".claude"];
+export const PROJECT_SKILL_DIRS = [".agents/skills", ".claude/skills"];
 /* Claude Code's tool names, by what the gate does with them. The generated hooks match exactly these. */
 export const CLAUDE_TOOLS = { edit: ["Write", "Edit", "MultiEdit", "NotebookEdit"], shell: ["Bash"] };
 
@@ -43,6 +44,7 @@ const onPath = cmd => (process.env.PATH || "").split(delimiter).some(d => d && e
 
 const ADAPTERS = {
   codex: {
+    projectSkillsDir: ".agents/skills",
     // The Codex app always has its own runner: unchanged from before hosts existed.
     compiles: () => true,
     newChatLink: (path, prompt) => `codex://threads/new?path=${encodeURIComponent(path)}&prompt=${encodeURIComponent(prompt)}`,
@@ -85,6 +87,7 @@ const ADAPTERS = {
     },
   },
   claude: {
+    projectSkillsDir: ".claude/skills",
     // No Claude Code runner for summaries yet: Codex runs them when it is installed on this machine.
     compiles: () => onPath("codex"),
     // Prefilled, not sent: the person presses Enter (claude-cli://open, Claude Code 2.1+).

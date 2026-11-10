@@ -1,0 +1,49 @@
+---
+import DesignSystem from "../../../layouts/DesignSystem.astro";
+import DsBlock from "../../../components/design-system/DsBlock.astro";
+import DsStage from "../../../components/design-system/DsStage.astro";
+
+const tab = [16, 32, 48];
+const files = [
+  { path: "public/favicon.svg", src: "/favicon.svg", size: "any", use: "the browser tab" },
+  { path: "public/apple-touch-icon.png", src: "/apple-touch-icon.png", size: "180 px", use: "an iPhone's home screen, on white" },
+  { path: "public/icon-192.png", src: "/icon-192.png", size: "192 px", use: "Android's home screen (site.webmanifest)" },
+  { path: "public/icon-512.png", src: "/icon-512.png", size: "512 px", use: "Android's splash screen (site.webmanifest)" },
+];
+---
+
+<DesignSystem
+  title="App icons"
+  lead="One source, src/assets/brand/icon.svg, and every file browsers and phones ask for, written by npm run icons. Replace the source with your mark and run it again."
+>
+  <DsBlock title="In a tab" description="The favicon at the sizes a browser draws it.">
+    <DsStage class="items-end">
+      {
+        tab.map((size) => (
+          <figure class="flex flex-col items-center gap-2">
+            <img src="/favicon.svg" alt="" width={size} height={size} />
+            <figcaption class="text-small text-ink-3">{size}</figcaption>
+          </figure>
+        ))
+      }
+    </DsStage>
+  </DsBlock>
+
+  <DsBlock title="The files" description="Each as written into public/. Base.astro links them on every page.">
+    <ul class="flex flex-col border-t border-line">
+      {
+        files.map((file) => (
+          <li class="flex items-center gap-6 border-b border-line py-4">
+            <span class="grid size-16 shrink-0 place-items-center rounded-sm border border-line bg-surface-2">
+              <img src={file.src} alt="" width="40" height="40" />
+            </span>
+            <span class="flex min-w-0 flex-col">
+              <code class="text-small font-medium text-ink-1">{file.path}</code>
+              <span class="text-small text-ink-3">{file.size} · {file.use}</span>
+            </span>
+          </li>
+        ))
+      }
+    </ul>
+  </DsBlock>
+</DesignSystem>

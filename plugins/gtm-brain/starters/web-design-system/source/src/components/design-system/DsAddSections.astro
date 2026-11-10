@@ -1,0 +1,50 @@
+---
+/** The ways to add a section: shown on /design-system/sections, under the sections there are. */
+import { Globe, MessageSquare, FilePlus } from "@lucide/astro";
+import IconTile from "../ui/IconTile.astro";
+
+interface Props {
+  /** No sections registered yet. */
+  empty?: boolean;
+}
+const { empty = false } = Astro.props;
+
+const ways = [
+  {
+    icon: Globe,
+    title: "From your site",
+    text: "Ask your agent /add-section with a page's URL and the section's heading. It is rebuilt on these components.",
+  },
+  {
+    icon: MessageSquare,
+    title: "From a description",
+    text: "Describe a section to /add-section: “a calculator: four inputs, two results, a note”.",
+  },
+  {
+    icon: FilePlus,
+    title: "By hand",
+    text: "Create src/sections/Name.astro with typed props, then register it in src/sections/index.ts.",
+  },
+];
+---
+
+<div class="flex flex-col gap-6 rounded-lg border border-dashed border-line-2 bg-surface-2 p-6 md:p-10">
+  <div class="flex flex-col gap-1">
+    <p class="heading-h5 text-ink-1">{empty ? "No sections yet. Feed it your sections." : "Feed it more sections."}</p>
+    <p class="max-w-measure-lg text-small text-ink-2">
+      The starter's sections are placeholders. Add the ones you like from your site, or new ones of
+      your own: each appears here and in the sidebar, at desktop, tablet and mobile width.
+    </p>
+  </div>
+  <ul class="grid gap-4 md:grid-cols-3">
+    {
+      ways.map((way) => (
+        <li class="flex flex-col gap-3 rounded-lg border border-line bg-surface-1 p-5">
+          <IconTile icon={way.icon} />
+          <p class="text-regular font-medium text-ink-1">{way.title}</p>
+          <p class="text-small text-ink-2">{way.text}</p>
+        </li>
+      ))
+    }
+  </ul>
+</div>

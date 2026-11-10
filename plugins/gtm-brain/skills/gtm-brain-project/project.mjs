@@ -1,24 +1,26 @@
 #!/usr/bin/env node
 // A folder becomes a project of this brain, or stops being one, or the projects are listed.
-//   node project.mjs <root> --link <path> [--create] [--slug s] [--title "T"] [--contexts a,b] [--by handle]
+//   node project.mjs <root> --link <path> [--create] [--starter web-design-system] [--slug s] [--title "T"] [--contexts a,b] [--by handle]
 //   node project.mjs <root> --unlink <slug>
 //   node project.mjs <root> --list [--json]
 // Writes the pointer block into <path>/AGENTS.md, the entry in work/projects.json and the project's
 // loaded set (work/projects/<slug>/loaded-contexts.json). Nothing under brain/ changes: a project is
-// a tag on notes and a local pointer, never an object, so nothing here commits.
+// a tag on notes and a local pointer, never an object. Starter creation commits only its own code repo.
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, rmSync, realpathSync, readFileSync, writeFileSync, lstatSync } from "node:fs";
 import { join, resolve, isAbsolute, basename, dirname, relative, sep } from "node:path";
 import { listCodexProjects } from "../../lib/codex-projects.mjs";
 import { listDocuments } from "../../lib/documents.mjs";
 import { HOST_DIRS } from "../../lib/host.mjs";
+import { WEB_STARTER, preparedStarter, createStarterProject, finishStarterProject, readStarterProject } from "../../lib/web-starter.mjs";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const us = await import(new URL("../../lib/user-skills.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = resolve(args[0] && !args[0].startsWith("--") ? args.shift() : ".");
 if (!existsSync(join(root, "brain", "admin.md"))) { console.error("no brain here (brain/admin.md missing)."); process.exit(1); }
 const opt = {}; for (let i = 0; i < args.length; i++) if (args[i].startsWith("--")) { const k = args[i].slice(2), v = args[i + 1]; if (v === undefined || v.startsWith("--")) opt[k] = true; else { opt[k] = v; i++; } }
 const refuse = why => { console.error(why); process.exit(2); };
-for (const flag of ["link", "slug", "title", "contexts", "by", "unlink"]) if (opt[flag] === true) refuse(`--${flag} needs a value`);
+for (const flag of ["link", "slug", "title", "contexts", "by", "unlink", "starter"]) if (opt[flag] === true) refuse(`--${flag} needs a value`);
+if (opt.starter && (opt.starter !== WEB_STARTER || !opt.create || !opt.link)) refuse(`--starter ${WEB_STARTER} requires --link and --create; no other starter is supported`);
 const slugOf = s => String(s || "").toLowerCase().replace(/ł/g, "l").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const admin = lib.readAdmin(root) || {};
 const projects = lib.readProjects(root);
@@ -75,7 +77,11 @@ if (opt.link) {
   for (const [base, target] of [[root, path], [rootReal, effectivePath]]) {
     if (reserved.has(relative(base, target).split(sep)[0].toLowerCase())) refuse(`${path} is GTM Brain internal storage; choose a project folder beside brain/ and work/.`);
   }
-  if (opt.create && existsSync(path)) refuse(`${path} already exists; choose another name or use Link Project to connect the existing folder.`);
+  let resume = null;
+  if (opt.create && opt.starter && existsSync(path)) {
+    try { resume = preparedStarter(path, root); } catch (e) { refuse(e.message); }
+  }
+  if (opt.create && existsSync(path) && !resume) refuse(`${path} already exists; choose another name or use Link Project to connect the existing folder.`);
   if (existsSync(join(path, "brain", "admin.md"))) refuse(`${path} is another brain; a brain is never a project.`);
   // A folder nested inside someone else's brain (not this one) is that brain's business, never this one's.
   for (const candidate of [path, effectivePath]) for (let d = dirname(candidate); ; d = dirname(d)) {
@@ -89,12 +95,15 @@ if (opt.link) {
     const held = listDocuments(root).filter(d => d.path.startsWith(`${rel}/`)).map(d => d.path);
     if (held.length) refuse(`${path} holds documents (${held.join(", ")}); a document's folder is not a project. To work on a document, open its folder in Codex: it sees the brain without being linked. Link only folders that hold deliverables (a website, an event).`);
   }
-  const title = opt.title ? String(opt.title).trim() : basename(path);
-  const slug = slugOf(opt.slug || title || basename(path)); if (!slug) refuse("give --slug or --title");
-  if (projects.some(p => p.slug === slug)) refuse(`slug ${slug} is taken by ${projects.find(p => p.slug === slug).path}; unlink it first or choose another`);
-  if (projects.some(p => same(p.path, path))) refuse(`${path} is already a project (${projects.find(p => same(p.path, path)).slug})`);
+  const title = opt.title ? String(opt.title).trim() : resume?.title || basename(path);
+  const slug = slugOf(opt.slug || resume?.slug || title || basename(path)); if (!slug) refuse("give --slug or --title");
+  if (resume && (resume.slug !== slug || resume.title !== title)) refuse("Resume the prepared starter with its original project name; files preserved");
+  const prior = projects.find(p => p.slug === slug && same(p.path, path));
+  if (projects.some(p => p.slug === slug) && !(resume && prior)) refuse(`slug ${slug} is taken by ${projects.find(p => p.slug === slug).path}; unlink it first or choose another`);
+  if (projects.some(p => same(p.path, path)) && !(resume && prior)) refuse(`${path} is already a project (${projects.find(p => same(p.path, path)).slug})`);
   const existing = existsSync(path) ? lib.readPointer(path) : null;
-  if (existing && !existing.missing) refuse(`${path} is already a project of ${existing.brain}; unlink it there first`);
+  const resumePointer = resume && existing && same(existing.brain, root) && existing.slug === slug;
+  if (existing && !existing.missing && !resumePointer) refuse(`${path} is already a project of ${existing.brain}; unlink it there first`);
   const nestedProject = folder => refuse(`${path} overlaps linked project ${folder}. A linked folder is one project, not a workspace for nested projects. Use New Project to create a separate folder directly inside ${root}. Existing files stay in place.`);
   // Check pointers even across repository boundaries and outside this brain's local registry.
   // Resolve aliases too, so a symlink cannot hide the enclosing project's pointer.
@@ -103,16 +112,21 @@ if (opt.link) {
     if (dirname(d) === d) break;
   }
   for (const p of projects) {
+    if (resume && p === prior) continue;
     if (lib.projectPointerStatus(root, p) !== "ok") continue;
     const other = realpathSync(p.path);
     if (below(other, effectivePath) || below(effectivePath, other) || below(p.path, path) || below(path, p.path)) nestedProject(p.path);
   }
-  const contexts = String(opt.contexts || "").split(",").map(s => s.trim()).filter(Boolean);
+  const contexts = opt.contexts === undefined && resume ? resume.contexts : String(opt.contexts || "").split(",").map(s => s.trim()).filter(Boolean);
+  if (resume && JSON.stringify(contexts) !== JSON.stringify(resume.contexts)) refuse("Resume the prepared starter with its original starting contexts; files preserved");
   for (const c of contexts) { const x = lib.readContext(root, c); if (!x) refuse(`no such context: ${c}`); if (x.status !== "active") refuse(`${c} is archived; unarchive it first`); }
   const by = opt.by ? lib.teamHandle(root, String(opt.by)) : null; if (opt.by && !by) refuse(`"${opt.by}" is not in admin.md team`);
   // Exclusive creation also refuses a folder that appeared after validation. Existing-folder
   // linking keeps its original behavior; new projects require an existing parent directory.
-  try { mkdirSync(path, { recursive: !opt.create }); } catch (e) { refuse(`${path}: ${e.message}`); }
+  try {
+    if (opt.starter && !resume) createStarterProject(path, { brain: root, slug, title, contexts, by });
+    else if (!resume) mkdirSync(path, { recursive: !opt.create });
+  } catch (e) { refuse(`${path}: ${e.message}`); }
   // Codex reads AGENTS.md from the nearest git root down to cwd: a sub-folder inherits the brain's rulebook only
   // when no .git sits between it and the brain. A nested repository gets the rulebook line like an outside folder.
   const contained = realpathSync(path).startsWith(rootReal + "/");
@@ -125,14 +139,19 @@ if (opt.link) {
     try { previousText = readFileSync(agentsFile, "utf8"); } catch { previousText = null; }
     lib.removePointer(path); repaired = true;
   }
-  try { lib.writePointer(path, { brain: root, slug, title, company: admin.company || basename(root), inside }); }
+  try { if (!resumePointer) lib.writePointer(path, { brain: root, slug, title, company: admin.company || basename(root), inside }); }
   catch (e) { if (repaired) { try { writeFileSync(join(path, "AGENTS.md"), previousText ?? ""); } catch {} } refuse(`${path}: ${e.message}`); }
   const exclusion = contained ? excludeLine(root, path) : null;
   const excluded = contained && addExclude(root, exclusion);
-  lib.writeProjects(root, [...projects, { slug, title, path, contexts, linkedAt: new Date().toISOString(), by, excluded: !!excluded, exclusion: excluded ? exclusion : null }]);
+  lib.writeProjects(root, [...projects.filter(p => p !== prior), { slug, title, path, contexts, linkedAt: prior?.linkedAt || new Date().toISOString(), by: by || resume?.by || null, excluded: !!excluded || !!prior?.excluded, exclusion: excluded ? exclusion : prior?.exclusion || null }]);
   lib.writeLoaded(root, contexts, slug);
   // The brain's own skills show in this project too: Codex scans each project's .agents/skills.
   const skillLinks = us.reconcileProjectSkills(root, slug);
+  if (opt.starter) {
+    const kept = finishStarterProject(path);
+    if (!kept.ok) refuse(`Starter files and project link are preserved, but initial history is incomplete: ${kept.note}. Resolve the Git error, then retry this same starter creation request to finish without replacing files.`);
+    console.log(`Starter source prepared and linked; ${kept.note}. Dependencies and preview: not verified. Continue in this chat using ${path} as the working directory. Read docs/workflows/build-design-system/SKILL.md there; install dependencies through the shell with normal permissions. No remote repository or deployment was created.`);
+  }
   lib.logActivity(root, "project", `${opt.create ? "created" : "linked"} ${slug} at ${path}`);
   if (opt.create) console.log(`Created ${title} at ${path}. Work here uses ${admin.company || basename(root)}'s shared company knowledge.`);
   else console.log(`linked ${slug} at ${path} · loaded: ${contexts.join(", ") || "nothing yet"}${inside ? " · inside the brain (its rules are inherited)" : ""}${excluded ? " · excluded from the brain's git on this machine (a personal path)" : ""}${repaired ? ` · replaced a pointer to a brain that was gone (${existing.brain})` : ""}${skillLinks.linked.length ? ` · skills linked: ${skillLinks.linked.join(", ")}` : ""}`);
@@ -158,14 +177,14 @@ if (opt.unlink) {
   } else {
     elsewhere = ` · pointer at ${p.path} now belongs to ${ptr.brain}; left in place`;
   }
-  for (const s of us.listUserSkills(root)) { const l = join(p.path, ".agents", "skills", s.id); try { if (lstatSync(l).isSymbolicLink()) rmSync(l, { recursive: true }); } catch {} }
+  us.removeProjectSkillLinks(root, p.path);
   rmSync(join(root, "work", "projects", slug), { recursive: true, force: true });
   lib.writeProjects(root, projects.filter(x => x.slug !== slug));
   lib.logActivity(root, "project", `unlinked ${slug}`);
   console.log(`unlinked ${slug} (${p.path}); its notes keep the tag project:${slug}.${elsewhere}`); lib.rerender(root); process.exit(0);
 }
 if (opt.list) {
-  const rows = projects.map(p => { const loaded = lib.readLoaded(root, p.slug); const last = lib.listContexts(root).flatMap(c => lib.effectiveMemories(c.memories)).filter(m => m.tags.includes(`project:${p.slug}`)).map(m => m.at).sort().pop() || null; return { ...p, loaded, lastNote: last, pointer: lib.projectPointerStatus(root, p) === "ok", pointerStatus: lib.projectPointerStatus(root, p) }; });
+  const rows = projects.map(p => { const loaded = lib.readLoaded(root, p.slug); const last = lib.listContexts(root).flatMap(c => lib.effectiveMemories(c.memories)).filter(m => m.tags.includes(`project:${p.slug}`)).map(m => m.at).sort().pop() || null; const starter = readStarterProject(p.path); return { ...p, ...(starter ? { starter } : {}), loaded, lastNote: last, pointer: lib.projectPointerStatus(root, p) === "ok", pointerStatus: lib.projectPointerStatus(root, p) }; });
   if (opt.available) {
     const available = await listCodexProjects();
     console.log(JSON.stringify({ projects: rows, codex: available, guidance: "Codex projects are candidates, not capture consent. Ask which existing projects to follow with native checkboxes. Verify each selected folder and link only after submission. An empty or unavailable catalog does not establish that the person has no projects; offer to name a missing folder. Stay in the onboarding chat." }, null, 1));
@@ -173,7 +192,7 @@ if (opt.list) {
   }
   if (opt.json) { console.log(JSON.stringify({ projects: rows }, null, 1)); process.exit(0); }
   if (!rows.length) { console.log("no projects linked to this brain. In a folder: /gtm-brain-project links it."); process.exit(0); }
-  for (const r of rows) console.log(`• ${r.slug} (${r.title}) · ${r.path}${r.pointer ? "" : " · pointer invalid (missing, moved or linked elsewhere)"}\n  contexts: ${r.contexts.join(", ") || "none"} · loaded: ${r.loaded.join(", ") || "nothing"} · last note: ${r.lastNote ? lib.localDateTime(r.lastNote) : "none"}`);
+  for (const r of rows) console.log(`• ${r.slug} (${r.title}) · ${r.path}${r.pointer ? "" : " · pointer invalid (missing, moved or linked elsewhere)"}\n  contexts: ${r.contexts.join(", ") || "none"} · loaded: ${r.loaded.join(", ") || "nothing"} · last note: ${r.lastNote ? lib.localDateTime(r.lastNote) : "none"}${r.starter ? `\n  starter: ${r.starter.id} · ${r.starter.state || "unknown"} · ${r.starter.compatible ? "compatible" : `needs repair: ${r.starter.issues.join("; ")}`} · dependencies and preview not verified` : ""}`);
   process.exit(0);
 }
-console.error("usage: project.mjs <root> --link <path> [--create] [--slug s] [--title T] [--contexts a,b] [--by h] | --unlink <slug> | --list [--json]"); process.exit(1);
+console.error("usage: project.mjs <root> --link <path> [--create] [--starter web-design-system] [--slug s] [--title T] [--contexts a,b] [--by h] | --unlink <slug> | --list [--json]"); process.exit(1);

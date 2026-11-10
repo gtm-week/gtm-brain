@@ -1,0 +1,17 @@
+---
+/** One topic on a design-system page: a heading, a line on what it shows, then the stages. */
+interface Props {
+  title: string;
+  description?: string;
+  id?: string;
+}
+const { title, description, id } = Astro.props;
+---
+
+<section id={id} class="flex flex-col gap-6 border-b border-line px-6 py-10 lg:px-12 lg:py-12">
+  <div class="flex flex-col gap-1">
+    <h2 class="heading-h5 text-ink-1">{title}</h2>
+    {description && <p class="max-w-measure-lg text-small text-ink-2">{description}</p>}
+  </div>
+  <slot />
+</section>
