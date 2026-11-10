@@ -30,7 +30,7 @@ test("setup writes WHERE.md, commits it, and the README points to it", () => {
   assert.match(readFileSync(join(root, "README.md"), "utf8"), /\[WHERE\.md\]\(WHERE\.md\) says where every file goes/);
 });
 
-test("every chat starts with the numbered rows and the outcomes; a Berlin speaker graphic has its row and its outcome", () => {
+test("every chat starts with the numbered rows and the projects; a Berlin speaker graphic has its row and its project", () => {
   const root = brain();
   mkdirSync(join(root, "projects", "berlin-event-2026"), { recursive: true });
   writeFileSync(join(root, "projects", "berlin-event-2026", "README.md"), "# GTM Tech Week Berlin, November 2026: graphics, speakers, LinkedIn\n");
@@ -38,7 +38,7 @@ test("every chat starts with the numbered rows and the outcomes; a Berlin speake
   const out = start(root);
   assert.match(out, /WHERE\.md decides where every file goes; the person edits it\./);
   assert.match(out, /\n  5\. A speaker or guest graphic for an event: `projects\/<event>\/speakers\/<name>\/`/);
-  assert.match(out, /Outcomes:\n  projects\/berlin-event-2026\/ - GTM Tech Week Berlin, November 2026: graphics, speakers, LinkedIn\n  projects\/website\/ \(no README\.md line yet/);
+  assert.match(out, /Projects:\n  projects\/berlin-event-2026\/ - GTM Tech Week Berlin, November 2026: graphics, speakers, LinkedIn\n  projects\/website\/ \(no README\.md line yet/);
   assert.match(out, /never create a folder at the brain root or put a deliverable in work\//);
 });
 
@@ -65,4 +65,15 @@ test("a new project goes to projects/<slug>/ by default, creating projects/ the 
   const out = execFileSync(process.execPath, [`${P}/skills/gtm-brain-project/project.mjs`, root, "--link", join(root, "projects", "berlin-event-2026"), "--create", "--slug", "berlin-event-2026", "--title", "Berlin event", "--by", "artur-wala"], { cwd: root, env, encoding: "utf8" });
   assert.match(out, /Created Berlin event at .*projects\/berlin-event-2026/);
   assert.ok(existsSync(join(root, "projects", "berlin-event-2026", "AGENTS.md")));
+});
+
+test("an unedited WHERE.md from before the rename gets the new wording at the next chat start; an edited one keeps its own", () => {
+  const root = brain(), old = readFileSync(join(T, "legacy", "where", "0.33.9-outcomes.md"), "utf8");
+  writeFileSync(join(root, "WHERE.md"), old); execFileSync("git", ["-C", root, "commit", "-qam", "the earlier wording"]);
+  assert.match(start(root), /\nProjects:\n/);
+  assert.equal(readFileSync(join(root, "WHERE.md"), "utf8"), readFileSync(join(T, "WHERE.md"), "utf8"));
+  assert.match(readFileSync(join(root, "WHERE.md"), "utf8"), /\| A project: an event, a campaign, a client, a launch \| `projects\/<project>\/`/);
+  const mine = old.replace("| Brand: design system, fonts, brand files | `brand/` |", "| Brand | `brand/` and `fonts/` |");
+  writeFileSync(join(root, "WHERE.md"), mine); start(root);
+  assert.equal(readFileSync(join(root, "WHERE.md"), "utf8"), mine);
 });

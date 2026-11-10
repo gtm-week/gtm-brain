@@ -311,10 +311,10 @@ test("setup refuses a folder too broad for a brain, before writing anything, and
   const ok = setup(fine); assert.equal(ok.status, 0, ok.stderr); assert.equal(existsSync(join(fine, "brain/admin.md")), true);
 });
 
-test("the rules say WHERE.md decides where work output goes, inside its outcome", () => {
+test("the rules say WHERE.md decides where work output goes, inside its project", () => {
   const rules = readFileSync(join(plugin, "templates/AGENTS.md"), "utf8").replace(/\s+/g, " ");
   assert.match(rules, /`WHERE\.md` at the brain root decides where every file goes, and the person edits it/);
-  assert.match(rules, /a task that belongs to a listed outcome goes in that outcome, never in a folder of its own/);
+  assert.match(rules, /a task that belongs to a listed project goes in that project, never in a folder of its own/);
   assert.match(rules, /Never put a deliverable in `work\/` or a new folder at the brain root/);
 });
 

@@ -1,14 +1,14 @@
 // WHERE.md: the one file that says where things go in a brain, for the person and for Codex alike
 // (Artur, 2026-11-10: "where is the if-then I can change"). Setup writes it; a brain without one gets it
 // at the chat start; an unedited one follows the shipped template; an edited one is never touched.
-// Every chat's opening lines carry its rows and the outcomes under projects/, so a deliverable goes into
-// the outcome it belongs to (a speaker graphic into the Berlin event) instead of a folder of its own.
+// Every chat's opening lines carry its rows and the projects under projects/, so a deliverable goes into
+// the project it belongs to (a speaker graphic into the Berlin event) instead of a folder of its own.
 import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { readAdmin, commit } from "./brain.mjs";
 
 export const WHERE = "WHERE.md";
-const MAX_OUTCOMES = 20;
+const MAX_PROJECTS = 20;
 
 /* Write WHERE.md when it is missing, refresh it when it is a shipped version nobody edited. */
 export function ensureWhere(root, templates) {
@@ -38,8 +38,8 @@ export function whereRows(root) {
   return rows;
 }
 
-/* The outcomes: folders in projects/, each with the first line of its README.md as what it is. */
-export function outcomes(root) {
+/* The projects: folders in projects/, each with the first line of its README.md as what it is. */
+export function projects(root) {
   const dir = join(root, "projects");
   let names = []; try { names = readdirSync(dir).filter(n => !n.startsWith(".") && statSync(join(dir, n)).isDirectory()).sort(); } catch { return []; }
   return names.map(slug => {
@@ -49,13 +49,13 @@ export function outcomes(root) {
   });
 }
 
-/* The opening lines' part: the rows, numbered as Codex cites them, and the outcomes to choose from. */
+/* The opening lines' part: the rows, numbered as Codex cites them, and the projects to choose from. */
 export function whereLine(root) {
   const rows = whereRows(root);
   if (!rows.length) return "";
-  const list = outcomes(root), shown = list.slice(0, MAX_OUTCOMES);
+  const list = projects(root), shown = list.slice(0, MAX_PROJECTS);
   const outs = list.length
     ? shown.map(o => `  projects/${o.slug}/${o.about ? ` - ${o.about}` : " (no README.md line yet: add one when you next work in it)"}`).join("\n") + (list.length > shown.length ? `\n  and ${list.length - shown.length} more in projects/` : "")
     : "  none yet";
-  return `WHERE.md decides where every file goes; the person edits it. Put each file where a row says and name the row in one short clause ("in projects/berlin-event/speakers/, WHERE.md row 5"). A deliverable for an outcome below goes inside that outcome. When no row or outcome fits, ask before creating a folder and offer a new row; never create a folder at the brain root or put a deliverable in work/.\n${rows.map((r, i) => `  ${i + 1}. ${r.what}: ${r.where}`).join("\n")}\nOutcomes:\n${outs}`;
+  return `WHERE.md decides where every file goes; the person edits it. Put each file where a row says and name the row in one short clause ("in projects/berlin-event/speakers/, WHERE.md row 5"). A deliverable for a project below goes inside that project. When no row or project fits, ask before creating a folder and offer a new row; never create a folder at the brain root or put a deliverable in work/.\n${rows.map((r, i) => `  ${i + 1}. ${r.what}: ${r.where}`).join("\n")}\nProjects:\n${outs}`;
 }

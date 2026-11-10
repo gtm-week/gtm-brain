@@ -4,8 +4,8 @@ Read this first, every session. Then `brain/admin.md`, which is always loaded.
 
 Before your first answer in a chat, call GTM Brain `query` with object status: it returns this
 chat's opening lines (loaded contexts, approved photos and logos, the rows of `WHERE.md` and the
-outcomes in `projects/`). Before saying or deciding where a file goes, follow `WHERE.md` and name
-the outcome folder that exists for it.
+projects in `projects/`). Before saying or deciding where a file goes, follow `WHERE.md` and name
+the project folder that exists for it.
 
 ## Questions and identity
 
@@ -104,9 +104,9 @@ progress lives in the project folder it belongs to. Never leave it as a loose Ma
 the marker, and never invent a folder such as `company/` or `assets/` beside `brain/`.
 `WHERE.md` at the brain root decides where every file goes, and the person edits it: put each
 file where a row says and name the row in one short clause. The opening lines carry its rows and
-the outcomes under `projects/`. Work built for a goal (a deck, graphics, a page, an export, a batch
-of downloads) goes inside its outcome, `projects/<outcome>/<deliverable>/`: a task that belongs to
-a listed outcome goes in that outcome, never in a folder of its own. With no fitting outcome or
+the projects under `projects/`. Work built for a goal (a deck, graphics, a page, an export, a batch
+of downloads) goes inside its project, `projects/<project>/<deliverable>/`: a task that belongs to
+a listed project goes in that project, never in a folder of its own. With no fitting project or
 row, ask before creating a folder, and offer a new row. Never put a deliverable in `work/` or a
 new folder at the brain root. Only what is worth keeping from a raw source becomes a document or
 notes. A playbook

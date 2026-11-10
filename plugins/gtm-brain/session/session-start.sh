@@ -152,7 +152,7 @@ node -e 'const w=await import(process.argv[1]);const l=w.runsLine(process.argv[2
 # Unedited ones are refreshed here; edited ones get the offer. Both say why: what the newer rules change.
 node -e 'const u=await import(process.argv[1]);const o=u.autoRefresh(process.argv[2],process.argv[3]);if(o)console.log(o)' "$P/lib/upgrade-files.mjs" "$root" "$P/templates" 2>/dev/null || true
 node -e 'const u=await import(process.argv[1]);u.refreshReadme(process.argv[2],process.argv[3])' "$P/lib/upgrade-files.mjs" "$root" "$P/templates" 2>/dev/null || true
-# Where things go (WHERE.md, the person's to edit) and the outcomes under projects/: a deliverable goes into its outcome.
+# Where things go (WHERE.md, the person's to edit) and the projects under projects/: a deliverable goes into its project.
 node -e 'const w=await import(process.argv[1]);w.ensureWhere(process.argv[2],process.argv[3]);const l=w.whereLine(process.argv[2]);if(l)console.log(l)' "$P/lib/where.mjs" "$root" "$P/templates" 2>/dev/null || true
 # A newer GTM Brain where this install came from: checked in the background at most once a day (a shallow
 # fetch of one ref, never in the hook's own time); the last result is said here and shown on the page.

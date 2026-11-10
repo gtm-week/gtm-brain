@@ -6,7 +6,7 @@ always in one of the places below.
 ## What goes where
 
 [WHERE.md](WHERE.md) says where every file goes. Codex reads it at the start of every chat and
-follows it; edit its rows to change where things land. Outcomes (an event, a campaign, a client)
+follows it; edit its rows to change where things land. Projects (an event, a campaign, a client)
 live in `projects/`, each in one folder with everything made for it. Processes that run over
 time, with steps, are in `workflows/`.
 
