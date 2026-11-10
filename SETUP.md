@@ -13,7 +13,8 @@ grows with the steps: each section is a step you can run and check.
   nothing to type in a terminal. The ChatGPT desktop app works too;
   the CLI is used below because it is easier to describe.
 - Node 22.16+ or 24+ (`node --version`), git.
-- GTM Brain has no hooks, so there is nothing to approve after installing. The chat start (the
+- GTM Brain declares no Codex hooks, so there is nothing to approve after installing (a brain's
+  own git pre-commit check in `.githooks` is separate). The chat start (the
   brain refresh and its opening lines) runs on a chat's first GTM Brain call, and a direct edit
   of a protected file is put back at the next chat start or save.
 

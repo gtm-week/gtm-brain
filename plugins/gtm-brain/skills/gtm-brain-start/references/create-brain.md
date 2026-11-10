@@ -1,7 +1,7 @@
 
 # Create the brain (the procedure gtm-brain-start follows in its Step 1)
 
-Use the person's saved language for conversation and English for authored brain records.
+Speak English and write brain records in English.
 Read [onboarding questions](questions.md) for structured
 input. Reuse known answers. The folder must be empty apart from repository scaffolding;
 never run setup over an existing brain.
@@ -40,7 +40,7 @@ Explain the starting contexts together without requiring a separate rule intervi
 - #market: trends, competitors, alternatives and research.
 - Target customers (`icp`): target segments, customer needs, buying roles and evidence of fit.
 - Our offer (`offer`): our products and services, positioning, packaging, pricing, proof and voice.
-- #personal-<handle>: the identified person's role, language and working preferences.
+- #personal-<handle>: the identified person's role and working preferences.
 
 Follow [starting contexts](contexts.md) when explaining the set or deciding where a finding belongs.
 Our company describes the business that owns this brain. External company names are linked
@@ -55,10 +55,9 @@ for sustained work with useful separation. Ordinary customer records do not crea
 ## Create
 
 Call `setup_brain` with `folder`, `company`, `one_liner`, `owner` (Full Name <email>),
-optional `team`, `tools`, and `language`. Summaries update by themselves in the background, so say that in one line, never as a question. Optional rule overrides are `company_rule`, `strategy`,
-`market`, `icp` and `offer`. Setup always creates the creator's personal context, even if
-language has not yet been chosen. Only the identified person's explicit or saved language is
-stored. Other teammates select their preferences when they join.
+optional `team` and `tools`. Summaries update by themselves in the background, so say that in one line, never as a question. Optional rule overrides are `company_rule`, `strategy`,
+`market`, `icp` and `offer`. Setup always creates the creator's personal context. GTM Brain is English-only: there is no
+language to ask about or save.
 
 Use the MCP operation, not direct file edits. It writes and saves the initial brain.
 If `setup_brain` still advertises pipeline/marketing/gtm defaults, the running plugin is stale:

@@ -28,7 +28,8 @@ so people and companies stay shared.
 
 - `AGENTS.md`, `CLAUDE.md`: the rules Codex and Claude follow in this folder.
 - `work/`: this computer's working files: the dashboard, logs and search index, plus the projects
-  linked here and the backups from upgrades. Not in git. Leave it alone: deleting it unlinks those projects and removes the backups.
+  linked here and the backups from upgrades. Not in git: deleting it unlinks those projects and removes the backups.
+  Never the place for a deliverable; leave it alone.
 
 Nothing else belongs at this level: a `company/` or `assets/` folder is a container nobody reads.
 Did it happen? Say it in the chat; Codex notes it.

@@ -21,7 +21,7 @@ esac
 if [ -n "$project" ]; then
   company="$(node -e 'const l=await import(process.argv[1]);console.log((l.readAdmin(process.argv[2])||{}).company||"")' "$P/lib/brain.mjs" "$root" 2>/dev/null)"
   echo "PROJECT $project of the $company brain at $root. Pass brain: $root and project: $project in every GTM Brain tool call. Say \"$project\" to the person, never the path."
-  echo "This linked folder is one working project. For new subprojects or a workspace hierarchy, propose separate folders directly inside $root through /gtm-brain-project. Do not scaffold a brain or nested GTM Brain projects here; preserve ordinary application directories and existing files."
+  echo "This linked folder is one working project. For new subprojects or a workspace hierarchy, propose separate folders in $root/projects/ through /gtm-brain-project. Do not scaffold a brain or nested GTM Brain projects here; preserve ordinary application directories and existing files."
   # A teammate's skill arrives through git; the link into this project is made here, once per session start.
   node -e 'const u=await import(process.argv[1]);u.reconcileProjectSkills(process.argv[2],process.argv[3])' "$P/lib/user-skills.mjs" "$root" "$project" 2>/dev/null || true
 fi

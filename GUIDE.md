@@ -190,7 +190,8 @@ brain/contexts/<context>/context.md  the context summary and rules
 brain/contexts/<context>/memories.jsonl   the notes, one per line
 README.md                            what goes where; setup writes it, upgrade refreshes it while unedited
 strategy.md, brand/voice.md, ...     your documents, with their files in a folder of the same name
-<project>/                           a working folder you created or linked, beside brain/
+WHERE.md                             where every file goes; Codex follows it, you edit it
+projects/<outcome>/                  one folder per outcome (an event, a campaign), its deliverables inside
 work/home/index.html                 the dashboard
 ```
 

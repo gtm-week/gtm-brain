@@ -354,13 +354,15 @@ Tool: `check_environment`. Writes: nothing.
 ### setup
 *"set up a new company brain in this folder"* (empty folder)
 
-Nine questions: company, one line, your name and email, teammates, tools, whether the dashboard opens at every chat, one standing rule
-for each of `pipeline`, `marketing`, `gtm`. Creates `brain/admin.md`, the three contexts,
-`brain/entities/` with the team, `AGENTS.md`, git, the pre-commit hook; then checks the tools.
-Handles are full names, lowercase, hyphenated (`maciej-konczal`).
+Four questions, one at a time: your full name and work email; the company, what it sells and to
+whom; teammates; the tools you use (checkboxes, CRM first). Creates `brain/admin.md`, the
+contexts Our company (`company`), Strategy, Market, Target customers (`icp`), Our offer and your
+personal context, `brain/entities/` with the team, `AGENTS.md`, `README.md`, `WHERE.md`,
+`strategy.md`, `workflows/`, git and the pre-commit check; then checks the tools. Handles are full
+names, lowercase, hyphenated (`maciej-konczal`).
 
 Tool: `setup_brain`. Writes: everything in a new brain; the first commit.
-`bash $PLUGIN_ROOT/scripts/gtm-brain-setup/setup.sh --company X --one-liner "..." --owner "Name <email>" --team "Name <email>, ..." --tools "Attio (CRM), Gmail" [--pipeline "..."] [--marketing "..."] [--gtm "..."]`
+`bash $PLUGIN_ROOT/scripts/gtm-brain-setup/setup.sh --company X --one-liner "..." --owner "Name <email>" --team "Name <email>, ..." --tools "Attio (CRM), Gmail"`
 
 ### new project / link project
 During onboarding, GTM Brain asks which existing Codex projects to follow. `list_projects` with

@@ -106,6 +106,6 @@ fi
 node -e 'const l=await import(process.argv[1]);l.registerBrain(".")' "$PLUGIN/lib/brain.mjs" 2>/dev/null || true
 echo "  brain/admin.md            workplace info: team with handles, tools. Changes need APPROVE."
 echo "  brain/contexts/           company, strategy, market, icp, offer, personal-$OWNER_HANDLE"
-echo "  git in this folder: commits as $OWNER_NAME <$OWNER_EMAIL>, hooks in .githooks (local config)"
+echo "  git in this folder: commits as $OWNER_NAME <$OWNER_EMAIL>, git pre-commit check in .githooks (local config)"
 echo "  you are: $OWNER_HANDLE    next: onboarding is in progress; continue gtm-brain-start discovery in this chat using the answers already supplied"
 node -e 'const l=await import(process.argv[1]);console.log(l.onboardingInstruction("."))' "$PLUGIN/lib/brain.mjs"

@@ -44,7 +44,7 @@ test("every chat starts with the numbered rows and the outcomes; a Berlin speake
 
 test("the person's rows are what Codex is given, and an edited WHERE.md is never overwritten", () => {
   const root = brain();
-  const mine = readFileSync(join(root, "WHERE.md"), "utf8").replace("| Brand: design system, logos, fonts | `brand/` |", "| Brand: design system, logos, fonts | `brand/` |\n| Anything for a client | `clients/<client>/` |");
+  const mine = readFileSync(join(root, "WHERE.md"), "utf8").replace("| Brand: design system, fonts, brand files | `brand/` |", "| Brand: design system, fonts, brand files | `brand/` |\n| Anything for a client | `clients/<client>/` |");
   writeFileSync(join(root, "WHERE.md"), mine);
   assert.equal(where.ensureWhere(root, T), false);
   assert.equal(readFileSync(join(root, "WHERE.md"), "utf8"), mine);

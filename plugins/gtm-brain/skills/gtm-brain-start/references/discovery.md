@@ -1,7 +1,7 @@
 
 # Discovery: get to know the company (the procedure gtm-brain-start follows in its Step 2)
 
-> For humans: instead of a questionnaire, Codex figures your business out. It reads what is
+> For humans: after the four setup questions, there is no questionnaire: Codex figures your business out. It reads what is
 > already on your machine and in your connected tools, researches your website, drafts your
 > workplace info for you to approve, and sets up one or two things that help this week. You
 > correct a draft; you do not fill in a form.
@@ -27,8 +27,8 @@ The approval is always the person's APPROVE in the `approve_change` form, never 
 Questions are clicks wherever the harness allows it. If a structured question control
 with answer proposals is available in the current mode, use it for preferences and
 connection choices (never security permissions): yes/no answers, "connect these
-two?", "which provider?", with a free-text follow-up when the person means something
-else. The dashboard is view-only. If no appropriate structured control is available,
+two?", "which provider?", and the form's own Something else for an answer in the
+person's words. The dashboard is view-only. If no appropriate structured control is available,
 ask in the Codex conversation, and then these rules keep it pleasant:
 
 - **Every question earns its keep.** One line of why you are asking, then the question,
@@ -155,9 +155,8 @@ sample from step 0. From it draft:
 - anything that looks like an ICP or a positioning claim, kept as **hypotheses to
   confirm**, never written as fact.
 
-If `brain/` does not exist, materialize it now by calling the setup script with the
-derived values (`setup.sh --company ... --one-liner ... --owner ...`), defaults for the
-rest. Context rules and the dashboard setting are point-of-need questions for later
+If `brain/` does not exist yet, create it now with the `setup_brain` tool and the derived
+values (company, one line, owner), defaults for the rest; never run the setup script yourself. Context rules and the dashboard setting are point-of-need questions for later
 sessions, not part of discovery.
 
 Show the drafted workplace info and all proposed changes in plain language, without raw file diffs, and invite corrections

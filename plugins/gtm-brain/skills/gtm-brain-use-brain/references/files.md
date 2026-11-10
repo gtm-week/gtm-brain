@@ -62,6 +62,6 @@ what it is attached to (entity, role, status) when it is an entity file, what wa
 
 ## Hard rules
 
-- Never move, rename or delete the person's original file; a copy lands in the brain.
+- Never move, rename or delete the person's original file; a file from outside lands in the brain as a copy.
 - Never overwrite a file in the brain; a different file with the same name gets a suffix.
 - The extraction under `work/` is derived and disposable; the notes cite the file, not it.

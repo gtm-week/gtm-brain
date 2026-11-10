@@ -23,8 +23,8 @@ protected: true
 - Contexts hold shared knowledge about topics. Use the relevant context for the requested work.
 - Tools are read live when a context names them. The brain never holds a copy.
 - Memories name their authors by handle; the handles are in `team` above.
-- This file is the workplace info. Codex changes it only after you type APPROVE: it shows the
-  diff, you type the word, it applies and commits.
+- This file is the workplace info. Codex changes it only after you choose APPROVE in its form:
+  it explains the change, the form shows the diff, your click applies and commits it.
 - The dashboard opens in the Codex pane and needs no login. The legacy browser setting is
   ignored. `dashboard: always | on-demand` controls its timing guidance; change it in Codex,
   then APPROVE. Summaries update in the background after each saved change.
