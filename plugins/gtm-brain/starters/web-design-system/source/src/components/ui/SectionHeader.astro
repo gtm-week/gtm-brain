@@ -1,0 +1,64 @@
+---
+/**
+ * The top of a section: tagline, heading (with an optional muted tail), lead and
+ * actions. Every section uses it, so section tops stay consistent.
+ */
+import Tagline from "./Tagline.astro";
+import Heading from "./Heading.astro";
+import Button from "./Button.astro";
+
+export interface Action {
+  label: string;
+  href: string;
+  variant?: "primary" | "secondary" | "ghost";
+}
+
+interface Props {
+  tagline?: string;
+  heading: string;
+  /** The two-tone tail, in ink-3. */
+  muted?: string;
+  lead?: string;
+  actions?: Action[];
+  align?: "left" | "center";
+  /** The tag; a page's first section is 1, the rest 2. */
+  level?: 1 | 2;
+  size?: "h1" | "h2" | "h3";
+  class?: string;
+}
+const {
+  tagline,
+  heading,
+  muted,
+  lead,
+  actions = [],
+  align = "left",
+  level = 2,
+  size = level === 1 ? "h1" : "h2",
+  class: className,
+} = Astro.props;
+const center = align === "center";
+---
+
+<header
+  class:list={[
+    "flex flex-col gap-4",
+    center ? "mx-auto max-w-measure-lg items-center text-center" : "max-w-measure-lg items-start",
+    className,
+  ]}
+>
+  {tagline && <Tagline>{tagline}</Tagline>}
+  <Heading level={level} size={size} muted={muted}>{heading}</Heading>
+  {lead && <p class="text-large text-ink-2">{lead}</p>}
+  {
+    actions.length > 0 && (
+      <div class:list={["mt-2 flex flex-wrap gap-3", center && "justify-center"]}>
+        {actions.map((action, i) => (
+          <Button href={action.href} variant={action.variant ?? (i === 0 ? "primary" : "ghost")}>
+            {action.label}
+          </Button>
+        ))}
+      </div>
+    )
+  }
+</header>

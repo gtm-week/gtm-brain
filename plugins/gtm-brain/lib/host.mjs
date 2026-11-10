@@ -28,6 +28,7 @@ export const CHAT_KINDS = HOSTS;
 export const isChatSource = s => !!s && CHAT_KINDS.includes(s.kind);
 /* Each host's own home folder in a project: the other host's is off limits (texts.foreign). */
 export const HOST_DIRS = [".codex", ".claude"];
+export const PROJECT_SKILL_DIRS = [".agents/skills", ".claude/skills"];
 
 export function hostId(env = process.env) {
   const id = env.GTM_BRAIN_HOST || env.GTM_OS_HOST || "codex";
@@ -48,6 +49,7 @@ function newest(files, now = Date.now()) {
 
 const ADAPTERS = {
   codex: {
+    projectSkillsDir: ".agents/skills",
     // The Codex app always has its own runner: unchanged from before hosts existed.
     compiles: () => true,
     newChatLink: (path, prompt) => `codex://threads/new?path=${encodeURIComponent(path)}&prompt=${encodeURIComponent(prompt)}`,
@@ -108,6 +110,7 @@ const ADAPTERS = {
     },
   },
   claude: {
+    projectSkillsDir: ".claude/skills",
     // No Claude Code runner for summaries yet: Codex runs them when it is installed on this machine.
     compiles: () => onPath("codex"),
     // Prefilled, not sent: the person presses Enter (claude-cli://open, Claude Code 2.1+).

@@ -1,0 +1,47 @@
+---
+/** A checkbox with its label; same states as the fields. */
+import type { HTMLAttributes } from "astro/types";
+import { Check } from "@lucide/astro";
+import Icon from "./Icon.astro";
+
+type Props = Omit<HTMLAttributes<"input">, "class" | "type"> & {
+  label: string;
+  error?: string;
+  class?: string;
+};
+
+const {
+  label,
+  error,
+  id = `checkbox-${Math.random().toString(36).slice(2, 8)}`,
+  class: className,
+  ...rest
+} = Astro.props;
+---
+
+<div class:list={["flex flex-col gap-1.5", className]}>
+  <label for={id} class="inline-flex items-start gap-3 text-regular text-ink-2">
+    <span class="relative grid size-5 shrink-0 translate-y-0.5 place-items-center">
+      <input
+        id={id}
+        type="checkbox"
+        aria-invalid={error ? "true" : undefined}
+        aria-describedby={error ? `${id}-note` : undefined}
+        class:list={[
+          "peer col-start-1 row-start-1 size-5 appearance-none rounded-sm border border-line-2 bg-surface-1 transition-colors",
+          "hover:bg-surface-2 checked:border-transparent checked:bg-surface-inverted-1",
+          "focus-visible:border-line-brand focus-visible:outline-none checked:focus-visible:border-line-brand",
+          "aria-invalid:border-danger disabled:cursor-not-allowed disabled:opacity-40",
+        ]}
+        {...rest}
+      />
+      <Icon
+        icon={Check}
+        size="sm"
+        class="pointer-events-none col-start-1 row-start-1 text-ink-inverted opacity-0 peer-checked:opacity-100"
+      />
+    </span>
+    <span>{label}</span>
+  </label>
+  {error && <p id={`${id}-note`} class="text-small text-danger">{error}</p>}
+</div>

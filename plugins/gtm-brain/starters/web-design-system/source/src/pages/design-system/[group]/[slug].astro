@@ -1,0 +1,18 @@
+---
+/** One component: its examples on stages, its states, its props (examples/<Name>.astro). */
+import DesignSystem from "../../../layouts/DesignSystem.astro";
+import { components } from "../../../components/design-system/nav";
+
+export const getStaticPaths = () =>
+  components.map((element) => ({
+    params: { group: "components", slug: element.slug },
+    props: { element },
+  }));
+
+const { element } = Astro.props;
+const { Thumb: Examples } = element;
+---
+
+<DesignSystem title={element.name} lead={element.lead} file={`src/${element.source}.astro`}>
+  <Examples />
+</DesignSystem>

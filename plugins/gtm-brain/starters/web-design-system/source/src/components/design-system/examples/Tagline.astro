@@ -1,0 +1,28 @@
+---
+import DsBlock from "../DsBlock.astro";
+import DsStage from "../DsStage.astro";
+import DsProps from "../DsProps.astro";
+import Tagline from "../../ui/Tagline.astro";
+import Heading from "../../ui/Heading.astro";
+
+interface Props {
+  /** A small preview for the overview grid. */
+  thumb?: boolean;
+}
+const { thumb = false } = Astro.props;
+---
+
+{
+  thumb ? (
+    <Tagline>Section tagline</Tagline>
+  ) : (
+    <>
+      <DsBlock title="Above a heading" description="Written in normal case; the capitals are style.">
+        <DsStage layout="start">
+          <div class="flex flex-col gap-3"><Tagline>Section tagline</Tagline><Heading level={2} size="h3">A section heading</Heading></div>
+        </DsStage>
+      </DsBlock>
+      <DsBlock title="Props"><DsProps of="components/ui/Tagline" /></DsBlock>
+    </>
+  )
+}

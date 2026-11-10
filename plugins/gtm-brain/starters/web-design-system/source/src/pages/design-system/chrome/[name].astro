@@ -1,0 +1,24 @@
+---
+/** The navbar or the footer at Desktop · Tablet · Mobile width, and its props. */
+import DesignSystem from "../../../layouts/DesignSystem.astro";
+import DsBlock from "../../../components/design-system/DsBlock.astro";
+import DsFrame from "../../../components/design-system/DsFrame.astro";
+import DsProps from "../../../components/design-system/DsProps.astro";
+import { chrome } from "../../../components/design-system/nav";
+
+export const getStaticPaths = () => chrome.map((part) => ({ params: { name: part.slug }, props: { part } }));
+const { part } = Astro.props;
+const notes: Record<string, string> = {
+  navbar: "Choose Mobile and press the menu button: the links open under the bar.",
+  footer: "Stacked on a phone, two by two on a tablet, a row of four from 1024.",
+};
+---
+
+<DesignSystem title={part.name} lead={part.lead} file={`src/${part.source}.astro`}>
+  <DsBlock title="Preview" description={notes[part.slug]}>
+    <DsFrame src={`/design-system/preview/chrome/${part.slug}`} title={part.name} switcher />
+  </DsBlock>
+  <DsBlock title="Props" description="Defaults come from src/data/navigation.ts; a page can pass its own.">
+    <DsProps of={part.source} />
+  </DsBlock>
+</DesignSystem>

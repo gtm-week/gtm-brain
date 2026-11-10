@@ -92,7 +92,7 @@ called out. The review makes a recommendation; budget and campaign changes remai
 > Make this research process a skill I can reuse in our other projects.
 
 Keep your own skills in the brain and use them from linked project folders. Plugin updates
-preserve them. See the [command reference](COMMANDS.md) for all fourteen workflows, including
+preserve them. See the [command reference](COMMANDS.md) for all nineteen workflows, including
 strategy, source sync, documents and project setup.
 
 ## How GTM Brain works
@@ -277,7 +277,7 @@ does not mean offline AI processing.
 
 ## Built-in workflows
 
-Ask for an outcome in ordinary language, or invoke one of the fourteen shipped skills:
+Ask for an outcome in ordinary language, or invoke one of the nineteen shipped skills:
 
 | Command | Use it for |
 | --- | --- |
@@ -292,8 +292,18 @@ Ask for an outcome in ordinary language, or invoke one of the fourteen shipped s
 | `/gtm-brain-sync` | Pull relevant updates from connected sources and retain useful findings. |
 | `/gtm-brain-todo` | Review what is waiting on you across the brain and connected tools. |
 | `/gtm-brain-project` | Create or link a working folder to the shared brain. |
+| `/gtm-brain-design-system` | Build our website design system from the existing brand with Brian Woloszczak and Peakout's starter. |
+| `/gtm-brain-add-section` | Add a reusable section to the website design system. |
+| `/gtm-brain-build-landing-page` | Build a campaign page on the shared website; stops at a local preview. |
+| `/gtm-brain-publish-website` | Publish the shared website on Vercel: preview first, production on its own decision. |
 | `/gtm-brain-skill` | Turn a repeated process into your own reusable skill. |
 | `/gtm-brain-configure` | Change workplace information, tools and settings through the approval flow. |
+
+The website workflows use Brian Woloszczak and Peakout's GTM Tech Week starter. GTM Brain
+bundles its pinned source unchanged, adapts only its packaging and connects it to company
+knowledge. Each company reuses one website project for its design system and campaign pages.
+Building ends at a local preview; publishing is a separate request. See the
+[preservation contract](plugins/gtm-brain/starters/web-design-system/README.md).
 
 ## Claude Code (beta)
 
@@ -366,15 +376,18 @@ plugins/gtm-brain/
   .mcp.json  server/          the operations as MCP tools (Remembering, Searching the brain, ...);
                               dash.mjs serves the read-only dashboard and revision events
   lib/                        shared readers, validators, writers, search and identity logic; Node built-ins
-  skills/                     the fourteen workflows a person can ask for (all prefixed gtm-brain-): start,
+  skills/                     the nineteen workflows a person can ask for (all prefixed gtm-brain-): start,
                               todo, sync, workflow, deepdive, strategy, unit-economics, define-icp,
-                              market-desk-research, project, configure, skill, document, use-brain; what
+                              market-desk-research, project, design-system, add-section,
+                              build-landing-page, publish-website, configure, skill, rules, schema,
+                              use-brain; what
                               they used to be as separate skills lives on as their references
     gtm-brain-use-brain/references/    load, create and edit contexts, remember, recall, names, compile,
                               dashboard, manual save
     gtm-brain-configure/references/ workplace approval, connect tools, update plugin
     gtm-brain-start/references/  onboarding, the handoff import
   scripts/gtm-brain-*/           the operation scripts the MCP server, session scripts and skills run (no SKILL.md)
+  starters/web-design-system/ Brian and Peakout's unchanged starter source and its preservation manifest
   templates/                  AGENTS.md, brain/admin.md, .gitignore, the pre-commit hook
   test/                       node --test 'plugins/gtm-brain/test/*.test.mjs'
 frontend/dashboard/           React dashboard source; built assets ship with the plugin

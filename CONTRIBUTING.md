@@ -97,15 +97,18 @@ plugins/gtm-brain/
   .mcp.json  server/          the operations as MCP tools (Remembering, Searching the brain, ...);
                               dash.mjs serves the read-only dashboard and revision events
   lib/                        the file format: read, append, write covers, commit; no dependencies
-  skills/                     the fourteen workflows a person can ask for (all prefixed gtm-brain-): start,
+  skills/                     the nineteen workflows a person can ask for (all prefixed gtm-brain-): start,
                               todo, sync, workflow, deepdive, strategy, unit-economics, define-icp,
-                              market-desk-research, project, configure, skill, document, use-brain; what
+                              market-desk-research, project, design-system, add-section,
+                              build-landing-page, publish-website, configure, skill, rules, schema,
+                              use-brain; what
                               they used to be as separate skills lives on as their references
     gtm-brain-use-brain/references/    load, create and edit contexts, remember, recall, names, compile,
                               dashboard, manual save
     gtm-brain-configure/references/ workplace approval, connect tools, update plugin
     gtm-brain-start/references/  onboarding, the handoff import
   scripts/gtm-brain-*/           the operation scripts the MCP server, session scripts and skills run (no SKILL.md)
+  starters/web-design-system/ Brian and Peakout's unchanged starter source and its preservation manifest
   templates/                  AGENTS.md, brain/admin.md, .gitignore, the pre-commit hook
   test/                       node --test 'plugins/gtm-brain/test/*.test.mjs'
 dev-install.sh                install this checkout into Codex, no GitHub round trip

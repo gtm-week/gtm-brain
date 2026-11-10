@@ -1,0 +1,33 @@
+---
+/** Every page: the head (Seo) and the page's sections. */
+import "../styles/global.css";
+import Seo, { type JsonLd } from "../components/Seo.astro";
+import font from "../assets/fonts/inter-latin-wght-normal.woff2?url";
+import { SITE_LANG } from "../../site.config.mjs";
+
+interface Props {
+  title: string;
+  description: string;
+  canonical?: string;
+  image?: string;
+  noindex?: boolean;
+  jsonLd?: JsonLd[];
+}
+---
+
+<!doctype html>
+<html lang={SITE_LANG}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="preload" href={font} as="font" type="font/woff2" crossorigin />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <Seo {...Astro.props} />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

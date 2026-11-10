@@ -1,0 +1,128 @@
+---
+/**
+ * The /design-system shell: a bar (the brand, the search, a way back to the site), then
+ * one framed column with the sidebar beside the page. Never indexed. Built from the
+ * system's own roles, so it takes on the brand as the foundations are filled. Below lg
+ * the sidebar folds into a menu.
+ */
+import Base from "./Base.astro";
+import DsNav from "../components/design-system/DsNav.astro";
+import DsSearch from "../components/design-system/DsSearch.astro";
+import Icon from "../components/ui/Icon.astro";
+import { Menu, ExternalLink } from "@lucide/astro";
+import { groups, groupOf } from "../components/design-system/nav";
+import { SITE_NAME } from "../../site.config.mjs";
+
+interface Props {
+  title: string;
+  /** One or two sentences: what this page is for. */
+  lead: string;
+  /** The component's file, shown under the lead. */
+  file?: string;
+}
+const { title, lead, file } = Astro.props;
+const current = Astro.url.pathname.replace(/(.)\/$/, "$1");
+const eyebrow = current === "/design-system" ? SITE_NAME : (groupOf(current)?.label ?? "Design system");
+const here = groups.flatMap((g) => g.items).find((item) => item.href === current)?.name ?? title;
+---
+
+<Base title={`${title} · Design system`} description={lead} noindex>
+  <header class="sticky top-0 z-30 h-14 border-b border-line bg-surface-1">
+    <div class="h-full px-4 md:px-8">
+      <div class="mx-auto flex h-full max-w-frame items-center gap-3 md:gap-6">
+        <a href="/design-system" class="flex shrink-0 items-center gap-3 rounded-sm lg:w-56">
+          <span class="text-small font-medium text-ink-1">{SITE_NAME}</span>
+          <span class="h-5 border-l border-line"></span>
+          <span class="tagline text-ink-3">Design system</span>
+        </a>
+        <DsSearch />
+        <a
+          href="/"
+          class="ml-auto hidden shrink-0 items-center gap-1.5 whitespace-nowrap rounded-sm text-small text-ink-2 transition-colors hover:text-ink-1 md:flex"
+        >
+          Open the site <Icon icon={ExternalLink} size="sm" />
+        </a>
+        <button
+          type="button"
+          data-menu-toggle
+          aria-expanded="false"
+          aria-controls="ds-sidebar"
+          class="ml-auto flex items-center gap-2 rounded-sm px-2 py-1.5 text-small text-ink-1 transition-colors hover:bg-surface-2 md:ml-0 lg:hidden"
+        >
+          <span class="hidden max-w-40 truncate md:inline">{here}</span>
+          <Icon icon={Menu} size="sm" label="Contents" />
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="px-4 md:px-8">
+    <div class="mx-auto max-w-frame border-x border-line lg:flex">
+      <aside
+        id="ds-sidebar"
+        class="ds-sidebar hidden border-b border-line lg:block lg:w-60 lg:shrink-0 lg:border-b-0"
+      >
+        <DsNav current={current} />
+      </aside>
+      <main class="min-w-0 flex-1 lg:border-l lg:border-line">
+        <header class="flex flex-col gap-4 border-b border-line px-6 pt-10 pb-12 lg:px-12 lg:pt-16 lg:pb-14">
+          <p class="tagline text-ink-3">{eyebrow}</p>
+          <h1 class="heading-h2 text-ink-1">{title}</h1>
+          <p class="max-w-measure-lg text-large text-ink-2">{lead}</p>
+          {
+            file && (
+              <p class="mt-2 flex flex-col gap-1">
+                <span class="tagline text-ink-3">File</span>
+                <code class="text-small text-ink-1">{file}</code>
+              </p>
+            )
+          }
+        </header>
+        <slot />
+      </main>
+    </div>
+  </div>
+</Base>
+
+<style>
+  /* Under the bar, in view while the page scrolls, with a thin scrollbar that shows
+     only while the pointer is over the list. */
+  @media (min-width: 64rem) {
+    .ds-sidebar {
+      position: sticky;
+      top: 3.5rem;
+      height: calc(100dvh - 3.5rem);
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: transparent transparent;
+      transition: scrollbar-color 200ms ease;
+    }
+    .ds-sidebar:hover {
+      scrollbar-color: var(--color-line-2) transparent;
+    }
+    .ds-sidebar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .ds-sidebar::-webkit-scrollbar-thumb {
+      border-radius: var(--radius-full);
+      background: transparent;
+    }
+    .ds-sidebar:hover::-webkit-scrollbar-thumb {
+      background: var(--color-line-2);
+    }
+  }
+  /* In-page anchors land clear of the bar. */
+  :global(html) {
+    scroll-padding-top: 3.5rem;
+  }
+</style>
+
+<script>
+  const toggle = document.querySelector<HTMLButtonElement>("[data-menu-toggle]");
+  const sidebar = document.getElementById("ds-sidebar");
+  toggle?.addEventListener("click", () => {
+    const open = toggle.getAttribute("aria-expanded") !== "true";
+    toggle.setAttribute("aria-expanded", String(open));
+    sidebar?.classList.toggle("hidden", !open);
+  });
+</script>

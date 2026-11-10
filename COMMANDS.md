@@ -8,6 +8,10 @@ to distinguish these workflows from other installed skills.
 | Skill identifier | Display name | What it does |
 |---|---|---|
 | `gtm-brain-project` | GTM Brain: Projects | Create a project folder, or link an existing one to your brain; repair, unlink, list |
+| `gtm-brain-design-system` | GTM Brain: Build our design system | Brian Woloszczak and Peakout's starter: one shared website project (`link_project` with `starter: "web-design-system"`), tokens, components and a local catalogue; `design-system.md` points to it |
+| `gtm-brain-add-section` | GTM Brain: Add a reusable section | A section from a source page or a brief, registered once in the website project for every page |
+| `gtm-brain-build-landing-page` | GTM Brain: Build a landing page | A campaign page on the shared website from strategy, ICP, voice and offer; stops at a local preview |
+| `gtm-brain-publish-website` | GTM Brain: Publish the website | Vercel preview first, production only on its own decision, through the Vercel and GitHub connectors |
 | `gtm-brain-start` | GTM Brain: Start | The first command in a project: creates the brain here, gets to know the business, connects the tools, opens the dashboard; resumes what is unfinished |
 | `gtm-brain-sync` | GTM Brain: Sync | Pull what came in through the connected tools since the last sync, one subagent per tool, and record what matters |
 | `gtm-brain-todo` | GTM Brain: Todo | What should I do now: everything waiting on you, ordered, walked through one by one |
@@ -35,7 +39,7 @@ The sections below document the underlying operations, tools, and script paths f
 They are not additional discoverable skills. Tools show outcomes such as "Remembering" or
 "Searching the brain" in chat. Review proposals on the read-only dashboard. APPROVE is a choice in the form `approve_change` shows; in a chat nothing else applies it.
 Scripts retain their paths for terminal use with
-`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.34.3`.
+`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.34.4`.
 
 Legend for "writes": what files the command changes. Nothing else is ever touched.
 
@@ -432,7 +436,30 @@ the folder linked. An existing task in the brain keeps its brain-wide scope.
 Tools: `list_brains`, `link_project`, `unlink_project`, `list_projects`. Writes: the pointer
 block in the project's `AGENTS.md`, plus `work/projects.json` and the project's loaded set
 inside the brain. The underlying script path remains stable:
-`node $PLUGIN_ROOT/skills/gtm-brain-project/project.mjs . --link <path> [--create] [--slug s] [--title "T"] [--contexts a,b] [--by handle]`, `... --unlink <slug>`, `... --list`
+`node $PLUGIN_ROOT/skills/gtm-brain-project/project.mjs . --link <path> [--create] [--starter web-design-system] [--slug s] [--title "T"] [--contexts a,b] [--by handle]`, `... --unlink <slug>`, `... --list`
+
+### Build and publish a company website
+
+*"build our design system from our website"*, *"add a comparison table to our website"*,
+*"build a page for our event"*, *"prepare a hosted preview of our website"*
+
+`/gtm-brain-design-system` reuses the company's one website project, or creates
+`<brain-root>/projects/website` through `link_project` with `create: true` and
+`starter: "web-design-system"`, after capture consent. That copies Brian Woloszczak and
+Peakout's pinned starter into a project with its own local git. Installing dependencies and
+starting the local preview follow through the shell, in the same chat. An occupied folder is
+never replaced; an interrupted starter resumes without recopying.
+
+Brian's four procedures stay unchanged in the project's `docs/workflows/`. GTM Brain supplies
+the project, the company knowledge and one "Website" section in `design-system.md` pointing to
+the project. Design values stay in the project's code and manual. Later campaigns add pages
+to the same component library, and plugin updates never rewrite a company's project.
+
+`/gtm-brain-add-section` takes a source URL and heading or a brief, including interactive
+sections. `/gtm-brain-build-landing-page` uses the strategy, ICP, voice and offer, then
+composes registered sections. Both end at a local preview. `/gtm-brain-publish-website` runs
+only on its own request: a Vercel preview first, production on a separate decision. See the
+[preservation and packaging contract](plugins/gtm-brain/starters/web-design-system/README.md).
 
 ### connect
 *"connect my tools"*, *"is HubSpot connected?"*

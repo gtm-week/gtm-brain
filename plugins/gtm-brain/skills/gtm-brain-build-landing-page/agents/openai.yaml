@@ -1,0 +1,4 @@
+interface:
+  display_name: "GTM Brain: Build a landing page"
+  short_description: "Build a campaign page from our design system"
+  default_prompt: "Use $gtm-brain-build-landing-page to build a landing page for this campaign from what the brain knows."

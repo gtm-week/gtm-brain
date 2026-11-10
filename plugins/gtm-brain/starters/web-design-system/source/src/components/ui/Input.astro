@@ -1,0 +1,59 @@
+---
+/**
+ * A text field with its label, an optional hint and an error. The error replaces the
+ * hint and marks the field invalid. `hideLabel` keeps the label for screen readers only.
+ */
+import type { HTMLAttributes } from "astro/types";
+
+type Props = Omit<HTMLAttributes<"input">, "class" | "type"> & {
+  label: string;
+  type?: "text" | "email" | "tel" | "url" | "number";
+  hint?: string;
+  error?: string;
+  hideLabel?: boolean;
+  /** On the wrapper. */
+  class?: string;
+  /** On the `<input>` itself (EmailCapture joins it to a button). */
+  fieldClass?: string;
+};
+
+const {
+  label,
+  type = "text",
+  hint,
+  error,
+  hideLabel = false,
+  id = `input-${Math.random().toString(36).slice(2, 8)}`,
+  class: className,
+  fieldClass,
+  ...rest
+} = Astro.props;
+const note = error ?? hint;
+---
+
+<div class:list={["flex flex-col gap-1.5", className]}>
+  <label for={id} class:list={["text-small font-medium text-ink-1", hideLabel && "sr-only"]}>
+    {label}
+  </label>
+  <input
+    id={id}
+    type={type}
+    aria-invalid={error ? "true" : undefined}
+    aria-describedby={note ? `${id}-note` : undefined}
+    class:list={[
+      "h-11 w-full min-w-0 rounded-sm border border-line-2 bg-surface-1 px-3 text-regular text-ink-1 transition-colors",
+      "placeholder:text-ink-4 hover:bg-surface-2 focus-visible:border-line-brand focus-visible:outline-none",
+      "aria-invalid:border-danger",
+      "disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-ink-4",
+      fieldClass,
+    ]}
+    {...rest}
+  />
+  {
+    note && (
+      <p id={`${id}-note`} class:list={["text-small", error ? "text-danger" : "text-ink-3"]}>
+        {note}
+      </p>
+    )
+  }
+</div>

@@ -1,0 +1,13 @@
+---
+/** The navbar or the footer alone, with its default content: what its frame loads. */
+import Base from "../../../../layouts/Base.astro";
+import Navbar from "../../../../components/layout/Navbar.astro";
+import Footer from "../../../../components/layout/Footer.astro";
+
+export const getStaticPaths = () => [{ params: { name: "navbar" } }, { params: { name: "footer" } }];
+const { name } = Astro.params;
+---
+
+<Base title={`${name} · Preview`} description={`The ${name}, alone.`} noindex>
+  {name === "navbar" ? <Navbar /> : <Footer />}
+</Base>

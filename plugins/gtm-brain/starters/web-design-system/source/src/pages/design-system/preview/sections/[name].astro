@@ -1,0 +1,20 @@
+---
+/**
+ * One section alone, with its example content: what the frame on its design-system page
+ * loads, and what `npm run shots -- /design-system/preview/sections/<name>` photographs.
+ */
+import Base from "../../../../layouts/Base.astro";
+import { sectionList } from "../../../../sections";
+
+export const getStaticPaths = () =>
+  sectionList.map((entry) => ({ params: { name: entry.name }, props: { entry } }));
+
+const { entry } = Astro.props;
+const Component = entry.component;
+---
+
+<Base title={`${entry.name} · Preview`} description={`The ${entry.name} section, alone.`} noindex>
+  <main>
+    <Component {...entry.example} />
+  </main>
+</Base>
