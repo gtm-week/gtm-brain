@@ -64,10 +64,11 @@ For a vendor such as Zynt, the contract between your tool and the brain:
 
 - **The connector is yours, the sign-in is the person's.** They add your MCP server in Codex and
   sign in there. The brain never holds a key or a token.
-- **GTM Brain does not see your connector yet.** Its tool check only knows official Codex plugins.
-  A server added by hand is not in the tools list or on the dashboard, and `gtm-brain-configure`
-  cannot install it. So put your own connect steps in the skill, check your tools are callable
-  first, and when they are not, say so and show those steps.
+- **GTM Brain sees your connector, but cannot install it.** A remote MCP server in the person's
+  Codex `config.toml` shows on the dashboard as installed, untested, and as connected after a
+  successful call. `gtm-brain-configure` cannot add it for them, so put your own connect steps
+  in the skill, check your tools are callable first, and when they are not, say so and show
+  those steps. After connecting, the person opens a new chat: Codex lists tools at chat start.
 - **The brain keeps pointers, not your data.** A signal or a news item becomes one short note in
   the right context, with `sources` set to `yourtool:<url or id>`. Raw lists, exports and payloads
   stay with you.
