@@ -553,12 +553,17 @@ a file with no owner is refused, so ask what it belongs to; a project file stays
 folder), an entity file is attached, and its content is noted. Under the hood attachments are
 `remember` with its optional `asset` field. Each attachment belongs
 to an existing entity and one memory; one file can have several entity relationships. Use a
-readable label, role and draft/approved/retired status. File paths remain references: no upload,
-copy or folder scan. Read the remember workflow reference before attaching or replacing.
-Read current attachments with `query` before using a logo or photo. Prefer an
-approved file for the requested role; ask if several approved files match or only drafts exist.
+readable label, role and draft/approved/retired status. File paths remain references: no upload
+or folder scan; a file in `work/` is copied beside its owner when attached. Read the remember
+workflow reference before attaching or replacing.
+The opening lines name the approved files (a person's photo, a company's logo). Use exactly those
+for a graphic, page or deck, never a copy in a task folder or a package's own asset list; ask if
+several approved files match or only drafts exist. When the person says use another photo or logo,
+that is the new approved file for the same role: attach it in the same turn, and it replaces the
+old one in every chat. "Where is this set" is answered with the person's or company's page on the
+dashboard and how to change it, in one line.
 Resolve relative paths against the recorded brain or linked project, never this chat's cwd.
-Replace or retire with a new memory that supersedes the current attachment in its context.
+Retire with a new memory that supersedes the current attachment in its context.
 Never delete the source file. Missing files are repaired through Codex. The dashboard is a
 read-only view of these fields, with previews, file links and collapsed attachment history.
 

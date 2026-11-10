@@ -1,7 +1,9 @@
-// Attachments are fields on memories. This module resolves their local file references;
-// it never copies, uploads, deletes or searches for files.
-import { readFileSync, writeFileSync, mkdirSync, realpathSync, statSync } from 'node:fs';
-import { resolve, relative, isAbsolute, join, extname } from 'node:path';
+// Attachments are fields on memories. This module resolves their local file references; it never
+// uploads, deletes or searches for files. The one copy it makes: a file attached from work/ (this
+// computer's, gitignored, a task's scratch) goes to its owner's folder first, so the approved file
+// travels with the brain and outlives the task (Artur, 2026-11-10: his portrait in a Berlin package).
+import { readFileSync, writeFileSync, mkdirSync, realpathSync, statSync, existsSync, copyFileSync } from 'node:fs';
+import { resolve, relative, isAbsolute, join, extname, basename } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import * as lib from './brain.mjs';
 
@@ -57,9 +59,10 @@ export function prepareAsset(root, input, project = null, previous = null) {
     if (!text(input.path)) throw new Error('asset path required');
     const base = project ? projectRoot(root, project) : realpathSync(root);
     if (!isAbsolute(input.path) && !relativePath(input.path)) throw new Error('Use a path inside the project or an explicit absolute file path.');
-    const path = realpathSync(resolve(base, input.path));
+    let path = realpathSync(resolve(base, input.path));
     if (!statSync(path).isFile()) throw new Error('Attach a file, not a directory.');
     if (!isAbsolute(input.path) && !within(base, path)) throw new Error('Relative attachment escapes its folder. Use its explicit absolute path.');
+    if (within(join(realpathSync(root), 'work'), path)) path = toOwnerFolder(root, entity, path);
     file = within(base, path) ? { base: project ? 'project' : 'brain', path: relative(base, path), ...(project ? { project } : {}) }
       : within(realpathSync(root), path) ? { base: 'brain', path: relative(realpathSync(root), path) }
       : { base: 'local', path, machine: machine(root, true) };
@@ -69,6 +72,34 @@ export function prepareAsset(root, input, project = null, previous = null) {
   // Retirement is possible even after the file has gone. Other changes must have a usable file.
   if (asset.status !== 'retired') resolveAssetFile(root, asset);
   return asset;
+}
+/* A file under work/ lands in brain/entities/<id>/ beside the entity's file, committed, under a free name. */
+function toOwnerFolder(root, entity, path) {
+  const e = lib.resolveEntity(lib.readNames(root), entity);
+  if (!e?._path) throw new Error('Name the existing entity for this attachment; use add_name first if it is new.');
+  const real = realpathSync(root), dir = join(real, e._path.replace(/\.md$/, '')); mkdirSync(dir, { recursive: true });
+  const ext = extname(path), stem = basename(path, ext), bytes = readFileSync(path), same = p => existsSync(p) && readFileSync(p).equals(bytes);
+  let name = `${stem}${ext}`, n = 1;
+  while (existsSync(join(dir, name)) && !same(join(dir, name))) name = `${stem}-${++n}${ext}`;
+  const target = join(dir, name);
+  if (!same(target)) { copyFileSync(path, target); lib.commit(root, [relative(real, target)], `file: ${name} (from ${relative(real, path)})`); }
+  return realpathSync(target);
+}
+/* The current approved file for an entity and role: the one a new approved attachment replaces. */
+export function currentApproved(root, entity, role, rows = assetRows(root)) {
+  const name = lib.exactName(lib.readNames(root), entity || '') || entity, r = String(role || '').trim().toLowerCase();
+  return rows.filter(a => a.active && a.status === 'approved' && a.entity === name && String(a.role).trim().toLowerCase() === r);
+}
+/* The approved files every chat starts with: a person's photo, a company's logo. One line per file, at most
+   MAX_LINE_ASSETS; the rest are a query away. The person changes one by attaching the new file as approved. */
+const MAX_LINE_ASSETS = 12;
+export function assetsLine(root, rows = assetRows(root)) {
+  const approved = rows.filter(a => a.active && a.status === 'approved');
+  if (!approved.length) return '';
+  const where = a => a.issue ? `missing (${a.issue})` : a.file.base === 'project' ? `${a.file.project}:${a.file.path}` : a.file.path;
+  const shown = approved.slice(0, MAX_LINE_ASSETS).map(a => `  ${a.entity} · ${a.role}: ${where(a)}${a.ambiguous ? ' (two approved for this role: ask which one)' : ''}`);
+  const more = approved.length > MAX_LINE_ASSETS ? `\n  and ${approved.length - MAX_LINE_ASSETS} more (query attachments)` : '';
+  return `Approved files (the person's photo, the company's logo): use exactly these, never a copy in a task folder or a package's own list. When the person says use another one, attach it as approved for the same role at once; it replaces the old one. They see and change them on the person's or company's page of the dashboard.\n${shown.join('\n')}${more}`;
 }
 export const assetMime = path => ({ '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml' })[extname(path).toLowerCase()] || null;
 

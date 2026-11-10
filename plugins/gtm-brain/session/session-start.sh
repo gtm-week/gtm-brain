@@ -142,6 +142,8 @@ node -e 'const l=await import(process.argv[1]);const r=process.argv[2],s=l.meeti
 # The documents (root Markdown with kind: document): what the work must follow, named every chat so rule 11
 # has something to point at; absolute paths in a linked project, where the landing pages get built.
 node -e 'const d=await import(process.argv[1]);console.log(d.documentsLine(process.argv[2],{absolute:!!process.argv[3]}))' "$P/lib/documents.mjs" "$root" "$project" 2>/dev/null || true
+# The approved files (a person's photo, a company's logo): named every chat, so a graphic never takes an old copy (lib/assets.mjs).
+node -e 'const a=await import(process.argv[1]);const l=a.assetsLine(process.argv[2]);if(l)console.log(l)' "$P/lib/assets.mjs" "$root" 2>/dev/null || true
 # Workflow runs in progress (lib/workflows.mjs): named once, so a due step is mentioned and "next step" follows the skill.
 node -e 'const w=await import(process.argv[1]);const l=w.runsLine(process.argv[2]);if(l)console.log(l)' "$P/lib/workflows.mjs" "$root" 2>/dev/null || true
 # Folders at the top GTM Brain does not use (a migrated brain's company/, assets/): named once per set, never touched.

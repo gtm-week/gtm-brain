@@ -21,7 +21,7 @@
 // background summary run, instead of one of each per note. An entry whose name looks like someone
 // already known holds back only itself; the rest are written and the report names it by position.
 import { existsSync, readFileSync } from "node:fs";
-import { prepareAsset, assetSummary } from '../../lib/assets.mjs';
+import { prepareAsset, assetSummary, assetRows, currentApproved } from '../../lib/assets.mjs';
 import { join } from "node:path";
 import { isChatSource } from "../../lib/host.mjs";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
@@ -64,6 +64,20 @@ const ctxOf = e => e.context || opt.context || (loaded.length === 1 ? loaded[0] 
 if (entries.some(e => e?.meeting_coverage) && entries.some(e => e?.meeting || e?.meeting_id)) die("Record meeting coverage in a separate call after checking kept, held and failed entries.");
 const preparedAssets = new Map(), changedAssets = new Set();
 const sourceOf = e => lib.parseSources(e.sources);
+// A new approved file for an entity and role replaces the current one, wherever that attachment lives: the
+// person said "use this one" and the old file must not keep winning (Artur, 2026-11-10). Exactly one current
+// approved file is replaced; with two, the person picks (the opening lines say so).
+const replacing = new Map();
+{
+  let rows = null;
+  entries.forEach((e, i) => {
+    if (!e?.asset || e.asset.status !== "approved" || e.supersedes || e.retracts) return;
+    rows ??= assetRows(root);
+    const now = currentApproved(root, e.asset.entity, e.asset.role, rows);
+    if (now.length !== 1) return;
+    e.supersedes = now[0].id; e.context = now[0].context; replacing.set(i, now[0]);
+  });
+}
 const problems = entries.map((e, i) => {
   e = e || {}; const n = i + 1;
   if (e.kind === "action") return `${at(n)}"action" is no longer a kind: record what was done as a note (say what was sent or moved in the text).`;
@@ -146,6 +160,7 @@ for (let i = 0; i < entries.length; i++) {
 
   // The person sees this line through the model: the note itself, so they know what landed (ALL-209)
   const said = String(rec.content).replace(/\s+/g, " ").trim(), shown = said.length > 240 ? said.slice(0, 237) + "..." : said;
+  if (replacing.has(i)) lines.push(`${at(n)}replaced the approved ${replacing.get(i).role} of ${replacing.get(i).entity} (${replacing.get(i).label}, ${replacing.get(i).id}): every chat now uses the new file`);
   lines.push(`${at(n)}remembered ${rec.id} in ${ctx} · ${rec.kind} · ${rec.authors.join(", ")}${rec.people.length ? " · people: " + rec.people.join(", ") : ""} · "${shown}"`);
   if (rec.asset) lines.push(assetSummary(root, rec).trim());
   for (const w of warnings) lines.push(`${at(n)}warning: ${w}`);

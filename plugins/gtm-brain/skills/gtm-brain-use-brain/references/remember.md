@@ -242,18 +242,22 @@ through separate memories; approval and retirement apply independently to each r
 Relative paths resolve against the selected project folder, or the brain when no project was
 passed. An absolute file inside that folder is stored relatively. Other absolute paths are
 local to this computer. Only paths are stored: sharing the brain does not share the file.
-No folder is scanned for attachments. A file landed with `add-file.mjs --entity` sits in
+No folder is scanned for attachments. A file in `work/` (a task's scratch, not shared) is copied
+into `brain/entities/<id>/` and committed when attached, so the approved file outlives the task. A file landed with `add-file.mjs --entity` sits in
 `brain/entities/<id>/` beside the entity file; one landed with `--document` belongs to that
 document and needs no attachment ([files](files.md)). Keep project files in their existing folder.
 
-Before using a file, read the entity's brief with `query` (brief) or query its effective memories
-and read the asset field. The brief gives the resolved absolute file location and availability. Use approved
+The opening lines list the approved files (person · role: path). Use exactly those for a photo or
+a logo; a task folder or a package's own asset list is never the source. For anything else, read
+the entity's brief with `query` (brief) or query its effective memories and read the asset field. The brief gives the resolved absolute file location and availability. Use approved
 assets for the requested role. Ask if several approved files match, only drafts exist, or a
 file is unavailable. The tool does not inspect file contents or infer usage rights. Read the
 file through the appropriate tool before making claims about it.
 
-To replace, approve, repair or retire an attachment, read its latest memory id and context,
-then write a new memory with `supersedes` and the full asset fields. Omit `path` to retain the
+"Use this photo", "this is our logo now": attach the file with status approved and the same role,
+in the same turn. When one approved file holds that role, the tool replaces it by itself, in its
+context, and says so; nothing else to pass. To approve, repair or retire an attachment, read its
+latest memory id and context, then write a new memory with `supersedes` and the full asset fields. Omit `path` to retain the
 previous file for a status change. A retirement can omit path even when the old file is gone.
 A replacement with a new path leaves the original file untouched. Withdraw a mistaken attachment
 with `retracts` and a reason, without an asset field. Historical records remain append-only.
