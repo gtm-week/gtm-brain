@@ -5,7 +5,7 @@ Linking adds its pointer; shared knowledge stays in the original GTM Brain brain
 a second brain, workspace hierarchy or subprojects in that external folder.
 
 When the person asks to organize several projects or build that kind of structure there,
-propose separate folders directly inside the existing GTM Brain workspace and follow
+propose separate folders in the existing GTM Brain workspace's `projects/` and follow
 [New Project](../../gtm-brain-project/SKILL.md). Resolve the location from the brain root,
 not this chat's folder. For example, from an external Website project linked to FDE OS,
 propose `FDE OS/research/` for a new Research project, not `Website/research/`.

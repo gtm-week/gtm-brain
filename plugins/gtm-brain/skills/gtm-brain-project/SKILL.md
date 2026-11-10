@@ -23,9 +23,10 @@ Follow [question handling](../gtm-brain-start/references/questions.md) for nativ
 1. Reuse the known brain and project name. If the brain is unknown, call `query` (brains) and
    resolve which existing brain to use; verify it with `check_environment`. Never use the
    plugin checkout as a brain. Ask only for missing information through `configuration_question`.
-2. Default to a direct child of the brain's workspace root: `<brain-root>/<project-slug>/`.
-   For example, a Website project in FDE OS goes in `FDE OS/website/`, beside `brain/` and
-   `work/`. Resolve from the brain root even when this chat is in another linked project.
+2. Default to the brain's outcomes folder, as WHERE.md says: `<brain-root>/projects/<project-slug>/`.
+   For example, a Website project in FDE OS goes in `FDE OS/projects/website/`. A deliverable for
+   an outcome that already exists goes inside it, not into a new project. Resolve from the brain
+   root even when this chat is in another linked project.
    Keep the shared brain where it is. Do not propose a sibling folder outside the workspace
    or an extra projects container. Honor an explicit alternative location only when it is
    separate from other linked projects. For a requested subproject in an external linked

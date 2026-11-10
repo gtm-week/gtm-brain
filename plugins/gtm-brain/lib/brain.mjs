@@ -818,7 +818,7 @@ export const NOT_COMMITTED_YET = "written to disk, not committed yet: say save t
 /* What a save covers: the brain and the plugin-owned files, never work/. */
 export const BRAIN_PATHS = ["brain", "AGENTS.md", "CLAUDE.md", ".githooks", ".gitignore", ".gitattributes", ".agents"];
 /* Everything save keeps: the engine's paths, the root README, and the documents with their files (lib/documents.mjs). */
-export function savePathsFor(root) { return [...BRAIN_PATHS, "README.md", ...documentSavePaths(root)].filter(p => existsSync(join(root, p))); }
+export function savePathsFor(root) { return [...BRAIN_PATHS, "README.md", "WHERE.md", ...documentSavePaths(root)].filter(p => existsSync(join(root, p))); }
 /* Every writer calls this once after writing: everything written is kept at once, one commit per
    change. The message is also the activity line the dashboard shows. GTM_BRAIN_NO_COMMIT (tests,
    dry runs) turns committing off; `always` lets save ignore it. */

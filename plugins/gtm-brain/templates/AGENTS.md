@@ -96,12 +96,15 @@ document is the statement, the notes are the evidence. A document a chat or a sk
 strategy, a plan) is written as a document through `document`, at the root or in the
 folder the person names; its decisions and findings also become memories, and a draft in
 progress lives in the project folder it belongs to. Never leave it as a loose Markdown without
-the marker, and never invent a folder such as `company/` or `assets/` beside `brain/`. Work built for a task (a
-deck, a site, an export, a batch of downloads) goes in a linked project folder
-(gtm-brain-project), never at the brain root; with no project yet, offer one before building. A
-raw source (transcripts, a zip, a dump) lands beside the document, person, company or product it
-belongs to, and is unpacked under `work/`, never at the root; only what is worth keeping becomes
-a document or notes. A playbook
+the marker, and never invent a folder such as `company/` or `assets/` beside `brain/`.
+`WHERE.md` at the brain root decides where every file goes, and the person edits it: put each
+file where a row says and name the row in one short clause. The opening lines carry its rows and
+the outcomes under `projects/`. Work built for a goal (a deck, graphics, a page, an export, a batch
+of downloads) goes inside its outcome, `projects/<outcome>/<deliverable>/`: a task that belongs to
+a listed outcome goes in that outcome, never in a folder of its own. With no fitting outcome or
+row, ask before creating a folder, and offer a new row. Never put a deliverable in `work/` or a
+new folder at the brain root. Only what is worth keeping from a raw source becomes a document or
+notes. A playbook
 is a workflow (gtm-brain-workflow): steps that play out over time, started and tracked as a run.
 The files in `brain/entities/` form the global identity registry and readable entity briefs.
 Each Markdown file holds a stable ID, canonical name, kind, aliases, contacts and external

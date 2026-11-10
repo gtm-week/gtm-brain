@@ -112,6 +112,8 @@ if (opt.link) {
   const by = opt.by ? lib.teamHandle(root, String(opt.by)) : null; if (opt.by && !by) refuse(`"${opt.by}" is not in admin.md team`);
   // Exclusive creation also refuses a folder that appeared after validation. Existing-folder
   // linking keeps its original behavior; new projects require an existing parent directory.
+  // A new project under the brain's projects/ (WHERE.md's outcomes) may be the first one there.
+  if (opt.create && resolve(dirname(path)) === resolve(root, "projects")) mkdirSync(dirname(path), { recursive: true });
   try { mkdirSync(path, { recursive: !opt.create }); } catch (e) { refuse(`${path}: ${e.message}`); }
   // Codex reads AGENTS.md from the nearest git root down to cwd: a sub-folder inherits the brain's rulebook only
   // when no .git sits between it and the brain. A nested repository gets the rulebook line like an outside folder.

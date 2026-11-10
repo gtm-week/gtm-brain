@@ -372,8 +372,8 @@ as the sixth onboarding step. Completed v1 onboarding resumes only this new choi
 
 *"create a project for the curriculum at ~/curriculum"*, *"link this folder"*, *"unlink this project"*, *"list projects"*
 
-`/gtm-brain-project` creates `<brain-root>/<project-slug>/` by default, beside `brain/`
-and `work/`. It reuses the known brain and name, combines the destination and capture consent
+`/gtm-brain-project` creates `<brain-root>/projects/<project-slug>/` by default, the outcomes
+folder [WHERE.md](#wheremd) names. It reuses the known brain and name, combines the destination and capture consent
 in one question when needed, and handles relevant existing context in the background. No
 context selection or matching context creation is needed. An explicit alternative location
 is respected. The tool uses `create: true` to refuse occupied destinations and protects the
@@ -383,7 +383,7 @@ files and instructions. It also repairs broken connections, unlinks projects, an
 `/gtm-brain-project` workflow is now Link Project.
 
 An external linked folder stays one working project. For several new projects, use separate
-folders directly inside the GTM Brain workspace. Nested or overlapping linked projects are
+folders in the GTM Brain workspace's `projects/`. Nested or overlapping linked projects are
 refused, including aliases; existing application directories and files stay intact. GTM Brain
 does not scaffold another brain or move the existing project as part of this flow.
 
@@ -536,3 +536,14 @@ Daily maintenance can refresh meeting sources and calendar references before com
 summaries. Configure capture scopes and timing in chat. A failed calendar refresh does not
 block meeting capture or compilation. The system-scheduler entry point is
 `scripts/gtm-brain-schedule/daily-run.mjs <brain> <confirmed-handle>` under the installed plugin.
+
+## WHERE.md
+
+`WHERE.md` at the brain root is the table of where every file goes: rules at the root, brand in
+`brand/`, outcomes in `projects/<outcome>/` with their deliverables inside, raw sources with their
+outcome or owner, approved photos and logos on their entity, scratch in `work/`. Setup writes it,
+and a brain without one gets it at the next chat start. Every chat's opening lines carry its rows
+(numbered) and the outcomes under `projects/` with the first line of each one's `README.md`; Codex
+files each thing where a row says, names the row, and asks before creating a folder when nothing
+fits. The person edits it freely: an edited `WHERE.md` is never overwritten, an unedited one
+follows the shipped template. `save` keeps it.
