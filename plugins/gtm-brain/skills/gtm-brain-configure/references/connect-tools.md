@@ -44,7 +44,7 @@ When the person declines in chat ("no CRM yet", "skip HubSpot"), record it at on
 
 If the check ends with *"installed in Codex but not in admin.md tools: linear, google-calendar"*,
 offer once: *"You have Linear and Google Calendar connected; add them to the tools list?"* On
-yes, propose the `admin.md` change through the `gtm-brain-configure` workplace-change procedure (the person types APPROVE).
+yes, propose the `admin.md` change through the `gtm-brain-configure` workplace-change procedure (the person chooses APPROVE in the `approve_change` form).
 
 ## Step 1c: MCP servers added by hand
 
@@ -113,9 +113,10 @@ Call the plugin's smallest read operation yourself and report what came back in 
 
 Then record it:
 
-A connector call that succeeds in any chat also records the read test by itself, so a tool used in
-real work is never left "untested". Otherwise call `mark_tool` with `tool` (hubspot), `status` (ok or fail) and `note` ("57 deals, 342 companies",
-"not signed in").
+Call `mark_tool` with `tool` (hubspot), `status` (ok or fail) and `note` ("57 deals, 342 companies",
+"not signed in"). GTM Brain does not see calls to other connectors, so the same holds in real work:
+the first time a tool shown as installed, untested (○) returns data in any chat, call `mark_tool`
+with `status` ok once.
 
 Never `remember` the read test results; they are not company knowledge. Never store what you
 read. If a read fails because the person is not signed in, explain the one sign-in action they need. During onboarding, keep its flag pending and follow [continuation](../../gtm-brain-start/references/continuation.md). Continue independent steps or offer an explicit skip; one unavailable connection does not end onboarding.

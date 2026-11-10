@@ -41,7 +41,7 @@ export function readPreferences() {
   if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("Invalid GTM Brain preferences file");
   return data;
 }
-/* The brains this machine has opened (the session hook registers a brain chat, setup registers a
+/* The brains this machine has opened (the chat start registers a brain chat, setup registers a
    new brain): what the gtm-brain-project skill offers when a folder is linked. Paths that are gone are
    dropped on read; nothing else in the preferences is touched. */
 function writePreferences(preferences) {
@@ -795,7 +795,7 @@ export function removePointer(dir) {
   cutBlock(join(dir, "CLAUDE.md"), "<!-- gtm-os rulebook -->", "<!-- /gtm-os rulebook -->"); return true;
 }
 /* Where the brain is, from any working directory: cwd is a brain; or cwd or an ancestor up to the git
-   root (or the filesystem root) carries the pointer block. Mirrored by hooks/resolve.sh for the shell hooks. */
+   root (or the filesystem root) carries the pointer block. Mirrored by session/resolve.sh for the shell hooks. */
 export function resolveBrain(cwd) {
   let dir = resolve(cwd);
   for (;;) {
@@ -876,6 +876,8 @@ export const pushRemote = list => { const r = String(list || "").split("\n").map
 /* The person's save: commit what unsavedChanges lists, push when there is a remote. */
 export function save(root, message, { covers = false } = {}) {
   if (!covers && existsSync(join(root, "work", "admin.proposed.md"))) return { ok: false, note: "a change to brain/admin.md is waiting for APPROVE; ask for APPROVE or a drop, then save" };
+  // A direct edit of a protected file is never saved: it is put back first (guardProtected).
+  if (!covers) { const back = restoredNotice(guardProtected(root)); if (back) logActivity(root, "save", back.split(".")[0]); }
   const paths = covers ? COVER_PATHS : savePathsFor(root);
   const files = unsavedChanges(root, paths);
   if (!files.length) return { ok: true, note: covers ? "nothing to save: no cover changed" : "nothing to save: everything is committed", files };
@@ -890,8 +892,39 @@ export function save(root, message, { covers = false } = {}) {
   logActivity(root, "save", `saved ${hash}: ${files.length} file(s), ${pushed}`);
   return { ok: true, note: `saved ${hash}: ${files.length} file(s)\n${files.map(f => `${f.state} ${f.path}`).join("\n")}\n${pushed}`, hash, files, pushed };
 }
-/* The Codex chat a brain folder was last opened in: the session hook records it, the dashboard
-   sends its buttons there. Input is the hook's JSON (session_id, cwd). */
+/* ---------- the protected files, without a write gate ----------
+   brain/admin.md and brain/ontology.ossie.json change only through APPROVE (approve.mjs commits at once),
+   and a memories.jsonl only by appending (lib, then a commit). GTM Brain has no hook that stops a direct
+   edit, so one is caught before anything commits it: at each chat's start and on every save. The edited
+   file is kept in work/manual-edits/protected/ and the committed version comes back. An uncommitted file
+   with no committed version is not judged; GTM_BRAIN_NO_COMMIT (tests, dry runs) turns the check off. */
+export const PROTECTED_PATHS = ["brain/admin.md", "brain/ontology.ossie.json", ":(glob)brain/contexts/*/memories.jsonl"];
+export function guardProtected(root) {
+  if (process.env.GTM_BRAIN_NO_COMMIT) return [];
+  const git = (...a) => execFileSync("git", ["--no-optional-locks", "-C", root, ...a], { encoding: "utf8", stdio: "pipe" });
+  let changed;
+  try { git("rev-parse", "--verify", "-q", "HEAD"); changed = git("diff", "--name-only", "HEAD", "--", ...PROTECTED_PATHS).split("\n").filter(Boolean); }
+  catch { return []; }
+  const restored = [];
+  for (const path of changed) {
+    let committed; try { committed = git("show", `HEAD:${path}`); } catch { continue; }
+    const file = join(root, path), now = existsSync(file) ? readFileSync(file, "utf8") : null;
+    if (/memories\.jsonl$/.test(path) && now !== null && now.startsWith(committed)) continue;
+    let backup = null;
+    if (now !== null) {
+      const dir = join(root, "work", "manual-edits", "protected"); mkdirSync(dir, { recursive: true });
+      backup = join("work", "manual-edits", "protected", `${path.replace(/\//g, "__")}.${Date.now()}`);
+      writeFileSync(join(root, backup), now);
+    }
+    mkdirSync(dirname(file), { recursive: true }); writeFileSync(file, committed);
+    logActivity(root, "restored", `${path}: changed outside GTM Brain; the committed version is back${backup ? `, the edit is in ${backup}` : ""}`);
+    restored.push({ path, backup });
+  }
+  return restored;
+}
+export const restoredNotice = restored => restored.length ? `PROTECTED FILES RESTORED: ${restored.map(r => `${r.path}${r.backup ? ` (the edit is kept in ${r.backup})` : " (it had been deleted)"}`).join("; ")}. These change only through GTM Brain: admin.md and the company's interactions through a proposal and APPROVE (approve_change), notes through remember. Tell the person in one line; if the edit was wanted, propose it that way.` : "";
+/* The Codex chat a brain folder was last opened in: the chat start records it (session/session.mjs),
+   the dashboard sends its buttons there. Input is JSON with session_id and cwd. */
 function landingSession(root, input) {
   try {
     const session = typeof input === "string" ? JSON.parse(input) : input;
@@ -1028,13 +1061,6 @@ export function openExternal(url) {
 
 /* ---------- the chat and the dashboard server (both local, in work/) ---------- */
 export function readSession(root, project = null) { try { return JSON.parse(readFileSync(join(projectDir(root, project), "session.json"), "utf8")); } catch { return null; } }
-/* APPROVE counts only as the person's own last message in this chat: the last prompt hooks/turns.sh
-   logged for the session (any session when the hook names none) starts with the word. */
-export function approvedByPerson(root, session = "") {
-  let prompts = [];
-  try { prompts = readFileSync(join(root, "work", "turns.jsonl"), "utf8").split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(t => t && t.kind === "prompt" && (!session || t.session === session)); } catch {}
-  return /^\s*APPROVE\b/.test(prompts.at(-1)?.text || "");
-}
 export function readDash(root) {
   try { const s = JSON.parse(readFileSync(join(root, "work", "dash.json"), "utf8")); process.kill(s.pid, 0); return s; } catch { return null; }
 }
@@ -1203,7 +1229,7 @@ export function validateMemoriesFile(path, context = null) {
 export const INTERACTIONS_PATH = "brain/ontology.ossie.json";
 // every name the plugin serves; server.test.mjs holds this equal to the live catalog, so a company
 // interaction can never shadow a tool
-export const RESERVED_TOOLS = new Set(["memory_index", "update_plugin", "where_we_are", "list_contexts", "load_context", "recall", "compile_facts", "compile_apply", "render_dashboard", "open_dashboard", "new_context", "fork_context", "edit_context", "archive_context", "advise", "who_is", "add_name", "check_tools", "mark_tool", "propose_admin_change", "save", "check_environment", "setup_brain", "upgrade_brain", "onboarding_question", "configuration_question", "question", "list_objects", "describe_object", "query", "remember", "interact", "propose_interaction", "link_project", "unlink_project", "list_projects", "list_brains", "customer_overview", "meeting_overview", "entity_facts", "compile_entity", "update_entity", "merge_entities", "archive_entity", "undo_entity_merge", "skill", "guideline", "document", "workflow", "share_brain"]);
+export const RESERVED_TOOLS = new Set(["memory_index", "update_plugin", "where_we_are", "list_contexts", "load_context", "recall", "compile_facts", "compile_apply", "render_dashboard", "open_dashboard", "new_context", "fork_context", "edit_context", "archive_context", "advise", "who_is", "add_name", "check_tools", "mark_tool", "propose_admin_change", "approve_change", "save", "check_environment", "setup_brain", "upgrade_brain", "onboarding_question", "configuration_question", "question", "list_objects", "describe_object", "query", "remember", "interact", "propose_interaction", "link_project", "unlink_project", "list_projects", "list_brains", "customer_overview", "meeting_overview", "entity_facts", "compile_entity", "update_entity", "merge_entities", "archive_entity", "undo_entity_merge", "skill", "guideline", "document", "workflow", "share_brain"]);
 const LONG_DASH = /[\u2013\u2014\u2015\u2212]/;
 const interactionOf = (raw, parsed) => ({
   name: parsed.name, title: String(raw.title || parsed.name), tool: String(raw.tool || "").trim(), operation: String(raw.operation || "").trim(), description: String(raw.description || "").trim(),

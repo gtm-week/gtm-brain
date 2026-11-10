@@ -1,6 +1,6 @@
 process.env.GTM_BRAIN_NO_WATCH = "1";
 process.env.GTM_BRAIN_NO_COMPILE = "1"; // Model runs are opt-in through test doubles.
-process.env.GTM_BRAIN_NO_HOOK_CHECK = "1"; // the hooks-off check talks to a real Codex; hooks-notice.test covers it with a fake one
+process.env.GTM_BRAIN_NO_SESSION_START = "1"; // servers here test tools; chat-start.test.mjs covers the chat start
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';

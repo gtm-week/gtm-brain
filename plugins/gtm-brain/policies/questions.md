@@ -47,9 +47,11 @@ Do not use shell sleep or a busy loop. Waiting does not keep the host's panel ex
 accept a short chat answer if it collapses and never repost a question to reset its timer.
 A plain text question without a pending widget ends in a final message and waits for a reply.
 
-Security permissions, account sign-in and the exact APPROVE flow stay native. A preference
-widget cannot authorize shell commands, trust hooks or grant account access. Carry out a
-submitted ordinary choice through its owning workflow with the normal permission prompts.
+Security permissions and account sign-in stay native. A preference widget cannot authorize
+shell commands or grant account access. The question tools never authorize APPROVE: a workplace
+or interaction change goes only through `approve_change`, whose own form carries the APPROVE
+choice. Carry out a submitted ordinary choice through its owning workflow with the normal
+permission prompts.
 
 No slop. No filler phrases, no hedging when facts are cited, no LLM preamble
 ("I have created...", "Here is the updated...", "Certainly!"). No placeholder dates.

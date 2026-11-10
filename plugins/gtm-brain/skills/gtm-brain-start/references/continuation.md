@@ -11,7 +11,7 @@ Keep native questions pending according to questions.md; never end a turn with a
 
 ## Resume from evidence
 
-`setup_brain` saves `Onboarding: pending v2 ...` in the initial commit. The hook,
+`setup_brain` saves `Onboarding: pending v2 ...` in the initial commit. The opening lines,
 `check_environment` and `query` (status) expose the same memory-derived flag, outcomes and
 next step. Use these even when a new chat has none of the previous conversation.
 Use the returned `context` when superseding `marker_id`. An older marker can still live in

@@ -3,7 +3,7 @@ process.env.GTM_BRAIN_NO_SESSION_MAINTENANCE = "1"; // Covered by session-mainte
 process.env.GTM_BRAIN_NO_COMPILE = "1"; // Model runs are opt-in through test doubles.
 // Deterministic onboarding integration, separate MCP contexts and synthetic data only.
 // Native Desktop question widgets, account sign-in and permission prompts are not simulated.
-process.env.GTM_BRAIN_NO_HOOK_CHECK = "1"; // the hooks-off check talks to a real Codex; hooks-notice.test covers it with a fake one
+process.env.GTM_BRAIN_NO_SESSION_START = "1"; // servers here test tools; chat-start.test.mjs covers the chat start
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, symlinkSync } from "node:fs";
@@ -20,6 +20,7 @@ function syntheticApply(f) {
   const auditHome = join(f.scratch, "synthetic-audit");
   const apply = `import os from 'node:os'; import { syncBuiltinESMExports } from 'node:module';
     os.homedir = () => ${JSON.stringify(auditHome)}; syncBuiltinESMExports();
+    process.env.GTM_BRAIN_APPROVAL = 'form'; // what approve_change sets after the person chose APPROVE
     process.argv = [process.execPath, 'approve.mjs', ${JSON.stringify(f.root)}, '--apply', '--by', 'alex-example'];
     await import(${JSON.stringify(pathToFileURL(join(P, "scripts/gtm-brain-approve/approve.mjs")).href)});`;
   return f.run(process.execPath, ["--input-type=module", "-e", apply]);
@@ -51,7 +52,9 @@ createInterface({ input: process.stdin }).on('line', line => {
       { name: "hubspot", installation_policy: "AVAILABLE", release: { display_name: "HubSpot" } },
     ] }));
   const env = { ...process.env, CODEX_HOME: join(scratch, "codex-profile"), PLUGIN_ROOT: P,
-    PATH: `${bin}:${process.env.PATH}`, GTM_BRAIN_CATALOG_DIR: catalog, GTM_BRAIN_NO_OPEN: "1" };
+    PATH: `${bin}:${process.env.PATH}`, GTM_BRAIN_CATALOG_DIR: catalog, GTM_BRAIN_NO_OPEN: "1",
+    // A fresh server per call is a fresh chat each time: the chat start is chat-start.test.mjs's, not this flow's.
+    GTM_BRAIN_NO_SESSION_START: "1" };
   const run = (command, args, options = {}) => execFileSync(command, args, { cwd: root, env, encoding: "utf8", timeout: 30000, ...options });
   // Every call starts a fresh MCP process. Progress must survive context/process boundaries.
   const rpc = (method, params = {}) => {
@@ -76,7 +79,7 @@ createInterface({ input: process.stdin }).on('line', line => {
     call("render_dashboard");
     return JSON.parse(readFileSync(join(root, "work/home/data.json"), "utf8"));
   };
-  const hook = () => run("bash", [join(P, "hooks/session-start.sh")], {
+  const hook = () => run("bash", [join(P, "session/session-start.sh")], {
     input: JSON.stringify({ session_id: "synthetic-onboarding-context", cwd: root }),
   });
   t.after(() => {
@@ -281,7 +284,7 @@ test("a handoff written by IMPORT.md is announced by the hook until it is gone; 
   f.call("setup_brain", { folder: f.root, company: "Synthetic Example", one_liner: "Synthetic workflow testing",
     owner: "Alex Example <alex@example.invalid>", dashboard: "on-demand" });
   const home = join(f.scratch, "home"); mkdirSync(join(home, ".gtm-brain"), { recursive: true });
-  const hook = () => f.run("bash", [join(P, "hooks/session-start.sh")], { input: JSON.stringify({ session_id: "synthetic-handoff", cwd: f.root }), env: { ...f.env, GTM_BRAIN_HOME: home } });
+  const hook = () => f.run("bash", [join(P, "session/session-start.sh")], { input: JSON.stringify({ session_id: "synthetic-handoff", cwd: f.root }), env: { ...f.env, GTM_BRAIN_HOME: home } });
   assert.doesNotMatch(hook(), /HANDOFF/, "nothing to import, nothing said");
   writeFileSync(join(home, ".gtm-brain", "handoff.md"), "---\nexported: 2026-09-07T10:00:00Z\nby: claude-code\nconfirmed: false\n---\n# Company context handoff for GTM Brain\n## Tools observed\n- HubSpot is the CRM (memory)\n");
   assert.match(hook(), /HANDOFF waiting: .*handoff\.md \(by claude-code, confirmed: false; skill gtm-brain-start\)/);
@@ -371,7 +374,7 @@ test("approving a suggested tool into workplace tools preserves its row and read
 
 test("an empty-folder hook preserves its actual session through same-chat setup and dashboard rendering", t => {
   const f = fixture(t);
-  const hook = id => f.run("bash", [join(P, "hooks/session-start.sh")], {
+  const hook = id => f.run("bash", [join(P, "session/session-start.sh")], {
     env: { ...f.env, CODEX_THREAD_ID: "wrong-inherited-parent" },
     input: JSON.stringify({ session_id: id, cwd: f.root }),
   });
@@ -390,7 +393,7 @@ test("an empty-folder hook preserves its actual session through same-chat setup 
 test("empty-folder startup with missing or mismatched hook identity never uses inherited thread ID", t => {
   const f = fixture(t);
   for (const input of [{}, { session_id: "wrong-cwd", cwd: f.scratch }, { session_id: 42, cwd: f.root }, { session_id: " ", cwd: f.root }]) {
-    f.run("bash", [join(P, "hooks/session-start.sh")], {
+    f.run("bash", [join(P, "session/session-start.sh")], {
       env: { ...f.env, CODEX_THREAD_ID: "wrong-inherited-parent" }, input: JSON.stringify(input),
     });
     assert.ok(!existsSync(join(f.root, "work/session.json")));

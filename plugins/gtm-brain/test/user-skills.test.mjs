@@ -170,7 +170,7 @@ test("linking a project links the existing skills; unlinking removes them; the s
   mkdirSync(join(root, ".agents/skills/gtm-brain-pulled"), { recursive: true });
   writeFileSync(join(root, ".agents/skills/gtm-brain-pulled/SKILL.md"), "---\nname: gtm-brain-pulled\ndescription: Pulled from a teammate.\n---\n\n# GTM Brain skill: Pulled\n");
   rmSync(join(root, ".agents/skills/gtm-brain-weekly-update"), { recursive: true, force: true }); // and one removed by hand: its link dangles
-  const hook = execFileSync("bash", [`${P}/hooks/session-start.sh`], { cwd: external, encoding: "utf8", input: JSON.stringify({ session_id: "t", cwd: external }), env: { ...env, GTM_BRAIN_NO_VERSION_CHECK: "1" } });
+  const hook = execFileSync("bash", [`${P}/session/session-start.sh`], { cwd: external, encoding: "utf8", input: JSON.stringify({ session_id: "t", cwd: external }), env: { ...env, GTM_BRAIN_NO_VERSION_CHECK: "1" } });
   assert.match(hook, /PROJECT website/);
   assert.ok(lstatSync(join(external, ".agents/skills/gtm-brain-pulled")).isSymbolicLink(), "pulled skill linked by the hook");
   assert.equal(existsSync(link), false, "dangling link removed by the hook");

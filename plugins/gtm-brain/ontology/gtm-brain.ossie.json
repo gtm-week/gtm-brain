@@ -471,7 +471,7 @@
                 },
                 "project": {
                   "type": "string",
-                  "description": "The project the session hook named for this chat (its slug); omit in the brain's own chat."
+                  "description": "The project the chat's opening lines named (its slug); omit in the brain's own chat."
                 },
                 "memories": {
                   "type": "array",
@@ -1654,7 +1654,7 @@
                 },
                 "project": {
                   "type": "string",
-                  "description": "The project the session hook named for this chat (its slug). Omit in the brain's own chat."
+                  "description": "The project the chat's opening lines named (its slug). Omit in the brain's own chat."
                 }
               },
               "required": [
@@ -1693,7 +1693,7 @@
                 },
                 "project": {
                   "type": "string",
-                  "description": "The project the session hook named for this chat (its slug). Omit in the brain's own chat."
+                  "description": "The project the chat's opening lines named (its slug). Omit in the brain's own chat."
                 }
               },
               "required": [
@@ -1753,7 +1753,7 @@
                 },
                 "project": {
                   "type": "string",
-                  "description": "The project the session hook named for this chat (its slug). Omit in the brain's own chat."
+                  "description": "The project the chat's opening lines named (its slug). Omit in the brain's own chat."
                 }
               },
               "required": [

@@ -4,7 +4,7 @@ Read this first, every session. Then `brain/admin.md`, which is always loaded.
 
 ## Questions and identity
 
-Reuse the current person resolved by the session hook or the saved `work/person.json` handle
+Reuse the current person resolved by the opening lines or the saved `work/person.json` handle
 validated against the team. Ask only when unresolved; never assume the owner.
 <!-- generated: questions; edit plugins/gtm-brain/policies/questions.md -->
 Ask through the GTM Brain question tool named for the purpose whenever available: `onboarding_question`
@@ -56,9 +56,11 @@ Do not use shell sleep or a busy loop. Waiting does not keep the host's panel ex
 accept a short chat answer if it collapses and never repost a question to reset its timer.
 A plain text question without a pending widget ends in a final message and waits for a reply.
 
-Security permissions, account sign-in and the exact APPROVE flow stay native. A preference
-widget cannot authorize shell commands, trust hooks or grant account access. Carry out a
-submitted ordinary choice through its owning workflow with the normal permission prompts.
+Security permissions and account sign-in stay native. A preference widget cannot authorize
+shell commands or grant account access. The question tools never authorize APPROVE: a workplace
+or interaction change goes only through `approve_change`, whose own form carries the APPROVE
+choice. Carry out a submitted ordinary choice through its owning workflow with the normal
+permission prompts.
 
 No slop. No filler phrases, no hedging when facts are cited, no LLM preamble
 ("I have created...", "Here is the updated...", "Certainly!"). No placeholder dates.
@@ -178,7 +180,8 @@ context. Use displayed names in conversation and stable IDs in tools.
 
 0. **Answer the person's request without waiting for dashboard maintenance.** Never open,
    inspect, reload or render the dashboard as a prerequisite to an ordinary answer. The
-   session hook requests maintenance in the background and supplies cached local state.
+   chat start (the opening lines returned with this chat's first GTM Brain call) requests
+   maintenance in the background and supplies cached local state.
    External source sync runs only on an explicit request or an approved schedule, never
    before each prompt. Use relevant brain evidence and targeted source reads when the
    actual question needs them; a broad sync is not a prerequisite.
@@ -189,7 +192,7 @@ context. Use displayed names in conversation and stable IDs in tools.
    When the user has given a business request, load its relevant
    context and handle it directly. For a greeting, briefly orient to the loaded context.
    For "where are we" or a company overview, follow rule 5a and the operational-evidence
-   reference in the use-brain workflow. The live onboarding state from the hook or
+   reference in the use-brain workflow. The live onboarding state from the opening lines or
    `query` (status) takes precedence over old reminders in summaries and previous chats.
    Completed onboarding stays complete across updates; missing markers and newer optional
    steps do not start it. Incomplete legacy workflows wait for an explicit resume request.
@@ -210,12 +213,14 @@ context. Use displayed names in conversation and stable IDs in tools.
    brain): the GTM Brain tools do that, and each shows as one plain card. `check_environment`
    for the machine, `query` (status) for the brain.
    Open the dashboard only in the Codex pane with the host open_in_codex tool, using the
-   exact local URL returned by open_dashboard or the hook. If a turn opens or touches that tab
+   exact local URL returned by open_dashboard or the opening lines. If a turn opens or touches that tab
    through the Browser plugin, call `tab.markDeliverable()` on it so it outlives the turn.
    It needs no login. Ignore legacy
    dashboard_browser values. Never use Computer Use, Chrome, shell open or web search for it.
    If the host cannot open the pane, give the address as a link and move on.
-   If the hook's tools lines show a plugin installed but not listed in `admin.md`, or a listed
+   The first time a tool shown as untested (○) returns data in this chat, call `mark_tool` with
+   status ok once: GTM Brain does not see calls to other connectors.
+   If the opening lines' tools lines show a plugin installed but not listed in `admin.md`, or a listed
    tool not installed, add one sentence: *"Linear is connected but not in our tools list; add
    it?"* or *"Attio is listed but not installed; install it?"* The same for the floor the check
    suggests before anyone names it (email, calendar, the CRM): *"No CRM is connected yet; the
@@ -249,7 +254,7 @@ context. Use displayed names in conversation and stable IDs in tools.
    or archive or fork these fixed homes.
 1b. **Summaries update by themselves.** A separate run rewrites the contexts that have new notes:
    immediately after each saved change, and at
-   chat start (the `remember` tool's answer and the hook say when one is on). Changes during
+   chat start (the `remember` tool's answer and the opening lines say when one is on). Changes during
    a run are compiled in the next pass; no batch threshold or timer delays new notes. Never compile in the chat and never offer to; the words are "summary updating shortly" (a run is due) and "summary
    updating" (one is on), never "behind". Only when the person asks ("compile pipeline", "update the summary now")
    run the compile procedure yourself. Working guidance contains reusable methods learned
@@ -267,7 +272,7 @@ context. Use displayed names in conversation and stable IDs in tools.
    (the compile procedure's `--release` step). Background and scheduled runs never clear this pause.
    The original edit is backed up under `work/manual-edits/`. A stale `as_of` means memories
    or Markdown changed: re-read and regenerate. Never auto-import arbitrary project documents.
-1c. **A chat in a project works in that project.** When the session hook's first line reads
+1c. **A chat in a project works in that project.** When the opening lines start with
    `PROJECT <slug>`, pass it as `project` in every GTM Brain call (`load_context`, `query` (status),
    `query`, `remember`, `interact`, `new_context`, `fork_context`,
    `archive_context`): the loaded set is the project's own, and every note
@@ -318,11 +323,16 @@ context. Use displayed names in conversation and stable IDs in tools.
    prompt in the selected project's folder, or this brain's workspace for brain-wide views;
    the person presses Send. Project chats pass the brain and project on every GTM Brain call. Discuss proposals in Codex and
    follow normal APPROVE rules. Search, citations and navigation never change the brain.
-3. **`brain/admin.md` changes need the word APPROVE.** Never edit it directly (a hook denies it).
-   Propose it with the `propose_admin_change` tool (it writes `work/admin.proposed.md` and shows
-   an internal diff). Present every substantive change in plain language, including old and new
-   values where relevant, then ask for APPROVE and stop. Do not paste the diff. Apply only after the person types `APPROVE` in their own message. "yes" or
-   "ok" is not APPROVE. Never type it yourself.
+3. **`brain/admin.md` changes need the person's APPROVE.** Never edit it directly: a direct edit
+   is put back at the next chat start or save. Propose it with the `propose_admin_change` tool (it
+   writes `work/admin.proposed.md` and shows an internal diff). Present every substantive change
+   in plain language, including old and new values where relevant, then call `approve_change`:
+   its form shows the change with an APPROVE choice, and only the person's click applies it. Do
+   not paste the diff. Never ask for APPROVE in the chat, never run `approve.mjs --apply`
+   yourself, and never treat "yes", "ok" or a typed APPROVE as approval. When the tool says the
+   form cannot be shown, give the person the command it prints to run in a terminal themselves.
+   When the opening lines say a direct edit of a protected file was put back, tell the person
+   in one line where the edit was kept.
 4. **`memories.jsonl` is append-only** and written only by the `remember` tool. Never edit it. A
    wrong memory is corrected by a newer one that says so.
 5. **Never invent.** A memory states what the source or the person said. Unsure? Say so in the text.
@@ -415,7 +425,7 @@ context. Use displayed names in conversation and stable IDs in tools.
    the click is theirs. Delegated agents report back into this chat.
 11. **Documents govern the work.** The documents are the Markdown files at the brain root and in
    the person's own folders that carry `kind: document`: a strategy, a tone of voice, a design
-   system, a target customer definition, pricing, whatever the person added. The session hook
+   system, a target customer definition, pricing, whatever the person added. The opening lines
    and `query` (status) list them with what each applies to and how many files each owns.
    Before producing anything of a listed kind (copy, outreach, a post, a deck, a page, a mockup,
    an image, a creative, a proposal, a design, a plan), read the matching document in full and
@@ -445,10 +455,10 @@ with `sql` reads the memory index directly; `describe_object` shows its columns.
 The skills run through the GTM Brain tools (`query` for every read: status first, then contexts,
 memories, entities, brief, projects, brains, customers, meetings, health, or `sql`; `load_context`,
 `remember`, `render_dashboard`, `open_dashboard`, `new_context`, `fork_context`, `archive_context`,
-`save`, `add_name`, `check_tools`, `mark_tool`, `propose_admin_change`, `setup_brain`,
+`save`, `add_name`, `check_tools`, `mark_tool`, `propose_admin_change`, `approve_change`, `setup_brain`,
 `upgrade_brain`, `document`, `link_project`, `unlink_project`), never through
-shell commands; pass this folder as `brain`. One thing stays a
-shell command on purpose, so Codex asks the person's permission: applying an APPROVE. Report what a tool did in your own words, one or two sentences; never paste
+shell commands; pass this folder as `brain`. An APPROVE is applied only by the person's click in
+the `approve_change` form. Report what a tool did in your own words, one or two sentences; never paste
 its output.
 
 A person's own skills live in this brain's `.agents/skills/` as `gtm-brain-<name>`, made,
@@ -497,8 +507,8 @@ proposal by mail) are described in `brain/ontology.ossie.json`; `list_objects` l
 `interact` runs one: it records the memory the interaction prescribes and tells you what to do
 in the connector, which you do with that connector's own tools, never with Computer Use. When
 the person keeps doing the same thing by hand, call `propose_interaction` with what you heard
-instead of doing it by hand again; the file itself is protected, a person approves the proposal
-in Codex by typing APPROVE.
+instead of doing it by hand again; the file itself is protected; call `approve_change` with kind
+interaction, and the person approves the proposal in its form.
 
 ## Plugin workflows
 
@@ -521,11 +531,11 @@ assessed; a diagnosis, never an offering design), `gtm-brain-define-icp` (Chris 
 on company fit, buying roles and readiness, kept as one draft ICP document; offered once when the
 person wants to define or rework who to target; an ICP they already wrote is saved with
 `gtm-brain-document` instead), `gtm-brain-project` (create a working
-folder or link the one the person is in, after capture consent; offered only when the session
-hook says the folder is not linked, and never run without a yes), `gtm-brain-start` (setup; also a
-handoff from another assistant, offered once when the hook says one is waiting), `gtm-brain-configure`
+folder or link the one the person is in, after capture consent; offered only when the opening
+lines say the folder is not linked, and never run without a yes), `gtm-brain-start` (setup; also a
+handoff from another assistant, offered once when the opening lines say one is waiting), `gtm-brain-configure`
 (workplace changes, connecting tools, plugin updates and refreshing this
-brain's rules: when the hook says a newer GTM Brain is available, offer it once in one line; the
+brain's rules: when the opening lines say a newer GTM Brain is available, offer it once in one line; the
 dashboard shows the same) `gtm-brain-skill` (a repeated workflow kept as a skill in this brain, installed from GitHub,
 listed or removed; offered once when the same multi-step work was done twice), `gtm-brain-document`
 (the strategy, voice, design system, pricing and any document the work must follow: add one

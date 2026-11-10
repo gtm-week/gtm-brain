@@ -32,18 +32,17 @@ async function migration(t, host, fault) {
   const {migrateInstallation}=await import(moduleUrl);
   const run=()=>migrateInstallation({host,home:dir,command,verify:(root,version)=>{
     state.events.push('runtime verification');if(fault==='runtime')throw new Error('broken connector');return verifyRuntime(root,version);
-  },trust:async()=>{state.events.push('hook verification');return fault==='hooks'?[]:[{enabled:true,status:'trusted'}];}});
+  }});
   return {state,run};
 }
-for(const host of ['codex','claude'])test(`${host}: migration preserves the old plugin until new runtime and safety checks pass, then retries safely`,async t=>{
+for(const host of ['codex','claude'])test(`${host}: migration preserves the old plugin until the new runtime check passes, then retries safely`,async t=>{
   const {state,run}=await migration(t,host);
   await run();assert.equal(state.old,false);assert.equal(state.next,true);
   assert.ok(state.events.indexOf('runtime verification')<state.events.findIndex(x=>x.includes(` ${oldId}`)));
-  if(host==='codex')assert.ok(state.events.indexOf('hook verification')<state.events.findIndex(x=>x.includes(` ${oldId}`)));
   const removalCount=state.events.filter(x=>x.includes(` ${oldId}`)).length;
   await run();assert.equal(state.events.filter(x=>x.includes(` ${oldId}`)).length,removalCount);
 });
-for(const fault of ['install','runtime','hooks'])test(`migration keeps the existing plugin when ${fault} fails`,async t=>{
+for(const fault of ['install','runtime'])test(`migration keeps the existing plugin when ${fault} fails`,async t=>{
   const {state,run}=await migration(t,'codex',fault);await assert.rejects(run);assert.equal(state.old,true);
   assert.ok(!state.events.some(x=>x.startsWith('plugin remove')));
 });

@@ -13,7 +13,7 @@ always in one of the places below.
 | One piece of work with deliverables (a website, an event) | its own folder, linked with `/gtm-brain-project` | you |
 | Something that happened: a meeting, a call, a decision, a finding | `brain/contexts/<topic>/` | Codex, when you say it in the chat |
 | A person, company or product | `brain/entities/<id>.md`, its files (a logo, a photo) in `brain/entities/<id>/` | Codex; you can edit the text |
-| Company profile: name, team, tools | `brain/admin.md` | Codex proposes, you type APPROVE |
+| Company profile: name, team, tools | `brain/admin.md` | Codex proposes, you choose APPROVE in a form |
 | Your own Codex skills | `.agents/skills/` | you or Codex |
 
 `strategy.md` is here from day one, waiting for `run the strategic intake`. A file with no owner

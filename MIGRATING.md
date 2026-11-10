@@ -17,8 +17,7 @@ git clone --depth 1 https://github.com/gtm-week/gtm-brain.git "$migration_dir/so
 node "$migration_dir/source/scripts/migrate-install.mjs" codex
 ```
 
-The migration installs `gtm-brain@gtm-brain`, verifies its connector and enables its safety
-hooks, then removes the old `gtm-os@gtm-os` registration. A failed verification keeps the old
+The migration installs `gtm-brain@gtm-brain`, verifies its connector, then removes the old `gtm-os@gtm-os` registration. A failed verification keeps the old
 plugin. If the new installation already exists, it is verified before anything is retired.
 
 Restart Codex and open the **same working folder**. Recent rules with no edits of yours are refreshed

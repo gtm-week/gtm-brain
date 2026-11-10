@@ -165,7 +165,7 @@ test("save commits a document and the files a person dropped beside it by hand; 
   assert.equal(lib.unsavedChanges(root).length, 0);
 });
 
-const hook = (root, project) => execFileSync("bash", [`${P}/hooks/session-start.sh`], { cwd: project || root, encoding: "utf8", env, input: JSON.stringify({ session_id: "thread-1", cwd: project || root }) });
+const hook = (root, project) => execFileSync("bash", [`${P}/session/session-start.sh`], { cwd: project || root, encoding: "utf8", env, input: JSON.stringify({ session_id: "thread-1", cwd: project || root }) });
 test("the session hook names the documents every chat, in the brain and in a linked project, and says when there are none", () => {
   const root = brain();
   assert.match(hook(root), /documents: Strategy \[draft\] \(strategy, planning\) -> strategy\.md/);

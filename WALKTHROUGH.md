@@ -25,8 +25,8 @@ You need three things GTM Brain cannot do for you:
 - **A Mac.** GTM Brain runs locally on your machine; nothing is hosted.
 
 > ⚠️ **Windows:** GTM Brain is recommended on a Mac and **has not been tested on Windows**.
-> It may run if Git for Windows is installed first (it provides the tools GTM Brain's safety
-> locks need), but folders will not open automatically and custom skills need Windows
+> It may run if Git for Windows is installed first (it provides the tools GTM Brain's chat
+> start needs), but folders will not open automatically and custom skills need Windows
 > developer mode. If you are on Windows, ask in the community before you start, and expect
 > to be the first.
 
@@ -119,13 +119,6 @@ flowchart TB
    do. Read the line, then click **Approve**. Expect roughly:
    - checking this computer has everything it needs
    - installing GTM Brain
-   - turning on the safety locks (see the warning below)
-
-> ⚠️ **Warning:** Do not skip the **safety locks** prompt (Codex may call it "trust
-> hooks"). The locks do two things: they make every chat open where the last one ended
-> (your dashboard, your loaded contexts, auto-save), and they stop anything important
-> changing without your say-so. Without them GTM Brain still works, but you will have to
-> drive everything by hand. <!-- ALL-126 -->
 
 > ✅ **You should see:** Codex says installation is done and it checked it works, then
 > gives you **one next action**: create your company project. It should not hand you a
@@ -139,9 +132,6 @@ flowchart TB
 > - **"Marketplace add failed" / network error.** Check your internet connection and that
 >   you accepted the GitHub invitation (step 2). Paste the install prompt again; re-running
 >   it is safe.
-> - **"Safety locks: off" or Codex says the locks are still off.** Paste the install
->   prompt once more. If they stay off, carry on anyway: everything works, and Codex will
->   offer to turn them on later from inside your project.
 > - **Codex asks "why does it update Codex?" or updates the Codex app itself.** The
 >   install checks the Codex app is recent enough (0.149 or newer) and updates it if not.
 >   Let it finish, then reopen the app and paste the install prompt again. <!-- ALL-124, open -->
@@ -158,7 +148,6 @@ flowchart TB
 2. Create an **empty folder**, wherever you keep your work, called **GTM Brain**.
    The folder name is what the app shows as the project name.
 3. Select that folder and open a **new chat** in it.
-4. The first time, the app may ask whether to trust GTM Brain's hooks. Click **Accept**.
 
 > ⚠️ **Warning:** The folder must be **empty**. Do not point setup at a folder that already
 > has your documents in it; GTM Brain makes its own structure there. Your existing work
@@ -194,11 +183,11 @@ flowchart TB
    - **Settings question**: tools, connections, dashboard
    - **Your choice**: everyday decisions (which context, which direction)
 
-4. When the workplace info draft looks right, type **`APPROVE`** (the exact word, capitals).
-   Codex then asks permission to write an audit line; click **Approve**.
+4. When the workplace info draft looks right, choose **APPROVE** in the form Codex shows.
 
-> ⚠️ **Warning:** Only the exact word **APPROVE** applies workplace info. "ok", "yes" or
-> "looks good" do nothing, on purpose. This is the same for every future change to company
+> ⚠️ **Warning:** Only choosing **APPROVE** in that form applies workplace info. "ok", "yes",
+> "looks good" or APPROVE typed in the chat do nothing, on purpose. This is the same for
+> every future change to company
 > facts.
 
 > ✅ **You should see:** the dashboard opens in the right pane next to the chat, with a
@@ -340,8 +329,7 @@ The procedure, every time:
 > ⚠️ **Warning:** **Removing the installation or re-running setup is never the recovery
 > procedure.** Your brain files are untouched by updates; do not delete anything.
 
-> ✅ **You should see:** the new version under **Admin** on the dashboard, and the safety
-> locks still on (an update re-approves them for you).
+> ✅ **You should see:** the new version under **Admin** on the dashboard.
 
 > 🛠 **If it goes wrong:**
 > - **"Connector points to a missing plugin version".** Say **"repair the GTM Brain update"**.
@@ -389,9 +377,6 @@ The problem first, then what to do, grouped by the section it belongs to.
 
 ### Installing (step 4)
 
-***"Safety locks: off"***\
-**→ Paste the install prompt again; else carry on, Codex offers later**
-
 ***Install updates the Codex app***\
 **→ Let it finish, reopen, paste the install prompt again**
 
@@ -420,7 +405,7 @@ The problem first, then what to do, grouped by the section it belongs to.
 ### Tools and connections
 
 ***Tool shows "untested" after use***\
-**→ Update; or "is HubSpot connected?"**
+**→ Ask "is HubSpot connected?"; it runs the read test**
 
 ***Attio finds nobody***\
 **→ Exact spelling; or "who is <name>"**

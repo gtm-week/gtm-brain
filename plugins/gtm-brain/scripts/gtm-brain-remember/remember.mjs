@@ -47,7 +47,7 @@ const project = opt.project || null;
 if (project) { const known = lib.readProjects(root).map(p => p.slug); if (!known.includes(project)) die(`no project ${project}; projects: ${known.join(", ") || "none"}`, 2); }
 const loaded = lib.readLoaded(root, project);
 // The chat this note came from is a source too: codex:<thread id> or claude:<session id>, from
-// work/session.json (the session hook writes it with its host). A separate run (GTM_BRAIN_RUN: the
+// work/session.json (the chat start writes it with its host). A separate run (GTM_BRAIN_RUN: the
 // background summary run, a dashboard job, a scheduled run) is nobody's conversation, so it attaches nothing.
 const session = process.env.GTM_BRAIN_RUN ? null : lib.readSession(root, project);
 const chat = session?.session_id || null, chatKind = session?.host || "codex";

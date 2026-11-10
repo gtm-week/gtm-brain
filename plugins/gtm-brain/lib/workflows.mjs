@@ -96,7 +96,7 @@ export function stepDue(step, previousDone) {
   return { status: "due", due: previousDone, ask: g.condition };
 }
 
-/* One opening line for the session hook. Instructions for the model: name the runs once, act only when asked. */
+/* One opening line for the chat start. Instructions for the model: name the runs once, act only when asked. */
 export function runsLine(root, today = localDate()) {
   const live = listRuns(root).filter(isLive); if (!live.length) return "";
   const show = r => {

@@ -31,7 +31,7 @@ evidence, honor manual restrictions, and select each memory's destination by mea
 Short continuations reuse the current scope; do not rerun discovery before every reply.
 
 Before producing copy, outreach, posts, landing pages, creatives, proposals, a design or a plan,
-read the document that applies (the session hook and `query` (status) list the documents at the
+read the document that applies (the opening lines and `query` (status) list the documents at the
 brain root with what each applies to) and follow it, saying which one in one line; AGENTS.md
 rule 11. Adding or changing one is `gtm-brain-document`.
 
@@ -91,7 +91,7 @@ keeps being done by hand. Keep one pending question alive until answered or canc
 never send a final response while an async widget is pending. Ask only for missing information
 that affects the task, not identity or maintenance already resolved by the brain.
 
-Reuse the current person supplied by the session hook or `work/person.json`, validated against
+Reuse the current person supplied by the opening lines or `work/person.json`, validated against
 `brain/admin.md` team. Do not ask who the user is again when this resolves a teammate. Do not
 substitute the owner when it does not. Capture partial information immediately with unknowns
 marked; missing meeting time or model detail need not block saving a named opportunity.

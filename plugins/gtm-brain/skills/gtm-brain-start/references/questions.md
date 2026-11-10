@@ -30,7 +30,7 @@ Do not interpret panel collapse as an answer or a reason to repost.
 | --- | --- |
 | Inferred company | Yes, this is my company; Different company. Then a free-text question for the website. |
 | Unknown website or identity | Structured free-text question, with one example in the prompt. |
-| Company profile corrections | Offer concrete sections to revise when helpful. Applying the profile still requires the literal APPROVE flow below. |
+| Company profile corrections | Offer concrete sections to revise when helpful. Applying the profile still requires the APPROVE form below. |
 | Connections | `onboarding_question` with `multiple: true`, or single-select combinations in chat. Submit once; no second yes per tool. |
 | Existing Codex projects | Ask which projects to follow with native checkboxes and actual project names. Selection consents to future capture; reuse it when linking. If the catalog is unavailable, ask for the folder, or offer Not yet / Skip for now. Stay in the onboarding chat. |
 | Claude context import | Import context; Skip. Explain what will run before asking. |
@@ -43,7 +43,7 @@ Do not interpret panel collapse as an answer or a reason to repost.
 | Resume onboarding | Continue onboarding; Skip for now. |
 
 Choices do not replace security approvals. Native Codex command permission prompts and
-account sign-in stay native. Workplace changes still require the exact `APPROVE` token
-in the person's own message plus the existing shell permission prompt; "Looks right",
-"Yes", or a recommendation must never stand in for it. Do not add a second confirmation
+account sign-in stay native. Workplace changes still require the person's `APPROVE`
+in the `approve_change` form; "Looks right", "Yes", a typed APPROVE or a recommendation must
+never stand in for it. Do not add a second confirmation
 where the person has already authorized an ordinary setup or connection action.

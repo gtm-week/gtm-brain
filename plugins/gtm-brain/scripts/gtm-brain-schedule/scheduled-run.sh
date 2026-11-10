@@ -22,7 +22,7 @@ if [ -z "$STALE$ENTITIES" ]; then
   printf '%s  scheduled-run  nothing stale\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log; echo "nothing stale"; exit 0
 fi
 echo "stale contexts: $STALE; entity briefs: $ENTITIES"
-# The run tells its own session hook what it is (GTM_BRAIN_RUN): the hook then records this run's
+# The run tells its own chat start what it is (GTM_BRAIN_RUN): the hook then records this run's
 # thread on work/compile.json for the page to link, and leaves the person's chat in work/session.json alone.
 export GTM_BRAIN_RUN="$BY"
 HEAD_BEFORE="$(git rev-parse -q --verify HEAD 2>/dev/null)"

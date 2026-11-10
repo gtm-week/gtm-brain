@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# gtm-brain SessionStart: in a brain folder, pull, rebuild the dashboard, list the contexts, and
-# re-load the contexts that were loaded last time, so a session opens where the last one ended.
+# gtm-brain chat start: in a brain folder, pull, rebuild the dashboard, list the contexts, and
+# re-load the contexts that were loaded last time, so a chat opens where the last one ended.
+# GTM Brain has no Codex hooks: the MCP server runs this on a chat's first GTM Brain call, in the
+# chat's folder, and hands its output to the model with that call's result (server.mjs, opening).
 set -u
-input="$(cat 2>/dev/null || true)"   # the hook's JSON: session_id, cwd, ...
+input="$(cat 2>/dev/null || true)"   # JSON from the server: session_id (the chat, when found), cwd
 P="${PLUGIN_ROOT:-}"
 . "$(dirname "${BASH_SOURCE[0]}")/resolve.sh"
 # What differs between Codex and Claude Code: a line of text, or whether this machine can do something.
@@ -55,9 +57,11 @@ if [ -z "$where" ] || [ ! -f "$root/brain/admin.md" ]; then
 fi
 mkdir -p "$root/work"
 # Remember which Codex chat this is (work/session.json): the dashboard shows which chat is linked.
-[ -n "${PLUGIN_ROOT:-}" ] && printf '%s' "$input" | node "$PLUGIN_ROOT/hooks/session.mjs" "$root" "$project" 2>/dev/null || true
+[ -n "${PLUGIN_ROOT:-}" ] && printf '%s' "$input" | node "$PLUGIN_ROOT/session/session.mjs" "$root" "$project" 2>/dev/null || true
 # This machine has opened this brain: known to /gtm-brain-project when it offers the skill elsewhere.
 node -e 'const l=await import(process.argv[1]);l.registerBrain(process.argv[2])' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
+# A direct edit of a protected file is put back before anything reads or commits it (lib.guardProtected).
+node -e 'const l=await import(process.argv[1]);const t=l.restoredNotice(l.guardProtected(process.argv[2]));if(t)console.log(t)' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
 P="${PLUGIN_ROOT:-}"
 # A clone has no local git config: point the pre-commit hook at this plugin's lib every session.
 if [ -n "$P" ] && [ -f "$P/lib/brain.mjs" ] && [ -d "$root/.githooks" ]; then
@@ -69,7 +73,7 @@ fi
 command -v node >/dev/null 2>&1 || { echo "brain: $(basename "$root") (node not found; skills unavailable)"; exit 0; }
 # Maintenance owns network checks and rendering outside the foreground hook.
 P="${PLUGIN_ROOT:-}"
-node "$P/hooks/session-maintenance.mjs" "$root" --start "$project" >/dev/null 2>&1 || true
+node "$P/session/session-maintenance.mjs" "$root" --start "$project" >/dev/null 2>&1 || true
 url="$(node -e 'try{const s=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));process.kill(s.pid,0);console.log(s.url+(process.argv[2]?"#view=home&project="+encodeURIComponent(process.argv[2]):""))}catch{}' "$root/work/dash.json" "$project" 2>/dev/null)"
 # The legacy dashboard_browser value is ignored; the dashboard belongs in the Codex pane.
 mode="$(node -e 'const l=await import(process.argv[1]);const a=l.readAdmin(process.argv[2])||{};console.log(a.dashboard==="on-demand"?"on-demand":"always")' "$P/lib/brain.mjs" "$root" 2>/dev/null || echo 'always')"
@@ -87,6 +91,8 @@ fi
 echo "brain: $(basename "$root")  ·  admin: brain/admin.md (always loaded)"
 # Other chats are linked, never entered: the person opens them, or not.
 node "$H" text chats
+# The other assistant's home is its own memory, reads included; IMPORT.md is the only way across.
+node "$H" text foreign
 # Claude Code reads CLAUDE.md: without its AGENTS.md import (a brain from before 0.30) the rulebook is named here.
 rules_dir="$root"; [ -n "$project" ] && rules_dir="$cwd"
 node "$H" rulebook "$rules_dir" 2>/dev/null || node "$H" text rulebook "$root"
@@ -127,7 +133,7 @@ fi
 # Cached connector status is sufficient for orientation. The worker refreshes it.
 if [ -f "$root/work/tools.json" ]; then
   tools="$(node -e 'try{const t=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));console.log(Object.values(t).map(x=>`${(x.tool||"").toLowerCase().replace(/\s*\(.*\)$/,"")} ${x.status==="installed"?(x.test==="ok"?"●":"○"):x.declined?"skipped":"✕"}`).join("  "))}catch{console.log("")}' "$root/work/tools.json")"
-  [ -n "$tools" ] && echo "tools: $tools   (● read test ok, ○ installed not tested, ✕ not connected, skipped = declined, never offered again; say: connect my tools)"
+  [ -n "$tools" ] && echo "tools: $tools   (● read test ok, ○ installed not tested, ✕ not connected, skipped = declined, never offered again; say: connect my tools. The first time a ○ tool returns data in this chat, call mark_tool with status ok once)"
 else
   node "$H" text toolsUnchecked
 fi
@@ -155,6 +161,5 @@ pv="$(node -e 'try{const s=JSON.parse(require("fs").readFileSync(process.argv[1]
 pv_latest="${pv%% *}"; pv_installed="${pv#*installed }"; pv_installed="${pv_installed%)}"
 [ -n "$pv" ] && node "$H" can update-check && node "$H" text updateOffer "$pv_installed" "$pv_latest"
 echo "Dashboard maintenance requested in the background. Use open_dashboard when the person asks to see it."
-rm -f "$root/work/hooks-off.json" 2>/dev/null   # this hook ran: the safety locks are on
 printf '%s  SessionStart  loaded=%s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "${loaded:-none}" >> "$root/work/hooks.log"
 exit 0

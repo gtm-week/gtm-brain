@@ -4,7 +4,6 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { homedir } from "node:os";
-import { hookTrust, trustSummary } from "../../hooks/trust-hooks.mjs";
 import { pluginVersion, olderVersion, verifyRuntime } from "../../lib/plugin-runtime.mjs";
 import { sourceVersion, retiredSource, SHIPPING_SOURCE } from "../../lib/plugin-source.mjs";
 
@@ -69,18 +68,11 @@ try {
   if (before && !before.enabled) throw new Error("GTM Brain is disabled. Enable it in Codex before updating.");
   console.log(`GTM Brain installed version: ${before?.version || "missing"}`);
   console.log(`Source: ${source.sourceType === "git" ? "Git repository (configured branch/ref preserved)" : "local checkout (no remote fetch)"}`);
-  // A hook runs only while Codex holds the trust for its declaration, and a changed hooks.json
-  // silently drops it: check every time, and put it back as part of an update the person asked for.
-  const safety = async trust => {
-    try { console.log(trustSummary(await hookTrust({ trust }))); }
-    catch (error) { console.log(`Safety locks: not checked (${error.message}).`); }
-  };
   if (mode === "--check") {
     console.log("Remote not checked; this reports the installed state only.");
     stage = "checking the installed connector";
     const runtime = verifyRuntime(cached(before.version), before.version);
     console.log(`Connector: GTM Brain ${runtime.version} starts and lists ${runtime.tools} tools.`);
-    await safety(false);
   } else {
     if (source.sourceType === "git") {
       stage = "refreshing the marketplace";
@@ -112,7 +104,6 @@ try {
     const runtime = verifyRuntime(cached(after.version), candidate);
     console.log(`GTM Brain refreshed: ${before?.version || "missing"} -> ${after.version || "unknown"}.`);
     console.log(`Connector: GTM Brain ${runtime.version} starts and lists ${runtime.tools} tools.`);
-    await safety(true);
     // One step for the person: the brain they updated from gets the new rules and migrations at once, run by the
     // version just installed (the old one does not know them). Other brains get the one-line offer when opened.
     if (brainArg) {

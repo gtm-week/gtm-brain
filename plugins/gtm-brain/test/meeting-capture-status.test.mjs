@@ -15,7 +15,7 @@ function brain(t) {
   assert.equal(setup.status, 0, setup.stderr);
   return { root, env };
 }
-const hook = f => spawnSync("bash", [join(plugin, "hooks/session-start.sh")], { cwd: f.root, env: { ...f.env, PLUGIN_ROOT: plugin, GTM_BRAIN_NO_VERSION_CHECK: "1", GTM_BRAIN_NO_SESSION_MAINTENANCE: "1" }, encoding: "utf8", input: JSON.stringify({ session_id: "r", cwd: f.root }) }).stdout;
+const hook = f => spawnSync("bash", [join(plugin, "session/session-start.sh")], { cwd: f.root, env: { ...f.env, PLUGIN_ROOT: plugin, GTM_BRAIN_NO_VERSION_CHECK: "1", GTM_BRAIN_NO_SESSION_MAINTENANCE: "1" }, encoding: "utf8", input: JSON.stringify({ session_id: "r", cwd: f.root }) }).stdout;
 const synced = root => { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(join(root, "work/sync.json"), "{}\n"); };
 
 test("the status says no sync, then no capture settings, then no source read, then nothing", t => {

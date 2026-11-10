@@ -208,7 +208,7 @@ export function migrateGuidelines(root) {
   return { moved, kept };
 }
 
-/* The one line every chat reads: the session hook (brain and linked project) and query (status).
+/* The one line every chat reads: the chat start (brain and linked project) and query (status).
    With an absolute root the paths are absolute, for a chat in a linked folder. */
 export function documentsLine(root, { absolute = false } = {}) {
   const all = listDocuments(root), where = p => absolute ? join(root, p) : p;

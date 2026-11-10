@@ -295,12 +295,8 @@ test('the attention view lists workflow runs with their steps, read-only, and sa
   assert.match(html, /Workflow runs · 1/); assert.match(html, /outbound-2026-09-28-q4 · Our offer/); assert.match(html, /1 done/); assert.match(html, /2 pending · 2026-10-08/);
   assert.doesNotMatch(html, /<button|<input|<form/, 'read-only');
 });
-test('settings warn when the safety locks are off, with a version check present, and name the repair that fits',()=>{
- const line=(hooksOff,plugin={installed:'0.33.1',latest:'0.33.1',status:'current',checkedAt:'2026-09-11T10:00:00.000Z'})=>{const D=data();D.plugin=plugin;D.hooksOff=hooksOff;return page(D).node('#plugin-line').innerHTML};
- const at='2026-09-11T10:00:00.000Z';
- assert.match(line({at,how:'codex'}),/0\.33\.1, the latest[\s\S]*Safety locks off[\s\S]*Say in Codex: update GTM Brain/);
- assert.match(line({at,how:'silent'}),/Safety locks off[\s\S]*In Codex settings, approve GTM Brain's hooks/);
- assert.doesNotMatch(line({at,how:'silent'}),/update GTM Brain/);
- assert.match(line({at,how:'codex'},null),/version not checked yet[\s\S]*Safety locks off/);
- assert.doesNotMatch(line(null),/Safety locks/);
+test('settings show the version line with no safety-locks notice: GTM Brain has no hooks to switch off',()=>{
+ const D=data();D.plugin={installed:'0.33.9',latest:'0.33.9',status:'current',checkedAt:'2026-09-11T10:00:00.000Z'};
+ const line=page(D).node('#plugin-line').innerHTML;
+ assert.match(line,/0\.33\.9, the latest/); assert.doesNotMatch(line,/Safety locks|hooks/);
 });

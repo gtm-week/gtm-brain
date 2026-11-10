@@ -3,7 +3,7 @@
 // Adds to the loaded set (work/loaded-contexts.json) so remember and the hook know; --only
 // replaces the set with what you name ("instead"), --clear empties it. AGENTS.md rule 1.
 //   node load.mjs <root> <slug> [<slug>...] [--last 15] [--only]      node load.mjs <root> --clear
-//   --last 0: cover and what is new only, no memories list (the session hook, so a chat opens light)
+//   --last 0: cover and what is new only, no memories list (the chat start, so a chat opens light)
 //   node load.mjs <root> --drop <slug> [<slug>...]                     unload these, keep the rest
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args.shift() || ".";

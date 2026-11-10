@@ -57,9 +57,11 @@ Do not use shell sleep or a busy loop. Waiting does not keep the host's panel ex
 accept a short chat answer if it collapses and never repost a question to reset its timer.
 A plain text question without a pending widget ends in a final message and waits for a reply.
 
-Security permissions, account sign-in and the exact APPROVE flow stay native. A preference
-widget cannot authorize shell commands, trust hooks or grant account access. Carry out a
-submitted ordinary choice through its owning workflow with the normal permission prompts.
+Security permissions and account sign-in stay native. A preference widget cannot authorize
+shell commands or grant account access. The question tools never authorize APPROVE: a workplace
+or interaction change goes only through `approve_change`, whose own form carries the APPROVE
+choice. Carry out a submitted ordinary choice through its owning workflow with the normal
+permission prompts.
 
 No slop. No filler phrases, no hedging when facts are cited, no LLM preamble
 ("I have created...", "Here is the updated...", "Certainly!"). No placeholder dates.
@@ -111,23 +113,25 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
 - GTM Brain is English-only: conversations, dashboard labels, user-facing commands and brain
   records. There is no language preference to read, save or ask about. Keep tool identifiers,
   CLI flags, and the APPROVE token stable.
-- `plugins/gtm-brain/lib/` is the file format; skills and hooks go through it.
-- A hook runs only while Codex holds the approval for its declaration: `config.toml` keeps a
-  `trusted_hash` per hook and `codex plugin add` writes none, so a hook installed by a command
-  is enabled and silent. `hooks/trust-hooks.mjs` writes that approval; `dev-install.sh`,
-  `update.mjs` and the install flow all run it. Before Codex 0.164 the hash covered only
-  `hooks.json` (command, matcher, timeout, status message). From 0.164 Codex also keeps a
-  `trusted_content_hash` of the plugin's files (`currentHash` is "declaration/contents"), so any
-  change to the plugin, a version bump included, switches every hook off until it is approved
-  again. `update.mjs` re-approves; an update the Codex app makes itself does not, so the MCP
-  server checks once per start and tells the person (`host.texts.hooksOff`). Off means waiting for
-  review or switched off in Codex (`enabled = false`), and `--trust` switches those back on. The
-  server also reads what the hooks leave (`work/tool-usage.jsonl`, `work/hooks.log`), so it notices
-  without a Codex CLI on the PATH, and writes `work/hooks-off.json` for the dashboard. After any change to
-  the plugin, re-run `./dev-install.sh` or the hooks stay off without saying so.
+- `plugins/gtm-brain/lib/` is the file format; skills and the session scripts go through it.
+- GTM Brain declares no hooks. Since Codex 0.164 any change to a plugin, a version bump
+  included, switches all its hooks off until the person approves a "Review hooks" dialog, and
+  no other installed plugin has hooks. Everything runs through the MCP server instead. The chat
+  start: on a chat's first GTM Brain call (once per brain and project per server, again after 30
+  quiet minutes) the server runs `session/session-start.sh` and returns its opening lines before
+  that call's result; the server's instructions make `query` (status) the first call in a brain
+  folder or a linked project. The chat id comes from the host's own session files
+  (`lib/host.mjs` `currentChat`). APPROVE: `approve_change` shows the person a native form and
+  only their click applies the change; `approve.mjs --apply/--interaction` refuses otherwise,
+  except in a terminal where the person types APPROVE. Protection: `lib.guardProtected` runs at
+  each chat start and before every save; a direct edit of `admin.md`, `ontology.ossie.json` or a
+  `memories.jsonl` not committed through GTM Brain is copied to `work/manual-edits/protected/` and
+  the committed version restored. The server logs its own calls to `work/tool-usage.jsonl`; it
+  does not see other connectors' calls, so the model marks an untested tool with `mark_tool`.
+  After any change to the plugin, re-run `./dev-install.sh` to install it.
 - A change under `plugins/gtm-brain/` that people should receive bumps the version in
   `.codex-plugin/plugin.json`. `check-version.mjs` compares that number with the installed one,
-  and the dashboard, the hook and the advisor all read its answer: everything shipped without a
+  and the dashboard, the chat start and the advisor all read its answer: everything shipped without a
   bump is invisible, so nobody is ever offered it. The cache path in SETUP.md and COMMANDS.md
   carries the same number, and a test holds them together. A change to `templates/AGENTS.md`
   snapshots the outgoing template into `templates/legacy/AGENTS-<old version>.md` and lists that
@@ -141,16 +145,16 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
   and generated as first-class tools; a company's, described in its `brain/ontology.ossie.json`,
   listed per brain by the catalog tools and run through the one fixed tool `interact`. Codex lists a
   server's tools once, at startup, and the server does not know the brain then, so company
-  interactions cannot be tools of their own. The company file is protected truth (the gate,
-  `approve.mjs --interaction`); `lib.RESERVED_TOOLS` is held equal to the live catalog by a test.
+  interactions cannot be tools of their own. The company file is protected truth (`lib.guardProtected`,
+  `approve_change` with kind interaction); `lib.RESERVED_TOOLS` is held equal to the live catalog by a test.
 - A project is a tag and a local pointer, never an object: `project:<slug>` on memories, a marked
   block in the folder's `AGENTS.md` (`lib.writePointer`; the format lives in `lib` and
-  `hooks/resolve.sh` mirrors it), and `work/projects.json` for this machine's paths. Nothing
+  `session/resolve.sh` mirrors it), and `work/projects.json` for this machine's paths. Nothing
   under `brain/`. Codex reads `AGENTS.md` from the git root down to cwd and never below cwd
   (https://learn.chatgpt.com/docs/agent-configuration/agents-md), so an external folder needs the
   pointer with the rulebook line and a sub-folder of the brain needs only the two values.
   `lib.readLoaded/writeLoaded(root, ..., project)` are the only place that knows a loaded set's
-  path; every hook resolves the brain through `resolve.sh` / `lib.resolveBrain`, never
+  path; the session scripts resolve the brain through `session/resolve.sh` / `lib.resolveBrain`, never
   `$cwd/brain/admin.md` directly.
 - Entity identity lives in `brain/entities/*.md`, with stable IDs and generated cited briefs.
   Facts stay in context memories. Migrations preserve old records, retired IDs and source files.
@@ -166,23 +170,23 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
 - Two hosts, one plugin folder: Codex and Claude Code (beta, 0.30). `lib/host.mjs` is the only place that
   knows which one runs (`GTM_BRAIN_HOST`, set only by the generated Claude declarations; unset is Codex) and
   holds every difference: texts, links, tool names, what the machine can do. A test fails on a host branch
-  anywhere else. Codex's `hooks.json`, `.mcp.json` and manifest stay the source; the Claude files are
+  anywhere else. Codex's `.mcp.json` and manifest stay the source; the Claude files are
   generated by `scripts/sync-derived.mjs`. `via` stays `codex` for a chat on either host (older versions
   reject other values); the host is the chat source's kind (`codex:` or `claude:`).
 - No em dashes anywhere. Plain hyphens.
 - The plugin ships from `gtm-week/gtm-brain`, branch `main`.
 - Tests: `node --test 'plugins/gtm-brain/test/*.test.mjs'` (Node's own runner, no dependencies).
   `brain.test.mjs` covers the lib, `skills.test.mjs` runs the scripts on a brain made by setup,
-  `server.test.mjs` drives the MCP server, `dash.test.mjs` the dashboard server and the session
-  hook. Run them before every commit that touches `lib/`, a skill script, a server or the hook.
+  `server.test.mjs` drives the MCP server, `dash.test.mjs` the dashboard server and the chat
+  start. Run them before every commit that touches `lib/`, a skill script, a server or the session scripts.
   Before a push to `main`, `.githooks/pre-push` runs them and, when what ships changed,
   `test/live/harness-bench.mjs`: the plugin must not cost Codex solved tasks on work that is not
   GTM (see README.md, Before pushing to main).
 - The model reaches the skills through the MCP server (`server/server.mjs`, one tool per
   operation, each runs the skill's script in the brain). The server runs outside the sandbox, so
   every writer commits what it wrote at once (`lib.commit`, pushed in the background when there
-  is a remote); `save` keeps edits made by hand. Applying an APPROVE stays a shell step with
-  Codex's permission prompt. `GTM_BRAIN_NO_COMMIT` turns committing off for tests and dry runs. A new operation is a script plus a tool entry; add its instructions to the owning workflow.
+  is a remote); `save` keeps edits made by hand. An APPROVE is applied only from the person's
+  click in the `approve_change` form. `GTM_BRAIN_NO_COMMIT` turns committing off for tests and dry runs. A new operation is a script plus a tool entry; add its instructions to the owning workflow.
   Skills are user workflows, not one entry per operation. Internal procedures live in their
   `references/` folders. Existing script paths under `skills/gtm-brain-*/` stay stable even when
   that directory has no `SKILL.md`.

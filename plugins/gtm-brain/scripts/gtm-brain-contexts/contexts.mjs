@@ -69,7 +69,7 @@ if (args.includes("--json")) { console.log(JSON.stringify(cs.map(c => ({ slug: c
 // Same words as the dashboard: "summary up to date" / "summary updating (shortly)", "loaded in this chat". Never "behind".
 console.log("admin: brain/admin.md (always loaded)");
 const loadedNow = lib.readLoaded(root, project); const busy = lib.compileBusy(root);
-// --brief-loaded: the session hook prints each loaded context in full right after this list, so its
+// --brief-loaded: the chat start prints each loaded context in full right after this list, so its
 // summary excerpt and standing rule are left out here instead of reaching the chat twice.
 const briefLoaded = args.includes("--brief-loaded");
 for (const c of cs.filter(c => c.status === "active")) {

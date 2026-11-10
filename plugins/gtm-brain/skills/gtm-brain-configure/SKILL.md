@@ -19,10 +19,10 @@ Route the requested change to the procedure below. Read only the one needed.
 
 - **Workplace info or behavior:** read [workplace changes](references/approve.md). This
   covers company info, team, declared tools, `dashboard: always | on-demand`, and nothing else (summaries always update by
-  themselves). Propose with `propose_admin_change`, summarize every substantive change in plain language, and preserve
-  the literal APPROVE step and shell permission prompt before applying it.
-- **APPROVE after a proposal:** read the same workplace-change procedure and apply only
-  the pending proposal authorized in this conversation.
+  themselves). Propose with `propose_admin_change`, summarize every substantive change in plain language, then
+  call `approve_change`: only the person's APPROVE in its form applies it.
+- **APPROVE after a proposal:** never from the chat; the `approve_change` form is the only way.
+  Read the same workplace-change procedure.
 
 Write authored brain records in English. Never edit `brain/admin.md` directly. Connection setup follows `gtm-brain-configure`; plugin updates follow `gtm-brain-configure`.
 

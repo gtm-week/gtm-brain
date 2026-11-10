@@ -119,7 +119,7 @@ A failed calendar refresh must not block recording notes or compiling available 
 Use source reads when the person works, bounded polling during sync, and provider event hooks
 only where the actual connector/host supports them. A notification queues a fetch of the record;
 it is not evidence of the conversation. Do not invent MCP notifications, install a webhook
-listener, or run connector fetches from every Codex tool-use hook.
+listener, or run connector fetches after every tool call.
 
 ## Calendar enrichment and daily maintenance
 

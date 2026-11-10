@@ -31,7 +31,7 @@ test('old and new linked projects resolve in Node and Bash; unlink preserves han
       assert.equal(resolveBrain(join(project,'nested')).root, brain);
       assert.equal(resolveBrain(join(project,'nested')).project, 'campaign');
       assert.throws(() => writePointer(project,{brain,slug:'duplicate',title:'Duplicate',company:'Example'}), /already a project/);
-      const shell = execFileSync('bash', ['-c', 'source "$1"; "${2}_resolve" "$3"', 'test',join(plugin,'hooks/resolve.sh'),'gtm_brain',join(project,'nested')], {encoding:'utf8'});
+      const shell = execFileSync('bash', ['-c', 'source "$1"; "${2}_resolve" "$3"', 'test',join(plugin,'session/resolve.sh'),'gtm_brain',join(project,'nested')], {encoding:'utf8'});
       assert.equal(shell.trim(), `${brain}\tcampaign`);
       assert.equal(removePointer(project), true);
       assert.equal(readFileSync(join(project,'AGENTS.md'),'utf8').trim(), 'My instructions');
@@ -97,7 +97,7 @@ test('a new session finds old handoffs and keeps old memory-validation hooks wor
     mkdirSync(join(brain,'.githooks'));
     execFileSync('git',['init','-q',brain]);
     execFileSync('git',['-C',brain,'config','gtm-os.lib','/old/cache/lib/brain.mjs']);
-    const out = execFileSync('bash',[join(plugin,'hooks/session-start.sh')],{cwd:brain,encoding:'utf8',input:'{}',env:{...process.env,PLUGIN_ROOT:plugin,CODEX_HOME:join(dir,'profile'),GTM_BRAIN_HOME:dir,GTM_BRAIN_NO_SESSION_MAINTENANCE:'1',GTM_BRAIN_NO_COMPILE:'1',GTM_BRAIN_NO_WATCH:'1',GTM_BRAIN_NO_OPEN:'1'}});
+    const out = execFileSync('bash',[join(plugin,'session/session-start.sh')],{cwd:brain,encoding:'utf8',input:'{}',env:{...process.env,PLUGIN_ROOT:plugin,CODEX_HOME:join(dir,'profile'),GTM_BRAIN_HOME:dir,GTM_BRAIN_NO_SESSION_MAINTENANCE:'1',GTM_BRAIN_NO_COMPILE:'1',GTM_BRAIN_NO_WATCH:'1',GTM_BRAIN_NO_OPEN:'1'}});
     assert.ok(out.includes(`HANDOFF waiting: ${join(dir,'.gtm-os/handoff.md')}`));
     assert.equal(execFileSync('git',['-C',brain,'config','gtm-os.lib'],{encoding:'utf8'}).trim(),join(plugin,'lib/brain.mjs'));
     assert.ok(readFileSync(join(dir,'.gtm-os/handoff.md'),'utf8').includes('Keep this content.'));

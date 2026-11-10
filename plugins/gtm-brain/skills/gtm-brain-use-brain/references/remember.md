@@ -61,8 +61,8 @@ Each entry takes:
   from an opaque ID, or substitute an API endpoint, search URL, attachment download URL or
   credential-bearing URL. If only an ID is available, keep it.
   The dashboard groups sources by provider and keeps raw references inside expandable details.
-  The chat the note is recorded in is added by itself as `codex:<thread id>` (from the session
-  hook); name a `codex:` source only to point at another chat. Readers see it as a link,
+  The chat the note is recorded in is added by itself as `codex:<thread id>` (from the host's
+  own session files); name a `codex:` source only to point at another chat. Readers see it as a link,
   `codex://threads/<id>`; hand the link over, never open it.
 - `actions`: what was done, `tool:action:ref`. One per action.
 - `supersedes`: this note replaces that one (a correction). `retracts`: that note is withdrawn; say why in the content.

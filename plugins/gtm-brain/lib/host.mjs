@@ -1,16 +1,14 @@
 #!/usr/bin/env node
 /* The assistant app GTM Brain runs in: Codex or Claude Code. Everything that differs between the two
    lives here, so no other file branches on the host. The host is GTM_BRAIN_HOST, set only by the
-   Claude declarations that scripts/sync-derived.mjs generates (hooks and MCP server); unset is Codex,
+   Claude declaration that scripts/sync-derived.mjs generates (the MCP server); unset is Codex,
    so the Codex install needs nothing new. Children inherit it: operation scripts, background runs.
-   Shell hooks ask through the CLI at the bottom:
-     node host.mjs gate-input < hook.json        kind, foreign home, its deny reason, then the text to check
-     node host.mjs mcp-server <server>           the connector a tool id belongs to (gtm_brain for our own)
+   Shell scripts (session/session-start.sh) ask through the CLI at the bottom:
      node host.mjs text <key> [args...]          one host-specific line, empty when the host has none
      node host.mjs can <compile|update-check>    exit 0 when this machine can
      node host.mjs rulebook <dir>                exit 0 when the host loads <dir>/AGENTS.md by itself
    Depends on nothing in lib/, so lib/brain.mjs can import it. */
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync, realpathSync } from "node:fs";
 import { delimiter, join } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -28,10 +26,8 @@ export const HOSTS = ["codex", "claude"];
    "codex". via stays "codex" for a chat on either host: older versions reject any other value. */
 export const CHAT_KINDS = HOSTS;
 export const isChatSource = s => !!s && CHAT_KINDS.includes(s.kind);
-/* Each host's own home folder in a project: the other host's is off limits to the gate. */
+/* Each host's own home folder in a project: the other host's is off limits (texts.foreign). */
 export const HOST_DIRS = [".codex", ".claude"];
-/* Claude Code's tool names, by what the gate does with them. The generated hooks match exactly these. */
-export const CLAUDE_TOOLS = { edit: ["Write", "Edit", "MultiEdit", "NotebookEdit"], shell: ["Bash"] };
 
 export function hostId(env = process.env) {
   const id = env.GTM_BRAIN_HOST || env.GTM_OS_HOST || "codex";
@@ -40,6 +36,15 @@ export function hostId(env = process.env) {
 }
 const cli = (cmd, args) => JSON.parse(execFileSync(cmd, args, { encoding: "utf8", timeout: 60000, stdio: ["ignore", "pipe", "ignore"], maxBuffer: 4 * 1024 * 1024 }));
 const onPath = cmd => (process.env.PATH || "").split(delimiter).some(d => d && existsSync(join(d, cmd)));
+const real = p => { try { return realpathSync(p); } catch { return p; } };
+/* The chat a folder is open in, found from the host's own session files: the newest one written in the
+   last RECENT_MS whose working folder is this one. GTM Brain has no hooks, so nothing hands it the id. */
+const RECENT_MS = 10 * 60 * 1000;
+function newest(files, now = Date.now()) {
+  let best = null;
+  for (const f of files) { try { const t = statSync(f).mtimeMs; if (now - t < RECENT_MS && (!best || t > best.t)) best = { f, t }; } catch {} }
+  return best?.f || null;
+}
 
 const ADAPTERS = {
   codex: {
@@ -47,8 +52,14 @@ const ADAPTERS = {
     compiles: () => true,
     newChatLink: (path, prompt) => `codex://threads/new?path=${encodeURIComponent(path)}&prompt=${encodeURIComponent(prompt)}`,
     updateCheck: () => onPath("codex"),
-    // Codex 0.164+ switches a plugin's hooks off whenever its files change, until they are approved again.
-    hookCheck: () => onPath("codex"),
+    // A rollout file per thread, sessions/YYYY/MM/DD/rollout-<time>-<thread id>.jsonl, whose first line names its cwd.
+    currentChat(cwd, home = process.env.CODEX_HOME || join(homedir(), ".codex")) {
+      const days = [0, 1].map(n => new Date(Date.now() - n * 864e5)).map(d => join(home, "sessions", String(d.getFullYear()), String(d.getMonth() + 1).padStart(2, "0"), String(d.getDate()).padStart(2, "0")));
+      const want = real(cwd);
+      const files = days.flatMap(dir => { try { return readdirSync(dir).filter(f => f.endsWith(".jsonl")).map(f => join(dir, f)); } catch { return []; } })
+        .filter(f => { try { const p = JSON.parse(readFileSync(f, "utf8").split("\n", 1)[0]).payload || {}; return typeof p.cwd === "string" && real(p.cwd) === want; } catch { return false; } });
+      return /-([0-9a-f-]{36})\.jsonl$/.exec(newest(files) || "")?.[1] || null;
+    },
     // Where GTM Brain is installed from and which version is installed, as the host's plugin manager reports it.
     plugin: {
       home: () => process.env.CODEX_HOME || join(homedir(), ".codex"),
@@ -60,7 +71,6 @@ const ADAPTERS = {
       updateScript: "update.mjs",
     },
     rulebookLoaded: dir => existsSync(join(dir, "AGENTS.md")),
-    foreign: { dir: ".claude", reason: "Files under .claude belong to Claude and are off limits, reads included. To import what Claude knows, have Claude read IMPORT.md from the GTM Brain repository (or run the plugin gtm-brain-export skill with claude -p); it writes ~/.gtm-brain/handoff.md, and the gtm-brain-start skill reads that." },
     texts: {
       dashboardAlways: url => `Dashboard: ${url} (saved view in the Codex pane; open only when asked using open_in_codex, never as a prerequisite to answering; no login or Chrome needed).`,
       dashboardOnDemand: url => `Dashboard: ${url} (this brain opens it on demand in the Codex pane; only when someone asks; admin.md dashboard: on-demand).`,
@@ -69,19 +79,12 @@ const ADAPTERS = {
       toolsUnchecked: () => "tools: not checked yet in this Codex. Say: connect my tools.",
       noCompile: () => "",
       rulebook: () => "",
-      hooksOff: how => `GTM BRAIN SAFETY LOCKS OFF: GTM Brain's hooks are not running in this Codex (Codex switches them off after an update made outside "update GTM Brain", and they can be switched off in its settings). Until they are back on, a new chat does not refresh the brain and direct edits to protected files are not blocked. Tell the person once, in one line, in these words: "${how === "silent" ? "GTM Brain's safety locks are off. In Codex settings, approve GTM Brain's hooks and switch them on, then start a new chat." : "GTM Brain's safety locks are off. Say: update GTM Brain, to turn them back on."}" Never approve or enable hooks yourself or edit Codex's config.`,
+      foreign: () => "Files under .claude belong to Claude and are off limits, reads included. To import what Claude knows, have Claude read IMPORT.md from the GTM Brain repository (or run the plugin gtm-brain-export skill with claude -p); it writes ~/.gtm-brain/handoff.md, and the gtm-brain-start skill reads that.",
       updateOffer: (installed, latest) => `GTM Brain UPDATE available: ${latest} (installed ${installed}). Offer once, in one line, in these words: "You are on ${installed}, GTM Brain ${latest} is available. Say: update GTM Brain. When it finishes, quit and reopen Codex, then start a new chat in this folder." Add that line to your first reply, at its end, even when the reply resumes onboarding or answers a request. Never run it without a yes (skill gtm-brain-configure). If the update says Codex's copy is behind GitHub, the fix is git's own GitHub sign-in: gh auth login, then gh auth setup-git.`,
     },
     async environment(sh) {
       const [codex, login] = await Promise.all([sh("codex", ["--version"]), sh("codex", ["login", "status"])]);
       return [codex ? codex.replace(/^codex-cli\s*/, "codex ") : "codex: not on PATH (the app's own binary still runs this plugin)", login ? `codex sign-in: ${login}` : "codex sign-in: unknown"];
-    },
-    // Codex shell calls keep the whole payload as the text the gate checks, as before hosts existed.
-    toolInput(tool, input) {
-      if (tool !== "apply_patch") return null;
-      const patch = typeof input === "string" ? input : input?.input || input?.patch || "";
-      const targets = patch.split(/\n/).filter(l => /^\*\*\* (?:Add File|Update File|Delete File|Move to): /.test(l));
-      return { kind: "edit", text: targets.length ? targets.join("\n") : JSON.stringify(input) };
     },
   },
   claude: {
@@ -90,8 +93,12 @@ const ADAPTERS = {
     // Prefilled, not sent: the person presses Enter (claude-cli://open, Claude Code 2.1+).
     newChatLink: (path, prompt) => `claude-cli://open?q=${encodeURIComponent(prompt)}&cwd=${encodeURIComponent(path)}`,
     updateCheck: () => onPath("claude"),
-    // Claude Code runs plugin hooks without a per-hook approval.
-    hookCheck: () => false,
+    // A session file per chat, projects/<cwd with every other character as ->/<session id>.jsonl.
+    currentChat(cwd, home = process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude")) {
+      const dir = join(home, "projects", real(cwd).replace(/[^A-Za-z0-9]/g, "-"));
+      let files = []; try { files = readdirSync(dir).filter(f => f.endsWith(".jsonl")).map(f => join(dir, f)); } catch {}
+      return /([0-9a-f-]{36})\.jsonl$/.exec(newest(files) || "")?.[1] || null;
+    },
     plugin: {
       home: () => process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude"),
       installed: () => cli("claude", ["plugin", "list", "--json"]).find(p => p.id === "gtm-brain@gtm-brain")?.version || null,
@@ -106,7 +113,6 @@ const ADAPTERS = {
     },
     // Claude Code reads CLAUDE.md; the brain's carries the @AGENTS.md import (lib.ensureRulebookShim).
     rulebookLoaded: dir => { try { return /^@AGENTS\.md\s*$/m.test(readFileSync(join(dir, "CLAUDE.md"), "utf8")); } catch { return false; } },
-    foreign: { dir: ".codex", reason: "Files under .codex belong to Codex and are off limits, reads included." },
     texts: {
       dashboardAlways: url => `Dashboard: ${url} (open only when asked: give this address as a link for the browser; no login needed; never as a prerequisite to answering).`,
       dashboardOnDemand: url => `Dashboard: ${url} (this brain opens it on demand: only when someone asks, as a link for the browser; admin.md dashboard: on-demand).`,
@@ -114,7 +120,7 @@ const ADAPTERS = {
       chats: () => "Each chat is a Claude Code session; a memory saved here names it as its claude:<session id> source. To revisit one, the person runs claude --resume <id> in this folder; never resume or open another session yourself. Agents you delegate to report back here.",
       toolsUnchecked: () => "tools: connector checks are not available in Claude Code yet. Use the MCP tools this session lists.",
       noCompile: () => "compile: summaries are not compiled on this machine yet (GTM Brain runs them through Codex, which is not installed here). Say 'summary waiting'; never say 'updating shortly', never compile or offer to compile in this chat. Answer from the notes.",
-      hooksOff: () => "",
+      foreign: () => "Files under .codex belong to Codex and are off limits, reads included.",
       updateOffer: (installed, latest) => `GTM Brain UPDATE available: ${latest} (installed ${installed}). Offer once, in one line, in these words: "You are on ${installed}, GTM Brain ${latest} is available. Say: update GTM Brain. When it finishes, run /reload-plugins or start a new session in this folder." Add that line to your first reply, at its end, even when the reply resumes onboarding or answers a request. Never run it without a yes (skill gtm-brain-configure). If the update says Claude's copy is behind GitHub, the fix is git's own GitHub sign-in: gh auth login, then gh auth setup-git.`,
       rulebook: root => `Rulebook: read ${root}/AGENTS.md now and follow it, every session (Claude Code loads CLAUDE.md, and this folder's CLAUDE.md does not import AGENTS.md yet; say: upgrade the GTM Brain rules).`,
     },
@@ -122,42 +128,15 @@ const ADAPTERS = {
       const claude = await sh("claude", ["--version"]);
       return [claude ? `claude ${claude.replace(/\s*\(Claude Code\)\s*$/, "")}` : "claude: not on PATH"];
     },
-    toolInput(tool, input) {
-      if (CLAUDE_TOOLS.edit.includes(tool)) return { kind: "edit", text: [input?.file_path, input?.notebook_path].filter(Boolean).join("\n") || JSON.stringify(input) };
-      if (CLAUDE_TOOLS.shell.includes(tool)) return { kind: "shell", text: String(input?.command || "") };
-      return null;
-    },
   },
 };
 
 export function host(env = process.env) { const id = hostId(env); return { id, ...ADAPTERS[id] }; }
 
-/* What a PreToolUse payload asks the gate to check: edit (every target is a write), shell (only a
-   write verb is a write), or raw (the whole payload, as Codex shell calls always were). */
-export function gateInput(payload, env = process.env) {
-  const h = host(env);
-  let p; try { p = JSON.parse(payload); } catch { return { kind: "raw", text: payload, foreign: h.foreign }; }
-  const t = h.toolInput(p.tool_name, p.tool_input);
-  return { ...(t || { kind: "raw", text: payload }), foreign: h.foreign };
-}
-
-/* A tool id's server, as the connector it is: Claude Code names plugin servers
-   plugin_<plugin>_<server> and claude.ai connectors claude_ai_<Name>. */
-export function mcpServer(server) {
-  const plugin = /^plugin_[a-z0-9-]+_(.+)$/.exec(server); if (plugin) return plugin[1];
-  const remote = /^claude_ai_(.+)$/.exec(server); if (remote) return remote[1];
-  return server;
-}
-
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const [cmd, ...args] = process.argv.slice(2);
-  if (cmd === "gate-input") {
-    let s = ""; for await (const c of process.stdin) s += c;
-    const g = gateInput(s);
-    process.stdout.write(`${g.kind}\n${g.foreign.dir}\n${g.foreign.reason}\n${g.text}`);
-  } else if (cmd === "mcp-server") console.log(mcpServer(args[0] || ""));
-  else if (cmd === "text") { const f = host().texts[args[0]]; if (!f) process.exit(2); const t = f(...args.slice(1)); if (t) console.log(t); }
+  if (cmd === "text") { const f = host().texts[args[0]]; if (!f) process.exit(2); const t = f(...args.slice(1)); if (t) console.log(t); }
   else if (cmd === "can") process.exit(({ compile: host().compiles, "update-check": host().updateCheck }[args[0]] || (() => false))() ? 0 : 1);
   else if (cmd === "rulebook") process.exit(host().rulebookLoaded(args[0] || ".") ? 0 : 1);
-  else { console.error("usage: host.mjs gate-input | mcp-server <server> | text <key> [args] | can <compile|update-check> | rulebook <dir>"); process.exit(2); }
+  else { console.error("usage: host.mjs text <key> [args] | can <compile|update-check> | rulebook <dir>"); process.exit(2); }
 }

@@ -261,7 +261,7 @@ evidence remains weak, say so and lower confidence instead of continuing indefin
 The report is `market-desk-research-<market-slug>.md`; its charts live beside it in a folder of
 the same name, `market-desk-research-<market-slug>/`, referenced by relative path.
 
-- In a linked project folder (the session hook names it), write the report at that project's
+- In a linked project folder (the opening lines name it), write the report at that project's
   root: a draft in progress lives in the project folder it belongs to.
 - Otherwise it is a document of the brain: `document` with `action: create`, `title`
   "Market desk research: <market>", `applies_to` market strategy, segment choice, positioning,

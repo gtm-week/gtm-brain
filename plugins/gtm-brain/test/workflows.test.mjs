@@ -288,7 +288,7 @@ test("a pending step whose date already passed can be advanced without waiting f
   assert.equal(runMemories(root, id).find(m => m.tags.includes("step:3") && m.tags.includes("step-status:done")).supersedes, pending.id);
 });
 
-const hook = root => execFileSync("bash", [`${P}/hooks/session-start.sh`], { cwd: root, encoding: "utf8", env, input: JSON.stringify({ session_id: "thread-wf", cwd: root }) });
+const hook = root => execFileSync("bash", [`${P}/session/session-start.sh`], { cwd: root, encoding: "utf8", env, input: JSON.stringify({ session_id: "thread-wf", cwd: root }) });
 
 test("the session hook prints the runs line only when a run is in progress, and stays quiet on a workflow file that does not parse", () => {
   const root = ready();
@@ -309,7 +309,7 @@ test("session maintenance and the scheduled run mark due steps: one gate questio
   const bin = mkdtempSync(join(tmpdir(), "gtm-brain-wf-fakecodex-")); writeFileSync(join(bin, "codex"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
   const fake = { ...env, PATH: `${bin}:${process.env.PATH}` };
   const before = runMemories(root, id).length;
-  execFileSync(process.execPath, [`${P}/hooks/session-maintenance.mjs`, root, "--run"], { cwd: root, env: fake, stdio: "ignore", timeout: 60000 });
+  execFileSync(process.execPath, [`${P}/session/session-maintenance.mjs`, root, "--run"], { cwd: root, env: fake, stdio: "ignore", timeout: 60000 });
   assert.equal(runMemories(root, id).length, before, "nothing due yet: session maintenance writes nothing");
   assert.match(readFileSync(join(root, "work", "session-maintenance.json"), "utf8"), /"status":"(done|partial)"/);
   assert.doesNotMatch(readFileSync(join(root, "work", "session-maintenance.json"), "utf8"), /"workflows"/, "the due check did not fail");

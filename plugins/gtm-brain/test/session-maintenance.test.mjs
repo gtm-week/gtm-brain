@@ -49,7 +49,7 @@ if (args[0] === 'pull') {
     await until(() => ['done', 'partial'].includes(state().status));
     run(process.execPath, [join(plugin, 'server/dash.mjs'), root, '--stop']);
   });
-  const hook = () => run('bash', [join(plugin, 'hooks/session-start.sh')], {
+  const hook = () => run('bash', [join(plugin, 'session/session-start.sh')], {
     input: JSON.stringify({ session_id: 'test-chat', cwd: root }), timeout: 8000,
   });
   const first = hook();
@@ -58,7 +58,7 @@ if (args[0] === 'pull') {
   await until(() => existsSync(started));
   assert.equal(state().status, 'running', 'hook returned while pull was still blocked');
   hook();
-  run(process.execPath, [join(plugin, 'hooks/session-maintenance.mjs'), root, '--run']);
+  run(process.execPath, [join(plugin, 'session/session-maintenance.mjs'), root, '--run']);
   assert.equal(readFileSync(started, 'utf8'), 'pull\n', 'concurrent sessions share one worker');
   assert.equal(state().status, 'running');
   writeFileSync(release, 'release');
@@ -69,6 +69,6 @@ if (args[0] === 'pull') {
   assert.equal(JSON.parse(readFileSync(join(root, 'work/session.json'), 'utf8')).session_id, 'test-chat');
   assert.ok(!existsSync(join(root, 'work/sync.json')), 'session maintenance does not advance source sync');
   const before = readFileSync(join(root, 'work/session-maintenance.json'), 'utf8');
-  run(process.execPath, [join(plugin, 'hooks/session-maintenance.mjs'), root, '--start'], { env: { ...env, GTM_BRAIN_RUN: 'background' } });
+  run(process.execPath, [join(plugin, 'session/session-maintenance.mjs'), root, '--start'], { env: { ...env, GTM_BRAIN_RUN: 'background' } });
   assert.equal(readFileSync(join(root, 'work/session-maintenance.json'), 'utf8'), before, 'background model runs do not recursively start maintenance');
 });

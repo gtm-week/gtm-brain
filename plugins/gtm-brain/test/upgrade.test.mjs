@@ -172,7 +172,7 @@ test("custom instructions are preserved and a proposed replacement is prepared w
   assert.ok(readFileSync(join(folder, backup, "AGENTS.proposed.md"), "utf8").includes("Operational answers"));
 });
 
-const sessionHook = (f, env = {}) => spawnSync("bash", [join(plugin, "hooks/session-start.sh")], { cwd: f.root, env: { ...f.env, PLUGIN_ROOT: plugin, GTM_BRAIN_NO_VERSION_CHECK: "1", GTM_BRAIN_NO_SESSION_MAINTENANCE: "1", ...env }, encoding: "utf8", input: JSON.stringify({ session_id: "r", cwd: f.root }) }).stdout;
+const sessionHook = (f, env = {}) => spawnSync("bash", [join(plugin, "session/session-start.sh")], { cwd: f.root, env: { ...f.env, PLUGIN_ROOT: plugin, GTM_BRAIN_NO_VERSION_CHECK: "1", GTM_BRAIN_NO_SESSION_MAINTENANCE: "1", ...env }, encoding: "utf8", input: JSON.stringify({ session_id: "r", cwd: f.root }) }).stdout;
 
 test("the session hook refreshes unedited recent rules itself, says so once, and leaves edited rules alone", t => {
   const legacy = fixture(t, "0.31.2"), current = fixture(t), edited = fixture(t, "0.31.2");

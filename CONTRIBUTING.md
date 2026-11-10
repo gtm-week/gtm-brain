@@ -15,10 +15,10 @@ flowchart LR
 
   subgraph plugin["gtm-brain plugin (~/.codex/plugins)"]
     skills["skills/*<br/>workflow skills + internal procedures"]
-    hooks["hooks<br/>SessionStart · PreToolUse gate"]
+    session["session/<br/>chat start · protected-file guard"]
     lib["lib/brain.mjs<br/>the file format: read, validate, append"]
     skills --> lib
-    hooks --> lib
+    session --> lib
   end
 
   subgraph brain["The brain (their private git repo)"]
@@ -46,14 +46,14 @@ flowchart LR
   chat --> mail
   chat --> notes
   schedule["Scheduled run<br/>app task or launchd"] -->|"refresh summaries · render · save covers"| skills
-  hooks -.->|"deny direct edits"| admin
-  hooks -.->|"deny direct edits"| mem
+  session -.->|"puts back direct edits"| admin
+  session -.->|"puts back direct edits"| mem
 ```
 
 Three objects, shared library writers. Workflow skills coordinate small MCP operations, with detailed internal procedures loaded as needed; every write goes
 through `lib/brain.mjs`, with two named exceptions (`setup` composes the first `admin.md` from
-its template, `approve` replaces it after APPROVE); the hooks deny the model any other route to
-the protected files. Memories retain append-only evidence; entity files maintain identities and
+its template, `approve` replaces it after APPROVE); a direct edit of a protected file is put back
+at the next chat start or save, and kept in `work/manual-edits/protected/`. Memories retain append-only evidence; entity files maintain identities and
 cited briefs; context covers are compiled from memories. The dashboard reads all three objects.
 
 ```mermaid
@@ -63,7 +63,7 @@ sequenceDiagram
   participant B as Brain files
   participant T as Tools (live)
 
-  Note over C: session start: hook re-loads last contexts and requests background maintenance
+  Note over C: chat start: the first GTM Brain call re-loads last contexts and requests background maintenance
   P->>C: "show the dashboard"
   C-->>P: open the read-only dashboard on request
   P->>C: "load pipeline"
@@ -92,8 +92,8 @@ An explicit refresh can run sooner. Opening a chat does not automatically open t
 .agents/plugins/marketplace.json
 plugins/gtm-brain/
   .codex-plugin/plugin.json
-  hooks.json  hooks/          SessionStart (list contexts), PreToolUse (protect admin, memories);
-                              trust-hooks.mjs approves them in Codex, which installing does not do
+  session/                    the chat start the MCP server runs on a chat's first call (list
+                              contexts, put back direct edits of protected files); no hooks
   .mcp.json  server/          the operations as MCP tools (Remembering, Searching the brain, ...);
                               dash.mjs serves the read-only dashboard and revision events
   lib/                        the file format: read, append, write covers, commit; no dependencies
@@ -105,7 +105,7 @@ plugins/gtm-brain/
                               dashboard, manual save
     gtm-brain-configure/references/ workplace approval, connect tools, update plugin
     gtm-brain-start/references/  onboarding, the handoff import
-  scripts/gtm-brain-*/           the operation scripts the MCP server, hooks and skills run (no SKILL.md)
+  scripts/gtm-brain-*/           the operation scripts the MCP server, session scripts and skills run (no SKILL.md)
   templates/                  AGENTS.md, brain/admin.md, .gitignore, the pre-commit hook
   test/                       node --test 'plugins/gtm-brain/test/*.test.mjs'
 dev-install.sh                install this checkout into Codex, no GitHub round trip
@@ -144,7 +144,7 @@ without writing; the normal test suite runs that check too.
 
 - Question and Computer Use policy sources live in [plugins/gtm-brain/policies/](plugins/gtm-brain/policies/).
   The script fills marked blocks in contributor instructions, installation instructions,
-  the brain template and the question reference. The session hook reads these sources
+  the brain template and the question reference. The chat start reads these sources
   directly for both empty folders and existing brains.
 - In [the ontology](plugins/gtm-brain/ontology/gtm-brain.ossie.json), edit the single-memory fields
   under `remember.input_schema.properties`. The script derives `memories.items.properties`

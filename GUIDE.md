@@ -57,8 +57,8 @@ Then you just talk. The things worth knowing:
 | leave a context | **unload marketing** | the others stay loaded |
 | put a context away | **archive berlin-expansion** | asks once; unloaded, hidden, notes still searchable; **unarchive** brings it back |
 | split a context | **Bergstrom is becoming its own thing, fork it out of pipeline** | a new context with the matching notes copied |
-| change the company info | **change what we sell to also include UK retailers**, then type **APPROVE** | shown as a diff first; applied only on the word APPROVE |
-| stop the dashboard opening by itself | **open the dashboard only when I ask**, then **APPROVE** | a setting changed through Codex |
+| change the company info | **change what we sell to also include UK retailers**, then choose **APPROVE** | shown as a form first; applied only when you choose APPROVE there |
+| stop the dashboard opening by itself | **open the dashboard only when I ask**, then choose **APPROVE** | a setting changed through Codex |
 | see who is who | **what entities do we have** | the Entities page groups them: team, people, companies, products, teams; filter by kind or search |
 | tell Codex two names are one | **Maciej is Maciej Kończal** | an alias; Codex asks this itself when a new name looks like one it knows, and never merges on its own |
 

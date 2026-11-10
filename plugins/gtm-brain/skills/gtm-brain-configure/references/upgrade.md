@@ -3,7 +3,7 @@
 Keep authored brain content in English. Preserve names, source quotes and the exact approval token `APPROVE`.
 
 
-> For humans: when a later plugin release brings new rules or a better hook, this refreshes
+> For humans: when a later plugin release brings new rules or a better pre-commit hook, this refreshes
 > your existing brain. You keep your data and preferences; onboarding is not repeated.
 
 New participants start with the current format and need no initial migration. Existing

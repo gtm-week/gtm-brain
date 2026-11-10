@@ -31,7 +31,7 @@ export function rulesReasons(root, templates) {
   const reasons = Object.entries(rulesWhy).filter(([v]) => newer(v, from)).sort(([a], [b]) => (newer(a, b) ? 1 : -1)).map(([, why]) => why);
   return { from, reasons };
 }
-/* The session hook's one-line offer for a legacy brain, with its reasons; "" for any other state. */
+/* The chat start's one-line offer for a legacy brain, with its reasons; "" for any other state. */
 export function rulesOffer(root, templates) {
   if (rulesState(root, templates) !== "legacy") return "";
   const { from, reasons } = rulesReasons(root, templates);
@@ -73,7 +73,7 @@ export function refreshReadme(root, templates) {
 }
 
 /* Where a brain's rules stand against the plugin: current, a shipped older version (legacy),
-   edited by hand (custom), or missing. The session hook says so; nothing is changed here. */
+   edited by hand (custom), or missing. The chat start says so; nothing is changed here. */
 export function rulesState(root, templates) {
   const company = readAdmin(root)?.company; if (!company) return "missing";
   const path = join(root, "AGENTS.md"); if (!existsSync(path)) return "missing";

@@ -34,22 +34,13 @@ installation in place. A missing registered cache can be repaired by the same up
 For a local source, it refreshes the plugin from that checkout and says so. It preserves
 the configured repository and branch; it never switches a development install to master.
 
-A newer version is noticed by itself: the session hook runs `check-version.mjs` in the
-background at most once a day, and when the source holds a newer plugin the hook says
+A newer version is noticed by itself: the chat start runs `check-version.mjs` in the
+background at most once a day, and when the source holds a newer plugin the opening lines say
 `GTM Brain UPDATE available` and the dashboard shows the available version under Admin. Offer the update once in one line then; never start it without a yes.
 
 Check mode reports the installed version, source and whether its connector can start. It does not fetch the remote,
 so do not claim the plugin is up to date or that a new release is available from that result.
 The version alone also cannot prove whether a refresh changed files.
-
-Both modes report the safety locks (the hooks that refresh the brain at the start of a chat
-and keep the protected files from being written directly). Codex runs a hook only while it
-holds the approval for that hook's declaration, and a release that changes one drops its
-approval silently, so an update puts the approval back and check only reports. Pass on the
-`Safety locks:` line in one plain sentence. If it says they are not running, the person can
-put them back by asking for an update again, or by reviewing them in Codex; if it says they
-were not checked, say the update went through and the locks were not confirmed. Never call
-the locks on when that line did not say so.
 
 ## Missing tools or an interrupted update
 

@@ -70,9 +70,11 @@ Do not use shell sleep or a busy loop. Waiting does not keep the host's panel ex
 accept a short chat answer if it collapses and never repost a question to reset its timer.
 A plain text question without a pending widget ends in a final message and waits for a reply.
 
-Security permissions, account sign-in and the exact APPROVE flow stay native. A preference
-widget cannot authorize shell commands, trust hooks or grant account access. Carry out a
-submitted ordinary choice through its owning workflow with the normal permission prompts.
+Security permissions and account sign-in stay native. A preference widget cannot authorize
+shell commands or grant account access. The question tools never authorize APPROVE: a workplace
+or interaction change goes only through `approve_change`, whose own form carries the APPROVE
+choice. Carry out a submitted ordinary choice through its owning workflow with the normal
+permission prompts.
 
 No slop. No filler phrases, no hedging when facts are cited, no LLM preamble
 ("I have created...", "Here is the updated...", "Certainly!"). No placeholder dates.
@@ -81,8 +83,8 @@ thinking; do not paraphrase or clean up their language.
 <!-- /generated: questions -->
 
 Security approval belongs to the app's permission prompt, never a preference widget.
-A tool checklist selects what to connect; it cannot grant shell permissions, trust hooks,
-or authorize account access. Do not change approval settings to speed up installation.
+A tool checklist selects what to connect; it cannot grant shell permissions or authorize
+account access. Do not change approval settings to speed up installation.
 When the app offers a scoped remembered permission, describe exactly what it covers;
 never ask for unrestricted access. Do not ask for a second chat confirmation for an
 installation action the person already requested.
@@ -132,16 +134,12 @@ and path do not appear in anything you say to them; commands and their names sta
 tool calls. Substitutions:
 
 - checking prerequisites -> "checking this computer has everything it needs"
-- enabling hooks -> "turning on the safety locks so nothing important changes without your
-  say-so"
 - marketplace add + plugin add -> "installing GTM Brain"
 - verifying -> "done, and I checked it works"
 
 The test for every line you say: would it make sense to someone who has never opened a
 terminal? Bad: "Codex, Node and Git meet the installation requirements." Good: "This computer
-has everything it needs." Bad: "I will enable the plugin's protection mechanisms that block
-direct edits of protected files." Good: "Turning on the safety locks: nothing important
-changes without your say-so." One short line per step: what just happened, in their
+has everything it needs." One short line per step: what just happened, in their
 world, not yours.
 
 ## What you are installing
@@ -153,7 +151,7 @@ person's own git repo. This repo is the plugin. Branch: `main`.
 
 Before installing, inspect `codex plugin list --json`. If `gtm-os@gtm-os` is installed,
 this is a migration, not a new brain. Use the following explicit migration, which verifies
-the new connector and hooks before removing the old plugin registration:
+the new connector before removing the old plugin registration:
 
 ```bash
 migration_dir="$(mktemp -d "${TMPDIR:-/tmp}/gtm-brain-migrate.XXXXXX")"
@@ -198,26 +196,11 @@ Check each step before the next. Report progress as you go, one line per step.
    codex plugin add gtm-brain@gtm-brain
    ```
 
-3. **Turn on the safety locks.** Installing does not switch them on: Codex keeps them off
-   until someone approves them, so a plugin installed from a command has no session refresh
-   and no write protection until this step runs.
-
-   ```bash
-   node <plugin>/hooks/trust-hooks.mjs --trust
-   ```
-
-   `<plugin>` is the folder you installed from: a local checkout is
-   `<that folder>/plugins/gtm-brain`, a GitHub install is
-   `~/.codex/plugins/cache/gtm-brain/gtm-brain/<version>`. It prints one line per lock and ends
-   with `Safety locks: on`; anything else means they are still off, so say so plainly and
-   do not report the installation as finished. Say one line before running it (see How to
-   talk); this is the person's approval, so do not bundle it with anything else.
-
-4. **Verify:** `codex plugin list | grep gtm-brain` must say installed and enabled.
+3. **Verify:** `codex plugin list | grep gtm-brain` must say installed and enabled.
 
    Do not run the Claude handoff during install; onboarding offers it itself later, at
    the tools step, inside the brain's own chat.
-5. **Hand over one small step at a time.** Installing is all this file does. First say exactly:
+4. **Hand over one small step at a time.** Installing is all this file does. First say exactly:
    "Now create a new, empty project in Codex called GTM Brain and tell me when it's ready."
    Once it is ready, give the next action only: open a new chat there and send "Set up GTM Brain here".
    Do not present the whole installation and onboarding checklist at once. The sequence is:
@@ -234,7 +217,7 @@ Check each step before the next. Report progress as you go, one line per step.
    A new empty-folder chat proactively offers setup on a greeting. After setup succeeds,
    a saved onboarding flag keeps the next steps moving without a continuation command.
    The brain is born in the person's own project, in a chat they opened, where the plugin's
-   hooks and skills are active. If they ask you to make the folder for them, make an empty
+   tools and skills are active. If they ask you to make the folder for them, make an empty
    one where they say and stop there.
 
 ## If something fails
@@ -244,15 +227,11 @@ Explain the failure simply and what to do. Known cases:
 - **Marketplace add fails:** check network and that the repo URL is reachable. Retry once.
 - **Plugin add fails after a marketplace change:** run `codex plugin add gtm-brain@gtm-brain`
   again; re-adding is safe.
-- **The safety locks stay off:** `trust-hooks.mjs` reaches Codex through its app-server, so
-  it needs the installed plugin and a working `codex` command. Retry once after the install
-  step. If it still fails, hand over anyway and tell the person that the locks are off and
-  that Codex will offer to review them: everything else works, and nothing is lost.
 
 ## Scope
 
 Install. Nothing else: the brain is created by
-`/gtm-brain-start` in the person's own project, in their next chat, where the plugin's hooks
+`/gtm-brain-start` in the person's own project, in their next chat, where the plugin's tools
 and skills are active.
 
 ## New brain defaults

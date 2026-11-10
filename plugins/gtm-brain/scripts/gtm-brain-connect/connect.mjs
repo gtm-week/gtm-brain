@@ -26,7 +26,7 @@ if (args[0] === "--skip") {
   writeFileSync(wf, JSON.stringify(state, null, 1)); console.log(`${names.join(", ")}: declined; not offered again (say "connect ${names[0]}" to change your mind)`); process.exit(0);
 }
 
-// A successful call in chat counts as the read test (PostToolUse hook, ALL-211). The server is the
+// A successful call in chat counts as the read test (--used; the model calls mark_tool, ALL-211). The server is the
 // tool itself (mcp__attio__...) or Codex's connector bus, whose tool names start with the app
 // (mcp__codex_apps__attio_whoami, gmail.search_emails): the longest tool key or plugin id that the
 // call name starts with wins. Only an installed, not yet tested tool is written; nothing else moves.

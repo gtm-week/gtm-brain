@@ -29,7 +29,7 @@ Three things only you can do:
 
 | Step | You do | Codex does |
 |---|---|---|
-| 1. Install | Paste one prompt in any Codex chat | Checks the computer, installs GTM Brain, turns on the safety locks |
+| 1. Install | Paste one prompt in any Codex chat | Checks the computer, installs GTM Brain |
 | 2. Project | Create an empty folder called GTM Brain, open a new chat in it | Nothing yet |
 | 3. Set up | Send "Set up GTM Brain here" | Creates the brain, learns your business, connects your tools, opens the dashboard |
 | After | Work in plain language | Remembers, recalls, keeps summaries up to date |
@@ -45,8 +45,6 @@ What happens:
 
 - Codex checks this computer has everything it needs and installs what is missing.
 - It installs GTM Brain.
-- It turns on the **safety locks**: the safeguards that stop anything important in your
-  brain changing without your say-so. The app shows an Approve button for this. Click it.
 - It finishes by telling you the next step. It does not create your project for you.
 
 Whenever the app shows a permission prompt, read the action it names and click Approve.
@@ -72,8 +70,8 @@ The dashboard opens next to the chat, with a card showing these six steps and wh
    sell and to whom, your name and work email, your teammates, the tools you use (CRM first).
    Then it creates the brain in your folder.
 2. **Company profile.** It researches your website and what is already on the machine, and
-   drafts your workplace info. You correct what is wrong, then type **APPROVE** in the chat.
-   Nothing about your company is saved as fact without that word from you.
+   drafts your workplace info. You correct what is wrong, then choose **APPROVE** in the form Codex shows.
+   Nothing about your company is saved as fact without that choice from you.
 3. **Tools.** It proposes connecting your work email, calendar and CRM first (HubSpot, or
    Attio if that is yours), then the other tools it noticed. You choose; you sign in when
    asked. Each connection gets one read test so you know it works.
@@ -181,7 +179,6 @@ add that folder. Then start a new chat in it.
 | What you see | What to do |
 |---|---|
 | Codex cannot read the install page or download GTM Brain | Your GitHub account has no access yet, or this computer is not signed in to GitHub. Ask the person who invited you, then say "sign me in to GitHub and try again". |
-| "Safety locks" are reported as off | Everything else still works. Say "turn on the GTM Brain safety locks"; the app may also offer to review them when you open the project. Accept. |
 | Setup says the folder is not empty, or too broad | Create a fresh empty folder as a new project and send "Set up GTM Brain here" there. |
 | A tool will not connect | Skip it and carry on. Later, say "connect my tools" to retry. |
 | You closed the chat mid-setup | Open a new chat in the same project and say "hi". Setup resumes. |

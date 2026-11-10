@@ -1,7 +1,7 @@
 process.env.GTM_BRAIN_NO_WATCH = "1";
 process.env.GTM_BRAIN_NO_COMPILE = "1"; // Model runs are opt-in through test doubles.
 // End-to-end tests of the skill scripts on a brain made by setup.sh. Run: node --test plugins/gtm-brain/test
-process.env.GTM_BRAIN_NO_HOOK_CHECK = "1"; // the hooks-off check talks to a real Codex; hooks-notice.test covers it with a fake one
+process.env.GTM_BRAIN_NO_SESSION_START = "1"; // servers here test tools; chat-start.test.mjs covers the chat start
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
@@ -771,7 +771,7 @@ test("retired skills live on as references of the eight, and nothing names them 
   for (const gone of ["import", "whats-next", "advisor", "schedule", "new-project", "link-project", "connect-tools", "update-plugin", "load-context", "create-context", "edit-context", "render"]) assert.ok(!existsSync(`${P}/skills/gtm-brain-${gone}/SKILL.md`), `gtm-brain-${gone} is no longer a skill`);
   // a retired name may still appear as a script path (scripts/gtm-brain-render/render.mjs), never as a skill or a slash command
   const retired = /gtm-brain-(import|whats-next|advisor|schedule|new-project|link-project|connect-tools|update-plugin|load-context|create-context|edit-context|render)(?![-\w]*\/)/;
-  const files = execFileSync("grep", ["-rlE", "gtm-brain-(import|whats-next|advisor|schedule|new-project|link-project|connect-tools|update-plugin|load-context|create-context|edit-context|render)", `${P}/skills`, `${P}/policies`, `${P}/hooks`, `${P}/templates/AGENTS.md`, `${P}/server/server.mjs`, `${P}/scripts/gtm-brain-render/skill-catalog.json`, join(P, "..", "..", "COMMANDS.md"), join(P, "..", "..", "ONBOARDING.md"), join(P, "..", "..", "GUIDE.md")], { encoding: "utf8" }).trim().split("\n").filter(Boolean);
+  const files = execFileSync("grep", ["-rlE", "gtm-brain-(import|whats-next|advisor|schedule|new-project|link-project|connect-tools|update-plugin|load-context|create-context|edit-context|render)", `${P}/skills`, `${P}/policies`, `${P}/session`, `${P}/templates/AGENTS.md`, `${P}/server/server.mjs`, `${P}/scripts/gtm-brain-render/skill-catalog.json`, join(P, "..", "..", "COMMANDS.md"), join(P, "..", "..", "ONBOARDING.md"), join(P, "..", "..", "GUIDE.md")], { encoding: "utf8" }).trim().split("\n").filter(Boolean);
   const offenders = files.filter(f => !f.includes("/legacy/")).filter(f => readFileSync(f, "utf8").split("\n").some(line => retired.test(line)));
   assert.deepEqual(offenders, [], "these still name a retired skill");
 });

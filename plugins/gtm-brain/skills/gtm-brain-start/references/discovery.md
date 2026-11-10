@@ -22,7 +22,7 @@ questions are available, keep them alive until answered.
 ## How to talk during discovery
 
 The example questions below are patterns, not fixed wording. Draft brain content in English.
-The approval token is always the exact word APPROVE.
+The approval is always the person's APPROVE in the `approve_change` form, never typed in the chat.
 
 Questions are clicks wherever the harness allows it. If a structured question control
 with answer proposals is available in the current mode, use it for preferences and
@@ -63,14 +63,14 @@ either shows something you learned or offers something concrete. A question that
 no finding and no offer does not go out; go find something first.
 
 And in their words, not yours: no plugin, hook, repo, git, script, render, memory-file or
-context-slug talk with the person. Say what a thing does ("the safety locks", "your notes",
+context-slug talk with the person. Say what a thing does ("your company profile", "your notes",
 "the page next to this chat"), not what it is called in the codebase. Command names stay in
 tool calls; sentences describe outcomes.
 
 ## Trigger and state
 
 Follow [continuation](continuation.md) only for an active onboarding request: the pending flag is saved by setup itself, and the
-hook and MCP readers return the next unfinished step. Continue a pending workflow in this
+opening lines and MCP readers return the next unfinished step. Continue a pending workflow in this
 chat without asking for a separate start or continuation command. Record each completed
 outcome and proceed until the completion marker or an actual blocker.
 
@@ -119,8 +119,8 @@ Never ask what the machine already knows. Before the first question, gather sile
   draft or a memory, it cites `handoff:<by>` as its source. If the frontmatter says
   `confirmed: false` (a headless export nobody reviewed), walk the person through it line
   by line before using any of it (the gtm-brain-start skill has the procedure). `.claude`
-  and the other assistants' folders are off limits, reads included; the gate denies any
-  command touching them. The handoff file is the whole import path.
+  and the other assistants' folders are off limits, reads included, as the opening lines say;
+  never run a command touching them. The handoff file is the whole import path.
 - An existing brain in the folder: if `brain/` exists, read `admin.md`, the contexts and
   the marker; discovery becomes gap-filling, not setup.
 
@@ -167,7 +167,7 @@ like this:
 > for you: everything is a guess from your website and your tools, and one wrong line
 > costs one correction. Common fixes at this point: the one-liner is close but the
 > audience is wrong ("mid-market" not "enterprise"); a teammate is missing; a tool I saw
-> is actually being phased out. Tell me what to change, or type APPROVE to accept.
+> is actually being phased out. Tell me what to change, or choose APPROVE in the form to accept.
 
 Include known tools and clearly labelled proposed email/calendar providers in this first
 review, so accepting those same connections later needs no duplicate profile approval.
@@ -383,7 +383,7 @@ is the user's map of where they are:
   5. Running for you - daily source sync at 09:00 Europe/Warsaw, confirmed task ID and sources
   6. Your projects - Marta chose Website and Curriculum; both linked
 - the current step marked, with one line on what happens next and whether Codex is
-  waiting on the user (e.g. "waiting for APPROVE in the chat");
+  waiting on the user (e.g. "waiting for APPROVE in the form");
 - the single **Chat about this** link opens a new Codex task in the brain folder with a
   prepared prompt. The person presses Send and continues discovery there. All connection
   choices, approvals and requests to skip happen in the Codex conversation.
@@ -462,8 +462,8 @@ framed by what it unlocks and with Skip as a choice:
 > It writes one file you review; then say "import from claude" here and I file what you
 > confirm. Want that, or skip it?
 
-When the `claude` CLI is on the PATH (`command -v claude`; never probe `~/.claude`, the
-gate denies it), add the faster path as the first choice: "Do it for me now" runs one
+When the `claude` CLI is on the PATH (`command -v claude`; never probe `~/.claude`, it is
+off limits), add the faster path as the first choice: "Do it for me now" runs one
 bounded headless export (at most 60 seconds):
 
 ```bash
@@ -479,7 +479,7 @@ again; "import from claude" still works any time.
 
 ## Hard rules
 
-- The gate is unchanged: `admin.md` only through APPROVE; memories append-only; every
+- The rules are unchanged: `admin.md` only through APPROVE; memories append-only; every
   fact cites its source. Discovery has no special powers.
 - One mandatory question. Everything else is a confirmation of a draft or an offer, and
   every question carries its why, examples, and an escape hatch.

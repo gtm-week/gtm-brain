@@ -34,9 +34,9 @@ run a sequence of memory commands.
 
 The sections below document the underlying operations, tools, and script paths for reference.
 They are not additional discoverable skills. Tools show outcomes such as "Remembering" or
-"Searching the brain" in chat. Review proposals on the read-only dashboard. APPROVE typed in Codex stays a shell step with its permission prompt.
+"Searching the brain" in chat. Review proposals on the read-only dashboard. APPROVE is a choice in the form `approve_change` shows; in a chat nothing else applies it.
 Scripts retain their paths for terminal use with
-`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.33.8`.
+`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.33.9`.
 
 Legend for "writes": what files the command changes. Nothing else is ever touched.
 
@@ -88,8 +88,8 @@ Tool: `interact`. Writes: `brain/contexts/<slug>/memories.jsonl` (via remember).
 
 Drafts one of this company's interactions from the person's words (name, tool, the operation in
 words, inputs, what it records), validates it and writes `work/interaction.proposed.json`. The
-dashboard shows it in words; typing APPROVE in Codex
-applies it too. `approve.mjs <root> --interaction --by <person>` is the only writer of
+dashboard shows it in words; Codex then calls `approve_change` with kind interaction, and
+choosing APPROVE in its form applies it. `approve.mjs <root> --interaction --by <person>` is the only writer of
 `brain/ontology.ossie.json`: it appends the proposal and commits `interactions: <name>`. The
 advisor only suggests one, from an action recorded three times in a month: a brain check never writes a proposal.
 
@@ -180,7 +180,7 @@ IDs through the tools. Review the prompt and press Send to begin. All changes ha
 The live viewer refreshes after each saved answer, preserving browsing state independently
 of summary compilation. A saved HTML copy offers the same chat link without live updates.
 
-The page stays between chats: the session hook starts the server, and the tab is marked
+The page stays between chats: the chat start starts the server, and the tab is marked
 deliverable so it survives the turn. One tab, reloaded rather than reopened, never closed in
 cleanup. The dashboard always uses the Codex pane and needs no login. Legacy
 `dashboard_browser` values are ignored. Chrome setup is separate, personal to the machine,
@@ -193,7 +193,7 @@ hold). A sentence with no pill has no source note, so the summary itself is what
 Correcting a wrong sentence means forgetting the note behind its pill, not editing the summary.
 
 Tools: `render_dashboard` (rebuild), `open_dashboard` (rebuild, start the server, open the browser). Writes: `work/home/` (local); `work/dash.json`, `work/session.json`
-(the chat the session hook recorded).
+(the chat recorded at chat start).
 `node $PLUGIN_ROOT/scripts/gtm-brain-render/render.mjs . && open work/home/index.html`
 
 ### save
@@ -302,7 +302,7 @@ A document is one Markdown file at the brain root (`strategy.md`) or in a folder
 work it governs: copy, outreach, posts, landing pages, design, proposals, planning), a status
 (`draft` or `approved`, approved only on the person's word) and the body in the person's language.
 Its files live in a folder of its name beside it (`brand/design-system/`), or around it when it is
-alone in its folder. The session hook and `query` (status) name every document in every chat with
+alone in its folder. The opening lines and `query` (status) name every document in every chat with
 its file count, in the brain and in each linked project, and rule 11 of the brain's rules makes
 Codex read the matching one in full before that kind of work and say which it followed. Nothing
 compiles or summarizes a document. Hand edits in an editor are kept by `save`; a hand-written
@@ -409,24 +409,28 @@ Checks each tool in `admin.md` against the live catalog of official Codex plugin
 list` for the install state, Codex's cached remote catalog for display names, so "Wispr Flow"
 resolves to its `app-...` id): installed / available (with the install command) / no official
 plugin / not available (disabled by the workspace admin), and lists installed
-plugins that `admin.md` does not mention. The check itself runs at every session start; Codex
-offers fixes unasked. Saying it runs the read tests too. Installs on a yes per tool. Sign-in is
+plugins that `admin.md` does not mention. The check itself runs at every chat start; Codex
+offers fixes unasked. Saying it runs the read tests too. GTM Brain does not see calls to other
+connectors, so a tool stays installed, untested (○) until a read test: the first time one returns
+data in a chat, Codex calls `mark_tool` with status ok. Installs on a yes per tool. Sign-in is
 yours and lives in your Codex.
 
 Tools: `check_tools`, `mark_tool`. Also reads remote MCP servers from Codex's `config.toml`. Writes: `work/tools.json` (local); installs Codex plugins on request.
 `node $PLUGIN_ROOT/scripts/gtm-brain-connect/connect.mjs . --check`, `... --mark <tool> ok|fail "note"`
 
 ### approve
-*"change what we sell to also include UK retailers"*, then `APPROVE`
+*"change what we sell to also include UK retailers"*, then choose `APPROVE` in the form
 
 The only way `brain/admin.md` changes. Codex writes the full proposed file to
-`work/admin.proposed.md`, shows the diff, waits for the literal word `APPROVE`. Then the
-script writes an audit line to `~/.gtm-brain/approvals.log` (outside the sandbox, so Codex asks
-your permission a second time), replaces the file, commits with your handle. Only team members
-can approve. "ok" or "yes" is not APPROVE.
+`work/admin.proposed.md`, explains the change, then calls `approve_change`: its form shows the
+change with an APPROVE choice, and only your click applies it. Then the script writes an audit
+line to `~/.gtm-brain/approvals.log`, replaces the file, commits with your handle. Only team
+members can approve. APPROVE, "ok" or "yes" typed in the chat applies nothing. When the host
+cannot show the form, Codex gives you the `approve.mjs` command to run in a terminal yourself,
+where it asks you to type APPROVE.
 
-Tool: `propose_admin_change` for the proposal; applying is a shell command with your permission. Writes: `brain/admin.md`, `~/.gtm-brain/approvals.log`, a commit.
-`node $PLUGIN_ROOT/scripts/gtm-brain-approve/approve.mjs . --diff`, `... --apply --by <handle|name|email>`
+Tools: `propose_admin_change` for the proposal, `approve_change` (kind `admin` or `interaction`, `by`) to apply it. Writes: `brain/admin.md`, `~/.gtm-brain/approvals.log`, a commit.
+`node $PLUGIN_ROOT/scripts/gtm-brain-approve/approve.mjs . --diff`, `... --apply --by <handle|name|email>` (in a terminal; asks you to type APPROVE)
 
 ### schedule
 *"set up the weekly compile"*, *"schedule"*
@@ -462,7 +466,7 @@ installed version's upgrader runs right after the verified install and prints it
 
 Tool: `update_plugin` (`mode: check | update`, `brain` optional). Writes: Codex's plugin installation and
 marketplace cache when updating. No brain files.
-`node $PLUGIN_ROOT/scripts/gtm-brain-update-plugin/update.mjs --check`, `... --update`; `check-version.mjs <root>` asks the source whether a newer version exists (the hook runs it daily in the background; the dashboard and the advisor read `work/plugin-version.json`)
+`node $PLUGIN_ROOT/scripts/gtm-brain-update-plugin/update.mjs --check`, `... --update`; `check-version.mjs <root>` asks the source whether a newer version exists (the chat start runs it daily in the background; the dashboard and the advisor read `work/plugin-version.json`)
 
 ### Refresh brain rules
 *"upgrade the brain"*, *"refresh the rules"*
@@ -470,7 +474,7 @@ marketplace cache when updating. No brain files.
 After a plugin update: refreshes `AGENTS.md`, the pre-commit hook and `.gitignore` in an
 existing brain. Validates editable identities first and migrates legacy identity files with
 backups when needed. Contexts, memories, workplace settings and personal preferences remain.
-The session hook refreshes `AGENTS.md` on its own when it is exactly a recent shipped version with no
+The chat start refreshes `AGENTS.md` on its own when it is exactly a recent shipped version with no
 other upgrade step still to run, and says so in one line. Older brains, edited rules and scheduled
 runs are offered "refresh the rules" instead; a refresh of edited rules pauses with a proposed file
 to merge. It also refreshes `README.md`, silently, when that is exactly what a release wrote. Each
@@ -482,16 +486,17 @@ backups, and identity files only when migration is needed.
 
 ## What runs by itself
 
-- **Session start**: pulls the repo, lists contexts with staleness, re-loads what was loaded
+- **Chat start** (on a chat's first GTM Brain call, again after 30 quiet minutes): pulls the repo, lists contexts with staleness, re-loads what was loaded
   last time (cover, rules and what is new; not the memories, which the tools fetch on demand), checks the tools against the installed Codex plugins,
   records which chat this is (for session context), starts the dashboard server, rebuilds
   the page. The dashboard is available inside Codex, with no Chrome launch. The chat opens with
   one line saying where you are and what is new, plus at most one tool offer. One more line
   names the documents (the marked Markdown at the brain root) with what each applies to and how
   many files each owns, in a linked project too.
-- **Before any file edit or shell command by Codex**: the gate denies patches to
-  `brain/admin.md` and any `memories.jsonl`, and shell commands that write to
-  them (reads pass); the skills are the only writers. Best effort, logged in `work/hooks.log`.
+- **At chat start and before every save**: a direct edit of `brain/admin.md`,
+  `brain/ontology.ossie.json` or any `memories.jsonl` not committed through GTM Brain is copied
+  to `work/manual-edits/protected/` and the committed version restored; the opening lines say
+  so. The skills are the only writers.
 - **Before any commit**: every staged `memories.jsonl` is validated line by line and must keep
   the committed records unchanged (append-only). Without the plugin on the machine the commit
   is refused (`GTM_BRAIN_SKIP_VALIDATE=1` to override once).

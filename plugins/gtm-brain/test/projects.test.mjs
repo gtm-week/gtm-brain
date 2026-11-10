@@ -2,7 +2,7 @@ process.env.GTM_BRAIN_NO_WATCH = "1";
 process.env.GTM_BRAIN_NO_SESSION_MAINTENANCE = "1"; // Covered by session-maintenance.test.mjs.
 process.env.GTM_BRAIN_NO_COMPILE = "1"; // Model runs are opt-in through test doubles.
 // Projects: a folder linked to a brain by a pointer block in its AGENTS.md, its own loaded set, a tag on its notes.
-process.env.GTM_BRAIN_NO_HOOK_CHECK = "1"; // the hooks-off check talks to a real Codex; hooks-notice.test covers it with a fake one
+process.env.GTM_BRAIN_NO_SESSION_START = "1"; // servers here test tools; chat-start.test.mjs covers the chat start
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, realpathSync, symlinkSync } from "node:fs";
@@ -365,13 +365,13 @@ test("recall groups a project's hits before it limits them; without a project it
   assert.equal((withoutProject.match(/^- Recorded: \d{4}-\d{2}-\d{2}/gm) || []).length, 40, "still capped at 40 without a project");
 });
 
-const hook = (cwd, name, input, extra = {}) => execFileSync("bash", [`${P}/hooks/${name}`], { cwd, encoding: "utf8", env: { ...env, ...extra }, input: JSON.stringify({ hook_event_name: "SessionStart", session_id: "thread-p1", cwd, ...input }) });
+const hook = (cwd, name, input, extra = {}) => execFileSync("bash", [`${P}/session/${name}`], { cwd, encoding: "utf8", env: { ...env, ...extra }, input: JSON.stringify({ hook_event_name: "SessionStart", session_id: "thread-p1", cwd, ...input }) });
 const tryHook = (cwd, name, input) => { try { return { code: 0, out: hook(cwd, name, input) }; } catch (e) { return { code: e.status, out: String(e.stdout) }; } };
 
 test("resolve.sh agrees with lib.resolveBrain on every fixture", () => {
   const root = realpathSync(brain()); const ext = folder(); project(root, "--link", ext, "--slug", "website"); const nested = join(ext, "a", "b"); mkdirSync(nested, { recursive: true });
   const gone = folder(); lib.writePointer(gone, { brain: "/no/such/brain", slug: "old", title: "Old", company: "X" });
-  const sh = dir => { try { return execFileSync("bash", ["-c", `. "${P}/hooks/resolve.sh"; gtm_brain_resolve "$1"`, "_", dir], { encoding: "utf8" }).replace(/\n$/, ""); } catch (e) { return null; } };
+  const sh = dir => { try { return execFileSync("bash", ["-c", `. "${P}/session/resolve.sh"; gtm_brain_resolve "$1"`, "_", dir], { encoding: "utf8" }).replace(/\n$/, ""); } catch (e) { return null; } };
   assert.equal(sh(root), `${root}\t`); assert.equal(sh(ext), `${root}\twebsite`); assert.equal(sh(nested), `${root}\twebsite`);
   assert.equal(sh(folder()), null); assert.equal(sh(gone), "MISSING\t/no/such/brain\told");
 });
@@ -424,15 +424,14 @@ test("the session hook elsewhere: a pointer to a gone brain says so and stops; a
   assert.doesNotMatch(r, /onboarding_question|question tool|Computer Use|no company brain yet/);
 }));
 
-test("turns, tool usage and the gate work from a project cwd and log into the brain with the project", () => {
+test("a direct edit of admin.md is put back at a project chat's start, with the edit kept in the brain", () => {
   const root = brain(); const ext = folder(); project(root, "--link", ext, "--slug", "website");
-  hook(ext, "turns.sh", { hook_event_name: "UserPromptSubmit", prompt: "note the deadline" });
-  hook(ext, "tool-usage.sh", { hook_event_name: "PostToolUse", tool_name: "mcp__gtm_brain__remember", tool_input: {}, tool_response: {} });
-  const turn = JSON.parse(readFileSync(join(root, "work", "turns.jsonl"), "utf8").trim().split("\n").pop()); assert.equal(turn.project, "website"); assert.equal(turn.text, "note the deadline");
-  const use = JSON.parse(readFileSync(join(root, "work", "tool-usage.jsonl"), "utf8").trim().split("\n").pop()); assert.equal(use.project, "website"); assert.equal(use.name, "remember");
-  const g = tryHook(ext, "gate-protected-write.sh", { tool_name: "shell_command", tool_input: { command: `printf y > ${root}/brain/admin.md` } });
-  assert.equal(g.code, 2); assert.match(g.out, /permissionDecision":"deny"/);
-  assert.match(readFileSync(join(root, "work", "hooks.log"), "utf8"), /PreToolUse  DENY/, "logged in the brain, not in the project folder");
+  const before = readFileSync(join(root, "brain", "admin.md"), "utf8");
+  writeFileSync(join(root, "brain", "admin.md"), "edited by hand\n");
+  const out = hook(ext, "session-start.sh", {});
+  assert.match(out, /PROTECTED FILES RESTORED: brain\/admin\.md \(the edit is kept in work\/manual-edits\/protected\/brain__admin\.md\.\d+\)/);
+  assert.equal(readFileSync(join(root, "brain", "admin.md"), "utf8"), before);
+  assert.match(readFileSync(join(root, "work", "hooks.log"), "utf8"), /restored  brain\/admin\.md: changed outside GTM Brain/, "logged in the brain, not in the project folder");
   assert.equal(existsSync(join(ext, "work")), false);
 });
 
@@ -487,7 +486,7 @@ test("interact from a project tags the memory with it and cites the project's ow
   lib.writeInteractions(root, [{ name: "note_result", title: "Noting a result", tool: "gmail", operation: "Nothing to do in gmail.", description: "A result.", input_schema: { type: "object", properties: { what: { type: "string" } }, required: ["what"], additionalProperties: false }, record: { context: "icp", kind: "note", companies: [], people: [], content: "Result: {what}", action: "gmail:noted:{what}", tags: ["result"] } }]);
   // the server's interact, driven the way server.test drives tools: one JSON-RPC call over stdio
   const { spawn } = await import("node:child_process");
-  const call = (name, args) => new Promise((res, rej) => { const p = spawn(process.execPath, [`${P}/server/server.mjs`], { env: { ...env, GTM_BRAIN_NO_COMMIT: "1" } }); let out = ""; p.stdout.on("data", d => out += d); p.on("close", () => { const lines = out.split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); const r = lines.find(l => l.id === 2); r ? res(r.result) : rej(new Error(out)); }); p.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {} } }) + "\n"); p.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name, arguments: args } }) + "\n"); p.stdin.end(); });
+  const call = (name, args) => new Promise((res, rej) => { const p = spawn(process.execPath, [`${P}/server/server.mjs`], { env: { ...env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_SESSION_START: "1" } }); let out = ""; p.stdout.on("data", d => out += d); p.on("close", () => { const lines = out.split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); const r = lines.find(l => l.id === 2); r ? res(r.result) : rej(new Error(out)); }); p.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {} } }) + "\n"); p.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name, arguments: args } }) + "\n"); p.stdin.end(); });
   const r = await call("interact", { brain: root, by: "marta", name: "note_result", params: { what: "M2 shipped" }, project: "curriculum" });
   assert.match(r.content[0].text, /^ok: note_result/, JSON.stringify(r));
   const m = lib.readMemories(root, "icp").pop();
@@ -513,7 +512,7 @@ test("a channel created, forked or archived from a project changes that project'
 test("new_context and archive_context take project through the server", async () => {
   const root = brain(); const a = folder(); project(root, "--link", a, "--slug", "seo");
   const { spawn } = await import("node:child_process");
-  const call = (name, args) => new Promise((res, rej) => { const p = spawn(process.execPath, [`${P}/server/server.mjs`], { env: { ...env, GTM_BRAIN_NO_COMMIT: "1" } }); let out = ""; p.stdout.on("data", d => out += d); p.on("close", () => { const lines = out.split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); const r = lines.find(l => l.id === 2); r ? res(r.result) : rej(new Error(out)); }); p.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {} } }) + "\n"); p.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name, arguments: args } }) + "\n"); p.stdin.end(); });
+  const call = (name, args) => new Promise((res, rej) => { const p = spawn(process.execPath, [`${P}/server/server.mjs`], { env: { ...env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_SESSION_START: "1" } }); let out = ""; p.stdout.on("data", d => out += d); p.on("close", () => { const lines = out.split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); const r = lines.find(l => l.id === 2); r ? res(r.result) : rej(new Error(out)); }); p.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {} } }) + "\n"); p.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name, arguments: args } }) + "\n"); p.stdin.end(); });
   const r = await call("new_context", { brain: root, slug: "keywords", title: "Keywords", rule: "Keyword work.", project: "seo" });
   assert.doesNotMatch(r.content[0].text, /refused|error/i, r.content[0].text);
   assert.deepEqual(lib.readLoaded(root, "seo"), ["keywords"]); assert.deepEqual(lib.readLoaded(root), []);
