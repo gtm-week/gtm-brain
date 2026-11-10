@@ -396,6 +396,10 @@ test("the floor: HubSpot is suggested as the CRM before anyone names one, Attio 
   // the model passes the plugin id (google-calendar): the decline lands on the entry the check wrote, no twin
   check(none, "--skip", "google-calendar");
   st = JSON.parse(readFileSync(join(cr, "work", "tools.json"), "utf8")); assert.equal(st["google calendar"].declined, true); assert.ok(!st["google-calendar"], "no second entry");
+  // a twin left by an older version folds into the real entry at the next check, its decline kept
+  delete st["google calendar"].declined; st["google-calendar"] = { tool: "google-calendar", status: "not checked", declined: true, declined_at: "2026-11-10T23:08:51Z" };
+  writeFileSync(join(cr, "work", "tools.json"), JSON.stringify(st)); check(none);
+  st = JSON.parse(readFileSync(join(cr, "work", "tools.json"), "utf8")); assert.ok(!st["google-calendar"], "the twin is gone"); assert.equal(st["google calendar"].declined, true);
   execFileSync(process.execPath, [`${P}/scripts/gtm-brain-render/render.mjs`, "."], { cwd: cr, env: { ...process.env, GTM_BRAIN_NO_OPEN: "1" } });
   const data = JSON.parse(readFileSync(join(cr, "work", "home", "data.json"), "utf8"));
   const hs = data.tools.find(t => t.tool === "HubSpot"); assert.equal(hs.declined, true); assert.equal(hs.suggested, true);

@@ -22,6 +22,14 @@ const flatName = s => String(s || "").toLowerCase().replace(/\s*\(.*\)\s*$/, "")
 const entryKey = (state, t) => Object.keys(state).find(k => k === key(t)) || Object.keys(state).find(k => [k, state[k] && state[k].plugin, state[k] && state[k].tool].some(x => x && flatName(x) === flatName(t))) || key(t);
 const wf = join(root, "work", "tools.json"); mkdirSync(join(root, "work"), { recursive: true });
 let state = {}; try { state = JSON.parse(readFileSync(wf, "utf8")); } catch {}
+// A twin written by a skip or test under the plugin id (google-calendar beside google calendar, 0.33.9 and earlier):
+// its decline or test result moves to the real entry and the twin goes, so the page lists the tool once.
+for (const k of Object.keys(state)) {
+  const twin = state[k]; if (!twin || twin.plugin || twin.mcp) continue;
+  const to = Object.keys(state).find(o => o !== k && [o, state[o] && state[o].plugin, state[o] && state[o].tool].some(x => x && flatName(x) === flatName(k)));
+  if (!to) continue;
+  const { tool, status, ...carried } = twin; state[to] = { ...state[to], ...carried }; delete state[k];
+}
 
 if (args[0] === "--skip") {
   const names = args.slice(1).filter(Boolean); if (!names.length) { console.error("--skip needs a tool name"); process.exit(1); }
