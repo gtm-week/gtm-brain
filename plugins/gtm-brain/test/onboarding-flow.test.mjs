@@ -20,7 +20,9 @@ function syntheticApply(f) {
   const auditHome = join(f.scratch, "synthetic-audit");
   const apply = `import os from 'node:os'; import { syncBuiltinESMExports } from 'node:module';
     os.homedir = () => ${JSON.stringify(auditHome)}; syncBuiltinESMExports();
-    process.env.GTM_BRAIN_APPROVAL = 'form'; // what approve_change sets after the person chose APPROVE
+    // What approve_change does after the person chose APPROVE: a single-use ticket.
+    const lib = await import(${JSON.stringify(pathToFileURL(join(P, "lib/brain.mjs")).href)});
+    process.env.GTM_BRAIN_APPROVAL_TICKET = lib.issueApproval(${JSON.stringify(f.root)}, 'admin');
     process.argv = [process.execPath, 'approve.mjs', ${JSON.stringify(f.root)}, '--apply', '--by', 'alex-example'];
     await import(${JSON.stringify(pathToFileURL(join(P, "scripts/gtm-brain-approve/approve.mjs")).href)});`;
   return f.run(process.execPath, ["--input-type=module", "-e", apply]);

@@ -14,7 +14,7 @@ const P = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 const codexHome = mkdtempSync(join(tmpdir(), "gtm-brain-codex-home-"));
 const env = { ...process.env, PLUGIN_ROOT: P, CODEX_HOME: codexHome, HOME: mkdtempSync(join(tmpdir(), "gtm-brain-home-")),
   GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_NO_VERSION_CHECK: "1", GTM_BRAIN_NO_SESSION_MAINTENANCE: "1", GTM_BRAIN_NO_WATCH: "1" };
-delete env.GTM_BRAIN_NO_COMMIT; delete env.GTM_BRAIN_NO_SESSION_START; delete env.GTM_BRAIN_RUN; delete env.GTM_BRAIN_APPROVAL; delete env.GTM_BRAIN_HOST;
+delete env.GTM_BRAIN_NO_COMMIT; delete env.GTM_BRAIN_NO_SESSION_START; delete env.GTM_BRAIN_RUN; delete env.GTM_BRAIN_APPROVAL_TICKET; delete env.GTM_BRAIN_HOST;
 const lib = await import(`${P}/lib/brain.mjs`);
 const { host } = await import(`${P}/lib/host.mjs`);
 
@@ -104,6 +104,7 @@ test("approve_change without forms applies nothing and gives the person the term
   assert.doesNotMatch(readFileSync(join(root, "brain", "admin.md"), "utf8"), /extra line/);
   // The script itself refuses a model's shell: no form flag and no terminal.
   assert.throws(() => execFileSync(process.execPath, [`${P}/scripts/gtm-brain-approve/approve.mjs`, root, "--apply", "--by", "marta"], { env, stdio: "pipe" }), e => e.status === 4);
+  assert.throws(() => execFileSync(process.execPath, [`${P}/scripts/gtm-brain-approve/approve.mjs`, root, "--apply", "--by", "marta"], { env: { ...env, GTM_BRAIN_APPROVAL: "form", GTM_BRAIN_APPROVAL_TICKET: "0".repeat(64) }, stdio: "pipe" }), e => e.status === 4, "a set flag or a made-up ticket is no APPROVE");
   assert.doesNotMatch(readFileSync(join(root, "brain", "admin.md"), "utf8"), /extra line/);
 });
 

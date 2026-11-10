@@ -3,9 +3,9 @@
 //   node approve.mjs <root> --diff                 show the diff between admin.md and work/admin.proposed.md
 //   node approve.mjs <root> --apply --by <name>    replace admin.md with the proposal, commit, remove the proposal
 //   node approve.mjs <root> --interaction --by <name>   append work/interaction.proposed.json to brain/ontology.ossie.json, commit, remove the proposal
-// --apply and --interaction run only with the person's APPROVE: the approve_change tool sets
-// GTM_BRAIN_APPROVAL=form after they chose APPROVE in its form; in a terminal the script asks them to type it.
-// A model's shell has neither. No dependencies.
+// --apply and --interaction run only with the person's APPROVE: a single-use ticket approve_change issues
+// after they chose APPROVE in its form (lib.issueApproval / takeApproval), or, in a terminal, the word typed
+// here. A chat's shell has neither. No dependencies.
 import { readFileSync, writeFileSync, existsSync, unlinkSync, appendFileSync, mkdirSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { join } from "node:path";
@@ -18,9 +18,9 @@ const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith(
 const ADMIN = join(root, "brain", "admin.md"), PROP = join(root, "work", "admin.proposed.md");
 const opt = {}; for (let i = 0; i < args.length; i++) if (args[i].startsWith("--")) { opt[args[i].slice(2)] = args[i + 1] && !args[i + 1].startsWith("--") ? args[++i] : true; }
 
-// The person's APPROVE: the form's (approve_change), or typed here when a person runs this in a terminal.
+// The person's APPROVE: the form's ticket (approve_change), or typed here when a person runs this in a terminal.
 async function personApproved() {
-  if (process.env.GTM_BRAIN_APPROVAL === "form") return true;
+  if (process.env.GTM_BRAIN_APPROVAL_TICKET) return lib.takeApproval(root, opt.interaction ? "interaction" : "admin", process.env.GTM_BRAIN_APPROVAL_TICKET);
   if (!process.stdin.isTTY || !process.stdout.isTTY) return false;
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   const typed = await new Promise(done => rl.question("Type APPROVE to apply this change: ", done)); rl.close();

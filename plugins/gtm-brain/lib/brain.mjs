@@ -9,7 +9,7 @@
 import { readFileSync, writeFileSync, appendFileSync, existsSync, readdirSync, statSync, lstatSync, realpathSync, mkdirSync , unlinkSync, rmSync, renameSync, linkSync, chmodSync} from "node:fs";
 import { join, isAbsolute, resolve, basename, dirname } from "node:path";
 import { homedir } from "node:os";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomUUID, randomBytes } from "node:crypto";
 import { spawnSync, execFileSync, execFile, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { parseOntology } from "./ontology/ontology.mjs";
@@ -898,6 +898,25 @@ export function save(root, message, { covers = false } = {}) {
    edit, so one is caught before anything commits it: at each chat's start and on every save. The edited
    file is kept in work/manual-edits/protected/ and the committed version comes back. An uncommitted file
    with no committed version is not judged; GTM_BRAIN_NO_COMMIT (tests, dry runs) turns the check off. */
+/* ---------- the person's APPROVE, as a single-use ticket ----------
+   approve_change issues one after the person chose APPROVE in its form: the secret goes to approve.mjs in
+   its environment only, and only its hash is kept, in ~/.gtm-brain/approvals/ (outside the brain, which a
+   sandboxed chat can write). approve.mjs takes the ticket once; a chat's shell has no secret to offer. */
+const APPROVALS = () => join(homedir(), ".gtm-brain", "approvals");
+const ticketFile = secret => join(APPROVALS(), createHash("sha256").update(String(secret)).digest("hex"));
+const realRoot = root => { try { return realpathSync(root); } catch { return resolve(root); } };
+export function issueApproval(root, kind) {
+  const secret = randomBytes(32).toString("hex");
+  mkdirSync(APPROVALS(), { recursive: true, mode: 0o700 });
+  writeFileSync(ticketFile(secret), JSON.stringify({ brain: realRoot(root), kind, at: Date.now() }), { mode: 0o600, flag: "wx" });
+  return secret;
+}
+export function takeApproval(root, kind, secret) {
+  if (typeof secret !== "string" || !/^[0-9a-f]{64}$/.test(secret)) return false;
+  const file = ticketFile(secret);
+  let t; try { t = JSON.parse(readFileSync(file, "utf8")); unlinkSync(file); } catch { return false; }
+  return t.brain === realRoot(root) && t.kind === kind && Date.now() - t.at < 120000;
+}
 export const PROTECTED_PATHS = ["brain/admin.md", "brain/ontology.ossie.json", ":(glob)brain/contexts/*/memories.jsonl"];
 export function guardProtected(root) {
   if (process.env.GTM_BRAIN_NO_COMMIT) return [];

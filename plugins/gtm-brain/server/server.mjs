@@ -293,7 +293,7 @@ const TOOLS = [
       const answer = await questions.ask({ question: `${ask}\n\n${shown}`, options: ["APPROVE", "Not now"] }, requestId);
       if (answer.status === "not_shown") return text(`not applied: the host closed the form before the person saw it. Ask the person to run this in a terminal themselves; it asks them to type APPROVE: ${terminal}`);
       if (answer.status !== "answered" || !answer.selections?.includes("APPROVE")) return text(`not applied (${answer.status === "answered" ? `the person chose ${[...(answer.selections || []), answer.text].filter(Boolean).join(", ")}` : answer.status}); the proposal stays in ${file}.`);
-      return result(await run(brain, "gtm-brain-approve/approve.mjs", apply, { env: { GTM_BRAIN_APPROVAL: "form" } }));
+      return result(await run(brain, "gtm-brain-approve/approve.mjs", apply, { env: { GTM_BRAIN_APPROVAL_TICKET: lib.issueApproval(brain, admin ? "admin" : "interaction") } }));
     } },
   { name: "upgrade_brain", title: "Refreshing the brain's rules", readOnly: false,
     description: "After a plugin update: refresh managed rules, preserving local edits. Migrate legacy identity registries into permanent entity files, backing up originals and leaving memories unchanged.",
