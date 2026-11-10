@@ -69,7 +69,8 @@ test('only submitted data supplies answers; cancellation, empty input and invali
 test('every choice question can take the person\'s own words on one page: Something else opens a typed answer (Artur, 2026-11-06)', async () => {
   // The form offered only the model's choices; a person whose answer was not among them could not give it.
   assert.deepEqual(Object.keys(buildQuestion(args).requestedSchema.properties), ['selection']);
-  assert.deepEqual(buildQuestion({ ...args, options: ['A', 'Other'] }).requestedSchema.properties.selection.enum, ['A', 'Other'], 'never offered twice');
+  assert.deepEqual(buildQuestion({ ...args, options: ['A', 'Other'] }).requestedSchema.properties.selection.enum, ['A', SOMETHING_ELSE], 'never offered twice, and always with the next-screen hint');
+  assert.match(SOMETHING_ELSE, /type it on the next screen/, 'the label says the text box comes after Submit');
   const ask = async (a, answers) => {
     const sent = [], q = questionInput(m => { sent.push(m); queueMicrotask(() => q.receive({ id: m.id, result: answers.shift() })); });
     q.initialize({ elicitation: { form: {} } });
@@ -84,7 +85,7 @@ test('every choice question can take the person\'s own words on one page: Someth
   assert.equal(picked.sent.length, 1, 'a listed choice is still one page');
   const mixed = await ask({ ...args, multiple: true }, [{ action: 'accept', content: { selection: [args.options[0], SOMETHING_ELSE] } }, { action: 'accept', content: { text: 'and Slack' } }]);
   assert.deepEqual(mixed.answer, { status: 'answered', selections: [args.options[0]], text: 'and Slack' });
-  const own = await ask({ ...args, options: ['A', 'Other'] }, [{ action: 'accept', content: { selection: 'Other' } }, { action: 'accept', content: { text: 'C' } }]);
+  const own = await ask({ ...args, options: ['A', 'Other'] }, [{ action: 'accept', content: { selection: SOMETHING_ELSE } }, { action: 'accept', content: { text: 'C' } }]);
   assert.deepEqual(own.answer, { status: 'answered', selections: [], text: 'C' }, 'the model\'s own Other opens the typed answer too');
   // Closing the typed answer is that outcome, never a choice of "Something else"; a quick close is the person's.
   assert.deepEqual((await ask(args, [{ action: 'accept', content: { selection: SOMETHING_ELSE } }, { action: 'cancel' }])).answer, { status: 'cancelled' });
@@ -173,7 +174,7 @@ test("a decline Codex made itself is not_shown however long it took (Artur, 2026
 });
 
 test('only the bare words count as the typed-answer choice: "Other company" is a real choice and Something else is still added', async () => {
-  const { elseChoice } = await import('../scripts/gtm-brain-learn-company/question.mjs');
-  for (const bare of ['Other', 'other.', 'Something else', 'None of the above', ' None of these ']) assert.equal(elseChoice({ options: ['Yes', bare] }), bare);
-  for (const real of ['Other company', 'Something else entirely', 'None of these apply to us yet']) assert.equal(elseChoice({ options: ['Yes', real] }), 'Something else', real);
+  const enumOf = options => buildQuestion({ question: 'Which one?', options }).requestedSchema.properties.selection.enum;
+  for (const bare of ['Other', 'other.', 'Something else', 'None of the above', ' None of these ']) assert.deepEqual(enumOf(['Yes', bare]), ['Yes', SOMETHING_ELSE], bare);
+  for (const real of ['Other company', 'Something else entirely', 'None of these apply to us yet']) assert.deepEqual(enumOf(['Yes', real]), ['Yes', real, SOMETHING_ELSE], real);
 });

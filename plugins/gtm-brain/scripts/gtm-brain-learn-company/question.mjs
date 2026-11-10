@@ -7,11 +7,14 @@ const OR_LABEL = 'Or type an answer';
 // free-text form only when picked (Artur, 2026-11-06: "no third option"). A text field next to the
 // choices would be a second page on every question (2026-09-21). A choice the model wrote that already
 // means this ("Other", "Something else") plays the part, so it is never offered twice.
-export const SOMETHING_ELSE = 'Something else';
+// The label says what happens: Codex shows the typed answer's field on a second screen after Submit, not
+// under the choices as its own question box does (Maciej, 2026-11-10: picked it and saw no text box).
+export const SOMETHING_ELSE = 'Something else (type it on the next screen)';
 // Only the bare words: "Other company" or "Something else entirely" is a real choice, which must not lose the typed answer.
-const ELSE = /^(other|something else|none of (these|the above))[.:!]?$/i;
-export const elseChoice = args => args.options?.find(o => ELSE.test(o.trim())) ?? SOMETHING_ELSE;
-const choices = args => args.options && (args.options.some(o => ELSE.test(o.trim())) ? args.options : [...args.options, SOMETHING_ELSE]);
+const ELSE = /^(other|something else|none of (these|the above))[.:!]?$|^something else \(type it on the next screen\)$/i;
+// A model's own Other or Something else becomes this one choice, with its hint, in the same place.
+export const elseChoice = () => SOMETHING_ELSE;
+const choices = args => args.options && (args.options.some(o => ELSE.test(o.trim())) ? args.options.map(o => ELSE.test(o.trim()) ? SOMETHING_ELSE : o) : [...args.options, SOMETHING_ELSE]);
 
 export const inputSchema = {
   type: 'object', additionalProperties: false,
