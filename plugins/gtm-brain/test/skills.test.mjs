@@ -393,6 +393,9 @@ test("the floor: HubSpot is suggested as the CRM before anyone names one, Attio 
   out = check(none); assert.match(out, /declined earlier: HubSpot \(not offered again unless they ask\)/); assert.doesNotMatch(out, /suggested[^\n]*HubSpot/);
   st = JSON.parse(readFileSync(join(cr, "work", "tools.json"), "utf8")); assert.equal(st.hubspot.declined, true); assert.equal(st.hubspot.status, "available, not installed");
   assert.ok(!adv().some(x => x.key === "tool-suggested" && /HubSpot/.test(x.what)), "a decline is never nagged");
+  // the model passes the plugin id (google-calendar): the decline lands on the entry the check wrote, no twin
+  check(none, "--skip", "google-calendar");
+  st = JSON.parse(readFileSync(join(cr, "work", "tools.json"), "utf8")); assert.equal(st["google calendar"].declined, true); assert.ok(!st["google-calendar"], "no second entry");
   execFileSync(process.execPath, [`${P}/scripts/gtm-brain-render/render.mjs`, "."], { cwd: cr, env: { ...process.env, GTM_BRAIN_NO_OPEN: "1" } });
   const data = JSON.parse(readFileSync(join(cr, "work", "home", "data.json"), "utf8"));
   const hs = data.tools.find(t => t.tool === "HubSpot"); assert.equal(hs.declined, true); assert.equal(hs.suggested, true);

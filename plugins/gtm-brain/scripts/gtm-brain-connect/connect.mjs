@@ -17,12 +17,15 @@ const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
 const admin = lib.readAdmin(root); if (!admin) { console.error("no brain here"); process.exit(1); }
 const key = t => t.toLowerCase().replace(/\s*\(.*\)\s*$/, "").trim();
+// A name the model passes as a plugin id (google-calendar) finds the entry the check wrote (google calendar).
+const flatName = s => String(s || "").toLowerCase().replace(/\s*\(.*\)\s*$/, "").replace(/[^a-z0-9]/g, "");
+const entryKey = (state, t) => Object.keys(state).find(k => k === key(t)) || Object.keys(state).find(k => [k, state[k] && state[k].plugin, state[k] && state[k].tool].some(x => x && flatName(x) === flatName(t))) || key(t);
 const wf = join(root, "work", "tools.json"); mkdirSync(join(root, "work"), { recursive: true });
 let state = {}; try { state = JSON.parse(readFileSync(wf, "utf8")); } catch {}
 
 if (args[0] === "--skip") {
   const names = args.slice(1).filter(Boolean); if (!names.length) { console.error("--skip needs a tool name"); process.exit(1); }
-  for (const t of names) state[key(t)] = { ...(state[key(t)] || { tool: t, status: "not checked" }), declined: true, declined_at: new Date().toISOString() };
+  for (const t of names) { const k = entryKey(state, t); state[k] = { ...(state[k] || { tool: t, status: "not checked" }), declined: true, declined_at: new Date().toISOString() }; }
   writeFileSync(wf, JSON.stringify(state, null, 1)); console.log(`${names.join(", ")}: declined; not offered again (say "connect ${names[0]}" to change your mind)`); process.exit(0);
 }
 
@@ -43,9 +46,9 @@ if (args[0] === "--used") {
 }
 
 if (args[0] === "--mark") {
-  const [tool, result, ...note] = args.slice(1); const { declined, declined_at, ...was } = state[key(tool)] || {};
+  const [tool, result, ...note] = args.slice(1); const k = entryKey(state, tool); const { declined, declined_at, ...was } = state[k] || {};
   // a test result is the person changing their mind about a tool they had declined: it is offered again
-  state[key(tool)] = { ...was, tool: was.tool || tool, status: was.status || "not checked", test: result, note: note.join(" "), at: new Date().toISOString() };
+  state[k] = { ...was, tool: was.tool || tool, status: was.status || "not checked", test: result, note: note.join(" "), at: new Date().toISOString() };
   writeFileSync(wf, JSON.stringify(state, null, 1)); console.log(`${tool}: ${result}${note.length ? " · " + note.join(" ") : ""}${declined ? " (no longer declined)" : ""}`); process.exit(0);
 }
 
