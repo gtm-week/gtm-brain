@@ -21,7 +21,9 @@ that would then sign every note). Confirm the company name, what it sells and to
 teammates if any, and the tools in use. Ask about the CRM by name, not "which tools?": the
 course gives every participant HubSpot, so propose HubSpot and let them correct it ("Attio"
 is the other one to expect; anything else is fine too), then mail, calendar and meeting
-notes. Tell them, in one plain line, that GTM Brain keeps a dashboard open with what needs them,
+notes. Ask it as one `onboarding_question` with `multiple: true`: one checkbox per tool, CRMs
+first (HubSpot, Attio, then Gmail, Google Calendar, Granola), never a bundle of tools as one
+choice. Something else, which the form adds, takes any other tool in the person's own words. Tell them, in one plain line, that GTM Brain keeps a dashboard open with what needs them,
 the contexts and the open questions. It opens inside Codex and needs no login. Do not ask
 where it should open; there is no dashboard browser setting.
 
