@@ -171,3 +171,9 @@ test("a decline Codex made itself is not_shown however long it took (Artur, 2026
   const before = sent.length; assert.equal((await q.ask(args, 2)).status, 'not_shown');
   assert.equal(sent.length, before);
 });
+
+test('only the bare words count as the typed-answer choice: "Other company" is a real choice and Something else is still added', async () => {
+  const { elseChoice } = await import('../scripts/gtm-brain-learn-company/question.mjs');
+  for (const bare of ['Other', 'other.', 'Something else', 'None of the above', ' None of these ']) assert.equal(elseChoice({ options: ['Yes', bare] }), bare);
+  for (const real of ['Other company', 'Something else entirely', 'None of these apply to us yet']) assert.equal(elseChoice({ options: ['Yes', real] }), 'Something else', real);
+});
