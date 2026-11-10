@@ -2,6 +2,11 @@
 
 Read this first, every session. Then `brain/admin.md`, which is always loaded.
 
+Before your first answer in a chat, call GTM Brain `query` with object status: it returns this
+chat's opening lines (loaded contexts, approved photos and logos, the rows of `WHERE.md` and the
+outcomes in `projects/`). Before saying or deciding where a file goes, follow `WHERE.md` and name
+the outcome folder that exists for it.
+
 ## Questions and identity
 
 Reuse the current person resolved by the opening lines or the saved `work/person.json` handle
