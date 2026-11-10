@@ -71,6 +71,13 @@ const ADAPTERS = {
       updateScript: "update.mjs",
     },
     rulebookLoaded: dir => existsSync(join(dir, "AGENTS.md")),
+    // Codex's own question box (request_user_input) in an ordinary chat: off unless the person turned on the
+    // default_mode_request_user_input feature in config.toml. Read once, when the server starts, as Codex does.
+    nativeQuestions(home = process.env.CODEX_HOME || join(homedir(), ".codex")) {
+      let toml = ""; try { toml = readFileSync(join(home, "config.toml"), "utf8"); } catch { return false; }
+      const features = /^\[features\]\s*$([\s\S]*?)(?=^\[|(?![\s\S]))/m.exec(toml)?.[1] || "";
+      return /^\s*default_mode_request_user_input\s*=\s*true\s*(#.*)?$/m.test(features);
+    },
     texts: {
       dashboardAlways: url => `Dashboard: ${url} (saved view in the Codex pane; open only when asked using open_in_codex, never as a prerequisite to answering; no login or Chrome needed).`,
       dashboardOnDemand: url => `Dashboard: ${url} (this brain opens it on demand in the Codex pane; only when someone asks; admin.md dashboard: on-demand).`,
@@ -112,6 +119,7 @@ const ADAPTERS = {
       updateScript: "update-claude.mjs",
     },
     // Claude Code reads CLAUDE.md; the brain's carries the @AGENTS.md import (lib.ensureRulebookShim).
+    nativeQuestions: () => false,
     rulebookLoaded: dir => { try { return /^@AGENTS\.md\s*$/m.test(readFileSync(join(dir, "CLAUDE.md"), "utf8")); } catch { return false; } },
     texts: {
       dashboardAlways: url => `Dashboard: ${url} (open only when asked: give this address as a link for the browser; no login needed; never as a prerequisite to answering).`,

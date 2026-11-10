@@ -310,8 +310,11 @@ const RETIRED_READS = { recall: "query (memories with search, or object brief)",
 // A summary run (GTM_BRAIN_TOOLSET=compile, set by scripts/gtm-brain-compile/run-args.mjs) is listed only what it
 // calls: every other description is re-sent with each of its requests and is pure cost there.
 const COMPILE_TOOLSET = new Set([...RUN_ONLY_TOOLS, "render_dashboard"]);
+// With Codex's own question box on in ordinary chats, it asks instead: the free text sits on the same screen.
+const NATIVE_QUESTIONS = (() => { try { return host().nativeQuestions(); } catch { return false; } })();
+const NATIVE_LINE = "\nQuestions: this Codex has its own question box on (request_user_input), so GTM Brain's onboarding_question, configuration_question and question are off. Wherever a GTM Brain procedure names one of them, ask the same question with request_user_input instead: one question per call unless the procedure groups them, two or three concrete options, recommended first. It adds the free-text answer itself, so never add Other or Something else. It has no checkboxes: where a procedure asks for multiple: true, offer the likely combinations as options and let the free-text answer cover the rest. APPROVE still goes only through approve_change.";
 const offered = t => process.env.GTM_BRAIN_TOOLSET === "compile" ? COMPILE_TOOLSET.has(t.name)
-  : !(QUESTION_TOOLS.has(t.name) && !questions.available()) && !(RUN_ONLY_TOOLS.has(t.name) && !process.env.GTM_BRAIN_RUN) && !(t.name in RETIRED_READS);
+  : !(QUESTION_TOOLS.has(t.name) && (NATIVE_QUESTIONS || !questions.available())) && !(RUN_ONLY_TOOLS.has(t.name) && !process.env.GTM_BRAIN_RUN) && !(t.name in RETIRED_READS);
 
 // Allethic supplies memory capture and structured reads; the host keeps its native forms
 // and session operations. One registered tool per operation, with existing names preserved.
@@ -442,7 +445,7 @@ async function handle(req) {
   const { id, method, params = {} } = req;
   if (method === "initialize") questions.initialize(params.capabilities);
   if (method === "notifications/cancelled") { questions.cancel(params.requestId); return; }
-  if (method === "initialize") return reply(id, { protocolVersion: params.protocolVersion || "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "gtm-brain", title: "GTM Brain", version: VERSION }, instructions: INSTRUCTIONS + "\n" + instructionsText(ontology) + "\n" + WORKFLOWS + "\nGTM Brain speaks English. Author brain records in English. Preserve names, IDs, source quotes, and the exact token APPROVE." });
+  if (method === "initialize") return reply(id, { protocolVersion: params.protocolVersion || "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "gtm-brain", title: "GTM Brain", version: VERSION }, instructions: INSTRUCTIONS + (NATIVE_QUESTIONS ? NATIVE_LINE : "") + "\n" + instructionsText(ontology) + "\n" + WORKFLOWS + "\nGTM Brain speaks English. Author brain records in English. Preserve names, IDs, source quotes, and the exact token APPROVE." });
   if (method === "ping") return reply(id, {});
   if (method === "tools/list") return reply(id, { tools: TOOLS.filter(offered).map(t => ({ name: t.name, title: t.title, description: t.description, inputSchema: advertised(t.inputSchema), annotations: { title: t.title, readOnlyHint: t.readOnly, destructiveHint: false, openWorldHint: !!t.openWorld } })) });
   if (method === "tools/call") {

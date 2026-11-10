@@ -7,6 +7,11 @@ import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { buildQuestion, readAnswer, SOMETHING_ELSE, inputSchema as buildQuestionSchema } from '../scripts/gtm-brain-learn-company/question.mjs';
 import { questionInput } from '../server/question-input.mjs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+// A throwaway Codex profile: the person's own config.toml must not decide which question tools the server lists.
+process.env.CODEX_HOME = mkdtempSync(join(tmpdir(), 'gtm-brain-question-profile-'));
 
 const args = { question: 'Connect Gmail?', options: ['Yes, go ahead', 'No, skip it'] };
 
@@ -177,4 +182,30 @@ test('only the bare words count as the typed-answer choice: "Other company" is a
   const enumOf = options => buildQuestion({ question: 'Which one?', options }).requestedSchema.properties.selection.enum;
   for (const bare of ['Other', 'other.', 'Something else', 'None of the above', ' None of these ']) assert.deepEqual(enumOf(['Yes', bare]), ['Yes', SOMETHING_ELSE], bare);
   for (const real of ['Other company', 'Something else entirely', 'None of these apply to us yet']) assert.deepEqual(enumOf(['Yes', real]), ['Yes', real, SOMETHING_ELSE], real);
+});
+
+test("with Codex's own question box on, the server lists no question forms and tells Codex to use request_user_input; APPROVE keeps its form", async t => {
+  const profile = mkdtempSync(join(tmpdir(), 'gtm-brain-native-q-'));
+  writeFileSync(join(profile, 'config.toml'), 'model = "x"\n\n[features]\nhooks = true\ndefault_mode_request_user_input = true\n\n[mcp_servers.a]\ncommand = "a"\n');
+  const listed = async home => {
+    const child = spawn(process.execPath, [new URL('../server/server.mjs', import.meta.url).pathname], { stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, CODEX_HOME: home } });
+    t.after(() => child.kill());
+    const replies = new Map(); let seq = 0;
+    createInterface({ input: child.stdout }).on('line', line => { const m = JSON.parse(line); replies.get(m.id)?.(m); });
+    const rpc = (method, params) => new Promise(resolve => { const id = ++seq; replies.set(id, resolve); child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n'); });
+    const init = await rpc('initialize', { capabilities: { elicitation: { form: {} } } });
+    const names = (await rpc('tools/list', {})).result.tools.map(x => x.name);
+    child.kill();
+    return { names, instructions: init.result.instructions };
+  };
+  const native = await listed(profile);
+  for (const name of ['onboarding_question', 'configuration_question', 'question']) assert.ok(!native.names.includes(name), `${name} is off`);
+  assert.ok(native.names.includes('approve_change'), 'APPROVE keeps its own form');
+  assert.match(native.instructions, /ask the same question with request_user_input instead/);
+  assert.match(native.instructions, /never add Other or Something else/);
+  // the flag off, or outside [features]: GTM Brain's forms as before
+  writeFileSync(join(profile, 'config.toml'), '[features]\ndefault_mode_request_user_input = false\n[other]\ndefault_mode_request_user_input = true\n');
+  const forms = await listed(profile);
+  assert.ok(forms.names.includes('onboarding_question') && forms.names.includes('question'));
+  assert.doesNotMatch(forms.instructions, /request_user_input/);
 });
