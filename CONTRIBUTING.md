@@ -116,6 +116,12 @@ The plugin ships from `gtm-week/gtm-brain`, branch `main`.
 Describe a feature in its owning reference and link to it from the other guides. Shared
 agent policies are embedded automatically where an agent needs a self-contained document.
 
+## Adding a skill
+
+A skill that ships to every brain starts from [skill-template/](skill-template/README.md): a folder
+to copy, the rules it must follow, and every file to register it in. `gtm-brain-define-icp` is the
+worked example.
+
 ## Before pushing to main
 
 `./dev-install.sh` points git at [.githooks/](.githooks/). Before a push to `main`, the pre-push
