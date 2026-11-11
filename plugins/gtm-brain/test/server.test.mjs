@@ -103,7 +103,7 @@ test("memory dates stay in content while MCP capture assigns the recording times
   lib.writeContext(brain, "events", { title: "Events" });
   const started = Date.now();
   const content = "Chris agreed the sponsorship plan around June 2026.";
-  const captured = await call("remember", { brain, by: "ann", context: "events", content, people: ["Chris"] });
+  const captured = await call("remember", { brain, by: "ann", context: "events", content, people: ["Chris Novak"] });
   assert.ok(!captured.isError, captured.text);
   const batch = await call("remember", { brain, by: "ann", memories: [{ context: "events", content: "Chris prefers concise proposals.", people: ["Chris"] }] });
   assert.ok(!batch.isError, batch.text);

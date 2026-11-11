@@ -689,28 +689,41 @@ export function candidateEntities(content, people, names) {
   }
   return out;
 }
+/* How a mention becomes an entity. Fixed codes, so a saved memory and the brain's README cite the
+   same rule and the answer to "who is Max, and why" never depends on a file someone edited. */
+export const NAME_RULES = {
+  P1: "A name, alias or email that belongs to exactly one known person, company or product is that one.",
+  P2: "A first name alone means a known person only when exactly one known person has that first name; otherwise ask.",
+  P3: "A first name alone is never saved as a new person: ask for the full name, or say it is a company, product or team.",
+  P4: "A name that looks like a known one is never merged on a guess: ask \"same as X?\" first.",
+};
 /* normalise a list of mentions: known -> canonical; unknown -> added as new people, unless one
    looks like a name already known (similarNames): then nothing is added and `similar` says which
-   mention may be whom, so the caller can ask "same as X?" first. confirmedNew lists mentions the
-   person has said are new. Returns {people, added, similar}. */
-export function normalisePeople(root, mentions, { confirmedNew = [], companies = [] } = {}) {
-  const names = readNames(root), sure = new Set(confirmedNew.map(foldName)), people = [], fresh = [], similar = [], inferred = [];
+   mention may be whom, so the caller can ask "same as X?" first. A single word nobody has (P3) is
+   held the same way in `unnamed`, unless the person confirmed it (confirmedNew) or it is a company
+   or an already resolved name (trusted). Every mention that took judgment is in `mentions`, as
+   {mention, name, resolution, rule}, for the memory to keep. Returns {people, added, similar, unnamed, inferred, mentions}. */
+export function normalisePeople(root, mentions, { confirmedNew = [], companies = [], trusted = [] } = {}) {
+  const names = readNames(root), sure = new Set(confirmedNew.map(foldName)), people = [], fresh = [], similar = [], unnamed = [], inferred = [], said = [];
+  const plain = new Set([...companies, ...trusted].map(foldName));
   const take = c => { if (!people.includes(c)) people.push(c); };
+  const note = (mention, name, resolution, rule) => { if (!said.some(x => x.mention === mention)) said.push({ mention, name, resolution, rule }); };
   for (const m of mentions) {
     const t = String(m || "").trim(); if (!t) continue;
-    const exact = exactName(names, t); if (exact) { take(exact); continue; }
-    if (sure.has(foldName(t))) { names.push({ name: t, aliases: [], emails: [], kind: "person" }); fresh.push(t); take(t); continue; }   // the person said: someone new
-    const guess = inferredName(names, t); if (guess) { inferred.push({ mention: t, name: guess }); take(guess); continue; }
+    const exact = exactName(names, t); if (exact) { take(exact); if (exact !== t) note(t, exact, "exact", "P1"); continue; }
+    if (sure.has(foldName(t))) { names.push({ name: t, aliases: [], emails: [], kind: "person" }); fresh.push(t); take(t); note(t, t, "confirmed_new", /\s/.test(t) ? "P1" : "P3"); continue; }   // the person said: someone new
+    const guess = inferredName(names, t); if (guess) { inferred.push({ mention: t, name: guess }); take(guess); note(t, guess, "inferred_first_name", "P2"); continue; }
     const like = similarNames(names, t);
     if (like.length) { similar.push({ mention: t, matches: like }); continue; }
-    names.push({ name: t, aliases: [], emails: [], kind: "person" }); fresh.push(t); take(t);
+    if (!/\s/.test(t) && !plain.has(foldName(t))) { unnamed.push(t); continue; }
+    names.push({ name: t, aliases: [], emails: [], kind: "person" }); fresh.push(t); take(t); note(t, t, "new", "P1");
   }
-  if (similar.length) return { people: [], added: [], similar, inferred: [] };
+  if (similar.length || unnamed.length) return { people: [], added: [], similar, unnamed, inferred: [], mentions: [] };
   // Resolve all mentions before writing, so an ambiguous company cannot leave a partial registry.
   const companyNames = new Set(companies.map(m => canonicalName(names, m)).filter(Boolean));
   for (const t of fresh) addName(root, t, { kind: companyNames.has(t) ? "company" : "person" });
   for (const name of companyNames) if (!fresh.includes(name)) addName(root, name, { kind: "company" });
-  return { people, added: fresh, similar: [], inferred };
+  return { people, added: fresh, similar: [], unnamed: [], inferred, mentions: said };
 }
 
 /* ---------- the loaded set: work/loaded-contexts.json, per brain, local ---------- */
@@ -1120,8 +1133,9 @@ export function rerender(root) {
 /* ---------- memories ---------- */
 // The record. See PLAN.md. Modify and Forget are new records pointing at old ones (supersedes,
 // retracts); the file is never rewritten. effectiveMemories() resolves them for readers.
-export const MEMORY_FIELDS = ["id", "context", "at", "authors", "via", "kind", "tools", "people", "content", "source", "actions", "supersedes", "retracts", "tags", "asset", "entities", "customer", "customer_coverage", ...MEETING_FIELDS];
+export const MEMORY_FIELDS = ["id", "context", "at", "authors", "via", "kind", "tools", "people", "content", "source", "actions", "supersedes", "retracts", "tags", "asset", "entities", "entity_mentions", "customer", "customer_coverage", ...MEETING_FIELDS];
 export const KINDS = ["note", "decision", "question"];
+export const MENTION_RESOLUTIONS = ["exact", "inferred_first_name", "new", "confirmed_new"];
 export const LEGACY_KINDS = ["action"]; // retired; records written before stay valid
 const isList = (v, f) => Array.isArray(v) && v.every(f);
 const isStr = s => typeof s === "string" && s.length > 0;
@@ -1138,6 +1152,7 @@ export function validateMemory(r) {
   if (!isList(r.tools, isStr)) errs.push("tools must be a list of strings");
   if (!isList(r.people, isStr)) errs.push("people must be a list of names");
   if (r.entities !== undefined && !isList(r.entities, id => /^e_[0-9a-f]{16}$/.test(id))) errs.push("entities must be a list of stable entity IDs");
+  if (r.entity_mentions !== undefined && !isList(r.entity_mentions, x => x && isStr(x.mention) && /^e_[0-9a-f]{16}$/.test(x.entity || "") && MENTION_RESOLUTIONS.includes(x.resolution) && Object.hasOwn(NAME_RULES, x.rule || ""))) errs.push("entity_mentions must be a list of {mention, entity (stable ID), resolution, rule}");
   if (!isStr(r.content)) errs.push("content required");
   if (/[\u2013\u2014\u2015\u2212]/.test(r.content || "")) errs.push("long dash in content; use a plain hyphen");
   if (!isList(r.source, s => s && isStr(s.kind) && isStr(s.ref))) errs.push("source must be a list of {kind, ref}");
@@ -1204,7 +1219,7 @@ export function unknownTools(root, tools) {
 export function appendMemory(root, slug, options) {
   return withEntityLock(root, () => appendMemoryRecord(root, slug, prepareMeetingMemory(root, slug, options)));
 }
-function appendMemoryRecord(root, slug, { authors, via = "codex", kind = "note", tools = [], people = [], content, source = [], actions = [], supersedes = null, retracts = null, tags = [], at = null, asset, customer, customer_coverage, ...meetingFields }) {
+function appendMemoryRecord(root, slug, { authors, via = "codex", kind = "note", tools = [], people = [], mentions = [], content, source = [], actions = [], supersedes = null, retracts = null, tags = [], at = null, asset, customer, customer_coverage, ...meetingFields }) {
   const dir = join(root, "brain", "contexts", slug);
   if (!existsSync(join(dir, "context.md"))) throw new Error(`no such context: ${slug}`);
   const when = at || new Date().toISOString();
@@ -1224,6 +1239,8 @@ function appendMemoryRecord(root, slug, { authors, via = "codex", kind = "note",
     if (!mentioned.includes(entity.name)) mentioned.push(entity.name);
   }
   rec.entities = registry.filter(e => mentioned.includes(e.name)).map(e => e.id);
+  const resolved = mentions.map(x => ({ mention: x.mention, entity: registry.find(e => e.name === x.name)?.id, resolution: x.resolution, rule: x.rule })).filter(x => x.entity);
+  if (resolved.length) rec.entity_mentions = resolved;
   const errs = validateMemory(rec); if (errs.length) throw new Error(errs.join("; "));
   guardCustomerCorrection(root, slug, rec);
   const duplicate = duplicateMeetingMemory(root, rec);

@@ -132,7 +132,7 @@ test("entities: both registry files are merged on read and folded into entities.
 test("entities: 'Chris is Krzysztof Pawlak' folds the Chris entry into Krzysztof and his notes count there", () => {
   const root = brain();
   lib.writeContext(root, "pipeline", { title: "Pipeline", rule: "Deals." });
-  lib.normalisePeople(root, ["Chris"]);   // a note named Chris before anyone said who he is
+  lib.normalisePeople(root, ["Chris"], { confirmedNew: ["Chris"] });   // a note named Chris before anyone said who he is (the person kept the one word)
   lib.appendMemory(root, "pipeline", { authors: ["marta-nowak"], content: "Chris called.", people: ["Chris"] });
   const target = lib.addName(root, "Krzysztof Pawlak", { emails: ["kp@x.io"] });
   const args = { source: lib.resolveEntity(lib.readNames(root), "Chris").id, target: target.id };

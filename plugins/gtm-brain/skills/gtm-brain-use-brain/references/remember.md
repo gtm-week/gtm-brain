@@ -49,8 +49,9 @@ Each entry takes:
   it plain. If the tool answers *possibly entities, not recorded as such: "Castorama"*, do that
   now for each one that is an entity. Compile collects these names, with their kinds, into the
   context's cover, and the dashboard counts them from the text as well once they are known.
-- `new_names`: only after the tool answered that a name may be someone already known and the
-  person said it is not: the names confirmed as new. Never filled on a guess.
+- `new_names`: only after the tool held a name (it may be someone already known, or it is one
+  word nobody has) and the person said it is someone new: the names confirmed as new. Never
+  filled on a guess.
 - `tools`: the tools or slots actually used. Unknown tools produce a warning; still recorded.
 - `sources`: where it comes from, `kind:ref` (`gmail:19faef...`, `granola:<note id>`, `attio:deal/123`).
   Prefer a direct source URL returned by the connector when available (for example,
@@ -98,6 +99,15 @@ says so: *took "Maciej" as Maciej Kończal*. Pass that on only if the note could
 else; when the person says it is, `remember` again with `new_names` ["Maciej"] and the note is
 recorded for a new person (from then on "Maciej" means the new one; the teammate needs the full
 name). A first name shared by two known entities is asked about like any look-alike.
+
+A first name alone that nobody known has is never saved as a new person (rule P3 in the brain's
+README): the entry is held with *"Max" is one word and nobody known has it*. When the note or its
+source plainly says it is a company, product or team, send it in `companies` (or `new_names` and
+`add_name` with its kind) without asking. A person: ask once for the full name, all held names in
+one question (*"Max who? The full name, so the brain knows him later"*), then `remember` with the
+full name in `people`. The note keeps how each name matched and by which rule (P1-P4), and the
+person's brief shows it under *How this name was matched*: that is the answer to "who is Max, and
+why do you think so".
 
 ## Answers and corrections in Codex
 

@@ -13,6 +13,19 @@ time, with steps, are in `workflows/`.
 `strategy.md` is here from day one, waiting for `run the strategic intake`. A file with no owner
 is not stored: Codex asks what it belongs to.
 
+## How we name people
+
+Every note says who it is about. Codex matches each name by four fixed rules, and the person's page
+in `brain/entities/` shows which rule matched each spelling, when, and from which source and project.
+
+- **P1** A name, alias or email that belongs to exactly one known person, company or product is that one.
+- **P2** A first name alone ("Max") means a known person only when exactly one known person has that
+  first name; otherwise Codex asks which one.
+- **P3** A first name alone is never saved as a new person: Codex asks for the full name.
+- **P4** A name that looks like a known one is never merged on a guess: Codex asks "same as X?" first.
+
+Ask "who is Max?" and the answer names the rule, the note and where it came from.
+
 ## Inside `brain/`
 
 - `contexts/<topic>/memories.jsonl`: every note, one per line, never edited. Corrections are new notes.

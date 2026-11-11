@@ -447,6 +447,24 @@ export function entityBrief(root, name, options = {}) {
   return { ...facts, compilation, evidence, timeline, markdown, path: e._path || null };
 }
 
+/* "Who is Max, and why": how each spelling became this entity, by the rule in lib.NAME_RULES, with the
+   note's date, source and project. Notes saved before mentions were recorded say so instead of guessing. */
+const RESOLVED = { exact: "matched exactly", inferred_first_name: "taken as", new: "first saved as", confirmed_new: "saved on the person's word as" };
+function nameProvenance(facts, memories, citation, source) {
+  const ids = new Set([facts.entity.id, ...facts.entity.previous_ids]), seen = new Set(), rows = [];
+  for (const m of [...memories].sort((a, b) => Date.parse(a.at) - Date.parse(b.at))) for (const x of m.entity_mentions || []) {
+    const key = `${x.mention}|${x.resolution}`;
+    if (!ids.has(x.entity) || seen.has(key)) continue;
+    seen.add(key);
+    const project = (m.tags || []).find(t => t.startsWith("project:"))?.slice(8), from = (m.source || []).map(source).join(" · ");
+    rows.push(`- "${md(x.mention)}" ${RESOLVED[x.resolution]} ${md(facts.entity.name)}, rule ${x.rule}: ${md(lib.NAME_RULES[x.rule])} ${lib.localDateTime(m.at).slice(0, 10)}${project ? `, project ${md(project)}` : ""}${from ? `, from ${from}` : ""} ${citation(m.id)}`);
+  }
+  const out = ["\n## How this name was matched"];
+  if (facts.entity.kind === "person" && !/\s/.test(facts.entity.name.trim())) out.push(`\nKnown by a first name only (rule P3). Ask who this is and add the full name with add_name, so later notes match the right person.`);
+  out.push(rows.length ? "\n" + rows.slice(0, 8).join("\n") : "\nNot recorded: the notes about this entity were saved before GTM Brain kept how names were matched.");
+  return out;
+}
+
 function renderBrief(facts, brief, evidence, registry, scope) {
   if (scope && !facts.contexts.some(c => c.context === scope)) throw new Error(`No evidence about ${facts.entity.name} in ${scope}`);
   const all = new Map(facts.contexts.flatMap(c => c.memories).map(m => [m.id, m]));
@@ -460,6 +478,7 @@ function renderBrief(facts, brief, evidence, registry, scope) {
   if (facts.entity.references.length) out.push(`\nExternal records: ${facts.entity.references.map(source).join(" · ")}`);
   if (facts.entity.identity_sources.length) out.push(`\nIdentity evidence: ${facts.entity.identity_sources.map(source).join(" · ")}`);
   if (facts.entity.not_same.length) out.push(`\nKept separate from: ${facts.entity.not_same.map(md).join(", ")}.`);
+  if (!scope) out.push(...nameProvenance(facts, [...all.values()], citation, source));
   if (!scope) out.push("\n## Overview", brief?.overview.length ? "\n" + claims(brief.overview) : "\nNo current synthesis yet. The context evidence below preserves what was recorded and where it applies.");
   out.push("\n## By context");
   const contexts = facts.contexts.filter(c => !scope || c.context === scope);

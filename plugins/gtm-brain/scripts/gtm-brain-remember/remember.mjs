@@ -128,9 +128,9 @@ for (let i = 0; i < entries.length; i++) {
   }
   const mapped = name => e.customer && name === e.customer.entity ? customerName : name;
   const mappedCompanies = companies.map(mapped);
-  const { people, added, similar, inferred } = lib.normalisePeople(root, [...list(e.people).map(mapped), ...(e.meeting?.participants || []).map(p => p.name), ...mappedCompanies, ...(customerName ? [customerName] : []), ...(preparedAssets.has(i) ? [preparedAssets.get(i).entity] : [])], { confirmedNew: list(e.new_names).map(mapped), companies: mappedCompanies });
-  if (similar.length) {
-    held.push({ n, why: similar.map(s => `"${s.mention}" may be ${s.matches.map(x => `${x.name}${x.kind !== "person" ? ` (${x.kind})` : ""}`).join(" or ")}`).join("; "), mentions: similar.map(s => s.mention) });
+  const { people, added, similar, unnamed, inferred, mentions } = lib.normalisePeople(root, [...list(e.people).map(mapped), ...(e.meeting?.participants || []).map(p => p.name), ...mappedCompanies, ...(customerName ? [customerName] : []), ...(preparedAssets.has(i) ? [preparedAssets.get(i).entity] : [])], { confirmedNew: list(e.new_names).map(mapped), companies: mappedCompanies, trusted: [...(customerName ? [customerName] : []), ...(preparedAssets.has(i) ? [preparedAssets.get(i).entity] : [])] });
+  if (similar.length || unnamed.length) {
+    held.push({ n, why: [...similar.map(s => `"${s.mention}" may be ${s.matches.map(x => `${x.name}${x.kind !== "person" ? ` (${x.kind})` : ""}`).join(" or ")}`), ...unnamed.map(u => `"${u}" is one word and nobody known has it (rule P3: a first name alone is never a new person)`)].join("; "), mentions: [...similar.map(s => s.mention), ...unnamed], unnamed });
     continue;
   }
   if (e.customer) {
@@ -147,7 +147,7 @@ for (let i = 0; i < entries.length; i++) {
     ({ rec, warnings, alreadyRecorded } = lib.appendMemory(root, ctx, {
       ...lib.meetingMetadata(e),
       asset: preparedAssets.get(i),
-      authors, via: e.via || opt.via || "codex", kind: e.kind || "note", tools: list(e.tools), people, content: e.content,
+      authors, via: e.via || opt.via || "codex", kind: e.kind || "note", tools: list(e.tools), people, mentions, content: e.content,
       source: withChat(lib.parseSources(e.sources)),
       actions: list(e.actions).map(a => { const [tool, action, ...ref] = a.split(":"); return ref.length ? { tool, action, ref: ref.join(":") } : { tool, action }; }),
       supersedes: e.supersedes || null, retracts: e.retracts || null, tags: [...new Set([...list(e.tags), ...(project ? [`project:${project}`] : [])])],
@@ -169,7 +169,7 @@ for (let i = 0; i < entries.length; i++) {
     const kind = names.find(x => x.name === a)?.kind || "person";
     lines.push(`${at(n)}new ${kind} in entities/: ${a}.${kind === "person" ? " If it is not a person, set its kind with add_name (organization, product; company/team are organization subtypes)." : ""}`);
   }
-  for (const inf of inferred) lines.push(`${at(n)}took "${inf.mention}" as ${inf.name} (first name of one known entity). If it is someone else, say so: remember again with new_names ["${inf.mention}"].`);
+  for (const inf of inferred) lines.push(`${at(n)}took "${inf.mention}" as ${inf.name} (rule P2: the one known person with that first name). If it is someone else, say so: remember again with new_names ["${inf.mention}"].`);
   const missed = lib.candidateEntities(e.content, people, names);
   if (missed.length) lines.push(`${at(n)}names in this note not yet registered as entities: ${missed.map(x => `"${x}"`).join(", ")}. For each that is a person, organization or product, call add_name with its kind now (company and team are organization subtypes; no need to ask when it is plain from the note); the note counts for it from then on. Skip the rest.`);
   // The last step outcome closes onboarding in the same commit: no separate marker to forget.
@@ -183,7 +183,8 @@ for (let i = 0; i < entries.length; i++) {
 }
 
 /* the look-alike names, in one place, so only the entries that need an answer are re-sent */
-const holdReport = () => `${batched ? `not kept (${held.length} of ${entries.length})` : "not remembered yet"}: ${held.map(h => `${at(h.n)}${h.why}`).join(batched ? "\n" : "; ")}. Ask the person in one line ("same as X?"). Yes: add_name with that name and aliases [the spelling used here], then remember ${batched ? "the held-back entries" : "again"}. No: remember again with new_names [${held.flatMap(h => h.mentions).map(m => `"${m}"`).join(", ")}]. Never merge on a guess.`;
+const holdReport = () => { const loose = held.flatMap(h => h.unnamed || []), alike = held.flatMap(h => h.mentions.filter(m => !(h.unnamed || []).includes(m)));
+  return `${batched ? `not kept (${held.length} of ${entries.length})` : "not remembered yet"}: ${held.map(h => `${at(h.n)}${h.why}`).join(batched ? "\n" : "; ")}. Ask the person once, all names in one question.${alike.length ? ` For ${alike.map(m => `"${m}"`).join(", ")} ("same as X?"): yes, add_name with that name and aliases [the spelling used here]; no, list it in new_names.` : ""}${loose.length ? ` For ${loose.map(m => `"${m}"`).join(", ")}: if the note or source plainly says it is a company, product or team, do not ask; send it in companies, or in new_names with add_name for its kind. A person: ask for the full name ("Max who? The full name, so the brain knows him later") and remember again with that full name in people; only if the person insists on the one word, list it in new_names.` : ""} Then remember ${batched ? "the held-back entries" : "again"}. Never merge or create on a guess.`; };
 
 if (!kept.length) { console.error(held.length ? holdReport() : lines.join("\n")); process.exit(2); }
 
