@@ -104,8 +104,11 @@ const candidates = () => [...plugins.values()].filter(p => marketplaceOnly.inclu
 function findPlugin(tool) {
   const k = key(tool), nk = norm(k), pool = candidates();
   if (!nk) return { plugin: null, also: [] };
-  const exactId = pool.find(p => norm(p.id) === nk); if (exactId) return { plugin: exactId, also: [] };
+  const exactId = pool.find(p => norm(p.id) === nk);
   const exactName = pool.filter(p => p.display && norm(p.display) === nk);
+  // An id wins unless another plugin carries the tool's exact name: "Luma" is the events app (app-...),
+  // not the plugin with id luma named "Luma AI" (Artur's tools, 2026-11-11).
+  if (exactId && (norm(exactId.display) === nk || !exactName.length)) return { plugin: exactId, also: [] };
   if (exactName.length) { const best = prefer(exactName, nk); return { plugin: best, also: exactName.filter(p => p !== best) }; }
   if (k in SHORT) { const p = SHORT[k] && pool.find(x => x.id === SHORT[k]); return { plugin: p || null, also: [] }; }
   // the tool name as the first words of a display name: "Apollo" -> "Apollo.io", "Todoist" -> "Todoist: To Do List"
@@ -123,7 +126,9 @@ const prefer = (list, nk) => [...list].sort((a, b) => (b.state === "enabled") - 
 const previous = Object.values(state);
 /* Remote MCP servers added to Codex by hand (ZYNT, Pocket): not plugins, so `codex plugin list` never names them.
    Local command servers are left out: those are developer tools, not a GTM person's. */
-const DEV = new Set(["github", "vercel", "supabase", "data-analytics", "openai-developers"]);
+// Not a GTM person's tools, so never offered for admin.md: developer plugins and OpenAI's own helpers
+// (the catalog cache often misses the latter, so their install policy cannot tell).
+const DEV = new Set(["github", "vercel", "supabase", "data-analytics", "openai-developers", "openai-templates", "sites", "plugin-management", "work-pets", "defense-factory"]);
 const mcpServers = (() => {
   let text; try { text = readFileSync(join(codexHome, "config.toml"), "utf8"); } catch { return []; }
   return [...text.matchAll(/^\[mcp_servers\.(?:"([^"]+)"|([A-Za-z0-9_-]+))\]\s*\n((?:^(?!\[).*\n?)*)/gm)]

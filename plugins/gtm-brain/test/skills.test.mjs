@@ -325,9 +325,9 @@ test("the cover carries the names it is about, with kinds; action is no longer a
 
 test("connect matches tools against the live catalog: by id, by display name, short forms, prefix; never a table", () => {
   const cr = mkdtempSync(join(tmpdir(), "gtm-brain-connect-")); execFileSync("git", ["init", "-q", cr]);
-  run(cr, "setup", "setup.sh", "--company", "X", "--one-liner", "y", "--owner", "A B <a@b.c>", "--tools", "Gmail, Wispr Flow, Granola, Calendar, Apollo, Todoist, Fax machine, Salesforce");
+  run(cr, "setup", "setup.sh", "--company", "X", "--one-liner", "y", "--owner", "A B <a@b.c>", "--tools", "Gmail, Wispr Flow, Granola, Calendar, Apollo, Todoist, Fax machine, Salesforce, Luma");
   const bin = mkdtempSync(join(tmpdir(), "gtm-brain-cbin-")); const cat = mkdtempSync(join(tmpdir(), "gtm-brain-cat-"));
-  writeFileSync(join(bin, "codex"), `#!/bin/sh\ncat <<'L'\nMarketplace \`openai-bundled\`\nbrowser@openai-bundled            installed, enabled  1.0  x\nMarketplace \`openai-curated-remote\`\ngmail@openai-curated-remote       installed, enabled  0.1.10  x\ngranola@openai-curated-remote     not installed       1.0.0   x\nlinear@openai-curated-remote      installed, enabled  5.0.1   x\ngithub@openai-curated-remote      installed, enabled  0.1     x\nplugin-management@openai-curated-remote installed, enabled 0.1 x\nL\n`); execFileSync("chmod", ["755", join(bin, "codex")]);
+  writeFileSync(join(bin, "codex"), `#!/bin/sh\ncat <<'L'\nMarketplace \`openai-bundled\`\nbrowser@openai-bundled            installed, enabled  1.0  x\nMarketplace \`openai-curated-remote\`\ngmail@openai-curated-remote       installed, enabled  0.1.10  x\ngranola@openai-curated-remote     not installed       1.0.0   x\nlinear@openai-curated-remote      installed, enabled  5.0.1   x\ngithub@openai-curated-remote      installed, enabled  0.1     x\nplugin-management@openai-curated-remote installed, enabled 0.1 x\nwork-pets@openai-curated-remote installed, enabled 0.1 x\nsites@openai-curated-remote installed, enabled 0.1 x\nopenai-templates@openai-curated-remote installed, enabled 0.1 x\nL\n`); execFileSync("chmod", ["755", join(bin, "codex")]);
   writeFileSync(join(cat, "abc.json"), JSON.stringify({ schema_version: 1, fetched_at: "2026-09-05T09:21:24Z", plugins: [
     { name: "gmail", installation_policy: "AVAILABLE", release: { display_name: "Gmail" } }, { name: "granola", installation_policy: "AVAILABLE", release: { display_name: "Granola" } },
     { name: "app-6a5ae9736be0819199d06d61ac171080", installation_policy: "AVAILABLE", release: { display_name: "Wispr Flow" } },
@@ -336,7 +336,8 @@ test("connect matches tools against the live catalog: by id, by display name, sh
     { name: "app-3", installation_policy: "AVAILABLE", release: { display_name: "Todoist: To Do List & Calendar" } }, { name: "app-4", installation_policy: "AVAILABLE", release: { display_name: "Todoist Helper" } },
     { name: "linear", installation_policy: "AVAILABLE", release: { display_name: "Linear" } }, { name: "app-2", installation_policy: "AVAILABLE", release: { display_name: "LINEAR" } },
     { name: "salesforce", installation_policy: "NOT_AVAILABLE", status: "DISABLED_BY_ADMIN", release: { display_name: "Salesforce" } },
-    { name: "plugin-management", installation_policy: "INSTALLED_BY_DEFAULT", release: { display_name: "Plugin Management" } }, { name: "github", installation_policy: "AVAILABLE", release: { display_name: "GitHub" } } ] }));
+    { name: "plugin-management", installation_policy: "INSTALLED_BY_DEFAULT", release: { display_name: "Plugin Management" } }, { name: "github", installation_policy: "AVAILABLE", release: { display_name: "GitHub" } },
+    { name: "luma", installation_policy: "AVAILABLE", release: { display_name: "Luma AI" } }, { name: "app-5", installation_policy: "AVAILABLE", release: { display_name: "Luma" } } ] }));
   const out = execFileSync(process.execPath, [`${P}/scripts/gtm-brain-connect/connect.mjs`, ".", "--check"], { cwd: cr, encoding: "utf8", env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, GTM_BRAIN_CATALOG_DIR: cat } });
   assert.ok(out.includes(`catalog as of ${lib.localDateTime("2026-09-05T09:21:24Z")}`));
   assert.match(out, /- Gmail\s+installed/); assert.match(out, /- Granola\s+available, not installed/);
@@ -344,8 +345,9 @@ test("connect matches tools against the live catalog: by id, by display name, sh
   assert.match(out, /- Calendar\s+available, not installed[^\n]*plugin "Google Calendar"/, "a short form");
   assert.match(out, /- Apollo\s+available, not installed[^\n]*plugin "Apollo.io"\n\s+install: [^\n]*\n- Todoist/, "an exact id wins outright, nothing else named");
   assert.match(out, /- Todoist\s+available, not installed[^\n]*plugin "Todoist: To Do List & Calendar"\n[^\n]*\n\s+also matches: "Todoist Helper" \(app-4\)/, "prefix match: the app whose own name is the tool first, the rest named");
+  assert.match(out, /- Luma\s+available, not installed\s+install: codex plugin add app-5@openai-curated-remote/, "the plugin named exactly Luma beats the id luma named Luma AI (2026-11-11)");
   assert.match(out, /- Fax machine\s+no official plugin/); assert.match(out, /- Salesforce\s+not available \(disabled by your workspace admin\)/);
-  assert.match(out, /installed in Codex but not in admin.md tools: Linear\./, "defaults and developer plugins are not offered");
+  assert.match(out, /installed in Codex but not in admin.md tools: Linear\./, "defaults, developer plugins and OpenAI's own helpers (Work Pets, Sites, Templates) are not offered");
   const st = JSON.parse(readFileSync(join(cr, "work", "tools.json"), "utf8"));
   assert.equal(st["wispr flow"].plugin, "app-6a5ae9736be0819199d06d61ac171080"); assert.equal(st["wispr flow"].display, "Wispr Flow"); assert.equal(st.gmail.status, "installed");
   // the read test stands, then `codex plugin list` fails: the last known state is kept and said to be old, nothing becomes "not installed"
