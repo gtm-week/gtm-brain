@@ -65,6 +65,9 @@ test("a new project goes to projects/<slug>/ by default, creating projects/ the 
   const out = execFileSync(process.execPath, [`${P}/skills/gtm-brain-project/project.mjs`, root, "--link", join(root, "projects", "berlin-event-2026"), "--create", "--slug", "berlin-event-2026", "--title", "Berlin event", "--by", "artur-wala"], { cwd: root, env, encoding: "utf8" });
   assert.match(out, /Created Berlin event at .*projects\/berlin-event-2026/);
   assert.ok(existsSync(join(root, "projects", "berlin-event-2026", "AGENTS.md")));
+  // its README.md first line is what every chat start lists for it
+  assert.equal(readFileSync(join(root, "projects", "berlin-event-2026", "README.md"), "utf8"), "# Berlin event\n");
+  assert.match(start(root), /\n  projects\/berlin-event-2026\/ - Berlin event/);
 });
 
 test("an unedited WHERE.md from before the rename gets the new wording at the next chat start; an edited one keeps its own", () => {
@@ -76,4 +79,14 @@ test("an unedited WHERE.md from before the rename gets the new wording at the ne
   const mine = old.replace("| Brand: design system, fonts, brand files | `brand/` |", "| Brand | `brand/` and `fonts/` |");
   writeFileSync(join(root, "WHERE.md"), mine); start(root);
   assert.equal(readFileSync(join(root, "WHERE.md"), "utf8"), mine);
+});
+
+test("a WHERE.md edited in a chat and not saved is kept by the next chat start's maintenance, as written", () => {
+  const root = brain();
+  const mine = readFileSync(join(root, "WHERE.md"), "utf8").replace("| Brand: design system, fonts, brand files | `brand/` |", "| Brand: design system, fonts, brand files | `brand/` |\n| Anything for a client | `clients/<client>/` |");
+  writeFileSync(join(root, "WHERE.md"), mine);
+  start(root); execFileSync(process.execPath, [`${P}/session/session-maintenance.mjs`, root, "--run"], { env });
+  assert.equal(readFileSync(join(root, "WHERE.md"), "utf8"), mine);
+  assert.equal(execFileSync("git", ["-C", root, "status", "--porcelain", "--", "WHERE.md"], { encoding: "utf8" }), "");
+  assert.match(execFileSync("git", ["-C", root, "log", "--format=%s"], { encoding: "utf8" }), /kept: edited by hand outside Codex/);
 });

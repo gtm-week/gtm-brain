@@ -261,18 +261,34 @@ test("projects cannot occupy internal storage, including symlink aliases", () =>
   assert.ok(!existsSync(join(other, "website")));
 });
 
-test("a sub-folder project is excluded locally (.git/info/exclude), never in the shared .gitignore; the entry owns what link added", () => {
+test("a sub-folder project is shared with the team: its files in the brain's git, only its pointer kept out locally, never in .gitignore", () => {
   const root = realpathSync(brain());
-  const sub = join(root, "projects", "seo");
+  const sub = join(root, "projects", "seo"); mkdirSync(sub, { recursive: true }); writeFileSync(join(sub, "brief.md"), "# SEO brief\n");
   const gitignoreBefore = readFileSync(join(root, ".gitignore"), "utf8");
   const out = project(root, "--link", sub, "--slug", "seo");
-  assert.match(out, / · excluded from the brain's git on this machine \(a personal path\)/);
-  assert.match(readFileSync(join(root, ".git", "info", "exclude"), "utf8"), /^\/projects\/seo\/$/m);
+  assert.match(out, / · inside the brain \(its rules are inherited; its files are shared with the team, its pointer stays on this machine\)/);
+  const exclude = readFileSync(join(root, ".git", "info", "exclude"), "utf8");
+  assert.match(exclude, /^\/projects\/seo\/AGENTS\.md$/m); assert.match(exclude, /^\/projects\/seo\/CLAUDE\.md$/m);
+  assert.doesNotMatch(exclude, /^\/projects\/seo\/$/m, "the folder itself is the team's");
   assert.equal(readFileSync(join(root, ".gitignore"), "utf8"), gitignoreBefore, "the shared .gitignore is never touched by this");
-  assert.equal(execFileSync("git", ["-C", root, "status", "--porcelain", "--", "projects/seo"], { encoding: "utf8" }).trim(), "", "the brain's git sees nothing there");
-  assert.equal(lib.readProjects(root).find(p => p.slug === "seo").excluded, true, "link added the line, so the entry owns it");
+  assert.equal(execFileSync("git", ["-C", root, "ls-files", "--", "projects/seo"], { encoding: "utf8" }).trim(), "projects/seo/brief.md", "committed; the pointer is not");
+  assert.equal(execFileSync("git", ["-C", root, "status", "--porcelain", "--", "projects/seo"], { encoding: "utf8" }).trim(), "", "nothing left uncommitted");
   project(root, "--unlink", "seo");
-  assert.doesNotMatch(readFileSync(join(root, ".git", "info", "exclude"), "utf8"), /^\/projects\/seo\/$/m, "the line is gone after unlink");
+  assert.doesNotMatch(readFileSync(join(root, ".git", "info", "exclude"), "utf8"), /projects\/seo/, "the lines are gone after unlink");
+});
+
+test("a project folder an earlier version kept out of git whole is shared at the next chat start, its pointer still local", () => {
+  const root = realpathSync(brain());
+  const sub = join(root, "projects", "berlin"); mkdirSync(sub, { recursive: true }); writeFileSync(join(sub, "speakers.md"), "Florian\n");
+  project(root, "--link", sub, "--slug", "berlin");
+  // what 0.33.8 wrote: the whole folder excluded
+  writeFileSync(join(root, ".git", "info", "exclude"), "/projects/berlin/\n");
+  lib.writeProjects(root, lib.readProjects(root).map(p => ({ ...p, excluded: true, exclusion: "/projects/berlin/" })));
+  execFileSync("git", ["-C", root, "rm", "-rq", "--cached", "projects/berlin"]); execFileSync("git", ["-C", root, "commit", "-qm", "as 0.33.8 left it"]);
+  assert.match(project(root, "--share"), /shared with the team: projects\/berlin/);
+  assert.equal(execFileSync("git", ["-C", root, "ls-files", "--", "projects/berlin"], { encoding: "utf8" }).trim(), "projects/berlin/speakers.md");
+  assert.match(readFileSync(join(root, ".git", "info", "exclude"), "utf8"), /^\/projects\/berlin\/AGENTS\.md$/m);
+  assert.equal(project(root, "--share").trim(), "", "once is enough");
 });
 
 test("a hand-written exclude line was not link's to add, so unlink leaves it in place", () => {
@@ -282,7 +298,7 @@ test("a hand-written exclude line was not link's to add, so unlink leaves it in 
   writeFileSync(join(root, ".git", "info", "exclude"), "projects/private/\n");
   const out = project(root, "--link", sub, "--slug", "private");
   assert.doesNotMatch(out, /excluded from the brain's git/, "the line was already there: link did not add it");
-  assert.equal(lib.readProjects(root).find(p => p.slug === "private").excluded, false);
+  assert.doesNotMatch(lib.readProjects(root).find(p => p.slug === "private").exclusion || "", /^projects\/private\/$/m, "the person's own line is not the entry's");
   project(root, "--unlink", "private");
   assert.match(readFileSync(join(root, ".git", "info", "exclude"), "utf8"), /^projects\/private\/$/m, "the hand-written line survives unlink");
 });

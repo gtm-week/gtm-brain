@@ -375,7 +375,9 @@ as the sixth onboarding step. Completed v1 onboarding resumes only this new choi
 *"create a project for the curriculum at ~/curriculum"*, *"link this folder"*, *"unlink this project"*, *"list projects"*
 
 `/gtm-brain-project` creates `<brain-root>/projects/<project-slug>/` by default, the projects
-folder [WHERE.md](#wheremd) names. It reuses the known brain and name, combines the destination and capture consent
+folder [WHERE.md](#wheremd) names. A project inside the brain is the team's: its files go in the brain's git, and only
+its two pointer files (`AGENTS.md`, `CLAUDE.md`, which name this machine's brain path) stay out, in
+`.git/info/exclude`. A folder an earlier version kept out of git whole is shared at the next chat start. It reuses the known brain and name, combines the destination and capture consent
 in one question when needed, and handles relevant existing context in the background. No
 context selection or matching context creation is needed. An explicit alternative location
 is respected. The tool uses `create: true` to refuse occupied destinations and protects the

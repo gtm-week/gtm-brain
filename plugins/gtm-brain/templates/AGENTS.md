@@ -107,7 +107,9 @@ file where a row says and name the row in one short clause. The opening lines ca
 the projects under `projects/`. Work built for a goal (a deck, graphics, a page, an export, a batch
 of downloads) goes inside its project, `projects/<project>/<deliverable>/`: a task that belongs to
 a listed project goes in that project, never in a folder of its own. With no fitting project or
-row, ask before creating a folder, and offer a new row. Never put a deliverable in `work/` or a
+row, ask before creating a folder, and offer a new row. After creating, editing, moving or
+deleting files in the brain yourself (a graphic, a brief, `WHERE.md`), call `save` once when the
+task is done, so the team gets them. Never put a deliverable in `work/` or a
 new folder at the brain root. Only what is worth keeping from a raw source becomes a document or
 notes. A playbook
 is a workflow (gtm-brain-workflow): steps that play out over time, started and tracked as a run.

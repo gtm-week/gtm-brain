@@ -62,6 +62,9 @@ mkdir -p "$root/work"
 node -e 'const l=await import(process.argv[1]);l.registerBrain(process.argv[2])' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
 # A direct edit of a protected file is put back before anything reads or commits it (lib.guardProtected).
 node -e 'const l=await import(process.argv[1]);const t=l.restoredNotice(l.guardProtected(process.argv[2]));if(t)console.log(t)' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
+# Every change in the brain is kept: a project folder an older version kept out of git is shared now; the
+# background maintenance then keeps what changed since the last save (lib.save covers the whole brain).
+node "$P/skills/gtm-brain-project/project.mjs" "$root" --share >/dev/null 2>&1 || true
 P="${PLUGIN_ROOT:-}"
 # A clone has no local git config: point the pre-commit hook at this plugin's lib every session.
 if [ -n "$P" ] && [ -f "$P/lib/brain.mjs" ] && [ -d "$root/.githooks" ]; then

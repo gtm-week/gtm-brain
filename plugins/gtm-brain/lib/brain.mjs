@@ -14,7 +14,6 @@ import { spawnSync, execFileSync, execFile, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { parseOntology } from "./ontology/ontology.mjs";
 import { validateAsset } from './assets.mjs';
-import { savePaths as documentSavePaths } from "./documents.mjs";
 import { rankEntityCandidates } from './entity-search.mjs';
 export { rankEntityCandidates } from './entity-search.mjs';
 import { checkSchema } from "./ontology/validation.mjs";
@@ -818,7 +817,8 @@ export const NOT_COMMITTED_YET = "written to disk, not committed yet: say save t
 /* What a save covers: the brain and the plugin-owned files, never work/. */
 export const BRAIN_PATHS = ["brain", "AGENTS.md", "CLAUDE.md", ".githooks", ".gitignore", ".gitattributes", ".agents"];
 /* Everything save keeps: the engine's paths, the root README, and the documents with their files (lib/documents.mjs). */
-export function savePathsFor(root) { return [...BRAIN_PATHS, "README.md", "WHERE.md", ...documentSavePaths(root)].filter(p => existsSync(join(root, p))); }
+/* Every change in the brain folder: what .gitignore keeps out (work/, .env) and a project's local pointer stay out. */
+export function savePathsFor(root) { return [".", "brain"].filter(p => existsSync(join(root, p))); }
 /* Every writer calls this once after writing: everything written is kept at once, one commit per
    change. The message is also the activity line the dashboard shows. GTM_BRAIN_NO_COMMIT (tests,
    dry runs) turns committing off; `always` lets save ignore it. */

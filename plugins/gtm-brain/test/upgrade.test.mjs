@@ -318,7 +318,7 @@ test("the rules say WHERE.md decides where work output goes, inside its project"
   assert.match(rules, /Never put a deliverable in `work\/` or a new folder at the brain root/);
 });
 
-test("the session hook refreshes a README a release wrote, commits only it, and leaves an edited one alone", t => {
+test("the session hook refreshes a README a release wrote in a commit of its own, and leaves an edited one alone", t => {
   const old = readFileSync(join(plugin, "templates/legacy/readme/0.31.0.md"), "utf8").replaceAll("{{COMPANY}}", "Upgrade Co");
   const target = readFileSync(join(plugin, "templates/README.md"), "utf8").replaceAll("{{COMPANY}}", "Upgrade Co");
   const f = fixture(t), git = (...a) => spawnSync("git", ["-C", f.root, ...a], { encoding: "utf8" }).stdout;
@@ -328,7 +328,7 @@ test("the session hook refreshes a README a release wrote, commits only it, and 
   sessionHook(f, { GTM_BRAIN_NO_COMMIT: "" });
   assert.equal(readFileSync(join(f.root, "README.md"), "utf8"), target);
   assert.deepEqual(git("show", "--name-only", "--format=", "HEAD").trim().split("\n"), ["README.md"]);
-  assert.match(git("status", "--porcelain"), /pricing\.md/);
+  assert.match(git("status", "--porcelain"), /pricing\.md/, "the person's own file is the maintenance's to keep, in its own commit");
 
   const edited = fixture(t); writeFileSync(join(edited.root, "README.md"), old + "\nOur own note.\n");
   sessionHook(edited);
