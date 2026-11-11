@@ -882,7 +882,7 @@ export function unsavedChanges(root, paths = savePathsFor(root)) {
    said while the note reads "kept and shared". origin when there is one, else the first remote. */
 export const PUSH = ["push", "-q", "-u"];
 export const pushRemote = list => { const r = String(list || "").split("\n").map(x => x.trim()).filter(Boolean); return r.includes("origin") ? "origin" : r[0] || ""; };
-export const largeNote = large => `Too big for git, not kept (over ${LARGE_FILE_MB} MB): ${large.map(f => `${f.path} (${Math.round(f.size / 1048576)} MB)`).join(", ")}. Offer to move each to the shared drive (Google Drive) and link it from its project's README.md, as WHERE.md says; delete the local copy only after the person says yes and the upload is verified.`;
+export const largeNote = large => `Too big for git, not kept (over ${LARGE_FILE_MB} MB): ${large.map(f => `${f.path} (${Math.round(f.size / 1048576)} MB)`).join(", ")}. Offer to move each to the shared drive (Google Drive) and link it from its project's README.md, as WHERE.md says; delete the local copy only after the person says yes and the upload is verified. If Google Drive is not connected in this Codex, offer to connect it first (connect my tools); if they decline, the file stays on this computer only, and say once that teammates will not get it.`;
 /* The person's save: commit what unsavedChanges lists, push when there is a remote. */
 export function save(root, message, { covers = false } = {}) {
   if (!covers && existsSync(join(root, "work", "admin.proposed.md"))) return { ok: false, note: "a change to brain/admin.md is waiting for APPROVE; ask for APPROVE or a drop, then save" };

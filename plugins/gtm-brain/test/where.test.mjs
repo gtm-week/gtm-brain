@@ -104,6 +104,7 @@ test("a video over 25 MB is never committed: save keeps the rest and names it, t
   assert.match(lib.save(root, "again").note, /^nothing else to save\nToo big for git/);
   const out = start(root);
   assert.match(out, /Offer to move each to the shared drive \(Google Drive\) and link it from its project's README\.md/);
+  assert.match(out, /If Google Drive is not connected in this Codex, offer to connect it first \(connect my tools\); if they decline, the file stays on this computer only/);
   assert.match(out, /Name folders and files in lowercase words joined by hyphens/);
   assert.match(out, /\n  7\. Video, audio, recordings, any file over 25 MB: the shared drive/);
 });
