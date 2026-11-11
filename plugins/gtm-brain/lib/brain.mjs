@@ -817,8 +817,16 @@ export const NOT_COMMITTED_YET = "written to disk, not committed yet: say save t
 /* What a save covers: the brain and the plugin-owned files, never work/. */
 export const BRAIN_PATHS = ["brain", "AGENTS.md", "CLAUDE.md", ".githooks", ".gitignore", ".gitattributes", ".agents"];
 /* Everything save keeps: the engine's paths, the root README, and the documents with their files (lib/documents.mjs). */
-/* Every change in the brain folder: what .gitignore keeps out (work/, .env) and a project's local pointer stay out. */
-export function savePathsFor(root) { return [".", "brain"].filter(p => existsSync(join(root, p))); }
+/* Files too big for git (videos, recordings, renders; GitHub refuses a file over 100 MB): never committed. They
+   belong on the shared drive, linked from the brain (WHERE.md); save and the chat start name them. */
+export const LARGE_FILE_MB = 25;
+export function largeUnsaved(root, limit = LARGE_FILE_MB * 1024 * 1024) {
+  let out = ""; try { out = execFileSync("git", ["--no-optional-locks", "-C", root, "ls-files", "-z", "--others", "--modified", "--exclude-standard"], { encoding: "utf8", stdio: "pipe", maxBuffer: 64 << 20 }); } catch { return []; }
+  return [...new Set(out.split("\0").filter(Boolean))].map(path => { try { return { path, size: statSync(join(root, path)).size }; } catch { return null; } }).filter(f => f && f.size > limit);
+}
+/* Every change in the brain folder: what .gitignore keeps out (work/, .env), a project's local pointer and a file
+   too big for git stay out. */
+export function savePathsFor(root) { return [...[".", "brain"].filter(p => existsSync(join(root, p))), ...largeUnsaved(root).map(f => `:(exclude,literal)${f.path}`)]; }
 /* Every writer calls this once after writing: everything written is kept at once, one commit per
    change. The message is also the activity line the dashboard shows. GTM_BRAIN_NO_COMMIT (tests,
    dry runs) turns committing off; `always` lets save ignore it. */
@@ -834,7 +842,8 @@ export function commit(root, paths, message, { always = false, push = true } = {
   // moment: wait for it rather than fail the note. Short waits, a few times, then give up.
   const git = (...a) => { for (let i = 0; ; i++) { try { return execFileSync("git", ["-C", root, ...a], { stdio: "pipe", encoding: "utf8" }); } catch (e) { if (i < 8 && /index\.lock|Unable to create .*\.lock/i.test(String(e.stderr || e.message))) { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250); continue; } throw e; } } };
   try {
-    paths = paths.filter(p => existsSync(join(root, p)) || git("ls-files", "--", p).trim());
+    paths = paths.filter(p => p.startsWith(":(") || existsSync(join(root, p)) || git("ls-files", "--", p).trim());
+    if (!paths.some(p => !p.startsWith(":("))) return { ok: true, note: "nothing to commit" };
     if (!paths.length) return { ok: true, note: "nothing to commit" };
     git("add", "--", ...paths);
     if (!git("diff", "--cached", "--name-only", "--", ...paths).trim()) return { ok: true, note: "nothing to commit" };
@@ -866,13 +875,14 @@ export const COVER_PATHS = [":(glob)brain/contexts/*/context.md"];
 /* what git would commit on save */
 export function unsavedChanges(root, paths = savePathsFor(root)) {
   paths = paths.filter(p => p.startsWith(":(") || existsSync(join(root, p)));
-  try { return execFileSync("git", ['--no-optional-locks', "-C", root, "status", "--short", "--", ...paths], { encoding: "utf8", stdio: "pipe" }).split("\n").filter(Boolean).map(l => ({ state: l.slice(0, 2).trim() || "M", path: l.slice(3) })); } catch { return []; }
+  try { return execFileSync("git", ['--no-optional-locks', "-C", root, "status", "--short", "--untracked-files=all", "--", ...paths], { encoding: "utf8", stdio: "pipe" }).split("\n").filter(Boolean).map(l => ({ state: l.slice(0, 2).trim() || "M", path: l.slice(3) })); } catch { return []; }
 }
 /* Every push names its remote and branch and sets the upstream: a remote the person added by hand
    (git remote add, no -u) has none, and a bare "git push" then fails in the background with nothing
    said while the note reads "kept and shared". origin when there is one, else the first remote. */
 export const PUSH = ["push", "-q", "-u"];
 export const pushRemote = list => { const r = String(list || "").split("\n").map(x => x.trim()).filter(Boolean); return r.includes("origin") ? "origin" : r[0] || ""; };
+export const largeNote = large => `Too big for git, not kept (over ${LARGE_FILE_MB} MB): ${large.map(f => `${f.path} (${Math.round(f.size / 1048576)} MB)`).join(", ")}. Offer to move each to the shared drive (Google Drive) and link it from its project's README.md, as WHERE.md says; delete the local copy only after the person says yes and the upload is verified.`;
 /* The person's save: commit what unsavedChanges lists, push when there is a remote. */
 export function save(root, message, { covers = false } = {}) {
   if (!covers && existsSync(join(root, "work", "admin.proposed.md"))) return { ok: false, note: "a change to brain/admin.md is waiting for APPROVE; ask for APPROVE or a drop, then save" };
@@ -880,7 +890,7 @@ export function save(root, message, { covers = false } = {}) {
   if (!covers) { const back = restoredNotice(guardProtected(root)); if (back) logActivity(root, "save", back.split(".")[0]); }
   const paths = covers ? COVER_PATHS : savePathsFor(root);
   const files = unsavedChanges(root, paths);
-  if (!files.length) return { ok: true, note: covers ? "nothing to save: no cover changed" : "nothing to save: everything is committed", files };
+  if (!files.length) { const large = covers ? [] : largeUnsaved(root); return { ok: true, note: covers ? "nothing to save: no cover changed" : large.length ? `nothing else to save\n${largeNote(large)}` : "nothing to save: everything is committed", files, large }; }
   // save pushes in the foreground below; a background push from commit would race it for the ref.
   const r = commit(root, paths, String(message || "save").split("\n")[0].slice(0, 120), { always: true, push: false });
   if (!r.ok) return { ok: false, note: r.note, files };
@@ -890,7 +900,8 @@ export function save(root, message, { covers = false } = {}) {
   try { const remote = pushRemote(git("remote")); if (remote) { execFileSync("git", ["-C", root, ...PUSH, remote, "HEAD"], { stdio: "pipe", timeout: 30000 }); pushed = `pushed to ${remote}`; } }
   catch (e) { pushed = `commit is local; push failed: ${String(e.stderr || e.message).trim().split("\n")[0].slice(0, 160)}`; }
   logActivity(root, "save", `saved ${hash}: ${files.length} file(s), ${pushed}`);
-  return { ok: true, note: `saved ${hash}: ${files.length} file(s)\n${files.map(f => `${f.state} ${f.path}`).join("\n")}\n${pushed}`, hash, files, pushed };
+  const large = largeUnsaved(root), left = large.length ? `\n${largeNote(large)}` : "";
+  return { ok: true, note: `saved ${hash}: ${files.length} file(s)\n${files.map(f => `${f.state} ${f.path}`).join("\n")}\n${pushed}${left}`, hash, files, pushed, large };
 }
 /* ---------- the protected files, without a write gate ----------
    brain/admin.md and brain/ontology.ossie.json change only through APPROVE (approve.mjs commits at once),

@@ -2,7 +2,7 @@
 // Run: node --test plugins/gtm-brain/test/where.test.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, realpathSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, realpathSync, truncateSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
@@ -89,4 +89,21 @@ test("a WHERE.md edited in a chat and not saved is kept by the next chat start's
   assert.equal(readFileSync(join(root, "WHERE.md"), "utf8"), mine);
   assert.equal(execFileSync("git", ["-C", root, "status", "--porcelain", "--", "WHERE.md"], { encoding: "utf8" }), "");
   assert.match(execFileSync("git", ["-C", root, "log", "--format=%s"], { encoding: "utf8" }), /kept: edited by hand outside Codex/);
+});
+
+test("a video over 25 MB is never committed: save keeps the rest and names it, the chat start offers the shared drive (Artur, 2026-11-10: 10 GB of video)", async () => {
+  const root = brain(); const lib = await import(`${P}/lib/brain.mjs`);
+  const dir = join(root, "projects", "berlin-event-2026", "sources"); mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, "Keynote Recording.mov"), ""); truncateSync(join(dir, "Keynote Recording.mov"), 30 * 1024 * 1024);
+  writeFileSync(join(dir, "agenda.md"), "# Agenda\n");
+  const r = lib.save(root, "Berlin sources");
+  assert.equal(r.ok, true, r.note);
+  const tracked = execFileSync("git", ["-C", root, "ls-files", "--", "projects"], { encoding: "utf8" }).trim();
+  assert.equal(tracked, "projects/berlin-event-2026/sources/agenda.md", "the agenda is kept, the video is not");
+  assert.match(r.note, /Too big for git, not kept \(over 25 MB\): projects\/berlin-event-2026\/sources\/Keynote Recording\.mov \(30 MB\)/);
+  assert.match(lib.save(root, "again").note, /^nothing else to save\nToo big for git/);
+  const out = start(root);
+  assert.match(out, /Offer to move each to the shared drive \(Google Drive\) and link it from its project's README\.md/);
+  assert.match(out, /Name folders and files in lowercase words joined by hyphens/);
+  assert.match(out, /\n  7\. Video, audio, recordings, any file over 25 MB: the shared drive/);
 });

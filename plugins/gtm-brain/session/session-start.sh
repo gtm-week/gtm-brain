@@ -65,6 +65,8 @@ node -e 'const l=await import(process.argv[1]);const t=l.restoredNotice(l.guardP
 # Every change in the brain is kept: a project folder an older version kept out of git is shared now; the
 # background maintenance then keeps what changed since the last save (lib.save covers the whole brain).
 node "$P/skills/gtm-brain-project/project.mjs" "$root" --share >/dev/null 2>&1 || true
+# A file too big for git (a video, a recording) is never committed: Codex is told, to offer the shared drive.
+node -e 'const l=await import(process.argv[1]);const g=l.largeUnsaved(process.argv[2]);if(g.length)console.log(l.largeNote(g))' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
 P="${PLUGIN_ROOT:-}"
 # A clone has no local git config: point the pre-commit hook at this plugin's lib every session.
 if [ -n "$P" ] && [ -f "$P/lib/brain.mjs" ] && [ -d "$root/.githooks" ]; then
