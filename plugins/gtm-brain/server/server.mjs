@@ -19,6 +19,7 @@ import { createMemoryReader } from "./memory-reader.mjs";
 import { host } from "../lib/host.mjs";
 import { validateValue } from "../lib/ontology/validation.mjs";
 import { placementTrailers, whyHere, WHY_TRAILER } from "../lib/where.mjs";
+import { rulesReport } from "../lib/rules-check.mjs";
 
 const P = dirname(dirname(fileURLToPath(import.meta.url)));
 const lib = await import(join(P, "lib", "brain.mjs"));
@@ -163,6 +164,10 @@ const TOOLS = [
       const why = r.ok && trailers.length ? `\nwhy kept for ${trailers.length} path(s)` : "", ask = r.ok && loose.length ? `\nno reason recorded for: ${loose.slice(0, 8).join(", ")}${loose.length > 8 ? ` and ${loose.length - 8} more` : ""}. Next time give each new file its WHERE.md row and why in placed; for these, save again with placed only.` : "";
       return text(r.ok ? r.note + why + ask : `not saved: ${r.note}`, !r.ok);
     } },
+  { name: "check_rules", title: "Checking the brain against its rules", readOnly: true,
+    description: "The brain against its own rules, on request: people known by a first name only (P3), look-alike names nobody confirmed (P4), top-level folders no WHERE.md row names, files with no recorded reason, names with capitals or spaces. Each finding names its rule, the person or path, and fixed choices carried out through existing tools. Reads only; changes nothing.",
+    inputSchema: schema({}),
+    call: async ({ brain }) => text(rulesReport(brain)) },
   { name: "why_here", title: "Why this is here", readOnly: true,
     description: "Why a file or folder is where it is: the WHERE.md row and reason recorded when it was saved, who put it there and when; for a folder, the reasons for what is inside. Reads only.",
     inputSchema: schema({ path: str("Path inside the brain folder") }),
@@ -311,7 +316,7 @@ const TOOLS = [
 // A chat never sees these tools: it queues the worker instead (ALL-204 step 1). tools/call still works.
 const RUN_ONLY_TOOLS = new Set(["compile_facts", "compile_apply", "compile_entity", "entity_facts"]);
 // The reads that query covers (ALL-204 step 2b): never listed; still answering, marked deprecated, for one release.
-const RETIRED_READS = { recall: "query (memories with search, or object brief)", who_is: "query (entities with search)", list_contexts: "query (contexts)", list_projects: "query (projects)", list_brains: "query (brains)", customer_overview: "query (customers)", meeting_overview: "query (meetings)", advise: "query (health)", where_we_are: "query (status)", why_here: "query (why)", guideline: "document" };
+const RETIRED_READS = { recall: "query (memories with search, or object brief)", who_is: "query (entities with search)", list_contexts: "query (contexts)", list_projects: "query (projects)", list_brains: "query (brains)", customer_overview: "query (customers)", meeting_overview: "query (meetings)", advise: "query (health)", where_we_are: "query (status)", why_here: "query (why)", check_rules: "query (rules)", guideline: "document" };
 // A summary run (GTM_BRAIN_TOOLSET=compile, set by scripts/gtm-brain-compile/run-args.mjs) is listed only what it
 // calls: every other description is re-sent with each of its requests and is pure cost there.
 const COMPILE_TOOLSET = new Set([...RUN_ONLY_TOOLS, "render_dashboard"]);
@@ -362,9 +367,9 @@ const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [colu
   const query = byName("query"), describe = byName("describe_object"), objects = byName("list_objects");
   const datasets = [...query.inputSchema.properties.object.enum];
   const base = query.call, describeBase = describe.call, objectsBase = objects.call;
-  query.description = "The one read: rows of one object, newest first (exact filters, free-text search with alias expansion, limit), or one read-only SQL SELECT over the memory index (memories, members, contexts, entities, keywords; describe_object shows the columns) for counts, joins and dates. Derived reads by object: status (where we are: contexts, loaded set, tools, onboarding; call it first), brief (an entity's cited one-page view; search = the name), deal (one deal's MEDDPICC rubric and every memory about it, to score with cited IDs; search = the company), why (why a file or folder is where it is: the WHERE.md row, reason, who and when; search = the path), projects, brains, customers, meetings, health (how the brain is doing). An entities search resolves a name, alias, email or typo to ranked candidates. Answer from the rows; no rows means say so.";
+  query.description = "The one read: rows of one object, newest first (exact filters, free-text search with alias expansion, limit), or one read-only SQL SELECT over the memory index (memories, members, contexts, entities, keywords; describe_object shows the columns) for counts, joins and dates. Derived reads by object: status (where we are: contexts, loaded set, tools, onboarding; call it first), brief (an entity's cited one-page view; search = the name), deal (one deal's MEDDPICC rubric and every memory about it, to score with cited IDs; search = the company), why (why a file or folder is where it is: the WHERE.md row, reason, who and when; search = the path), rules (the brain checked against its naming and WHERE.md rules, each finding with fixed choices; for: check the brain), projects, brains, customers, meetings, health (how the brain is doing). An entities search resolves a name, alias, email or typo to ranked candidates. Answer from the rows; no rows means say so.";
   query.inputSchema = { ...query.inputSchema, required: [], properties: { ...query.inputSchema.properties,
-    object: { ...query.inputSchema.properties.object, enum: [...datasets, ...Object.keys(VIEWS), "deal", "why"] },
+    object: { ...query.inputSchema.properties.object, enum: [...datasets, ...Object.keys(VIEWS), "deal", "why", "rules"] },
     sql: { type: "string", description: "One SELECT (or WITH ... SELECT) over memories, members, contexts, entities and keywords. Read-only; at most limit rows (default 200)." },
     candidates: { type: "array", items: { type: "object", additionalProperties: true }, description: "With object entities and search: rank this bounded shortlist a CRM returned instead of the registry; no connector calls." },
     project: PROJECT } };
@@ -372,14 +377,16 @@ const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [colu
     if (sql) { try { return text(table(await memoryReader.read(brain, "sql", { sql, limit }))); } catch (e) { return text(e.message, true); } }
     if (!object) return text("Pass object or sql: query needs one of them.", true);
     if (object === "brief") return search ? original.get("recall")({ brain, entity: search, ...(filters?.context ? { context: filters.context } : {}), ...(project ? { project } : {}) }) : text("brief needs search: the entity name, alias, email or id.", true);
+    if (object === "rules") return original.get("check_rules")({ brain });
     if (object === "why") return search ? original.get("why_here")({ brain, path: search }) : text("why needs search: the file or folder path.", true);
     if (object === "deal") return search ? run(brain, "gtm-brain-recall/deal-health.mjs", ["--entity", search]).then(result) : text("deal needs search: the company name, alias or id.", true);
     if (VIEWS[object]) return original.get(VIEWS[object])(object === "brains" ? {} : { brain, ...(project ? { project } : {}), ...(filters && typeof filters === "object" ? filters : {}) });   // a view's options travel in filters (projects: include_available; meetings: its options)
     if (object === "entities" && search && !filters) return original.get("who_is")({ brain, name: search, ...(candidates ? { candidates } : {}) });
     return base({ brain, object, ...(search !== undefined ? { search } : {}), ...(filters !== undefined ? { filters } : {}), ...(limit !== undefined ? { limit } : {}) });
   };
-  describe.inputSchema = { ...describe.inputSchema, properties: { ...describe.inputSchema.properties, name: { ...describe.inputSchema.properties.name, enum: [...datasets, ...Object.keys(VIEWS), "deal", "why"] } } };
+  describe.inputSchema = { ...describe.inputSchema, properties: { ...describe.inputSchema.properties, name: { ...describe.inputSchema.properties.name, enum: [...datasets, ...Object.keys(VIEWS), "deal", "why", "rules"] } } };
   describe.call = async args => {
+    if (args.name === "rules") return text("rules: a derived read (query with object rules). Checks the brain against its own rules: people known by a first name only (P3), look-alike names nobody confirmed (P4), top-level folders no WHERE.md row names, files with no recorded reason (by folder), names with capitals or spaces. Each finding: the rule, the person or path, two or three fixed choices through existing tools. Reads only.");
     if (args.name === "why") return text("why: a derived read (query with object why, search = a path inside the brain). Returns the WHERE.md row and reason recorded when the file or folder was saved (save's placed), who put it there and when; for a folder, the reasons for what is inside; with no reason recorded, when it arrived and that the person should be asked. Reads only.");
     if (args.name === "deal") return text("deal: a derived read (query with object deal, search = the company). Returns the MEDDPICC rubric and every memory about that company, newest first, with IDs; score each element confirmed, weak or missing from those memories only, citing IDs, then ask about what is missing. Reads only. Off when brain/admin.md has deal_scoring: off.");
     if (VIEWS[args.name]) return text(`${args.name}: a derived read (query with object ${args.name}${args.name === "brief" ? ", search = the entity; filters.context for one perspective" : ""}). ${byName(VIEWS[args.name]).description}`);

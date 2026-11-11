@@ -68,7 +68,7 @@ export function whereLine(root) {
    the brain, no second store). whyHere reads those lines back; unplacedHint names new files that
    arrived without one. Rows are cited by number and their What text, so a reordered table still reads right. */
 export const WHY_TRAILER = "gtm-brain-why";
-const MANAGED = p => /^(brain|work|\.githooks|\.agents)\//.test(p) || ["README.md", WHERE, "AGENTS.md", "CLAUDE.md", ".gitignore", ".gitattributes"].includes(p);
+export const MANAGED = p => /^(brain|work|\.githooks|\.agents)\//.test(p) || ["README.md", WHERE, "AGENTS.md", "CLAUDE.md", ".gitignore", ".gitattributes"].includes(p);
 const clean = p => String(p || "").trim().replace(/^\.\//, "").replace(/\/+$/, "");
 const oneLine = s => String(s || "").replace(/\s+/g, " ").trim();
 
@@ -87,7 +87,7 @@ export function placementTrailers(root, placed = []) {
 
 const gitOut = (root, ...a) => { try { return execFileSync("git", ["--no-optional-locks", "-C", root, ...a], { encoding: "utf8", stdio: "pipe" }); } catch { return ""; } };
 /* every recorded reason, newest first: {path, reason, hash, date, author} */
-function recordedReasons(root) {
+export function recordedReasons(root) {
   const out = [];
   for (const c of gitOut(root, "log", `--grep=^${WHY_TRAILER}: `, "--format=%x1e%h%x1f%ad%x1f%an%x1f%B", "--date=short").split("\x1e").filter(Boolean)) {
     const [hash, date, author, body = ""] = c.split("\x1f");

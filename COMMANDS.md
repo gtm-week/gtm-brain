@@ -217,6 +217,13 @@ with object `why` and the path: the row, the reason, who put it there and when, 
 recorded, when it arrived and that you should be asked. The chat start names new files that
 arrived with no reason (made by shell, kept by background maintenance), once per set.
 
+*"Check the brain against its rules"* is `query` with object `rules`: people known by a first name
+only (P3), look-alike names nobody confirmed (P4), top-level folders no WHERE.md row names, files
+with no recorded reason (grouped by folder), names with capitals or spaces. Each finding names its
+rule, the person or path, and two or three fixed choices carried out through the tools above
+(`add_name`, `merge_entities`, `save` with `placed`), so each fix leaves its own reason. It reads
+only and changes nothing; `query` with object `health` counts what it found.
+
 Tool: `save`. Writes: a git commit (never `work/`); with only `placed`, a commit that carries the
 reasons and nothing else.
 

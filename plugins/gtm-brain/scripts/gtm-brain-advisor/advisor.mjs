@@ -7,6 +7,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const us = await import(new URL("../../lib/user-skills.mjs", import.meta.url));
+const rc = await import(new URL("../../lib/rules-check.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
 if (!existsSync(join(root, "brain", "admin.md"))) { console.error("no brain here"); process.exit(1); }
 const now = Date.parse(process.env.GTM_BRAIN_NOW || new Date().toISOString());
@@ -68,6 +69,9 @@ for (const p of lib.readProjects(root)) {
 const team = new Set((admin.team || []).map(p => String(p.name || "").toLowerCase()));
 const firstOnly = names.filter(n => n.kind === "person" && !team.has(n.name.toLowerCase()) && !n.name.trim().includes(" "));
 if (firstOnly.length) add(30, "first-name", `${firstOnly.length} ${firstOnly.length === 1 ? "person is" : "people are"} known by a first name only: ${firstOnly.slice(0, 4).map(n => n.name).join(", ")}${firstOnly.length > 4 ? ", ..." : ""}.`, "A first name alone cannot be matched to an email or a CRM record.", `Say who they are: "${firstOnly[0].name} is <Full Name>".`);
+// 6b. the brain against its own rules: names and files (the detail is query rules, on request)
+const broken = rc.ruleFindings(root).filter(f => !["P3", "P4"].includes(f.rule));   // first names and look-alikes have their own findings above
+if (broken.length) add(28, "rules", `${broken.length} file${broken.length === 1 ? "" : "s and folders"} break the brain's WHERE.md rules (${[...new Set(broken.map(f => f.subject))].slice(0, 3).join(", ")}${broken.length > 3 ? ", ..." : ""}).`, "A file nobody can explain is where trust in the brain goes first.", "Say: check the brain against its rules (each finding comes with its choices).");
 // 7. notes without a trace
 const recent = active.flatMap(c => lib.effectiveMemories(c.memories)).filter(m => days(m.at) <= 30 && m.kind === "note");
 const bare = recent.filter(m => !m.source.length && !m.people.length && !m.tools.length);
