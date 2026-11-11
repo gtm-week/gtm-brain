@@ -90,7 +90,8 @@ for (const mode of ['existing', 'new']) test(`${mode} project: MCP link, session
   if (mode === 'new') {
     assert.match(linked, /Created Website Test/);
     assert.doesNotMatch(linked, /channels|loaded:/i);
-    assert.deepEqual(readdirSync(project), ['AGENTS.md', 'CLAUDE.md'], 'the pointer, and its import for Claude Code');
+    assert.deepEqual(readdirSync(project), ['AGENTS.md', 'CLAUDE.md', 'README.md'], 'the pointer, its import for Claude Code, and the README whose first line the chat start lists');
+    assert.equal(readFileSync(join(project, 'README.md'), 'utf8'), '# Website Test\n');
     assert.deepEqual(lib.readLoaded(f.root, slug), []);
   }
   const pointer = lib.readPointer(project);
