@@ -248,6 +248,22 @@ export function manualCoverChanges(root) {
   return [...slugs].map(slug => ({ slug, ...manualCoverState(root, slug) })).filter(s => s.blocked)
     .map(({ slug, status, path, hash, reason }) => ({ slug, status, path, hash, reason }));
 }
+/* Summaries no run will touch: a hand edit waits for review (compile.md, release with --reviewed-cover).
+   Background and scheduled runs skip them, so without a word they freeze on their last date. */
+export function pausedCovers(root) {
+  const blocked = new Set(manualCoverChanges(root).map(e => e.slug));
+  return activeContexts(root).filter(c => blocked.has(c.slug)).map(c => ({ slug: c.slug, title: c.title, status: c.manualEdit.status, since: c.compiledAt || null,
+    waiting: effectiveMemories(c.memories).filter(m => !c.compiledAt || newer(m.at, c.compiledAt)).length }));
+}
+const pausedText = p => `${p.title} (last updated ${p.since ? String(p.since).slice(0, 10) : "never"}${p.waiting ? `, ${p.waiting} note${p.waiting === 1 ? "" : "s"} waiting` : ""})`;
+/* The chat start's line for them, once per set (work/paused-covers.json), so the person hears it where they work. */
+export function pausedCoversHint(root) {
+  const paused = pausedCovers(root), memo = join(root, "work", "paused-covers.json"), key = paused.map(p => p.slug).join(" ");
+  let seen = ""; try { seen = JSON.parse(readFileSync(memo, "utf8")).slugs || ""; } catch {}
+  try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(memo, JSON.stringify({ slugs: key, at: new Date().toISOString() })); } catch {}
+  if (!paused.length || key === seen) return "";
+  return `Summaries paused, not updating: ${paused.map(pausedText).join("; ")}. Each was edited by hand outside a summary run, so no run replaces it until the person reviews the edit. Say it in one line and offer the review: show the edit, keep what matters as sourced notes or the context rule, and only after an explicit yes release it (gtm-brain-use-brain compile.md, compile.mjs --release with --reviewed-cover).`;
+}
 export function adoptGeneratedCover(root, slug) {
   const state = manualCoverState(root, slug);
   if (!state.knownWrite) return;
