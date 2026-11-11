@@ -49,9 +49,8 @@ need, budget and trust, using what is already known. We will start with at least
 or desired examples, then generalize the pattern, and keep a working draft. Anonymized examples
 are welcome; fewer are fine when unavailable or declined. Do not promise a fixed completion time.
 
-Follow [question handling](../gtm-brain-start/references/questions.md). Use the everyday
-`question` tool, not configuration or onboarding questions. Ask one focused question at a
-time; put the full interview question in the free-text form without preset choices. Reuse
+Follow [question handling](../gtm-brain-start/references/questions.md). Ask one focused question at a
+time; ask the full interview question as free text without preset choices. Reuse
 answers, skip covered areas and accept uncertainty, skips and confidential ranges. Follow the
 question procedure for unanswered, declined, cancelled and not_shown results; no default or
 timeout is an answer. Do not ask again for a third company after the person says none is available.
@@ -67,7 +66,7 @@ Use [Your documents](../gtm-brain-document/SKILL.md) and the current `document` 
 Synthesize the method's five parts when there is enough for a useful draft, including when the
 person stops with gaps. Never claim that interview agreement validates the market.
 
-- Before a new synthesized document, confirm once through `question`: show the title,
+- Before a new synthesized document, confirm once: show the title,
   destination and first rules briefly, with "Keep as a draft" and "Change something" choices.
   For an update, quote the substantive change and confirm it. Reuse an explicit instruction
   to save or update this exact draft; do not ask for the same authorization twice. This is a

@@ -65,9 +65,8 @@ Run the intake as a conversation, not a questionnaire.
 - Allow the participant to skip any question.
 - Do not expose internal frameworks or scoring mechanics during the interview.
 
-Follow [question handling](../gtm-brain-start/references/questions.md). Intake questions go
-through `question` as free text without preset options, with the coverage note in the message
-right before the call. The two checkpoints below are choice questions. A file shared on the way
+Follow [question handling](../gtm-brain-start/references/questions.md). Intake questions are
+asked as free text without preset options, with the coverage note right before the question. The two checkpoints below are choice questions. A file shared on the way
 is read at once and used to skip or narrow questions; say briefly what you picked up from it.
 
 Treat company and person names, figures, customer profiles and quotations from a session as
@@ -155,7 +154,7 @@ Before deep research, present a concise research frame containing:
 - proposed source set,
 - material gaps or assumptions.
 
-Recommend a source set and let the participant approve or adjust it, with one `question`:
+Recommend a source set and let the participant approve or adjust it, with one question:
 "Looks right, start research" first, then "Adjust the scope" (its follow-up is a free-text
 question). Do not begin dependent deep research until the direction is confirmed.
 
@@ -238,7 +237,7 @@ After the broad scan and before final synthesis, show a compact interim view:
 - strongest apparent current fit between market opportunity and demonstrated capabilities,
 - contradictions or important evidence gaps.
 
-This is the second required checkpoint: one `question`, "Direction is right, finish it" first,
+This is the second required checkpoint: one question, "Direction is right, finish it" first,
 then "Correct one point" (its follow-up is a free-text question). Use the answer to prioritize
 the final deepening pass rather than restarting the whole research.
 
@@ -338,7 +337,7 @@ wedge, feature set, package, price, pilot design or roadmap.
 
 End with a concise source list that lets the reader verify and deepen the research.
 
-After writing, return one short sentence with the report's path and ask, with one `question`,
+After writing, return one short sentence with the report's path and ask, with one question,
 whether the report stands: "Accept the report" first, then "Needs corrections". Do not repeat
 the report in the chat.
 

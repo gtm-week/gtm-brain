@@ -191,7 +191,7 @@ if (opt.list) {
   const rows = projects.map(p => { const loaded = lib.readLoaded(root, p.slug); const last = lib.listContexts(root).flatMap(c => lib.effectiveMemories(c.memories)).filter(m => m.tags.includes(`project:${p.slug}`)).map(m => m.at).sort().pop() || null; return { ...p, loaded, lastNote: last, pointer: lib.projectPointerStatus(root, p) === "ok", pointerStatus: lib.projectPointerStatus(root, p) }; });
   if (opt.available) {
     const available = await listCodexProjects();
-    console.log(JSON.stringify({ projects: rows, codex: available, guidance: "Codex projects are candidates, not capture consent. Ask which existing projects to follow with native checkboxes. Verify each selected folder and link only after submission. An empty or unavailable catalog does not establish that the person has no projects; offer to name a missing folder. Stay in the onboarding chat." }, null, 1));
+    console.log(JSON.stringify({ projects: rows, codex: available, guidance: "Codex projects are candidates, not capture consent. Ask which existing projects to follow, listing them by number; the person may pick several. Verify each selected folder and link only after submission. An empty or unavailable catalog does not establish that the person has no projects; offer to name a missing folder. Stay in the onboarding chat." }, null, 1));
     process.exit(0);
   }
   if (opt.json) { console.log(JSON.stringify({ projects: rows }, null, 1)); process.exit(0); }

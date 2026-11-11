@@ -8,7 +8,7 @@ Read [question handling](../../gtm-brain-start/references/questions.md) before a
    `query` (brains): propose the only known brain or let the person choose among several.
    If none are known, ask for its folder path. Verify the selected brain with
    `check_environment`; do not create a brain or treat the plugin checkout as one.
-2. **Capture consent.** Ask through `configuration_question`: "Should GTM Brain capture work done
+2. **Capture consent.** Ask: "Should GTM Brain capture work done
    in this folder into the <company> brain?" Yes / No. Name the selected project so the
    question is unambiguous when the current task is in another folder. Reuse an explicit
    answer already given for this folder and brain. A request to create a folder alone is

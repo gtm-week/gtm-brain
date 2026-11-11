@@ -12,8 +12,8 @@ allowed-tools: [Bash, Read, Write]
 
 # GTM Brain: Configure GTM Brain
 
-Before the first `configuration_question` form, read [question handling](../gtm-brain-start/references/questions.md) once for the tool parameters.
-Use structured choices by default and keep async questions alive until answered.
+Before the first question, read [question handling](../gtm-brain-start/references/questions.md) once.
+Offer concrete choices by default.
 
 Route the requested change to the procedure below. Read only the one needed.
 
@@ -39,7 +39,7 @@ For "update GTM Brain", "check for GTM Brain updates", "upgrade the brain", "ref
 ## Push this brain to my GitHub
 
 For "push this brain to my GitHub", "share the brain", "put the brain on GitHub": one
-`configuration_question` first, because this publishes the whole folder to a repository the
+question first, because this publishes the whole folder to a repository the
 person owns: "Create a private repository <company>-brain on your GitHub and push this brain
 there? From then on every note goes there too." with "Yes, create and push" first, "Use a
 different name" second (then ask the name as free text), "No, keep it local" last. On a yes,

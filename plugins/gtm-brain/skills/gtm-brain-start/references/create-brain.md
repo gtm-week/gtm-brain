@@ -23,12 +23,12 @@ course gives every participant HubSpot, so propose HubSpot and let them correct 
 is the other one to expect; anything else is fine too), then mail, calendar and meeting
 notes.
 
-Ask these as separate `onboarding_question` calls, one at a time, never as one list in one
-box: (1) full name and work email, free text; (2) the company, what it sells and to whom, free
+Ask these as separate questions, one at a time, never as one list in one
+message: (1) full name and work email, free text; (2) the company, what it sells and to whom, free
 text, or a proposal to confirm when the folder or chat already says it; (3) teammates, with a
-"Just me" choice; (4) the tools, with `multiple: true`: one checkbox per tool, CRMs first
+"Just me" choice; (4) the tools, as a numbered list they may pick several from: one number per tool, CRMs first
 (HubSpot, Attio, then Gmail, Google Calendar, Granola), never a bundle of tools as one choice.
-Something else, which the form adds, takes any other tool in the person's own words. Skip a
+They may name any other tool in their own words. Skip a
 question whose answer is already known. Tell them, in one plain line, that GTM Brain keeps a dashboard open with what needs them,
 the contexts and the open questions. It opens inside Codex and needs no login. Do not ask
 where it should open; there is no dashboard browser setting.
@@ -71,7 +71,7 @@ tool; offer useful connections together and verify selected connections before c
 
 Offer optional Chrome setup for website work after the connector choices. Explain that the
 embedded browser has a separate login session, while connected Chrome can reuse their existing
-website logins. Ask one `onboarding_question`: "Set up your logged-in Chrome for website work?"
+website logins. Ask one question: "Set up your logged-in Chrome for website work?"
 with "Set up Chrome" (recommended) and "Skip for now". Reuse a submitted choice; if Chrome is
 already connected, skip setup. This choice is personal to this machine, never a shared admin
 setting or blanket browser authorization. On yes, follow

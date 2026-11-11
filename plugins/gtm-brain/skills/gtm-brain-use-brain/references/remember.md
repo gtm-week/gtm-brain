@@ -88,7 +88,7 @@ Aubert`. Ask the one line, then send back **only entry #3** with `add_name` done
 filled. Never re-send the entries that were kept: they are already in the memory and would be
 recorded twice.
 
-If a single note is held back, nothing was written. Ask with `question`: *"Is this the Pierre Aubert we know?"* (options: the same person, someone new). Yes: `add_name` with `name`
+If a single note is held back, nothing was written. Ask: *"Is this the Pierre Aubert we know?"* (options: the same person, someone new). Yes: `add_name` with `name`
 "Pierre Aubert" and `aliases` ["Pierre Dupont"], then call `remember` again unchanged. No: call
 `remember` again with `new_names` ["Pierre Dupont"]. Never decide this yourself; a wrong merge
 is worse than a question.
@@ -105,7 +105,7 @@ name). A first name shared by two known entities is asked about like any look-al
 (`context: pipeline`) without asking, unless it plainly belongs elsewhere; then suggest as below.
 *"close question m_xxx: <answer>"* (in chat): write a note with
 `retracts: m_xxx` and the answer as content (kind `decision` if it was decided). Without an
-answer, ask *"What is the answer?"* first, with `question` (free text).
+answer, ask *"What is the answer?"* first (free text).
 *"forget memory m_xxx, it was wrong"*: a note with `retracts: m_xxx` saying it was withdrawn. The
 retracted note leaves every view; your note stays, so the answer or the reason is never lost.
 

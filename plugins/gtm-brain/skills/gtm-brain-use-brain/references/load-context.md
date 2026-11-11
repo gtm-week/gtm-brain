@@ -27,7 +27,7 @@ Do not show a chooser when the request already makes the choice clear. If the pe
 browse, list the available names; a listing alone does not require a question or change the loaded set.
 Ask only when a choice is needed to proceed and cannot be inferred. Follow
 [question handling](../../gtm-brain-start/references/questions.md), using a short business question
-and meaningful names as options. Use `multiple: true` only for a requested multiple selection.
+and meaningful names as options. Let them pick several numbers only for a requested multiple selection.
 
 ## Step 3: load
 

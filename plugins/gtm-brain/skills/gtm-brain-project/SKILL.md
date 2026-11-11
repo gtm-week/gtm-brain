@@ -22,7 +22,7 @@ Follow [question handling](../gtm-brain-start/references/questions.md) for nativ
 
 1. Reuse the known brain and project name. If the brain is unknown, call `query` (brains) and
    resolve which existing brain to use; verify it with `check_environment`. Never use the
-   plugin checkout as a brain. Ask only for missing information through `configuration_question`.
+   plugin checkout as a brain. Ask only for missing information.
 2. Default to the brain's projects folder, as WHERE.md says: `<brain-root>/projects/<project-slug>/`.
    For example, a Website project in FDE OS goes in `FDE OS/projects/website/`. A deliverable for
    a project that already exists goes inside it, not into a new project. Resolve from the brain
@@ -69,8 +69,7 @@ project; there are no per-project brains or summaries.
 
 
 Use the person's saved conversation language. Keep authored brain data in English.
-Follow [question handling](../gtm-brain-start/references/questions.md) for `configuration_question`
-and its fallbacks. Reuse submitted answers; never link without a yes to capturing work.
+Follow [question handling](../gtm-brain-start/references/questions.md) when asking. Reuse submitted answers; never link without a yes to capturing work.
 
 ## Link an existing folder
 

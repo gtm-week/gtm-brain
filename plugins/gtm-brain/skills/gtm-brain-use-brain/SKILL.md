@@ -80,11 +80,10 @@ recording a note from refreshing its summary. Report failures or partial complet
 Do not paste file diffs, raw records, file paths or commit output unless explicitly requested.
 The host app may still expose its own review UI; these instructions do not disable it.
 
-Before the first question that uses a form (`question`), read [question handling](../gtm-brain-start/references/questions.md) once for the tool parameters; a plain answer needs no reading.
+Before the first question, read [question handling](../gtm-brain-start/references/questions.md) once; a plain answer needs no reading.
 This applies after onboarding too: every question in everyday work (which context, same as X?,
-is this a company?, what is the answer?, which direction or photo?) is asked with `question`,
-or `configuration_question` for tools and settings, with two or three concrete options on one page.
-A question typed into the chat is the fallback only when those tools are unavailable.
+is this a company?, what is the answer?, which direction or photo?) is asked
+with two or three concrete options, recommended first.
 This company's own interactions: `list_objects` lists them, `interact` runs them (it records and
 says what to do in the connector); propose one with `propose_interaction` when the same thing
 keeps being done by hand. Keep one pending question alive until answered or cancelled;

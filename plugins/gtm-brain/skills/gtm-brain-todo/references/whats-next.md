@@ -9,7 +9,7 @@ Keep authored brain content in English. Preserve names, source quotes and the ex
 
 1. `query` (status); if a context is named, `load_context` it (`mode: add`). If nothing is open,
    infer relevant existing contexts from the request. Only when there is no task to infer from,
-   ask what the person wants to work on using `question` and concrete business choices.
+   ask what the person wants to work on, with concrete business choices.
 2. Read [operational evidence](../../gtm-brain-use-brain/references/operational-evidence.md).
    For each open context, use the summary, open questions and follow-up memories as candidates.
    Working guidance explains reusable methods; it is not a list of pending tasks. Older

@@ -34,7 +34,7 @@ holds, and say where each number came from:
   brain's dated notes are the default. Follow
   [operational evidence](../gtm-brain-use-brain/references/operational-evidence.md).
 
-Ask through `question` only for what changes the decision and is nowhere to be found: the
+Ask only for what changes the decision and is nowhere to be found: the
 customer unit, the sales cycle in months, the period the spend and the new customers cover,
 whether the spend is fully loaded. One question at a time, a concrete proposal first
 ("Customer unit is the account, not the seat?"). Do not ask for cohort data a Tier 2 business
@@ -54,7 +54,7 @@ the conclusion.
 
 ## Step 3: keep it
 
-Offer once, through `question`, to record the review:
+Offer once to record the review:
 
 - One note (`remember`, kind `decision`) in the context the review belongs to (Strategy when
   none is named): the headline status, the metrics with their inputs and assumptions, the up

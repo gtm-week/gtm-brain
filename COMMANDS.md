@@ -364,7 +364,7 @@ Tool: `check_environment`. Writes: nothing.
 *"set up a new company brain in this folder"* (empty folder)
 
 Four questions, one at a time: your full name and work email; the company, what it sells and to
-whom; teammates; the tools you use (checkboxes, CRM first). Creates `brain/admin.md`, the
+whom; teammates; the tools you use (a numbered list, pick several, CRM first). Creates `brain/admin.md`, the
 contexts Our company (`company`), Strategy, Market, Target customers (`icp`), Our offer and your
 personal context, `brain/entities/` with the team, `AGENTS.md`, `README.md`, `WHERE.md`,
 `strategy.md`, `workflows/`, git and the pre-commit check; then checks the tools. Handles are full

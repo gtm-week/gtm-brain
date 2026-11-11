@@ -6,8 +6,7 @@ The contributor invariants live in AGENTS.md and apply here in full: @AGENTS.md
 
 AGENTS.md is written for Codex, the host GTM Brain runs in. Its "Default onboarding interaction" and
 "Computer Use" sections are generated blocks describing how the plugin behaves inside a company
-brain (the `onboarding_question` / `configuration_question` / `question` tools do not exist in a
-Claude Code session). When working on this repo from Claude Code, the section that binds you is
+brain (Codex's question box does not exist in a Claude Code session). When working on this repo from Claude Code, the section that binds you is
 "Contributor invariants". Do not hand-edit the generated blocks; see "Derived text" below.
 
 ## What this repo is
@@ -66,7 +65,7 @@ Everything that ships is under `plugins/gtm-brain/`. The layers, from the outsid
   is a thin wrapper that spawns an operation script with the brain folder as cwd and returns its
   text. `run()` resolves a script under `scripts/` first, then `skills/`, which is why old script
   paths stay valid. Some tools are filtered out of `tools/list` but still answer `tools/call`:
-  the question forms (only when the client supports forms), the compile tools (only when
+  the compile tools (only when
   `GTM_BRAIN_RUN` is set, i.e. scheduled and background runs) and the retired reads that `query`
   now covers.
 - **Operation scripts** (`scripts/gtm-brain-*/`): one folder per operation (remember, load, compile,

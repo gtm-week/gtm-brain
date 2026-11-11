@@ -471,7 +471,7 @@ test("the skill exists, is listed, and asks before it writes", () => {
   const skill = readFileSync(`${P}/skills/gtm-brain-project/SKILL.md`, "utf8") + readFileSync(`${P}/skills/gtm-brain-project/references/link.md`, "utf8");
   assert.match(skill, /^name: gtm-brain-project$/m);
   assert.match(skill, /capture work done\s+in this folder/i, "the opt-in question is in the skill");
-  assert.match(skill, /`query` \(brains\)/); assert.match(skill, /link_project/); assert.match(skill, /unlink_project/); assert.match(skill, /configuration_question/);
+  assert.match(skill, /`query` \(brains\)/); assert.match(skill, /link_project/); assert.match(skill, /unlink_project/);
   assert.match(skill, /never link without a yes/i);
   assert.match(readFileSync(`${P}/skills/gtm-brain-project/agents/openai.yaml`, "utf8"), /display_name: "GTM Brain: Projects"/);
   assert.ok(!existsSync(`${P}/skills/gtm-brain-link-project/SKILL.md`) && !existsSync(`${P}/skills/gtm-brain-new-project/SKILL.md`), "the two old workflows are one skill now (ALL-204 step 4)");

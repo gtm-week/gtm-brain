@@ -704,16 +704,15 @@ test("recall hands over each hit's sources, with the chat it came from as a link
   assert.match(person, /Pierre Aubert signs in October/); assert.match(person, /contexts\/icp\/memories.jsonl/); assert.match(person, /codex:\/\/threads\/01a0-chat/, "the entity brief traces claims to memories and sources");
 });
 
-test("each question goes to the tool named for its purpose, so setup, settings and work questions are not all labelled onboarding (ALL-203)", () => {
+test("GTM Brain has no question forms: questions go to Codex's own box or plain chat text, and no procedure names a removed tool (2026-11-11)", () => {
   const policy = readFileSync(`${P}/policies/questions.md`, "utf8");
-  assert.match(policy, /`onboarding_question`[^.]*first-run setup/s);
-  assert.match(policy, /`configuration_question`[^.]*(tools|settings)/s);
-  assert.match(policy, /`question`[^.]*(everyday|ordinary|creative)/s);
-  const named = execFileSync("grep", ["-rl", "onboarding_question", `${P}/skills`, "--include=*.md"], { encoding: "utf8" }).trim().split("\n").filter(Boolean);
-  assert.deepEqual(named.filter(f => !f.includes("/gtm-brain-start/")), [], "only first-run setup asks with onboarding_question");
-  assert.match(readFileSync(`${P}/skills/gtm-brain-configure/references/connect-tools.md`, "utf8"), /`configuration_question`/);
-  assert.match(readFileSync(`${P}/skills/gtm-brain-use-brain/SKILL.md`, "utf8"), /asked with `question`/);
-  assert.match(readFileSync(`${P}/skills/gtm-brain-todo/references/whats-next.md`, "utf8"), /using `question`/);
+  assert.match(policy, /no question forms of its own/);
+  assert.match(policy, /`request_user_input`/);
+  assert.match(policy, /plain chat text and end the turn/);
+  assert.match(policy, /`approve_change`/, "APPROVE keeps its own form");
+  let found = ""; try { found = execFileSync("grep", ["-rlE", "onboarding_question|configuration_question", `${P}/skills`, `${P}/policies`, `${P}/templates/AGENTS.md`, "--include=*.md"], { encoding: "utf8" }); } catch {}
+  const named = found.trim().split("\n").filter(Boolean);
+  assert.deepEqual(named, [], "no procedure names a removed question tool");
 });
 
 test("sync and resolution end without a next step, a reminder or a to-do; the brain is not the person's to-do system (ALL-208)", () => {
@@ -795,7 +794,7 @@ test("Slack replies: optional in onboarding, read live, scope asked once, style 
   assert.match(discovery, /No, skip it[\s\S]*`mark_tool` \(status\s+`skip`\)/);
   assert.match(discovery, /When nothing points to Slack, do not bring it up/);
   // privacy: the scope is the person's choice, saved once; a scheduled run never asks
-  assert.match(ref, /configuration_question/);
+  assert.match(ref, /When there is none, ask once/);
   assert.match(ref, /A\s+scheduled run never asks: no saved scope means no Slack scan/);
   assert.match(ref, /Read only: never send, react, mark read/);
   assert.match(ref, /Nothing from the scan by default/);

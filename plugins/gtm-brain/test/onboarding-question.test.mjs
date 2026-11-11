@@ -123,39 +123,6 @@ test('input transport releases pending requests on cancellation, client error an
   q.receive({ id: sent.at(-1).id, error: { message: 'not supported' } }); await rejected;
 });
 
-test('real MCP server exposes a form before a brain exists and resumes the tool from the client answer', async t => {
-  const child = spawn(process.execPath, [new URL('../server/server.mjs', import.meta.url).pathname], { stdio: ['pipe','pipe','pipe'] });
-  t.after(() => child.kill());
-  const pending = new Map(); let seq = 0, form;
-  const send = m => child.stdin.write(JSON.stringify({ jsonrpc: '2.0', ...m }) + '\n');
-  const rpc = (method, params) => new Promise(resolve => { const id = ++seq; pending.set(id, resolve); send({ id, method, params }); });
-  createInterface({ input: child.stdout }).on('line', line => {
-    const m = JSON.parse(line);
-    if (m.method === 'elicitation/create') {
-      form = m;
-      send({ id: m.id, result: { action: 'accept', content: { selection: ['Gmail', 'Calendar'] } } });
-    } else if (pending.has(m.id)) { const done = pending.get(m.id); pending.delete(m.id); done(m); }
-  });
-  const timeout = setTimeout(() => child.kill(), 10000); t.after(() => clearTimeout(timeout));
-  await rpc('initialize', { capabilities: { elicitation: { form: {} } } });
-  const list = await rpc('tools/list', {});
-  // One form, three names: the host labels a call by its tool, so setup, settings and ordinary questions need their own
-  const titles = Object.fromEntries(list.result.tools.filter(tool => /question$/.test(tool.name)).map(tool => [tool.name, tool.title]));
-  assert.deepEqual(titles, { onboarding_question: 'Setup question', configuration_question: 'Settings question', question: 'Your choice' });
-  for (const [name, purpose] of [['onboarding_question', /first-run setup/], ['configuration_question', /tools|settings/], ['question', /creative|ordinary|everyday/]]) {
-    const tool = list.result.tools.find(t => t.name === name);
-    assert.match(tool.description, purpose, `${name} says what it is for`);
-    assert.deepEqual(tool.inputSchema, buildQuestionSchema, `${name} takes the same arguments`);
-    assert.equal(tool.annotations.readOnlyHint, true);
-  }
-  const result = await rpc('tools/call', { name: 'question', arguments: { question: 'Connect which tools?', options: ['Gmail', 'Calendar'], multiple: true } });
-  assert.equal(form.params.requestedSchema.properties.selection.type, 'array');
-  assert.equal(form.params._meta, undefined);
-  assert.deepEqual(JSON.parse(result.result.content[0].text), { status: 'answered', selections: ['Gmail', 'Calendar'], text: '' });
-  child.stdin.end();
-  await new Promise(resolve => child.on('exit', resolve));
-});
-
 test("a form the host declines at once was never shown: not_shown, and later questions go to chat text (Maksymilian, 2026-09-30)", async () => {
   // Codex CLI answered every onboarding_question with declined before anything appeared on screen.
   let clock = 0; const sent = [], q = questionInput(m => sent.push(m), () => clock);
@@ -184,7 +151,7 @@ test('only the bare words count as the typed-answer choice: "Other company" is a
   for (const real of ['Other company', 'Something else entirely', 'None of these apply to us yet']) assert.deepEqual(enumOf(['Yes', real]), ['Yes', real, SOMETHING_ELSE], real);
 });
 
-test("with Codex's own question box on, the server lists no question forms and tells Codex to use request_user_input; APPROVE keeps its form", async t => {
+test("GTM Brain lists no question forms: Codex's own box when it is on, chat text when it is off; APPROVE keeps its form", async t => {
   const profile = mkdtempSync(join(tmpdir(), 'gtm-brain-native-q-'));
   writeFileSync(join(profile, 'config.toml'), 'model = "x"\n\n[features]\nhooks = true\ndefault_mode_request_user_input = true\n\n[mcp_servers.a]\ncommand = "a"\n');
   const listed = async home => {
@@ -201,11 +168,13 @@ test("with Codex's own question box on, the server lists no question forms and t
   const native = await listed(profile);
   for (const name of ['onboarding_question', 'configuration_question', 'question']) assert.ok(!native.names.includes(name), `${name} is off`);
   assert.ok(native.names.includes('approve_change'), 'APPROVE keeps its own form');
-  assert.match(native.instructions, /ask the same question with request_user_input instead/);
+  assert.match(native.instructions, /ask every question with request_user_input/);
   assert.match(native.instructions, /never add Other or Something else/);
-  // the flag off, or outside [features]: GTM Brain's forms as before
+  // the flag off, or outside [features]: still no forms; the questions go to chat text
   writeFileSync(join(profile, 'config.toml'), '[features]\ndefault_mode_request_user_input = false\n[other]\ndefault_mode_request_user_input = true\n');
-  const forms = await listed(profile);
-  assert.ok(forms.names.includes('onboarding_question') && forms.names.includes('question'));
-  assert.doesNotMatch(forms.instructions, /request_user_input/);
+  const chat = await listed(profile);
+  for (const name of ['onboarding_question', 'configuration_question', 'question']) assert.ok(!chat.names.includes(name), `${name} is off`);
+  assert.ok(chat.names.includes('approve_change'), 'APPROVE keeps its own form');
+  assert.match(chat.instructions, /Ask every question as plain chat text and end the turn/);
+  assert.doesNotMatch(chat.instructions, /request_user_input/);
 });

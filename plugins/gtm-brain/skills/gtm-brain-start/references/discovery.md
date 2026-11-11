@@ -15,20 +15,17 @@ conversational. Complete the steps in order unless the user asks to skip one; an
 recorded and never nagged about.
 
 For interactive onboarding questions, read [onboarding questions](questions.md) once.
-Use `onboarding_question` by default during setup when available. It waits inside the call
-and provides native choices, checkboxes and free text in ordinary mode. If only async
-questions are available, keep them alive until answered.
 
 ## How to talk during discovery
 
 The example questions below are patterns, not fixed wording. Draft brain content in English.
 The approval is always the person's APPROVE in the `approve_change` form, never typed in the chat.
 
-Questions are clicks wherever the harness allows it. If a structured question control
-with answer proposals is available in the current mode, use it for preferences and
+Questions are clicks wherever the harness allows it. If Codex's own question box is
+available in the current chat, use it for preferences and
 connection choices (never security permissions): yes/no answers, "connect these
-two?", "which provider?", and the form's own Something else for an answer in the
-person's words. The dashboard is view-only. If no appropriate structured control is available,
+two?", "which provider?", with room for an answer in the
+person's words. The dashboard is view-only. Otherwise
 ask in the Codex conversation, and then these rules keep it pleasant:
 
 - **Every question earns its keep.** One line of why you are asking, then the question,
@@ -261,10 +258,10 @@ plugin (export or paste path). Credentials are personal and stay in the user's C
 brain never holds a token. If nothing connects, say so plainly and continue; the snapshot
 names the gap.
 
-The dashboard card is read-only. Collect choices through `onboarding_question`, using
-`multiple: true` when independent tools can be chosen together. Preserve submitted text
-as well as selections. Connect the selected tools without asking for another yes per tool.
-An unchecked tool, empty selection or cancelled form is not an explicit decline; record
+The dashboard card is read-only. Collect choices by asking, with a numbered list when independent tools can be chosen
+together; they may pick several. Preserve their own words
+as well as the picked numbers. Connect the selected tools without asking for another yes per tool.
+An unpicked tool, an empty answer or no answer is not an explicit decline; record
 only a submitted skip. Native shell permissions and account sign-in remain separate.
 Save accepted choices before any install that could require a fresh chat, following
 [continuation](continuation.md). If one connection cannot be completed yet, proceed with
@@ -358,7 +355,7 @@ memory so a later test reset can identify exactly what belongs to the run.
 ## Step 5: which existing projects to follow
 
 Follow [existing projects](projects.md). Ask which projects the person already works in
-should feed this brain, with native checkboxes when candidates can be listed. This selection
+should feed this brain, with a numbered list when candidates can be listed; they may pick several. This selection
 is consent to capture future work from those folders. Reuse it when calling `link_project`;
 do not ask another yes for each project. A skip or no existing projects is a valid outcome.
 Keep the person in the current Codex chat throughout this step.

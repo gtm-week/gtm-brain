@@ -15,60 +15,39 @@ it is saved without that call.
 Reuse the current person resolved by the opening lines or the saved `work/person.json` handle
 validated against the team. Ask only when unresolved; never assume the owner.
 <!-- generated: questions; edit plugins/gtm-brain/policies/questions.md -->
-Ask through the GTM Brain question tool named for the purpose whenever available: `onboarding_question`
-for first-run setup only, `configuration_question` for tools, connections and settings, and
-`question` for everyday and creative work (which context, same as X?, which direction or photo?).
-The host labels the call by the tool's name, so the name is the person's only cue to what kind
-of question it is. All three are the same native form: it waits inside the call and supports
-radio choices, `multiple: true` checkboxes and free text. Do not show the same question with a
-second tool or end the turn with a text question while these tools are available.
-In Plan mode, ask through the host's own planning question tool instead: it is the form the
-person expects there, and it shows the choices and their own answer on one page.
+GTM Brain shows no question forms of its own. Ask with the host's own question box when it has
+one (in Codex, `request_user_input`, on in ordinary chats only when the person has turned it on;
+in Plan mode always). Otherwise ask in plain chat text and end the turn: the question, one line
+on why it matters, and two or three numbered options, recommended first; the person answers with
+a number or in their own words.
 
-Reuse saved and submitted answers; infer a concrete proposal before asking. Use structured
-questions proactively for missing information and decisions in the person's current mode.
-Do not ask them to enable Plan mode or experimental settings, call a plan-only tool outside
-Plan mode, or perform writes when restricted to planning. If GTM Brain questions are unavailable,
-prefer a blocking question tool when its current contract allows it, then an async form.
-Use a plain text question only when an appropriate structured control is unavailable.
+Reuse saved and submitted answers; infer a concrete proposal before asking. Ask only for missing
+information and real decisions. Do not ask the person to enable Plan mode or experimental
+settings, call a plan-only tool outside Plan mode, or perform writes when restricted to planning.
 
-Explain why the answer matters before the widget. Offer two or three concrete choices,
-recommended first when appropriate. A choice question is one page: the host shows each field
-on its own page, so `text_label` next to `options` adds a second step. Pass it only when a note
-is really needed. The form ends every choice question with Something else and, when it is picked,
-asks for the typed answer in the same call, so do not add your own Other option. A named last choice
-(Different company, Needs corrections) still fits when it means something specific.
-When the form is not shown and the choices become chat buttons, each one sends a whole answer:
-never a half sentence for the person to finish ("A different company: "); ask for the rest next.
-Use genuine multi-select for independent choices only when the tool's schema supports it;
-otherwise offer concrete combinations in a single-select chat question. The dashboard is
-view-only. Aim for clicks or at most five words per answer. Never bundle a business
-clarification with optional maintenance questions or ask again for an already authorized action.
+Explain why the answer matters before the question. Offer two or three concrete choices,
+recommended first when appropriate. Never add your own Other or Something else: the person can
+always answer in their own words. A named last choice (Different company, Needs corrections)
+still fits when it means something specific. Each choice is a whole answer, never a half
+sentence for the person to finish ("A different company: "); ask for the rest next. Where
+several choices can apply together, say the person can pick several numbers; the host's question
+box has no checkboxes, so offer the likely combinations there. The dashboard is view-only. Aim
+for a number or at most five words per answer. Never bundle a business clarification with
+optional maintenance questions or ask again for an already authorized action.
 
-A yes/no or permission question always passes `options`, for example Yes, go ahead and No, skip it.
-Omit `options` only when the answer is a name, a link or other free text, and then name what to
-type in `text_label` or leave it out. A yes or no the person already gave for that exact step, in
-a form or in the chat, is the answer: act on it and never show the same question again in another form.
+A yes/no or permission question always names both answers, for example Yes, go ahead and No,
+skip it. A free-text question (a name, a link) says what to type. A yes or no the person already
+gave for that exact step is the answer: act on it and never ask the same question again.
 
-Keep one question pending. Only `status: answered` from a question tool supplies
-submitted `selections` and/or `text`; preserve both. `declined` skips that question only,
-`cancelled` stops it, and `unanswered` supplies no decision. None of those three authorizes
-dependent work; an `answered` yes does, for the ordinary step it named.
-`not_shown` means the host closed the form before the person could see it: it is no answer
-and no refusal. Ask that question, and the rest of this chat's questions, as plain chat text.
-For async forms, an acknowledgement is not an answer: pause dependent work and keep the
-turn alive with interruptible waits, repeating until an answer or cancellation arrives.
-Never end the turn, even with an empty final response, while an async question is pending.
-Defaults, empty results, errors, timeouts, elapsed time and unrelated messages are not answers.
-Do not use shell sleep or a busy loop. Waiting does not keep the host's panel expanded;
-accept a short chat answer if it collapses and never repost a question to reset its timer.
-A plain text question without a pending widget ends in a final message and waits for a reply.
+Keep one question pending. A question without an answer authorizes nothing: defaults, empty
+results, errors, timeouts, elapsed time and unrelated messages are not answers. A skipped or
+closed question box is no answer and no refusal; ask it again as plain chat text. A plain text
+question ends the turn and waits for the reply. Do not use shell sleep or a busy loop to wait.
 
-Security permissions and account sign-in stay native. A preference widget cannot authorize
-shell commands or grant account access. The question tools never authorize APPROVE: a workplace
-or interaction change goes only through `approve_change`, whose own form carries the APPROVE
-choice. Carry out a submitted ordinary choice through its owning workflow with the normal
-permission prompts.
+Security permissions and account sign-in stay native. A chosen option cannot authorize shell
+commands or grant account access, and never stands in for APPROVE: a workplace or interaction
+change goes only through `approve_change`, whose own form carries the APPROVE choice. Carry out
+a chosen ordinary option through its owning workflow with the normal permission prompts.
 
 No slop. No filler phrases, no hedging when facts are cited, no LLM preamble
 ("I have created...", "Here is the updated...", "Certainly!"). No placeholder dates.

@@ -27,7 +27,7 @@ if [ -n "$project" ]; then
 fi
 # Both the empty-folder and brain branches emit the same authored policy.
 interaction_policy() {
-  echo "Before the first question that uses a form (question, configuration_question, onboarding_question), read $P/skills/gtm-brain-start/references/questions.md once for the tool parameters; not before a plain answer, and not again later."
+  echo "Before the first question you ask the person, read $P/skills/gtm-brain-start/references/questions.md once; not before a plain answer, and not again later."
   echo "Call GTM Brain tools directly when the host lists them as tools. When the host exposes them only inside a code or script cell, call them there: that is the host's tool path, not a workaround. Either way a result is content parts (never stringify it)."
   cat "$P/policies/questions.md" "$P/policies/computer-use.md"
 }
@@ -37,7 +37,7 @@ interaction_policy() {
 # blocks or the CLAUDE.md import, so those still get them.
 brain_interaction_policy() {
   if [ -z "$project" ] && node "$H" rulebook "$root" 2>/dev/null && grep -q '<!-- generated: questions' "$root/AGENTS.md" 2>/dev/null && grep -q '<!-- generated: computer-use' "$root/AGENTS.md" 2>/dev/null; then
-    echo "Before the first question that uses a form (question, configuration_question, onboarding_question), read $P/skills/gtm-brain-start/references/questions.md once for the tool parameters; not before a plain answer, and not again later."
+    echo "Before the first question you ask the person, read $P/skills/gtm-brain-start/references/questions.md once; not before a plain answer, and not again later."
   else
     interaction_policy
   fi

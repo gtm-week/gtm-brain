@@ -60,9 +60,9 @@ If no selection exists, offer an available structured choice control in Codex. F
 and "Skip both"; then the CRM as its
 own question: "HubSpot (the course gives it to you)", "Attio", "Another CRM or none yet".
 
-Prefer `configuration_question` with the named tools as `options` and `multiple: true`.
-Its submitted selections choose what to connect, not account permissions. If the person
-submits none or cancels, do not infer declines. Record an explicit Skip response as a
+Ask with the named tools as a numbered list; they may pick several.
+Their picks choose what to connect, not account permissions. If the person
+picks none or does not answer, do not infer declines. Record an explicit Skip response as a
 skip of this question, and clarify scope only when necessary to continue.
 
 Prefer a blocking question tool when available in the current mode. Async questions

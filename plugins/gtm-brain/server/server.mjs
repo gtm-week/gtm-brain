@@ -11,7 +11,6 @@ import { execFile } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync, readFileSync, appendFileSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { inputSchema as questionSchema } from "../scripts/gtm-brain-learn-company/question.mjs";
 import { questionInput } from "./question-input.mjs";
 import { createInterface } from "node:readline";
 import { loadOntology, buildTools, instructionsText } from "../lib/ontology/index.mjs";
@@ -51,16 +50,6 @@ const TOOLS = [
     description: "Inspect or maintain the local, disposable memory search index. mode status reports freshness, checkpoint progress and disk usage without refreshing. Ordinary remember and query handle additions automatically. Use refresh after a large import or an indexing-in-progress response; each call saves checkpoints. Continue refresh while status is stale or rebuilding, until ready, including after a new chat. Use rebuild to recover a damaged cache or when the person asks for a full rebuild; an unfinished rebuild resumes. Source memories and entity Markdown are preserved. This is search-cache maintenance, not summary or entity-brief compilation. Report progress concisely and never claim completion before ready.",
     inputSchema: schema({ mode: str("status | refresh | rebuild", { enum: ["status", "refresh", "rebuild"] }), budget_ms: { type: "integer", minimum: 100, maximum: 5000, description: "Approximate work budget per call in milliseconds; default 1000. One record, source verification or SQL operation may overrun it." } }, ["brain", "mode"]),
     call: ({ brain, ...args }) => memoryReader.read(brain, "maintenance", args).then(r => text(JSON.stringify(r))) },
-  // One native form, three names: the host labels a call by its tool, so a setup step, a settings
-  // question and an ordinary work question must not all read "onboarding question" (ALL-203).
-  ...[
-    ["onboarding_question", "Setup question", "Ask one first-run setup question during gtm-brain-start onboarding (who you are, the company, contexts, optional Chrome setup for websites). Not for tools or settings after setup (configuration_question) and not for everyday work (question)."],
-    ["configuration_question", "Settings question", "Ask one question about tools, connections, settings or workplace configuration: which tools to connect, an admin.md change, the dashboard. Not for first-run setup (onboarding_question) and not for everyday work (question)."],
-    ["question", "Your choice", "Ask one question in everyday work: which context, same as X?, is this a company?, a creative or ordinary choice such as which direction or photo to use. Not for first-run setup (onboarding_question) and not for tools or settings (configuration_question)."],
-  ].map(([name, title, purpose]) => ({ name, title, readOnly: true, noBrain: true,
-    description: `${purpose} The form waits inside the call for the submitted answer. Prefer it over a question typed into the chat and over async chat questions whenever it is available, including in ordinary mode; in Plan mode use the host's planning question tool instead. Options appear as radio choices; multiple=true uses checkboxes. The form adds Something else as the last choice; picking it opens one free-text field, and the typed words come back as text. A choice question is one page; text_label adds a free-text second step, so pass it with options only when a note is needed. Without options the form is one free-text field. Reuse known answers. No account, file or permission changes. Never use it for credentials, security approvals or the protected APPROVE step. Only status answered supplies an answer; declined and cancelled are explicit outcomes, unanswered supplies no decision, and not_shown means the host never displayed the form: ask in plain chat text instead.`,
-    inputSchema: questionSchema,
-    async call(args, requestId) { return text(JSON.stringify(await questions.ask(args, requestId))); } })),
   { name: "update_plugin", title: "Updating GTM Brain", readOnly: false, noBrain: true, openWorld: true,
     description: "Check the installed GTM Brain plugin (mode check, no remote fetch), or update it from its configured marketplace (mode update, only when the person requests an update). Preserves the repository and branch; local installs refresh from their checkout. Afterward the plugin must be reloaded (the update says how). Does not edit a company brain.",
     inputSchema: { type: "object", properties: { mode: str("check | update", { enum: ["check", "update"] }), brain: str("update: the brain folder this chat is in; its rules are refreshed by the new version right after the install") }, required: ["mode"], additionalProperties: false },
@@ -307,8 +296,6 @@ const TOOLS = [
     inputSchema: schema({}),
     call: ({ brain }) => run(brain, "gtm-brain-upgrade/upgrade.sh", []).then(result) },
 ];
-// The form tools are listed only to a client that can show forms
-const QUESTION_TOOLS = new Set(TOOLS.filter(t => t.inputSchema === questionSchema).map(t => t.name));
 // Compilation belongs to the scheduled and background runs (they export GTM_BRAIN_RUN before codex exec).
 // A chat never sees these tools: it queues the worker instead (ALL-204 step 1). tools/call still works.
 const RUN_ONLY_TOOLS = new Set(["compile_facts", "compile_apply", "compile_entity", "entity_facts"]);
@@ -319,9 +306,10 @@ const RETIRED_READS = { recall: "query (memories with search, or object brief)",
 const COMPILE_TOOLSET = new Set([...RUN_ONLY_TOOLS, "render_dashboard"]);
 // With Codex's own question box on in ordinary chats, it asks instead: the free text sits on the same screen.
 const NATIVE_QUESTIONS = (() => { try { return host().nativeQuestions(); } catch { return false; } })();
-const NATIVE_LINE = "\nQuestions: this Codex has its own question box on (request_user_input), so GTM Brain's onboarding_question, configuration_question and question are off. Wherever a GTM Brain procedure names one of them, ask the same question with request_user_input instead: one question per call unless the procedure groups them, two or three concrete options, recommended first. It adds the free-text answer itself, so never add Other or Something else. It has no checkboxes: where a procedure asks for multiple: true, offer the likely combinations as options and let the free-text answer cover the rest. APPROVE still goes only through approve_change.";
+const NATIVE_LINE = "\nQuestions: GTM Brain shows no question forms of its own. This Codex has its own question box on, so ask every question with request_user_input: one question per call unless a procedure groups them, two or three concrete options, recommended first. It adds the free-text answer itself, so never add Other or Something else. It has no checkboxes: where several can apply, offer the likely combinations as options. APPROVE still goes only through approve_change.";
+const CHAT_LINE = "\nQuestions: GTM Brain shows no question forms of its own. Ask every question as plain chat text and end the turn: one question, one line on why it matters, then two or three numbered options with the recommended first. The person answers with a number or in their own words, so never add Other or Something else. Where several can apply, say they can pick several numbers. In Plan mode use the host's own planning question tool. APPROVE still goes only through approve_change.";
 const offered = t => process.env.GTM_BRAIN_TOOLSET === "compile" ? COMPILE_TOOLSET.has(t.name)
-  : !(QUESTION_TOOLS.has(t.name) && (NATIVE_QUESTIONS || !questions.available())) && !(RUN_ONLY_TOOLS.has(t.name) && !process.env.GTM_BRAIN_RUN) && !(t.name in RETIRED_READS);
+  : !(RUN_ONLY_TOOLS.has(t.name) && !process.env.GTM_BRAIN_RUN) && !(t.name in RETIRED_READS);
 
 // Allethic supplies memory capture and structured reads; the host keeps its native forms
 // and session operations. One registered tool per operation, with existing names preserved.
@@ -452,7 +440,7 @@ async function handle(req) {
   const { id, method, params = {} } = req;
   if (method === "initialize") questions.initialize(params.capabilities);
   if (method === "notifications/cancelled") { questions.cancel(params.requestId); return; }
-  if (method === "initialize") return reply(id, { protocolVersion: params.protocolVersion || "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "gtm-brain", title: "GTM Brain", version: VERSION }, instructions: INSTRUCTIONS + (NATIVE_QUESTIONS ? NATIVE_LINE : "") + "\n" + instructionsText(ontology) + "\n" + WORKFLOWS + "\nGTM Brain speaks English. Author brain records in English. Preserve names, IDs, source quotes, and the exact token APPROVE." });
+  if (method === "initialize") return reply(id, { protocolVersion: params.protocolVersion || "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "gtm-brain", title: "GTM Brain", version: VERSION }, instructions: INSTRUCTIONS + (NATIVE_QUESTIONS ? NATIVE_LINE : CHAT_LINE) + "\n" + instructionsText(ontology) + "\n" + WORKFLOWS + "\nGTM Brain speaks English. Author brain records in English. Preserve names, IDs, source quotes, and the exact token APPROVE." });
   if (method === "ping") return reply(id, {});
   if (method === "tools/list") return reply(id, { tools: TOOLS.filter(offered).map(t => ({ name: t.name, title: t.title, description: t.description, inputSchema: advertised(t.inputSchema), annotations: { title: t.title, readOnlyHint: t.readOnly, destructiveHint: false, openWorldHint: !!t.openWorld } })) });
   if (method === "tools/call") {

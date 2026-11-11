@@ -13,7 +13,7 @@ remain ordinary memories without an invented conversation.
    installed, tested connectors. It never calls those connectors itself.
 2. Use their submitted policy when available. For a directly requested capture, the request
    supplies the scope. For broader recurring ingestion, propose source/account scopes and
-   relevant conversations through `configuration_question`; store the submitted choice using
+   relevant conversations and ask; store the submitted choice using
    `remember.meeting_policy` in the person's existing `personal-<handle>` context. Setup's
    language preference establishes that context. Do not use a company-wide language or policy.
    Policy records need `sources: ["user:<handle>"]`. They do not install a scheduler or grant access.

@@ -1,28 +1,22 @@
 # Onboarding questions
 
 
-The question policy itself (which tool asks what, one question pending, what counts as an answer) is in the brain's AGENTS.md and in the chat's opening lines: every chat already holds it. This file holds only what they do not: the tool parameters and their lifecycle. Read it once before the first question that uses a form.
+The question policy itself (one question pending, what counts as an answer) is in the brain's AGENTS.md and in the chat's opening lines: every chat already holds it. This file holds only how to ask. Read it once before the first question.
 
-## Tool parameters and lifecycle
+## How to ask
 
-`onboarding_question` works before a brain exists; `configuration_question` and `question`
-take the same arguments and are the names to use after setup. Pass `question`, two or three
-`options` in display order, and `multiple: true` only for independent selections.
-Omit `options` only for free text, never for a yes/no. With `options`, leave `text_label` out unless
-a note is needed: it becomes a second page. Translate it when used. An `options` array
-on `request_user_input_async` accepts one choice per question, not multiple selections.
-Never invent a `multiple` or `multi_select` parameter on another tool.
+GTM Brain has no question forms of its own. Ask every question one of two ways:
 
-The question tool does not save preferences, configure tools or apply approvals. Its
-24-hour call ceiling releases a lost session; it supplies no auto-resolution decision.
-For async fallback, `{"accepted":true}` acknowledges creating the widget only. Wait with
-an interruptible tool such as `clock.sleep` with `duration_ms: 30000`, then repeat if
-no answer arrived. A submitted answer arrives as a new user message.
+- Codex's own question box, `request_user_input`, when this chat has it (the chat's opening
+  lines say so; Plan mode always has it). Two or three options, recommended first. It adds the
+  free-text answer itself, so never add Other or Something else. It has no checkboxes: offer the
+  likely combinations as options.
+- Otherwise plain chat text, and end the turn: the question, one line on why it matters, and
+  numbered options, recommended first. The person answers with a number or in their own words.
+  Where several can apply, say they can pick several numbers.
 
-The inspected Desktop renderer collapses untouched async forms after 30 seconds. There
-is no keep-open parameter. Turn completion separately clears pending requests, as
-described in OpenAI's [app-server documentation](https://learn.chatgpt.com/docs/app-server#toolrequestuserinput).
-Do not interpret panel collapse as an answer or a reason to repost.
+A yes/no always offers both answers. Free text (a name, a link) names what to type.
+A question never saves preferences, configures tools or applies approvals.
 
 ## Apply throughout onboarding
 
@@ -31,8 +25,8 @@ Do not interpret panel collapse as an answer or a reason to repost.
 | Inferred company | Yes, this is my company; Different company. Then a free-text question for the website. |
 | Unknown website or identity | Structured free-text question, with one example in the prompt. |
 | Company profile corrections | Offer concrete sections to revise when helpful. Applying the profile still requires the APPROVE form below. |
-| Connections | `onboarding_question` with `multiple: true`, or single-select combinations in chat. Submit once; no second yes per tool. |
-| Existing Codex projects | Ask which projects to follow with native checkboxes and actual project names. Selection consents to future capture; reuse it when linking. If the catalog is unavailable, ask for the folder, or offer Not yet / Skip for now. Stay in the onboarding chat. |
+| Connections | One numbered list of the tools; the person picks several numbers at once. No second yes per tool. |
+| Existing Codex projects | Ask which projects to follow, listing the actual project names. Selection consents to future capture; reuse it when linking. If the catalog is unavailable, ask for the folder, or offer Not yet / Skip for now. Stay in the onboarding chat. |
 | Claude context import | Import context; Skip. Explain what will run before asking. |
 | Snapshot | Looks right; Needs corrections. Then a free-text question for the corrections. |
 | Automation | Show the actual proposed work and timing first; offer the named choices and Skip. |
