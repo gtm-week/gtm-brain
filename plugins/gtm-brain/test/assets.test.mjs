@@ -82,6 +82,19 @@ test("Artur's portrait: a photo from a task's work/ folder moves beside him; the
  const line=assetsLine(f.root);assert.match(line,/Artur Wala · portrait: artur-smiling\.png/);assert.doesNotMatch(line,/artur-cap/);
 });
 
+test("a photo Codex dropped loose in brain/entities/ moves into the person's folder when it is approved (new-brain, 2026-11-11)",async()=>{
+ const f=fixture(),remember=await writer(f);
+ lib.writeNames(f.root,[...lib.readNames(f.root),{name:'Maciej Konczal',kind:'person',aliases:[],emails:[],not:[]}]);
+ writeFileSync(join(f.root,'brain/entities/maciej-konczal.jpg'),'me');
+ const r=await remember({content:'Maciej approved this photo as his portrait.',context:'market',asset:{entity:'Maciej Konczal',label:'Portrait',role:'portrait',status:'approved',path:'brain/entities/maciej-konczal.jpg'}});
+ assert.ok(!r.isError,JSON.stringify(r));
+ const stored=lib.readMemories(f.root,'market').find(m=>m.asset?.role==='portrait').asset.file;
+ assert.equal(stored.path,'brain/entities/maciej-konczal/maciej-konczal.jpg','in his folder');
+ assert.equal(readFileSync(join(f.root,stored.path),'utf8'),'me');
+ assert.ok(!existsSync(join(f.root,'brain/entities/maciej-konczal.jpg')),'not left loose beside the pages');
+ assert.match(assetsLine(f.root),/Maciej Konczal · portrait: brain\/entities\/maciej-konczal\/maciej-konczal\.jpg/);
+});
+
 test('the opening line names no files when nothing is approved, and flags two approved files for one role',()=>{
  const f=fixture();
  assert.equal(assetsLine(f.root),'');

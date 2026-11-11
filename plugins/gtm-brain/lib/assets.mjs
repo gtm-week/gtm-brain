@@ -2,8 +2,8 @@
 // uploads, deletes or searches for files. The one copy it makes: a file attached from work/ (this
 // computer's, gitignored, a task's scratch) goes to its owner's folder first, so the approved file
 // travels with the brain and outlives the task (Artur, 2026-11-10: his portrait in a Berlin package).
-import { readFileSync, writeFileSync, mkdirSync, realpathSync, statSync, existsSync, copyFileSync } from 'node:fs';
-import { resolve, relative, isAbsolute, join, extname, basename } from 'node:path';
+import { readFileSync, writeFileSync, mkdirSync, realpathSync, statSync, existsSync, copyFileSync, unlinkSync } from 'node:fs';
+import { resolve, relative, isAbsolute, join, extname, basename, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import * as lib from './brain.mjs';
 
@@ -63,6 +63,8 @@ export function prepareAsset(root, input, project = null, previous = null) {
     if (!statSync(path).isFile()) throw new Error('Attach a file, not a directory.');
     if (!isAbsolute(input.path) && !within(base, path)) throw new Error('Relative attachment escapes its folder. Use its explicit absolute path.');
     if (within(join(realpathSync(root), 'work'), path)) path = toOwnerFolder(root, entity, path);
+    // A file dropped loose in brain/entities/ (beside the pages) moves into its owner's folder.
+    else if (dirname(path) === join(realpathSync(root), 'brain', 'entities')) path = toOwnerFolder(root, entity, path, { move: true });
     file = within(base, path) ? { base: project ? 'project' : 'brain', path: relative(base, path), ...(project ? { project } : {}) }
       : within(realpathSync(root), path) ? { base: 'brain', path: relative(realpathSync(root), path) }
       : { base: 'local', path, machine: machine(root, true) };
@@ -73,8 +75,9 @@ export function prepareAsset(root, input, project = null, previous = null) {
   if (asset.status !== 'retired') resolveAssetFile(root, asset);
   return asset;
 }
-/* A file under work/ lands in brain/entities/<id>/ beside the entity's file, committed, under a free name. */
-function toOwnerFolder(root, entity, path) {
+/* A file under work/ lands in brain/entities/<id>/ beside the entity's file, committed, under a free name.
+   One loose in brain/entities/ itself is moved there, so a person's or company's files are always in their folder. */
+function toOwnerFolder(root, entity, path, { move = false } = {}) {
   const e = lib.resolveEntity(lib.readNames(root), entity);
   if (!e?._path) throw new Error('Name the existing entity for this attachment; use add_name first if it is new.');
   const real = realpathSync(root), dir = join(real, e._path.replace(/\.md$/, '')); mkdirSync(dir, { recursive: true });
@@ -82,7 +85,10 @@ function toOwnerFolder(root, entity, path) {
   let name = `${stem}${ext}`, n = 1;
   while (existsSync(join(dir, name)) && !same(join(dir, name))) name = `${stem}-${++n}${ext}`;
   const target = join(dir, name);
-  if (!same(target)) { copyFileSync(path, target); lib.commit(root, [relative(real, target)], `file: ${name} (from ${relative(real, path)})`); }
+  const from = relative(real, path);
+  if (!same(target)) copyFileSync(path, target);
+  if (move) unlinkSync(path);
+  lib.commit(root, [relative(real, target), ...(move ? [from] : [])], `file: ${name} (${move ? 'moved' : 'copied'} from ${from})`);
   return realpathSync(target);
 }
 /* The current approved file for an entity and role: the one a new approved attachment replaces. */
