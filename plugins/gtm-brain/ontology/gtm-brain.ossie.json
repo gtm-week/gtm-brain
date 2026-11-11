@@ -206,7 +206,7 @@
           "name": "asset",
           "expression": "asset",
           "data_type": "Opaque",
-          "description": "Entity attachment, required when the person hands over or approves a file for a person, company or product (a photo, a logo): entity, label, role (portrait, primary-logo, ...), status (approved when the person said so) and file {base, path, project?, machine?}, or path alone for a file in the brain. Without it the file is never offered again. Resolve project paths through this computer’s linked folder; local references do not transfer files. Use recall for resolved file locations."
+          "description": "Entity attachment, required when the person hands over or approves a file for a person, company or product (a photo, a logo): entity, label, role (portrait, primary-logo, ...), status (approved when the person said so) and file {base, path, project?, machine?}, or path alone for a file in the brain. Without it the file is never offered again; keep_approved_file does this in one call. Resolve project paths through this computer’s linked folder; local references do not transfer files. Use recall for resolved file locations."
         },
         {
           "name": "entities",

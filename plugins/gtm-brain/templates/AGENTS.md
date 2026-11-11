@@ -6,9 +6,9 @@ Before your first answer in a chat, call GTM Brain `query` with object status: i
 chat's opening lines (loaded contexts, approved photos and logos, the rows of `WHERE.md` and the
 projects in `projects/`). Before saying or deciding where a file goes, follow `WHERE.md` and name
 the project folder that exists for it.
-A photo or logo the person approves ("use this photo", "this is our logo") is kept only through
-`remember` with its `asset` field (entity, label, role such as portrait or primary-logo, status
-approved, path); a note or a tag alone is never used again.
+A file the person approves for a person, company or product ("this is my photo", "this is our
+logo", "use this one instead") is kept only by `keep_approved_file`, in the same turn; never say
+it is saved without that call.
 
 ## Questions and identity
 

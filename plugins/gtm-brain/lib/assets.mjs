@@ -91,6 +91,16 @@ function toOwnerFolder(root, entity, path, { move = false } = {}) {
   lib.commit(root, [relative(real, target), ...(move ? [from] : [])], `file: ${name} (${move ? 'moved' : 'copied'} from ${from})`);
   return realpathSync(target);
 }
+/* keep_approved_file: the approved file in its owner's folder. Copied from outside the brain (an attachment in
+   Downloads) or from work/, moved when loose in brain/entities/; a file already elsewhere in the brain stays. */
+export function ownerCopy(root, entity, input) {
+  const real = realpathSync(root);
+  let path; try { path = realpathSync(isAbsolute(input) ? input : join(real, input)); } catch { throw new Error(`no file at ${input}`); }
+  if (!statSync(path).isFile()) throw new Error('Keep a file, not a folder.');
+  const loose = dirname(path) === join(real, 'brain', 'entities');
+  if (within(real, path) && !within(join(real, 'work'), path) && !loose) return relative(real, path);
+  return relative(real, toOwnerFolder(root, entity, path, { move: loose }));
+}
 /* The current approved file for an entity and role: the one a new approved attachment replaces. */
 export function currentApproved(root, entity, role, rows = assetRows(root)) {
   const name = lib.exactName(lib.readNames(root), entity || '') || entity, r = String(role || '').trim().toLowerCase();

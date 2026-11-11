@@ -326,6 +326,15 @@ links keep working). It prints where it landed and the owner; an
 entity file is then attached through `remember` with `asset`. No skill to invoke: use-brain's
 `references/files.md` is the procedure.
 
+### keep_approved_file
+*"this is my photo, use it from now on"*, *"this is our logo"*, *"use this one instead"*
+
+One call keeps an approved file for a person, company or product: copied from outside the brain (an
+attachment in Downloads) or from `work/`, moved when loose in `brain/entities/`, into
+`brain/entities/<name>/`, committed, and recorded as the approved file for its role (portrait,
+primary-logo, ...). A previous approved file for the same role is replaced. Every chat's opening
+lines name the approved files.
+
 ## Workflows
 
 ### workflow

@@ -120,3 +120,22 @@ test("a direct edit of a memories file is put back unless it only appended", () 
   assert.deepEqual(back.map(r => r.path), ["brain/contexts/icp/memories.jsonl"]);
   assert.equal(readFileSync(file, "utf8"), committed);
 });
+
+test("\"this is my photo\": keep_approved_file copies it from Downloads into the person's folder, approved, and the next chat starts with it; \"use this one instead\" replaces it (new-brain, 2026-11-11)", async () => {
+  const root = brain(), downloads = mkdtempSync(join(tmpdir(), "gtm-brain-downloads-"));
+  writeFileSync(join(downloads, "PXL_1.jpg"), "first"); writeFileSync(join(downloads, "PXL_2.jpg"), "second");
+  const s = client(null); await s.init();
+  const { result } = await s.rpc("initialize", { capabilities: {} });
+  assert.match(result.instructions, /is kept only by keep_approved_file, in the same turn/);
+  const kept = await s.call("keep_approved_file", { brain: root, by: "marta-nowak", entity: "Marta Nowak", role: "portrait", label: "Portrait", path: join(downloads, "PXL_1.jpg") });
+  assert.ok(!kept.isError, kept.text);
+  const file = join(root, "brain", "entities", "marta-nowak", "PXL_1.jpg");
+  assert.equal(readFileSync(file, "utf8"), "first", "a copy in her folder, in the brain");
+  assert.equal(execFileSync("git", ["-C", root, "ls-files", "--", "brain/entities/marta-nowak/PXL_1.jpg"], { encoding: "utf8" }).trim(), "brain/entities/marta-nowak/PXL_1.jpg", "committed");
+  const { assetsLine } = await import(`${P}/lib/assets.mjs`);
+  assert.match(assetsLine(root), /Marta Nowak · portrait: brain\/entities\/marta-nowak\/PXL_1\.jpg/);
+  const again = await s.call("keep_approved_file", { brain: root, by: "marta-nowak", entity: "Marta Nowak", role: "portrait", label: "Portrait, newer", path: join(downloads, "PXL_2.jpg") });
+  assert.match(again.text, /replaced the approved portrait of Marta Nowak/);
+  assert.match(assetsLine(root), /Marta Nowak · portrait: brain\/entities\/marta-nowak\/PXL_2\.jpg/); assert.doesNotMatch(assetsLine(root), /PXL_1/);
+  assert.match((await s.call("keep_approved_file", { brain: root, by: "marta-nowak", entity: "Marta Nowak", role: "portrait", path: join(downloads, "nope.jpg") })).text, /not kept: no file at/);
+});
