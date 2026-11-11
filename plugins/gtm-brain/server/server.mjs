@@ -18,6 +18,7 @@ import { createFilesBackend } from "./files-backend.mjs";
 import { createMemoryReader } from "./memory-reader.mjs";
 import { host } from "../lib/host.mjs";
 import { validateValue } from "../lib/ontology/validation.mjs";
+import { placementTrailers, whyHere, WHY_TRAILER } from "../lib/where.mjs";
 
 const P = dirname(dirname(fileURLToPath(import.meta.url)));
 const lib = await import(join(P, "lib", "brain.mjs"));
@@ -150,12 +151,22 @@ const TOOLS = [
     call: ({ brain, name }) => run(brain, "gtm-brain-share/share.mjs", name ? ["--name", String(name)] : [], { timeout: 120000 }).then(result) },
   { name: "save", title: "Saving", readOnly: false,
     description: "Keep every change in the brain folder that no GTM Brain tool wrote: files Codex created, edited, moved or deleted itself (graphics, briefs, WHERE.md) and edits made by hand. Call it once when such a task is done; what GTM Brain tools write is already kept. Refuses while an admin proposal is pending.",
-    inputSchema: schema({ message: str("One line, what changed: e.g. notes: pipeline (3), marketing (1)"), scope: str("all (default) | covers: only brain/contexts/*/context.md, for the scheduled run", { enum: ["all", "covers"] }) }),
-    async call({ brain, message, scope }) {
-      const r = lib.save(brain, message, { covers: scope === "covers" });
+    inputSchema: schema({ message: str("One line, what changed: e.g. notes: pipeline (3), marketing (1)"), scope: str("all (default) | covers: only brain/contexts/*/context.md, for the scheduled run", { enum: ["all", "covers"] }),
+      placed: { type: "array", maxItems: 50, description: "Every new file or folder you put somewhere: its path, the WHERE.md row you followed and why, in a few words. Kept in history, so \"why is this here\" has an answer later. A file already saved can be given alone.", items: { type: "object", properties: { path: str("Path inside the brain folder, e.g. projects/berlin-event/speakers/anna-lee/"), row: { type: "integer", minimum: 1, description: "The WHERE.md row number; leave out when no row fits and the person said where" }, why: str("Why there, in a few words, e.g. speaker graphic for the Berlin event") }, required: ["path", "why"], additionalProperties: false } } }),
+    async call({ brain, message, scope, placed }) {
+      const { trailers, problems } = placementTrailers(brain, placed);
+      if (problems.length) return text(`not saved: ${problems.join("; ")}. Fix placed and call again.`, true);
+      const r = lib.save(brain, message, { covers: scope === "covers", trailers });
       if (r.ok) lib.rerender(brain);
-      return text(r.ok ? r.note : `not saved: ${r.note}`, !r.ok);
+      const covered = f => trailers.some(t => { const p = t.slice(WHY_TRAILER.length + 2).split(": ")[0]; return f === p || f.startsWith(p + "/"); });
+      const loose = (r.files || []).filter(f => /^(\?\?|A)$/.test(f.state) && !/^(brain|work)\//.test(f.path) && !covered(f.path)).map(f => f.path);
+      const why = r.ok && trailers.length ? `\nwhy kept for ${trailers.length} path(s)` : "", ask = r.ok && loose.length ? `\nno reason recorded for: ${loose.slice(0, 8).join(", ")}${loose.length > 8 ? ` and ${loose.length - 8} more` : ""}. Next time give each new file its WHERE.md row and why in placed; for these, save again with placed only.` : "";
+      return text(r.ok ? r.note + why + ask : `not saved: ${r.note}`, !r.ok);
     } },
+  { name: "why_here", title: "Why this is here", readOnly: true,
+    description: "Why a file or folder is where it is: the WHERE.md row and reason recorded when it was saved, who put it there and when; for a folder, the reasons for what is inside. Reads only.",
+    inputSchema: schema({ path: str("Path inside the brain folder") }),
+    call: async ({ brain, path }) => text(whyHere(brain, path)) },
   { name: "check_environment", title: "Checking the machine", readOnly: true, noBrain: true,
     description: "What this machine has: node, codex (version, signed in or not), git, and what the folder is (a brain, empty, or something else). Call this instead of running version or login commands in the shell; it is the only check needed before setup. An existing brain also returns its saved onboarding state and continuation instructions.",
     inputSchema: schema({ folder: str("The folder the person is in (absolute path); optional") }, []),
@@ -300,7 +311,7 @@ const TOOLS = [
 // A chat never sees these tools: it queues the worker instead (ALL-204 step 1). tools/call still works.
 const RUN_ONLY_TOOLS = new Set(["compile_facts", "compile_apply", "compile_entity", "entity_facts"]);
 // The reads that query covers (ALL-204 step 2b): never listed; still answering, marked deprecated, for one release.
-const RETIRED_READS = { recall: "query (memories with search, or object brief)", who_is: "query (entities with search)", list_contexts: "query (contexts)", list_projects: "query (projects)", list_brains: "query (brains)", customer_overview: "query (customers)", meeting_overview: "query (meetings)", advise: "query (health)", where_we_are: "query (status)", guideline: "document" };
+const RETIRED_READS = { recall: "query (memories with search, or object brief)", who_is: "query (entities with search)", list_contexts: "query (contexts)", list_projects: "query (projects)", list_brains: "query (brains)", customer_overview: "query (customers)", meeting_overview: "query (meetings)", advise: "query (health)", where_we_are: "query (status)", why_here: "query (why)", guideline: "document" };
 // A summary run (GTM_BRAIN_TOOLSET=compile, set by scripts/gtm-brain-compile/run-args.mjs) is listed only what it
 // calls: every other description is re-sent with each of its requests and is pure cost there.
 const COMPILE_TOOLSET = new Set([...RUN_ONLY_TOOLS, "render_dashboard"]);
@@ -351,9 +362,9 @@ const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [colu
   const query = byName("query"), describe = byName("describe_object"), objects = byName("list_objects");
   const datasets = [...query.inputSchema.properties.object.enum];
   const base = query.call, describeBase = describe.call, objectsBase = objects.call;
-  query.description = "The one read: rows of one object, newest first (exact filters, free-text search with alias expansion, limit), or one read-only SQL SELECT over the memory index (memories, members, contexts, entities, keywords; describe_object shows the columns) for counts, joins and dates. Derived reads by object: status (where we are: contexts, loaded set, tools, onboarding; call it first), brief (an entity's cited one-page view; search = the name), deal (one deal's MEDDPICC rubric and every memory about it, to score with cited IDs; search = the company), projects, brains, customers, meetings, health (how the brain is doing). An entities search resolves a name, alias, email or typo to ranked candidates. Answer from the rows; no rows means say so.";
+  query.description = "The one read: rows of one object, newest first (exact filters, free-text search with alias expansion, limit), or one read-only SQL SELECT over the memory index (memories, members, contexts, entities, keywords; describe_object shows the columns) for counts, joins and dates. Derived reads by object: status (where we are: contexts, loaded set, tools, onboarding; call it first), brief (an entity's cited one-page view; search = the name), deal (one deal's MEDDPICC rubric and every memory about it, to score with cited IDs; search = the company), why (why a file or folder is where it is: the WHERE.md row, reason, who and when; search = the path), projects, brains, customers, meetings, health (how the brain is doing). An entities search resolves a name, alias, email or typo to ranked candidates. Answer from the rows; no rows means say so.";
   query.inputSchema = { ...query.inputSchema, required: [], properties: { ...query.inputSchema.properties,
-    object: { ...query.inputSchema.properties.object, enum: [...datasets, ...Object.keys(VIEWS), "deal"] },
+    object: { ...query.inputSchema.properties.object, enum: [...datasets, ...Object.keys(VIEWS), "deal", "why"] },
     sql: { type: "string", description: "One SELECT (or WITH ... SELECT) over memories, members, contexts, entities and keywords. Read-only; at most limit rows (default 200)." },
     candidates: { type: "array", items: { type: "object", additionalProperties: true }, description: "With object entities and search: rank this bounded shortlist a CRM returned instead of the registry; no connector calls." },
     project: PROJECT } };
@@ -361,13 +372,15 @@ const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [colu
     if (sql) { try { return text(table(await memoryReader.read(brain, "sql", { sql, limit }))); } catch (e) { return text(e.message, true); } }
     if (!object) return text("Pass object or sql: query needs one of them.", true);
     if (object === "brief") return search ? original.get("recall")({ brain, entity: search, ...(filters?.context ? { context: filters.context } : {}), ...(project ? { project } : {}) }) : text("brief needs search: the entity name, alias, email or id.", true);
+    if (object === "why") return search ? original.get("why_here")({ brain, path: search }) : text("why needs search: the file or folder path.", true);
     if (object === "deal") return search ? run(brain, "gtm-brain-recall/deal-health.mjs", ["--entity", search]).then(result) : text("deal needs search: the company name, alias or id.", true);
     if (VIEWS[object]) return original.get(VIEWS[object])(object === "brains" ? {} : { brain, ...(project ? { project } : {}), ...(filters && typeof filters === "object" ? filters : {}) });   // a view's options travel in filters (projects: include_available; meetings: its options)
     if (object === "entities" && search && !filters) return original.get("who_is")({ brain, name: search, ...(candidates ? { candidates } : {}) });
     return base({ brain, object, ...(search !== undefined ? { search } : {}), ...(filters !== undefined ? { filters } : {}), ...(limit !== undefined ? { limit } : {}) });
   };
-  describe.inputSchema = { ...describe.inputSchema, properties: { ...describe.inputSchema.properties, name: { ...describe.inputSchema.properties.name, enum: [...datasets, ...Object.keys(VIEWS), "deal"] } } };
+  describe.inputSchema = { ...describe.inputSchema, properties: { ...describe.inputSchema.properties, name: { ...describe.inputSchema.properties.name, enum: [...datasets, ...Object.keys(VIEWS), "deal", "why"] } } };
   describe.call = async args => {
+    if (args.name === "why") return text("why: a derived read (query with object why, search = a path inside the brain). Returns the WHERE.md row and reason recorded when the file or folder was saved (save's placed), who put it there and when; for a folder, the reasons for what is inside; with no reason recorded, when it arrived and that the person should be asked. Reads only.");
     if (args.name === "deal") return text("deal: a derived read (query with object deal, search = the company). Returns the MEDDPICC rubric and every memory about that company, newest first, with IDs; score each element confirmed, weak or missing from those memories only, citing IDs, then ask about what is missing. Reads only. Off when brain/admin.md has deal_scoring: off.");
     if (VIEWS[args.name]) return text(`${args.name}: a derived read (query with object ${args.name}${args.name === "brief" ? ", search = the entity; filters.context for one perspective" : ""}). ${byName(VIEWS[args.name]).description}`);
     const r = await describeBase(args);
@@ -381,7 +394,7 @@ const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [colu
   };
 }
 
-const INSTRUCTIONS = "GTM Brain: the company brain in this workspace. Pass the workspace folder as brain. In a folder with brain/admin.md, or one whose AGENTS.md names a GTM Brain project, start every chat with query (object status) before your first answer: it refreshes the brain and returns the chat's opening lines, which you follow. In a folder without a brain, a request to set up GTM Brain follows the gtm-brain-start skill (check_environment first). Tools return plain text meant for you: report the outcome in one or two sentences in your own words, never paste tool output. Everything a tool writes is kept at once; never ask the person to save, never mention git. Files you create, edit, move or delete in the brain folder yourself (a graphic, a brief, WHERE.md), not through a GTM Brain tool, are kept by save: call it once when that task is done, with a one-line message. A proposal is applied only through approve_change, whose form asks the person for APPROVE. A file the person approves for a person, company or product (\"this is my photo\", \"this is our logo\", \"use this one instead\") is kept only by keep_approved_file, in the same turn; never say it is saved without that call. A note or a tag alone is never used again.";
+const INSTRUCTIONS = "GTM Brain: the company brain in this workspace. Pass the workspace folder as brain. In a folder with brain/admin.md, or one whose AGENTS.md names a GTM Brain project, start every chat with query (object status) before your first answer: it refreshes the brain and returns the chat's opening lines, which you follow. In a folder without a brain, a request to set up GTM Brain follows the gtm-brain-start skill (check_environment first). Tools return plain text meant for you: report the outcome in one or two sentences in your own words, never paste tool output. Everything a tool writes is kept at once; never ask the person to save, never mention git. Files you create, edit, move or delete in the brain folder yourself (a graphic, a brief, WHERE.md), not through a GTM Brain tool, are kept by save: call it once when that task is done, with a one-line message and, for each new file or folder, placed (path, WHERE.md row, why). Why is this file here: query (object why, search: the path). A proposal is applied only through approve_change, whose form asks the person for APPROVE. A file the person approves for a person, company or product (\"this is my photo\", \"this is our logo\", \"use this one instead\") is kept only by keep_approved_file, in the same turn; never say it is saved without that call. A note or a tag alone is never used again.";
 
 const WORKFLOWS = `During company work, read ${join(P, "skills/gtm-brain-use-brain/SKILL.md")} and the internal procedure relevant to the task. Read ${join(P, "skills/gtm-brain-configure/SKILL.md")} for workplace changes and APPROVE. Read ${join(P, "skills/gtm-brain-configure/references/update-plugin.md")} for plugin updates or brain refresh. Internal operations remain tools; the person does not need to invoke a separate skill for each one.`;
 

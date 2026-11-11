@@ -10,6 +10,10 @@ follows it; edit its rows to change where things land. Projects (an event, a cam
 live in `projects/`, each in one folder with everything made for it. Processes that run over
 time, with steps, are in `workflows/`.
 
+Ask "why is this here?" about any file or folder: Codex answers with the WHERE.md row and the
+reason it recorded when the file was kept, who put it there and when. A file that arrived without
+one is named at the start of the next chat, so nothing stays unexplained.
+
 `strategy.md` is here from day one, waiting for `run the strategic intake`. A file with no owner
 is not stored: Codex asks what it belongs to.
 

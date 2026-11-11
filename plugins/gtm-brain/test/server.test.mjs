@@ -515,7 +515,7 @@ test("compile_apply accepts empty working guidance through MCP and rejects missi
 
 test("RESERVED_TOOLS is the live catalog, so no company interaction can shadow a tool", async () => {
   const { result } = await rpc("tools/list");
-  const hidden = ["compile_facts", "compile_apply", "compile_entity", "entity_facts", "recall", "who_is", "list_contexts", "list_projects", "list_brains", "customer_overview", "meeting_overview", "advise", "where_we_are", "guideline"];
+  const hidden = ["compile_facts", "compile_apply", "compile_entity", "entity_facts", "recall", "who_is", "list_contexts", "list_projects", "list_brains", "customer_overview", "meeting_overview", "advise", "where_we_are", "why_here", "guideline"];
   assert.deepEqual([...lib.RESERVED_TOOLS].sort(), [...new Set([...result.tools.map(t => t.name), ...hidden])].sort());
 });
 

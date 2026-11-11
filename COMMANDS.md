@@ -209,7 +209,16 @@ cover changed in an editor, names fixed by hand). APPROVE commits the workplace 
 scheduled run's compile commits its covers; setup makes the first commit; upgrade keeps the rules
 it refreshed. Anything you had staged yourself stays out of these commits.
 
-Tool: `save`. Writes: a git commit (never `work/`).
+Files Codex makes with its own shell (a graphic, a brief, a project folder) are kept by `save` too,
+with `placed`: for each new file or folder, its path, the WHERE.md row it followed and why. Each
+becomes a `gtm-brain-why: <path>: WHERE.md row 5 (...): <why>` line in that commit, so git
+history is the shared log of where things went and why. *"Why is this file here?"* is `query`
+with object `why` and the path: the row, the reason, who put it there and when, or, with none
+recorded, when it arrived and that you should be asked. The chat start names new files that
+arrived with no reason (made by shell, kept by background maintenance), once per set.
+
+Tool: `save`. Writes: a git commit (never `work/`); with only `placed`, a commit that carries the
+reasons and nothing else.
 
 ### share_brain
 *"push this brain to my GitHub"*, *"share the brain"*, *"put the brain on GitHub"*

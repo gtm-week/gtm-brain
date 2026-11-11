@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync, spawnSync } from "node:child_process";
 const P = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
+process.env.CODEX_HOME = mkdtempSync(join(tmpdir(), "gtm-brain-test-home-"));   // never the real brains registry
 const lib = await import(`${P}/lib/brain.mjs`);
 
 test("a bare first name is held and asked about; a full name is kept with where it came from; who is Max names the rule", () => {

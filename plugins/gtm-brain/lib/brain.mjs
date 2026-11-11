@@ -843,7 +843,7 @@ export function savePathsFor(root) { return [...[".", "brain"].filter(p => exist
 /* Every writer calls this once after writing: everything written is kept at once, one commit per
    change. The message is also the activity line the dashboard shows. GTM_BRAIN_NO_COMMIT (tests,
    dry runs) turns committing off; `always` lets save ignore it. */
-export function commit(root, paths, message, { always = false, push = true } = {}) {
+export function commit(root, paths, message, { always = false, push = true, allowEmpty = false } = {}) {
   // Keep identity files and derived evidence views with every brain write.
   if (readAdmin(root) && paths.some(p => /brain(?:\/|$)|context\.md$|memories\.jsonl$/.test(p))) {
     withEntityLock(root, () => { if (!migrateEntities(root)) refreshEntityPages(root); });
@@ -856,12 +856,15 @@ export function commit(root, paths, message, { always = false, push = true } = {
   const git = (...a) => { for (let i = 0; ; i++) { try { return execFileSync("git", ["-C", root, ...a], { stdio: "pipe", encoding: "utf8" }); } catch (e) { if (i < 8 && /index\.lock|Unable to create .*\.lock/i.test(String(e.stderr || e.message))) { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250); continue; } throw e; } } };
   try {
     paths = paths.filter(p => p.startsWith(":(") || existsSync(join(root, p)) || git("ls-files", "--", p).trim());
-    if (!paths.some(p => !p.startsWith(":("))) return { ok: true, note: "nothing to commit" };
-    if (!paths.length) return { ok: true, note: "nothing to commit" };
-    git("add", "--", ...paths);
-    if (!git("diff", "--cached", "--name-only", "--", ...paths).trim()) return { ok: true, note: "nothing to commit" };
-    // The pathspec keeps anything else the person had staged out of this commit.
-    git("-c", "commit.gpgsign=false", "commit", "-q", "-m", message, "--", ...paths);
+    if (!paths.some(p => !p.startsWith(":(")) && !allowEmpty) return { ok: true, note: "nothing to commit" };
+    if (!paths.length && !allowEmpty) return { ok: true, note: "nothing to commit" };
+    if (paths.length) git("add", "--", ...paths);
+    const staged = paths.length && git("diff", "--cached", "--name-only", "--", ...paths).trim();
+    if (!staged && !allowEmpty) return { ok: true, note: "nothing to commit" };
+    // The pathspec keeps anything else the person had staged out of this commit. A reason recorded for a
+    // file already kept (allowEmpty) is a commit of its own, with nothing staged in it.
+    if (staged) git("-c", "commit.gpgsign=false", "commit", "-q", "-m", message, "--", ...paths);
+    else git("-c", "commit.gpgsign=false", "commit", "-q", "--allow-empty", "--only", "-m", message);
     // Shared right away when the brain has a remote; in the background, so a slow network never
     // holds a note. A failed push is retried by the next commit and by the session start's pull.
     let shared = false;
@@ -897,15 +900,16 @@ export const PUSH = ["push", "-q", "-u"];
 export const pushRemote = list => { const r = String(list || "").split("\n").map(x => x.trim()).filter(Boolean); return r.includes("origin") ? "origin" : r[0] || ""; };
 export const largeNote = large => `Too big for git, not kept (over ${LARGE_FILE_MB} MB): ${large.map(f => `${f.path} (${Math.round(f.size / 1048576)} MB)`).join(", ")}. Offer to move each to the shared drive (Google Drive) and link it from its project's README.md, as WHERE.md says; delete the local copy only after the person says yes and the upload is verified. If Google Drive is not connected in this Codex, offer to connect it first (connect my tools); if they decline, the file stays on this computer only, and say once that teammates will not get it.`;
 /* The person's save: commit what unsavedChanges lists, push when there is a remote. */
-export function save(root, message, { covers = false } = {}) {
+export function save(root, message, { covers = false, trailers = [] } = {}) {
   if (!covers && existsSync(join(root, "work", "admin.proposed.md"))) return { ok: false, note: "a change to brain/admin.md is waiting for APPROVE; ask for APPROVE or a drop, then save" };
   // A direct edit of a protected file is never saved: it is put back first (guardProtected).
   if (!covers) { const back = restoredNotice(guardProtected(root)); if (back) logActivity(root, "save", back.split(".")[0]); }
   const paths = covers ? COVER_PATHS : savePathsFor(root);
   const files = unsavedChanges(root, paths);
-  if (!files.length) { const large = covers ? [] : largeUnsaved(root); return { ok: true, note: covers ? "nothing to save: no cover changed" : large.length ? `nothing else to save\n${largeNote(large)}` : "nothing to save: everything is committed", files, large }; }
+  if (!files.length && !trailers.length) { const large = covers ? [] : largeUnsaved(root); return { ok: true, note: covers ? "nothing to save: no cover changed" : large.length ? `nothing else to save\n${largeNote(large)}` : "nothing to save: everything is committed", files, large }; }
   // save pushes in the foreground below; a background push from commit would race it for the ref.
-  const r = commit(root, paths, String(message || "save").split("\n")[0].slice(0, 120), { always: true, push: false });
+  const subject = String(message || (files.length ? "save" : "why: placed files")).split("\n")[0].slice(0, 120);
+  const r = commit(root, files.length ? paths : [], trailers.length ? `${subject}\n\n${trailers.join("\n")}` : subject, { always: true, push: false, allowEmpty: !files.length });
   if (!r.ok) return { ok: false, note: r.note, files };
   const git = (...a) => execFileSync("git", ["-C", root, ...a], { encoding: "utf8", stdio: "pipe" }).trim();
   const hash = git("rev-parse", "--short", "HEAD");
@@ -1276,7 +1280,7 @@ export function validateMemoriesFile(path, context = null) {
 export const INTERACTIONS_PATH = "brain/ontology.ossie.json";
 // every name the plugin serves; server.test.mjs holds this equal to the live catalog, so a company
 // interaction can never shadow a tool
-export const RESERVED_TOOLS = new Set(["memory_index", "update_plugin", "where_we_are", "list_contexts", "load_context", "recall", "compile_facts", "compile_apply", "render_dashboard", "open_dashboard", "new_context", "fork_context", "edit_context", "archive_context", "advise", "who_is", "add_name", "check_tools", "mark_tool", "propose_admin_change", "approve_change", "keep_approved_file", "save", "check_environment", "setup_brain", "upgrade_brain", "list_objects", "describe_object", "query", "remember", "interact", "propose_interaction", "link_project", "unlink_project", "list_projects", "list_brains", "customer_overview", "meeting_overview", "entity_facts", "compile_entity", "update_entity", "merge_entities", "archive_entity", "undo_entity_merge", "skill", "guideline", "document", "workflow", "share_brain"]);
+export const RESERVED_TOOLS = new Set(["memory_index", "update_plugin", "where_we_are", "list_contexts", "load_context", "recall", "compile_facts", "compile_apply", "render_dashboard", "open_dashboard", "new_context", "fork_context", "edit_context", "archive_context", "advise", "who_is", "why_here", "add_name", "check_tools", "mark_tool", "propose_admin_change", "approve_change", "keep_approved_file", "save", "check_environment", "setup_brain", "upgrade_brain", "list_objects", "describe_object", "query", "remember", "interact", "propose_interaction", "link_project", "unlink_project", "list_projects", "list_brains", "customer_overview", "meeting_overview", "entity_facts", "compile_entity", "update_entity", "merge_entities", "archive_entity", "undo_entity_merge", "skill", "guideline", "document", "workflow", "share_brain"]);
 const LONG_DASH = /[\u2013\u2014\u2015\u2212]/;
 const interactionOf = (raw, parsed) => ({
   name: parsed.name, title: String(raw.title || parsed.name), tool: String(raw.tool || "").trim(), operation: String(raw.operation || "").trim(), description: String(raw.description || "").trim(),
