@@ -46,6 +46,13 @@ If the check ends with *"installed in Codex but not in admin.md tools: linear, g
 offer once: *"You have Linear and Google Calendar connected; add them to the tools list?"* On
 yes, propose the `admin.md` change through the `gtm-brain-configure` workplace-change procedure (the person chooses APPROVE in the `approve_change` form).
 
+An installed plugin this brain has used is on the dashboard already, admin.md or not: it was
+read-tested in chat (`mark_tool`), a memory came from it (its `tools` or source), or a memory
+mentions it by name (*"used in this brain, on the dashboard, not in admin.md tools: MagicPath
+(mentioned in a memory)"*). A plugin named with an everyday word (Sales) never counts by mention.
+Offer once to add it to the company profile, the same way. After using a plugin for brain work,
+call `mark_tool` so it shows.
+
 ## Step 1c: MCP servers added by hand
 
 The check also reads remote MCP servers from Codex's `config.toml`. One that matches a tool in

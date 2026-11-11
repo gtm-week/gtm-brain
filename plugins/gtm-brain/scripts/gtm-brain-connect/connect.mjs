@@ -173,7 +173,31 @@ if (listed) for (const { re, ids, why } of SUGGEST) {
   state[key(tool)] = { ...prev, tool, plugin: p.id, marketplace: p.marketplace, display: p.display, status, suggested: true, checked_at: new Date().toISOString() };
   suggested.push({ tool, status, p, why: typeof why === "function" ? why(p) : why, declined: !!prev.declined });
 }
-for (const k of Object.keys(state)) if (!(state[k] && (state[k].suggested || state[k].mcp)) && !(admin.tools || []).some(t => key(t) === k)) delete state[k]; // a tool removed from admin.md leaves the record
+/* ---------- used in this brain: an installed plugin with a trace here is on the page, admin.md or not ----------
+   A trace: a read test in chat (mark_tool), a memory that names it in tools or as its source, or a memory
+   that mentions it by name ("pulled the guests from Luma"). Codex's defaults and helpers never count.
+   Recomputed each run: uninstalled, it leaves the page. */
+const brainText = (() => {
+  const recs = lib.listContexts(root).flatMap(c => lib.effectiveMemories(lib.readMemories(root, c.slug)));
+  return { tools: new Set(recs.flatMap(r => [...(r.tools || []), ...(r.source || []).map(x => x && x.kind)]).filter(Boolean).map(norm)), content: recs.map(r => String(r.content || "")).join("\n") };
+})();
+// A plugin named with an everyday word (Sales, Sites) is in every GTM memory: a mention of it proves nothing.
+const COMMON = new Set(["sales", "sites", "notes", "tasks", "calendar", "contacts", "drive", "docs", "sheets", "slides", "files", "email", "mail", "messages", "search", "maps", "news", "meetings", "forms", "chat", "teams"]);
+const mentions = name => name.length >= 4 && !COMMON.has(norm(name)) && new RegExp(`(^|[^\\p{L}\\p{N}])${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^\\p{L}\\p{N}])`, "u").test(brainText.content);
+const used = [];
+if (listed) {
+  const taken = new Set([...rows.map(r => r.p && r.p.id), ...suggested.map(x => x.p.id)].filter(Boolean));
+  for (const k of Object.keys(state)) if (state[k] && state[k].used) delete state[k].used;
+  for (const p of candidates()) {
+    if (p.state !== "enabled" || taken.has(p.id) || DEV.has(p.id) || p.policy === "INSTALLED_BY_DEFAULT") continue;
+    const name = p.display || p.id, k = entryKey(state, name), prev = state[k] || {};
+    const why = prev.test ? "used in chat" : [p.id, name].some(x => brainText.tools.has(norm(x))) ? "a memory came from it" : mentions(name) ? "mentioned in a memory" : null;
+    if (!why) continue;
+    state[k] = { ...prev, tool: prev.tool || name, plugin: p.id, marketplace: p.marketplace, display: p.display, status: "installed", used: why, suggested: false, mcp: false, checked_at: new Date().toISOString() };
+    used.push({ tool: state[k].tool, why });
+  }
+}
+for (const k of Object.keys(state)) if (!(state[k] && (state[k].suggested || state[k].mcp || state[k].used)) && !(admin.tools || []).some(t => key(t) === k)) delete state[k]; // a tool removed from admin.md leaves the record
 writeFileSync(wf, JSON.stringify(state, null, 1));
 console.log(`tools in admin.md: ${rows.length}${listed ? "" : " · codex plugin list failed: install state as last checked, not re-checked now"}${catalogAt ? ` · catalog as of ${lib.localDateTime(catalogAt)}` : " · no catalog cache yet (open the Codex app once)"}`);
 for (const r of rows) {
@@ -185,7 +209,8 @@ for (const r of rows) {
 // installed official plugins that admin.md does not mention: offer to add them. Codex's own defaults
 // (installed by default) and developer plugins are left out; they are not a GTM person's tools.
 const known = new Set(rows.map(r => r.p && r.p.id).filter(Boolean));
-const extra = candidates().filter(p => p.state === "enabled" && !known.has(p.id) && !DEV.has(p.id) && p.policy !== "INSTALLED_BY_DEFAULT" && !mcpServers.some(m => norm(p.display).startsWith(norm(m)))).map(p => p.display || p.id);
+const extra = candidates().filter(p => p.state === "enabled" && !known.has(p.id) && !used.some(u => norm(u.tool) === norm(p.display || p.id)) && !DEV.has(p.id) && p.policy !== "INSTALLED_BY_DEFAULT" && !mcpServers.some(m => norm(p.display).startsWith(norm(m)))).map(p => p.display || p.id);
+if (used.length) console.log(`\nused in this brain, on the dashboard, not in admin.md tools: ${used.map(u => `${u.tool} (${u.why})`).join(", ")}. Offer once to add them to the company profile (gtm-brain-configure workplace-change procedure).`);
 if (extra.length) console.log(`\ninstalled in Codex but not in admin.md tools: ${extra.join(", ")}. Offer to add them (gtm-brain-configure workplace-change procedure).`);
 if (manual.length) console.log(`\nconnected as MCP servers, not in admin.md tools: ${manual.map(s => state[key(s)].tool).join(", ")}. They are on the dashboard already; offer once to add them to the company profile (gtm-brain-configure workplace-change procedure).`);
 for (const s of suggested) {

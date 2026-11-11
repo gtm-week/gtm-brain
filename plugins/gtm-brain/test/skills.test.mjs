@@ -323,6 +323,30 @@ test("the cover carries the names it is about, with kinds; action is no longer a
   assert.throws(() => run(root, "remember", "remember.mjs", "--by", "marta", "--kind", "action", "--content", "x"), /no longer a kind/);
 });
 
+test("an installed plugin used in this brain is on the dashboard without admin.md: a read test, a memory from it, a mention (2026-11-11)", () => {
+  const cr = mkdtempSync(join(tmpdir(), "gtm-brain-used-")); execFileSync("git", ["init", "-q", cr]);
+  run(cr, "setup", "setup.sh", "--company", "X", "--one-liner", "y", "--owner", "Ann Lee <ann@b.c>", "--tools", "Attio");
+  const bin = mkdtempSync(join(tmpdir(), "gtm-brain-ubin-")), cat = mkdtempSync(join(tmpdir(), "gtm-brain-ucat-"));
+  writeFileSync(join(bin, "codex"), `#!/bin/sh\ncat <<'L'\nMarketplace \`openai-curated-remote\`\nattio@openai-curated-remote installed, enabled 1 x\nlinear@openai-curated-remote installed, enabled 1 x\nslack@openai-curated-remote installed, enabled 1 x\nhubspot@openai-curated-remote installed, enabled 1 x\napp-9@openai-curated-remote installed, enabled 1 x\nsales@openai-curated-remote installed, enabled 1 x\nwork-pets@openai-curated-remote installed, enabled 1 x\nnotion@openai-curated-remote installed, enabled 1 x\nL\n`); execFileSync("chmod", ["755", join(bin, "codex")]);
+  writeFileSync(join(cat, "c.json"), JSON.stringify({ plugins: ["attio:Attio", "linear:Linear", "slack:Slack", "hubspot:HubSpot", "app-9:MagicPath", "sales:Sales", "work-pets:Work Pets", "notion:Notion"].map(x => ({ name: x.split(":")[0], installation_policy: "AVAILABLE", release: { display_name: x.split(":")[1] } })) }));
+  const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, GTM_BRAIN_CATALOG_DIR: cat, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1" };
+  const remember = (...a) => execFileSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann-lee", "--context", "company", ...a], { cwd: cr, env });
+  remember("--tools", "slack", "--content", "Collected the speaker replies.");
+  remember("--content", "Built the Berlin hero in MagicPath. Sales cycle is three months; Work Pets is fun.");
+  execFileSync(process.execPath, [`${P}/scripts/gtm-brain-connect/connect.mjs`, ".", "--mark", "Linear", "ok", "3 issues"], { cwd: cr, env });
+  const out = execFileSync(process.execPath, [`${P}/scripts/gtm-brain-connect/connect.mjs`, ".", "--check"], { cwd: cr, encoding: "utf8", env });
+  assert.match(out, /used in this brain, on the dashboard, not in admin\.md tools: [^\n]*Linear \(used in chat\)/);
+  assert.match(out, /Slack \(a memory came from it\)/); assert.match(out, /MagicPath \(mentioned in a memory\)/);
+  const st = JSON.parse(readFileSync(join(cr, "work", "tools.json"), "utf8"));
+  assert.equal(st.magicpath.status, "installed"); assert.equal(st.linear.test, "ok", "the read test stays with it");
+  for (const k of ["sales", "work pets", "notion"]) assert.equal(st[k], undefined, `${k}: an everyday word, a helper, or no trace`);
+  assert.match(out, /installed in Codex but not in admin\.md tools: [^\n]*Notion/); assert.doesNotMatch(out.split("installed in Codex")[1] || "", /MagicPath|Linear/, "a used one is not offered twice");
+  execFileSync(process.execPath, [`${P}/scripts/gtm-brain-render/render.mjs`, "."], { cwd: cr, env: { ...env, GTM_BRAIN_NO_OPEN: "1" } });
+  const page = readFileSync(join(cr, "work", "home", "data.json"), "utf8");
+  for (const t of ["MagicPath", "Linear", "Slack"]) assert.match(page, new RegExp(`"tool":"${t}"`), `${t} is on the dashboard`);
+  assert.doesNotMatch(page, /"tool":"Sales"/);
+});
+
 test("connect matches tools against the live catalog: by id, by display name, short forms, prefix; never a table", () => {
   const cr = mkdtempSync(join(tmpdir(), "gtm-brain-connect-")); execFileSync("git", ["init", "-q", cr]);
   run(cr, "setup", "setup.sh", "--company", "X", "--one-liner", "y", "--owner", "A B <a@b.c>", "--tools", "Gmail, Wispr Flow, Granola, Calendar, Apollo, Todoist, Fax machine, Salesforce, Luma");
