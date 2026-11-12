@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One worker per brain. Saved changes start immediately; changes during a run get another pass.
+# One worker per brain. A saved change starts it; it waits for 10 quiet minutes, then compiles; changes during a run get another pass.
 set -u
 P="${PLUGIN_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 BRAIN="${1:-.}"; cd "$BRAIN" || exit 1

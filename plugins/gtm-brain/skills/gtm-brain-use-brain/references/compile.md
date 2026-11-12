@@ -10,10 +10,12 @@ Keep authored brain content in English. Preserve names, source quotes and the ex
 
 ## When it runs by itself
 
-A separate run starts immediately after each saved change and rewrites summaries with new
-notes. There is no note threshold or batching timer. Only one run works on a brain at a time;
-changes arriving during that run get an immediate follow-up pass. With nothing pending, no
-model run starts. A failed pass retries up to three attempts, ten seconds apart.
+Each saved change starts a separate run, which first waits until no note has been saved for 10
+minutes (`GTM_BRAIN_COMPILE_DELAY`, in seconds; a run is a full model session, so notes saved close
+together are compiled in one go, and each new note restarts the wait). Then it rewrites every summary
+with new notes. Only one run works on a brain at a time; changes arriving during that run get a
+follow-up pass. With nothing pending, no model run starts. A request in chat ("update the summary
+now") starts it without the wait. A failed pass retries up to three attempts, ten seconds apart.
 
 Saved notes and answered questions refresh the dashboard before compilation finishes. The
 summary shows that it is updating during the run and refreshes when the new cover is saved.
@@ -25,7 +27,7 @@ and background runs; a chat does not see them (ALL-204). When the person asks ("
 "update the summary now"), queue the worker through the shell and say the summary is updating:
 
 ```
-bash "$PLUGIN_ROOT/scripts/gtm-brain-compile/background-compile.sh" "<brain>"
+GTM_BRAIN_COMPILE_DELAY=0 bash "$PLUGIN_ROOT/scripts/gtm-brain-compile/background-compile.sh" "<brain>"
 ```
 
 It compiles every context whose summary is behind, then the stale entity briefs, and the
