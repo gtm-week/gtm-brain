@@ -47,6 +47,15 @@ test("the session hook keeps edits made by hand outside Codex", () => {
   assert.match(execFileSync("git", ["-C", root, "log", "-1", "--format=%s"], { encoding: "utf8" }), /kept: edited by hand outside Codex/);
 });
 
+test("dashboard accepts an explicit port for local forwarding", () => {
+  dash("--stop");
+  const url = dash("--start", "--port=48815");
+  assert.equal(url, "http://127.0.0.1:48815/");
+  assert.equal(JSON.parse(readFileSync(join(root, "work", "dash.json"), "utf8")).port, 48815);
+  assert.equal(dash("--port=48815", "--start"), url, "the option may come before the command");
+  dash("--stop");
+});
+
 test("the chat start records the chat id from its stdin", () => {
   dash('--start');
   const out = execFileSync("bash", [`${P}/session/session-start.sh`], { cwd: root, encoding: "utf8", env, input: JSON.stringify({ hook_event_name: "SessionStart", session_id: "thread-123", cwd: root }) });
