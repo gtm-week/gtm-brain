@@ -16,8 +16,9 @@ Reuse the current person resolved by the opening lines or the saved `work/person
 validated against the team. Ask only when unresolved; never assume the owner.
 <!-- generated: questions; edit plugins/gtm-brain/policies/questions.md -->
 GTM Brain shows no question forms of its own. Ask with the host's own question box when it has
-one (in Codex, `request_user_input`, on in ordinary chats only when the person has turned it on;
-in Plan mode always). Otherwise ask in plain chat text and end the turn: the question, one line
+one (in Codex, `request_user_input`: use it whenever it is available in the chat, in Plan mode
+always and in ordinary chats where the person's Codex has it). Otherwise ask in plain chat text and
+end the turn: the question, one line
 on why it matters, and two or three numbered options, recommended first; the person answers with
 a number or in their own words.
 
