@@ -94,6 +94,11 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   const pick = remember("--content", "Florian Kim called about the venue.", "--people", "Florian Kim");
   assert.equal(pick.status, 2);
   assert.match(pick.stderr, /the person did not write which Florian: Florian (Weber|Kim) or Florian (Weber|Kim) \(rule P2/);
+  // Codex asked in its own question box before saving: the picked answer counts as the person's words, no second question
+  writeFileSync(join(day, `rollout-2026-11-12T10-18-48-${id}.jsonl`), [{ type: "session_meta", payload: { cwd: root } },
+    { type: "response_item", payload: { type: "message", role: "user", content: [{ type: "input_text", text: "lorian sent the agenda." }] } },
+    { type: "response_item", payload: { type: "function_call_output", output: JSON.stringify({ answers: { florian_identity: { answers: ["Florian Weber"] } } }) } }].map(x => JSON.stringify(x)).join("\n") + "\n");
+  assert.equal(remember("--content", "Florian Weber sent the agenda.", "--people", "Florian Weber").status, 0, "picked in the box: saved at once");
   say("2");   // the person picked Florian Kim in the question box
   assert.equal(remember("--content", "Florian Kim called about the venue.", "--people", "Florian Kim").status, 0);
   say("Florian Kim sent the contract.");

@@ -67,7 +67,9 @@ const ADAPTERS = {
       const file = days.flatMap(dir => { try { return readdirSync(dir).filter(f => f.endsWith(`${id}.jsonl`)).map(f => join(dir, f)); } catch { return []; } })[0];
       if (!file) return "";
       let last = "";
-      try { for (const line of readFileSync(file, "utf8").split("\n")) { try { const p = JSON.parse(line).payload || {}; if (p.type === "message" && p.role === "user") { const t = (p.content || []).map(c => c?.text || "").join(" "); if (t && !/^\s*<(environment_context|user_instructions|permissions)/.test(t) && !/AGENTS\.md instructions/.test(t.slice(0, 300))) last = t; } } catch {} } } catch {}
+      try { for (const line of readFileSync(file, "utf8").split("\n")) { try { const p = JSON.parse(line).payload || {}; if (p.type === "message" && p.role === "user") { const t = (p.content || []).map(c => c?.text || "").join(" "); if (t && !/^\s*<(environment_context|user_instructions|permissions)/.test(t) && !/AGENTS\.md instructions/.test(t.slice(0, 300))) last = t; }
+        // an answer picked in the question box is the person's words too ("Florian Kim" picked, not typed; new-brain, 2026-11-12)
+        else if (p.type === "function_call_output" && /"answers"/.test(String(p.output).slice(0, 40))) { const a = JSON.parse(p.output).answers || {}; const picked = Object.values(a).flatMap(x => x?.answers || []).join(" "); if (picked) last = `${last} ${picked}`.trim(); } } catch {} } } catch {}
       return last;
     },
     // Where GTM Brain is installed from and which version is installed, as the host's plugin manager reports it.
