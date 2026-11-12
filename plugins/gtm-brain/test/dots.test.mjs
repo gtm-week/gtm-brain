@@ -97,3 +97,32 @@ test("the chat start tells Codex to look for a named file before asking, and to 
   mkdirSync(join(root, "projects", "berlin-event-2026"), { recursive: true }); writeFileSync(join(root, "projects", "berlin-event-2026", "README.md"), "The Berlin event\n");
   assert.match(where.whereLine(root), /names a file you do not have \("use the new flyer"\), look in the project's folder first, then ask once/);
 });
+
+test("after saving, remember hands Codex facts to judge: the open question it may answer and what the brain last said", () => {
+  const root = mkdtempSync(join(tmpdir(), "gtm-brain-dots-facts-")); execFileSync("git", ["init", "-q", root]);
+  execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "X", "--one-liner", "y", "--owner", "Ann Lee <ann@b.c>"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P } });
+  const env = { ...process.env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_NOW: "2026-11-12T09:00:00" };
+  const remember = (...a) => spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann-lee", "--context", "company", ...a], { cwd: root, env, encoding: "utf8" });
+  assert.equal(remember("--content", "We still need to decide the Berlin ticket price.", "--kind", "question").status, 0);
+  const q = lib.readMemories(root, "company").at(-1);
+  // row 7 of the new-brain test: the answer comes back with the question it closes
+  const price = remember("--content", "Berlin tickets will be 99 EUR.");
+  assert.equal(price.status, 0, price.stderr);
+  assert.match(price.stdout, new RegExp(`open questions this note may answer: "We still need to decide the Berlin ticket price\\." \\(${q.id}, in company\\)\\. If it answers one, remember the answer`));
+  assert.doesNotMatch(remember("--content", "Coffee machine is fixed.").stdout, /open questions/);   // nothing in common: nothing said
+
+  // what the brain last said about a person, so Codex can say what changed
+  assert.equal(remember("--content", "Florian Weber will send the slides by Friday 2026-11-13.", "--people", "Florian Weber", "--new", "Florian Weber").status, 0);
+  const moved = remember("--content", "Florian Weber moved the slides to Monday 2026-11-16.", "--people", "Florian Weber");
+  assert.match(moved.stdout, /the brain last said about Florian Weber: "Florian Weber will send the slides by Friday 2026-11-13\." \(2026-11-1\d\)\. If this note changes one of these, say what changed in one line/);
+});
+
+test("meetings around now with the people in a note are listed; far ones are not", () => {
+  const meetings = [
+    { id: "m1", title: "Berlin speaker call", scheduled_at: "2026-11-19T10:00:00Z", entities: ["e_1"] },
+    { id: "m2", title: "Old kickoff", occurred_at: "2026-08-01T10:00:00Z", entities: ["e_1"] },
+    { id: "m3", title: "Someone else", scheduled_at: "2026-11-13T10:00:00Z", entities: ["e_2"] },
+  ];
+  assert.deepEqual(dots.nearbyMeetings(meetings, ["e_1"], THU).map(m => m.id), ["m1"]);
+});
+

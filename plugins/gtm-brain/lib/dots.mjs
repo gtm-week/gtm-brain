@@ -59,3 +59,28 @@ export function projectOfPeople(memories, people, linked) {
 
 const WEBSITE = /^(https?:\/\/)?([a-z0-9-]+\.)+[a-z]{2,}(\/|$)/i;
 export const hasWebsite = entity => (entity?.references || []).some(r => r.kind === "website" || WEBSITE.test(String(r.ref || "")));
+
+/* Facts for Codex to judge, never decisions (connect-dots.md): the open questions a note may answer,
+   the meetings around it, and what the brain last said about the people in it. Each list is short and
+   says where it came from; Codex decides what, if anything, it means for this note. */
+const STOP = new Set(["about", "after", "again", "their", "there", "these", "this", "that", "with", "will", "from", "have", "what", "when", "which", "would", "still", "need", "needs", "should", "could", "into", "your", "ours", "they", "them", "were", "been", "being", "decide", "make", "made", "does"]);
+const stem = w => w.length > 4 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w;   // tickets = ticket
+const words = s => new Set(String(s || "").toLowerCase().match(/[\p{L}\p{N}]{4,}/gu)?.filter(w => !STOP.has(w)).map(stem) || []);
+const projectsOf = m => (m.tags || []).filter(t => t.startsWith("project:"));
+
+export function openQuestions(memories, rec, limit = 3) {
+  const mine = words(rec.content), proj = projectsOf(rec), people = new Set(rec.people || []);
+  return memories.filter(m => m.kind === "question" && m.id !== rec.id && !m.retracts)
+    .map(m => { const shared = [...words(m.content)].filter(w => mine.has(w)).length; return { m, score: shared * 2 + (projectsOf(m).some(t => proj.includes(t)) ? 2 : 0) + ((m.people || []).some(p => people.has(p)) ? 2 : 0), shared }; })
+    .filter(x => x.shared >= 1 && x.score >= 3).sort((a, b) => b.score - a.score || b.m.at.localeCompare(a.m.at)).slice(0, limit).map(x => x.m);
+}
+
+export function nearbyMeetings(meetings, entityIds, now = today(), days = 14, limit = 3) {
+  const ids = new Set(entityIds), lo = now.getTime() - days * 864e5, hi = now.getTime() + days * 864e5;
+  return meetings.filter(m => (m.entities || []).some(e => ids.has(e)) && (d => d >= lo && d <= hi)(Date.parse(m.occurred_at || m.scheduled_at || ""))).slice(0, limit);
+}
+
+export function lastNotesAbout(memories, person, rec, limit = 2) {
+  return memories.filter(m => m.id !== rec.id && (m.people || []).includes(person) && m.kind !== "question" && !m.meeting)
+    .sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
+}

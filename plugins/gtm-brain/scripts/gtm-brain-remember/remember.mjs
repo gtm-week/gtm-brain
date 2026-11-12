@@ -22,6 +22,7 @@
 // already known holds back only itself; the rest are written and the report names it by position.
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { prepareAsset, assetSummary, assetRows, currentApproved } from '../../lib/assets.mjs';
+import { meetingOverview } from '../../lib/meetings.mjs';
 import { join } from "node:path";
 import { isChatSource, host } from "../../lib/host.mjs";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
@@ -202,6 +203,19 @@ for (let i = 0; i < entries.length; i++) {
   // our own company and one already asked ("don't know") are not asked again
   const own = foldName(lib.readAdmin(root)?.company || "");
   for (const a of rec.people) { const ent = names.find(x => x.name === a); if (ent && ent.kind === "organization" && foldName(a) !== own && !dots.hasWebsite(ent) && !wasAsked(`website:${a}`, Infinity)) { noteAsked([`website:${a}`]); asks.push(`${a}'s website, so the brain knows which ${a} this is ("don't know" is a fine answer; with a website: add_name ${a} with references [{kind: "website", ref: the URL}], then offer a short look-up)`); } }
+  // facts for Codex to judge (connect-dots.md): what this note may answer, the meetings around it, what changed
+  // one sentence from the person, not a batch of meeting notes or a background run: those would be noise
+  const curious = !batched && !e.meeting && !process.env.GTM_BRAIN_RUN;
+  const everything = curious ? lib.listContexts(root).flatMap(c => lib.effectiveMemories(lib.readMemories(root, c.slug))) : [];
+  const open = dots.openQuestions(everything, rec);
+  if (open.length) lines.push(`${at(n)}open questions this note may answer: ${open.map(q => `"${q.content.replace(/\s+/g, " ").slice(0, 120)}" (${q.id}, in ${q.context})`).join("; ")}. If it answers one, remember the answer in that question's context with retracts: its id and kind decision, and say so in one line; if not, say nothing about it.`);
+  const knownIds = rec.people.map(p => names.find(x => x.name === p)).filter(x => x && !added.includes(x.name)).map(x => x.id);
+  if (curious && knownIds.length) { let meets = []; try { meets = dots.nearbyMeetings(meetingOverview(root, { registry: names }).meetings, knownIds); } catch {}
+    if (meets.length) lines.push(`${at(n)}meetings around now with these people: ${meets.map(m => `"${m.title}" ${String(m.occurred_at || m.scheduled_at).slice(0, 10)} (${m.id})`).join("; ")}. If this note is about one, remember it with meeting_id: that id; otherwise ignore.`); }
+  for (const p of curious ? rec.people.filter(p => !added.includes(p) && names.find(x => x.name === p)?.kind === "person") : []) {
+    const before = dots.lastNotesAbout(everything, p, rec);
+    if (before.length) lines.push(`${at(n)}the brain last said about ${p}: ${before.map(m => `"${m.content.replace(/\s+/g, " ").slice(0, 100)}" (${m.at.slice(0, 10)})`).join("; ")}. If this note changes one of these, say what changed in one line.`);
+  }
   for (const inf of inferred) lines.push(`${at(n)}took "${inf.mention}" as ${inf.name} (rule P2: the one known person with that first name). If it is someone else, say so: remember again with new_names ["${inf.mention}"].`);
   const missed = lib.candidateEntities(e.content, people, names);
   if (missed.length) lines.push(`${at(n)}words in this note not linked to anything in the brain: ${missed.map(x => `"${x}"`).join(", ")}. Decide what each is, by connect-dots.md: a person, company or product the note is about gets add_name with its kind (company and team are organization subtypes; ask only when it is not plain); a place, event, project or plain word gets nothing.`);

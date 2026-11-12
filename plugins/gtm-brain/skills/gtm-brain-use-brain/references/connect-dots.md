@@ -33,6 +33,11 @@ What to look for, as examples, not a full list:
 - **Person or company already in the brain:** what else the brain says about them that this
   sentence changes, said in one line ("Florian was down for the slides by Friday; this moves it").
 
+After saving, `remember` hands you facts to judge, never decisions: open questions the note may
+answer, meetings around now with the same people, and what the brain last said about them. Use one
+when it plainly fits (answer the question, attach the meeting, say what changed in one line);
+ignore the rest without mentioning them.
+
 The brain enforces a few of these by itself: first names (P3), look-alike names (P4), bare
 relative dates, a new company's website, a known person's one project. When `remember` holds a
 note or lists questions, fold them into the same one question. Everything else is your judgment,

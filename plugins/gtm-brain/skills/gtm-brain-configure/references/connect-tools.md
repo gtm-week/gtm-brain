@@ -40,6 +40,8 @@ earlier* is a decision already made: never propose that tool again unless they a
 When the person declines in chat ("no CRM yet", "skip HubSpot"), record it at once with
 `mark_tool` (`status` = skip, `note` = their words).
 
+Past the floor, which tool fits a need is judgment: follow [which tool fits a need](tool-fit.md).
+
 ## Step 1b: plugins installed but not in the tools list
 
 If the check ends with *"installed in Codex but not in admin.md tools: linear, google-calendar"*,
