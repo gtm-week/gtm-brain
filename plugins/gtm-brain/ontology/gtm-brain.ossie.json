@@ -460,7 +460,7 @@
             "title": "Remembering",
             "object": "memories",
             "returns": "Opaque",
-            "description": "Record what happened during work: a decision, an action done, a finding, a meeting, a question or its answer. The only memory writer, append-only. One memory per distinct outcome; pass a whole turn's findings in one call through memories, each entry with its own context. Write first when the context is clear, then confirm by quoting the note back as the tool echoes it, with its context, in one line. Corrections supersede an old id; withdrawals and answers retract it. An entry naming someone who may already be known, or with a bare relative date (Thursday), is held back: ask what the result says to ask, all in one question, and resend only that entry. Attachments (asset), customers (customer, customer_coverage) and meetings (meeting, meeting_id, meeting_capture, meeting_policy, meeting_coverage) follow the remember, customers and meetings references.",
+            "description": "Record what happened during work: a decision, an action done, a finding, a meeting, a question or its answer. The only memory writer, append-only. One memory per distinct outcome; pass a whole turn's findings in one call through memories, each entry with its own context. Write first when the context is clear, then confirm by quoting the note back as the tool echoes it, with its context, in one line. Corrections supersede an old id; withdrawals and answers retract it. An entry naming someone who may already be known, or with a bare relative date (Thursday), is held back: ask what the result says to ask, all in one question, and resend only that entry. Attachments (asset), customers (customer, customer_coverage) and meetings (meeting, meeting_id, meeting_capture, meeting_policy, meeting_coverage) follow the remember, customers and meetings references. The saving rules (saving-rules.md) arrive with the first reply of a chat; a held note quotes the rule that applies.",
             "input_schema": {
               "type": "object",
               "properties": {
@@ -1636,7 +1636,7 @@
             "title": "Opening a context",
             "object": "contexts",
             "returns": "Opaque",
-            "description": "Create and load a context only for an explicit user request to create it or user agreement to a concrete proposal. Check existing and archived contexts first. Propose only for distinct purpose, sustained work and useful separation. Ordinary customers remain identity references in memories in existing contexts; compose their view through query (brief) and live sources. A dedicated customer context is exceptional for a key strategic account needing separate scope and guidance. Entity mentions, CRM imports, repeated meetings, tool calls and one-off tasks do not authorize creation. Do not infer agreement. Confirm successful creation in one line. Never create admin or personal preference contexts here; use configure for personal preferences. Refused for a linked project's name (X1: a project is a tag, not a context) and for a name like an existing or archived context (X3: ask same as X? first).",
+            "description": "Create and load a context only for an explicit user request to create it or user agreement to a concrete proposal. Check existing and archived contexts first. Propose only for distinct purpose, sustained work and useful separation. Ordinary customers remain identity references in memories in existing contexts; compose their view through query (brief) and live sources. A dedicated customer context is exceptional for a key strategic account needing separate scope and guidance. Entity mentions, CRM imports, repeated meetings, tool calls and one-off tasks do not authorize creation. Do not infer agreement. Confirm successful creation in one line. Never create admin or personal preference contexts here; use configure for personal preferences. The first call lists the existing contexts and projects; decide by the saving rules X1-X3 and call again with distinct to create.",
             "input_schema": {
               "type": "object",
               "properties": {
@@ -1658,7 +1658,7 @@
                 },
                 "distinct": {
                   "type": "string",
-                  "description": "Only after new_context refused a look-alike (rule X3) and the person said it is a different topic: their reason, in their words"
+                  "description": "One line on why no existing context or project covers this topic (rules X1-X3). The first call without it creates nothing and lists the contexts and projects to check against."
                 }
               },
               "required": [

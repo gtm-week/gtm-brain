@@ -1,4 +1,6 @@
 import { host } from "./host.mjs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 /* Connecting the dots on a note (2026-11-12, new-brain test): what the brain can settle by itself it
    settles and says in one line; what has two answers it asks, all in one question. Nothing here guesses.
    - dates: "Thursday", "tomorrow", "next week" mean nothing a week later, so a note never keeps them bare.
@@ -45,8 +47,8 @@ export function relativeDates(content, now = today()) {
 export function datesHold(found, { sourced = false } = {}) {
   if (sourced) return `${found.map(f => `"${f.word}"`).join(", ")} ${found.length > 1 ? "are" : "is"} relative: write the date ${found.length > 1 ? "each" : "it"} means into the note, counted from the source's own date, not today`;
   return found.map(f => f.ask
-    ? `"${f.word}" can be ${f.means.join(" or ")}: ask which, in the same question as anything else`
-    : `"${f.word}" is ${f.means[0]}${f.means[1] ? ` (or ${f.means.slice(1).join(", ")}; take it from the person's words, ask only if they do not say)` : ""}: write it into the note`).join("; ");
+    ? `"${f.word}" can be ${f.means.join(" or ")}: ask which, in the same question as anything else (D1, D2)`
+    : `"${f.word}" is ${f.means[0]}${f.means[1] ? ` (or ${f.means.slice(1).join(", ")}; take it from the person's words, ask only if they do not say)` : ""}: write it into the note, no question (D1)`).join("; ");
 }
 
 /* The one project the named known people all belong to: every project tag on their effective notes is
@@ -94,7 +96,7 @@ export function datesLine(now = today(), box = host().nativeQuestions?.()) {
   const short = d => d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
   const left = []; for (let d = 1; now.getDay() + d <= 6 + 1 && (now.getDay() + d) % 7 !== 1; d++) left.push(d);
   const two = left.map(d => `"next ${DAYS[(now.getDay() + d) % 7][0].toUpperCase()}${DAYS[(now.getDay() + d) % 7].slice(1)}" (${short(day(d))} or ${short(day(d + 7))})`);
-  return `Today is ${now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}.${two.length ? ` ${two.join(", ")} ${two.length > 1 ? "each have" : "has"} two readings: in any request, not only a note, ask which before acting on it, ${box ? "in Codex's question box (request_user_input) with the two dates as options" : "as plain chat text with the two dates numbered, then end the turn"}; a free calendar slot is no answer.` : ""}`;
+  return `Today is ${now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}.${two.length ? ` ${two.join(", ")} ${two.length > 1 ? "each have" : "has"} two readings (D2): in any request, not only a note, ask which before acting on it, ${box ? "in Codex's question box (request_user_input) with the two dates as options" : "as plain chat text with the two dates numbered, then end the turn"}; a free calendar slot is no answer (D3). A plain weekday (\"Friday\") is the coming one, no question (D1).` : ""}`;
 }
 
 /* A compiled summary: 2-4 sentences, each ending with the ids of the notes it rests on ("[m_1a2b3c, m_4d5e6f]"),
@@ -114,4 +116,20 @@ export function summaryCheck(summary, ids) {
     return { text, ids: [...new Set(cited)] };
   });
   return { text: out.map(o => o.text).join(" "), sources: out.map(o => o.ids.join(" ")), problems: [...new Set(problems)] };
+}
+
+/* The saving rulebook, once per chat: the first remember or new_context of a chat hands Codex the
+   whole page, so the rules arrive at the moment of saving instead of hoping it read them
+   (2026-11-12: rules in five files were skipped; a reply's text was followed every time). */
+export function rulebookOnce(root, chat) {
+  if (!chat) return "";
+  const memo = join(root, "work", "rulebook-sent.json");
+  let sent = {}; try { sent = JSON.parse(readFileSync(memo, "utf8")); } catch {}
+  if (sent[chat]) return "";
+  let page = ""; try { page = readFileSync(new URL("../skills/gtm-brain-use-brain/references/saving-rules.md", import.meta.url), "utf8").trim(); } catch { return ""; }
+  sent[chat] = new Date().toISOString();
+  try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(memo, JSON.stringify(sent, null, 2) + "\n"); } catch {}
+  // the brain's own RULES.md, written by its people (or by Codex on their yes): theirs win over the defaults
+  let own = ""; try { own = readFileSync(join(root, "RULES.md"), "utf8").trim(); } catch {}
+  return `\n--- The saving rules for this chat (from now on a refusal quotes them by number) ---\n${page}${own ? `\n\n## This brain's own rules (RULES.md, written by its people; they win over the rules above)\n\n${own}` : ""}\n---`;
 }

@@ -13,6 +13,10 @@ follows it; edit its rows to change where things land. Projects (an event, a cam
 live in `projects/`, each in one folder with everything made for it. Processes that run over
 time, with steps, are in `workflows/`.
 
+`RULES.md` holds your own rules for what Codex saves and asks ("always ask before tagging a client",
+"notes about pricing go to Our offer"). Codex follows them over its defaults, and offers to add one
+when you correct how something was saved. Edit it freely.
+
 Ask "why is this here?" about any file or folder: Codex answers with the WHERE.md row and the
 reason it recorded when the file was kept, who put it there and when. A file that arrived without
 one is named at the start of the next chat, so nothing stays unexplained.

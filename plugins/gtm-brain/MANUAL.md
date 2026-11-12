@@ -127,6 +127,7 @@ made there carry the project's tag, and everything stays searchable from the bra
 | To change | Do this |
 |---|---|
 | Company profile, team, tools, settings | say it in chat; Codex shows the change and applies it only when you choose APPROVE |
+| What Codex saves and asks | your own rules in `RULES.md`, one line each; Codex offers to add one when you correct a save, and yours win over the defaults |
 | Where files go | edit the rows in `WHERE.md` |
 | How Codex works in a context | "change the rule of <context> to ..." |
 | A rule the work must follow (tone of voice, pricing, ICP) | write it as a document: `<name>.md` at the top, then "add <name>.md as a document" |

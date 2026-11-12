@@ -8,6 +8,9 @@ Keep authored brain content in English. Preserve names, source quotes and the ex
 > and sources available. Fix a note with a new one
 > that supersedes it; withdraw one with a note that retracts it. Nothing is ever edited.
 
+The saving rules (names, dates, forget, projects, contexts, where questions go) are in
+[saving-rules.md](saving-rules.md), numbered; the brain hands them to you on a chat's first save.
+
 Call the GTM Brain tool `remember` (no shell command). **Record a whole turn's findings in one
 call**: put them in `memories`, one entry per finding, in the order they happened. Do not call the
 tool once per note. Each entry may name its own `context`, so notes belonging to different contexts

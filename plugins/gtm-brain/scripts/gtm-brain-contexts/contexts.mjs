@@ -6,7 +6,8 @@
 //   node contexts.mjs <root> --archive <slug> | --unarchive <slug>   (status on the cover; archived is unloaded, not offered)
 //   node contexts.mjs <root> --edit <slug> [--title "..."] [--rule "..."]   the cover's title and standing rule; summary and working guidance kept
 import { host } from "../../lib/host.mjs";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
+import * as dots from "../../lib/dots.mjs";
 import { join } from "node:path";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
@@ -18,14 +19,15 @@ if (args[0] === "--new") {
   const slug = (args[1] || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); const title = args[2] || slug; const rule = args[3] || "";
   if (!slug) { console.error('usage: --new <slug> "<Title>" ["<rule>"]'); process.exit(1); }
   const dir = join(root, "brain", "contexts", slug); if (existsSync(dir)) { console.error(`context exists: ${slug}`); process.exit(1); }
-  // X1: a project is a tag on notes and a folder, never a context (Artur expected a "website" context, 2026-11-11)
-  if (lib.readProjects(root).some(p => p.slug === slug) || existsSync(join(root, "projects", slug))) { console.error(`not created: ${slug} is a project (rule X1: a project is a tag on notes and a folder, not a context). Save its notes in the context their meaning fits, with project ${slug}.`); process.exit(2); }
-  // X3: never two contexts for one topic; a look-alike name is asked about first, archived ones included
+  // X1-X3 are judgment (saving-rules.md): the brain states what exists, Codex decides, and says why the new one is
+  // distinct before it is created ("berlin-event" for the project berlin-event-2026 slipped past a name match, 2026-11-12)
   const di = args.indexOf("--distinct"), distinct = di > 0 ? (args[di + 1] || "").trim() : "";
-  const words = t => new Set(String(t).toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length >= 4 && !["context", "contexts", "notes", "team", "work"].includes(w)));
-  const mine = new Set([...words(slug), ...words(title)]);
-  const like = lib.listContexts(root).filter(c => c.slug.includes(slug) || slug.includes(c.slug) || [...words(c.slug), ...words(c.title)].some(w => mine.has(w)));
-  if (like.length && !distinct) { console.error(`not created: "${title}" looks like ${like.map(c => `${c.title} (${c.slug}${c.status === "archived" ? ", archived" : ""})`).join(", ")} (rule X3: never two contexts for one topic). Ask the person "same as ${like[0].title}?" ${host().nativeQuestions?.() ? "in Codex's question box (request_user_input), with yes and no as options" : "as plain chat text with yes and no numbered, then end the turn"}: yes, ${like[0].status === "archived" ? "unarchive and " : ""}load that one; no, call new_context again with distinct set to their reason.`); process.exit(2); }
+  if (!distinct) {
+    const ctxs = lib.listContexts(root).map(c => `${c.title} (${c.slug}${c.status === "archived" ? ", archived" : ""})`);
+    const projects = [...new Set([...lib.readProjects(root).map(p => p.slug), ...(existsSync(join(root, "projects")) ? readdirSync(join(root, "projects"), { withFileTypes: true }).filter(d => d.isDirectory()).map(d => d.name) : [])])];
+    console.error(`not created yet: check "${title}" against what exists. Contexts: ${ctxs.join(", ") || "none"}. Projects: ${projects.join(", ") || "none"}. X1: a project (by any shorter or longer name) is not a context. X3: a topic an existing or archived context covers is that context. If it is one of these, do not create it: say which, and ask the person only when it is unclear (Q1). If it is a new lasting topic (X2) and the person agreed, call new_context again with distinct set to one line on why no context or project above covers it.${dots.rulebookOnce(root, lib.readSession(root, project)?.session_id)}`);
+    process.exit(2);
+  }
   lib.writeContext(root, slug, { title, rule });
   // A new context is loaded right away: you created it because you are about to work in it.
   const loaded = lib.readLoaded(root, project); if (!loaded.includes(slug)) loaded.push(slug); lib.writeLoaded(root, loaded, project);

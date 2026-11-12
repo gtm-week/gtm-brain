@@ -19,6 +19,9 @@ For each thing the sentence touches:
 4. **Not worth asking: skip it.** Ask only what changes where the note goes or who it is about.
    Three parts at most; the rest can wait for the next time it matters.
 
+The saving rules (names, dates, forget, projects, contexts, where questions go) are in
+[saving-rules.md](saving-rules.md), numbered; the brain hands them to you on a chat's first save.
+
 What to look for, as examples, not a full list:
 
 - **A name or capitalised word:** decide what it is. A person, company or product the note is about
