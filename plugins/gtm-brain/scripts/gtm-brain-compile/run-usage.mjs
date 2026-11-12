@@ -8,10 +8,13 @@ import { join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 
 const root = resolve(process.argv[2] || '.'), by = process.argv[3] || 'schedule';
-const usage = { input: 0, cached: 0, output: 0 }; let thread = null, last = '', turns = 0;
+const usage = { input: 0, cached: 0, output: 0 }; let thread = null, last = '', turns = 0, failure = '', raw = [];
 for await (const line of createInterface({ input: process.stdin })) {
   // Anything that is not an event (a timeout, a crash) is the run's own error output: shown as before.
-  let e; try { e = JSON.parse(line); } catch { if (line.trim()) console.log(line); continue; }
+  let e; try { e = JSON.parse(line); } catch { if (line.trim()) { console.log(line); raw.push(line.trim()); } continue; }
+  // why a run stopped, kept for hooks.log: Artur's runs failed with 0 tokens and no reason anyone could read (2026-11-12)
+  if (e.type === 'error' && e.message) failure = e.message;
+  if (e.type === 'turn.failed') failure = e.error?.message || failure || 'turn failed';
   if (e.type === 'thread.started' && e.thread_id) thread = e.thread_id;
   if (e.type === 'turn.completed' && e.usage) {
     turns++;
@@ -32,4 +35,6 @@ try {
   appendFileSync(join(root, 'work', 'runs.jsonl'), JSON.stringify({ at, by, thread, turns, ...usage }) + '\n');
   const stamp = new Date().toLocaleString('sv-SE').slice(0, 19);
   appendFileSync(join(root, 'work', 'hooks.log'), `${stamp}  scheduled-run  tokens in=${usage.input} cached=${usage.cached} out=${usage.output}${thread ? ` codex://threads/${thread}` : ''}\n`);
+  const why = (failure || (!turns ? raw.slice(-2).join(' / ') : '')).replace(/\s+/g, ' ').slice(0, 300);
+  if (why) appendFileSync(join(root, 'work', 'hooks.log'), `${stamp}  scheduled-run  error: ${why}\n`);
 } catch {}

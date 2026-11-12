@@ -69,7 +69,7 @@ const kept = [], held = [], failed = [], lines = [], asks = [];
 const esc = t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const personText = chat && !process.env.GTM_BRAIN_RUN ? (host().lastPersonText?.(chat) || "") : "";
 // where the one question goes: Codex's own question box when the person turned it on, else plain chat text
-const askIn = host().nativeQuestions?.() ? "in Codex's question box (request_user_input), numbered parts as its options" : "as plain chat text with numbered parts, then end the turn";
+const askIn = host().nativeQuestions?.() ? "in Codex's question box (request_user_input), numbered parts as its options" : "in Codex's question box (request_user_input) when that tool is available in this chat (Plan mode, or a Codex where it is on by default), otherwise as plain chat text with numbered parts, then end the turn";
 const waitingForReply = !!personText && wasAsked(`reply:${personText}`, 1 / 24);   // read once, before this call holds anything
 const FORGET = /\b(forget|scratch|withdraw|never ?mind|disregard|ignore that|delete that|remove that|drop that|undo that)\b/i;
 // the saving rules ride along once per chat, on whichever reply comes first (saving-rules.md)

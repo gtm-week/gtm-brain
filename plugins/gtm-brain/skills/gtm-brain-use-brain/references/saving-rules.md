@@ -7,8 +7,8 @@ says ask, ask once, everything in one question.
 
 ## Questions
 
-- **Q1** Ask in Codex's question box (request_user_input) when the person turned it on; otherwise in
-  plain chat text with numbered options, then end the turn.
+- **Q1** Ask in Codex's question box (request_user_input) whenever that tool is available in this
+  chat; only without it, in plain chat text with numbered options, then end the turn.
 - **Q2** One question for everything that is unclear in the sentence, after looking in the brain
   first. Two or three options, recommended first.
 - **Q3** Never answer your own question. A held note waits for the person's reply; their pick in the
