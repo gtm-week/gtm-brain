@@ -83,6 +83,7 @@ const ADAPTERS = {
     rulebookLoaded: dir => existsSync(join(dir, "AGENTS.md")),
     // Codex's own question box (request_user_input) in an ordinary chat: off unless the person turned on the
     // default_mode_request_user_input feature in config.toml. Read once, when the server starts, as Codex does.
+    scheduledTasks: true,   // the Codex app's Scheduled tasks: the schedule notice offers one
     nativeQuestions(home = process.env.CODEX_HOME || join(homedir(), ".codex")) {
       let toml = ""; try { toml = readFileSync(join(home, "config.toml"), "utf8"); } catch { return false; }
       const features = /^\[features\]\s*$([\s\S]*?)(?=^\[|(?![\s\S]))/m.exec(toml)?.[1] || "";
@@ -137,6 +138,7 @@ const ADAPTERS = {
       updateScript: "update-claude.mjs",
     },
     // Claude Code reads CLAUDE.md; the brain's carries the @AGENTS.md import (lib.ensureRulebookShim).
+    scheduledTasks: false,
     nativeQuestions: () => false,
     rulebookLoaded: dir => { try { return /^@AGENTS\.md\s*$/m.test(readFileSync(join(dir, "CLAUDE.md"), "utf8")); } catch { return false; } },
     texts: {

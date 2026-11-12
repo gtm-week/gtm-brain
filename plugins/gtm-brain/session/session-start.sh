@@ -104,6 +104,7 @@ node "$H" rulebook "$rules_dir" 2>/dev/null || node "$H" text rulebook "$root"
 node -e 'const l=await import(process.argv[1]);const p=l.currentPerson(process.argv[2]);if(p)console.log("Current person: "+p+" (resolved from this checkout and validated against the team). Reuse this as by; do not ask who the user is again.")' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
 brain_interaction_policy
 node -e 'const d=await import(process.argv[1]);console.log(d.datesLine())' "$P/lib/dots.mjs" 2>/dev/null || true
+node -e 'const s=await import(process.argv[1]);const t=s.scheduleNotice(process.argv[2]);if(t)console.log(t)' "$P/lib/schedule.mjs" "$root" 2>/dev/null || true
 echo "Answer the person's request using relevant saved evidence. Never open, inspect or refresh the dashboard before an ordinary answer. Maintenance runs in the background; external source sync runs only when requested or by an approved schedule. An explicit dashboard or sync request follows its normal workflow."
 # A handoff another assistant wrote by following IMPORT.md waits under ~/.gtm-brain until it is imported
 # (the gtm-brain-start skill offers to delete it). Said once per chat; the model offers, never imports by itself.

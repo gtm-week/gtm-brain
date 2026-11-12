@@ -3,7 +3,7 @@
 // question (a date with two readings, a new company's website, several projects). Nothing is guessed.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync, spawnSync } from "node:child_process";
@@ -11,6 +11,7 @@ const P = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 process.env.CODEX_HOME = mkdtempSync(join(tmpdir(), "gtm-brain-test-home-"));   // never the real brains registry
 const lib = await import(`${P}/lib/brain.mjs`);
 const dots = await import(`${P}/lib/dots.mjs`);
+const schedule = await import(`${P}/lib/schedule.mjs`);
 
 const THU = new Date(2026, 10, 12);   // Thursday 2026-11-12, the day of the test
 
@@ -154,4 +155,21 @@ test("chat start: today's date, and each \"next <day>\" with two readings, for a
   const d = new Date(2026, 10, 12);   // a Thursday: "can we meet next Saturday?" is 14 or 21 Nov (scenario run, 2026-11-12)
   assert.match(dots.datesLine(d), /^Today is Thursday, 12 November 2026\. .*"next Saturday" \(Sat 14 Nov or Sat 21 Nov\).* ask which before acting on it/);
   assert.equal(dots.datesLine(new Date(2026, 10, 15)), "Today is Sunday, 15 November 2026.");
+});
+
+test("chat start: a summary behind for days with no scheduled run says so once a week; a working brain stays quiet", () => {
+  const sched = schedule;
+  const root = mkdtempSync(join(tmpdir(), "gtm-brain-sched-")); execFileSync("git", ["init", "-q", root]); execFileSync("git", ["-C", root, "config", "commit.gpgsign", "false"]);
+  execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "X", "--one-liner", "y", "--owner", "Ann Lee <ann@b.c>"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P } });
+  lib.appendMemory(root, "icp", { authors: ["ann-lee"], content: "Mid-market SaaS fits best." });
+  const later = new Date(Date.now() + 10 * 864e5);
+  assert.equal(sched.scheduleNotice(root, new Date()), "", "behind for minutes: the compile after the save is still coming");
+  const said = sched.scheduleNotice(root, later);
+  assert.match(said, /^Summaries behind: Our company \(never compiled\), Target customers \(never compiled\); no weekly summary run is set up\. After answering the person.s request, ask this once/);
+  assert.match(said, /Compile them now and set up the weekly run \(recommended\).*background-compile\.sh.*Scheduled tasks, new task.*Never create or change a scheduled task yourself/);
+  assert.equal(sched.scheduleNotice(root, later), "", "once a week");
+  rmSync(join(root, "work", "schedule-notice.json"));
+  execFileSync("git", ["-C", root, "commit", "-q", "--allow-empty", "-m", "compile: company (3 memories, by schedule)"]);
+  assert.equal(sched.scheduleNotice(root, new Date(Date.now() + 5 * 864e5)), "", "a scheduled run saved something this week");
+  assert.equal(sched.scheduleNotice(root, new Date(Date.now() + 20 * 864e5)).includes("the weekly summary run last ran on"), true);
 });
