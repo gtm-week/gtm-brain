@@ -30,6 +30,10 @@ When beginning company work or the objective changes, follow
 evidence, honor manual restrictions, and select each memory's destination by meaning.
 Short continuations reuse the current scope; do not rerun discovery before every reply.
 
+When the person says something to keep, connect it to what the brain knows before saving: follow
+[connect the dots](references/connect-dots.md). Settle what has one answer, ask the rest in one
+question, never guess.
+
 Before producing copy, outreach, posts, landing pages, creatives, proposals, a design or a plan,
 read the document that applies (the opening lines and `query` (status) list the documents at the
 brain root with what each applies to) and follow it, saying which one in one line; AGENTS.md

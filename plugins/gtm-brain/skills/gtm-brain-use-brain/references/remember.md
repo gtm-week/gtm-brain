@@ -100,6 +100,8 @@ else; when the person says it is, `remember` again with `new_names` ["Maciej"] a
 recorded for a new person (from then on "Maciej" means the new one; the teammate needs the full
 name). A first name shared by two known entities is asked about like any look-alike.
 
+Before saving, connect the note to what the brain knows: [connect the dots](connect-dots.md).
+
 A first name alone that nobody known has is never saved as a new person (rule P3 in the brain's
 README): the entry is held with *"Max" is one word and nobody known has it*. When the note or its
 source plainly says it is a company, product or team, send it in `companies` (or `new_names` and
