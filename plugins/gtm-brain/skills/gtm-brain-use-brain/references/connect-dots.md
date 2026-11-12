@@ -25,6 +25,12 @@ What to look for, as examples, not a full list:
   is linked (`add_name` with its kind); a place (Berlin), an event, a project or a plain word is not
   an entity. `remember` lists the words it could not link; it does not know which is which, you do.
 - **Event or meeting:** the project or meeting it belongs to, and its date.
+- **A relative date in any request, not only a note** ("can we meet next Saturday?", "book it for
+  Friday"): when it has two readings, ask which date before acting on it, the dates written out
+  (Sat 14 Nov or Sat 21 Nov). `remember` checks dates only in notes; a calendar search or a draft
+  is not checked, so you do. A free calendar slot is no answer to which day the person meant.
+- **"Forget that…", "scratch that":** a withdrawal, never a correction. Withdraw the note
+  (`retracts`) and say what was withdrawn; never save the opposite claim the person did not make.
 - **Open question or to-do:** whether the sentence answers one ("Tickets will be 99 EUR" answers
   "decide the ticket price"); if so, remember it as the answer to that question.
 - **Product:** whose product it is, ours or a company's.
@@ -39,6 +45,6 @@ when it plainly fits (answer the question, attach the meeting, say what changed 
 ignore the rest without mentioning them.
 
 The brain enforces a few of these by itself: first names (P3), look-alike names (P4), bare
-relative dates, a new company's website, a known person's one project. When `remember` holds a
+relative dates in notes, a new company's website, a known person's one project, "forget" as a withdrawal. When `remember` holds a
 note or lists questions, fold them into the same one question. Everything else is your judgment,
 by the four steps above.

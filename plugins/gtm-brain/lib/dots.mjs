@@ -84,3 +84,14 @@ export function lastNotesAbout(memories, person, rec, limit = 2) {
   return memories.filter(m => m.id !== rec.id && (m.people || []).includes(person) && m.kind !== "question" && !m.meeting)
     .sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
 }
+
+/* The chat's opening line about dates: "next Saturday" said on a Thursday is this Saturday or the one
+   after, and a request (a calendar search, a draft) never passes remember's date check (scenario run,
+   2026-11-12: Codex took the calendar's free 14 Nov without asking). */
+export function datesLine(now = today()) {
+  const day = d => { const x = new Date(now); x.setDate(now.getDate() + d); return x; };
+  const short = d => d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  const left = []; for (let d = 1; now.getDay() + d <= 6 + 1 && (now.getDay() + d) % 7 !== 1; d++) left.push(d);
+  const two = left.map(d => `"next ${DAYS[(now.getDay() + d) % 7][0].toUpperCase()}${DAYS[(now.getDay() + d) % 7].slice(1)}" (${short(day(d))} or ${short(day(d + 7))})`);
+  return `Today is ${now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}.${two.length ? ` ${two.join(", ")} ${two.length > 1 ? "each have" : "has"} two readings: in any request, not only a note, ask which before acting on it; a free calendar slot is no answer.` : ""}`;
+}

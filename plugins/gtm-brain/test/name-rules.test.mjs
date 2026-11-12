@@ -50,11 +50,12 @@ test("a bare first name is held and asked about; a full name is kept with where 
   assert.match(brief, /"Max Kowalski" first saved as Max Kowalski, rule P1:[^\n]*project gtm-os[^\n]*Gmail/);
   assert.match(brief, /"Max" taken as Max Kowalski, rule P2: A first name alone means a known person only when exactly one/);
 
-  // a second Max makes "Max" ambiguous again: held as "same as X?", never guessed
-  const weber = remember("--content", "Max Weber joined.", "--people", "Max Weber");
-  assert.equal(weber.status, 2);   // P4: looks like Max Kowalski, so "same as X?" first
-  assert.match(weber.stderr, /"Max Weber" may be Max Kowalski/);
-  assert.equal(remember("--content", "Max Weber joined.", "--people", "Max Weber", "--new", "Max Weber").status, 0);
+  // a typo of a known surname is held as "same as X?"; a different surname is someone else (scenario run: Florian Kim)
+  const typo = remember("--content", "Max Kowalsky joined.", "--people", "Max Kowalsky");
+  assert.equal(typo.status, 2);
+  assert.match(typo.stderr, /"Max Kowalsky" may be Max Kowalski/);
+  assert.equal(remember("--content", "Max Weber joined.", "--people", "Max Weber").status, 0);
+  // a second Max makes "Max" ambiguous again: held, never guessed
   const two = remember("--content", "Max called.", "--people", "Max");
   assert.equal(two.status, 2);
   assert.match(two.stderr, /"Max" may be Max Kowalski or Max Weber/);

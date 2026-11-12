@@ -26,7 +26,7 @@ in `brain/entities/` shows which rule matched each spelling, when, and from whic
 - **P2** A first name alone ("Max") means a known person only when exactly one known person has that
   first name; otherwise Codex asks which one.
 - **P3** A first name alone is never saved as a new person: Codex asks for the full name.
-- **P4** A name that looks like a known one is never merged on a guess: Codex asks "same as X?" first.
+- **P4** A name that looks like a known one is never merged on a guess: Codex asks "same as X?" first. The same first name with a different surname is someone else.
 
 Ask "who is Max?" and the answer names the rule, the note and where it came from.
 

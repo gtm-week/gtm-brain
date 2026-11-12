@@ -80,6 +80,13 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   assert.match(guessed.stderr, /the person has not answered the question yet .* never pick the answer yourself/);
   say("the 19th");
   assert.equal(remember("--content", "The speaker dinner moved to Thursday 2026-11-19.").status, 0);
+  // "forget that" withdraws: a supersedes with the opposite claim is held (scenario run, 2026-11-12)
+  const dinner19 = lib.readMemories(root, "company").at(-1).id;
+  say("Forget the speaker dinner");
+  const flipped = remember("--content", "There is no speaker dinner.", "--supersedes", dinner19);
+  assert.equal(flipped.status, 2);
+  assert.match(flipped.stderr, new RegExp(`asked to forget it, not to correct it: send retracts: ${dinner19} \\(not supersedes\\).*No question needed: send it as said`));
+  assert.equal(remember("--content", "Withdrawn: the speaker dinner note (the person said forget it).", "--retracts", dinner19).status, 0);
   writeFileSync(join(day, `rollout-2026-11-12T10-18-48-${id}.jsonl`), "");   // no message to read: as sent
   lib.writeSession(root, { session_id: null, cwd: root });
   // in two projects: asked, not tagged
@@ -142,3 +149,9 @@ test("meetings around now with the people in a note are listed; far ones are not
   assert.deepEqual(dots.nearbyMeetings(meetings, ["e_1"], THU).map(m => m.id), ["m1"]);
 });
 
+
+test("chat start: today's date, and each \"next <day>\" with two readings, for any request", () => {
+  const d = new Date(2026, 10, 12);   // a Thursday: "can we meet next Saturday?" is 14 or 21 Nov (scenario run, 2026-11-12)
+  assert.match(dots.datesLine(d), /^Today is Thursday, 12 November 2026\. .*"next Saturday" \(Sat 14 Nov or Sat 21 Nov\).* ask which before acting on it/);
+  assert.equal(dots.datesLine(new Date(2026, 10, 15)), "Today is Sunday, 15 November 2026.");
+});

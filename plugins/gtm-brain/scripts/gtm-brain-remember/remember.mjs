@@ -71,6 +71,7 @@ const personText = chat && !process.env.GTM_BRAIN_RUN ? (host().lastPersonText?.
 // where the one question goes: Codex's own question box when the person turned it on, else plain chat text
 const askIn = host().nativeQuestions?.() ? "in Codex's question box (request_user_input), numbered parts as its options" : "as plain chat text with numbered parts, then end the turn";
 const waitingForReply = !!personText && wasAsked(`reply:${personText}`, 1 / 24);   // read once, before this call holds anything
+const FORGET = /\b(forget|scratch|withdraw|never ?mind|disregard|ignore that|delete that|remove that|drop that|undo that)\b/i;
 const at = n => batched ? `#${n} ` : "";
 // every entry is checked before the first one is written: a bad entry in the middle must not leave the ones before it kept and unreported
 const ctxOf = e => e.context || opt.context || (loaded.length === 1 ? loaded[0] : null);
@@ -135,6 +136,9 @@ for (let i = 0; i < entries.length; i++) {
   // held on, a resend is the model answering for them (new-brain rerun, 2026-11-12: "Thursday" sent back as the
   // 19th with no reply). Only when the chat can be read; an answer in the same message passes.
   if (waitingForReply) { held.push({ n, why: "the person has not answered the question yet (their last message is the one this was held on): ask it and wait for their reply; never pick the answer yourself", mentions: [], ask: true }); continue; }
+  // "forget that Lena runs the workshop" withdraws the note; a supersedes with "Lena does not run the workshop"
+  // puts a claim in the brain the person never made (scenario run, 2026-11-12)
+  if (e.supersedes && !e.retracts && FORGET.test(personText)) { held.push({ n, why: `the person asked to forget it, not to correct it: send retracts: ${e.supersedes} (not supersedes), with content saying what was withdrawn and why in their words, never the opposite claim`, mentions: [], withdraw: true }); continue; }
   const ctx = ctxOf(e);
 
   const companies = list(e.companies);
@@ -243,7 +247,7 @@ for (let i = 0; i < entries.length; i++) {
 /* what the brain cannot settle by itself, for one question with numbered parts */
 /* the look-alike names, in one place, so only the entries that need an answer are re-sent */
 const holdReport = () => { const loose = held.flatMap(h => h.unnamed || []), alike = held.flatMap(h => h.mentions.filter(m => !(h.unnamed || []).includes(m)));
-  return `${batched ? `not kept (${held.length} of ${entries.length})` : "not remembered yet"}: ${held.map(h => `${at(h.n)}${h.why}`).join(batched ? "\n" : "; ")}. ${held.some(h => h.ask) ? `Ask the person once, everything in one question, ${askIn}.` : "No question needed: write the dates into the note."}${alike.length ? ` For ${alike.map(m => `"${m}"`).join(", ")} ("same as X?"): yes, add_name with that name and aliases [the spelling used here]; no, list it in new_names.` : ""}${loose.length ? ` For ${loose.map(m => `"${m}"`).join(", ")}: if the note or source plainly says it is a company, product or team, do not ask; send it in companies, or in new_names with add_name for its kind. A person: ask for the full name ("${loose[0]} who? The full name, so the brain knows them later") and remember again with that full name in people; only if the person insists on the one word, list it in new_names.` : ""} Then remember ${batched ? "the held-back entries" : "again"}. Never merge or create on a guess.`; };
+  return `${batched ? `not kept (${held.length} of ${entries.length})` : "not remembered yet"}: ${held.map(h => `${at(h.n)}${h.why}`).join(batched ? "\n" : "; ")}. ${held.some(h => h.ask) ? `Ask the person once, everything in one question, ${askIn}.` : (held.some(h => h.withdraw) ? "No question needed: send it as said." : "No question needed: write the dates into the note.")}${alike.length ? ` For ${alike.map(m => `"${m}"`).join(", ")} ("same as X?"): yes, add_name with that name and aliases [the spelling used here]; no, list it in new_names.` : ""}${loose.length ? ` For ${loose.map(m => `"${m}"`).join(", ")}: if the note or source plainly says it is a company, product or team, do not ask; send it in companies, or in new_names with add_name for its kind. A person: ask for the full name ("${loose[0]} who? The full name, so the brain knows them later") and remember again with that full name in people; only if the person insists on the one word, list it in new_names.` : ""} Then remember ${batched ? "the held-back entries" : "again"}. Never merge or create on a guess.`; };
 
 if (!kept.length) { console.error(held.length ? holdReport() : lines.join("\n")); process.exit(2); }
 

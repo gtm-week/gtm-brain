@@ -453,13 +453,13 @@ test("a brain with the old names.md keeps working; the first write and the upgra
 
 test("remember holds a note whose name looks like a known one until the person answers", () => {
   const before = lib.readMemories(root, "icp").length;
-  assert.throws(() => run(root, "remember", "remember.mjs", "--by", "marta", "--context", "icp", "--people", "Pierre Dupont", "--content", "Pierre Dupont joined the call."), /not remembered yet: "Pierre Dupont" may be Pierre Aubert\. Ask the person/);
-  assert.ok(!lib.readNames(root).some(n => n.name === "Pierre Dupont"), "not in the registry"); assert.equal(lib.readMemories(root, "icp").length, before, "not written");
-  const out = run(root, "remember", "remember.mjs", "--by", "marta", "--context", "icp", "--people", "Pierre Dupont", "--new", "Pierre Dupont", "--content", "Pierre Dupont joined the call.");
-  assert.match(out, /people: Pierre Dupont/); assert.match(out, /new person in entities\/: Pierre Dupont/);
-  const missed = run(root, "remember", "remember.mjs", "--by", "marta", "--context", "icp", "--people", "Pierre Dupont", "--content", "Pierre Dupont said Castorama will sign the NDA with ByteDance next Monday (2026-11-16).");
+  assert.throws(() => run(root, "remember", "remember.mjs", "--by", "marta", "--context", "icp", "--people", "Pierre Aubart", "--content", "Pierre Aubart joined the call."), /not remembered yet: "Pierre Aubart" may be Pierre Aubert\. Ask the person/);
+  assert.ok(!lib.readNames(root).some(n => n.name === "Pierre Aubart"), "not in the registry"); assert.equal(lib.readMemories(root, "icp").length, before, "not written");
+  const out = run(root, "remember", "remember.mjs", "--by", "marta", "--context", "icp", "--people", "Pierre Aubart", "--new", "Pierre Aubart", "--content", "Pierre Aubart joined the call.");
+  assert.match(out, /people: Pierre Aubart/); assert.match(out, /new person in entities\/: Pierre Aubart/);
+  const missed = run(root, "remember", "remember.mjs", "--by", "marta", "--context", "icp", "--people", "Pierre Aubart", "--content", "Pierre Aubart said Castorama will sign the NDA with ByteDance next Monday (2026-11-16).");
   assert.match(missed, /words in this note not linked to anything in the brain: "Castorama", "ByteDance"\. Decide what each is, by connect-dots\.md: a person, company or product/);
-  assert.match(run(root, "entities", "entities.mjs", "--add", "Pierre Martin"), /looks like Pierre Aubert, Pierre Dupont already in the registry/);
+  assert.match(run(root, "entities", "entities.mjs", "--add", "Pierre Aubirt"), /looks like Pierre Aub[ae]rt, Pierre Aub[ae]rt already in the registry/);
   run(root, "entities", "entities.mjs", "--add", "Nestle", "--kind", "company"); run(root, "entities", "entities.mjs", "--add", "Nestle Poland", "--kind", "company");
   assert.match(run(root, "entities", "entities.mjs"), /Might be the same: Nestle and Nestle Poland\. Ask the person; then "Nestle Poland is Nestle"/);
   run(root, "entities", "entities.mjs", "--add", "Nestle Poland", "--not", "Nestle");
@@ -553,7 +553,7 @@ test("remember takes a batch: every entry gets its own commit, and one look-alik
   writeFileSync(batch, JSON.stringify([
     { content: "Pierre Aubert asked for a three-year TCO.", people: ["Pierre Aubert"] },
     { content: "Who owns the security review?", kind: "question", context: "offer" },
-    { content: "Pierre Dupont joined the call." , people: ["Pierre Dupont"] },
+    { content: "Pierre Aubart joined the call." , people: ["Pierre Aubart"] },
   ]));
   const before = execFileSync("git", ["-C", b, "log", "--format=%s"], { encoding: "utf8" }).split("\n").filter(Boolean).length;
   const out = execFileSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann", "--batch", batch],
@@ -561,10 +561,10 @@ test("remember takes a batch: every entry gets its own commit, and one look-alik
 
   assert.match(out, /^kept 2 of 3/m, "the two clean entries land");
   assert.match(out, /not kept \(1 of 3\)/, "the blocked one is counted");
-  assert.match(out, /#3 .*"Pierre Dupont" may be Pierre Aubert/, "named by its position in the batch, so only it is re-sent");
+  assert.match(out, /#3 .*"Pierre Aubart" may be Pierre Aubert/, "named by its position in the batch, so only it is re-sent");
   assert.equal(lib.readMemories(b, "icp").length, 1, "entry 1 in the loaded context");
   assert.equal(lib.readMemories(b, "offer").length, 1, "entry 2 in the context it named");
-  assert.ok(!lib.readNames(b).some(n => n.name === "Pierre Dupont"), "the held-back name is not registered");
+  assert.ok(!lib.readNames(b).some(n => n.name === "Pierre Aubart"), "the held-back name is not registered");
 
   const msgs = execFileSync("git", ["-C", b, "log", "--format=%s"], { encoding: "utf8" }).split("\n").filter(Boolean);
   assert.equal(msgs.length - before, 2, "one commit per memory written, never one commit for the batch");
@@ -577,7 +577,7 @@ test("a batch whose every entry is held back writes nothing and exits 2", () => 
   run(b, "load", "load.mjs", "icp", "--only");
   run(b, "entities", "entities.mjs", "--add", "Pierre Aubert");
   const batch = join(b, "work", "batch.json");
-  writeFileSync(batch, JSON.stringify([{ content: "Pierre Dupont called.", people: ["Pierre Dupont"] }, { content: "Pierre Duponte wrote back.", people: ["Pierre Duponte"] }]));
+  writeFileSync(batch, JSON.stringify([{ content: "Pierre Aubart called.", people: ["Pierre Aubart"] }, { content: "Pierre Auberte wrote back.", people: ["Pierre Auberte"] }]));
   try {
     execFileSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann", "--batch", batch], { cwd: b, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, PLUGIN_ROOT: P, GTM_BRAIN_NO_COMPILE: "1" } });
     assert.fail("should have exited 2");

@@ -584,7 +584,19 @@ export function similarNames(names, mention) {
   const words = new Set(nameWords(mention)), letters = nameLetters(mention);
   if (!letters) return [];
   const fuzzy = new Set(rankEntityCandidates(names, mention, { limit: 10 }).matches.map(m => m.entry));
-  return names.filter(n => fuzzy.has(n) || [n.name, ...n.aliases].some(x => nameLetters(x) === letters || nameWords(x).some(w => words.has(w)))).map(n => ({ name: n.name, kind: n.kind }));
+  return names.filter(n => !otherPerson(n, mention) && (fuzzy.has(n) || [n.name, ...n.aliases].some(x => nameLetters(x) === letters || nameWords(x).some(w => words.has(w))))).map(n => ({ name: n.name, kind: n.kind }));
+}
+/* "Florian Kim" is not Florian Weber: a known person with a full name, the same first name and a
+   surname that is not a typo of this one is someone else (scenario run, 2026-11-12: "same as
+   Florian Weber?" asked for Florian Kim). A one-word known name, a close surname or a company still asks. */
+const nameTypo = (a, b) => { if (a.startsWith(b) || b.startsWith(a)) return true; let row = [...Array(b.length + 1).keys()];
+  for (let i = 1; i <= a.length; i++) { const next = [i]; for (let j = 1; j <= b.length; j++) next[j] = Math.min(row[j] + 1, next[j - 1] + 1, row[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); row = next; }
+  return row[b.length] <= 1; };
+function otherPerson(n, mention) {
+  const m = foldName(mention).trim().split(/\s+/);
+  if ((n.kind || "person") !== "person" || m.length < 2) return false;
+  return [n.name, ...n.aliases].every(x => { const k = foldName(x).trim().split(/\s+/);
+    return k.length >= 2 && k[0] === m[0] && !nameTypo(k[k.length - 1], m[m.length - 1]); });
 }
 /* add a person, or merge aliases/emails into an existing one (matched by name, alias or email) */
 export function addName(root, name, options = {}) {
@@ -711,7 +723,7 @@ export const NAME_RULES = {
   P1: "A name, alias or email that belongs to exactly one known person, company or product is that one.",
   P2: "A first name alone means a known person only when exactly one known person has that first name; otherwise ask.",
   P3: "A first name alone is never saved as a new person: ask for the full name, or say it is a company, product or team.",
-  P4: "A name that looks like a known one is never merged on a guess: ask \"same as X?\" first.",
+  P4: "A name that looks like a known one is never merged on a guess: ask \"same as X?\" first. The same first name with a different surname is someone else.",
   C1: "A company the note plainly names as one is saved as a company, and asked for its website once.",
 };
 /* normalise a list of mentions: known -> canonical; unknown -> added as new people, unless one
