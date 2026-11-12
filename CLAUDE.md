@@ -145,7 +145,7 @@ snapshot of the outgoing file in `templates/legacy/AGENTS-<old version>.md` plus
 
 Describe a feature once, in its owning document, and link from the others: `INSTALL.md`
 (standalone instructions for the installing agent), `ONBOARDING.md` (first-use walkthrough),
-`GUIDE.md` (everyday use), `COMMANDS.md` (every tool and command and the files it writes),
+`GUIDE.md` (everyday use), `plugins/gtm-brain/MANUAL.md` (how a brain works and how to change it; ships with the plugin, Codex answers "how does the brain work?" from it), `COMMANDS.md` (every tool and command and the files it writes),
 `SETUP.md` (manual install and contributor verification), `DOCUMENTS.md` (documents
 feature), `USER-SKILLS.md`, `skill-template/README.md` (contributing a shipped skill), `IMPORT.md` (its text is duplicated word for word as the body of
 `plugins/gtm-brain/claude/gtm-brain-export/SKILL.md`; keep the two in step).

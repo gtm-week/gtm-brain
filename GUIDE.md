@@ -1,6 +1,7 @@
 # Your company brain: a quick guide
 
-For the person using it, not for the person building it. Ten minutes to read.
+For the person using it, not for the person building it. Ten minutes to read. How the brain works
+inside, and how to change it, is in [the manual](plugins/gtm-brain/MANUAL.md); ask Codex in your brain and it answers from it.
 
 ## What it is
 

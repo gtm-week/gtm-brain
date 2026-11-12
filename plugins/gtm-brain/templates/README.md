@@ -3,6 +3,9 @@
 Made with GTM Brain. This page says what goes where. Codex follows the same rules, so a file is
 always in one of the places below.
 
+Ask Codex here how the brain works, what it cannot do or how to change something: it answers
+from GTM Brain's manual.
+
 ## What goes where
 
 [WHERE.md](WHERE.md) says where every file goes. Codex reads it at the start of every chat and

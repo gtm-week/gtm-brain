@@ -187,6 +187,7 @@ one already read in this chat is still in context, so reuse it instead of readin
 | Load, switch, or unload a context; list what exists | [Loading](references/load.md), [load context](references/load-context.md) | `load_context`, `query` (contexts) |
 | Create, fork or archive a context | [Create a context](references/create-context.md) | `new_context`, `fork_context`, `archive_context` |
 | Change a context's title or standing instructions | [Edit a context](references/edit-context.md) | `edit_context` |
+| Explain how the brain works, what it cannot do, how to change it | [The manual](../../MANUAL.md) | read it, answer in a few lines |
 | Record, correct, forget, or answer a question | [Memory recording](references/remember.md) | `remember` |
 | Find prior knowledge, count or join it, or build a person view | [Recall](references/recall.md) | `query` (memories with search; `sql` for counts, joins and dates; brief for a person view) |
 | How healthy a deal is, what is missing before the next call | [Deal health](references/deal-health.md) | `query` (deal; search = the company) |
