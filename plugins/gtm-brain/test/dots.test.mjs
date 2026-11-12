@@ -69,6 +69,11 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   assert.equal(acme.status, 0, acme.stderr);
   assert.match(acme.stdout, /Ask the person once, after quoting the note, one numbered part each: 1\) Acme's website, so the brain knows which Acme this is/);
   assert.deepEqual(lib.readMemories(root, "company").at(-1).entity_mentions.map(x => [x.mention, x.rule]), [["Acme", "C1"]]);
+  // Codex adds the company first and saves the note second (new-brain rerun, 2026-11-12): still asked, once
+  lib.addName(root, "Initech", { kind: "company" });
+  assert.match(remember("--content", "Initech wants a booth.", "--companies", "Initech").stdout, /1\) Initech's website/);
+  assert.doesNotMatch(remember("--content", "Initech confirmed the booth.", "--companies", "Initech").stdout, /website/);   // asked already
+  assert.doesNotMatch(remember("--content", "X hired two people.", "--companies", "X").stdout, /website/);   // our own company
   // known with a website: never asked again
   lib.addName(root, "Globex", { kind: "company", references: [{ kind: "website", ref: "https://globex.com" }] });
   assert.doesNotMatch(remember("--content", "Globex renewed.", "--companies", "Globex").stdout, /website/);

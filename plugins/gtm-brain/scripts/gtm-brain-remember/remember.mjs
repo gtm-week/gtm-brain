@@ -29,7 +29,8 @@ const dots = await import(new URL("../../lib/dots.mjs", import.meta.url));
 // One-word names held under P3, so a later new_names for the same word is the person's answer, not a guess.
 const ASKED_DAYS = 7, askedFile = () => join(root, "work", "asked-names.json"), fold = n => String(n).trim().toLowerCase();
 const readAsked = () => { try { return JSON.parse(readFileSync(askedFile(), "utf8")); } catch { return {}; } };
-const wasAsked = name => { const at = readAsked()[fold(name)]; return !!at && Date.now() - Date.parse(at) < ASKED_DAYS * 86400000; };
+const wasAsked = (name, days = ASKED_DAYS) => { const at = readAsked()[fold(name)]; return !!at && Date.now() - Date.parse(at) < days * 86400000; };
+const foldName = fold;
 const noteAsked = names => { if (!names.length) return; const m = readAsked(); for (const n of names) m[fold(n)] = new Date().toISOString(); try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(askedFile(), JSON.stringify(m, null, 2) + "\n"); } catch {} };
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
 const opt = { source: [], action: [] };
@@ -188,7 +189,10 @@ for (let i = 0; i < entries.length; i++) {
   }
   if (where.one) lines.push(`${at(n)}tagged project:${where.one}: ${known.join(", ")}'s notes are all in that project. Say so in your reply; if this note is not about it, remember a correction.`);
   if (where.several.length) asks.push(`which project is "${shown.slice(0, 60)}" about: ${where.several.join(" or ")}, or none? (then remember a correction with the project tag)`);
-  for (const a of added) { const ent = names.find(x => x.name === a); if (ent && ent.kind === "organization" && !dots.hasWebsite(ent)) asks.push(`${a}'s website, so the brain knows which ${a} this is ("don't know" is a fine answer; with a website: add_name ${a} with references [{kind: "website", ref: the URL}], then offer a short look-up)`); }
+  // every company in the note with no website is asked once, however it was added (add_name first or here);
+  // our own company and one already asked ("don't know") are not asked again
+  const own = foldName(lib.readAdmin(root)?.company || "");
+  for (const a of rec.people) { const ent = names.find(x => x.name === a); if (ent && ent.kind === "organization" && foldName(a) !== own && !dots.hasWebsite(ent) && !wasAsked(`website:${a}`, Infinity)) { noteAsked([`website:${a}`]); asks.push(`${a}'s website, so the brain knows which ${a} this is ("don't know" is a fine answer; with a website: add_name ${a} with references [{kind: "website", ref: the URL}], then offer a short look-up)`); } }
   for (const inf of inferred) lines.push(`${at(n)}took "${inf.mention}" as ${inf.name} (rule P2: the one known person with that first name). If it is someone else, say so: remember again with new_names ["${inf.mention}"].`);
   const missed = lib.candidateEntities(e.content, people, names);
   if (missed.length) lines.push(`${at(n)}names in this note not yet registered as entities: ${missed.map(x => `"${x}"`).join(", ")}. For each that is a person, organization or product, call add_name with its kind now (company and team are organization subtypes; no need to ask when it is plain from the note); the note counts for it from then on. Skip the rest.`);
