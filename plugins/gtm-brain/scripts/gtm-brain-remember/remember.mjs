@@ -23,7 +23,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { prepareAsset, assetSummary, assetRows, currentApproved } from '../../lib/assets.mjs';
 import { join } from "node:path";
-import { isChatSource } from "../../lib/host.mjs";
+import { isChatSource, host } from "../../lib/host.mjs";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const dots = await import(new URL("../../lib/dots.mjs", import.meta.url));
 // One-word names held under P3, so a later new_names for the same word is the person's answer, not a guess.
@@ -65,6 +65,8 @@ if (!authors.length) die("need --by <person>");
 const batched = entries.length > 1;
 if (entries.some(e => e?.customer) && entries.some(e => e?.customer_coverage)) die("Record customer coverage in a separate call after checking which customer entries were kept or held.");
 const kept = [], held = [], failed = [], lines = [], asks = [];
+const esc = t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const personText = chat && !process.env.GTM_BRAIN_RUN ? (host().lastPersonText?.(chat) || "") : "";
 const at = n => batched ? `#${n} ` : "";
 // every entry is checked before the first one is written: a bad entry in the middle must not leave the ones before it kept and unreported
 const ctxOf = e => e.context || opt.context || (loaded.length === 1 ? loaded[0] : null);
@@ -133,7 +135,14 @@ for (let i = 0; i < entries.length; i++) {
     try { customerName = lib.customerIdentity(root, e.customer); }
     catch (err) { held.push({ n, why: err.message, mentions: [e.customer.entity] }); continue; }
   }
-  const mapped = name => e.customer && name === e.customer.entity ? customerName : name;
+  // Names as the person typed them: when they wrote only "Florian" and the model sent the known "Florian
+  // Weber", the note keeps "Florian" taken by rule P2, so "who is Florian, and why" stays honest.
+  const typed = name => {
+    if (!personText || !/\s/.test(name) || new RegExp(`\\b${esc(name)}\\b`, "i").test(personText)) return name;
+    const first = name.split(/\s+/)[0], known = lib.readNames(root);
+    return lib.exactName(known, name) === name && new RegExp(`\\b${esc(first)}\\b`).test(personText) && lib.inferredName(known, first) === name ? first : name;
+  };
+  const mapped = name => e.customer && name === e.customer.entity ? customerName : typed(name);
   const mappedCompanies = companies.map(mapped);
   // P3: a one-word name in new_names counts only after it was held and asked about ("Max who?"); listing it
   // up front skips the question (2026-11-12, Codex sent new_names ["Max"] on the first try).

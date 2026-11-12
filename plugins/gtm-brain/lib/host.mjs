@@ -60,6 +60,16 @@ const ADAPTERS = {
         .filter(f => { try { const p = JSON.parse(readFileSync(f, "utf8").split("\n", 1)[0]).payload || {}; return typeof p.cwd === "string" && real(p.cwd) === want; } catch { return false; } });
       return /-([0-9a-f-]{36})\.jsonl$/.exec(newest(files) || "")?.[1] || null;
     },
+    // The person's last message in a chat, from its rollout file: what they typed, before the model reworded it.
+    lastPersonText(id, home = process.env.CODEX_HOME || join(homedir(), ".codex")) {
+      if (!/^[0-9a-f-]{36}$/.test(id || "")) return "";
+      const days = [0, 1, 2].map(n => new Date(Date.now() - n * 864e5)).map(d => join(home, "sessions", String(d.getFullYear()), String(d.getMonth() + 1).padStart(2, "0"), String(d.getDate()).padStart(2, "0")));
+      const file = days.flatMap(dir => { try { return readdirSync(dir).filter(f => f.endsWith(`${id}.jsonl`)).map(f => join(dir, f)); } catch { return []; } })[0];
+      if (!file) return "";
+      let last = "";
+      try { for (const line of readFileSync(file, "utf8").split("\n")) { try { const p = JSON.parse(line).payload || {}; if (p.type === "message" && p.role === "user") { const t = (p.content || []).map(c => c?.text || "").join(" "); if (t && !/^\s*<(environment_context|user_instructions|permissions)/.test(t) && !/AGENTS\.md instructions/.test(t.slice(0, 300))) last = t; } } catch {} } } catch {}
+      return last;
+    },
     // Where GTM Brain is installed from and which version is installed, as the host's plugin manager reports it.
     plugin: {
       home: () => process.env.CODEX_HOME || join(homedir(), ".codex"),
@@ -105,6 +115,14 @@ const ADAPTERS = {
       const dir = join(home, "projects", real(cwd).replace(/[^A-Za-z0-9]/g, "-"));
       let files = []; try { files = readdirSync(dir).filter(f => f.endsWith(".jsonl")).map(f => join(dir, f)); } catch {}
       return /([0-9a-f-]{36})\.jsonl$/.exec(newest(files) || "")?.[1] || null;
+    },
+    lastPersonText(id, home = process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude")) {
+      if (!/^[0-9a-f-]{36}$/.test(id || "")) return "";
+      let file = null; try { for (const d of readdirSync(join(home, "projects"))) { const f = join(home, "projects", d, `${id}.jsonl`); if (existsSync(f)) { file = f; break; } } } catch {}
+      if (!file) return "";
+      let last = "";
+      try { for (const line of readFileSync(file, "utf8").split("\n")) { try { const r = JSON.parse(line); if (r.type === "user" && typeof r.message?.content === "string") last = r.message.content; } catch {} } } catch {}
+      return last;
     },
     plugin: {
       home: () => process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude"),

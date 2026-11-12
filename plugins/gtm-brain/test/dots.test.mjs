@@ -58,6 +58,17 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   assert.match(slides.stdout, /took "Florian" as Florian Weber \(rule P2/);
   assert.match(slides.stdout, /tagged project:berlin-event-2026: Florian Weber's notes are all in that project/);
   assert.ok(lib.readMemories(root, "company").at(-1).tags.includes("project:berlin-event-2026"));
+  // Codex sends the full name although the person typed "Florian": the brain reads the person's own message
+  // in the chat's rollout file and keeps "Florian" taken by P2 (new-brain rerun, 2026-11-12)
+  const id = "01a1cf17-1df8-7f92-a5d1-28a9db950b99", d = new Date(), day = join(process.env.CODEX_HOME, "sessions", String(d.getFullYear()), String(d.getMonth() + 1).padStart(2, "0"), String(d.getDate()).padStart(2, "0"));
+  mkdirSync(day, { recursive: true });
+  writeFileSync(join(day, `rollout-2026-11-12T10-18-48-${id}.jsonl`), [{ type: "session_meta", payload: { cwd: root } }, { type: "response_item", payload: { type: "message", role: "user", content: [{ type: "input_text", text: "Florian asked for the slides" }] } }].map(x => JSON.stringify(x)).join("\n") + "\n");
+  lib.writeSession(root, { session_id: id, cwd: root, host: "codex" });
+  const reworded = remember("--content", "Florian Weber asked for the slides.", "--people", "Florian Weber");
+  assert.equal(reworded.status, 0, reworded.stderr);
+  assert.deepEqual(lib.readMemories(root, "company").at(-1).entity_mentions.map(x => [x.mention, x.rule]), [["Florian", "P2"]]);
+  writeFileSync(join(day, `rollout-2026-11-12T10-18-48-${id}.jsonl`), "");   // no message to read: as sent
+  lib.writeSession(root, { session_id: null, cwd: root });
   // in two projects: asked, not tagged
   assert.equal(remember("--content", "Florian Weber reviews the website copy.", "--people", "Florian Weber", "--project", "website").status, 0);
   const both = remember("--content", "Florian Weber sent his bio.", "--people", "Florian Weber");
