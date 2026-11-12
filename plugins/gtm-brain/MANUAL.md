@@ -162,7 +162,7 @@ in `work/manual-edits/protected/`.
 | Summaries never update | `work/hooks.log` lines `scheduled-run ... failed`; `work/runs.jsonl` has one line per compile run with its tokens; no lines at all means no run started |
 | A file in the wrong place | "why is this here?"; fix the `WHERE.md` row |
 | Codex did something you did not ask | `work/tool-usage.jsonl` lists every GTM Brain call with time and title; `git log` lists every change with who made it |
-| A question box you cannot answer in | type the answer in chat; a closed box is no answer and Codex asks again in text |
+| A question where none of the options fits | type your own answer in the box's "Or write your own response" field, then Send. The main message field below waits until the question is answered or skipped. Skip closes it, and Codex asks again in plain text. |
 
 Everything is in git: `git log` in the brain folder shows every note, compile and edit, one commit
 each, and any of them can be reverted.
