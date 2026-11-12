@@ -21,6 +21,9 @@ For each thing the sentence touches:
 
 What to look for, as examples, not a full list:
 
+- **A name or capitalised word:** decide what it is. A person, company or product the note is about
+  is linked (`add_name` with its kind); a place (Berlin), an event, a project or a plain word is not
+  an entity. `remember` lists the words it could not link; it does not know which is which, you do.
 - **Event or meeting:** the project or meeting it belongs to, and its date.
 - **Open question or to-do:** whether the sentence answers one ("Tickets will be 99 EUR" answers
   "decide the ticket price"); if so, remember it as the answer to that question.

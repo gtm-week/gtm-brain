@@ -458,7 +458,7 @@ test("remember holds a note whose name looks like a known one until the person a
   const out = run(root, "remember", "remember.mjs", "--by", "marta", "--context", "icp", "--people", "Pierre Dupont", "--new", "Pierre Dupont", "--content", "Pierre Dupont joined the call.");
   assert.match(out, /people: Pierre Dupont/); assert.match(out, /new person in entities\/: Pierre Dupont/);
   const missed = run(root, "remember", "remember.mjs", "--by", "marta", "--context", "icp", "--people", "Pierre Dupont", "--content", "Pierre Dupont said Castorama will sign the NDA with ByteDance next Monday (2026-11-16).");
-  assert.match(missed, /names in this note not yet registered as entities: "Castorama", "ByteDance"\. For each that is a person, organization or product/);
+  assert.match(missed, /words in this note not linked to anything in the brain: "Castorama", "ByteDance"\. Decide what each is, by connect-dots\.md: a person, company or product/);
   assert.match(run(root, "entities", "entities.mjs", "--add", "Pierre Martin"), /looks like Pierre Aubert, Pierre Dupont already in the registry/);
   run(root, "entities", "entities.mjs", "--add", "Nestle", "--kind", "company"); run(root, "entities", "entities.mjs", "--add", "Nestle Poland", "--kind", "company");
   assert.match(run(root, "entities", "entities.mjs"), /Might be the same: Nestle and Nestle Poland\. Ask the person; then "Nestle Poland is Nestle"/);
