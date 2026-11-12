@@ -14,6 +14,12 @@ const lib = await import(new URL("../lib/brain.mjs", import.meta.url));
 const args = process.argv.slice(2);
 const root = resolve(args.find(a => !a.startsWith("--")) || ".");
 const flag = args.find(a => a.startsWith("--")) || "";
+const portOption = args.find(a => a.startsWith("--port="))?.slice("--port=".length);
+const configuredPort = portOption ?? process.env.GTM_BRAIN_DASH_PORT;
+if (configuredPort !== undefined && (!/^\d+$/.test(configuredPort) || Number(configuredPort) <= 1024 || Number(configuredPort) > 65535)) {
+  console.error("dashboard port must be an integer between 1025 and 65535"); process.exit(1);
+}
+const requestedPort = configuredPort === undefined ? undefined : Number(configuredPort);
 // A project belongs to this opening URL, never to shared dashboard state.
 const project = args.find(a => a.startsWith("--project="))?.slice(10) || "";
 if (project && !lib.readProjects(root).some(p => p.slug === project)) { console.error(`Unknown dashboard project: ${project}`); process.exit(1); }
@@ -35,10 +41,11 @@ if (flag === "--stop") { lib.stopBrainWatcher(root); const s = readState(); if (
 if (flag === "--start" || flag === "--open" || flag === "--open-chrome") {
   lib.startBrainWatcher(root);
   const s = readState();
-  if (alive(s) && s.protocol === 3) { console.log(viewingUrl(s.url)); process.exit(0); }
+  if (alive(s) && s.protocol === 3 && (requestedPort === undefined || s.port === requestedPort)) { console.log(viewingUrl(s.url)); process.exit(0); }
   if (alive(s)) { try { process.kill(s.pid); } catch {} } // retire older action-capable servers
   const out = openSync(join(work, "dash.log"), "a");
-  const child = spawn(process.execPath, [fileURLToPath(import.meta.url), root], { detached: true, stdio: ["ignore", out, out], env: process.env });
+  const childArgs = [fileURLToPath(import.meta.url), root, ...(requestedPort === undefined ? [] : [`--port=${requestedPort}`])];
+  const child = spawn(process.execPath, childArgs, { detached: true, stdio: ["ignore", out, out], env: process.env });
   child.unref();
   const t0 = Date.now();
   const wait = () => { const n = readState(); if (n && n.pid === child.pid && alive(n)) { console.log(viewingUrl(n.url)); process.exit(0); } if (Date.now() - t0 > 4000) { console.error("dashboard server did not start; see work/dash.log"); process.exit(1); } setTimeout(wait, 100); };
@@ -117,8 +124,8 @@ function serve() {
   });
 
   const prev = readState();
-  port = (prev && Number.isInteger(prev.port) && prev.port > 1024) ? prev.port : 40000 + (Array.from(root).reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % 20000); let tries = 0;
-  server.on("error", e => { if (e.code === "EADDRINUSE" && tries++ < 20) { port++; server.listen(port, "127.0.0.1"); } else { console.error(e.message); process.exit(1); } });
+  port = requestedPort ?? ((prev && Number.isInteger(prev.port) && prev.port > 1024) ? prev.port : 40000 + (Array.from(root).reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % 20000)); let tries = 0;
+  server.on("error", e => { if (e.code === "EADDRINUSE" && requestedPort === undefined && tries++ < 20) { port++; server.listen(port, "127.0.0.1"); } else { console.error(e.message); process.exit(1); } });
   server.on("listening", () => {
     const url = `http://127.0.0.1:${port}/`;
     writeFileSync(stateFile, JSON.stringify({ port, pid: process.pid, protocol: 3, url, startedAt: new Date().toISOString() }, null, 1));
