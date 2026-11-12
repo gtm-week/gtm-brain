@@ -42,7 +42,11 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   const dinner = remember("--content", "The speaker dinner moved to Thursday.");
   assert.equal(dinner.status, 2);
   assert.match(dinner.stderr, /"Thursday" can be Thu 2026-11-12 or Thu 2026-11-19: ask which/);
-  assert.match(dinner.stderr, /Ask the person once, everything in one question with numbered parts/);
+  assert.match(dinner.stderr, /Ask the person once, everything in one question, as plain chat text with numbered parts, then end the turn/);
+  // the person turned Codex's question box on: the question goes there (new-brain rerun: plain text although it was on)
+  writeFileSync(join(process.env.CODEX_HOME, "config.toml"), "[features]\ndefault_mode_request_user_input = true\n");
+  assert.match(remember("--content", "The speaker dinner moved to Thursday.").stderr, /in Codex's question box \(request_user_input\)/);
+  writeFileSync(join(process.env.CODEX_HOME, "config.toml"), "");
   // "Friday": one reading, so no question, the model writes it in and sends again
   const deck = remember("--content", "Ola Nowak will send the deck on Friday.", "--people", "Ola Nowak");
   assert.equal(deck.status, 2);
@@ -90,7 +94,7 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   // a new company: saved as a company under C1, and its website asked in the one question
   const acme = remember("--content", "Acme wants a booth at the Berlin event.", "--companies", "Acme", "--project", "berlin-event-2026");
   assert.equal(acme.status, 0, acme.stderr);
-  assert.match(acme.stdout, /Ask the person once, after quoting the note, one numbered part each: 1\) Acme's website, so the brain knows which Acme this is/);
+  assert.match(acme.stdout, /Ask the person once, as plain chat text with numbered parts, then end the turn, after quoting the note, one numbered part each: 1\) Acme's website, so the brain knows which Acme this is/);
   assert.deepEqual(lib.readMemories(root, "company").at(-1).entity_mentions.map(x => [x.mention, x.rule]), [["Acme", "C1"]]);
   // Codex adds the company first and saves the note second (new-brain rerun, 2026-11-12): still asked, once
   lib.addName(root, "Initech", { kind: "company" });
