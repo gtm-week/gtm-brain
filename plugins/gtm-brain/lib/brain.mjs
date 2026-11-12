@@ -712,6 +712,7 @@ export const NAME_RULES = {
   P2: "A first name alone means a known person only when exactly one known person has that first name; otherwise ask.",
   P3: "A first name alone is never saved as a new person: ask for the full name, or say it is a company, product or team.",
   P4: "A name that looks like a known one is never merged on a guess: ask \"same as X?\" first.",
+  C1: "A company the note plainly names as one is saved as a company, and asked for its website once.",
 };
 /* normalise a list of mentions: known -> canonical; unknown -> added as new people, unless one
    looks like a name already known (similarNames): then nothing is added and `similar` says which
@@ -727,12 +728,12 @@ export function normalisePeople(root, mentions, { confirmedNew = [], companies =
   for (const m of mentions) {
     const t = String(m || "").trim(); if (!t) continue;
     const exact = exactName(names, t); if (exact) { take(exact); if (exact !== t) note(t, exact, "exact", "P1"); continue; }
-    if (sure.has(foldName(t))) { names.push({ name: t, aliases: [], emails: [], kind: "person" }); fresh.push(t); take(t); note(t, t, "confirmed_new", /\s/.test(t) ? "P1" : "P3"); continue; }   // the person said: someone new
+    if (sure.has(foldName(t))) { names.push({ name: t, aliases: [], emails: [], kind: "person" }); fresh.push(t); take(t); note(t, t, "confirmed_new", plain.has(foldName(t)) ? "C1" : /\s/.test(t) ? "P1" : "P3"); continue; }   // the person said: someone new
     const guess = inferredName(names, t); if (guess) { inferred.push({ mention: t, name: guess }); take(guess); note(t, guess, "inferred_first_name", "P2"); continue; }
     const like = similarNames(names, t);
     if (like.length) { similar.push({ mention: t, matches: like }); continue; }
     if (!/\s/.test(t) && !plain.has(foldName(t))) { unnamed.push(t); continue; }
-    names.push({ name: t, aliases: [], emails: [], kind: "person" }); fresh.push(t); take(t); note(t, t, "new", "P1");
+    names.push({ name: t, aliases: [], emails: [], kind: "person" }); fresh.push(t); take(t); note(t, t, "new", plain.has(foldName(t)) ? "C1" : "P1");
   }
   if (similar.length || unnamed.length) return { people: [], added: [], similar, unnamed, inferred: [], mentions: [] };
   // Resolve all mentions before writing, so an ambiguous company cannot leave a partial registry.

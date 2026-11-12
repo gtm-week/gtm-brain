@@ -1,0 +1,83 @@
+// Connecting the dots (new-brain test, 2026-11-12): six plain sentences, each checked for what the brain
+// settles itself (a date with one reading, the one project a known person is in) and what it asks, in one
+// question (a date with two readings, a new company's website, several projects). Nothing is guessed.
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { execFileSync, spawnSync } from "node:child_process";
+const P = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
+process.env.CODEX_HOME = mkdtempSync(join(tmpdir(), "gtm-brain-test-home-"));   // never the real brains registry
+const lib = await import(`${P}/lib/brain.mjs`);
+const dots = await import(`${P}/lib/dots.mjs`);
+
+const THU = new Date(2026, 10, 12);   // Thursday 2026-11-12, the day of the test
+
+test("relative dates: one reading is written in, two readings are asked, habits and dated notes are left alone", () => {
+  const means = s => dots.relativeDates(s, THU).map(d => [d.word, d.means[0], d.ask]);
+  assert.deepEqual(means("Ola will send the deck on Friday."), [["Friday", "Fri 2026-11-13", false]]);
+  assert.deepEqual(means("The speaker dinner moved to Thursday."), [["Thursday", "Thu 2026-11-12", true]]);   // today, or a week from today
+  assert.deepEqual(dots.relativeDates("The speaker dinner moved to Thursday.", THU)[0].means.slice(0, 2), ["Thu 2026-11-12", "Thu 2026-11-19"]);
+  assert.deepEqual(means("Max will run the demo next Tuesday."), [["next Tuesday", "Tue 2026-11-17", false]]);
+  assert.deepEqual(means("Call me next Friday."), [["next Friday", "Fri 2026-11-13", true]]);   // tomorrow, or the week after
+  assert.deepEqual(means("We met last Monday and agree tomorrow."), [["last Monday", "Mon 2026-11-09", false], ["tomorrow", "Fri 2026-11-13", false]]);
+  assert.deepEqual(means("Ship it next week."), [["next week", "the week of Mon 2026-11-16", false]]);
+  assert.deepEqual(means("The team meets on Mondays and every Friday."), []);
+  assert.deepEqual(means("Ola will send the deck on Friday (13 November 2026)."), []);
+  assert.deepEqual(means("Due Friday 2026-11-13."), []);
+});
+
+test("remember: a bare date is held with what it means; a known speaker's note lands in their project; a new company is asked for its website", () => {
+  const root = mkdtempSync(join(tmpdir(), "gtm-brain-dots-")); execFileSync("git", ["init", "-q", root]);
+  execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "X", "--one-liner", "y", "--owner", "Ann Lee <ann@b.c>"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P } });
+  const env = { ...process.env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_NOW: "2026-11-12T09:00:00" };
+  const remember = (...a) => spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann-lee", "--context", "company", ...a], { cwd: root, env, encoding: "utf8" });
+  const event = mkdtempSync(join(tmpdir(), "gtm-brain-dots-event-"));
+  execFileSync(process.execPath, [`${P}/skills/gtm-brain-project/project.mjs`, ".", "--link", event, "--slug", "berlin-event-2026", "--title", "Berlin event"], { cwd: root, env });
+  execFileSync(process.execPath, [`${P}/skills/gtm-brain-project/project.mjs`, ".", "--link", mkdtempSync(join(tmpdir(), "gtm-brain-dots-web-")), "--slug", "website", "--title", "Website"], { cwd: root, env });
+  assert.equal(remember("--content", "Florian Weber is our keynote speaker.", "--people", "Florian Weber", "--project", "berlin-event-2026").status, 0);
+
+  // "Thursday" said on a Thursday: two readings, so held and asked; nothing written
+  const dinner = remember("--content", "The speaker dinner moved to Thursday.");
+  assert.equal(dinner.status, 2);
+  assert.match(dinner.stderr, /"Thursday" can be Thu 2026-11-12 or Thu 2026-11-19 or Thu 2026-11-05 if it already happened: ask which/);
+  assert.match(dinner.stderr, /Ask the person once, everything in one question with numbered parts/);
+  // "Friday": one reading, so no question, the model writes it in and sends again
+  const deck = remember("--content", "Ola Nowak will send the deck on Friday.", "--people", "Ola Nowak");
+  assert.equal(deck.status, 2);
+  assert.match(deck.stderr, /"Friday" is Fri 2026-11-13 \(or Fri 2026-11-06 if it already happened; take it from the person's words/);
+  assert.match(deck.stderr, /No question needed: write the dates into the note/);
+  assert.equal(remember("--content", "Ola Nowak will send the deck on Friday (2026-11-13).", "--people", "Ola Nowak").status, 0);
+  // from an email: counted from the email's date, not today
+  assert.match(remember("--content", "Acme will sign next week.", "--source", "gmail:msg-1").stderr, /counted from the source's own date/);
+
+  // "Florian asked for the slides": Florian's notes are all in the Berlin event, so this one is too, said in one line
+  const slides = remember("--content", "Florian asked for the slides.", "--people", "Florian");
+  assert.equal(slides.status, 0, slides.stderr);
+  assert.match(slides.stdout, /took "Florian" as Florian Weber \(rule P2/);
+  assert.match(slides.stdout, /tagged project:berlin-event-2026: Florian Weber's notes are all in that project/);
+  assert.ok(lib.readMemories(root, "company").at(-1).tags.includes("project:berlin-event-2026"));
+  // in two projects: asked, not tagged
+  assert.equal(remember("--content", "Florian Weber reviews the website copy.", "--people", "Florian Weber", "--project", "website").status, 0);
+  const both = remember("--content", "Florian Weber sent his bio.", "--people", "Florian Weber");
+  assert.match(both.stdout, /which project is "Florian Weber sent his bio\." about: berlin-event-2026 or website, or none\?/);
+  assert.ok(!lib.readMemories(root, "company").at(-1).tags.some(t => t.startsWith("project:")));
+
+  // a new company: saved as a company under C1, and its website asked in the one question
+  const acme = remember("--content", "Acme wants a booth at the Berlin event.", "--companies", "Acme", "--project", "berlin-event-2026");
+  assert.equal(acme.status, 0, acme.stderr);
+  assert.match(acme.stdout, /Ask the person once, after quoting the note, one numbered part each: 1\) Acme's website, so the brain knows which Acme this is/);
+  assert.deepEqual(lib.readMemories(root, "company").at(-1).entity_mentions.map(x => [x.mention, x.rule]), [["Acme", "C1"]]);
+  // known with a website: never asked again
+  lib.addName(root, "Globex", { kind: "company", references: [{ kind: "website", ref: "https://globex.com" }] });
+  assert.doesNotMatch(remember("--content", "Globex renewed.", "--companies", "Globex").stdout, /website/);
+});
+
+test("the chat start tells Codex to look for a named file before asking, and to ask once", async () => {
+  const where = await import(`${P}/lib/where.mjs`);
+  const root = mkdtempSync(join(tmpdir(), "gtm-brain-dots-where-")); execFileSync("git", ["init", "-q", root]);
+  execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "X", "--one-liner", "y", "--owner", "Ann Lee <ann@b.c>"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P } });
+  mkdirSync(join(root, "projects", "berlin-event-2026"), { recursive: true }); writeFileSync(join(root, "projects", "berlin-event-2026", "README.md"), "The Berlin event\n");
+  assert.match(where.whereLine(root), /names a file you do not have \("use the new flyer"\), look in the project's folder first, then ask once/);
+});

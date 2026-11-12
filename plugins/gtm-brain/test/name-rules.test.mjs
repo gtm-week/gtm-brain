@@ -33,7 +33,7 @@ test("a bare first name is held and asked about; a full name is kept with where 
   const kept = remember("--content", "Max Kowalski will run the GTM-OS demo.", "--people", "Max Kowalski", "--source", "gmail:msg-1", "--tags", "project:gtm-os");
   assert.equal(kept.status, 0, kept.stderr);
   // P2: later, "Max" alone is the one known Max, and the note keeps that it was inferred
-  const later = remember("--content", "Max moved the demo to Friday.", "--people", "Max");
+  const later = remember("--content", "Max moved the demo to Friday 2026-11-13.", "--people", "Max");
   assert.equal(later.status, 0, later.stderr);
   assert.match(later.stdout, /took "Max" as Max Kowalski \(rule P2/);
   const max = lib.readNames(root).find(e => e.name === "Max Kowalski");
@@ -88,14 +88,14 @@ test("a one-word name sent in new_names before anyone asked is still held; after
   const env = { ...process.env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1" };
   const remember = (...a) => spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann-lee", "--context", "company", ...a], { cwd: root, env, encoding: "utf8" });
 
-  // Codex in new-brain, 2026-11-12: "Max will run the demo next Tuesday." went straight in with new_names ["Max"]
-  const guess = remember("--content", "Max will run the demo next Tuesday.", "--people", "Max", "--new", "Max");
+  // Codex in new-brain, 2026-11-12: "Max will run the demo next Tuesday (2026-11-17)." went straight in with new_names ["Max"]
+  const guess = remember("--content", "Max will run the demo next Tuesday (2026-11-17).", "--people", "Max", "--new", "Max");
   assert.equal(guess.status, 2);
   assert.match(guess.stderr, /"Max" is one word and nobody known has it \(rule P3/);
   assert.ok(!lib.readNames(root).some(e => e.name === "Max"));
 
   // the person was asked and insists on the one word: now it is kept, and the note says P3 confirmed_new
-  const insisted = remember("--content", "Max will run the demo next Tuesday.", "--people", "Max", "--new", "Max");
+  const insisted = remember("--content", "Max will run the demo next Tuesday (2026-11-17).", "--people", "Max", "--new", "Max");
   assert.equal(insisted.status, 0, insisted.stderr);
   const note = lib.readMemories(root, "company").find(m => /next Tuesday/.test(m.content));
   assert.deepEqual(note.entity_mentions.map(x => [x.mention, x.resolution, x.rule]), [["Max", "confirmed_new", "P3"]]);

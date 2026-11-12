@@ -338,7 +338,7 @@ test("load, remember and recall work in a project's own set and tag its notes; t
   assert.match(script(root, "gtm-brain-load/load.mjs", "--clear", "--project", "curriculum"), /cleared/); assert.deepEqual(lib.readLoaded(root, "curriculum"), []);
   script(root, "gtm-brain-load/load.mjs", "icp", "--project", "curriculum");
   lib.writeSession(root, { session_id: "t-curr", cwd: a }, "curriculum");
-  const out = script(root, "gtm-brain-remember/remember.mjs", "--by", "marta", "--content", "M2 draft is due Friday.", "--project", "curriculum");
+  const out = script(root, "gtm-brain-remember/remember.mjs", "--by", "marta", "--content", "M2 draft is due Friday 2026-11-13.", "--project", "curriculum");
   assert.match(out, /remembered m_\w+ in icp/, "one context loaded in the project: no context named");
   const m = lib.readMemories(root, "icp").pop();
   assert.ok(m.tags.includes("project:curriculum")); assert.ok(m.source.some(s => s.kind === "codex" && s.ref === "t-curr"), "the project's own chat is the source");
@@ -370,7 +370,7 @@ test("recall groups a project's hits before it limits them; without a project it
   const batch = join(root, "work", "batch.json");
   writeFileSync(batch, JSON.stringify(Array.from({ length: 45 }, (_, i) => ({ content: `Sprocket order ${i + 1} needs a check.`, context: "offer" }))));
   script(root, "gtm-brain-remember/remember.mjs", "--by", "marta", "--batch", batch);
-  script(root, "gtm-brain-remember/remember.mjs", "--by", "marta", "--content", "A longer note: the sprocket supplier for this project changed its terms this week.", "--project", "curriculum");
+  script(root, "gtm-brain-remember/remember.mjs", "--by", "marta", "--content", "A longer note: the sprocket supplier for this project changed its terms this week (2026-11-09).", "--project", "curriculum");
   const withProject = script(root, "gtm-brain-recall/recall.mjs", "sprocket", "--project", "curriculum");
   assert.match(withProject, /^46 memories match "sprocket"/m);
   assert.match(withProject, /## in this project \(curriculum\) · 1\n/);
@@ -454,7 +454,7 @@ test("a direct edit of admin.md is put back at a project chat's start, with the 
 test("the dashboard lists the projects and chips a note with its project; the advisor names a quiet project and a broken pointer", () => {
   const root = brain(); const a = folder(), b = folder();
   project(root, "--link", a, "--slug", "curriculum", "--title", "Curriculum", "--contexts", "icp"); project(root, "--link", b, "--slug", "website");
-  script(root, "gtm-brain-remember/remember.mjs", "--by", "marta", "--content", "M2 draft is due Friday.", "--context", "icp", "--project", "curriculum");
+  script(root, "gtm-brain-remember/remember.mjs", "--by", "marta", "--content", "M2 draft is due Friday 2026-11-13.", "--context", "icp", "--project", "curriculum");
   execFileSync(process.execPath, [`${P}/scripts/gtm-brain-render/render.mjs`, "."], { cwd: root, env });
   const data = JSON.parse(readFileSync(join(root, "work", "home", "data.json"), "utf8"));
   const c = data.projects.find(p => p.slug === "curriculum");
