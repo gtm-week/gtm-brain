@@ -147,6 +147,18 @@ export function setAdminSetting(root, key, value) {
 export function readCompileState(root) {
   try { const s = JSON.parse(readFileSync(join(root, "work", "compile.json"), "utf8")); if (s.state === "queued" || s.state === "running") { if (Date.now() - Date.parse(s.at) > 20 * 60 * 1000) return { ...s, state: "failed" }; } return s; } catch { return null; }
 }
+/* How a context's summary stands, in the words the chat and the dashboard use. A summary more than 2 days
+   behind says so with its date: "updating shortly" a month later is what Artur saw (ICP, 2026-10-15). */
+export function summaryState(c, busy = false, nowMs = process.env.GTM_BRAIN_NOW ? Date.parse(process.env.GTM_BRAIN_NOW) : Date.now()) {
+  const eff = effectiveMemories(c.memories), fresh = c.compiledAt ? eff.filter(m => newer(m.at, c.compiledAt)) : eff;
+  const day = iso => String(iso || "").slice(0, 10);
+  if (!eff.length) return "nothing recorded yet";
+  if (!c.stale) return `summary up to date (as of ${day(c.compiledAt)})`;
+  if (busy) return `summary updating (${fresh.length} new, in the background)`;
+  const oldest = fresh.map(m => Date.parse(m.at)).filter(Boolean).sort((a, b) => a - b)[0];
+  if (oldest && nowMs - oldest > 2 * 864e5) return `summary out of date: ${c.compiledAt ? `as of ${day(c.compiledAt)}` : "never compiled"}, ${fresh.length} new not in it`;
+  return `summary updating shortly (${fresh.length} new)`;
+}
 export function compileBusy(root) { const s = readCompileState(root); return !!s && (s.state === "queued" || s.state === "running"); }
 /* a failed run that will not try again by itself: the last attempt failed and something is still behind */
 export function compileGaveUp(root) { const s = readCompileState(root); return !!s && (s.state === "blocked" || (s.state === "failed" && (s.attempt || 1) >= (s.tries || 1))) && activeContexts(root).some(c => c.stale); }

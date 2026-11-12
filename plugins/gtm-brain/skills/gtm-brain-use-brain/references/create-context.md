@@ -6,6 +6,11 @@ Keep authored brain content in English. Preserve names, source quotes and the ex
 > A context holds shared knowledge about a topic, such as Strategy. This creates one,
 > splits a topic into its own context, or archives one that is finished.
 
+The brain's README states the rules people see: X1 a project is not a context, X2 propose with one
+sentence of purpose and create only after a yes, X3 never two contexts for one topic. `new_context`
+refuses a linked project's name (X1) and a name like an existing or archived context (X3); after
+the person says it is different, call it again with `distinct` set to their reason.
+
 ## First, what exists
 
 Call the GTM Brain tool `query` (contexts) with `brain` = this workspace folder (archived ones

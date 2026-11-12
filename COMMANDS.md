@@ -150,8 +150,8 @@ and reference index, including old spellings and shared aliases.
 *"compile"*, *"compile pipeline"*, *"update the summaries"*, or "yes" when Codex offers it
 
 Rewrites the cover of a context whose summary is behind from its memories. The script computes the names mentioned (with their kinds), tools,
-related contexts (shared people), confidence, timestamps; Codex writes the summary (3 to 6
-sentences, every one traceable to a memory) and Working guidance: reusable methods learned in this context, including tool-use lessons.
+related contexts (shared people), confidence, timestamps; Codex writes the summary (2 to 4
+sentences, each ending with the note ids it rests on, kept as `summary_sources`; absolute dates only; `compile_apply` refuses anything else) and Working guidance: reusable methods learned in this context, including tool-use lessons.
 Immediate next steps belong in the summary and source follow-ups. Guidance may be empty. Compilation sees memory
 IDs, source/action references, and prior guidance; it revalidates older lessons against the
 effective memories and cites memory IDs for durable tool guidance. There is no fixed sentence
@@ -159,7 +159,7 @@ cap on this guidance. Your standing rule from setup is never changed. Only conte
 one. Runs unattended on the schedule.
 
 Tools: `compile_facts`, `compile_apply`. Writes: `brain/contexts/<slug>/context.md`; kept at once.
-A separate run does it by itself (`background-compile.sh`, state in `work/compile.json`): after each saved change, once no note has been saved for 10 minutes (`GTM_BRAIN_COMPILE_DELAY`), and at chat start; changes during a run get a follow-up pass; the chat only compiles when asked.
+A separate run does it by itself (`background-compile.sh`, state in `work/compile.json`): after each saved change, once no note has been saved for 2 minutes (`GTM_BRAIN_COMPILE_DELAY`), and at chat start; changes during a run get a follow-up pass; the chat only compiles when asked.
 Model passes have a 15-minute timeout (`GTM_BRAIN_COMPILE_TIMEOUT_MS` overrides it in milliseconds).
 Failed scans and timed-out runs enter the three-attempt retry path; completed compilations stay
 saved. Successful passes that reduce the pending context or entity set continue without using

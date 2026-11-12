@@ -95,3 +95,22 @@ export function datesLine(now = today()) {
   const two = left.map(d => `"next ${DAYS[(now.getDay() + d) % 7][0].toUpperCase()}${DAYS[(now.getDay() + d) % 7].slice(1)}" (${short(day(d))} or ${short(day(d + 7))})`);
   return `Today is ${now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}.${two.length ? ` ${two.join(", ")} ${two.length > 1 ? "each have" : "has"} two readings: in any request, not only a note, ask which before acting on it; a free calendar slot is no answer.` : ""}`;
 }
+
+/* A compiled summary: 2-4 sentences, each ending with the ids of the notes it rests on ("[m_1a2b3c, m_4d5e6f]"),
+   no relative dates. Returns {text without the ids, sources: one "m_.. m_.." string per sentence, problems}. */
+export function summaryCheck(summary, ids) {
+  const known = new Set(ids), problems = [];
+  // a sentence ends at . ! or ? (a closing quote may follow), then any [m_...] groups, then a capital
+  const sentences = String(summary || "").trim().replace(/([.!?]["”’)]?(?:\s*\[[^\]]*\])*)\s+(?=[A-Z0-9"“])/g, "$1\n").split("\n").map(s => s.trim()).filter(Boolean);
+  if (sentences.length < 1 || sentences.length > 4) problems.push(`${sentences.length} sentences; write 2-4 (1 when there is one note): what is going on, what is open, what changed`);
+  const words = String(summary || "").replace(/\[[^\]]*\]/g, "").split(/\s+/).filter(Boolean).length;
+  if (words > 90) problems.push(`${words} words; keep it under 90: say what matters, not every note (a run of facts joined by semicolons is still a list)`);
+  const out = sentences.map(s => {
+    const cited = [...s.matchAll(/\bm_[0-9a-f]{6,12}\b/g)].map(m => m[0]), text = s.replace(/\s*\[[^\]]*\]/g, "").replace(/\s*\((?:m_[0-9a-f]{6,12}[,\s]*)+\)/g, "").trim();
+    if (!cited.length) problems.push(`"${text.slice(0, 60)}" cites no note: end each sentence with the ids it rests on, like [m_1a2b3c]`);
+    const unknown = cited.filter(id => !known.has(id)); if (unknown.length) problems.push(`${unknown.join(", ")} not among this context's notes in force`);
+    for (const d of relativeDates(text)) problems.push(`"${d.word}" in "${text.slice(0, 60)}" is a relative date: write the date itself (${d.means[0]})`);
+    return { text, ids: [...new Set(cited)] };
+  });
+  return { text: out.map(o => o.text).join(" "), sources: out.map(o => o.ids.join(" ")), problems: [...new Set(problems)] };
+}

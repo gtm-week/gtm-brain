@@ -17,6 +17,14 @@ if (args[0] === "--new") {
   const slug = (args[1] || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); const title = args[2] || slug; const rule = args[3] || "";
   if (!slug) { console.error('usage: --new <slug> "<Title>" ["<rule>"]'); process.exit(1); }
   const dir = join(root, "brain", "contexts", slug); if (existsSync(dir)) { console.error(`context exists: ${slug}`); process.exit(1); }
+  // X1: a project is a tag on notes and a folder, never a context (Artur expected a "website" context, 2026-11-11)
+  if (lib.readProjects(root).some(p => p.slug === slug) || existsSync(join(root, "projects", slug))) { console.error(`not created: ${slug} is a project (rule X1: a project is a tag on notes and a folder, not a context). Save its notes in the context their meaning fits, with project ${slug}.`); process.exit(2); }
+  // X3: never two contexts for one topic; a look-alike name is asked about first, archived ones included
+  const di = args.indexOf("--distinct"), distinct = di > 0 ? (args[di + 1] || "").trim() : "";
+  const words = t => new Set(String(t).toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length >= 4 && !["context", "contexts", "notes", "team", "work"].includes(w)));
+  const mine = new Set([...words(slug), ...words(title)]);
+  const like = lib.listContexts(root).filter(c => c.slug.includes(slug) || slug.includes(c.slug) || [...words(c.slug), ...words(c.title)].some(w => mine.has(w)));
+  if (like.length && !distinct) { console.error(`not created: "${title}" looks like ${like.map(c => `${c.title} (${c.slug}${c.status === "archived" ? ", archived" : ""})`).join(", ")} (rule X3: never two contexts for one topic). Ask the person "same as ${like[0].title}?": yes, ${like[0].status === "archived" ? "unarchive and " : ""}load that one; no, call new_context again with distinct set to their reason.`); process.exit(2); }
   lib.writeContext(root, slug, { title, rule });
   // A new context is loaded right away: you created it because you are about to work in it.
   const loaded = lib.readLoaded(root, project); if (!loaded.includes(slug)) loaded.push(slug); lib.writeLoaded(root, loaded, project);
@@ -66,7 +74,7 @@ if (args[0] === "--fork") {
 
 const cs = lib.listContexts(root);
 if (args.includes("--json")) { console.log(JSON.stringify(cs.map(c => ({ slug: c.slug, title: c.title, rule: c.rule, status: c.status, summary: c.summary, memories: lib.effectiveMemories(c.memories).length, stored: c.memories.length, lastMemory: c.lastMemory, compiledAt: c.compiledAt, stale: c.stale, people: c.people, tools: c.tools, related: c.related })), null, 1)); process.exit(0); }
-// Same words as the dashboard: "summary up to date" / "summary updating (shortly)", "loaded in this chat". Never "behind".
+// Same words as the dashboard: "summary up to date" / "summary updating (shortly)", "loaded in this chat"; "out of date" only after 2 days behind.
 console.log("admin: brain/admin.md (always loaded)");
 const loadedNow = lib.readLoaded(root, project); const busy = lib.compileBusy(root);
 // --brief-loaded: the chat start prints each loaded context in full right after this list, so its
@@ -74,7 +82,7 @@ const loadedNow = lib.readLoaded(root, project); const busy = lib.compileBusy(ro
 const briefLoaded = args.includes("--brief-loaded");
 for (const c of cs.filter(c => c.status === "active")) {
   const eff = lib.effectiveMemories(c.memories); const fresh = c.compiledAt ? eff.filter(m => lib.newer(m.at, c.compiledAt)).length : eff.length;
-  const state = !eff.length ? "nothing recorded yet" : c.stale ? (busy ? `summary updating (${fresh} new, in the background)` : `summary updating shortly (${fresh} new)`) : "summary up to date";
+  const state = lib.summaryState(c, busy);
   console.log(`• ${c.title} (${c.slug}) · ${eff.length} memories · ${state}${loadedNow.includes(c.slug) ? (project ? " · loaded in this project" : " · loaded in this chat") : ""}${eff.length && !c.stale && !(briefLoaded && loadedNow.includes(c.slug)) ? `  ${c.summary.slice(0, 80)}` : ""}`);
   if (c.rule && !(briefLoaded && loadedNow.includes(c.slug))) console.log(`  ${c.rule}`);
 }

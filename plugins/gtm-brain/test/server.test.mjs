@@ -220,7 +220,13 @@ test("load, remember (not committed by the server), recall, compile facts, rende
   assert.match(behind.text, /icp/);
   const facts = await call("compile_facts", { brain: root, context: "icp" });
   const asOf = facts.text.match(/as_of: (\S+)/)?.[1]; assert.ok(asOf, facts.text);
-  const applied = await call("compile_apply", { brain: root, context: "icp", by: "marta", as_of: asOf, summary: "Bergstrom gets no discount.", now: "Hold the price." });
+  // a model's summary cites its notes and dates nothing relatively (new-brain, 2026-11-12: "next Tuesday" frozen in a summary)
+  const refused = await call("compile_apply", { brain: root, context: "icp", by: "marta", as_of: asOf, summary: "Bergstrom gets no discount from next Tuesday.", now: "Hold the price." });
+  assert.ok(refused.isError); assert.match(refused.text, /cites no note.*"next Tuesday" .* is a relative date/s);
+  const noteId = rem.text.match(/remembered (m_[0-9a-f]{12})/)[1];
+  const applied = await call("compile_apply", { brain: root, context: "icp", by: "marta", as_of: asOf, summary: `Bergstrom gets no discount [${noteId}].`, now: "Hold the price." });
+  assert.deepEqual(lib.readContext(root, "icp").fm.summary_sources, [noteId], "the note ids are kept as the summary's sources");
+  assert.equal(lib.readContext(root, "icp").summary, "Bergstrom gets no discount.");
   assert.ok(!applied.isError, applied.text); assert.match(applied.text, /kept/);
   const rendered = await call("render_dashboard", { brain: root });
   assert.ok(!rendered.isError, rendered.text); assert.ok(existsSync(join(root, "work", "home", "index.html")));
@@ -497,10 +503,11 @@ test("context tools expose purpose and boundaries through rule and refuse the re
 test("compile_apply accepts empty working guidance through MCP and rejects missing or invalid values without writes", async () => {
   const context = "empty-guidance";
   assert.ok(!(await call("new_context", { brain: root, slug: context, title: "Renewals", rule: "Use confirmed renewal terms." })).isError);
-  assert.ok(!(await call("remember", { brain: root, by: "marta", context, content: "Confirm the renewal owner." })).isError);
+  const noted = await call("remember", { brain: root, by: "marta", context, content: "Confirm the renewal owner." }); assert.ok(!noted.isError, noted.text);
+  const noteId = noted.text.match(/remembered (m_[0-9a-f]{12})/)[1];
   const before = lib.readContext(root, context), original = readFileSync(before.path, "utf8");
   const facts = await call("compile_facts", { brain: root, context });
-  const args = { brain: root, context, by: "marta", as_of: facts.text.match(/^as_of: (\S+)/m)[1], summary: "A renewal needs an owner. Confirm the renewal owner." };
+  const args = { brain: root, context, by: "marta", as_of: facts.text.match(/^as_of: (\S+)/m)[1], summary: `A renewal needs an owner [${noteId}]. Confirm the renewal owner [${noteId}].` };
   for (const extra of [{}, { now: null }, { now: false }]) assert.ok((await call("compile_apply", { ...args, ...extra })).isError);
   assert.equal(readFileSync(before.path, "utf8"), original);
   const done = await call("compile_apply", { ...args, now: "" });

@@ -56,8 +56,8 @@ function searchTerms(root, query) {
 const list = a => (Array.isArray(a) ? a : String(a || "").split(",")).map(s => String(s).trim()).filter(Boolean);
 const SCRIPTS = {
   ...Object.fromEntries(["update_entity", "merge_entities", "archive_entity", "undo_entity_merge"].map(name => [name, args => ["gtm-brain-entities/lifecycle.mjs", [name, JSON.stringify(args)]]])),
-  compile_apply: ({ context, by, as_of, summary, now, reviewed_cover }) => ["gtm-brain-compile/compile.mjs", ["--apply", context, "--by", by, "--as-of", as_of, "--summary", summary, "--now", now, ...(reviewed_cover ? ["--reviewed-cover", reviewed_cover] : [])]],
-  new_context: ({ slug, title, rule, project }) => ["gtm-brain-contexts/contexts.mjs", ["--new", slug, title, rule, ...(project ? ["--project", project] : [])]],
+  compile_apply: ({ context, by, as_of, summary, now, reviewed_cover }) => ["gtm-brain-compile/compile.mjs", ["--checked", "--apply", context, "--by", by, "--as-of", as_of, "--summary", summary, "--now", now, ...(reviewed_cover ? ["--reviewed-cover", reviewed_cover] : [])]],
+  new_context: ({ slug, title, rule, project, distinct }) => ["gtm-brain-contexts/contexts.mjs", ["--new", slug, title, rule, ...(project ? ["--project", project] : []), ...(distinct ? ["--distinct", distinct] : [])]],
   fork_context: ({ from, slug, title, filter, project }) => ["gtm-brain-contexts/contexts.mjs", ["--fork", from, slug, title, ...(filter ? ["--filter", filter] : []), ...(project ? ["--project", project] : [])]],
   edit_context: ({ slug, title, rule }) => ["gtm-brain-contexts/contexts.mjs", ["--edit", slug, ...(title ? ["--title", title] : []), ...(rule ? ["--rule", rule] : [])]],
   archive_context: ({ slug, undo, project }) => ["gtm-brain-contexts/contexts.mjs", [undo ? "--unarchive" : "--archive", slug, ...(project ? ["--project", project] : [])]],

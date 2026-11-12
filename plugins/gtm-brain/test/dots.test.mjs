@@ -3,7 +3,7 @@
 // question (a date with two readings, a new company's website, several projects). Nothing is guessed.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync, spawnSync } from "node:child_process";
@@ -172,4 +172,24 @@ test("chat start: a summary behind for days with no scheduled run says so once a
   execFileSync("git", ["-C", root, "commit", "-q", "--allow-empty", "-m", "compile: company (3 memories, by schedule)"]);
   assert.equal(sched.scheduleNotice(root, new Date(Date.now() + 5 * 864e5)), "", "a scheduled run saved something this week");
   assert.equal(sched.scheduleNotice(root, new Date(Date.now() + 20 * 864e5)).includes("the weekly summary run last ran on"), true);
+});
+
+test("contexts: a project or a look-alike is never a new context (X1, X3); a summary days behind says out of date", () => {
+  const root = mkdtempSync(join(tmpdir(), "gtm-brain-ctx-rules-")); execFileSync("git", ["init", "-q", root]);
+  execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "X", "--one-liner", "y", "--owner", "Ann Lee <ann@b.c>"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P } });
+  const env = { ...process.env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1" };
+  const ctx = (...a) => spawnSync(process.execPath, [`${P}/scripts/gtm-brain-contexts/contexts.mjs`, ".", ...a], { cwd: root, env, encoding: "utf8" });
+  mkdirSync(join(root, "projects", "website"), { recursive: true });
+  const project = ctx("--new", "website", "Website", "rule");
+  assert.equal(project.status, 2); assert.match(project.stderr, /website is a project \(rule X1/);
+  const like = ctx("--new", "market-research", "Market research", "rule");
+  assert.equal(like.status, 2); assert.match(like.stderr, /looks like Market \(market\) \(rule X3.*"same as Market\?"/);
+  assert.equal(ctx("--new", "market-research", "Market research", "rule", "--distinct", "research projects, not the market overview").status, 0);
+  assert.equal(ctx("--new", "pricing", "Pricing redesign", "rule").status, 0);
+
+  lib.appendMemory(root, "icp", { authors: ["ann-lee"], content: "Mid-market SaaS fits best." });
+  const c = () => lib.readContext(root, "icp");
+  assert.match(lib.summaryState(c()), /^summary updating shortly \(1 new\)$/);
+  assert.match(lib.summaryState(c(), false, Date.now() + 3 * 864e5), /^summary out of date: never compiled, 1 new not in it$/);
+  assert.match(readFileSync(join(root, "README.md"), "utf8"), /## How contexts work[\s\S]*\*\*X1\*\* A project is not a context[\s\S]*\*\*L2\*\* Loading puts/);
 });

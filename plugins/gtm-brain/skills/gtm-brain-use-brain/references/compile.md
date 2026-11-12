@@ -10,9 +10,9 @@ Keep authored brain content in English. Preserve names, source quotes and the ex
 
 ## When it runs by itself
 
-Each saved change starts a separate run, which first waits until no note has been saved for 10
-minutes (`GTM_BRAIN_COMPILE_DELAY`, in seconds; a run is a full model session, so notes saved close
-together are compiled in one go, and each new note restarts the wait). Then it rewrites every summary
+Each saved change starts a separate run, which first waits until no note has been saved for 2
+minutes (`GTM_BRAIN_COMPILE_DELAY`, in seconds; a run is a model session of about 15-20k uncached
+tokens, so notes saved close together are compiled in one go, and each new note restarts the wait). Then it rewrites every summary
 with new notes. Only one run works on a brain at a time; changes arriving during that run get a
 follow-up pass. With nothing pending, no model run starts. A request in chat ("update the summary
 now") starts it without the wait. A failed pass retries up to three attempts, ten seconds apart.
@@ -78,12 +78,17 @@ summary stale without being a recent event. Keep partial dates, approximation an
 
 ## Step 2: write two pieces of prose, nothing else
 
-- **summary**, 3 to 6 sentences, present tense: what is going on in this context, the open
-  threads, what changed since the last compile. Name people as in the memories. Every sentence
-  must be traceable to a memory; no inference presented as fact. If there are open questions,
-  say how many and name the sharpest one. Include supported immediate next steps, owners and
-  dates when known. Keep their source memories as the follow-ups; compilation creates no new
+- **summary**, 2 to 4 sentences (1 when there is one note), present tense: what is going on in
+  this context, what is open, what changed since the last compile. Say what matters, not every
+  note: a person asking twice for the slides is one open thread, not two sentences. End every
+  sentence with the ids of the notes it rests on, in brackets: `Acme signed the pilot on Tue 10
+  Nov 2026 [m_1a2b3c].` The ids are kept as the summary's sources and removed from the text.
+  Dates are absolute ("Tue 17 Nov 2026"), never "next Tuesday", "tomorrow" or "this week": the
+  summary is read for weeks. Name people as in the memories; no inference presented as fact. If
+  there are open questions, say how many and name the sharpest one. Compilation creates no new
   tasks or decisions and never turns an old pending action into a current commitment.
+  Under 90 words. `compile_apply` refuses more than 4 sentences or 90 words, a sentence without a
+  note id, or a relative date, and says which; fix that and apply again with the same `as_of`.
 - **Working guidance** (tool argument `now`), concise reusable methods learned from effective
   memories: how to work in this context, find evidence and use its tools. Cite supporting
   memory IDs for each method. Keep distinct useful lessons in plain paragraphs without

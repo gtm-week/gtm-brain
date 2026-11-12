@@ -1591,7 +1591,7 @@
             "title": "Writing the summary",
             "object": "contexts",
             "returns": "Opaque",
-            "description": "Write the current summary and Working guidance from effective memories. Summary: 3 to 6 sentences covering the situation and supported immediate next steps, every sentence traceable to a memory. Working guidance (now): only reusable methods learned from memories, including evidenced tool usage, with memory IDs for each method. Revalidate prior methods and remove unsupported or superseded advice; pass an empty string when none remain. Do not repeat standing instructions, current status or one-off tasks in guidance. Older guidance may mix methods and actions: keep supported actions in the summary and their source follow-ups. Keeps the standing rule. Refuses if memories or Markdown changed after compile_facts. Manual edits pause compilation until reviewed in Codex; never overwrite them silently.",
+            "description": "Write the current summary and Working guidance from effective memories. Summary: 2 to 4 sentences covering the situation, what is open and supported immediate next steps; end every sentence with the ids of the notes it rests on in brackets ([m_...]); absolute dates only, never next Tuesday or tomorrow. Refused otherwise, with the reason. Working guidance (now): only reusable methods learned from memories, including evidenced tool usage, with memory IDs for each method. Revalidate prior methods and remove unsupported or superseded advice; pass an empty string when none remain. Do not repeat standing instructions, current status or one-off tasks in guidance. Older guidance may mix methods and actions: keep supported actions in the summary and their source follow-ups. Keeps the standing rule. Refuses if memories or Markdown changed after compile_facts. Manual edits pause compilation until reviewed in Codex; never overwrite them silently.",
             "input_schema": {
               "type": "object",
               "properties": {
@@ -1613,7 +1613,7 @@
                 },
                 "summary": {
                   "type": "string",
-                  "description": "Current situation and supported immediate next steps, owners and dates when known; every sentence traceable to effective memories"
+                  "description": "2 to 4 sentences: current situation, what is open, supported next steps with owners and absolute dates; each sentence ends with the ids of the notes it rests on, like [m_1a2b3c]"
                 },
                 "now": {
                   "type": "string",
@@ -1636,7 +1636,7 @@
             "title": "Opening a context",
             "object": "contexts",
             "returns": "Opaque",
-            "description": "Create and load a context only for an explicit user request to create it or user agreement to a concrete proposal. Check existing and archived contexts first. Propose only for distinct purpose, sustained work and useful separation. Ordinary customers remain identity references in memories in existing contexts; compose their view through query (brief) and live sources. A dedicated customer context is exceptional for a key strategic account needing separate scope and guidance. Entity mentions, CRM imports, repeated meetings, tool calls and one-off tasks do not authorize creation. Do not infer agreement. Confirm successful creation in one line. Never create admin or personal preference contexts here; use configure for personal preferences.",
+            "description": "Create and load a context only for an explicit user request to create it or user agreement to a concrete proposal. Check existing and archived contexts first. Propose only for distinct purpose, sustained work and useful separation. Ordinary customers remain identity references in memories in existing contexts; compose their view through query (brief) and live sources. A dedicated customer context is exceptional for a key strategic account needing separate scope and guidance. Entity mentions, CRM imports, repeated meetings, tool calls and one-off tasks do not authorize creation. Do not infer agreement. Confirm successful creation in one line. Never create admin or personal preference contexts here; use configure for personal preferences. Refused for a linked project's name (X1: a project is a tag, not a context) and for a name like an existing or archived context (X3: ask same as X? first).",
             "input_schema": {
               "type": "object",
               "properties": {
@@ -1655,6 +1655,10 @@
                 "project": {
                   "type": "string",
                   "description": "The project the chat's opening lines named (its slug). Omit in the brain's own chat."
+                },
+                "distinct": {
+                  "type": "string",
+                  "description": "Only after new_context refused a look-alike (rule X3) and the person said it is a different topic: their reason, in their words"
                 }
               },
               "required": [

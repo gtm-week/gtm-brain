@@ -30,6 +30,30 @@ in `brain/entities/` shows which rule matched each spelling, when, and from whic
 
 Ask "who is Max?" and the answer names the rule, the note and where it came from.
 
+## How contexts work
+
+A context is one lasting topic (the company, target customers, the offer, a key account) with its
+own notes and a summary of them. Three rules for making one:
+
+- **X1** A project is not a context: it is a folder in `projects/` and a tag on notes. Notes about a
+  project go in the context their meaning fits, tagged with the project.
+- **X2** Codex proposes a new context only for a purpose it can say in one sentence and work you will
+  come back to, and creates it only after you say yes.
+- **X3** Never two contexts for one topic: a name like an existing or archived context gets
+  "same as X?" first.
+
+Three rules for loading one:
+
+- **L1** `brain/admin.md` is always loaded. Other contexts load when you ask or when the work plainly
+  fits, and stay loaded for this folder's next chat.
+- **L2** Loading puts a context's summary and standing rule into the chat. Answers search the notes
+  of every context, loaded or not.
+- **L3** A note is saved in the context its meaning fits, whatever is loaded.
+
+Each summary is 2-4 sentences, every sentence resting on named notes (kept in `summary_sources`),
+with real dates only. It is rewritten 2 minutes after the last saved note; Codex says "out of
+date" with the date when it falls more than 2 days behind.
+
 ## Inside `brain/`
 
 - `contexts/<topic>/memories.jsonl`: every note, one per line, never edited. Corrections are new notes.

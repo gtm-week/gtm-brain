@@ -4,7 +4,7 @@ import { assetSummary } from '../../lib/assets.mjs';
 // the model writes the summary and working guidance (see ../../skills/gtm-brain-use-brain/references/compile.md).
 //   node compile.mjs <root> --stale                       which contexts need compiling (json)
 //   node compile.mjs <root> --facts <slug>                everything the model needs to write the prose
-//   node compile.mjs <root> --apply <slug> --by <handle> --as-of <id> --summary "<3-6 sentences>" --now "<learned methods, or empty>"
+//   node compile.mjs <root> --apply <slug> --by <handle> --as-of <id> --summary "<2-4 sentences, each ending [m_...]>" --now "<learned methods, or empty>"
 //                                                         writes summary, now, people, tools, related,
 //                                                         last_active, confidence, compiled_at; commits.
 //                                                         --as-of is the key --facts printed: the memories the prose
@@ -15,6 +15,7 @@ import { assetSummary } from '../../lib/assets.mjs';
 //                                                         back the edit up, adopt it as the baseline, queue the background compile.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import * as dots from "../../lib/dots.mjs";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
 const opt = {}; for (let i = 0; i < args.length; i++) if (args[i].startsWith("--")) { const v = args[i + 1], hasValue = v !== undefined && !v.startsWith("--"); opt[args[i].slice(2)] = hasValue ? v : true; if (hasValue) i++; }
@@ -56,7 +57,7 @@ if (opt.facts) {
     `\n## Manual edit status\n${f.c.manualEdit.blocked ? "PAUSED: manual edits need review in Codex. Preserve the edit as sourced memories or standing instructions before explicitly confirming replacement. Background and scheduled runs must skip this context. reviewed_cover: " + f.c.manualEdit.hash : "No manual generated-section edits detected."}`,
     `\n## Standing rule (never rewrite)\n${rule}`, `\n## Current summary\n${f.c.summary}`,
     `\n## Previous working guidance (revalidate against effective memories)\n${f.c.now || "none"}`,
-    `\n## Compilation guidance\nKeep only reusable methods supported by effective memories in working guidance (the now argument). Cite the memory IDs for each method. Put supported immediate actions, owners and dates in the summary; their source memories remain the follow-ups. Previous guidance may mix methods with next steps: reassess both against the evidence. Do not copy standing instructions or invent methods. Pass now as an empty string when no useful methods remain.`,
+    `\n## Compilation guidance\nKeep only reusable methods supported by effective memories in working guidance (the now argument). Cite the memory IDs for each method. Write the summary in 2-4 sentences, each ending with the ids of the notes it rests on in brackets ([m_...]), with absolute dates only (never next Tuesday or tomorrow). Put supported immediate actions, owners and dates in the summary; their source memories remain the follow-ups. Previous guidance may mix methods with next steps: reassess both against the evidence. Do not copy standing instructions or invent methods. Pass now as an empty string when no useful methods remain.`,
     `\n## Names mentioned (kind, mentions)\n${f.names.map(n => `${n.name} (${n.kind}, ${n.mentions})`).join(", ") || "none"}`, `\n## Tools used\n${f.tools.map(([t, n]) => `${t} (${n})`).join(", ") || "none"}`, `\n## Related contexts (share names)\n${f.related.join(", ") || "none"}`,
     `\n## Open questions (${f.questions.length})`, ...f.questions.map(m => `- ${lib.memoryTimeText(m)} ${m.authors.join(",")}: ${m.content}`),
     `\n## Decisions (${f.decisions.length})`, ...f.decisions.map(m => `- ${lib.memoryTimeText(m)} ${m.authors.join(",")}: ${m.content}`),
@@ -76,11 +77,17 @@ if (opt.apply) {
     console.error("not applied: manual edits need review in Codex; preserve the changes and confirm replacement first"); process.exit(5);
   }
   if (["invalid", "missing"].includes(c.manualEdit.status)) { console.error("not applied: fix the invalid Markdown before compiling"); process.exit(5); }
+  // The summary is read as current truth: 2-4 sentences, each with the note ids it rests on, absolute
+  // dates only ("Max will run the demo next Tuesday" was wrong a week later; new-brain, 2026-11-12)
+  // checked where a model writes it (the compile_apply tool passes --checked); a person at a terminal is not held
+  const checked = opt.checked ? dots.summaryCheck(opt.summary, f.mem.map(m => m.id)) : { text: opt.summary.trim(), sources: [], problems: [] };
+  if (checked.problems.length) { console.error(`not applied: ${checked.problems.join("; ")}. Rewrite the summary and apply again with the same as_of.`); process.exit(6); }
   const rule = c.rule;
   const now = new Date().toISOString();
   // tools: what the cover already names (seeded at setup) plus what the memories used
   const tools = lib.mergeTools(c.tools, f.tools.map(([t]) => t));
-  const fm = { ...c.fm, summary: opt.summary.trim(), names: f.names.map(n => ({ name: n.name, kind: n.kind })), people: f.names.filter(n => n.kind === "person").map(n => n.name), tools, related: f.related, last_active: c.lastMemory, confidence: f.confidence, compiled_at: now, compiled_by: `compile@${by}` };
+  const prior = { ...c.fm }; delete prior.summary_sources;   // sources belong to the summary they were checked with
+  const fm = { ...prior, summary: checked.text, ...(checked.sources.length ? { summary_sources: checked.sources } : {}), names: f.names.map(n => ({ name: n.name, kind: n.kind })), people: f.names.filter(n => n.kind === "person").map(n => n.name), tools, related: f.related, last_active: c.lastMemory, confidence: f.confidence, compiled_at: now, compiled_by: `compile@${by}` };
   lib.writeContext(root, slug, { ...fm, rule, now: opt.now }, { expectedCover: c.manualEdit.hash, reviewedCover: opt["reviewed-cover"] });
   const committed = lib.commit(root, [c.path], `compile: ${slug} (${f.mem.length} memories, by ${by})`).note;
   console.log(`compiled ${slug}: ${f.mem.length} memories, people ${fm.people.length}, names ${fm.names.length}, tools ${fm.tools.length}, related ${fm.related.join(", ") || "none"}, confidence ${f.confidence} · ${committed}`); lib.rerender(root); process.exit(0);
