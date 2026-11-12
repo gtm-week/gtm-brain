@@ -72,10 +72,31 @@ test("a person kept by one word on the person's word, and notes from before, say
   const brief = execFileSync(process.execPath, [`${P}/scripts/gtm-brain-recall/recall.mjs`, ".", "--person", "Bo"], { cwd: root, env, encoding: "utf8" });
   assert.match(brief, /Known by a first name only \(rule P3\)\. Ask who this is and add the full name/);
   assert.match(brief, /Not recorded: the notes about this entity were saved before/);
-  // the person insists on the one word: saved, and the note says it was their word
+  // asked first ("Zed who?"), then the person insists on the one word: saved, and the note says it was their word
+  const zedArgs = [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann-lee", "--context", "company", "--content", "Zed is our designer.", "--people", "Zed", "--new", "Zed"];
+  assert.equal(spawnSync(process.execPath, zedArgs, { cwd: root, env, encoding: "utf8" }).status, 2);
   const ok = spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann-lee", "--context", "company", "--content", "Zed is our designer.", "--people", "Zed", "--new", "Zed"], { cwd: root, env, encoding: "utf8" });
   assert.equal(ok.status, 0, ok.stderr);
   const zed = lib.readNames(root).find(e => e.name === "Zed");
   assert.deepEqual(lib.readMemories(root, "company").at(-1).entity_mentions, [{ mention: "Zed", entity: zed.id, resolution: "confirmed_new", rule: "P3" }]);
   assert.ok(existsSync(join(root, "README.md")));
+});
+
+test("a one-word name sent in new_names before anyone asked is still held; after the question it is the person's answer", () => {
+  const root = mkdtempSync(join(tmpdir(), "gtm-brain-names-")); execFileSync("git", ["init", "-q", root]);
+  execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "X", "--one-liner", "y", "--owner", "Ann Lee <ann@b.c>"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P } });
+  const env = { ...process.env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1" };
+  const remember = (...a) => spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann-lee", "--context", "company", ...a], { cwd: root, env, encoding: "utf8" });
+
+  // Codex in new-brain, 2026-11-12: "Max will run the demo next Tuesday." went straight in with new_names ["Max"]
+  const guess = remember("--content", "Max will run the demo next Tuesday.", "--people", "Max", "--new", "Max");
+  assert.equal(guess.status, 2);
+  assert.match(guess.stderr, /"Max" is one word and nobody known has it \(rule P3/);
+  assert.ok(!lib.readNames(root).some(e => e.name === "Max"));
+
+  // the person was asked and insists on the one word: now it is kept, and the note says P3 confirmed_new
+  const insisted = remember("--content", "Max will run the demo next Tuesday.", "--people", "Max", "--new", "Max");
+  assert.equal(insisted.status, 0, insisted.stderr);
+  const note = lib.readMemories(root, "company").find(m => /next Tuesday/.test(m.content));
+  assert.deepEqual(note.entity_mentions.map(x => [x.mention, x.resolution, x.rule]), [["Max", "confirmed_new", "P3"]]);
 });

@@ -20,11 +20,16 @@
 // batched is the work around them: one pass over the names, one dashboard render, one kick of the
 // background summary run, instead of one of each per note. An entry whose name looks like someone
 // already known holds back only itself; the rest are written and the report names it by position.
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { prepareAsset, assetSummary, assetRows, currentApproved } from '../../lib/assets.mjs';
 import { join } from "node:path";
 import { isChatSource } from "../../lib/host.mjs";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
+// One-word names held under P3, so a later new_names for the same word is the person's answer, not a guess.
+const ASKED_DAYS = 7, askedFile = () => join(root, "work", "asked-names.json"), fold = n => String(n).trim().toLowerCase();
+const readAsked = () => { try { return JSON.parse(readFileSync(askedFile(), "utf8")); } catch { return {}; } };
+const wasAsked = name => { const at = readAsked()[fold(name)]; return !!at && Date.now() - Date.parse(at) < ASKED_DAYS * 86400000; };
+const noteAsked = names => { if (!names.length) return; const m = readAsked(); for (const n of names) m[fold(n)] = new Date().toISOString(); try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(askedFile(), JSON.stringify(m, null, 2) + "\n"); } catch {} };
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
 const opt = { source: [], action: [] };
 for (let i = 0; i < args.length; i++) if (args[i].startsWith("--")) { const k = args[i].slice(2), v = args[i + 1]; if (k === "source" || k === "action") opt[k].push(v); else opt[k] = v; i++; }
@@ -128,8 +133,12 @@ for (let i = 0; i < entries.length; i++) {
   }
   const mapped = name => e.customer && name === e.customer.entity ? customerName : name;
   const mappedCompanies = companies.map(mapped);
-  const { people, added, similar, unnamed, inferred, mentions } = lib.normalisePeople(root, [...list(e.people).map(mapped), ...(e.meeting?.participants || []).map(p => p.name), ...mappedCompanies, ...(customerName ? [customerName] : []), ...(preparedAssets.has(i) ? [preparedAssets.get(i).entity] : [])], { confirmedNew: list(e.new_names).map(mapped), companies: mappedCompanies, trusted: [...(customerName ? [customerName] : []), ...(preparedAssets.has(i) ? [preparedAssets.get(i).entity] : [])] });
+  // P3: a one-word name in new_names counts only after it was held and asked about ("Max who?"); listing it
+  // up front skips the question (2026-11-12, Codex sent new_names ["Max"] on the first try).
+  const confirmed = list(e.new_names).map(mapped).filter(name => /\s/.test(String(name).trim()) || mappedCompanies.includes(name) || wasAsked(name));
+  const { people, added, similar, unnamed, inferred, mentions } = lib.normalisePeople(root, [...list(e.people).map(mapped), ...(e.meeting?.participants || []).map(p => p.name), ...mappedCompanies, ...(customerName ? [customerName] : []), ...(preparedAssets.has(i) ? [preparedAssets.get(i).entity] : [])], { confirmedNew: confirmed, companies: mappedCompanies, trusted: [...(customerName ? [customerName] : []), ...(preparedAssets.has(i) ? [preparedAssets.get(i).entity] : [])] });
   if (similar.length || unnamed.length) {
+    noteAsked(unnamed);
     held.push({ n, why: [...similar.map(s => `"${s.mention}" may be ${s.matches.map(x => `${x.name}${x.kind !== "person" ? ` (${x.kind})` : ""}`).join(" or ")}`), ...unnamed.map(u => `"${u}" is one word and nobody known has it (rule P3: a first name alone is never a new person)`)].join("; "), mentions: [...similar.map(s => s.mention), ...unnamed], unnamed });
     continue;
   }
