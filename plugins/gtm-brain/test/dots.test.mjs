@@ -67,6 +67,15 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   const reworded = remember("--content", "Florian Weber asked for the slides.", "--people", "Florian Weber");
   assert.equal(reworded.status, 0, reworded.stderr);
   assert.deepEqual(lib.readMemories(root, "company").at(-1).entity_mentions.map(x => [x.mention, x.rule]), [["Florian", "P2"]]);
+  // the model may not answer a held question for the person: "Thursday" sent back as the 19th with no reply
+  const say = text => writeFileSync(join(day, `rollout-2026-11-12T10-18-48-${id}.jsonl`), [{ type: "session_meta", payload: { cwd: root } }, { type: "response_item", payload: { type: "message", role: "user", content: [{ type: "input_text", text }] } }].map(x => JSON.stringify(x)).join("\n") + "\n");
+  say("The speaker dinner moved to Thursday.");
+  assert.equal(remember("--content", "The speaker dinner moved to Thursday.").status, 2);
+  const guessed = remember("--content", "The speaker dinner moved to Thursday 2026-11-19.");
+  assert.equal(guessed.status, 2);
+  assert.match(guessed.stderr, /the person has not answered the question yet .* never pick the answer yourself/);
+  say("the 19th");
+  assert.equal(remember("--content", "The speaker dinner moved to Thursday 2026-11-19.").status, 0);
   writeFileSync(join(day, `rollout-2026-11-12T10-18-48-${id}.jsonl`), "");   // no message to read: as sent
   lib.writeSession(root, { session_id: null, cwd: root });
   // in two projects: asked, not tagged
@@ -75,6 +84,9 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   assert.match(both.stdout, /which project is "Florian Weber sent his bio\." about: berlin-event-2026 or website, or none\?/);
   assert.ok(!lib.readMemories(root, "company").at(-1).tags.some(t => t.startsWith("project:")));
 
+  // Codex tagged the project's slug without "project:": it is the project all the same
+  assert.equal(remember("--content", "Booth plan drafted.", "--tags", "berlin-event-2026,booth").status, 0);
+  assert.deepEqual(lib.readMemories(root, "company").at(-1).tags, ["project:berlin-event-2026", "booth"]);
   // a new company: saved as a company under C1, and its website asked in the one question
   const acme = remember("--content", "Acme wants a booth at the Berlin event.", "--companies", "Acme", "--project", "berlin-event-2026");
   assert.equal(acme.status, 0, acme.stderr);

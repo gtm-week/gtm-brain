@@ -68,6 +68,7 @@ if (entries.some(e => e?.customer) && entries.some(e => e?.customer_coverage)) d
 const kept = [], held = [], failed = [], lines = [], asks = [];
 const esc = t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const personText = chat && !process.env.GTM_BRAIN_RUN ? (host().lastPersonText?.(chat) || "") : "";
+const waitingForReply = !!personText && wasAsked(`reply:${personText}`, 1 / 24);   // read once, before this call holds anything
 const at = n => batched ? `#${n} ` : "";
 // every entry is checked before the first one is written: a bad entry in the middle must not leave the ones before it kept and unreported
 const ctxOf = e => e.context || opt.context || (loaded.length === 1 ? loaded[0] : null);
@@ -128,6 +129,10 @@ const withChat = source => chat && !source.some(isChatSource) ? [...source, { ki
 if (problems.length) die(`nothing remembered: ${problems.join("; ")}. Fix these and call again with all the entries.`);
 for (let i = 0; i < entries.length; i++) {
   const e = entries[i] || {}, n = i + 1;
+  // a held question needs the person's reply: while their last message is still the one the question was
+  // held on, a resend is the model answering for them (new-brain rerun, 2026-11-12: "Thursday" sent back as the
+  // 19th with no reply). Only when the chat can be read; an answer in the same message passes.
+  if (waitingForReply) { held.push({ n, why: "the person has not answered the question yet (their last message is the one this was held on): ask it and wait for their reply; never pick the answer yourself", mentions: [], ask: true }); continue; }
   const ctx = ctxOf(e);
 
   const companies = list(e.companies);
@@ -153,10 +158,14 @@ for (let i = 0; i < entries.length; i++) {
   const dated = e.retracts ? [] : dots.relativeDates(e.content), sourced = !!e.meeting || lib.parseSources(e.sources).some(s => !isChatSource(s));
   if (similar.length || unnamed.length || dated.length) {
     noteAsked(unnamed);
+    if (personText && (similar.length || unnamed.length || dated.some(d => d.ask))) noteAsked([`reply:${personText}`]);
     held.push({ n, why: [...similar.map(s => `"${s.mention}" may be ${s.matches.map(x => `${x.name}${x.kind !== "person" ? ` (${x.kind})` : ""}`).join(" or ")}`), ...unnamed.map(u => `"${u}" is one word and nobody known has it (rule P3: a first name alone is never a new person)`), ...(dated.length ? [dots.datesHold(dated, { sourced })] : [])].join("; "), mentions: [...similar.map(s => s.mention), ...unnamed], unnamed, ask: similar.length + unnamed.length > 0 || dated.some(d => d.ask) });
     continue;
   }
   // a note about known people whose notes all sit in one project belongs there too; several: ask
+  // a bare tag that is a linked project's slug ("berlin-event-2026") is that project (new-brain rerun, 2026-11-12)
+  const slugs = lib.readProjects(root).map(p => p.slug);
+  e.tags = list(e.tags).map(t => slugs.includes(t) ? `project:${t}` : t);
   const tagged = project || list(e.tags).some(t => t.startsWith("project:"));
   const known = people.filter(p => !added.includes(p) && lib.readNames(root).find(x => x.name === p)?.kind === "person");
   const linked = lib.readProjects(root).map(p => p.slug);
