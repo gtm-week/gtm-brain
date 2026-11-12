@@ -29,7 +29,7 @@ Bergstrom", "open question: who signs for Acme?". You do not need to say "rememb
 outcome, in the context its meaning fits, with the people, companies, tools and project it names.
 
 Before saving, Codex connects the sentence to what the brain knows and asks, once, about what it
-cannot settle. It asks in Codex's question box when you turned it on, otherwise in plain text:
+cannot settle. It asks in Codex's question box whenever Codex has it in the chat, otherwise in plain text:
 
 - **Names.** Four rules, also in the brain's README:
   - P1: a known name, alias or email is that one.

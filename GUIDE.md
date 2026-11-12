@@ -51,7 +51,7 @@ Then you just talk. The things worth knowing:
 | see one person | **tell me about Pierre Aubert** | a one-page view built from every note about them |
 | tell Codex two names are one person | **Chris is Krzysztof Pawlak** | from now on "Chris" and "Krzysztof" are the same in search |
 | say a name is not a person | **Telli is a company** | it shows as a company, not a contact; products and teams work the same |
-| refresh a context's summary | **compile** (or say yes when offered) | the summary is rewritten from the notes; your rules stay |
+| refresh a context's summary now | **update the summary now** | rewritten from the notes at once; otherwise it refreshes by itself 2 minutes after your last save; your rules stay |
 | see everything | **open the dashboard** | it opens inside Codex, in the in-app browser; **render** only refreshes it |
 | keep an edit you made by hand | **save** | everything Codex writes is kept at once; this is for a file you changed yourself |
 | open a new context | say what you are starting on; Codex offers | *"Create a `berlin-expansion` context?"* yes, and it is loaded |
@@ -64,8 +64,8 @@ Then you just talk. The things worth knowing:
 | tell Codex two names are one | **Maciej is Maciej Kończal** | an alias; Codex asks this itself when a new name looks like one it knows, and never merges on its own |
 
 Codex also does four things on its own: it suggests a better context if your note fits another
-one, it offers a new context when you start a new stream of work, it offers to compile when a
-context's summary is behind, and it offers to install a missing tool or add one it noticed you
+one, it offers a new context when you start a new stream of work, it asks to compile and set up the
+weekly run when summaries have been behind for days with no schedule, and it offers to install a missing tool or add one it noticed you
 using. Each is a question; nothing happens without your yes.
 
 ## The dashboard

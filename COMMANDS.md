@@ -47,7 +47,7 @@ Legend for "writes": what files the command changes. Nothing else is ever touche
 
 Chooses the context(s) for this chat. Codex reads the cover (summary, standing rules, the
 Working guidance), people and tools, and the last memories; if the context's summary is behind it lists
-what is new since the last compile and offers to compile. Loading adds to the loaded set;
+what is new since the last compile (the summary refreshes by itself 2 minutes after the last save). Loading adds to the loaded set;
 "switch to gtm" or "only gtm" replaces it. Creating or forking a context adds to it. A new
 chat re-loads what was loaded last time, so you only say `load` to change context.
 
@@ -58,6 +58,10 @@ Tool: `load_context`. Writes: `work/loaded-contexts.json` (local).
 ### remember
 *"remember that Pierre asked for a three-year TCO before 12.09"*, *"note this"*, *"log that we decided ..."*,
 *"correct memory m_xxxxxx: ..."*, *"forget memory m_xxxxxx, it was wrong"*
+
+The saving rules are one numbered page, `skills/gtm-brain-use-brain/references/saving-rules.md`, printed at
+every chat start with the brain's own `RULES.md` after it (its people's rules, which win). A held note quotes
+the rule it broke. `RULES.md` sits at the top of the brain; Codex offers a line when a save is questioned.
 
 Appends one record to the loaded context's time series: who (your handle), when, via codex,
 kind (note, decision, question), tools used, names mentioned (normalised through `brain/entities/`;

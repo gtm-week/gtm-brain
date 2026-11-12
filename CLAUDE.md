@@ -28,6 +28,7 @@ node --test --test-name-pattern='<regex>' plugins/gtm-brain/test/brain.test.mjs 
 node plugins/gtm-brain/test/live/harness-bench.mjs         # live Codex A/B: bare / plugin / brain on 3 tasks (~4 min)
 node plugins/gtm-brain/test/live/tool-routing.mjs skills   # live Codex through the skill cases on a seeded brain; one case: skill-todo
 node plugins/gtm-brain/test/live/claude-smoke.mjs          # live Claude Code: setup, the admin.md guard, go ahead vs APPROVE (~2 min)
+node plugins/gtm-brain/test/live/scenarios.mjs             # live Codex: ten saving sentences on a clean brain, pass or fail each (~5 min)
 
 node scripts/sync-derived.mjs                           # regenerate derived blocks and schema
 node scripts/sync-derived.mjs --check                   # report drift only (the suite runs this)
