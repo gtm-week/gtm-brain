@@ -34,6 +34,11 @@ When the person says something to keep, connect it to what the brain knows befor
 [connect the dots](references/connect-dots.md). Settle what has one answer, ask the rest in one
 question, never guess.
 
+Asked why something is in the brain ("why did you add Florian?", "who is Max?", "why is this file
+here?"): read it, never answer from the chat. A person or company: `query` (brief, search = the name),
+then say when it was first saved, by whom, from which note, and how each spelling matched (the rule).
+A file or folder: `query` (why, search = the path).
+
 Before producing copy, outreach, posts, landing pages, creatives, proposals, a design or a plan,
 read the document that applies (the opening lines and `query` (status) list the documents at the
 brain root with what each applies to) and follow it, saying which one in one line; AGENTS.md

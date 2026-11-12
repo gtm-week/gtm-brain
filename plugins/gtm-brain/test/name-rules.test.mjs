@@ -46,6 +46,7 @@ test("a bare first name is held and asked about; a full name is kept with where 
   // who is Max: the page says how each spelling matched, by which rule, from where and in which project
   const brief = execFileSync(process.execPath, [`${P}/scripts/gtm-brain-recall/recall.mjs`, ".", "--person", "Max"], { cwd: root, env, encoding: "utf8" });
   assert.match(brief, /## How this name was matched/);
+  assert.match(brief, /First in the brain: \d{4}-\d{2}-\d{2}, by ann-lee, project gtm-os: "Max Kowalski will run the GTM-OS demo\."/);   // "why did you add Max?"
   assert.match(brief, /"Max Kowalski" first saved as Max Kowalski, rule P1:[^\n]*project gtm-os[^\n]*Gmail/);
   assert.match(brief, /"Max" taken as Max Kowalski, rule P2: A first name alone means a known person only when exactly one/);
 

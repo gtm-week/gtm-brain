@@ -460,6 +460,11 @@ function nameProvenance(facts, memories, citation, source) {
     rows.push(`- "${md(x.mention)}" ${RESOLVED[x.resolution]} ${md(facts.entity.name)}, rule ${x.rule}: ${md(lib.NAME_RULES[x.rule])} ${lib.localDateTime(m.at).slice(0, 10)}${project ? `, project ${md(project)}` : ""}${from ? `, from ${from}` : ""} ${citation(m.id)}`);
   }
   const out = ["\n## How this name was matched"];
+  // "why did you add Florian?": the first note that named this entity, by whom, from where; known even for notes
+  // saved before mentions were recorded (new-brain test, 2026-11-12)
+  const first = [...memories].sort((a, b) => Date.parse(a.at) - Date.parse(b.at))[0];
+  if (first) { const from = (first.source || []).map(source).join(" · "), said = String(first.content || "").replace(/\s+/g, " "), project = (first.tags || []).find(t => t.startsWith("project:"))?.slice(8);
+    out.push(`\nFirst in the brain: ${lib.localDateTime(first.at).slice(0, 10)}, by ${md((first.authors || []).join(", ") || "unknown")}${project ? `, project ${md(project)}` : ""}: "${md(said.length > 140 ? said.slice(0, 137) + "..." : said)}"${from ? `, from ${from}` : ""} ${citation(first.id)}`); }
   if (facts.entity.kind === "person" && !/\s/.test(facts.entity.name.trim())) out.push(`\nKnown by a first name only (rule P3). Ask who this is and add the full name with add_name, so later notes match the right person.`);
   out.push(rows.length ? "\n" + rows.slice(0, 8).join("\n") : "\nNot recorded: the notes about this entity were saved before GTM Brain kept how names were matched.");
   return out;
