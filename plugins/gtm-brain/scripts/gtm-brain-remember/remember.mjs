@@ -155,6 +155,18 @@ for (let i = 0; i < entries.length; i++) {
     return lib.exactName(known, name) === name && new RegExp(`\\b${esc(first)}\\b`).test(personText) && lib.inferredName(known, first) === name ? first : name;
   };
   const mapped = name => e.customer && name === e.customer.entity ? customerName : typed(name);
+  // Codex picked one of several people with that first name although the person never wrote the full name
+  // or the surname ("lorian called me about the venue" saved as Florian Kim; Florian Weber is known too; new-brain, 2026-11-12)
+  const picked = !personText ? [] : list(e.people).filter(name => {
+    const parts = String(name).trim().split(/\s+/); if (parts.length < 2) return false;
+    const said = new RegExp(`\\b${esc(name)}\\b|\\b${esc(parts[parts.length - 1])}\\b`, "i"); if (said.test(personText)) return false;
+    return lib.readNames(root).filter(x => x.kind === "person" && x.name.split(/\s+/)[0].toLowerCase() === parts[0].toLowerCase()).length > 1 && !wasAsked(`pick:${name}`, 1 / 24);   // asked within the hour: the reply ("2", "Kim") is the answer
+  });
+  if (picked.length) {
+    const first = picked[0].split(/\s+/)[0], all = lib.readNames(root).filter(x => x.kind === "person" && x.name.split(/\s+/)[0].toLowerCase() === first.toLowerCase()).map(x => x.name);
+    noteAsked([`reply:${personText}`, ...picked.map(p => `pick:${p}`)]);
+    held.push({ n, why: `the person did not write which ${first}: ${all.join(" or ")} (rule P2: a first name with several known people is asked, never taken from the chat so far)`, mentions: [], ask: true }); continue;
+  }
   const mappedCompanies = companies.map(mapped);
   // P3: a one-word name in new_names counts only after it was held and asked about ("Max who?"); listing it
   // up front skips the question (2026-11-12, Codex sent new_names ["Max"] on the first try).

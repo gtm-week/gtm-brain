@@ -88,6 +88,16 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   assert.equal(flipped.status, 2);
   assert.match(flipped.stderr, new RegExp(`asked to forget it, not to correct it: send retracts: ${dinner19} \\(not supersedes\\).*No question needed: send it as said`));
   assert.equal(remember("--content", "Withdrawn: the speaker dinner note (the person said forget it).", "--retracts", dinner19).status, 0);
+  // two Florians: Codex may not pick one from the chat so far ("lorian called me", saved as Florian Kim; new-brain, 2026-11-12)
+  lib.addName(root, "Florian Kim");
+  say("lorian called me about the venue.");
+  const pick = remember("--content", "Florian Kim called about the venue.", "--people", "Florian Kim");
+  assert.equal(pick.status, 2);
+  assert.match(pick.stderr, /the person did not write which Florian: Florian (Weber|Kim) or Florian (Weber|Kim) \(rule P2/);
+  say("2");   // the person picked Florian Kim in the question box
+  assert.equal(remember("--content", "Florian Kim called about the venue.", "--people", "Florian Kim").status, 0);
+  say("Florian Kim sent the contract.");
+  assert.equal(remember("--content", "Florian Kim sent the contract.", "--people", "Florian Kim").status, 0, "the full name typed: no question");
   writeFileSync(join(day, `rollout-2026-11-12T10-18-48-${id}.jsonl`), "");   // no message to read: as sent
   lib.writeSession(root, { session_id: null, cwd: root });
   // in two projects: asked, not tagged

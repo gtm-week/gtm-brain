@@ -1,3 +1,4 @@
+import { host } from "./host.mjs";
 /* Connecting the dots on a note (2026-11-12, new-brain test): what the brain can settle by itself it
    settles and says in one line; what has two answers it asks, all in one question. Nothing here guesses.
    - dates: "Thursday", "tomorrow", "next week" mean nothing a week later, so a note never keeps them bare.
@@ -88,12 +89,12 @@ export function lastNotesAbout(memories, person, rec, limit = 2) {
 /* The chat's opening line about dates: "next Saturday" said on a Thursday is this Saturday or the one
    after, and a request (a calendar search, a draft) never passes remember's date check (scenario run,
    2026-11-12: Codex took the calendar's free 14 Nov without asking). */
-export function datesLine(now = today()) {
+export function datesLine(now = today(), box = host().nativeQuestions?.()) {
   const day = d => { const x = new Date(now); x.setDate(now.getDate() + d); return x; };
   const short = d => d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
   const left = []; for (let d = 1; now.getDay() + d <= 6 + 1 && (now.getDay() + d) % 7 !== 1; d++) left.push(d);
   const two = left.map(d => `"next ${DAYS[(now.getDay() + d) % 7][0].toUpperCase()}${DAYS[(now.getDay() + d) % 7].slice(1)}" (${short(day(d))} or ${short(day(d + 7))})`);
-  return `Today is ${now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}.${two.length ? ` ${two.join(", ")} ${two.length > 1 ? "each have" : "has"} two readings: in any request, not only a note, ask which before acting on it; a free calendar slot is no answer.` : ""}`;
+  return `Today is ${now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}.${two.length ? ` ${two.join(", ")} ${two.length > 1 ? "each have" : "has"} two readings: in any request, not only a note, ask which before acting on it, ${box ? "in Codex's question box (request_user_input) with the two dates as options" : "as plain chat text with the two dates numbered, then end the turn"}; a free calendar slot is no answer.` : ""}`;
 }
 
 /* A compiled summary: 2-4 sentences, each ending with the ids of the notes it rests on ("[m_1a2b3c, m_4d5e6f]"),
