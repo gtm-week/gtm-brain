@@ -33,7 +33,7 @@ export function relativeDates(content, now = today()) {
     if (mod === "last") out.push({ word, means: [label(last)], ask: false });
     else if (mod === "this") out.push({ word, means: [label(ahead ? coming : now)], ask: false });
     else if (mod === "next" || mod === "coming") out.push({ word, means: ahead > 0 && ahead <= 2 && mod === "next" ? [label(coming), label(shift(coming, 7))] : [label(coming)], ask: ahead > 0 && ahead <= 2 && mod === "next" });
-    else if (!ahead) out.push({ word, means: [label(now), label(shift(now, 7)), `${label(shift(now, -7))} if it already happened`], ask: true });   // said on that very day
+    else if (!ahead) out.push({ word, means: [label(now), label(shift(now, 7))], ask: true });   // said on that very day: today or next week; a past date is never an option ("moved to" a week ago means nothing)
     else out.push({ word, means: [label(coming), `${label(last)} if it already happened`], ask: false });
   }
   return out;

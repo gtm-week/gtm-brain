@@ -18,7 +18,7 @@ test("relative dates: one reading is written in, two readings are asked, habits 
   const means = s => dots.relativeDates(s, THU).map(d => [d.word, d.means[0], d.ask]);
   assert.deepEqual(means("Ola will send the deck on Friday."), [["Friday", "Fri 2026-11-13", false]]);
   assert.deepEqual(means("The speaker dinner moved to Thursday."), [["Thursday", "Thu 2026-11-12", true]]);   // today, or a week from today
-  assert.deepEqual(dots.relativeDates("The speaker dinner moved to Thursday.", THU)[0].means.slice(0, 2), ["Thu 2026-11-12", "Thu 2026-11-19"]);
+  assert.deepEqual(dots.relativeDates("The speaker dinner moved to Thursday.", THU)[0].means, ["Thu 2026-11-12", "Thu 2026-11-19"]);   // never last week's
   assert.deepEqual(means("Max will run the demo next Tuesday."), [["next Tuesday", "Tue 2026-11-17", false]]);
   assert.deepEqual(means("Call me next Friday."), [["next Friday", "Fri 2026-11-13", true]]);   // tomorrow, or the week after
   assert.deepEqual(means("We met last Monday and agree tomorrow."), [["last Monday", "Mon 2026-11-09", false], ["tomorrow", "Fri 2026-11-13", false]]);
@@ -41,7 +41,7 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   // "Thursday" said on a Thursday: two readings, so held and asked; nothing written
   const dinner = remember("--content", "The speaker dinner moved to Thursday.");
   assert.equal(dinner.status, 2);
-  assert.match(dinner.stderr, /"Thursday" can be Thu 2026-11-12 or Thu 2026-11-19 or Thu 2026-11-05 if it already happened: ask which/);
+  assert.match(dinner.stderr, /"Thursday" can be Thu 2026-11-12 or Thu 2026-11-19: ask which/);
   assert.match(dinner.stderr, /Ask the person once, everything in one question with numbered parts/);
   // "Friday": one reading, so no question, the model writes it in and sends again
   const deck = remember("--content", "Ola Nowak will send the deck on Friday.", "--people", "Ola Nowak");
