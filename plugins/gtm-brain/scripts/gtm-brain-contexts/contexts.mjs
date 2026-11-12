@@ -5,6 +5,7 @@
 //   node contexts.mjs <root> --new <slug> "<Title>" ["<one rule for When loaded>"]
 //   node contexts.mjs <root> --archive <slug> | --unarchive <slug>   (status on the cover; archived is unloaded, not offered)
 //   node contexts.mjs <root> --edit <slug> [--title "..."] [--rule "..."]   the cover's title and standing rule; summary and working guidance kept
+import { host } from "../../lib/host.mjs";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
@@ -24,7 +25,7 @@ if (args[0] === "--new") {
   const words = t => new Set(String(t).toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length >= 4 && !["context", "contexts", "notes", "team", "work"].includes(w)));
   const mine = new Set([...words(slug), ...words(title)]);
   const like = lib.listContexts(root).filter(c => c.slug.includes(slug) || slug.includes(c.slug) || [...words(c.slug), ...words(c.title)].some(w => mine.has(w)));
-  if (like.length && !distinct) { console.error(`not created: "${title}" looks like ${like.map(c => `${c.title} (${c.slug}${c.status === "archived" ? ", archived" : ""})`).join(", ")} (rule X3: never two contexts for one topic). Ask the person "same as ${like[0].title}?": yes, ${like[0].status === "archived" ? "unarchive and " : ""}load that one; no, call new_context again with distinct set to their reason.`); process.exit(2); }
+  if (like.length && !distinct) { console.error(`not created: "${title}" looks like ${like.map(c => `${c.title} (${c.slug}${c.status === "archived" ? ", archived" : ""})`).join(", ")} (rule X3: never two contexts for one topic). Ask the person "same as ${like[0].title}?" ${host().nativeQuestions?.() ? "in Codex's question box (request_user_input), with yes and no as options" : "as plain chat text with yes and no numbered, then end the turn"}: yes, ${like[0].status === "archived" ? "unarchive and " : ""}load that one; no, call new_context again with distinct set to their reason.`); process.exit(2); }
   lib.writeContext(root, slug, { title, rule });
   // A new context is loaded right away: you created it because you are about to work in it.
   const loaded = lib.readLoaded(root, project); if (!loaded.includes(slug)) loaded.push(slug); lib.writeLoaded(root, loaded, project);
