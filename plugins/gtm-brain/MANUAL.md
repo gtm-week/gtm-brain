@@ -58,8 +58,8 @@ Making one:
 
 - **X1** A project is not a context: it is a folder in `projects/` and a tag on notes. Notes about
   a project go in the context their meaning fits, tagged with the project.
-- **X2** Codex proposes a new context only for a purpose it can say in one sentence and work you
-  will come back to, and creates it only after you say yes.
+- **X2** Codex offers a new context when lasting work starts that no context covers (a new
+  website or product project, a theme across several notes), and creates it only after you say yes.
 - **X3** Never two contexts for one topic: a name like an existing or archived context gets
   "same as X?" first.
 

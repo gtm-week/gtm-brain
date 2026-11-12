@@ -60,6 +60,14 @@ Follow [question handling](../gtm-brain-start/references/questions.md) for nativ
    another task. Say "Created Website inside FDE OS. Work here uses your shared company
    knowledge" for an internal project, then the opening result. Do not call it an external
    project, list context slugs, or explain the ontology during this flow.
+8. When step 5 found no context for the lasting topic behind the project (a website, a
+   product, a market), offer one once, after the report, in Codex's question box when it is
+   on: "The website work has no context of its own yet. Create a Website context for its
+   messaging, pages and decisions?" with Yes, create Website and No, keep notes in
+   <the closest context>. On yes call `new_context` with a slug that is not the project's
+   (X1). On no, do not offer it again for this project. An event, campaign or one-off client
+   job needs no context of its own: skip the offer. (Artur, 2026-11-11: the website folder
+   was made and no context followed, and nothing said why.)
 
 Creating a folder alone does not authorize capturing its work. A No or cancellation before
 linking leaves the folder uncreated. Memories stay in the existing brain, tagged with this
