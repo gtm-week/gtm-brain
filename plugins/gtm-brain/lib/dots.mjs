@@ -118,18 +118,23 @@ export function summaryCheck(summary, ids) {
   return { text: out.map(o => o.text).join(" "), sources: out.map(o => o.ids.join(" ")), problems: [...new Set(problems)] };
 }
 
-/* The saving rulebook, once per chat: the first remember or new_context of a chat hands Codex the
-   whole page, so the rules arrive at the moment of saving instead of hoping it read them
-   (2026-11-12: rules in five files were skipped; a reply's text was followed every time). */
-export function rulebookOnce(root, chat) {
-  if (!chat) return "";
-  const memo = join(root, "work", "rulebook-sent.json");
-  let sent = {}; try { sent = JSON.parse(readFileSync(memo, "utf8")); } catch {}
-  if (sent[chat]) return "";
+/* The saving rulebook: the shared page, then the brain's own RULES.md (written by its people; theirs win).
+   Printed at chat start, so the rules are there before Codex's first action (2026-11-12: handed over with the
+   first save's reply, it came one step late and the RULES.md offer and F2 were missed). */
+export function rulebookText(root) {
   let page = ""; try { page = readFileSync(new URL("../skills/gtm-brain-use-brain/references/saving-rules.md", import.meta.url), "utf8").trim(); } catch { return ""; }
-  sent[chat] = new Date().toISOString();
-  try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(memo, JSON.stringify(sent, null, 2) + "\n"); } catch {}
-  // the brain's own RULES.md, written by its people (or by Codex on their yes): theirs win over the defaults
   let own = ""; try { own = readFileSync(join(root, "RULES.md"), "utf8").trim(); } catch {}
-  return `\n--- The saving rules for this chat (from now on a refusal quotes them by number) ---\n${page}${own ? `\n\n## This brain's own rules (RULES.md, written by its people; they win over the rules above)\n\n${own}` : ""}\n---`;
+  return `--- The saving rules for this chat (a refusal quotes them by number) ---\n${page}${own ? `\n\n## This brain's own rules (RULES.md, written by its people; they win over the rules above)\n\n${own}` : ""}\n---`;
+}
+const sentFile = root => join(root, "work", "rulebook-sent.json");
+const readSent = root => { try { return JSON.parse(readFileSync(sentFile(root), "utf8")); } catch { return {}; } };
+export function markRulebookSent(root, chat) {
+  if (!chat) return; const sent = readSent(root); sent[chat] = new Date().toISOString();
+  try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(sentFile(root), JSON.stringify(sent, null, 2) + "\n"); } catch {}
+}
+/* the fallback: a chat whose start did not print it (no chat start ran) gets it with its first save */
+export function rulebookOnce(root, chat) {
+  if (!chat || readSent(root)[chat]) return "";
+  const text = rulebookText(root); if (!text) return "";
+  markRulebookSent(root, chat); return `\n${text}`;
 }

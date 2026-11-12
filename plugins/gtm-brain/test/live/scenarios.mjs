@@ -2,7 +2,7 @@
 // Live saving scenarios: each sentence goes through real Codex (codex exec) on its own copy of a test
 // brain, and the table says whether Codex asked or saved, and what. The proof for behaviour changes
 // before handing them over (2026-11-12: failures were found by hand, one at a time).
-//   node test/live/scenarios.mjs [brain folder, default ~/Documents/new-brain] [case ids, comma]
+//   node test/live/scenarios.mjs [case ids, comma] [--brain <folder>]   (default: a clean brain built here)
 // codex exec has no question box: a question shows as text ending in "?". The box itself stays a manual check.
 import { execFileSync, spawn } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync } from "node:fs";
@@ -10,12 +10,28 @@ import { join } from "node:path";
 import { homedir, tmpdir } from "node:os";
 
 const P = new URL("../..", import.meta.url).pathname.replace(/\/$/, "");
-const source = process.argv[2] || join(homedir(), "Documents", "new-brain");
-const only = (process.argv[3] || "").split(",").filter(Boolean);
-const by = JSON.parse(readFileSync(join(source, "work", "person.json"), "utf8")).handle || "maciej-konczal";
-
 const notes = root => readdirSync(join(root, "brain", "contexts")).flatMap(c => { try { return readFileSync(join(root, "brain", "contexts", c, "memories.jsonl"), "utf8").split("\n").filter(Boolean).map(l => JSON.parse(l)); } catch { return []; } });
 const seed = (root, content, people, extra = []) => execFileSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", by, "--context", "company", "--content", content, ...(people ? ["--people", people] : []), ...extra], { cwd: root, env: { ...process.env, GTM_BRAIN_RUN: "scenario", GTM_BRAIN_NO_COMPILE: "1" }, stdio: "ignore" });
+// a clean brain each run, so leftovers from manual testing never decide a result (2026-11-12: an alias and a
+// context made by hand earlier turned two cases into false passes); pass --brain <folder> to use your own copy
+const bi = process.argv.indexOf("--brain"), only = process.argv.slice(2).filter((a, i, all) => a !== "--brain" && all[i - 1] !== "--brain").join(",").split(",").filter(Boolean);
+const by = "maciej-konczal";
+const source = bi > 0 ? process.argv[bi + 1] : fixture();
+function fixture() {
+  const root = mkdtempSync(join(tmpdir(), "gtm-scenario-fixture-"));
+  execFileSync("git", ["init", "-q", root]); execFileSync("git", ["-C", root, "config", "commit.gpgsign", "false"]);
+  execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "newcto", "--one-liner", "events for revenue teams", "--owner", "Maciej Konczal <maciej@example.com>"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P }, stdio: "ignore" });
+  mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(join(root, "work", "person.json"), JSON.stringify({ handle: by }) + "\n");
+  mkdirSync(join(root, "projects", "berlin-event-2026"), { recursive: true }); writeFileSync(join(root, "projects", "berlin-event-2026", "README.md"), "Berlin Event 2026\n");
+  execFileSync(process.execPath, [`${P}/skills/gtm-brain-project/project.mjs`, ".", "--link", join(root, "projects", "berlin-event-2026"), "--slug", "berlin-event-2026", "--title", "Berlin Event 2026"], { cwd: root, env: { ...process.env, GTM_BRAIN_RUN: "scenario" }, stdio: "ignore" });
+  seed(root, "Florian Weber is our keynote speaker at the Berlin event.", "Florian Weber", ["--project", "berlin-event-2026"]);
+  seed(root, "Ola Nowak prepares the sponsor deck.", "Ola Nowak");
+  seed(root, "Lena Dumos joined the events team.", "Lena Dumos");
+  seed(root, "Globex wants a booth at the Berlin event.", null, ["--companies", "Globex"]);
+  execFileSync("git", ["-C", root, "add", "-A"]); execFileSync("git", ["-C", root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "fixture", "--allow-empty"]);
+  return root;
+}
+
 
 // expect: "ask" (a question, nothing new saved), "save" (a new note, no question) or "answer" (no save);
 // check(result) adds what must be true of the saved note or the reply
