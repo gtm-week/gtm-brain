@@ -40,8 +40,8 @@ brain valid and commit every write; the hooks refuse a direct edit of `brain/adm
    - The skill tables in `README.md`, `COMMANDS.md` and `ONBOARDING.md`: one row each.
    - The skill count ("fourteen") in `README.md`, `CLAUDE.md`, `CONTRIBUTING.md` and
      `USER-SKILLS.md`, plus the skill list in the layout blocks of `README.md` and `CONTRIBUTING.md`.
-   - A skill whose work overlaps another: say "Not ..." in both descriptions, as define-icp and
-     gtm-brain-document do.
+   - A skill whose work overlaps another: say "Not ..." in both descriptions, as define-icp
+     does about market desk research and campaign execution.
 4. **Routing, only if needed.** A slash command (`/gtm-brain-<slug>`) always works. For plain
    requests ("define our ICP") to reach the skill, add a line to `plugins/gtm-brain/templates/AGENTS.md`.
    That file is in every brain, so it needs a snapshot of the outgoing file in

@@ -11,8 +11,8 @@ and offers a new row.
 
 | What | Where |
 | --- | --- |
-| A rule the work must follow: strategy, tone of voice, pricing, ICP | `<name>.md` at this level; its files in a folder of the same name |
-| Brand: design system, fonts, brand files | `brand/` |
+| A document the work must follow: strategy, ICP, tone of voice, design system, pricing | `<name>.md` at this level (`strategy.md`, `icp.md`, `voice.md`, `design-system.md` are here from day one); its files in a folder of the same name |
+| Brand: fonts, logo files, design tokens | `design-system/`, beside `design-system.md` |
 | A project: an event, a campaign, a client, a launch | `projects/<project>/`, with a `README.md` whose first line says what it is |
 | A deliverable for a project: a graphic, a deck, a page, a sprint | inside its project: `projects/<project>/<deliverable>/`, never a new folder at this level |
 | A speaker or guest graphic for an event | `projects/<event>/speakers/<name>/` |

@@ -190,7 +190,7 @@ brain/entities/<id>.md               identity and cited briefs
 brain/contexts/<context>/context.md  the context summary and rules
 brain/contexts/<context>/memories.jsonl   the notes, one per line
 README.md                            what goes where; setup writes it, upgrade refreshes it while unedited
-strategy.md, brand/voice.md, ...     your documents, with their files in a folder of the same name
+strategy.md, icp.md, voice.md, ...  your documents (four from day one), files in a folder of the same name
 RULES.md                             where every file goes and your own saving rules; you edit it
 projects/<project>/                  one folder per project (an event, a campaign), its deliverables inside
 work/home/index.html                 the dashboard

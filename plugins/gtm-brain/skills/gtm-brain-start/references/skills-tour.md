@@ -1,10 +1,39 @@
-# The first task after onboarding
+# After onboarding: the documents question, then the first task
+
+## The documents question
+
+Setup wrote four starters at the brain root: `strategy.md`, `icp.md`, `voice.md` and
+`design-system.md`. They stay in the brain whatever the answer; filling them is what is offered.
+At the end of completed onboarding (the closing reply, after its three-part confirmation), ask
+once which to fill now, and end the turn. One line on why first: Codex reads them before every
+email, post, design and plan, and a starter holds no guidance yet.
+
+In Codex's question box (Q1), which has no checkboxes, offer the likely combinations:
+"Voice and ICP now" (recommended), "All four, one at a time", "Just the voice", "Later". In
+chat text, numbered options, and say the person can pick several numbers:
+
+1. Voice: a draft from the website and texts you like (about 5 minutes)
+2. ICP: a short interview about your best customers (about 10 minutes)
+3. Strategy: the strategic intake (10-15 minutes)
+4. Design system: a draft from the website and your brand files (about 5 minutes)
+5. Later
+
+Leave out a starter that is already filled (the chat line does not show it `[not filled]`); with
+all four filled, skip the question. Fill the chosen ones one at a time, in the order picked, each
+through its own procedure ([documents](../../gtm-brain-use-brain/references/documents.md), Fill a
+starter). Between two, one line on which comes next; the person can stop at any point. On Later,
+or once the chosen ones are done, say in one line that the rest stay as `[not filled]` and that
+"fill in our tone of voice" (or the ICP, strategy, design system) fills one at any time. Then the
+first task below. Ask the question once: no reminder on later greetings; the chat line and its
+offer before work of that kind (rule 11) carry it from there.
+
+## The first task
 
 At the end of completed onboarding, give the person one concrete next task, not a list of
 commands. Someone who just finished setup asks "what do I do now?"; a menu of skills sends
-them to guess (a new project on an empty brain is the usual wrong guess). Keep this in the
-closing reply; no new question, required step or completion marker. Do not repeat it on every
-greeting or when only checking status.
+them to guess (a new project on an empty brain is the usual wrong guess). Give it once the
+documents question is settled (Later, or the chosen ones filled); no new question, required
+step or completion marker. Do not repeat it on every greeting or when only checking status.
 
 **Pick the one task** from what onboarding verified, first match wins:
 

@@ -760,8 +760,9 @@ test("adding a file is one obvious pathway: everyday work through use-brain's fi
   assert.match(files, /add-file\.mjs/); assert.match(files, /--document <ref> \| --entity/); assert.match(files, /remember` with `asset`/); assert.match(files, /kind: "file"/);
   assert.match(files, /never what should happen next/, "learning from a file follows the no to-do rule");
   assert.match(readFileSync(`${P}/skills/gtm-brain-use-brain/SKILL.md`, "utf8"), /\[files\]\(references\/files\.md\)/);
-  assert.match(readFileSync(`${P}/skills/gtm-brain-document/agents/openai.yaml`, "utf8"), /"GTM Brain: Documents"/);
-  assert.match(readFileSync(join(P, "..", "..", "COMMANDS.md"), "utf8"), /^\| `gtm-brain-document` \| GTM Brain: Documents \|/m);
+  assert.ok(!existsSync(`${P}/skills/gtm-brain-document`), "documents are part of everyday work, not a skill of their own (2026-11-13)");
+  assert.match(readFileSync(`${P}/skills/gtm-brain-use-brain/SKILL.md`, "utf8"), /\[documents\]\(references\/documents\.md\)/);
+  assert.doesNotMatch(readFileSync(join(P, "..", "..", "COMMANDS.md"), "utf8"), /`gtm-brain-document`/);
   const template = readFileSync(`${P}/templates/AGENTS.md`, "utf8");
   assert.match(template, /goes through gtm-brain-use-brain's references\/files\.md/); assert.doesNotMatch(template, /gtm-brain-add-file/);
 });

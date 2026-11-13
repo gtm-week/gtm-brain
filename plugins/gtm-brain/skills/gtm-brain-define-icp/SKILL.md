@@ -6,7 +6,7 @@ description: |
   buying readiness. Reuse the brain's evidence and keep one draft ICP document.
   Triggers: "/gtm-brain-define-icp", "define our ICP", "ideal customer profile interview",
   "refine our target customer definition". Not market desk research, campaign execution or
-  saving an ICP already written (gtm-brain-document).
+  saving an ICP already written (gtm-brain-use-brain, references/documents.md).
 metadata:
   author: Chris Pawlak
 allowed-tools: [Bash, Read]
@@ -62,7 +62,7 @@ Unknown is not disqualified; title is not decision authority; engagement is not 
 
 ## 3. Keep one working draft
 
-Use [Your documents](../gtm-brain-document/SKILL.md) and the current `document` tool contract.
+Use [documents](../gtm-brain-use-brain/references/documents.md) and the current `document` tool contract. Setup writes `icp.md` as a starter: keep the ICP there (`action: update`, `ref: icp`), never a second ICP document.
 Synthesize the method's five parts when there is enough for a useful draft, including when the
 person stops with gaps. Never claim that interview agreement validates the market.
 

@@ -44,7 +44,7 @@ test("every chat starts with the numbered rows and the projects; a Berlin speake
 
 test("the person's rows are what Codex is given, and an edited RULES.md is never overwritten", () => {
   const root = brain();
-  const mine = readFileSync(join(root, "RULES.md"), "utf8").replace("| Brand: design system, fonts, brand files | `brand/` |", "| Brand: design system, fonts, brand files | `brand/` |\n| Anything for a client | `clients/<client>/` |");
+  const mine = readFileSync(join(root, "RULES.md"), "utf8").replace("| Brand: fonts, logo files, design tokens | `design-system/`, beside `design-system.md` |", "| Brand: design system, fonts, brand files | `brand/` |\n| Anything for a client | `clients/<client>/` |");
   writeFileSync(join(root, "RULES.md"), mine);
   assert.equal(where.ensureRules(root, T), false);
   assert.equal(readFileSync(join(root, "RULES.md"), "utf8"), mine);
@@ -98,7 +98,7 @@ test("an edited WHERE.md keeps its rows in RULES.md; a template with no own rule
 });
 test("a RULES.md edited in a chat and not saved is kept by the next chat start's maintenance, as written", () => {
   const root = brain();
-  const mine = readFileSync(join(root, "RULES.md"), "utf8").replace("| Brand: design system, fonts, brand files | `brand/` |", "| Brand: design system, fonts, brand files | `brand/` |\n| Anything for a client | `clients/<client>/` |");
+  const mine = readFileSync(join(root, "RULES.md"), "utf8").replace("| Brand: fonts, logo files, design tokens | `design-system/`, beside `design-system.md` |", "| Brand: design system, fonts, brand files | `brand/` |\n| Anything for a client | `clients/<client>/` |");
   writeFileSync(join(root, "RULES.md"), mine);
   start(root); execFileSync(process.execPath, [`${P}/session/session-maintenance.mjs`, root, "--run"], { env });
   assert.equal(readFileSync(join(root, "RULES.md"), "utf8"), mine);

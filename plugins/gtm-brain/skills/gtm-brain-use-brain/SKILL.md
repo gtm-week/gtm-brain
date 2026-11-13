@@ -10,7 +10,9 @@ description: |
   Also "load pipeline", "which contexts are there", "switch to marketing" (loading), "new context
   NAME", "fork X out of Y", "archive NAME" (creating), "rename pipeline", "change the rule for
   gtm" (editing), and "open the dashboard", "refresh the dashboard", "where does this number
-  come from" (the page).
+  come from" (the page). Also the documents the work must follow: "add our tone of voice",
+  "fill in our design system", "approve the strategy", "list the documents", "check this against
+  our documents" (references/documents.md).
 allowed-tools: [Bash, Read]
 ---
 
@@ -42,7 +44,9 @@ A file or folder: `query` (why, search = the path).
 Before producing copy, outreach, posts, landing pages, creatives, proposals, a design or a plan,
 read the document that applies (the opening lines and `query` (status) list the documents at the
 brain root with what each applies to) and follow it, saying which one in one line; AGENTS.md
-rule 11. Adding or changing one is `gtm-brain-document`.
+rule 11. Adding, filling or changing one: follow [documents](references/documents.md). Setup
+writes `strategy.md`, `icp.md`, `voice.md` and `design-system.md` as starters; one shown as
+`[not filled]` holds no guidance yet.
 
 A file in the chat (a path, a dropped PDF or image, "save this deck", "add this to the design
 system"): follow [files](references/files.md). No skill to invoke; it is part of everyday work.

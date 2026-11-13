@@ -23,8 +23,11 @@ Ask "why is this here?" about any file or folder: Codex answers with the RULES.m
 reason it recorded when the file was kept, who put it there and when. A file that arrived without
 one is named at the start of the next chat, so nothing stays unexplained.
 
-`strategy.md` is here from day one, waiting for `run the strategic intake`. A file with no owner
-is not stored: Codex asks what it belongs to.
+Four documents are here from day one: `strategy.md`, `icp.md` (who we sell to), `voice.md` (how
+we sound) and `design-system.md` (how we look). Codex reads them before every email, post,
+design and plan. Each starts empty: say "fill in our tone of voice" (or the ICP, the strategy,
+the design system) and Codex drafts it with you. A file with no owner is not stored: Codex asks
+what it belongs to.
 
 ## How we name people
 

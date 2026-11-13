@@ -18,6 +18,9 @@ function brain() {
   const root = trackBrain(realpathSync(mkdtempSync(join(tmpdir(), "gtm-brain-doc-brain-"))), P);
   execFileSync("git", ["init", "-q", root]); execFileSync("git", ["-C", root, "config", "commit.gpgsign", "false"]);
   execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "Reflow", "--one-liner", "returns automation", "--owner", "Marta Nowak <marta@reflow.io>", "--dashboard", "on-demand"], { cwd: root, env, stdio: "ignore" });
+  // These tests are about the format; the starters setup writes since 0.33.10 have their own test below.
+  for (const f of ["icp.md", "voice.md", "design-system.md"]) execFileSync("git", ["-C", root, "rm", "-q", f]);
+  execFileSync("git", ["-C", root, "commit", "-qm", "format tests start from strategy.md alone"]);
   return root;
 }
 const VOICE = "We write like an operator: short sentences, real numbers, problem first.\n\nHard rules: no exclamation points, no emoji in body copy.\n\nBanned words: synergy, leverage, unlock, seamless.";
@@ -101,7 +104,7 @@ test("files: a folder of the document's name beside it; a document alone in its 
 
 test("the line names every document with status, kinds of work, path and file count, and says what to do when there are none", () => {
   const root = brain();
-  assert.match(docs.documentsLine(root), /^documents: Strategy \[draft\] \(strategy, planning\) -> strategy\.md  ·  Ads, then outbound \[draft\] \(outbound campaign, linkedin ads\) -> workflows\/ads-then-outbound\.md  ·  Outbound \[draft\] \(outbound campaign\) -> workflows\/outbound\.md\./, "setup wrote strategy.md and the two workflows, all waiting for the person");
+  assert.match(docs.documentsLine(root), /^documents: Strategy \[not filled\] \(strategy, planning\) -> strategy\.md  ·  Ads, then outbound \[draft\] \(outbound campaign, linkedin ads\) -> workflows\/ads-then-outbound\.md  ·  Outbound \[draft\] \(outbound campaign\) -> workflows\/outbound\.md\./, "setup wrote strategy.md and the two workflows, all waiting for the person");
   docs.writeDocument(root, { ...ok, path: "strategy.md", title: "Strategy", applies_to: "strategy, planning", status: "approved" });
   docs.writeDocument(root, { ...ok, path: "brand/design-system.md", title: "Design system", applies_to: "design" });
   mkdirSync(join(root, "brand", "design-system")); writeFileSync(join(root, "brand", "design-system", "tokens.json"), "{}"); writeFileSync(join(root, "brand", "design-system", "logo.svg"), "<svg/>");
@@ -168,9 +171,9 @@ test("save commits a document and the files a person dropped beside it by hand; 
 const hook = (root, project) => execFileSync("bash", [`${P}/session/session-start.sh`], { cwd: project || root, encoding: "utf8", env, input: JSON.stringify({ session_id: "thread-1", cwd: project || root }) });
 test("the session hook names the documents every chat, in the brain and in a linked project, and says when there are none", () => {
   const root = brain();
-  assert.match(hook(root), /documents: Strategy \[draft\] \(strategy, planning\) -> strategy\.md/);
+  assert.match(hook(root), /documents: Strategy \[not filled\] \(strategy, planning\) -> strategy\.md/);
   document(root, "--create", "--title", "Tone of voice", "--applies-to", "copy, posts", "--body", VOICE, "--folder", "brand");
-  assert.match(hook(root), /documents: Tone of voice \[draft\] \(copy, posts\) -> brand\/tone-of-voice\.md  ·  Strategy \[draft\]/);
+  assert.match(hook(root), /documents: Tone of voice \[draft\] \(copy, posts\) -> brand\/tone-of-voice\.md  ·  Strategy \[not filled\]/);
   const folder = realpathSync(mkdtempSync(join(tmpdir(), "gtm-brain-doc-folder-")));
   execFileSync(process.execPath, [`${P}/skills/gtm-brain-project/project.mjs`, ".", "--link", folder, "--slug", "landing", "--contexts", "offer"], { cwd: root, encoding: "utf8", env });
   const inProject = hook(root, folder);
@@ -271,4 +274,22 @@ test("upgrade refreshes a README a release wrote and keeps one the person edited
   const edited = brain(); writeFileSync(join(edited, "README.md"), old + "\nOur own note.\n");
   assert.doesNotMatch(up(edited), /README/);
   assert.match(readFileSync(join(edited, "README.md"), "utf8"), /Our own note\./);
+});
+
+test("setup writes strategy, icp, voice and design-system as starters: not filled until someone writes in them, by hand or through document", () => {
+  const root = trackBrain(realpathSync(mkdtempSync(join(tmpdir(), "gtm-brain-doc-starters-"))), P);
+  execFileSync("git", ["init", "-q", root]); execFileSync("git", ["-C", root, "config", "commit.gpgsign", "false"]);
+  execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "Reflow", "--one-liner", "returns automation", "--owner", "Marta Nowak <marta@reflow.io>", "--dashboard", "on-demand"], { cwd: root, env, stdio: "ignore" });
+  const starters = docs.listDocuments(root).filter(d => docs.STARTERS.includes(d.slug));
+  assert.deepEqual(starters.map(d => [d.path, d.filled]), [["design-system.md", false], ["icp.md", false], ["strategy.md", false], ["voice.md", false]]);
+  assert.equal(execFileSync("git", ["-C", root, "ls-files", "icp.md", "voice.md", "design-system.md"], { encoding: "utf8" }).trim().split("\n").length, 3, "shared with the team");
+  assert.match(readFileSync(join(root, "voice.md"), "utf8"), /This is how Reflow sounds/);
+  const line = docs.documentsLine(root);
+  assert.match(line, /Tone of voice \[not filled\] \(copy, outreach, emails, posts, landing pages\) -> voice\.md/);
+  assert.match(line, /A not filled one is still its starter and holds no guidance/);
+  writeFileSync(join(root, "voice.md"), readFileSync(join(root, "voice.md"), "utf8").replace("## Do not\n", "## Do not\n\nNo exclamation marks.\n"));
+  assert.equal(docs.readDocument(root, "voice").filled, true, "a hand edit fills it");
+  execFileSync(process.execPath, [`${P}/scripts/gtm-brain-documents/document.mjs`, root, "--update", "icp", "--body", "# Ideal customer profile\n\nOnline shops with 50-500 returns a day."], { env: { ...env, GTM_BRAIN_NO_COMMIT: "1" } });
+  assert.equal(docs.readDocument(root, "icp").filled, true);
+  assert.doesNotMatch(docs.documentsLine(root), /Tone of voice \[not filled\]|Ideal customer profile \[not filled\]/);
 });

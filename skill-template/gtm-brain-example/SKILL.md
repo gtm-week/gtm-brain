@@ -49,7 +49,7 @@ default, timeout or empty result is an answer.
 
 Pick one home for the output and say it here:
 
-- A document the work must follow: [Your documents](../gtm-brain-document/SKILL.md), `document`
+- A document the work must follow: [documents](../gtm-brain-use-brain/references/documents.md), `document`
   with `action: create` or `update`, `status: draft`. Confirm once through `question` first.
 - Findings and decisions: the [remember procedure](../gtm-brain-use-brain/references/remember.md),
   in the loaded context, with sources and the person's exact words.

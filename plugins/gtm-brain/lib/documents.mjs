@@ -88,13 +88,30 @@ export function markdownFiles(root) {
   walk(root, 0); return out.sort();
 }
 
+/* The starters setup writes (strategy, icp, voice, design-system): a document whose body is still the shipped
+   one, word for word, is not filled. A hard fact, so a hand edit counts as filled; any company name matches. */
+export const STARTERS = ["strategy", "icp", "voice", "design-system"];
+const starterBody = new Map();
+function isStarterBody(slug, body) {
+  if (!STARTERS.includes(slug)) return false;
+  if (!starterBody.has(slug)) {
+    let re = null;
+    try {
+      const shipped = parseFrontmatter(readFileSync(new URL(`../templates/${slug}.md`, import.meta.url), "utf8")).body.trim();
+      re = new RegExp(`^${shipped.split("{{COMPANY}}").map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".+?")}$`, "s");
+    } catch {}
+    starterBody.set(slug, re);
+  }
+  const re = starterBody.get(slug); return !!re && re.test(String(body || "").trim());
+}
+
 export function parseDocument(root, path) {
   const abs = join(root, path); if (!existsSync(abs)) return null;
   const { fm, body } = parseFrontmatter(readFileSync(abs, "utf8"));
   if (fm.kind !== KIND) return null;
   const slug = basename(path, ".md"), dir = posix(dirname(path));
   const extra = Object.fromEntries(Object.entries(fm).filter(([k]) => !DOCUMENT_KEYS.has(k)));
-  return { slug, path: posix(path), folder: dir === "." ? "" : dir, title: String(fm.title || slug), applies_to: normalizeAppliesTo(fm.applies_to), status: STATUSES.includes(fm.status) ? fm.status : "draft", by: fm.by ? String(fm.by) : null, updated: fm.updated ? String(fm.updated) : null, version: fm["gtm-brain"] ? String(fm["gtm-brain"]) : null, body: body.trim(), bytes: Buffer.byteLength(body, "utf8"), extra };
+  return { slug, path: posix(path), folder: dir === "." ? "" : dir, title: String(fm.title || slug), applies_to: normalizeAppliesTo(fm.applies_to), status: STATUSES.includes(fm.status) ? fm.status : "draft", filled: !isStarterBody(slug, body), by: fm.by ? String(fm.by) : null, updated: fm.updated ? String(fm.updated) : null, version: fm["gtm-brain"] ? String(fm["gtm-brain"]) : null, body: body.trim(), bytes: Buffer.byteLength(body, "utf8"), extra };
 }
 
 export function listDocuments(root) { return markdownFiles(root).map(p => parseDocument(root, p)).filter(Boolean); }
@@ -216,7 +233,7 @@ export function documentsLine(root, { absolute = false } = {}) {
   const oldDir = join(root, "brain", "guidelines");
   const old = existsSync(oldDir) ? readdirSync(oldDir).filter(f => f.endsWith(".md") && !f.startsWith(".")).sort().map(f => `brain/guidelines/${f}`) : [];
   const legacy = old.length ? ` Older guidelines not moved yet, read them the same way: ${old.map(where).join(", ")}; the upgrade (say: refresh the rules) moves them to the root.` : "";
-  if (!all.length) return `documents: none yet. A document is something we wrote that the work must follow (${SUGGESTED.join(", ")}); say "add our tone of voice", "add strategy.md as a document" or /gtm-brain-document.${legacy}`;
-  const items = all.map(d => { const n = documentFiles(root, d, all).length; return `${d.title} [${d.status}] (${d.applies_to.join(", ")}) -> ${where(d.path)}${n ? ` (${n} file${n === 1 ? "" : "s"})` : ""}`; }).join("  ·  ");
-  return `documents: ${items}. Before work of a listed kind, read that file in full and follow it (AGENTS.md rule 11); say in one line which document you followed. A draft one is the best available guidance, say so.${legacy}`;
+  if (!all.length) return `documents: none yet. A document is something we wrote that the work must follow (${SUGGESTED.join(", ")}); say "add our tone of voice" or "add strategy.md as a document".${legacy}`;
+  const items = all.map(d => { const n = documentFiles(root, d, all).length; return `${d.title} [${d.filled ? d.status : "not filled"}] (${d.applies_to.join(", ")}) -> ${where(d.path)}${n ? ` (${n} file${n === 1 ? "" : "s"})` : ""}`; }).join("  ·  ");
+  return `documents: ${items}. Before work of a listed kind, read that file in full and follow it (AGENTS.md rule 11); say in one line which document you followed. A draft one is the best available guidance, say so.${all.some(d => !d.filled) ? " A not filled one is still its starter and holds no guidance: do the work without it, and when the work is of its kind offer once to fill it first (strategy: /gtm-brain-strategy; ICP: /gtm-brain-define-icp; voice or design system: a draft from the website, gtm-brain-use-brain references/documents.md)." : ""}${legacy}`;
 }
