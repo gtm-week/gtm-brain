@@ -51,7 +51,9 @@ Prepare a `brief` with three fields, plus `fields` when SCHEMA.md lists any for 
   notes state in prose and no such record holds.
 - `fields` (optional): the SCHEMA.md fields `entity_facts` lists in `schema.fields` for this
   entity's kind and subtype, one entry each: `{ "field": "role", "text": "Head of Sales at
-  Northwind", "memories": ["m_..."] }`. The text is the value as the notes state it. Fill
+  Northwind", "memories": ["m_..."] }`. The text is the value as the notes state it, without
+  memory IDs (they go in `memories`). Our own company has no fields: it is described in
+  `brain/admin.md`. Fill
   only fields the notes support; leave the others out (the page shows them as not recorded
   and the required ones as gaps to ask). When notes disagree, name both values and their
   dates in one entry, citing both. A note saying a field does not apply fills it with "does

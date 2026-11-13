@@ -338,6 +338,9 @@ export function entityEvidenceIndex(registry, contexts) {
 /* SCHEMA.md for one entity: the fields and required relationships of its kind, whether its brief was compiled
    under another schema (refilled, never hidden: as_of stays about evidence only), and the cited values kept. */
 export function schemaFacts(root, e, evidenceCount) {
+  // our own company is described in brain/admin.md, never asked about (saving rule C1)
+  const ours = String(lib.readAdmin(root)?.company || "").trim().toLowerCase();
+  if (ours && [e.name, ...(e.aliases || [])].some(n => String(n).trim().toLowerCase() === ours)) return { schema: { fields: [], relations_required: [], hash: null, ours: true }, schema_behind: false, previous_fields: null };
   const read = readSchema(root);
   const schema = read.schema ? { fields: fieldsFor(read.schema, e.kind, e.subtype), relations_required: requiredRelations(read.schema, e.kind).map(r => ({ type: r.type, to: r.to, about: r.about })), hash: kindHash(read.schema, e.kind, e.subtype) }
     : { fields: [], relations_required: [], hash: null, error: read.error?.message || null };
@@ -452,8 +455,10 @@ function applyCompilation(root, name, { as_of, by, brief }) {
   const author = lib.teamHandle(root, by) || (["schedule", "background"].includes(by) ? by : null);
   if (!author) throw new Error("by must identify a team member, schedule or background");
   // SCHEMA.md fields are kept beside the brief, never inside it: an older plugin reading the brief still sees its three lists.
-  const { fields = [], ...core } = brief || {};
+  const { fields: given = [], ...core } = brief || {};
   brief = core;
+  // a field's text is the value only; the citations travel in memories
+  const fields = Array.isArray(given) ? given.map(f => f && typeof f.text === "string" ? { ...f, text: f.text.replace(/\s*\\?\[\s*m_[0-9a-f]{6,12}(\s*,\s*m_[0-9a-f]{6,12})*\s*\\?\]/g, "").trim() } : f) : given;
   validateBrief(facts, brief);
   validateFields(facts, fields);
   lib.writeNames(root, registry);
@@ -518,7 +523,7 @@ function fieldsSection(facts, all, citation) {
   out.push("\n" + fields.map(f => { const v = filled.get(f.name); return `- ${md(words(f.name))[0].toUpperCase()}${md(words(f.name)).slice(1)}: ${v ? `${v.interpretation ? "Interpretation: " : ""}${md(v.text)} ${v.memories.map(citation).join(" ")}` : "not recorded"}`; }).join("\n"));
   const current = recordedRelations(facts).filter(r => r.status === "current" && r.from === facts.entity.id).map(r => r.type);
   const gaps = [...fields.filter(f => f.required && !filled.has(f.name)).map(f => ({ what: words(f.name), ask: `What is ${name}'s ${words(f.name)}?` })),
-    ...(facts.schema.relations_required || []).filter(r => !current.includes(r.type)).map(r => ({ what: `a current ${words(r.type)}`, ask: `Who does ${name} ${words(r.type)} now?` }))];
+    ...(facts.schema.relations_required || []).filter(r => !current.includes(r.type)).map(r => ({ what: `a current ${words(r.type)}`, ask: `${name} ${words(r.type)} ...?` }))];
   if (facts.schema_behind) out.push("\nSCHEMA.md changed since this brief was compiled; the fields refill at the next compile.");
   if (gaps.length) out.push(`\nGaps (required in SCHEMA.md): ${gaps.map(g => g.what).join(", ")}. Ask: ${gaps.map(g => `"${g.ask}"`).join(" ")}`);
   return out;

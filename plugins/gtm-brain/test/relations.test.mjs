@@ -111,3 +111,22 @@ test("the brief's Relationships come from the relation and customer notes: curre
   assert.match(page, /Ended:\n\n- Northwind partner of us \(ended/);
   assert.ok(lib.relationOverview(root).relations.some(r => r.type === "customer_of" && r.customer_status === "customer"));
 });
+
+test("our own company has no schema fields or gaps; a field's text keeps no memory IDs; a relationship gap reads as a sentence to finish", () => {
+  const root = brain();
+  lib.addName(root, "Demo Co", { kind: "company" });
+  const own = note(root, "Demo Co runs AI events.", undefined, { people: ["Demo Co"] });
+  assert.equal(lib.entityFacts(root, "Demo Co").schema.ours, true);
+  assert.ok(!lib.staleEntities(root).some(e => e.name === "Demo Co" && e.schema_behind));
+  const m = note(root, "Northwind's site is northwind.com.", undefined, { people: ["Northwind"] });
+  const facts = lib.entityFacts(root, "Northwind");
+  const brief = { overview: [{ text: "Northwind's site is northwind.com.", memories: [m.id] }], contexts: [{ context: "company", summary: [{ text: "Site northwind.com.", memories: [m.id] }], open_threads: [] }], relationships: [] };
+  lib.compileEntity(root, "Northwind", { as_of: facts.as_of, by: "marta-nowak", brief: { ...brief, fields: [{ field: "website", text: `northwind.com \\[${m.id}\\]`, memories: [m.id] }] } });
+  assert.equal(lib.entityFacts(root, "Northwind").previous_fields[0].text, "northwind.com");
+  const tom = note(root, "Tom Berg leads the pilot.", undefined, { people: ["Tom Berg"] });
+  const tf = lib.entityFacts(root, "Tom Berg");
+  lib.compileEntity(root, "Tom Berg", { as_of: tf.as_of, by: "marta-nowak", brief: { overview: [{ text: "Leads the pilot.", memories: [tom.id] }], contexts: [{ context: "company", summary: [{ text: "Leads the pilot.", memories: [tom.id] }], open_threads: [] }], relationships: [] } });
+  assert.match(lib.entityBrief(root, "Tom Berg").markdown, /Ask: "What is Tom Berg's role\?" "Tom Berg works at \.\.\.\?"/);
+  assert.ok(!ruleFindings(root).some(f => f.subject === "Demo Co"), "our company is never asked about");
+  assert.ok(own.id);
+});

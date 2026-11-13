@@ -75,7 +75,12 @@ says ask, ask once, everything in one question.
   shown: "Add to design-system.md: <the line>?" with Yes, add it and No, just this once. On yes,
   read the document and call `document` with `action: update`, its `ref`, and the body with the
   line added under the heading it fits (a starter's headings stay). No document fits: offer a new
-  one with the kinds of work it applies to. An instruction about saving, asking or filing goes to
+  one with the kinds of work it applies to. `design-system.md` and `voice.md` are about our own
+  company. A rule about another company's brand (a partner's or client's logo, name or colours:
+  "never put the OpenAI blossom next to the OpenAI name") goes to `partner-brands.md`, one heading
+  per company: "Add to partner-brands.md under OpenAI: <the line>?"; the first one creates it
+  (`document` with `action: create`, title "Partner brands" (the file `partner-brands.md`), applies_to graphics,
+  slides, social images, co-marketing). An instruction about saving, asking or filing goes to
   `RULES.md` instead (R2). Facts that come with it ("OpenAI is our partner") are still notes.
 - **G2** Before producing work of a kind a document covers, read that document even when the
   request seems small, and say which one you followed. When the person names a rule for this piece

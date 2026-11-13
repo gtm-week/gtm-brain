@@ -77,7 +77,7 @@ export function ruleFindings(root) {
     }
     gaps.sort((a, b) => b.n - a.n);
     for (const g of gaps.slice(0, 10)) {
-      const asks = [...g.fields.map(x => `What is ${g.e.name}'s ${words(x)}?`), ...g.rels.map(r => `Who does ${g.e.name} ${words(r)} now?`)];
+      const asks = [...g.fields.map(x => `What is ${g.e.name}'s ${words(x)}?`), ...g.rels.map(r => `${g.e.name} ${words(r)} ...?`)];
       add("SCHEMA.md", "gap", g.e.name, `${g.e.name} (${g.e.kind}${g.e.subtype ? `, ${g.e.subtype}` : ""}) has no ${[...g.fields.map(words), ...g.rels.map(r => `current ${words(r)}`)].join(", ")}, which SCHEMA.md marks required.`, [
         `Ask "${asks.join(" ")}" and remember the answer${g.rels.length ? " (a relationship with remember's relation block)" : ""}; the brief fills at the next compile`,
         `Does not apply: remember a note saying so, in the person's words`,

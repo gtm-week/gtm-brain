@@ -228,3 +228,9 @@ test("the rulebook: documents only through the document tool, a not filled one i
   assert.match(text, /"How we sound, in three words" stays empty unless the person said the three\s+words/);
   assert.match(text, /unless the person already gave it \("Northwind \(northwind\.com\)"\): then that is\s+its website, no question/);
 });
+
+test("the rulebook: another company's brand rule goes to partner-brands.md, not our design system (G1; Maciej, 2026-11-13)", () => {
+  const text = dots.rulebookText(mkdtempSync(join(tmpdir(), "gtm-brain-partner-")));
+  assert.match(text, /`design-system\.md` and `voice\.md` are about our own\s+company/);
+  assert.match(text, /goes to `partner-brands\.md`, one heading\s+per company: "Add to partner-brands\.md under OpenAI: <the line>\?"/);
+});
