@@ -16,7 +16,7 @@ editor opens it.
 | Notes (what happened, was decided, is open) | `brain/contexts/<context>/memories.jsonl` | Codex, when you say something worth keeping; never edited |
 | A context's summary and rules | `brain/contexts/<context>/context.md` | the summary: the compile run; the rules: you, through Codex |
 | People, companies, products | `brain/entities/*.md` | Codex; you may edit the Markdown by hand |
-| Where files go | `WHERE.md` | you; Codex follows it |
+| Where files go, your own rules | `RULES.md` | you; Codex follows it |
 | Your documents (strategy, tone of voice, pricing) | `<name>.md` at the top, files in a folder of the same name | you or Codex |
 | Projects (an event, a campaign, a client) | `projects/<project>/` | you or Codex |
 | Rules Codex follows in this folder | `AGENTS.md`, `CLAUDE.md` | GTM Brain; refreshed on update, never edit |
@@ -103,7 +103,7 @@ overview you see first on the dashboard and at the start of a chat.
 
 ## Files and projects
 
-`WHERE.md` decides where every file goes. Codex names the row it used; when no row fits it asks
+The "Where things go" table in `RULES.md` decides where every file goes. Codex names the row it used; when no row fits it asks
 and offers a new row. Edit the rows to change where things land; GTM Brain never overwrites them.
 Ask "why is this here?" about any file: the answer names the row, the reason, who put it there and
 when. A file that appears without one is named at the next chat start.
@@ -127,8 +127,8 @@ made there carry the project's tag, and everything stays searchable from the bra
 | To change | Do this |
 |---|---|
 | Company profile, team, tools, settings | say it in chat; Codex shows the change and applies it only when you choose APPROVE |
-| What Codex saves and asks | your own rules in `RULES.md`, one line each; Codex offers to add one when you correct a save, and yours win over the defaults |
-| Where files go | edit the rows in `WHERE.md` |
+| What Codex saves and asks | your own rules under "Our rules" in `RULES.md`, one line each; Codex offers to add one when you correct a save, and yours win over the defaults |
+| Where files go | edit the rows under "Where things go" in `RULES.md` |
 | How Codex works in a context | "change the rule of <context> to ..." |
 | A rule the work must follow (tone of voice, pricing, ICP) | write it as a document: `<name>.md` at the top, then "add <name>.md as a document" |
 | A recurring process with steps | "start the outbound workflow", or describe a new one; see `workflows/` |
@@ -160,7 +160,7 @@ in `work/manual-edits/protected/`.
 | A note saved that should not have been | "why did you add X?"; then "forget ..." |
 | A summary that looks old | its "as of" date; "update the summary now"; `work/compile.json` shows queued, running, done or failed |
 | Summaries never update | `work/hooks.log` lines `scheduled-run ... failed`; `work/runs.jsonl` has one line per compile run with its tokens; no lines at all means no run started |
-| A file in the wrong place | "why is this here?"; fix the `WHERE.md` row |
+| A file in the wrong place | "why is this here?"; fix the `RULES.md` row |
 | Codex did something you did not ask | `work/tool-usage.jsonl` lists every GTM Brain call with time and title; `git log` lists every change with who made it |
 | A question where none of the options fits | type your own answer in the box's "Or write your own response" field, then Send. The main message field below waits until the question is answered or skipped. Skip closes it, and Codex asks again in plain text. |
 

@@ -7,7 +7,7 @@ questions, files, dates. Before saving it, connect it to them. Be curious, never
 For each thing the sentence touches:
 
 1. **Look first.** Use what the chat already holds, then one read: `query` (entities, memories,
-   status), the project folder, WHERE.md. Never ask what the brain can answer.
+   status), the project folder, RULES.md. Never ask what the brain can answer.
 2. **One answer: settle it.** Use it and say so in one line ("tagged to the Berlin event: Florian
    speaks there"). A wrong guess costs more than a question, so settle only what has exactly one
    answer.
@@ -37,7 +37,7 @@ What to look for, as examples, not a full list:
 - **Open question or to-do:** whether the sentence answers one ("Tickets will be 99 EUR" answers
   "decide the ticket price"); if so, remember it as the answer to that question.
 - **Product:** whose product it is, ours or a company's.
-- **File:** look in the project's folder first; then ask for the file, where it goes (the WHERE.md
+- **File:** look in the project's folder first; then ask for the file, where it goes (the RULES.md
   row) and what it is for, together.
 - **Person or company already in the brain:** what else the brain says about them that this
   sentence changes, said in one line ("Florian was down for the slides by Friday; this moves it").

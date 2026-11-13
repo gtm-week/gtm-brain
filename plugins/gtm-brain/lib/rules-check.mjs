@@ -1,5 +1,5 @@
 // The rules check: the brain against its own rules, on demand (query object rules). Deterministic, no
-// model calls, reads only. Each finding names its rule (lib.NAME_RULES, WHERE.md), the exact person or
+// model calls, reads only. Each finding names its rule (lib.NAME_RULES, RULES.md), the exact person or
 // path, and two or three fixed choices, each carried out through an existing tool, so the fix leaves its
 // own reason behind. It never changes anything itself. (Artur, 2026-11-11: Max nobody could place, files
 // scattered without a reason.)
@@ -35,10 +35,10 @@ export function ruleFindings(root) {
   for (const m of lib.suggestMerges(names)) add("P4", m.kind, `${m.a} / ${m.b}`, `${m.a} and ${m.b} may be the same ${m.kind}; nobody has said either way.`, [
     `Same: merge_entities ${m.b} into ${m.a}`, `Different: add_name ${m.b} with not ["${m.a}"], so it is never asked again`]);
 
-  // WHERE.md: top-level folders GTM Brain does not use and no row names
+  // RULES.md: top-level folders GTM Brain does not use and no row names
   const rows = whereRows(root), rowText = rows.map(r => r.where).join(" ");
-  for (const f of strayFolders(root).filter(f => !rowText.includes(`\`${f}/`))) add("WHERE.md", "folder", `${f}/`, `${f}/ is at the top of the brain, and no WHERE.md row says what goes there.`, [
-    `Add a WHERE.md row for it (edit WHERE.md, then save with placed)`, `Move what is in it to where a row says (ask first; save with placed)`, `Adopt its Markdown as documents: say "adopt the documents in ${f}/"`]);
+  for (const f of strayFolders(root).filter(f => !rowText.includes(`\`${f}/`))) add("RULES.md", "folder", `${f}/`, `${f}/ is at the top of the brain, and no RULES.md row says what goes there.`, [
+    `Add a RULES.md row for it (edit RULES.md, then save with placed)`, `Move what is in it to where a row says (ask first; save with placed)`, `Adopt its Markdown as documents: say "adopt the documents in ${f}/"`]);
 
   // files with no recorded reason, by folder: projects/<one>/ or the top-level folder; documents and their files have one
   const docs = listDocuments(root), docPaths = new Set(docs.flatMap(d => [d.path, filesDir(d)]));
@@ -48,23 +48,23 @@ export function ruleFindings(root) {
   const groups = new Map();
   for (const p of files.filter(p => !reasoned(p))) { const parts = p.split("/"), key = parts.length === 1 ? p : parts[0] === "projects" && parts.length > 2 ? parts.slice(0, 2).join("/") + "/" : parts[0] + "/"; groups.set(key, [...(groups.get(key) || []), p]); }
   for (const [where, list] of [...groups].sort((a, b) => b[1].length - a[1].length)) add("why", "files", where, `${where}: ${list.length} file${list.length === 1 ? "" : "s"} with no recorded reason for being here (e.g. ${list.slice(0, 2).join(", ")}).`, [
-    `Record why, once for the folder: save with placed [{path: "${where.replace(/\/$/, "")}", row: <WHERE.md row>, why: "..."}]`, `Ask the person where they belong, then move or keep (save with placed)`]);
+    `Record why, once for the folder: save with placed [{path: "${where.replace(/\/$/, "")}", row: <RULES.md row>, why: "..."}]`, `Ask the person where they belong, then move or keep (save with placed)`]);
 
-  // WHERE.md naming: lowercase words joined by hyphens
+  // RULES.md naming: lowercase words joined by hyphens
   const paths = new Set(files.flatMap(p => p.split("/").map((_, i, a) => a.slice(0, i + 1).join("/"))));
   const badNames = [...paths].filter(p => BAD_NAME.test(basename(p)) && !["README.md", WHERE].includes(basename(p)) && !/^[A-Z0-9_-]+\.md$/.test(basename(p)));
   const top = badNames.filter(p => !badNames.some(q => q !== p && p.startsWith(q + "/")));   // a renamed folder fixes what is inside
-  for (const p of top.slice(0, 10)) add("WHERE.md naming", "name", p, `${p} has capitals or spaces; WHERE.md says lowercase words joined by hyphens.`, [
+  for (const p of top.slice(0, 10)) add("RULES.md naming", "name", p, `${p} has capitals or spaces; RULES.md says lowercase words joined by hyphens.`, [
     `Rename to ${p.split("/").slice(0, -1).concat(suggest(basename(p))).join("/")} (ask first; save with placed)`, `Keep the name as it is`]);
-  if (top.length > 10) add("WHERE.md naming", "name", "more", `${top.length - 10} more names with capitals or spaces.`, [`Run the check again after the first ones are fixed`]);
+  if (top.length > 10) add("RULES.md naming", "name", "more", `${top.length - 10} more names with capitals or spaces.`, [`Run the check again after the first ones are fixed`]);
   return out;
 }
 
 export function rulesReport(root) {
   const f = ruleFindings(root);
-  if (!f.length) return "Rules check: nothing to fix. Every person has a full name or was confirmed, no look-alike pair is open, and every file has a recorded reason and a WHERE.md-style name.";
+  if (!f.length) return "Rules check: nothing to fix. Every person has a full name or was confirmed, no look-alike pair is open, and every file has a recorded reason and a RULES.md-style name.";
   const count = k => f.filter(x => k.includes(x.kind)).length;
   const head = `Rules check: ${f.length} thing${f.length === 1 ? "" : "s"} to look at (${count(["person", "organization", "product"])} names, ${count(["folder", "files", "name"])} files and folders). Reads only; nothing was changed.`;
   const body = f.map((x, i) => `${i + 1}. [${x.rule}] ${x.what}\n${x.choices.map((c, j) => `   ${String.fromCharCode(97 + j)}) ${c}`).join("\n")}`).join("\n");
-  return `${head}\n${body}\nAsk the person about one at a time, choices as numbered options, the first recommended; carry out the answer through the tool named. The rules: P1-P4 in the brain's README (How we name people), the rows and naming in WHERE.md.`;
+  return `${head}\n${body}\nAsk the person about one at a time, choices as numbered options, the first recommended; carry out the answer through the tool named. The rules: P1-P4 in the brain's README (How we name people), the rows and naming in RULES.md.`;
 }

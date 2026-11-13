@@ -8,16 +8,18 @@ from GTM Brain's manual.
 
 ## What goes where
 
-[WHERE.md](WHERE.md) says where every file goes. Codex reads it at the start of every chat and
-follows it; edit its rows to change where things land. Projects (an event, a campaign, a client)
-live in `projects/`, each in one folder with everything made for it. Processes that run over
-time, with steps, are in `workflows/`.
+[RULES.md](RULES.md) is this brain's own rules, and yours to edit. Codex reads it at the start of
+every chat and follows it over its defaults:
 
-`RULES.md` holds your own rules for what Codex saves and asks ("always ask before tagging a client",
-"notes about pricing go to Our offer"). Codex follows them over its defaults, and offers to add one
-when you correct how something was saved. Edit it freely.
+- **Where things go**: a table of where every file goes; edit its rows to change where things land.
+- **Our rules**: your own rules for what Codex saves and asks ("always ask before tagging a
+  client", "notes about pricing go to Our offer"), one line each. Codex offers to add one when you
+  correct how something was saved.
 
-Ask "why is this here?" about any file or folder: Codex answers with the WHERE.md row and the
+Projects (an event, a campaign, a client) live in `projects/`, each in one folder with everything
+made for it. Processes that run over time, with steps, are in `workflows/`.
+
+Ask "why is this here?" about any file or folder: Codex answers with the RULES.md row and the
 reason it recorded when the file was kept, who put it there and when. A file that arrived without
 one is named at the start of the next chat, so nothing stays unexplained.
 

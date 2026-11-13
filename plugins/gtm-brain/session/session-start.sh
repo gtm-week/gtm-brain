@@ -160,8 +160,8 @@ node -e 'const w=await import(process.argv[1]);const l=w.runsLine(process.argv[2
 # Unedited ones are refreshed here; edited ones get the offer. Both say why: what the newer rules change.
 node -e 'const u=await import(process.argv[1]);const o=u.autoRefresh(process.argv[2],process.argv[3]);if(o)console.log(o)' "$P/lib/upgrade-files.mjs" "$root" "$P/templates" 2>/dev/null || true
 node -e 'const u=await import(process.argv[1]);u.refreshReadme(process.argv[2],process.argv[3])' "$P/lib/upgrade-files.mjs" "$root" "$P/templates" 2>/dev/null || true
-# Where things go (WHERE.md, the person's to edit) and the projects under projects/: a deliverable goes into its project.
-node -e 'const w=await import(process.argv[1]);w.ensureWhere(process.argv[2],process.argv[3]);const l=w.whereLine(process.argv[2]);if(l)console.log(l)' "$P/lib/where.mjs" "$root" "$P/templates" 2>/dev/null || true
+# Where things go (RULES.md, the person's to edit; an older WHERE.md is merged into it once) and the projects under projects/: a deliverable goes into its project.
+node -e 'const w=await import(process.argv[1]);w.ensureRules(process.argv[2],process.argv[3]);const l=w.whereLine(process.argv[2]);if(l)console.log(l)' "$P/lib/where.mjs" "$root" "$P/templates" 2>/dev/null || true
 # A summary paused by a hand edit never updates by itself: said once per set, so the person hears it in the chat.
 node -e 'const l=await import(process.argv[1]);const h=l.pausedCoversHint(process.argv[2]);if(h)console.log(h)' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
 # New files that arrived with no recorded reason (made by shell, saved by background maintenance): named once per set.

@@ -1,6 +1,7 @@
 import { host } from "./host.mjs";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { ownRules } from "./where.mjs";
 /* Connecting the dots on a note (2026-11-12, new-brain test): what the brain can settle by itself it
    settles and says in one line; what has two answers it asks, all in one question. Nothing here guesses.
    - dates: "Thursday", "tomorrow", "next week" mean nothing a week later, so a note never keeps them bare.
@@ -118,13 +119,13 @@ export function summaryCheck(summary, ids) {
   return { text: out.map(o => o.text).join(" "), sources: out.map(o => o.ids.join(" ")), problems: [...new Set(problems)] };
 }
 
-/* The saving rulebook: the shared page, then the brain's own RULES.md (written by its people; theirs win).
+/* The saving rulebook: the shared page, then the Our rules section of the brain's own RULES.md (written by its people; theirs win).
    Printed at chat start, so the rules are there before Codex's first action (2026-11-12: handed over with the
    first save's reply, it came one step late and the RULES.md offer and F2 were missed). */
 export function rulebookText(root) {
   let page = ""; try { page = readFileSync(new URL("../skills/gtm-brain-use-brain/references/saving-rules.md", import.meta.url), "utf8").trim(); } catch { return ""; }
-  let own = ""; try { own = readFileSync(join(root, "RULES.md"), "utf8").trim(); } catch {}
-  return `--- The saving rules for this chat (a refusal quotes them by number) ---\n${page}${own ? `\n\n## This brain's own rules (RULES.md, written by its people; they win over the rules above)\n\n${own}` : ""}\n---`;
+  const own = ownRules(root, new URL("../templates", import.meta.url).pathname);
+  return `--- The saving rules for this chat (a refusal quotes them by number) ---\n${page}${own ? `\n\n## This brain's own rules (Our rules in RULES.md, written by its people; they win over the rules above)\n\n${own}` : ""}\n---`;
 }
 const sentFile = root => join(root, "work", "rulebook-sent.json");
 const readSent = root => { try { return JSON.parse(readFileSync(sentFile(root), "utf8")); } catch { return {}; } };

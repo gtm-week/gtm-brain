@@ -74,7 +74,7 @@ const firstOnly = names.filter(n => n.kind === "person" && !team.has(n.name.toLo
 if (firstOnly.length) add(30, "first-name", `${firstOnly.length} ${firstOnly.length === 1 ? "person is" : "people are"} known by a first name only: ${firstOnly.slice(0, 4).map(n => n.name).join(", ")}${firstOnly.length > 4 ? ", ..." : ""}.`, "A first name alone cannot be matched to an email or a CRM record.", `Say who they are: "${firstOnly[0].name} is <Full Name>".`);
 // 6b. the brain against its own rules: names and files (the detail is query rules, on request)
 const broken = rc.ruleFindings(root).filter(f => !["P3", "P4"].includes(f.rule));   // first names and look-alikes have their own findings above
-if (broken.length) add(28, "rules", `${broken.length} file${broken.length === 1 ? "" : "s and folders"} break the brain's WHERE.md rules (${[...new Set(broken.map(f => f.subject))].slice(0, 3).join(", ")}${broken.length > 3 ? ", ..." : ""}).`, "A file nobody can explain is where trust in the brain goes first.", "Say: check the brain against its rules (each finding comes with its choices).");
+if (broken.length) add(28, "rules", `${broken.length} file${broken.length === 1 ? "" : "s and folders"} break the brain's RULES.md rules (${[...new Set(broken.map(f => f.subject))].slice(0, 3).join(", ")}${broken.length > 3 ? ", ..." : ""}).`, "A file nobody can explain is where trust in the brain goes first.", "Say: check the brain against its rules (each finding comes with its choices).");
 // 7. notes without a trace
 const recent = active.flatMap(c => lib.effectiveMemories(c.memories)).filter(m => days(m.at) <= 30 && m.kind === "note");
 const bare = recent.filter(m => !m.source.length && !m.people.length && !m.tools.length);

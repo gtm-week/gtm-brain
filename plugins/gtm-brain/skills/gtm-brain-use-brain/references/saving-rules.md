@@ -65,11 +65,11 @@ says ask, ask once, everything in one question.
 
 ## The brain's own rules
 
-- **R1** This brain's `RULES.md`, at the top of the brain folder, holds rules its people added. They
-  come after this page and win where they differ.
+- **R1** This brain's `RULES.md`, at the top of the brain folder, holds rules its people added under
+  `## Our rules`. They come after this page and win where they differ. (Its `## Where things go`
+  table is about files, and arrives with the chat start's opening lines.)
 - **R2** When the person questions how something was saved ("why did you save that here?", "that
   should have gone to Strategy", "from now on always ask before ..."), fix the note first, then offer
   once to add a rule: "Add to RULES.md: <the rule in one line>?" with Yes, add it and No, just this
-  once. On yes, append the line to `RULES.md` (create it with the heading `# Our rules` if missing),
-  then call `save`. One line per rule, in the person's words.
-
+  once. On yes, add the line at the end of the `## Our rules` section of `RULES.md`, then call
+  `save`. One line per rule, in the person's words.

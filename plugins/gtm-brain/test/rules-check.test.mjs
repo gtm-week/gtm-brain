@@ -1,4 +1,4 @@
-// The rules check on an old brain (Artur, 2026-11-11): a bare Max, a look-alike pair, a folder no WHERE.md
+// The rules check on an old brain (Artur, 2026-11-11): a bare Max, a look-alike pair, a folder no RULES.md
 // row names, files with no recorded reason, a name with capitals. Each finding names its rule, the person
 // or path and fixed choices; fixing one through the named tool makes it go away; nothing is changed by the check.
 import { test } from "node:test";
@@ -29,9 +29,9 @@ test("rules check: an old brain's Max, look-alikes, stray folder, unexplained fi
   assert.match(by("P3")[0].what, /"Max" is a person known by a first name only, in 1 note since \d{4}-/);
   assert.ok(by("P3")[0].choices.some(c => /Same as Max Kowalski: merge_entities Max into Max Kowalski/.test(c)));
   assert.ok(by("P4").some(x => /Ana Lee|Anna Lee/.test(x.subject)));
-  assert.ok(by("WHERE.md").some(x => x.subject === "assets/"));
+  assert.ok(by("RULES.md").some(x => x.subject === "assets/"));
   assert.deepEqual(by("why").map(x => x.subject).sort(), ["assets/", "projects/berlin-event/"]);
-  assert.ok(by("WHERE.md naming").some(x => x.subject === "projects/berlin-event/Speaker Photos" && /Rename to projects\/berlin-event\/speaker-photos/.test(x.choices[0])));
+  assert.ok(by("RULES.md naming").some(x => x.subject === "projects/berlin-event/Speaker Photos" && /Rename to projects\/berlin-event\/speaker-photos/.test(x.choices[0])));
   const report = rulesReport(root);
   assert.match(report, /^Rules check: \d+ things to look at .* Reads only; nothing was changed\./);
   assert.match(report, /\[P3\] "Max" is a person known by a first name only[\s\S]*a\) Give the full name/);

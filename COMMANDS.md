@@ -60,8 +60,8 @@ Tool: `load_context`. Writes: `work/loaded-contexts.json` (local).
 *"correct memory m_xxxxxx: ..."*, *"forget memory m_xxxxxx, it was wrong"*
 
 The saving rules are one numbered page, `skills/gtm-brain-use-brain/references/saving-rules.md`, printed at
-every chat start with the brain's own `RULES.md` after it (its people's rules, which win). A held note quotes
-the rule it broke. `RULES.md` sits at the top of the brain; Codex offers a line when a save is questioned.
+every chat start with the "Our rules" section of the brain's own [RULES.md](#rulesmd) after it (its people's
+rules, which win). A held note quotes the rule it broke. Codex offers a line there when a save is questioned.
 
 Appends one record to the loaded context's time series: who (your handle), when, via codex,
 kind (note, decision, question), tools used, names mentioned (normalised through `brain/entities/`;
@@ -214,15 +214,15 @@ scheduled run's compile commits its covers; setup makes the first commit; upgrad
 it refreshed. Anything you had staged yourself stays out of these commits.
 
 Files Codex makes with its own shell (a graphic, a brief, a project folder) are kept by `save` too,
-with `placed`: for each new file or folder, its path, the WHERE.md row it followed and why. Each
-becomes a `gtm-brain-why: <path>: WHERE.md row 5 (...): <why>` line in that commit, so git
+with `placed`: for each new file or folder, its path, the RULES.md row it followed and why. Each
+becomes a `gtm-brain-why: <path>: RULES.md row 5 (...): <why>` line in that commit, so git
 history is the shared log of where things went and why. *"Why is this file here?"* is `query`
 with object `why` and the path: the row, the reason, who put it there and when, or, with none
 recorded, when it arrived and that you should be asked. The chat start names new files that
 arrived with no reason (made by shell, kept by background maintenance), once per set.
 
 *"Check the brain against its rules"* is `query` with object `rules`: people known by a first name
-only (P3), look-alike names nobody confirmed (P4), top-level folders no WHERE.md row names, files
+only (P3), look-alike names nobody confirmed (P4), top-level folders no RULES.md row names, files
 with no recorded reason (grouped by folder), names with capitals or spaces. Each finding names its
 rule, the person or path, and two or three fixed choices carried out through the tools above
 (`add_name`, `merge_entities`, `save` with `placed`), so each fix leaves its own reason. It reads
@@ -386,7 +386,7 @@ Tool: `check_environment`. Writes: nothing.
 Four questions, one at a time: your full name and work email; the company, what it sells and to
 whom; teammates; the tools you use (a numbered list, pick several, CRM first). Creates `brain/admin.md`, the
 contexts Our company (`company`), Strategy, Market, Target customers (`icp`), Our offer and your
-personal context, `brain/entities/` with the team, `AGENTS.md`, `README.md`, `WHERE.md`,
+personal context, `brain/entities/` with the team, `AGENTS.md`, `README.md`, `RULES.md`,
 `strategy.md`, `workflows/`, git and the pre-commit check; then checks the tools. Handles are full
 names, lowercase, hyphenated (`maciej-konczal`).
 
@@ -404,7 +404,7 @@ as the sixth onboarding step. Completed v1 onboarding resumes only this new choi
 *"create a project for the curriculum at ~/curriculum"*, *"link this folder"*, *"unlink this project"*, *"list projects"*
 
 `/gtm-brain-project` creates `<brain-root>/projects/<project-slug>/` by default, the projects
-folder [WHERE.md](#wheremd) names. A project inside the brain is the team's: its files go in the brain's git, and only
+folder [RULES.md](#rulesmd) names. A project inside the brain is the team's: its files go in the brain's git, and only
 its two pointer files (`AGENTS.md`, `CLAUDE.md`, which name this machine's brain path) stay out, in
 `.git/info/exclude`. A folder an earlier version kept out of git whole is shared at the next chat start. It reuses the known brain and name, combines the destination and capture consent
 in one question when needed, and handles relevant existing context in the background. No
@@ -570,13 +570,17 @@ summaries. Configure capture scopes and timing in chat. A failed calendar refres
 block meeting capture or compilation. The system-scheduler entry point is
 `scripts/gtm-brain-schedule/daily-run.mjs <brain> <confirmed-handle>` under the installed plugin.
 
-## WHERE.md
+## RULES.md
 
-`WHERE.md` at the brain root is the table of where every file goes: rules at the root, brand in
+`RULES.md` at the brain root is the brain's own rules, in two sections. "Our rules" holds its people's
+rules for what Codex saves and asks, one line each; the chat start prints them after the shared saving
+rules (R1, R2). "Where things go" is the table of where every file goes: rules at the root, brand in
 `brand/`, projects in `projects/<project>/` with their deliverables inside, raw sources with their
 project or owner, approved photos and logos on their entity, scratch in `work/`. Setup writes it,
 and a brain without one gets it at the next chat start. Every chat's opening lines carry its rows
 (numbered) and the projects under `projects/` with the first line of each one's `README.md`; Codex
 files each thing where a row says, names the row, and asks before creating a folder when nothing
-fits. The person edits it freely: an edited `WHERE.md` is never overwritten, an unedited one
-follows the shipped template. `save` keeps it.
+fits. The person edits it freely: an edited `RULES.md` is never overwritten, an unedited one
+follows the shipped template. `save` keeps it. A brain from before 0.33.9 had `WHERE.md` for the table
+and a `RULES.md` with only its own lines; the next chat start merges both into one `RULES.md` (an
+unedited `WHERE.md` becomes the new template, an edited one keeps its rows) and removes `WHERE.md`.

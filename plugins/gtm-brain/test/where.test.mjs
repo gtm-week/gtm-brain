@@ -1,4 +1,4 @@
-// WHERE.md: where every file goes, one table the person reads and edits and Codex follows.
+// RULES.md: where every file goes, one table the person reads and edits and Codex follows.
 // Run: node --test plugins/gtm-brain/test/where.test.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -23,11 +23,11 @@ function brain() {
 const start = root => execFileSync("bash", [`${P}/session/session-start.sh`], { cwd: root, env, encoding: "utf8", input: JSON.stringify({ session_id: "", cwd: root }) });
 const tracked = (root, path) => execFileSync("git", ["-C", root, "ls-files", "--", path], { encoding: "utf8" }).trim() === path;
 
-test("setup writes WHERE.md, commits it, and the README points to it", () => {
+test("setup writes RULES.md, commits it, and the README points to it", () => {
   const root = brain();
-  assert.equal(readFileSync(join(root, "WHERE.md"), "utf8"), readFileSync(join(T, "WHERE.md"), "utf8"));
-  assert.ok(tracked(root, "WHERE.md"), "shared with the team");
-  assert.match(readFileSync(join(root, "README.md"), "utf8"), /\[WHERE\.md\]\(WHERE\.md\) says where every file goes/);
+  assert.equal(readFileSync(join(root, "RULES.md"), "utf8"), readFileSync(join(T, "RULES.md"), "utf8"));
+  assert.ok(tracked(root, "RULES.md"), "shared with the team");
+  assert.match(readFileSync(join(root, "README.md"), "utf8"), /\[RULES\.md\]\(RULES\.md\) is this brain.s own rules/);
 });
 
 test("every chat starts with the numbered rows and the projects; a Berlin speaker graphic has its row and its project", () => {
@@ -36,28 +36,28 @@ test("every chat starts with the numbered rows and the projects; a Berlin speake
   writeFileSync(join(root, "projects", "berlin-event-2026", "README.md"), "# GTM Tech Week Berlin, November 2026: graphics, speakers, LinkedIn\n");
   mkdirSync(join(root, "projects", "website"));
   const out = start(root);
-  assert.match(out, /WHERE\.md decides where every file goes; the person edits it\./);
+  assert.match(out, /RULES\.md decides where every file goes; the person edits it\./);
   assert.match(out, /\n  5\. A speaker or guest graphic for an event: `projects\/<event>\/speakers\/<name>\/`/);
   assert.match(out, /Projects:\n  projects\/berlin-event-2026\/ - GTM Tech Week Berlin, November 2026: graphics, speakers, LinkedIn\n  projects\/website\/ \(no README\.md line yet/);
   assert.match(out, /never create a folder at the brain root or put a deliverable in work\//);
 });
 
-test("the person's rows are what Codex is given, and an edited WHERE.md is never overwritten", () => {
+test("the person's rows are what Codex is given, and an edited RULES.md is never overwritten", () => {
   const root = brain();
-  const mine = readFileSync(join(root, "WHERE.md"), "utf8").replace("| Brand: design system, fonts, brand files | `brand/` |", "| Brand: design system, fonts, brand files | `brand/` |\n| Anything for a client | `clients/<client>/` |");
-  writeFileSync(join(root, "WHERE.md"), mine);
-  assert.equal(where.ensureWhere(root, T), false);
-  assert.equal(readFileSync(join(root, "WHERE.md"), "utf8"), mine);
+  const mine = readFileSync(join(root, "RULES.md"), "utf8").replace("| Brand: design system, fonts, brand files | `brand/` |", "| Brand: design system, fonts, brand files | `brand/` |\n| Anything for a client | `clients/<client>/` |");
+  writeFileSync(join(root, "RULES.md"), mine);
+  assert.equal(where.ensureRules(root, T), false);
+  assert.equal(readFileSync(join(root, "RULES.md"), "utf8"), mine);
   assert.deepEqual(where.whereRows(root)[2], { what: "Anything for a client", where: "`clients/<client>/`" });
   assert.match(start(root), /\n  3\. Anything for a client: `clients\/<client>\/`/);
 });
 
-test("a brain from before WHERE.md gets it at its next chat start, committed", () => {
+test("a brain from before RULES.md gets it at its next chat start, committed", () => {
   const root = brain();
-  rmSync(join(root, "WHERE.md")); execFileSync("git", ["-C", root, "commit", "-qam", "an older brain"]);
-  assert.match(start(root), /WHERE\.md decides/);
-  assert.ok(existsSync(join(root, "WHERE.md"))); assert.ok(tracked(root, "WHERE.md"));
-  assert.match(execFileSync("git", ["-C", root, "log", "-1", "--format=%s"], { encoding: "utf8" }), /^WHERE\.md: where things go/);
+  rmSync(join(root, "RULES.md")); execFileSync("git", ["-C", root, "commit", "-qam", "an older brain"]);
+  assert.match(start(root), /RULES\.md decides/);
+  assert.ok(existsSync(join(root, "RULES.md"))); assert.ok(tracked(root, "RULES.md"));
+  assert.match(execFileSync("git", ["-C", root, "log", "-1", "--format=%s"], { encoding: "utf8" }), /^RULES\.md: the brain.s rules/);
 });
 
 test("a new project goes to projects/<slug>/ by default, creating projects/ the first time", () => {
@@ -70,24 +70,39 @@ test("a new project goes to projects/<slug>/ by default, creating projects/ the 
   assert.match(start(root), /\n  projects\/berlin-event-2026\/ - Berlin event/);
 });
 
-test("an unedited WHERE.md from before the rename gets the new wording at the next chat start; an edited one keeps its own", () => {
+test("an unedited WHERE.md and an older RULES.md become one RULES.md at the next chat start, the person's lines kept", () => {
   const root = brain(), old = readFileSync(join(T, "legacy", "where", "0.33.9-outcomes.md"), "utf8");
-  writeFileSync(join(root, "WHERE.md"), old); execFileSync("git", ["-C", root, "commit", "-qam", "the earlier wording"]);
-  assert.match(start(root), /\nProjects:\n/);
-  assert.equal(readFileSync(join(root, "WHERE.md"), "utf8"), readFileSync(join(T, "WHERE.md"), "utf8"));
-  assert.match(readFileSync(join(root, "WHERE.md"), "utf8"), /\| A project: an event, a campaign, a client, a launch \| `projects\/<project>\/`/);
-  const mine = old.replace("| Brand: design system, fonts, brand files | `brand/` |", "| Brand | `brand/` and `fonts/` |");
-  writeFileSync(join(root, "WHERE.md"), mine); start(root);
-  assert.equal(readFileSync(join(root, "WHERE.md"), "utf8"), mine);
+  rmSync(join(root, "RULES.md")); writeFileSync(join(root, "WHERE.md"), old);
+  writeFileSync(join(root, "RULES.md"), "# Our rules\n\nAlways ask before tagging a client.\n");
+  execFileSync("git", ["-C", root, "add", "-A"]); execFileSync("git", ["-C", root, "commit", "-qm", "a brain from before the merge"]);
+  const out = start(root), now = readFileSync(join(root, "RULES.md"), "utf8");
+  assert.ok(!existsSync(join(root, "WHERE.md")) && !tracked(root, "WHERE.md"), "WHERE.md is gone, in git too");
+  assert.ok(now.startsWith(readFileSync(join(T, "RULES.md"), "utf8").trimEnd()), "the shipped template, since WHERE.md was never edited");
+  assert.match(now, /## Our rules\n[\s\S]*\n\nAlways ask before tagging a client\.\n$/);
+  assert.match(out, /This brain's own rules[^\n]*\n\nAlways ask before tagging a client\./, "the chat start prints the person's line");
+  assert.equal(execFileSync("git", ["-C", root, "status", "--porcelain"], { encoding: "utf8" }), "");
+  start(root); assert.equal(readFileSync(join(root, "RULES.md"), "utf8"), now, "merged once, then left alone");
 });
 
-test("a WHERE.md edited in a chat and not saved is kept by the next chat start's maintenance, as written", () => {
+test("an edited WHERE.md keeps its rows in RULES.md; a template with no own rules prints none", () => {
+  const root = brain(), old = readFileSync(join(T, "legacy", "where", "0.33.9.md"), "utf8");
+  assert.doesNotMatch(start(root), /This brain's own rules/, "the shipped intro is not a rule");
+  const mine = old.replace("| Brand: design system, fonts, brand files | `brand/` |", "| Brand | `brand/` and `fonts/` |");
+  rmSync(join(root, "RULES.md")); writeFileSync(join(root, "WHERE.md"), mine);
+  execFileSync("git", ["-C", root, "add", "-A"]); execFileSync("git", ["-C", root, "commit", "-qm", "edited rows"]);
+  start(root);
+  const now = readFileSync(join(root, "RULES.md"), "utf8");
+  assert.match(now, /^# Rules\n\n## Where things go\n/); assert.match(now, /\| Brand \| `brand\/` and `fonts\/` \|/); assert.match(now, /\n## Our rules\n/);
+  assert.equal(where.whereRows(root)[1].what, "Brand");
+  assert.ok(!existsSync(join(root, "WHERE.md")));
+});
+test("a RULES.md edited in a chat and not saved is kept by the next chat start's maintenance, as written", () => {
   const root = brain();
-  const mine = readFileSync(join(root, "WHERE.md"), "utf8").replace("| Brand: design system, fonts, brand files | `brand/` |", "| Brand: design system, fonts, brand files | `brand/` |\n| Anything for a client | `clients/<client>/` |");
-  writeFileSync(join(root, "WHERE.md"), mine);
+  const mine = readFileSync(join(root, "RULES.md"), "utf8").replace("| Brand: design system, fonts, brand files | `brand/` |", "| Brand: design system, fonts, brand files | `brand/` |\n| Anything for a client | `clients/<client>/` |");
+  writeFileSync(join(root, "RULES.md"), mine);
   start(root); execFileSync(process.execPath, [`${P}/session/session-maintenance.mjs`, root, "--run"], { env });
-  assert.equal(readFileSync(join(root, "WHERE.md"), "utf8"), mine);
-  assert.equal(execFileSync("git", ["-C", root, "status", "--porcelain", "--", "WHERE.md"], { encoding: "utf8" }), "");
+  assert.equal(readFileSync(join(root, "RULES.md"), "utf8"), mine);
+  assert.equal(execFileSync("git", ["-C", root, "status", "--porcelain", "--", "RULES.md"], { encoding: "utf8" }), "");
   assert.match(execFileSync("git", ["-C", root, "log", "--format=%s"], { encoding: "utf8" }), /kept: edited by hand outside Codex/);
 });
 

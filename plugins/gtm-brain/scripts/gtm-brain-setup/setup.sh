@@ -74,7 +74,7 @@ node -e 'const l=await import(process.argv[1]);l.ensureRulebookShim(".")' "$PLUG
 # The root README says what goes where (documents, projects, brain/); a README the person wrote stays.
 [ -f README.md ] || sed -e "s|{{COMPANY}}|$(esc "$COMPANY")|g" "$T/README.md" > README.md
 # Where things go: the table Codex follows and the person edits (lib/where.mjs).
-[ -f WHERE.md ] || cp "$T/WHERE.md" WHERE.md
+[ -f RULES.md ] || cp "$T/RULES.md" RULES.md
 # strategy.md from day one: a draft document waiting for the strategic intake (gtm-brain-strategy); a file already there is the person's.
 PLUGIN_VERSION="$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$T/../.codex-plugin/plugin.json" | head -1)"
 [ -f strategy.md ] || sed -e "s|{{COMPANY}}|$(esc "$COMPANY")|g" -e "s|{{DATE}}|$(date +%F)|g" -e "s|{{VERSION}}|$PLUGIN_VERSION|g" "$T/strategy.md" > strategy.md
@@ -98,7 +98,7 @@ OWNER_EMAIL="$(printf '%s' "$PEOPLE_JSON" | node -e 'const p=JSON.parse(require(
 [ -n "$OWNER_NAME" ] && git config user.name "$OWNER_NAME"; [ -n "$OWNER_EMAIL" ] && git config user.email "$OWNER_EMAIL"
 # Parallel branches (worktrees) merge notes as lines and keep the newer summary: .gitattributes, post-merge.
 node -e 'const l=await import(process.argv[1]);l.ensureMergeSetup(".")' "$PLUGIN/lib/brain.mjs" 2>/dev/null || true
-if git add -- brain AGENTS.md CLAUDE.md README.md WHERE.md strategy.md workflows .gitignore .gitattributes .githooks && git -c commit.gpgsign=false commit -q -m "setup: $COMPANY brain (gtm-brain v0)"; then
+if git add -- brain AGENTS.md CLAUDE.md README.md RULES.md strategy.md workflows .gitignore .gitattributes .githooks && git -c commit.gpgsign=false commit -q -m "setup: $COMPANY brain (gtm-brain v0)"; then
   echo "gtm-brain: brain created for $COMPANY  ·  committed"
 else
   echo "gtm-brain: brain created for $COMPANY  ·  written to disk, NOT committed (git is read-only here): say save"

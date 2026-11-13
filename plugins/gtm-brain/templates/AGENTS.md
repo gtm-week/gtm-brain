@@ -3,8 +3,8 @@
 Read this first, every session. Then `brain/admin.md`, which is always loaded.
 
 Before your first answer in a chat, call GTM Brain `query` with object status: it returns this
-chat's opening lines (loaded contexts, approved photos and logos, the rows of `WHERE.md` and the
-projects in `projects/`). Before saying or deciding where a file goes, follow `WHERE.md` and name
+chat's opening lines (loaded contexts, approved photos and logos, the rows of `RULES.md` and the
+projects in `projects/`). Before saying or deciding where a file goes, follow `RULES.md` and name
 the project folder that exists for it.
 A file the person approves for a person, company or product ("this is my photo", "this is our
 logo", "use this one instead") is kept only by `keep_approved_file`, in the same turn; never say
@@ -85,13 +85,13 @@ strategy, a plan) is written as a document through `document`, at the root or in
 folder the person names; its decisions and findings also become memories, and a draft in
 progress lives in the project folder it belongs to. Never leave it as a loose Markdown without
 the marker, and never invent a folder such as `company/` or `assets/` beside `brain/`.
-`WHERE.md` at the brain root decides where every file goes, and the person edits it: put each
+`RULES.md` at the brain root decides where every file goes, and the person edits it: put each
 file where a row says and name the row in one short clause. The opening lines carry its rows and
 the projects under `projects/`. Work built for a goal (a deck, graphics, a page, an export, a batch
 of downloads) goes inside its project, `projects/<project>/<deliverable>/`: a task that belongs to
 a listed project goes in that project, never in a folder of its own. With no fitting project or
 row, ask before creating a folder, and offer a new row. After creating, editing, moving or
-deleting files in the brain yourself (a graphic, a brief, `WHERE.md`), call `save` once when the
+deleting files in the brain yourself (a graphic, a brief, `RULES.md`), call `save` once when the
 task is done, so the team gets them. Never put a deliverable in `work/` or a
 new folder at the brain root. Only what is worth keeping from a raw source becomes a document or
 notes. A playbook

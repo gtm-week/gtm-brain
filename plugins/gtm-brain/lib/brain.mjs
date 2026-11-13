@@ -860,7 +860,7 @@ export const NOT_COMMITTED_YET = "written to disk, not committed yet: say save t
 export const BRAIN_PATHS = ["brain", "AGENTS.md", "CLAUDE.md", ".githooks", ".gitignore", ".gitattributes", ".agents"];
 /* Everything save keeps: the engine's paths, the root README, and the documents with their files (lib/documents.mjs). */
 /* Files too big for git (videos, recordings, renders; GitHub refuses a file over 100 MB): never committed. They
-   belong on the shared drive, linked from the brain (WHERE.md); save and the chat start name them. */
+   belong on the shared drive, linked from the brain (RULES.md); save and the chat start name them. */
 export const LARGE_FILE_MB = 25;
 export function largeUnsaved(root, limit = LARGE_FILE_MB * 1024 * 1024) {
   let out = ""; try { out = execFileSync("git", ["--no-optional-locks", "-C", root, "ls-files", "-z", "--others", "--modified", "--exclude-standard"], { encoding: "utf8", stdio: "pipe", maxBuffer: 64 << 20 }); } catch { return []; }
@@ -927,7 +927,7 @@ export function unsavedChanges(root, paths = savePathsFor(root)) {
    said while the note reads "kept and shared". origin when there is one, else the first remote. */
 export const PUSH = ["push", "-q", "-u"];
 export const pushRemote = list => { const r = String(list || "").split("\n").map(x => x.trim()).filter(Boolean); return r.includes("origin") ? "origin" : r[0] || ""; };
-export const largeNote = large => `Too big for git, not kept (over ${LARGE_FILE_MB} MB): ${large.map(f => `${f.path} (${Math.round(f.size / 1048576)} MB)`).join(", ")}. Offer to move each to the shared drive (Google Drive) and link it from its project's README.md, as WHERE.md says; delete the local copy only after the person says yes and the upload is verified. If Google Drive is not connected in this Codex, offer to connect it first (connect my tools); if they decline, the file stays on this computer only, and say once that teammates will not get it.`;
+export const largeNote = large => `Too big for git, not kept (over ${LARGE_FILE_MB} MB): ${large.map(f => `${f.path} (${Math.round(f.size / 1048576)} MB)`).join(", ")}. Offer to move each to the shared drive (Google Drive) and link it from its project's README.md, as RULES.md says; delete the local copy only after the person says yes and the upload is verified. If Google Drive is not connected in this Codex, offer to connect it first (connect my tools); if they decline, the file stays on this computer only, and say once that teammates will not get it.`;
 /* The person's save: commit what unsavedChanges lists, push when there is a remote. */
 export function save(root, message, { covers = false, trailers = [] } = {}) {
   if (!covers && existsSync(join(root, "work", "admin.proposed.md"))) return { ok: false, note: "a change to brain/admin.md is waiting for APPROVE; ask for APPROVE or a drop, then save" };

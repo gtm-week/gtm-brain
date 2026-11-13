@@ -1,4 +1,4 @@
-// Why is this here (Artur, 2026-11-11: files scattered without asking): save's placed records the WHERE.md
+// Why is this here (Artur, 2026-11-11: files scattered without asking): save's placed records the RULES.md
 // row and reason in the commit, query why reads it back, and a file that arrived without one is named
 // at the next chat start.
 import { test } from "node:test";
@@ -22,7 +22,7 @@ function brain() {
 }
 const put = (root, path) => { mkdirSync(join(root, path, ".."), { recursive: true }); writeFileSync(join(root, path), "x"); };
 
-test("save with placed keeps the WHERE.md row and reason; why answers for the file and its folder", () => {
+test("save with placed keeps the RULES.md row and reason; why answers for the file and its folder", () => {
   const root = brain(), rows = where.whereRows(root), n = rows.findIndex(r => /speaker or guest graphic/i.test(r.what)) + 1;
   assert.ok(n > 0);
   put(root, "projects/berlin-event/speakers/anna-lee/hero.png");
@@ -30,12 +30,12 @@ test("save with placed keeps the WHERE.md row and reason; why answers for the fi
   assert.deepEqual(problems, []);
   assert.ok(lib.save(root, "Berlin speaker graphic", { trailers }).ok);
   const file = where.whyHere(root, "projects/berlin-event/speakers/anna-lee/hero.png");
-  assert.match(file, new RegExp(`projects/berlin-event/speakers/anna-lee: WHERE\\.md row ${n} \\(A speaker or guest graphic for an event\\): speaker graphic for the Berlin event\\. Put there on \\d{4}-\\d\\d-\\d\\d by Artur Wala`));
-  assert.match(where.whyHere(root, "projects/berlin-event"), /anna-lee: WHERE\.md row/);
+  assert.match(file, new RegExp(`projects/berlin-event/speakers/anna-lee: RULES\\.md row ${n} \\(A speaker or guest graphic for an event\\): speaker graphic for the Berlin event\\. Put there on \\d{4}-\\d\\d-\\d\\d by Artur Wala`));
+  assert.match(where.whyHere(root, "projects/berlin-event"), /anna-lee: RULES\.md row/);
 
   // bad input is refused before anything is saved
   assert.match(where.placementTrailers(root, [{ path: "nope/x.png", row: n, why: "w" }]).problems[0], /no such file/);
-  assert.match(where.placementTrailers(root, [{ path: "projects/berlin-event", row: 99, why: "w" }]).problems[0], /WHERE\.md has no row 99/);
+  assert.match(where.placementTrailers(root, [{ path: "projects/berlin-event", row: 99, why: "w" }]).problems[0], /RULES\.md has no row 99/);
   assert.match(where.placementTrailers(root, [{ path: "../etc", why: "w" }]).problems[0], /not a path inside/);
 });
 
@@ -51,7 +51,7 @@ test("a file saved without a reason says when it arrived and to ask; a reason ca
   const { trailers } = where.placementTrailers(root, [{ path: "projects/demo/notes.md", why: "the person said: demo notes live with the demo" }]);
   const r = lib.save(root, "", { trailers });
   assert.ok(r.ok, r.note);
-  assert.match(where.whyHere(root, "projects/demo/notes.md"), /no WHERE\.md row: the person said: demo notes live with the demo/);
+  assert.match(where.whyHere(root, "projects/demo/notes.md"), /no RULES\.md row: the person said: demo notes live with the demo/);
   // save keeps every unsaved file: the draft is kept too, and still has no reason of its own
   assert.match(where.whyHere(root, "projects/demo/draft.md"), /no reason recorded\. It arrived/);
 });
