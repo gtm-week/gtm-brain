@@ -75,6 +75,8 @@ thing.
   "Save it as a draft" first, "Change something". Then `document` with `action: update`, the
   starter's `ref`, the new `body`, and the person's `by`. Approving is a separate word from the
   person ("approve the voice").
+- Only through `document`, never a shell edit of the file; status `draft` (or `approved` on the
+  person's word); the starter's content is never also saved as a note (saving rule G3).
 
 ## Files of a document
 

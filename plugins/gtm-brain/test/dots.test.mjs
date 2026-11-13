@@ -208,3 +208,23 @@ test("contexts: a project or a look-alike is never a new context (X1, X3); a sum
   assert.match(lib.summaryState(c(), false, Date.now() + 3 * 864e5), /^summary out of date: never compiled, 1 new not in it$/);
   assert.match(readFileSync(join(root, "README.md"), "utf8"), /## How contexts work[\s\S]*\*\*X1\*\* A project is not a context[\s\S]*\*\*L2\*\* Loading puts/);
 });
+
+test("the rulebook every chat starts with sends an instruction for later work to its document, not a note (G1, G2; Artur, 2026-11-13)", () => {
+  const root = mkdtempSync(join(tmpdir(), "gtm-brain-g1-"));
+  const text = dots.rulebookText(root);
+  assert.match(text, /\*\*G1\*\* An instruction about how future work must be done is not a note/);
+  assert.match(text, /"Add to design-system\.md: <the line>\?" with Yes, add it and No, just this once/);
+  assert.match(text, /\*\*G2\*\* Before producing work of a kind a document covers, read that document/);
+  assert.match(text, /\*\*R2\*\* When the person complains about finished work .* then offer G1/s);
+  assert.doesNotMatch(text, /[–—―−]/);
+});
+
+test("the rulebook: documents only through the document tool, a not filled one is offered, a website already given is not asked (G2, G3, C1; scenario run, 2026-11-13)", () => {
+  const text = dots.rulebookText(mkdtempSync(join(tmpdir(), "gtm-brain-g3-")));
+  assert.match(text, /\*\*G3\*\* A document is written only through `document`/);
+  assert.match(text, /never\s+by editing the file with the shell from a chat/);
+  assert.match(text, /Its content is never also saved as a note/);
+  assert.match(text, /shown `\[not filled\]`, do the work, then end the reply with one line/);
+  assert.match(text, /"How we sound, in three words" stays empty unless the person said the three\s+words/);
+  assert.match(text, /unless the person already gave it \("Northwind \(northwind\.com\)"\): then that is\s+its website, no question/);
+});

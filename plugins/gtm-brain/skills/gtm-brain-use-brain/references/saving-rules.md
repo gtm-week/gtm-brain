@@ -30,7 +30,8 @@ says ask, ask once, everything in one question.
   off ("Lena Dumas", "Lena Dumos") is asked: same as X? The same first name with a clearly different
   surname ("Florian Kim", "Florian Weber") is someone else: send it in `new_names`, no question.
 - **C1** A company the note plainly names is saved as a company (`companies`); a new one is asked for
-  its website once. Our own company is never asked.
+  its website once, unless the person already gave it ("Northwind (northwind.com)"): then that is
+  its website, no question. Our own company is never asked.
 
 ## Dates
 
@@ -63,6 +64,32 @@ says ask, ask once, everything in one question.
 - **X3** Never two contexts for one topic: a name like an existing or archived context ("Market
   research" and Market) is asked: use that one, or a different topic?
 
+## Instructions for later work
+
+- **G1** An instruction about how future work must be done is not a note: "remember our brand
+  guidelines", "never put the blossom next to the OpenAI name", "always sign emails with first name
+  only", "from now on our posts are in English". It goes into the document that kind of work
+  follows (the documents line at chat start: `design-system.md` for graphics, logos and slides,
+  `voice.md` for copy, emails and posts, or the document the person names), as one line in the
+  person's words, so it is read before every such piece of work (rule 11). Ask once, the line
+  shown: "Add to design-system.md: <the line>?" with Yes, add it and No, just this once. On yes,
+  read the document and call `document` with `action: update`, its `ref`, and the body with the
+  line added under the heading it fits (a starter's headings stay). No document fits: offer a new
+  one with the kinds of work it applies to. An instruction about saving, asking or filing goes to
+  `RULES.md` instead (R2). Facts that come with it ("OpenAI is our partner") are still notes.
+- **G2** Before producing work of a kind a document covers, read that document even when the
+  request seems small, and say which one you followed. When the person names a rule for this piece
+  of work that the document does not hold, do the work their way, then offer G1 once. When the
+  document for this work is shown `[not filled]`, do the work, then end the reply with one line:
+  "<document> is not filled yet: say "fill in our <name>" and I will draft it with you." Text you
+  write for the person (a post, an email, a page) uses plain hyphens, never long dashes.
+- **G3** A document is written only through `document` (`action: update` or `create`), after the
+  lines are shown and one question answered ("Save it as a draft" first, "Change something"); never
+  by editing the file with the shell from a chat. Its status is `draft`, or `approved` on the
+  person's word, nothing else. A heading nobody gave words for stays empty: never fill it with
+  likely phrases ("How we sound, in three words" stays empty unless the person said the three
+  words; their rules go under Do and Do not). Its content is never also saved as a note.
+
 ## What the brain keeps (SCHEMA.md)
 
 - **S1** A note that gives a field SCHEMA.md lists (a role, a website, an industry) states the
@@ -80,7 +107,9 @@ says ask, ask once, everything in one question.
 - **R1** This brain's `RULES.md`, at the top of the brain folder, holds rules its people added under
   `## Our rules`. They come after this page and win where they differ. (Its `## Where things go`
   table is about files, and arrives with the chat start's opening lines.)
-- **R2** When the person questions how something was saved ("why did you save that here?", "that
+- **R2** When the person complains about finished work ("I told you to...", "you used the wrong
+  logo again"), fix the work first, then offer G1 for the rule they named: it belongs in the
+  document that work follows, not in a note. When the person questions how something was saved ("why did you save that here?", "that
   should have gone to Strategy", "from now on always ask before ..."), fix the note first, then offer
   once to add a rule: "Add to RULES.md: <the rule in one line>?" with Yes, add it and No, just this
   once. On yes, add the line at the end of the `## Our rules` section of `RULES.md`, then call
