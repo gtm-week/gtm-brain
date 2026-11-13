@@ -53,7 +53,8 @@ if (wantEntity !== undefined) {
 // where it lands
 let base = "brain", project, path, copied = false, note;
 const linked = lib.readProjects(root).find(p => { try { return lib.projectPointerStatus(root, p) === "ok" && within(realpathSync(p.path), real); } catch { return false; } });
-if (within(root, real)) { path = relative(root, real); note = "already in the brain"; }
+// work/ is this computer's scratch and is not shared: a file there is landed beside its owner like one from outside.
+if (within(root, real) && !within(join(root, "work"), real)) { path = relative(root, real); note = "already in the brain"; }
 else if (linked) { base = "project"; project = linked.slug; path = relative(realpathSync(linked.path), real); note = `already in project ${linked.slug}`; }
 else {
   // Nothing lands in the brain unasked: a file from outside needs the document or the entity it belongs to.

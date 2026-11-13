@@ -64,6 +64,24 @@ const removeExclude = (rootDir, line) => {
   } catch { return false; }
 };
 
+// A project inside the brain with no git of its own is the team's: its files go in the brain's git, and only the
+// two pointer files (they name this machine's brain path) stay out, locally. A nested repository stays out whole.
+const insideBrain = (rootReal, path) => { let d; try { d = realpathSync(path); } catch { return false; } if (!d.startsWith(rootReal + "/")) return false; for (; d !== rootReal; d = dirname(d)) if (existsSync(join(d, ".git"))) return false; return true; };
+const pointerLines = (rootDir, path) => ["AGENTS.md", "CLAUDE.md"].map(f => excludeLine(rootDir, path) + f);
+const relPath = (rootDir, path) => relative(realpathSync(rootDir), realpathSync(path));
+
+// A project folder an earlier version kept out of git whole: shared now, its pointer still local (each chat start).
+if (opt.share) {
+  const rootReal = realpathSync(root), shared = [];
+  const next = projects.map(p => {
+    if (!p.excluded || !insideBrain(rootReal, p.path) || p.exclusion !== excludeLine(root, p.path)) return p;
+    removeExclude(root, p.exclusion); const added = pointerLines(root, p.path).filter(l => addExclude(root, l));
+    shared.push(relPath(root, p.path)); return { ...p, excluded: added.length > 0, exclusion: added.length ? added.join("\n") : null };
+  });
+  if (shared.length) { lib.writeProjects(root, next); lib.commit(root, shared, `project: ${shared.join(", ")} shared with the team`); console.log(`shared with the team: ${shared.join(", ")}`); }
+  process.exit(0);
+}
+
 if (opt.link) {
   if (!isAbsolute(String(opt.link))) refuse("give an absolute path");
   const path = resolve(String(opt.link));
@@ -112,11 +130,13 @@ if (opt.link) {
   const by = opt.by ? lib.teamHandle(root, String(opt.by)) : null; if (opt.by && !by) refuse(`"${opt.by}" is not in admin.md team`);
   // Exclusive creation also refuses a folder that appeared after validation. Existing-folder
   // linking keeps its original behavior; new projects require an existing parent directory.
+  // A new project under the brain's projects/ (RULES.md's outcomes) may be the first one there.
+  if (opt.create && resolve(dirname(path)) === resolve(root, "projects")) mkdirSync(dirname(path), { recursive: true });
   try { mkdirSync(path, { recursive: !opt.create }); } catch (e) { refuse(`${path}: ${e.message}`); }
   // Codex reads AGENTS.md from the nearest git root down to cwd: a sub-folder inherits the brain's rulebook only
   // when no .git sits between it and the brain. A nested repository gets the rulebook line like an outside folder.
   const contained = realpathSync(path).startsWith(rootReal + "/");
-  const inside = (() => { let d = realpathSync(path); if (!contained) return false; for (; d !== rootReal; d = dirname(d)) if (existsSync(join(d, ".git"))) return false; return true; })();
+  const inside = contained && insideBrain(rootReal, path);
   // Only now, after every validation, is the stale pointer touched: every refusal above leaves it exactly
   // as it was. If the write that replaces it still fails, the previous file text goes back verbatim.
   let repaired = false, previousText = null;
@@ -127,15 +147,18 @@ if (opt.link) {
   }
   try { lib.writePointer(path, { brain: root, slug, title, company: admin.company || basename(root), inside }); }
   catch (e) { if (repaired) { try { writeFileSync(join(path, "AGENTS.md"), previousText ?? ""); } catch {} } refuse(`${path}: ${e.message}`); }
-  const exclusion = contained ? excludeLine(root, path) : null;
-  const excluded = contained && addExclude(root, exclusion);
-  lib.writeProjects(root, [...projects, { slug, title, path, contexts, linkedAt: new Date().toISOString(), by, excluded: !!excluded, exclusion: excluded ? exclusion : null }]);
+  // RULES.md: a project has a README.md whose first line says what it is; every chat start lists that line.
+  if (opt.create && !existsSync(join(path, "README.md"))) writeFileSync(join(path, "README.md"), `# ${title}\n`);
+  const added = (!contained ? [] : inside ? pointerLines(root, path) : [excludeLine(root, path)]).filter(l => addExclude(root, l));
+  const excluded = contained && !inside && added.length > 0;
+  lib.writeProjects(root, [...projects, { slug, title, path, contexts, linkedAt: new Date().toISOString(), by, excluded: added.length > 0, exclusion: added.length ? added.join("\n") : null }]);
+  if (inside) lib.commit(root, [relPath(root, path)], `project: ${opt.create ? "created" : "linked"} ${slug}`);
   lib.writeLoaded(root, contexts, slug);
   // The brain's own skills show in this project too: Codex scans each project's .agents/skills.
   const skillLinks = us.reconcileProjectSkills(root, slug);
   lib.logActivity(root, "project", `${opt.create ? "created" : "linked"} ${slug} at ${path}`);
   if (opt.create) console.log(`Created ${title} at ${path}. Work here uses ${admin.company || basename(root)}'s shared company knowledge.`);
-  else console.log(`linked ${slug} at ${path} · loaded: ${contexts.join(", ") || "nothing yet"}${inside ? " · inside the brain (its rules are inherited)" : ""}${excluded ? " · excluded from the brain's git on this machine (a personal path)" : ""}${repaired ? ` · replaced a pointer to a brain that was gone (${existing.brain})` : ""}${skillLinks.linked.length ? ` · skills linked: ${skillLinks.linked.join(", ")}` : ""}`);
+  else console.log(`linked ${slug} at ${path} · loaded: ${contexts.join(", ") || "nothing yet"}${inside ? " · inside the brain (its rules are inherited; its files are shared with the team, its pointer stays on this machine)" : ""}${excluded ? " · excluded from the brain's git on this machine (a personal path)" : ""}${repaired ? ` · replaced a pointer to a brain that was gone (${existing.brain})` : ""}${skillLinks.linked.length ? ` · skills linked: ${skillLinks.linked.join(", ")}` : ""}`);
   // A code repo's AGENTS.md is usually tracked: the block shows in its git status and, once committed,
   // in every clone, branch and worktree, with this machine's brain path in it. The person decides.
   if (!inside) { try { execFileSync("git", ["-C", path, "rev-parse", "--show-toplevel"], { stdio: "ignore" }); console.log(`Git: the link is a block at the end of ${join(path, "AGENTS.md")}, in this git repository. Commit it and every worktree and clone of this repository uses the brain (it names this machine's brain path); leave it uncommitted and only this checkout does. The skill links under .agents/skills are kept out of this repository's git on this machine.`); } catch {} }
@@ -154,7 +177,7 @@ if (opt.unlink) {
   let elsewhere = "";
   if (!ptr || (same(ptr.brain, root) && ptr.slug === slug)) {
     lib.removePointer(p.path);
-    if (p.excluded) { try { removeExclude(root, p.exclusion || legacyExcludeLine(root, p.path)); } catch {} }
+    if (p.excluded) { for (const line of (p.exclusion || legacyExcludeLine(root, p.path)).split("\n")) { try { removeExclude(root, line); } catch {} } }
   } else {
     elsewhere = ` · pointer at ${p.path} now belongs to ${ptr.brain}; left in place`;
   }
@@ -168,7 +191,7 @@ if (opt.list) {
   const rows = projects.map(p => { const loaded = lib.readLoaded(root, p.slug); const last = lib.listContexts(root).flatMap(c => lib.effectiveMemories(c.memories)).filter(m => m.tags.includes(`project:${p.slug}`)).map(m => m.at).sort().pop() || null; return { ...p, loaded, lastNote: last, pointer: lib.projectPointerStatus(root, p) === "ok", pointerStatus: lib.projectPointerStatus(root, p) }; });
   if (opt.available) {
     const available = await listCodexProjects();
-    console.log(JSON.stringify({ projects: rows, codex: available, guidance: "Codex projects are candidates, not capture consent. Ask which existing projects to follow with native checkboxes. Verify each selected folder and link only after submission. An empty or unavailable catalog does not establish that the person has no projects; offer to name a missing folder. Stay in the onboarding chat." }, null, 1));
+    console.log(JSON.stringify({ projects: rows, codex: available, guidance: "Codex projects are candidates, not capture consent. Ask which existing projects to follow, listing them by number; the person may pick several. Verify each selected folder and link only after submission. An empty or unavailable catalog does not establish that the person has no projects; offer to name a missing folder. Stay in the onboarding chat." }, null, 1));
     process.exit(0);
   }
   if (opt.json) { console.log(JSON.stringify({ projects: rows }, null, 1)); process.exit(0); }

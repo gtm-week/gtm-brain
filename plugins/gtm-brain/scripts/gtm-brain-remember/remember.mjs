@@ -20,11 +20,19 @@
 // batched is the work around them: one pass over the names, one dashboard render, one kick of the
 // background summary run, instead of one of each per note. An entry whose name looks like someone
 // already known holds back only itself; the rest are written and the report names it by position.
-import { existsSync, readFileSync } from "node:fs";
-import { prepareAsset, assetSummary } from '../../lib/assets.mjs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { prepareAsset, assetSummary, assetRows, currentApproved } from '../../lib/assets.mjs';
+import { meetingOverview } from '../../lib/meetings.mjs';
 import { join } from "node:path";
-import { isChatSource } from "../../lib/host.mjs";
+import { isChatSource, host } from "../../lib/host.mjs";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
+const dots = await import(new URL("../../lib/dots.mjs", import.meta.url));
+// One-word names held under P3, so a later new_names for the same word is the person's answer, not a guess.
+const ASKED_DAYS = 7, askedFile = () => join(root, "work", "asked-names.json"), fold = n => String(n).trim().toLowerCase();
+const readAsked = () => { try { return JSON.parse(readFileSync(askedFile(), "utf8")); } catch { return {}; } };
+const wasAsked = (name, days = ASKED_DAYS) => { const at = readAsked()[fold(name)]; return !!at && Date.now() - Date.parse(at) < days * 86400000; };
+const foldName = fold;
+const noteAsked = names => { if (!names.length) return; const m = readAsked(); for (const n of names) m[fold(n)] = new Date().toISOString(); try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(askedFile(), JSON.stringify(m, null, 2) + "\n"); } catch {} };
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
 const opt = { source: [], action: [] };
 for (let i = 0; i < args.length; i++) if (args[i].startsWith("--")) { const k = args[i].slice(2), v = args[i + 1]; if (k === "source" || k === "action") opt[k].push(v); else opt[k] = v; i++; }
@@ -47,7 +55,7 @@ const project = opt.project || null;
 if (project) { const known = lib.readProjects(root).map(p => p.slug); if (!known.includes(project)) die(`no project ${project}; projects: ${known.join(", ") || "none"}`, 2); }
 const loaded = lib.readLoaded(root, project);
 // The chat this note came from is a source too: codex:<thread id> or claude:<session id>, from
-// work/session.json (the session hook writes it with its host). A separate run (GTM_BRAIN_RUN: the
+// work/session.json (the chat start writes it with its host). A separate run (GTM_BRAIN_RUN: the
 // background summary run, a dashboard job, a scheduled run) is nobody's conversation, so it attaches nothing.
 const session = process.env.GTM_BRAIN_RUN ? null : lib.readSession(root, project);
 const chat = session?.session_id || null, chatKind = session?.host || "codex";
@@ -57,13 +65,35 @@ if (!authors.length) die("need --by <person>");
 // numbering only where it helps: one note reads exactly as it always did
 const batched = entries.length > 1;
 if (entries.some(e => e?.customer) && entries.some(e => e?.customer_coverage)) die("Record customer coverage in a separate call after checking which customer entries were kept or held.");
-const kept = [], held = [], failed = [], lines = [];
+const kept = [], held = [], failed = [], lines = [], asks = [];
+const esc = t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const personText = chat && !process.env.GTM_BRAIN_RUN ? (host().lastPersonText?.(chat) || "") : "";
+// where the one question goes: Codex's own question box when the person turned it on, else plain chat text
+const askIn = host().nativeQuestions?.() ? "in Codex's question box (request_user_input), numbered parts as its options" : "in Codex's question box (request_user_input) when that tool is available in this chat (Plan mode, or a Codex where it is on by default), otherwise as plain chat text with numbered parts, then end the turn";
+const waitingForReply = !!personText && wasAsked(`reply:${personText}`, 1 / 24);   // read once, before this call holds anything
+const FORGET = /\b(forget|scratch|withdraw|never ?mind|disregard|ignore that|delete that|remove that|drop that|undo that)\b/i;
+// the saving rules ride along once per chat, on whichever reply comes first (saving-rules.md)
+let rulesText; const rules = () => rulesText ??= (process.env.GTM_BRAIN_RUN ? "" : dots.rulebookOnce(root, chat));
 const at = n => batched ? `#${n} ` : "";
 // every entry is checked before the first one is written: a bad entry in the middle must not leave the ones before it kept and unreported
 const ctxOf = e => e.context || opt.context || (loaded.length === 1 ? loaded[0] : null);
 if (entries.some(e => e?.meeting_coverage) && entries.some(e => e?.meeting || e?.meeting_id)) die("Record meeting coverage in a separate call after checking kept, held and failed entries.");
 const preparedAssets = new Map(), changedAssets = new Set();
 const sourceOf = e => lib.parseSources(e.sources);
+// A new approved file for an entity and role replaces the current one, wherever that attachment lives: the
+// person said "use this one" and the old file must not keep winning (Artur, 2026-11-10). Exactly one current
+// approved file is replaced; with two, the person picks (the opening lines say so).
+const replacing = new Map();
+{
+  let rows = null;
+  entries.forEach((e, i) => {
+    if (!e?.asset || e.asset.status !== "approved" || e.supersedes || e.retracts) return;
+    rows ??= assetRows(root);
+    const now = currentApproved(root, e.asset.entity, e.asset.role, rows);
+    if (now.length !== 1) return;
+    e.supersedes = now[0].id; e.context = now[0].context; replacing.set(i, now[0]);
+  });
+}
 const problems = entries.map((e, i) => {
   e = e || {}; const n = i + 1;
   if (e.kind === "action") return `${at(n)}"action" is no longer a kind: record what was done as a note (say what was sent or moved in the text).`;
@@ -104,6 +134,13 @@ const withChat = source => chat && !source.some(isChatSource) ? [...source, { ki
 if (problems.length) die(`nothing remembered: ${problems.join("; ")}. Fix these and call again with all the entries.`);
 for (let i = 0; i < entries.length; i++) {
   const e = entries[i] || {}, n = i + 1;
+  // a held question needs the person's reply: while their last message is still the one the question was
+  // held on, a resend is the model answering for them (new-brain rerun, 2026-11-12: "Thursday" sent back as the
+  // 19th with no reply). Only when the chat can be read; an answer in the same message passes.
+  if (waitingForReply) { held.push({ n, why: "the person has not answered the question yet (their last message is the one this was held on): ask it and wait for their reply; never pick the answer yourself (Q3)", mentions: [], ask: true }); continue; }
+  // "forget that Lena runs the workshop" withdraws the note; a supersedes with "Lena does not run the workshop"
+  // puts a claim in the brain the person never made (scenario run, 2026-11-12)
+  if (e.supersedes && !e.retracts && FORGET.test(personText)) { held.push({ n, why: `the person asked to forget it, not to correct it: send retracts: ${e.supersedes} (not supersedes), with content saying what was withdrawn and why in their words, never the opposite claim (F1)`, mentions: [], withdraw: true }); continue; }
   const ctx = ctxOf(e);
 
   const companies = list(e.companies);
@@ -112,13 +149,47 @@ for (let i = 0; i < entries.length; i++) {
     try { customerName = lib.customerIdentity(root, e.customer); }
     catch (err) { held.push({ n, why: err.message, mentions: [e.customer.entity] }); continue; }
   }
-  const mapped = name => e.customer && name === e.customer.entity ? customerName : name;
+  // Names as the person typed them: when they wrote only "Florian" and the model sent the known "Florian
+  // Weber", the note keeps "Florian" taken by rule P2, so "who is Florian, and why" stays honest.
+  const typed = name => {
+    if (!personText || !/\s/.test(name) || new RegExp(`\\b${esc(name)}\\b`, "i").test(personText)) return name;
+    const first = name.split(/\s+/)[0], known = lib.readNames(root);
+    return lib.exactName(known, name) === name && new RegExp(`\\b${esc(first)}\\b`).test(personText) && lib.inferredName(known, first) === name ? first : name;
+  };
+  const mapped = name => e.customer && name === e.customer.entity ? customerName : typed(name);
+  // Codex picked one of several people with that first name although the person never wrote the full name
+  // or the surname ("lorian called me about the venue" saved as Florian Kim; Florian Weber is known too; new-brain, 2026-11-12)
+  const picked = !personText ? [] : list(e.people).filter(name => {
+    const parts = String(name).trim().split(/\s+/); if (parts.length < 2) return false;
+    const said = new RegExp(`\\b${esc(name)}\\b|\\b${esc(parts[parts.length - 1])}\\b`, "i"); if (said.test(personText)) return false;
+    return lib.readNames(root).filter(x => x.kind === "person" && x.name.split(/\s+/)[0].toLowerCase() === parts[0].toLowerCase()).length > 1 && !wasAsked(`pick:${name}`, 1 / 24);   // asked within the hour: the reply ("2", "Kim") is the answer
+  });
+  if (picked.length) {
+    const first = picked[0].split(/\s+/)[0], all = lib.readNames(root).filter(x => x.kind === "person" && x.name.split(/\s+/)[0].toLowerCase() === first.toLowerCase()).map(x => x.name);
+    noteAsked([`reply:${personText}`, ...picked.map(p => `pick:${p}`)]);
+    held.push({ n, why: `the person did not write which ${first}: ${all.join(" or ")} (W1, P2: a first name with several known people is asked, never taken from the chat so far)`, mentions: [], ask: true }); continue;
+  }
   const mappedCompanies = companies.map(mapped);
-  const { people, added, similar, inferred } = lib.normalisePeople(root, [...list(e.people).map(mapped), ...(e.meeting?.participants || []).map(p => p.name), ...mappedCompanies, ...(customerName ? [customerName] : []), ...(preparedAssets.has(i) ? [preparedAssets.get(i).entity] : [])], { confirmedNew: list(e.new_names).map(mapped), companies: mappedCompanies });
-  if (similar.length) {
-    held.push({ n, why: similar.map(s => `"${s.mention}" may be ${s.matches.map(x => `${x.name}${x.kind !== "person" ? ` (${x.kind})` : ""}`).join(" or ")}`).join("; "), mentions: similar.map(s => s.mention) });
+  // P3: a one-word name in new_names counts only after it was held and asked about ("Max who?"); listing it
+  // up front skips the question (2026-11-12, Codex sent new_names ["Max"] on the first try).
+  const confirmed = list(e.new_names).map(mapped).filter(name => /\s/.test(String(name).trim()) || mappedCompanies.includes(name) || wasAsked(name));
+  const { people, added, similar, unnamed, inferred, mentions } = lib.normalisePeople(root, [...list(e.people).map(mapped), ...(e.meeting?.participants || []).map(p => p.name), ...mappedCompanies, ...(customerName ? [customerName] : []), ...(preparedAssets.has(i) ? [preparedAssets.get(i).entity] : [])], { confirmedNew: confirmed, companies: mappedCompanies, trusted: [...(customerName ? [customerName] : []), ...(preparedAssets.has(i) ? [preparedAssets.get(i).entity] : [])] });
+  // a bare "Thursday" means nothing next week: the note carries the date, or the person is asked which
+  const dated = e.retracts ? [] : dots.relativeDates(e.content), sourced = !!e.meeting || lib.parseSources(e.sources).some(s => !isChatSource(s));
+  if (similar.length || unnamed.length || dated.length) {
+    noteAsked(unnamed);
+    if (personText && (similar.length || unnamed.length || dated.some(d => d.ask))) noteAsked([`reply:${personText}`]);
+    held.push({ n, why: [...similar.map(s => `"${s.mention}" looks like ${s.matches.map(x => `${x.name}${x.kind !== "person" ? ` (${x.kind})` : ""}`).join(" or ")} (P4)`), ...unnamed.map(u => `"${u}" is one word and nobody known has it (rule P3: a first name alone is never a new person)`), ...(dated.length ? [dots.datesHold(dated, { sourced })] : [])].join("; "), mentions: [...similar.map(s => s.mention), ...unnamed], unnamed, ask: similar.length + unnamed.length > 0 || dated.some(d => d.ask) });
     continue;
   }
+  // a note about known people whose notes all sit in one project belongs there too; several: ask
+  // a bare tag that is a linked project's slug ("berlin-event-2026") is that project (new-brain rerun, 2026-11-12)
+  const slugs = lib.readProjects(root).map(p => p.slug);
+  e.tags = list(e.tags).map(t => slugs.includes(t) ? `project:${t}` : t);
+  const tagged = project || list(e.tags).some(t => t.startsWith("project:"));
+  const known = people.filter(p => !added.includes(p) && lib.readNames(root).find(x => x.name === p)?.kind === "person");
+  const linked = lib.readProjects(root).map(p => p.slug);
+  const where = tagged || !known.length || !linked.length ? { one: null, several: [] } : dots.projectOfPeople(lib.listContexts(root).flatMap(c => lib.effectiveMemories(lib.readMemories(root, c.slug))), known, linked);
   if (e.customer) {
     const entity = lib.resolveEntity(lib.readNames(root), customerName);
     const refs = list => JSON.stringify(list.filter(s => !isChatSource(s)).map(s => [s.kind, s.ref]).sort());
@@ -133,10 +204,10 @@ for (let i = 0; i < entries.length; i++) {
     ({ rec, warnings, alreadyRecorded } = lib.appendMemory(root, ctx, {
       ...lib.meetingMetadata(e),
       asset: preparedAssets.get(i),
-      authors, via: e.via || opt.via || "codex", kind: e.kind || "note", tools: list(e.tools), people, content: e.content,
+      authors, via: e.via || opt.via || "codex", kind: e.kind || "note", tools: list(e.tools), people, mentions, content: e.content,
       source: withChat(lib.parseSources(e.sources)),
       actions: list(e.actions).map(a => { const [tool, action, ...ref] = a.split(":"); return ref.length ? { tool, action, ref: ref.join(":") } : { tool, action }; }),
-      supersedes: e.supersedes || null, retracts: e.retracts || null, tags: [...new Set([...list(e.tags), ...(project ? [`project:${project}`] : [])])],
+      supersedes: e.supersedes || null, retracts: e.retracts || null, tags: [...new Set([...list(e.tags), ...(project ? [`project:${project}`] : []), ...(where.one ? [`project:${where.one}`] : [])])],
       ...(e.customer ? { customer: { ...e.customer, entity: customerName } } : {}),
       ...(e.customer_coverage ? { customer_coverage: e.customer_coverage } : {}),
     }));
@@ -146,6 +217,7 @@ for (let i = 0; i < entries.length; i++) {
 
   // The person sees this line through the model: the note itself, so they know what landed (ALL-209)
   const said = String(rec.content).replace(/\s+/g, " ").trim(), shown = said.length > 240 ? said.slice(0, 237) + "..." : said;
+  if (replacing.has(i)) lines.push(`${at(n)}replaced the approved ${replacing.get(i).role} of ${replacing.get(i).entity} (${replacing.get(i).label}, ${replacing.get(i).id}): every chat now uses the new file`);
   lines.push(`${at(n)}remembered ${rec.id} in ${ctx} · ${rec.kind} · ${rec.authors.join(", ")}${rec.people.length ? " · people: " + rec.people.join(", ") : ""} · "${shown}"`);
   if (rec.asset) lines.push(assetSummary(root, rec).trim());
   for (const w of warnings) lines.push(`${at(n)}warning: ${w}`);
@@ -154,9 +226,28 @@ for (let i = 0; i < entries.length; i++) {
     const kind = names.find(x => x.name === a)?.kind || "person";
     lines.push(`${at(n)}new ${kind} in entities/: ${a}.${kind === "person" ? " If it is not a person, set its kind with add_name (organization, product; company/team are organization subtypes)." : ""}`);
   }
-  for (const inf of inferred) lines.push(`${at(n)}took "${inf.mention}" as ${inf.name} (first name of one known entity). If it is someone else, say so: remember again with new_names ["${inf.mention}"].`);
+  if (where.one) lines.push(`${at(n)}tagged project:${where.one}: ${known.join(", ")}'s notes are all in that project. Say so in your reply; if this note is not about it, remember a correction.`);
+  if (where.several.length) asks.push(`which project is "${shown.slice(0, 60)}" about: ${where.several.join(" or ")}, or none? (then remember a correction with the project tag)`);
+  // every company in the note with no website is asked once, however it was added (add_name first or here);
+  // our own company and one already asked ("don't know") are not asked again
+  const own = foldName(lib.readAdmin(root)?.company || "");
+  for (const a of rec.people) { const ent = names.find(x => x.name === a); if (ent && ent.kind === "organization" && foldName(a) !== own && !dots.hasWebsite(ent) && !wasAsked(`website:${a}`, Infinity)) { noteAsked([`website:${a}`]); asks.push(`${a}'s website, so the brain knows which ${a} this is ("don't know" is a fine answer; with a website: add_name ${a} with references [{kind: "website", ref: the URL}], then offer a short look-up)`); } }
+  // facts for Codex to judge (connect-dots.md): what this note may answer, the meetings around it, what changed
+  // one sentence from the person, not a batch of meeting notes or a background run: those would be noise
+  const curious = !batched && !e.meeting && !process.env.GTM_BRAIN_RUN;
+  const everything = curious ? lib.listContexts(root).flatMap(c => lib.effectiveMemories(lib.readMemories(root, c.slug))) : [];
+  const open = dots.openQuestions(everything, rec);
+  if (open.length) lines.push(`${at(n)}open questions this note may answer: ${open.map(q => `"${q.content.replace(/\s+/g, " ").slice(0, 120)}" (${q.id}, in ${q.context})`).join("; ")}. If it answers one, remember the answer in that question's context with retracts: its id and kind decision, and say so in one line; if not, say nothing about it.`);
+  const knownIds = rec.people.map(p => names.find(x => x.name === p)).filter(x => x && !added.includes(x.name)).map(x => x.id);
+  if (curious && knownIds.length) { let meets = []; try { meets = dots.nearbyMeetings(meetingOverview(root, { registry: names }).meetings, knownIds); } catch {}
+    if (meets.length) lines.push(`${at(n)}meetings around now with these people: ${meets.map(m => `"${m.title}" ${String(m.occurred_at || m.scheduled_at).slice(0, 10)} (${m.id})`).join("; ")}. If this note is about one, remember it with meeting_id: that id; otherwise ignore.`); }
+  for (const p of curious ? rec.people.filter(p => !added.includes(p) && names.find(x => x.name === p)?.kind === "person") : []) {
+    const before = dots.lastNotesAbout(everything, p, rec);
+    if (before.length) lines.push(`${at(n)}the brain last said about ${p}: ${before.map(m => `"${m.content.replace(/\s+/g, " ").slice(0, 100)}" (${m.at.slice(0, 10)})`).join("; ")}. If this note changes one of these, say what changed in one line.`);
+  }
+  for (const inf of inferred) lines.push(`${at(n)}took "${inf.mention}" as ${inf.name} (rule P2: the one known person with that first name). If it is someone else, say so: remember again with new_names ["${inf.mention}"].`);
   const missed = lib.candidateEntities(e.content, people, names);
-  if (missed.length) lines.push(`${at(n)}names in this note not yet registered as entities: ${missed.map(x => `"${x}"`).join(", ")}. For each that is a person, organization or product, call add_name with its kind now (company and team are organization subtypes; no need to ask when it is plain from the note); the note counts for it from then on. Skip the rest.`);
+  if (missed.length) lines.push(`${at(n)}words in this note not linked to anything in the brain: ${missed.map(x => `"${x}"`).join(", ")}. Decide what each is, by connect-dots.md: a person, company or product the note is about gets add_name with its kind (company and team are organization subtypes; ask only when it is not plain); a place, event, project or plain word gets nothing.`);
   // The last step outcome closes onboarding in the same commit: no separate marker to forget.
   const closed = /^Onboarding step [1-6][ :]/.test(rec.content) ? lib.closeOnboardingFromOutcomes(root, rec.authors) : null;
   const closedIn = closed && lib.readOnboarding(root).context;
@@ -167,16 +258,24 @@ for (let i = 0; i < entries.length; i++) {
   kept.push({ n, id: rec.id, ctx });
 }
 
+/* what the brain cannot settle by itself, for one question with numbered parts */
 /* the look-alike names, in one place, so only the entries that need an answer are re-sent */
-const holdReport = () => `${batched ? `not kept (${held.length} of ${entries.length})` : "not remembered yet"}: ${held.map(h => `${at(h.n)}${h.why}`).join(batched ? "\n" : "; ")}. Ask the person in one line ("same as X?"). Yes: add_name with that name and aliases [the spelling used here], then remember ${batched ? "the held-back entries" : "again"}. No: remember again with new_names [${held.flatMap(h => h.mentions).map(m => `"${m}"`).join(", ")}]. Never merge on a guess.`;
+const holdReport = () => { const loose = held.flatMap(h => h.unnamed || []), alike = held.flatMap(h => h.mentions.filter(m => !(h.unnamed || []).includes(m)));
+  const decide = [
+    alike.length ? `${alike.map(m => `"${m}"`).join(", ")}: decide by P4. One or two letters off a known name: ask "same as X?" (yes: add_name with aliases [this spelling]; no: new_names). A clearly different surname: someone else, send it in new_names without asking` : "",
+    loose.length ? `${loose.map(m => `"${m}"`).join(", ")}: decide by P3. A company, product or team the note plainly names goes in companies (or new_names with add_name for its kind); a person: ask for the full name ("${loose[0]} who?")` : "",
+  ].filter(Boolean);
+  return `${batched ? `not kept (${held.length} of ${entries.length})` : "not remembered yet"}: ${held.map(h => `${at(h.n)}${h.why}`).join(batched ? "\n" : "; ")}.${decide.length ? ` ${decide.join(". ")}.` : ""} ${held.some(h => h.ask) || alike.length || loose.length ? `Whatever is still unclear: one question (Q2), ${askIn} (Q1), and wait for the reply (Q3).` : "No question needed: change the note as the rule says and send it again."} Then remember ${batched ? "the held-back entries" : "again"}.${rules()}`; };
 
-if (!kept.length) { console.error(held.length ? holdReport() : lines.join("\n")); process.exit(2); }
+if (!kept.length) { console.error(held.length ? holdReport() : lines.join("\n") + rules()); process.exit(2); }
 
 if (batched) console.log(`kept ${kept.length} of ${entries.length}: ${kept.map(k => `${k.id} in ${k.ctx}`).join(", ")}${failed.length ? `; not kept: ${failed.map(f => "#" + f.n).join(", ")} (see below; call again with only those)` : ""}`);
 for (const l of lines) console.log(l);
 if (held.length) console.log(holdReport());
+if (asks.length) console.log(`Ask the person once, ${askIn}, after quoting the note${held.some(h => h.ask) ? ", in the same question as the held entries" : ""}, one numbered part each: ${asks.map((a, k) => `${k + 1}) ${a}`).join(" ")}. Never more than this one question.`);
 
 // once for the whole call, not once per memory
 // The shared refresh path starts compilation for saved changes.
 if (!process.env.GTM_BRAIN_NO_COMPILE) console.log("the summaries update by themselves after each saved change; do not compile in this chat and do not offer to.");
+if (!held.length && rules()) console.log(rules().trim());
 lib.rerender(root);

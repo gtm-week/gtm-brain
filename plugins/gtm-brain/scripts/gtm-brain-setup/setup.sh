@@ -28,6 +28,8 @@ for (let dir = process.cwd(); ; dir = dirname(dir)) {
   if (dirname(dir) === dir) break;
 }
 NODE
+broad="$(node -e 'const l=await import(process.argv[1]);console.log(l.broadFolder("."))' "$PLUGIN/lib/brain.mjs")"
+[ -z "$broad" ] || { echo "gtm-brain: this is $broad, too broad for a brain: every chat here would leave its downloads and builds among your own files. Create a folder of its own, such as ~/Documents/$COMPANY Brain, open it and set up there." >&2; exit 1; }
 others="$(node -e 'const l=await import(process.argv[1]);console.log(l.setupBlockers(".").join("\n"))' "$PLUGIN/lib/brain.mjs")"
 [ -z "$others" ] || { echo "gtm-brain: this folder is not empty ($(printf '%s' "$others" | tr '\n' ' ')). Setup creates its own repo, hooks and git identity here; use an empty folder." >&2; exit 1; }
 [ "$TEAM" = "none" ] && TEAM=""
@@ -71,6 +73,8 @@ sed -e "s|{{COMPANY}}|$(esc "$COMPANY")|g" "$T/AGENTS.md" > AGENTS.md
 node -e 'const l=await import(process.argv[1]);l.ensureRulebookShim(".")' "$PLUGIN/lib/brain.mjs"
 # The root README says what goes where (documents, projects, brain/); a README the person wrote stays.
 [ -f README.md ] || sed -e "s|{{COMPANY}}|$(esc "$COMPANY")|g" "$T/README.md" > README.md
+# Where things go: the table Codex follows and the person edits (lib/where.mjs).
+[ -f RULES.md ] || cp "$T/RULES.md" RULES.md
 # strategy.md from day one: a draft document waiting for the strategic intake (gtm-brain-strategy); a file already there is the person's.
 PLUGIN_VERSION="$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$T/../.codex-plugin/plugin.json" | head -1)"
 [ -f strategy.md ] || sed -e "s|{{COMPANY}}|$(esc "$COMPANY")|g" -e "s|{{DATE}}|$(date +%F)|g" -e "s|{{VERSION}}|$PLUGIN_VERSION|g" "$T/strategy.md" > strategy.md
@@ -94,7 +98,7 @@ OWNER_EMAIL="$(printf '%s' "$PEOPLE_JSON" | node -e 'const p=JSON.parse(require(
 [ -n "$OWNER_NAME" ] && git config user.name "$OWNER_NAME"; [ -n "$OWNER_EMAIL" ] && git config user.email "$OWNER_EMAIL"
 # Parallel branches (worktrees) merge notes as lines and keep the newer summary: .gitattributes, post-merge.
 node -e 'const l=await import(process.argv[1]);l.ensureMergeSetup(".")' "$PLUGIN/lib/brain.mjs" 2>/dev/null || true
-if git add -- brain AGENTS.md CLAUDE.md README.md strategy.md workflows .gitignore .gitattributes .githooks && git -c commit.gpgsign=false commit -q -m "setup: $COMPANY brain (gtm-brain v0)"; then
+if git add -- brain AGENTS.md CLAUDE.md README.md RULES.md strategy.md workflows .gitignore .gitattributes .githooks && git -c commit.gpgsign=false commit -q -m "setup: $COMPANY brain (gtm-brain v0)"; then
   echo "gtm-brain: brain created for $COMPANY  ·  committed"
 else
   echo "gtm-brain: brain created for $COMPANY  ·  written to disk, NOT committed (git is read-only here): say save"
@@ -102,6 +106,6 @@ fi
 node -e 'const l=await import(process.argv[1]);l.registerBrain(".")' "$PLUGIN/lib/brain.mjs" 2>/dev/null || true
 echo "  brain/admin.md            workplace info: team with handles, tools. Changes need APPROVE."
 echo "  brain/contexts/           company, strategy, market, icp, offer, personal-$OWNER_HANDLE"
-echo "  git in this folder: commits as $OWNER_NAME <$OWNER_EMAIL>, hooks in .githooks (local config)"
+echo "  git in this folder: commits as $OWNER_NAME <$OWNER_EMAIL>, git pre-commit check in .githooks (local config)"
 echo "  you are: $OWNER_HANDLE    next: onboarding is in progress; continue gtm-brain-start discovery in this chat using the answers already supplied"
 node -e 'const l=await import(process.argv[1]);console.log(l.onboardingInstruction("."))' "$PLUGIN/lib/brain.mjs"

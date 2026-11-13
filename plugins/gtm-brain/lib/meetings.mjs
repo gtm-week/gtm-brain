@@ -1,5 +1,5 @@
 // Meeting evidence remains append-only memories. This module never writes a second store.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import * as lib from './brain.mjs';
@@ -178,6 +178,15 @@ export function meetingOverview(root, { by, meeting_id, entity, from, to, state,
   return { meetings: meetings.sort((a, b) => (b.occurred_at || b.scheduled_at || '').localeCompare(a.occurred_at || a.scheduled_at || '')), coverage,
     policies: policies.filter(m => { const key = m.meeting_policy.by; if (policyBy.has(key)) return false; policyBy.add(key); return true; }).map(evidenceRow),
     suggestions: meetingSourceSuggestions(root), notice: 'Source evidence establishes occurrence. Calendar references describe plans. Coverage is scoped to the named source and window; missing calendar entries do not establish cancellation. No external tools were queried by this view.' };
+}
+
+/* Why meetings may be missing from this brain, or null when sync and capture are both set up.
+   An empty list must not read as "no meetings happened". */
+export function meetingCaptureStatus(root, overview) {
+  if (!overview.coverage.length && !existsSync(join(root, 'work/sync.json'))) return 'No sync has finished in this brain, so meetings appear only when you ask for one. Say: set up the daily sync.';
+  if (!overview.policies.length) return 'Sync skips meetings until capture is set up for you. Say: capture my meetings.';
+  if (!overview.coverage.some(c => c.status !== 'unavailable')) return 'Meeting capture is set up, but no meeting source has been read yet, so meetings may be missing.';
+  return null;
 }
 
 export function meetingSourceSuggestions(root) {

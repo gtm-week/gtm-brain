@@ -206,7 +206,7 @@
           "name": "asset",
           "expression": "asset",
           "data_type": "Opaque",
-          "description": "Optional entity attachment: entity, label, role, status and file {base, path, project?, machine?}. Resolve project paths through this computer’s linked folder; local references do not transfer files. Use recall for resolved file locations."
+          "description": "Entity attachment, required when the person hands over or approves a file for a person, company or product (a photo, a logo): entity, label, role (portrait, primary-logo, ...), status (approved when the person said so) and file {base, path, project?, machine?}, or path alone for a file in the brain. Without it the file is never offered again; keep_approved_file does this in one call. Resolve project paths through this computer’s linked folder; local references do not transfer files. Use recall for resolved file locations."
         },
         {
           "name": "entities",
@@ -460,7 +460,7 @@
             "title": "Remembering",
             "object": "memories",
             "returns": "Opaque",
-            "description": "Record what happened during work: a decision, an action done, a finding, a meeting, a question or its answer. The only memory writer, append-only. One memory per distinct outcome; pass a whole turn's findings in one call through memories, each entry with its own context. Write first when the context is clear, then confirm by quoting the note back as the tool echoes it, with its context, in one line. Corrections supersede an old id; withdrawals and answers retract it. An entry naming someone who may already be known is held back: ask (same as X?), then add_name or new_names, and resend only that entry. Attachments (asset), customers (customer, customer_coverage) and meetings (meeting, meeting_id, meeting_capture, meeting_policy, meeting_coverage) follow the remember, customers and meetings references.",
+            "description": "Record what happened during work: a decision, an action done, a finding, a meeting, a question or its answer. The only memory writer, append-only. One memory per distinct outcome; pass a whole turn's findings in one call through memories, each entry with its own context. Write first when the context is clear, then confirm by quoting the note back as the tool echoes it, with its context, in one line. Corrections supersede an old id; withdrawals and answers retract it. An entry naming someone who may already be known, or with a bare relative date (Thursday), is held back: ask what the result says to ask, all in one question, and resend only that entry. Attachments (asset), customers (customer, customer_coverage) and meetings (meeting, meeting_id, meeting_capture, meeting_policy, meeting_coverage) follow the remember, customers and meetings references.",
             "input_schema": {
               "type": "object",
               "properties": {
@@ -471,7 +471,7 @@
                 },
                 "project": {
                   "type": "string",
-                  "description": "The project the session hook named for this chat (its slug); omit in the brain's own chat."
+                  "description": "The project the chat's opening lines named (its slug); omit in the brain's own chat."
                 },
                 "memories": {
                   "type": "array",
@@ -1034,7 +1034,7 @@
                   "items": {
                     "type": "string"
                   },
-                  "description": "Names mentioned, including people, products and teams. Text in content alone does not link names."
+                  "description": "Names mentioned, including people, products and teams, spelled as the person wrote them (Florian, not your guess Florian Weber): the brain matches each and keeps how. Text in content alone does not link names."
                 },
                 "companies": {
                   "type": "array",
@@ -1591,7 +1591,7 @@
             "title": "Writing the summary",
             "object": "contexts",
             "returns": "Opaque",
-            "description": "Write the current summary and Working guidance from effective memories. Summary: 3 to 6 sentences covering the situation and supported immediate next steps, every sentence traceable to a memory. Working guidance (now): only reusable methods learned from memories, including evidenced tool usage, with memory IDs for each method. Revalidate prior methods and remove unsupported or superseded advice; pass an empty string when none remain. Do not repeat standing instructions, current status or one-off tasks in guidance. Older guidance may mix methods and actions: keep supported actions in the summary and their source follow-ups. Keeps the standing rule. Refuses if memories or Markdown changed after compile_facts. Manual edits pause compilation until reviewed in Codex; never overwrite them silently.",
+            "description": "Write the current summary and Working guidance from effective memories. Summary: 2 to 4 sentences covering the situation, what is open and supported immediate next steps; end every sentence with the ids of the notes it rests on in brackets ([m_...]); absolute dates only, never next Tuesday or tomorrow. Refused otherwise, with the reason. Working guidance (now): only reusable methods learned from memories, including evidenced tool usage, with memory IDs for each method. Revalidate prior methods and remove unsupported or superseded advice; pass an empty string when none remain. Do not repeat standing instructions, current status or one-off tasks in guidance. Older guidance may mix methods and actions: keep supported actions in the summary and their source follow-ups. Keeps the standing rule. Refuses if memories or Markdown changed after compile_facts. Manual edits pause compilation until reviewed in Codex; never overwrite them silently.",
             "input_schema": {
               "type": "object",
               "properties": {
@@ -1613,7 +1613,7 @@
                 },
                 "summary": {
                   "type": "string",
-                  "description": "Current situation and supported immediate next steps, owners and dates when known; every sentence traceable to effective memories"
+                  "description": "2 to 4 sentences: current situation, what is open, supported next steps with owners and absolute dates; each sentence ends with the ids of the notes it rests on, like [m_1a2b3c]"
                 },
                 "now": {
                   "type": "string",
@@ -1636,7 +1636,7 @@
             "title": "Opening a context",
             "object": "contexts",
             "returns": "Opaque",
-            "description": "Create and load a context only for an explicit user request to create it or user agreement to a concrete proposal. Check existing and archived contexts first. Propose only for distinct purpose, sustained work and useful separation. Ordinary customers remain identity references in memories in existing contexts; compose their view through query (brief) and live sources. A dedicated customer context is exceptional for a key strategic account needing separate scope and guidance. Entity mentions, CRM imports, repeated meetings, tool calls and one-off tasks do not authorize creation. Do not infer agreement. Confirm successful creation in one line. Never create admin or personal preference contexts here; use configure for personal preferences.",
+            "description": "Create and load a context only for an explicit user request to create it or user agreement to a concrete proposal. Check existing and archived contexts first. Propose only for distinct purpose, sustained work and useful separation. Ordinary customers remain identity references in memories in existing contexts; compose their view through query (brief) and live sources. A dedicated customer context is exceptional for a key strategic account needing separate scope and guidance. Entity mentions, CRM imports, repeated meetings, tool calls and one-off tasks do not authorize creation. Do not infer agreement. Confirm successful creation in one line. Never create admin or personal preference contexts here; use configure for personal preferences. The first call lists the existing contexts and projects; decide by the saving rules X1-X3 and call again with distinct to create.",
             "input_schema": {
               "type": "object",
               "properties": {
@@ -1654,7 +1654,11 @@
                 },
                 "project": {
                   "type": "string",
-                  "description": "The project the session hook named for this chat (its slug). Omit in the brain's own chat."
+                  "description": "The project the chat's opening lines named (its slug). Omit in the brain's own chat."
+                },
+                "distinct": {
+                  "type": "string",
+                  "description": "One line on why no existing context or project covers this topic (rules X1-X3). The first call without it creates nothing and lists the contexts and projects to check against."
                 }
               },
               "required": [
@@ -1693,7 +1697,7 @@
                 },
                 "project": {
                   "type": "string",
-                  "description": "The project the session hook named for this chat (its slug). Omit in the brain's own chat."
+                  "description": "The project the chat's opening lines named (its slug). Omit in the brain's own chat."
                 }
               },
               "required": [
@@ -1753,7 +1757,7 @@
                 },
                 "project": {
                   "type": "string",
-                  "description": "The project the session hook named for this chat (its slug). Omit in the brain's own chat."
+                  "description": "The project the chat's opening lines named (its slug). Omit in the brain's own chat."
                 }
               },
               "required": [

@@ -12,17 +12,17 @@ allowed-tools: [Bash, Read, Write]
 
 # GTM Brain: Configure GTM Brain
 
-Before the first `configuration_question` form, read [question handling](../gtm-brain-start/references/questions.md) once for the tool parameters.
-Use structured choices by default and keep async questions alive until answered.
+Before the first question, read [question handling](../gtm-brain-start/references/questions.md) once.
+Offer concrete choices by default.
 
 Route the requested change to the procedure below. Read only the one needed.
 
 - **Workplace info or behavior:** read [workplace changes](references/approve.md). This
   covers company info, team, declared tools, `dashboard: always | on-demand`, and nothing else (summaries always update by
-  themselves). Propose with `propose_admin_change`, summarize every substantive change in plain language, and preserve
-  the literal APPROVE step and shell permission prompt before applying it.
-- **APPROVE after a proposal:** read the same workplace-change procedure and apply only
-  the pending proposal authorized in this conversation.
+  themselves). Propose with `propose_admin_change`, summarize every substantive change in plain language, then
+  call `approve_change`: only the person's APPROVE in its form applies it.
+- **APPROVE after a proposal:** never from the chat; the `approve_change` form is the only in-chat way. Without forms it gives a terminal command the person runs and types APPROVE in.
+  Read the same workplace-change procedure.
 
 Write authored brain records in English. Never edit `brain/admin.md` directly. Connection setup follows `gtm-brain-configure`; plugin updates follow `gtm-brain-configure`.
 
@@ -39,7 +39,7 @@ For "update GTM Brain", "check for GTM Brain updates", "upgrade the brain", "ref
 ## Push this brain to my GitHub
 
 For "push this brain to my GitHub", "share the brain", "put the brain on GitHub": one
-`configuration_question` first, because this publishes the whole folder to a repository the
+question first, because this publishes the whole folder to a repository the
 person owns: "Create a private repository <company>-brain on your GitHub and push this brain
 there? From then on every note goes there too." with "Yes, create and push" first, "Use a
 different name" second (then ask the name as free text), "No, keep it local" last. On a yes,

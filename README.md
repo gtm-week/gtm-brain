@@ -141,7 +141,7 @@ flowchart TB
   subgraph plugin["GTM Brain plugin"]
     skills --> mcp["Local MCP server<br/>Query, remember, entities, workflows"]
     mcp --> operations["Operation scripts and shared lib/<br/>Validate, resolve identities, write files"]
-    hooks["Host hooks<br/>Session context and protected-file checks"] --> operations
+    session["Chat start<br/>Session context and protected-file checks"] --> operations
     worker["Background summary worker"] --> operations
   end
 
@@ -209,7 +209,7 @@ sequenceDiagram
   Agent->>Brain: Reuse the same brain from the linked folder
 ```
 
-A new chat restores the working context through the session hook. Loading a context brings in
+A new chat restores the working context on its first GTM Brain call. Loading a context brings in
 its standing rules, summary, working guidance and recent memories. It does not load every
 transcript or every account into the prompt. Broader recall searches across the brain when needed.
 
@@ -262,9 +262,10 @@ relationships and scoped coverage. Meeting records distinguish scheduled events 
 that a conversation happened, and distinguish available notes or transcripts from missing content.
 Neither a cached summary nor a calendar invitation proves the current state of an account.
 
-Protected workplace changes are proposed first and applied after you type `APPROVE` in chat.
-The host hooks guard direct agent edits to protected files; installation requires explicit hook
-trust. These checks complement the host's permission system. External sends, account changes
+Protected workplace changes are proposed first and applied only after you choose `APPROVE` in
+the form GTM Brain shows. A direct edit of a protected file is put back at the next chat start or
+save and kept aside in `work/manual-edits/protected/`. These checks complement the host's
+permission system. External sends, account changes
 and other actions still go through the relevant integration and its permission flow.
 
 The dashboard is read-only and opens when requested. A workflow records prerequisites, step
@@ -328,12 +329,10 @@ Current beta limitations:
 codex plugin marketplace add gtm-week/gtm-brain
 codex plugin marketplace upgrade gtm-brain
 codex plugin add gtm-brain@gtm-brain
-node "$(ls -d ~/.codex/plugins/cache/gtm-brain/gtm-brain/*/ | sort -V | tail -1)hooks/trust-hooks.mjs" --trust
 ```
 
-The upgrade line refreshes an existing marketplace snapshot. The final line explicitly approves
-the plugin's hooks, which installation alone does not do. Without that approval, the installed
-hooks do not run. In a new chat in an empty project folder, send "Set up GTM Brain here" or
+The upgrade line refreshes an existing marketplace snapshot. GTM Brain has no hooks to approve.
+In a new chat in an empty project folder, send "Set up GTM Brain here" or
 `/gtm-brain-start`.
 
 To verify the first use, ask the agent to remember a test finding, recall it in a new chat and
@@ -363,8 +362,8 @@ paths need updating. [MIGRATING.md](MIGRATING.md) contains the full compatibilit
 .agents/plugins/marketplace.json
 plugins/gtm-brain/
   .codex-plugin/plugin.json
-  hooks.json  hooks/          SessionStart (list contexts), PreToolUse (protect admin, memories);
-                              trust-hooks.mjs approves them in Codex, which installing does not do
+  session/                    the chat start the MCP server runs on a chat's first call (list
+                              contexts, put back direct edits of protected files); no hooks
   .mcp.json  server/          the operations as MCP tools (Remembering, Searching the brain, ...);
                               dash.mjs serves the read-only dashboard and revision events
   lib/                        shared readers, validators, writers, search and identity logic; Node built-ins
@@ -376,7 +375,7 @@ plugins/gtm-brain/
                               dashboard, manual save
     gtm-brain-configure/references/ workplace approval, connect tools, update plugin
     gtm-brain-start/references/  onboarding, the handoff import
-  scripts/gtm-brain-*/           the operation scripts the MCP server, hooks and skills run (no SKILL.md)
+  scripts/gtm-brain-*/           the operation scripts the MCP server, session scripts and skills run (no SKILL.md)
   templates/                  AGENTS.md, brain/admin.md, .gitignore, the pre-commit hook
   test/                       node --test 'plugins/gtm-brain/test/*.test.mjs'
 frontend/dashboard/           React dashboard source; built assets ship with the plugin
@@ -411,7 +410,7 @@ without writing; the normal test suite runs that check too.
 
 - Question and Computer Use policy sources live in [plugins/gtm-brain/policies/](plugins/gtm-brain/policies/).
   The script fills marked blocks in contributor instructions, installation instructions,
-  the brain template and the question reference. The session hook reads these sources
+  the brain template and the question reference. The chat start reads these sources
   directly for both empty folders and existing brains.
 - In [the ontology](plugins/gtm-brain/ontology/gtm-brain.ossie.json), edit the single-memory fields
   under `remember.input_schema.properties`. The script derives `memories.items.properties`

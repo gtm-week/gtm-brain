@@ -171,10 +171,10 @@ challenge the answer, debate its validity or ask the respondent to defend it. Th
 conduct the interview and gather information. Keep hypotheses, tensions and strategy mapping
 internal until writing `strategy.md`.
 
-When GTM Brain requires the native `question` tool, place the optional coverage note and topic
-header in the conversational message immediately before the tool call. Put the complete
-precise question in the free-text tool without preset options. Reserve radio choices and short
-fields for simple setup facts.
+When asking, place the optional coverage note and topic
+header in the message immediately before the question. Ask the complete
+precise question as free text without preset options. Reserve numbered choices and short
+answers for simple setup facts.
 
 ## Question flow
 

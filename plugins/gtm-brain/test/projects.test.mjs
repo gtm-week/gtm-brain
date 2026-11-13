@@ -2,7 +2,7 @@ process.env.GTM_BRAIN_NO_WATCH = "1";
 process.env.GTM_BRAIN_NO_SESSION_MAINTENANCE = "1"; // Covered by session-maintenance.test.mjs.
 process.env.GTM_BRAIN_NO_COMPILE = "1"; // Model runs are opt-in through test doubles.
 // Projects: a folder linked to a brain by a pointer block in its AGENTS.md, its own loaded set, a tag on its notes.
-process.env.GTM_BRAIN_NO_HOOK_CHECK = "1"; // the hooks-off check talks to a real Codex; hooks-notice.test covers it with a fake one
+process.env.GTM_BRAIN_NO_SESSION_START = "1"; // servers here test tools; chat-start.test.mjs covers the chat start
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, realpathSync, symlinkSync } from "node:fs";
@@ -261,18 +261,34 @@ test("projects cannot occupy internal storage, including symlink aliases", () =>
   assert.ok(!existsSync(join(other, "website")));
 });
 
-test("a sub-folder project is excluded locally (.git/info/exclude), never in the shared .gitignore; the entry owns what link added", () => {
+test("a sub-folder project is shared with the team: its files in the brain's git, only its pointer kept out locally, never in .gitignore", () => {
   const root = realpathSync(brain());
-  const sub = join(root, "projects", "seo");
+  const sub = join(root, "projects", "seo"); mkdirSync(sub, { recursive: true }); writeFileSync(join(sub, "brief.md"), "# SEO brief\n");
   const gitignoreBefore = readFileSync(join(root, ".gitignore"), "utf8");
   const out = project(root, "--link", sub, "--slug", "seo");
-  assert.match(out, / · excluded from the brain's git on this machine \(a personal path\)/);
-  assert.match(readFileSync(join(root, ".git", "info", "exclude"), "utf8"), /^\/projects\/seo\/$/m);
+  assert.match(out, / · inside the brain \(its rules are inherited; its files are shared with the team, its pointer stays on this machine\)/);
+  const exclude = readFileSync(join(root, ".git", "info", "exclude"), "utf8");
+  assert.match(exclude, /^\/projects\/seo\/AGENTS\.md$/m); assert.match(exclude, /^\/projects\/seo\/CLAUDE\.md$/m);
+  assert.doesNotMatch(exclude, /^\/projects\/seo\/$/m, "the folder itself is the team's");
   assert.equal(readFileSync(join(root, ".gitignore"), "utf8"), gitignoreBefore, "the shared .gitignore is never touched by this");
-  assert.equal(execFileSync("git", ["-C", root, "status", "--porcelain", "--", "projects/seo"], { encoding: "utf8" }).trim(), "", "the brain's git sees nothing there");
-  assert.equal(lib.readProjects(root).find(p => p.slug === "seo").excluded, true, "link added the line, so the entry owns it");
+  assert.equal(execFileSync("git", ["-C", root, "ls-files", "--", "projects/seo"], { encoding: "utf8" }).trim(), "projects/seo/brief.md", "committed; the pointer is not");
+  assert.equal(execFileSync("git", ["-C", root, "status", "--porcelain", "--", "projects/seo"], { encoding: "utf8" }).trim(), "", "nothing left uncommitted");
   project(root, "--unlink", "seo");
-  assert.doesNotMatch(readFileSync(join(root, ".git", "info", "exclude"), "utf8"), /^\/projects\/seo\/$/m, "the line is gone after unlink");
+  assert.doesNotMatch(readFileSync(join(root, ".git", "info", "exclude"), "utf8"), /projects\/seo/, "the lines are gone after unlink");
+});
+
+test("a project folder an earlier version kept out of git whole is shared at the next chat start, its pointer still local", () => {
+  const root = realpathSync(brain());
+  const sub = join(root, "projects", "berlin"); mkdirSync(sub, { recursive: true }); writeFileSync(join(sub, "speakers.md"), "Florian\n");
+  project(root, "--link", sub, "--slug", "berlin");
+  // what 0.33.8 wrote: the whole folder excluded
+  writeFileSync(join(root, ".git", "info", "exclude"), "/projects/berlin/\n");
+  lib.writeProjects(root, lib.readProjects(root).map(p => ({ ...p, excluded: true, exclusion: "/projects/berlin/" })));
+  execFileSync("git", ["-C", root, "rm", "-rq", "--cached", "projects/berlin"]); execFileSync("git", ["-C", root, "commit", "-qm", "as 0.33.8 left it"]);
+  assert.match(project(root, "--share"), /shared with the team: projects\/berlin/);
+  assert.equal(execFileSync("git", ["-C", root, "ls-files", "--", "projects/berlin"], { encoding: "utf8" }).trim(), "projects/berlin/speakers.md");
+  assert.match(readFileSync(join(root, ".git", "info", "exclude"), "utf8"), /^\/projects\/berlin\/AGENTS\.md$/m);
+  assert.equal(project(root, "--share").trim(), "", "once is enough");
 });
 
 test("a hand-written exclude line was not link's to add, so unlink leaves it in place", () => {
@@ -282,7 +298,7 @@ test("a hand-written exclude line was not link's to add, so unlink leaves it in 
   writeFileSync(join(root, ".git", "info", "exclude"), "projects/private/\n");
   const out = project(root, "--link", sub, "--slug", "private");
   assert.doesNotMatch(out, /excluded from the brain's git/, "the line was already there: link did not add it");
-  assert.equal(lib.readProjects(root).find(p => p.slug === "private").excluded, false);
+  assert.doesNotMatch(lib.readProjects(root).find(p => p.slug === "private").exclusion || "", /^projects\/private\/$/m, "the person's own line is not the entry's");
   project(root, "--unlink", "private");
   assert.match(readFileSync(join(root, ".git", "info", "exclude"), "utf8"), /^projects\/private\/$/m, "the hand-written line survives unlink");
 });
@@ -322,7 +338,7 @@ test("load, remember and recall work in a project's own set and tag its notes; t
   assert.match(script(root, "gtm-brain-load/load.mjs", "--clear", "--project", "curriculum"), /cleared/); assert.deepEqual(lib.readLoaded(root, "curriculum"), []);
   script(root, "gtm-brain-load/load.mjs", "icp", "--project", "curriculum");
   lib.writeSession(root, { session_id: "t-curr", cwd: a }, "curriculum");
-  const out = script(root, "gtm-brain-remember/remember.mjs", "--by", "marta", "--content", "M2 draft is due Friday.", "--project", "curriculum");
+  const out = script(root, "gtm-brain-remember/remember.mjs", "--by", "marta", "--content", "M2 draft is due Friday 2026-11-13.", "--project", "curriculum");
   assert.match(out, /remembered m_\w+ in icp/, "one context loaded in the project: no context named");
   const m = lib.readMemories(root, "icp").pop();
   assert.ok(m.tags.includes("project:curriculum")); assert.ok(m.source.some(s => s.kind === "codex" && s.ref === "t-curr"), "the project's own chat is the source");
@@ -354,7 +370,7 @@ test("recall groups a project's hits before it limits them; without a project it
   const batch = join(root, "work", "batch.json");
   writeFileSync(batch, JSON.stringify(Array.from({ length: 45 }, (_, i) => ({ content: `Sprocket order ${i + 1} needs a check.`, context: "offer" }))));
   script(root, "gtm-brain-remember/remember.mjs", "--by", "marta", "--batch", batch);
-  script(root, "gtm-brain-remember/remember.mjs", "--by", "marta", "--content", "A longer note: the sprocket supplier for this project changed its terms this week.", "--project", "curriculum");
+  script(root, "gtm-brain-remember/remember.mjs", "--by", "marta", "--content", "A longer note: the sprocket supplier for this project changed its terms this week (2026-11-09).", "--project", "curriculum");
   const withProject = script(root, "gtm-brain-recall/recall.mjs", "sprocket", "--project", "curriculum");
   assert.match(withProject, /^46 memories match "sprocket"/m);
   assert.match(withProject, /## in this project \(curriculum\) · 1\n/);
@@ -365,13 +381,13 @@ test("recall groups a project's hits before it limits them; without a project it
   assert.equal((withoutProject.match(/^- Recorded: \d{4}-\d{2}-\d{2}/gm) || []).length, 40, "still capped at 40 without a project");
 });
 
-const hook = (cwd, name, input, extra = {}) => execFileSync("bash", [`${P}/hooks/${name}`], { cwd, encoding: "utf8", env: { ...env, ...extra }, input: JSON.stringify({ hook_event_name: "SessionStart", session_id: "thread-p1", cwd, ...input }) });
+const hook = (cwd, name, input, extra = {}) => execFileSync("bash", [`${P}/session/${name}`], { cwd, encoding: "utf8", env: { ...env, ...extra }, input: JSON.stringify({ hook_event_name: "SessionStart", session_id: "thread-p1", cwd, ...input }) });
 const tryHook = (cwd, name, input) => { try { return { code: 0, out: hook(cwd, name, input) }; } catch (e) { return { code: e.status, out: String(e.stdout) }; } };
 
 test("resolve.sh agrees with lib.resolveBrain on every fixture", () => {
   const root = realpathSync(brain()); const ext = folder(); project(root, "--link", ext, "--slug", "website"); const nested = join(ext, "a", "b"); mkdirSync(nested, { recursive: true });
   const gone = folder(); lib.writePointer(gone, { brain: "/no/such/brain", slug: "old", title: "Old", company: "X" });
-  const sh = dir => { try { return execFileSync("bash", ["-c", `. "${P}/hooks/resolve.sh"; gtm_brain_resolve "$1"`, "_", dir], { encoding: "utf8" }).replace(/\n$/, ""); } catch (e) { return null; } };
+  const sh = dir => { try { return execFileSync("bash", ["-c", `. "${P}/session/resolve.sh"; gtm_brain_resolve "$1"`, "_", dir], { encoding: "utf8" }).replace(/\n$/, ""); } catch (e) { return null; } };
   assert.equal(sh(root), `${root}\t`); assert.equal(sh(ext), `${root}\twebsite`); assert.equal(sh(nested), `${root}\twebsite`);
   assert.equal(sh(folder()), null); assert.equal(sh(gone), "MISSING\t/no/such/brain\told");
 });
@@ -424,22 +440,21 @@ test("the session hook elsewhere: a pointer to a gone brain says so and stops; a
   assert.doesNotMatch(r, /onboarding_question|question tool|Computer Use|no company brain yet/);
 }));
 
-test("turns, tool usage and the gate work from a project cwd and log into the brain with the project", () => {
+test("a direct edit of admin.md is put back at a project chat's start, with the edit kept in the brain", () => {
   const root = brain(); const ext = folder(); project(root, "--link", ext, "--slug", "website");
-  hook(ext, "turns.sh", { hook_event_name: "UserPromptSubmit", prompt: "note the deadline" });
-  hook(ext, "tool-usage.sh", { hook_event_name: "PostToolUse", tool_name: "mcp__gtm_brain__remember", tool_input: {}, tool_response: {} });
-  const turn = JSON.parse(readFileSync(join(root, "work", "turns.jsonl"), "utf8").trim().split("\n").pop()); assert.equal(turn.project, "website"); assert.equal(turn.text, "note the deadline");
-  const use = JSON.parse(readFileSync(join(root, "work", "tool-usage.jsonl"), "utf8").trim().split("\n").pop()); assert.equal(use.project, "website"); assert.equal(use.name, "remember");
-  const g = tryHook(ext, "gate-protected-write.sh", { tool_name: "shell_command", tool_input: { command: `printf y > ${root}/brain/admin.md` } });
-  assert.equal(g.code, 2); assert.match(g.out, /permissionDecision":"deny"/);
-  assert.match(readFileSync(join(root, "work", "hooks.log"), "utf8"), /PreToolUse  DENY/, "logged in the brain, not in the project folder");
+  const before = readFileSync(join(root, "brain", "admin.md"), "utf8");
+  writeFileSync(join(root, "brain", "admin.md"), "edited by hand\n");
+  const out = hook(ext, "session-start.sh", {});
+  assert.match(out, /PROTECTED FILES RESTORED: brain\/admin\.md \(the edit is kept in work\/manual-edits\/protected\/brain__admin\.md\.\d+\)/);
+  assert.equal(readFileSync(join(root, "brain", "admin.md"), "utf8"), before);
+  assert.match(readFileSync(join(root, "work", "hooks.log"), "utf8"), /restored  brain\/admin\.md: changed outside GTM Brain/, "logged in the brain, not in the project folder");
   assert.equal(existsSync(join(ext, "work")), false);
 });
 
 test("the dashboard lists the projects and chips a note with its project; the advisor names a quiet project and a broken pointer", () => {
   const root = brain(); const a = folder(), b = folder();
   project(root, "--link", a, "--slug", "curriculum", "--title", "Curriculum", "--contexts", "icp"); project(root, "--link", b, "--slug", "website");
-  script(root, "gtm-brain-remember/remember.mjs", "--by", "marta", "--content", "M2 draft is due Friday.", "--context", "icp", "--project", "curriculum");
+  script(root, "gtm-brain-remember/remember.mjs", "--by", "marta", "--content", "M2 draft is due Friday 2026-11-13.", "--context", "icp", "--project", "curriculum");
   execFileSync(process.execPath, [`${P}/scripts/gtm-brain-render/render.mjs`, "."], { cwd: root, env });
   const data = JSON.parse(readFileSync(join(root, "work", "home", "data.json"), "utf8"));
   const c = data.projects.find(p => p.slug === "curriculum");
@@ -456,7 +471,7 @@ test("the skill exists, is listed, and asks before it writes", () => {
   const skill = readFileSync(`${P}/skills/gtm-brain-project/SKILL.md`, "utf8") + readFileSync(`${P}/skills/gtm-brain-project/references/link.md`, "utf8");
   assert.match(skill, /^name: gtm-brain-project$/m);
   assert.match(skill, /capture work done\s+in this folder/i, "the opt-in question is in the skill");
-  assert.match(skill, /`query` \(brains\)/); assert.match(skill, /link_project/); assert.match(skill, /unlink_project/); assert.match(skill, /configuration_question/);
+  assert.match(skill, /`query` \(brains\)/); assert.match(skill, /link_project/); assert.match(skill, /unlink_project/);
   assert.match(skill, /never link without a yes/i);
   assert.match(readFileSync(`${P}/skills/gtm-brain-project/agents/openai.yaml`, "utf8"), /display_name: "GTM Brain: Projects"/);
   assert.ok(!existsSync(`${P}/skills/gtm-brain-link-project/SKILL.md`) && !existsSync(`${P}/skills/gtm-brain-new-project/SKILL.md`), "the two old workflows are one skill now (ALL-204 step 4)");
@@ -487,7 +502,7 @@ test("interact from a project tags the memory with it and cites the project's ow
   lib.writeInteractions(root, [{ name: "note_result", title: "Noting a result", tool: "gmail", operation: "Nothing to do in gmail.", description: "A result.", input_schema: { type: "object", properties: { what: { type: "string" } }, required: ["what"], additionalProperties: false }, record: { context: "icp", kind: "note", companies: [], people: [], content: "Result: {what}", action: "gmail:noted:{what}", tags: ["result"] } }]);
   // the server's interact, driven the way server.test drives tools: one JSON-RPC call over stdio
   const { spawn } = await import("node:child_process");
-  const call = (name, args) => new Promise((res, rej) => { const p = spawn(process.execPath, [`${P}/server/server.mjs`], { env: { ...env, GTM_BRAIN_NO_COMMIT: "1" } }); let out = ""; p.stdout.on("data", d => out += d); p.on("close", () => { const lines = out.split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); const r = lines.find(l => l.id === 2); r ? res(r.result) : rej(new Error(out)); }); p.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {} } }) + "\n"); p.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name, arguments: args } }) + "\n"); p.stdin.end(); });
+  const call = (name, args) => new Promise((res, rej) => { const p = spawn(process.execPath, [`${P}/server/server.mjs`], { env: { ...env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_SESSION_START: "1" } }); let out = ""; p.stdout.on("data", d => out += d); p.on("close", () => { const lines = out.split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); const r = lines.find(l => l.id === 2); r ? res(r.result) : rej(new Error(out)); }); p.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {} } }) + "\n"); p.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name, arguments: args } }) + "\n"); p.stdin.end(); });
   const r = await call("interact", { brain: root, by: "marta", name: "note_result", params: { what: "M2 shipped" }, project: "curriculum" });
   assert.match(r.content[0].text, /^ok: note_result/, JSON.stringify(r));
   const m = lib.readMemories(root, "icp").pop();
@@ -500,7 +515,7 @@ test("interact from a project tags the memory with it and cites the project's ow
 test("a channel created, forked or archived from a project changes that project's set; archiving clears it everywhere", () => {
   const root = brain(); const a = folder(); project(root, "--link", a, "--slug", "curriculum", "--contexts", "icp");
   lib.writeLoaded(root, ["offer"]);
-  script(root, "gtm-brain-contexts/contexts.mjs", "--new", "fresh", "Fresh", "A new channel.", "--project", "curriculum");
+  script(root, "gtm-brain-contexts/contexts.mjs", "--new", "fresh", "Fresh", "A new channel.", "--project", "curriculum", "--distinct", "no context covers this channel");
   assert.deepEqual(lib.readLoaded(root, "curriculum"), ["icp", "fresh"]); assert.deepEqual(lib.readLoaded(root), ["offer"], "the brain's set is untouched");
   script(root, "gtm-brain-remember/remember.mjs", "--by", "marta", "--content", "Seed.", "--context", "icp");
   script(root, "gtm-brain-contexts/contexts.mjs", "--fork", "icp", "icp-eu", "ICP EU", "--project", "curriculum");
@@ -513,8 +528,8 @@ test("a channel created, forked or archived from a project changes that project'
 test("new_context and archive_context take project through the server", async () => {
   const root = brain(); const a = folder(); project(root, "--link", a, "--slug", "seo");
   const { spawn } = await import("node:child_process");
-  const call = (name, args) => new Promise((res, rej) => { const p = spawn(process.execPath, [`${P}/server/server.mjs`], { env: { ...env, GTM_BRAIN_NO_COMMIT: "1" } }); let out = ""; p.stdout.on("data", d => out += d); p.on("close", () => { const lines = out.split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); const r = lines.find(l => l.id === 2); r ? res(r.result) : rej(new Error(out)); }); p.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {} } }) + "\n"); p.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name, arguments: args } }) + "\n"); p.stdin.end(); });
-  const r = await call("new_context", { brain: root, slug: "keywords", title: "Keywords", rule: "Keyword work.", project: "seo" });
+  const call = (name, args) => new Promise((res, rej) => { const p = spawn(process.execPath, [`${P}/server/server.mjs`], { env: { ...env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_SESSION_START: "1" } }); let out = ""; p.stdout.on("data", d => out += d); p.on("close", () => { const lines = out.split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); const r = lines.find(l => l.id === 2); r ? res(r.result) : rej(new Error(out)); }); p.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {} } }) + "\n"); p.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name, arguments: args } }) + "\n"); p.stdin.end(); });
+  const r = await call("new_context", { brain: root, slug: "keywords", title: "Keywords", rule: "Keyword work.", project: "seo", distinct: "no context covers keyword work" });
   assert.doesNotMatch(r.content[0].text, /refused|error/i, r.content[0].text);
   assert.deepEqual(lib.readLoaded(root, "seo"), ["keywords"]); assert.deepEqual(lib.readLoaded(root), []);
   await call("archive_context", { brain: root, slug: "keywords", project: "seo" });

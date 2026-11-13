@@ -6,11 +6,10 @@ import { realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { pathToFileURL } from 'node:url';
 import { verifyRuntime } from '../plugins/gtm-brain/lib/plugin-runtime.mjs';
-import { hookTrust } from '../plugins/gtm-brain/hooks/trust-hooks.mjs';
 
 const OLD_ID='gtm-os@gtm-os', ID='gtm-brain@gtm-brain';
 const cli=(host,args,options={})=>execFileSync(host,args,{...options,encoding:'utf8',timeout:120000,maxBuffer:4*1024*1024,stdio:['ignore','pipe','pipe']});
-export async function migrateInstallation({host='codex',home,cwd=process.cwd(),command=cli,verify=verifyRuntime,trust=hookTrust}={}) {
+export async function migrateInstallation({host='codex',home,cwd=process.cwd(),command=cli,verify=verifyRuntime}={}) {
   if(!['codex','claude'].includes(host))throw new Error('Choose codex or claude.');
   home ||= host==='codex' ? process.env.CODEX_HOME||join(homedir(),'.codex') : process.env.CLAUDE_CONFIG_DIR||join(homedir(),'.claude');
   const canonical=path=>{try{return realpathSync(path);}catch{return resolve(path);}};
@@ -47,11 +46,6 @@ export async function migrateInstallation({host='codex',home,cwd=process.cwd(),c
   const root=host==='codex'?join(home,'plugins/cache/gtm-brain/gtm-brain',next.version):next.installPath;
   if(!root)throw new Error('The new installation has no verified path. The previous plugin has been kept.');
   const runtime=verify(root,next.version);
-  if(host==='codex') {
-    const hooks=await trust({trust:true,pluginId:ID});
-    if(!hooks.length||hooks.some(h=>!h.enabled||!['trusted','managed'].includes(h.status)))
-      throw new Error('The new safety hooks are not running. The previous plugin has been kept. Review hooks in Codex and retry.');
-  }
   if(old)run(host==='codex'?'remove':'uninstall',OLD_ID,...scope,...(host==='claude'?['--keep-data']:[]));
   return {version:runtime.version,migrated:!!old};
 }

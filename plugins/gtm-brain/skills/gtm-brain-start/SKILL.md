@@ -27,15 +27,14 @@ code block and the one line of why outside it; use only names and dates a read r
 
 Follow [continuation](references/continuation.md) during active onboarding: setup saves the pending flag; keep moving until completion or a real blocker. A returning person with a pending request does not need to type a continuation command.
 
-First honor the live onboarding state from the hook or tools. `required: false` means no
+First honor the live onboarding state from the opening lines or tools. `required: false` means no
 onboarding is due, even if old summaries mention it. Continue ordinary work without an
 onboarding question or announcement about its completion. Use the status internally unless
 the person asks about onboarding. A person's statement that they already finished is enough to record
 completion with `remember`; never make them repeat the checklist to clear a stale flag.
 
-Before the first `onboarding_question` form, read [question handling](references/questions.md) once for the tool parameters.
-Prefer `onboarding_question` when available: it waits inside the call and supplies native
-choices, multi-select checkboxes and free text in ordinary mode. Reuse known answers and
+Before the first question, read [question handling](references/questions.md) once.
+Reuse known answers and
 keep one question pending until it is answered or cancelled. No Plan-mode switch is needed.
 
 Keep authored brain content in English. Preserve names, source quotes and the exact approval token `APPROVE`.
@@ -51,7 +50,7 @@ listing commands in the shell for this.
 
 - **A brain already** (brain/admin.md exists): say so in one line, then go to Step 2 only if
   `required: true` is an active request by this person (read `check_environment`, `query` (status)
-  or the hook), else open the dashboard and say where
+  or the opening lines), else open the dashboard and say where
   we are. Never run setup over an existing brain.
   Missing markers, an older completion, or unavailable optional features do not start discovery.
   Only an explicit new onboarding request records a pending marker with `remember`,
@@ -99,8 +98,7 @@ Codex will ask the person to allow some steps. Say, in one plain line and before
 appears, what the click allows and why: installing a tool's plugin ("the app will ask to
 install the Gmail connection; that is the sign-in for your mail"), opening the dashboard in
 Codex mode ("it will ask to open a page inside Codex; that is the dashboard"), the first write to the
-brain folder, the safeguards ("hooks", the locks that stop anything important changing
-without a say-so). Never bundle a step that needs a permission with routine ones, never ask
+brain folder. Never bundle a step that needs a permission with routine ones, never ask
 for broader access than the step needs, and never treat a declined prompt as a refusal of
 the whole setup: say what was skipped and carry on.
 
@@ -109,7 +107,7 @@ the whole setup: say what was skipped and carry on.
 - One question at a time; offer a concrete proposal with choices
   and free text for corrections when possible.
 - Never create the brain anywhere but this folder, and never in a folder that is not empty.
-- APPROVE is typed by the person in Codex. The dashboard has no approval controls.
+- APPROVE is the person's click in the `approve_change` form, never typed in the chat. The dashboard has no approval controls.
 - Nothing here is a shell command the person has to see: tools, then one plain line each.
 
 If GTM Brain tools are missing or report a missing plugin version, follow
@@ -122,5 +120,5 @@ Customer coverage is part of the first snapshot: follow [customer discovery](../
 
 ## Importing a handoff
 
-For "import from claude", "import the handoff" or a hook line saying a handoff is waiting,
+For "import from claude", "import the handoff" or an opening line saying a handoff is waiting,
 read [import](references/import.md) and follow it.

@@ -48,7 +48,7 @@ never rewrites it. A workflow from a mentor is a file dropped into `workflows/`.
 
 There is no push channel to someone who is not in Codex. The brain says a step is due in three
 places: the opening lines of every chat in the brain, the todo list (`what should I do now`),
-and the dashboard's Needs your attention view. The check runs at every session start and in the
+and the dashboard's Needs your attention view. The check runs at every chat start and in the
 scheduled run (see COMMANDS.md, schedule); a gate that passed becomes a question you answer in
 the chat or in the todo walk-through.
 

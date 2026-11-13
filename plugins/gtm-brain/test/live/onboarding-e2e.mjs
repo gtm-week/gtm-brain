@@ -108,7 +108,7 @@ async function dashboard(root) {
 async function session(scenario, turn, root, index) {
   const label = `${scenario.name}-${index + 1}`, trace = join(artifacts, label + '-mcp.jsonl');
   const final = join(artifacts, label + '-final.txt'), events = join(artifacts, label + '-agent.jsonl');
-  const hook = run(root, 'bash', [join(plugin, 'hooks/session-start.sh')],
+  const hook = run(root, 'bash', [join(plugin, 'session/session-start.sh')],
     { input: JSON.stringify({ session_id: 'synthetic-' + label, cwd: root }) });
   writeFileSync(join(artifacts, label + '-hook.txt'), hook);
   const prompt = `This is an isolated synthetic GTM Brain company brain at ${root}. You work for Marta Nowak, confirmed handle ${by}.

@@ -165,7 +165,7 @@ test("save commits a document and the files a person dropped beside it by hand; 
   assert.equal(lib.unsavedChanges(root).length, 0);
 });
 
-const hook = (root, project) => execFileSync("bash", [`${P}/hooks/session-start.sh`], { cwd: project || root, encoding: "utf8", env, input: JSON.stringify({ session_id: "thread-1", cwd: project || root }) });
+const hook = (root, project) => execFileSync("bash", [`${P}/session/session-start.sh`], { cwd: project || root, encoding: "utf8", env, input: JSON.stringify({ session_id: "thread-1", cwd: project || root }) });
 test("the session hook names the documents every chat, in the brain and in a linked project, and says when there are none", () => {
   const root = brain();
   assert.match(hook(root), /documents: Strategy \[draft\] \(strategy, planning\) -> strategy\.md/);
@@ -258,4 +258,17 @@ test("--files lists what a document owns; the old guideline.mjs path still runs"
   assert.equal(document(root, "--files", "design-system").trim(), "brand/design-system/logo.svg");
   const old = execFileSync(process.execPath, [`${P}/scripts/gtm-brain-guidelines/guideline.mjs`, ".", "--list"], { cwd: root, encoding: "utf8", env });
   assert.match(old, /Design system \[draft\]/);
+});
+
+test("upgrade refreshes a README a release wrote and keeps one the person edited", () => {
+  const up = root => execFileSync("bash", [`${P}/scripts/gtm-brain-upgrade/upgrade.sh`, root], { cwd: root, encoding: "utf8", env: { ...env, GTM_BRAIN_NO_COMMIT: "1" } });
+  const old = readFileSync(`${P}/templates/legacy/readme/0.31.0.md`, "utf8").replaceAll("{{COMPANY}}", "Reflow");
+  const shipped = brain(); writeFileSync(join(shipped, "README.md"), old);
+  assert.match(up(shipped), /updated README\.md/);
+  const now = readFileSync(join(shipped, "README.md"), "utf8");
+  assert.match(now, /^# Reflow brain/m); assert.match(now, /## What goes where/); assert.match(now, /`work\/`/);
+  assert.doesNotMatch(up(shipped), /README/);
+  const edited = brain(); writeFileSync(join(edited, "README.md"), old + "\nOur own note.\n");
+  assert.doesNotMatch(up(edited), /README/);
+  assert.match(readFileSync(join(edited, "README.md"), "utf8"), /Our own note\./);
 });

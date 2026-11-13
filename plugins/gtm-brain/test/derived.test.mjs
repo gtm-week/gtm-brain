@@ -24,7 +24,7 @@ test("source edits flag drift without writing, then update every copy and remove
   const root = mkdtempSync(join(tmpdir(), "gtm-derived-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const files = [script, ontology, policy, "plugins/gtm-brain/policies/computer-use.md", ...documents,
-    "plugins/gtm-brain/lib/host.mjs", "plugins/gtm-brain/.codex-plugin/plugin.json", "plugins/gtm-brain/hooks.json"];
+    "plugins/gtm-brain/lib/host.mjs", "plugins/gtm-brain/.codex-plugin/plugin.json"];
   for (const file of files) {
     mkdirSync(dirname(join(root, file)), { recursive: true });
     copyFileSync(join(repo, file), join(root, file));

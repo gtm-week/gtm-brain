@@ -132,7 +132,7 @@ test("entities: both registry files are merged on read and folded into entities.
 test("entities: 'Chris is Krzysztof Pawlak' folds the Chris entry into Krzysztof and his notes count there", () => {
   const root = brain();
   lib.writeContext(root, "pipeline", { title: "Pipeline", rule: "Deals." });
-  lib.normalisePeople(root, ["Chris"]);   // a note named Chris before anyone said who he is
+  lib.normalisePeople(root, ["Chris"], { confirmedNew: ["Chris"] });   // a note named Chris before anyone said who he is (the person kept the one word)
   lib.appendMemory(root, "pipeline", { authors: ["marta-nowak"], content: "Chris called.", people: ["Chris"] });
   const target = lib.addName(root, "Krzysztof Pawlak", { emails: ["kp@x.io"] });
   const args = { source: lib.resolveEntity(lib.readNames(root), "Chris").id, target: target.id };
@@ -197,17 +197,18 @@ test("names: a mention that looks like a known name is not added; confirmed new,
   const root = brain();
   lib.addName(root, "Pierre Aubert"); lib.addName(root, "OpenAI", { kind: "company" }); lib.addName(root, "Maciej Kończal");
   const names = lib.readNames(root);
-  assert.deepEqual(lib.similarNames(names, "Pierre Dupont"), [{ name: "Pierre Aubert", kind: "person" }], "shared first name");
+  assert.deepEqual(lib.similarNames(names, "Pierre Aubart"), [{ name: "Pierre Aubert", kind: "person" }], "a typo of the surname");
+  assert.deepEqual(lib.similarNames(names, "Pierre Dupont"), [{ name: "Pierre Aubert", kind: "person" }], "same first name: listed, Codex decides by P4 whether it is someone else");
   assert.deepEqual(lib.similarNames(names, "OpenAI Deployment"), [{ name: "OpenAI", kind: "organization" }], "shared word");
   assert.deepEqual(lib.similarNames(names, "Open AI"), [{ name: "OpenAI", kind: "organization" }], "same letters spelled apart");
   assert.deepEqual(lib.similarNames(names, "Konczal"), [{ name: "Maciej Kończal", kind: "person" }], "accents ignored");
   assert.deepEqual(lib.similarNames(names, "Ingrid Solberg"), []);
   assert.deepEqual(lib.similarNames(names, "The Group"), [], "stop words never match");
-  const held = lib.normalisePeople(root, ["Pierre Dupont", "Ingrid Solberg"]);
-  assert.deepEqual(held.people, []); assert.deepEqual(held.added, []); assert.equal(held.similar.length, 1); assert.equal(held.similar[0].mention, "Pierre Dupont");
+  const held = lib.normalisePeople(root, ["Pierre Aubart", "Ingrid Solberg"]);
+  assert.deepEqual(held.people, []); assert.deepEqual(held.added, []); assert.equal(held.similar.length, 1); assert.equal(held.similar[0].mention, "Pierre Aubart");
   assert.ok(!lib.readNames(root).some(n => n.name === "Ingrid Solberg"), "nothing is added while a question is open");
-  const ok = lib.normalisePeople(root, ["Pierre Dupont", "Ingrid Solberg"], { confirmedNew: ["pierre dupont"] });
-  assert.deepEqual(ok.people, ["Pierre Dupont", "Ingrid Solberg"]); assert.deepEqual(ok.added, ["Pierre Dupont", "Ingrid Solberg"]);
+  const ok = lib.normalisePeople(root, ["Pierre Aubart", "Ingrid Solberg"], { confirmedNew: ["pierre aubart"] });
+  assert.deepEqual(ok.people, ["Pierre Aubart", "Ingrid Solberg"]); assert.deepEqual(ok.added, ["Pierre Aubart", "Ingrid Solberg"]);
   assert.equal(lib.canonicalName(lib.readNames(root), "Pierre"), null, "two Pierres: a first name alone is ambiguous");
   assert.equal(lib.normalisePeople(root, ["Pierre"]).similar[0].matches.length, 2, "and both are named");
 });

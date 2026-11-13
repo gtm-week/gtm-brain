@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import * as lib from "../lib/brain.mjs";
-import { legacyTemplates, rulesWhy, rulesReasons } from "../lib/upgrade-files.mjs";
+import { legacyTemplates, rulesWhy, rulesReasons, rulesState, autoRefresh } from "../lib/upgrade-files.mjs";
 import { removeBrain } from "./helpers/dash-cleanup.mjs";
 
 const plugin = new URL("../", import.meta.url).pathname;
@@ -172,11 +172,66 @@ test("custom instructions are preserved and a proposed replacement is prepared w
   assert.ok(readFileSync(join(folder, backup, "AGENTS.proposed.md"), "utf8").includes("Operational answers"));
 });
 
-test("the session hook says when a brain's rules are from an older GTM Brain, and stays quiet when they are current (ALL-204 step 2a)", t => {
-  const legacy = fixture(t, "0.17.5"), current = fixture(t);
-  const hook = f => spawnSync("bash", [join(plugin, "hooks/session-start.sh")], { cwd: f.root, env: { ...f.env, PLUGIN_ROOT: plugin, GTM_BRAIN_NO_VERSION_CHECK: "1", GTM_BRAIN_NO_SESSION_MAINTENANCE: "1" }, encoding: "utf8", input: JSON.stringify({ session_id: "r", cwd: f.root }) }).stdout;
-  assert.match(hook(legacy), /are from GTM Brain 0\.17\.5\. What the newer rules change: [^\n]*script cell[^\n]*refresh the rules/);
-  assert.doesNotMatch(hook(current), /rules \(AGENTS\.md\) are from/);
+const sessionHook = (f, env = {}) => spawnSync("bash", [join(plugin, "session/session-start.sh")], { cwd: f.root, env: { ...f.env, PLUGIN_ROOT: plugin, GTM_BRAIN_NO_VERSION_CHECK: "1", GTM_BRAIN_NO_SESSION_MAINTENANCE: "1", ...env }, encoding: "utf8", input: JSON.stringify({ session_id: "r", cwd: f.root }) }).stdout;
+
+test("the session hook refreshes unedited recent rules itself, says so once, and leaves edited rules alone", t => {
+  const legacy = fixture(t, "0.31.2"), current = fixture(t), edited = fixture(t, "0.31.2");
+  const target = readFileSync(join(plugin, "templates/AGENTS.md"), "utf8").replaceAll("{{COMPANY}}", "Upgrade Co");
+  const old = readFileSync(join(legacy.root, "AGENTS.md"), "utf8");
+  assert.match(sessionHook(legacy), /refreshed this brain's rules \(AGENTS\.md\) from GTM Brain 0\.31\.2 on its own[^\n]*kept in [^\n]*work\/upgrades\/before-[^\n]*do not ask, it is done/);
+  assert.equal(readFileSync(join(legacy.root, "AGENTS.md"), "utf8"), target);
+  const backup = readdirSync(join(legacy.root, "work/upgrades"))[0];
+  assert.equal(readFileSync(join(legacy.root, "work/upgrades", backup, "AGENTS.md"), "utf8"), old);
+  assert.doesNotMatch(sessionHook(legacy), /rules \(AGENTS\.md\)/, "said once: the next chat finds the rules current");
+  assert.doesNotMatch(sessionHook(current), /rules \(AGENTS\.md\)/);
+  const mine = old + "\nKeep customer attachments local.\n";
+  writeFileSync(join(edited.root, "AGENTS.md"), mine);
+  assert.doesNotMatch(sessionHook(edited), /refreshed this brain's rules/);
+  assert.equal(readFileSync(join(edited.root, "AGENTS.md"), "utf8"), mine, "a line of the person's is never replaced without them");
+});
+
+test("the automatic refresh changes only AGENTS.md: deleted files stay deleted, files stay where they are", t => {
+  const f = fixture(t, "0.31.2");
+  rmSync(join(f.root, "strategy.md"), { force: true }); rmSync(join(f.root, "workflows"), { recursive: true, force: true });
+  mkdirSync(join(f.root, "brain/guidelines"), { recursive: true }); writeFileSync(join(f.root, "brain/guidelines/tone.md"), "# Tone\n");
+  writeFileSync(join(f.root, "pricing.md"), "HALF WRITTEN\n"); mkdirSync(join(f.root, "pricing"), { recursive: true });
+  assert.match(sessionHook(f), /refreshed this brain's rules/);
+  assert.equal(existsSync(join(f.root, "strategy.md")), false);
+  assert.equal(existsSync(join(f.root, "workflows")), false);
+  assert.equal(existsSync(join(f.root, "brain/guidelines/tone.md")), true);
+  assert.equal(readFileSync(join(f.root, "pricing.md"), "utf8"), "HALF WRITTEN\n");
+});
+
+test("the automatic refresh commits only AGENTS.md, leaving the person's unfinished work out", t => {
+  const f = fixture(t, "0.31.2"), git = (...a) => spawnSync("git", ["-C", f.root, ...a], { encoding: "utf8" }).stdout;
+  spawnSync("git", ["-C", f.root, "add", "-A"]); spawnSync("git", ["-C", f.root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "base"]);
+  writeFileSync(join(f.root, "draft.md"), "HALF WRITTEN\n");
+  const env = { ...process.env }; delete process.env.GTM_BRAIN_NO_COMMIT;
+  t.after(() => { process.env = env; });
+  process.env.GIT_AUTHOR_NAME = process.env.GIT_COMMITTER_NAME = "t"; process.env.GIT_AUTHOR_EMAIL = process.env.GIT_COMMITTER_EMAIL = "t@t";
+  assert.match(autoRefresh(f.root, join(plugin, "templates")), /refreshed this brain's rules/);
+  assert.equal(git("show", "--name-only", "--format=", "HEAD").trim(), "AGENTS.md");
+  assert.match(git("status", "--short"), /\?\? draft\.md/);
+});
+
+test("old rules with migrations still to run, and a run with nobody present, keep the offer and change nothing", t => {
+  const old = fixture(t, "0.17.5"), scheduled = fixture(t, "0.31.2");
+  const before = readFileSync(join(old.root, "AGENTS.md"), "utf8"), recent = readFileSync(join(scheduled.root, "AGENTS.md"), "utf8");
+  assert.match(sessionHook(old), /are from GTM Brain 0\.17\.5\. What the newer rules change: [^\n]*script cell[^\n]*refresh the rules/);
+  assert.equal(readFileSync(join(old.root, "AGENTS.md"), "utf8"), before);
+  assert.match(sessionHook(scheduled, { GTM_BRAIN_RUN: "1" }), /are from GTM Brain 0\.31\.2/);
+  assert.equal(readFileSync(join(scheduled.root, "AGENTS.md"), "utf8"), recent);
+});
+
+test("deleting lines from shipped rules is an edit of the person's: kept, never refreshed on its own", t => {
+  const f = fixture(t, "0.32.0"), lines = readFileSync(join(f.root, "AGENTS.md"), "utf8").split("\n");
+  const trimmed = [...lines.slice(0, 100), ...lines.slice(140)].join("\n");
+  writeFileSync(join(f.root, "AGENTS.md"), trimmed);
+  assert.equal(rulesState(f.root, join(plugin, "templates")), "custom");
+  assert.doesNotMatch(sessionHook(f), /refreshed this brain's rules/);
+  assert.equal(readFileSync(join(f.root, "AGENTS.md"), "utf8"), trimmed);
+  assert.equal(f.run().status, 2, "an asked-for refresh pauses with a proposed file");
+  assert.equal(readFileSync(join(f.root, "AGENTS.md"), "utf8"), trimmed);
 });
 
 test("an offer to refresh the rules always says why: every rule change since the brain's version, oldest first", t => {
@@ -242,4 +297,50 @@ test("upgrade pulls a document into the folder of its own name that sits beside 
   assert.match(out, /moved design-system\.md into design-system\//);
   assert.ok(!existsSync(join(root, "design-system.md"))); assert.match(readFileSync(join(root, "design-system", "design-system.md"), "utf8"), /^status: approved$/m);
   assert.doesNotMatch(run().stdout, /moved design-system\.md/, "a second run has nothing to move");
+});
+
+test("setup refuses a folder too broad for a brain, before writing anything, and says where to go", t => {
+  const home = mkdtempSync(join(tmpdir(), "gtm-broad-home-")); t.after(() => rmSync(home, { recursive: true, force: true }));
+  const desktop = join(home, "Desktop"), fine = join(home, "Documents", "Reflow Brain"); mkdirSync(desktop); mkdirSync(fine, { recursive: true });
+  const setup = cwd => spawnSync("bash", [join(plugin, "scripts/gtm-brain-setup/setup.sh"), "--company", "Reflow", "--one-liner", "Testing", "--owner", "Ann Lee <ann@example.test>"], { cwd, env: { ...process.env, HOME: home, CODEX_HOME: join(home, "profile"), GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_COMPILE: "1" }, encoding: "utf8" });
+  for (const [cwd, name] of [[home, "your home folder"], [desktop, "Desktop"], [join(home, "Documents"), "Documents"]]) {
+    const r = setup(cwd);
+    assert.equal(r.status, 1); assert.match(r.stderr, new RegExp(`this is ${name}, too broad[^\\n]*~/Documents/Reflow Brain`));
+    assert.equal(existsSync(join(cwd, "brain")), false);
+  }
+  const ok = setup(fine); assert.equal(ok.status, 0, ok.stderr); assert.equal(existsSync(join(fine, "brain/admin.md")), true);
+});
+
+test("the rules say RULES.md decides where work output goes, inside its project", () => {
+  const rules = readFileSync(join(plugin, "templates/AGENTS.md"), "utf8").replace(/\s+/g, " ");
+  assert.match(rules, /`RULES\.md` at the brain root decides where every file goes, and the person edits it/);
+  assert.match(rules, /a task that belongs to a listed project goes in that project, never in a folder of its own/);
+  assert.match(rules, /Never put a deliverable in `work\/` or a new folder at the brain root/);
+});
+
+test("the session hook refreshes a README a release wrote in a commit of its own, and leaves an edited one alone", t => {
+  const old = readFileSync(join(plugin, "templates/legacy/readme/0.31.0.md"), "utf8").replaceAll("{{COMPANY}}", "Upgrade Co");
+  const target = readFileSync(join(plugin, "templates/README.md"), "utf8").replaceAll("{{COMPANY}}", "Upgrade Co");
+  const f = fixture(t), git = (...a) => spawnSync("git", ["-C", f.root, ...a], { encoding: "utf8" }).stdout;
+  writeFileSync(join(f.root, "README.md"), old);
+  spawnSync("git", ["-C", f.root, "add", "-A"]); spawnSync("git", ["-C", f.root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "base"]);
+  writeFileSync(join(f.root, "pricing.md"), "HALF WRITTEN\n");
+  sessionHook(f, { GTM_BRAIN_NO_COMMIT: "" });
+  assert.equal(readFileSync(join(f.root, "README.md"), "utf8"), target);
+  assert.deepEqual(git("show", "--name-only", "--format=", "HEAD").trim().split("\n"), ["README.md"]);
+  assert.match(git("status", "--porcelain"), /pricing\.md/, "the person's own file is the maintenance's to keep, in its own commit");
+
+  const edited = fixture(t); writeFileSync(join(edited.root, "README.md"), old + "\nOur own note.\n");
+  sessionHook(edited);
+  assert.match(readFileSync(join(edited.root, "README.md"), "utf8"), /Our own note\./);
+
+  const scheduled = fixture(t); writeFileSync(join(scheduled.root, "README.md"), old);
+  sessionHook(scheduled, { GTM_BRAIN_RUN: "1" });
+  assert.equal(readFileSync(join(scheduled.root, "README.md"), "utf8"), old);
+});
+
+test("the README does not call work/ safe to delete", () => {
+  const readme = readFileSync(join(plugin, "templates/README.md"), "utf8");
+  assert.doesNotMatch(readme, /safe to delete/);
+  assert.match(readme, /`work\/`[^\n]*\n[^\n]*deleting it unlinks those projects/);
 });

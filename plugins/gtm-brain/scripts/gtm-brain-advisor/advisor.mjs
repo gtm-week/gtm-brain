@@ -7,6 +7,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const us = await import(new URL("../../lib/user-skills.mjs", import.meta.url));
+const rc = await import(new URL("../../lib/rules-check.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
 if (!existsSync(join(root, "brain", "admin.md"))) { console.error("no brain here"); process.exit(1); }
 const now = Date.parse(process.env.GTM_BRAIN_NOW || new Date().toISOString());
@@ -26,7 +27,10 @@ const add = (weight, key, what, why, do_) => F.push({ weight, key, what, why, do
 
 // 1. summaries: a run that gave up, or a context whose oldest waiting note is a day old with nothing running and no run due
 if (gaveUp) add(100, "summary-failed", `The summary run failed ${compile.attempt || 1} time(s) and gave up (${(compile.contexts || "").replace(/ /g, ", ") || "no context named"}); ${active.filter(c => c.stale).map(c => c.title).join(", ")} still wait.`, "Until it works, the context summaries stop reflecting the notes.", "This one needs a hand: say \"update the summaries now\" in the chat (Codex writes them itself this once); if that fails too, work/hooks.log says why.");
-const stalled = c => { const o = oldestPending(c); return c.stale && o && days(o) >= 1 && !busy && !(plan.wait !== null && plan.wait > 0) && !gaveUp; };
+// a summary paused by a hand edit: no run touches it until the edit is reviewed, so it is never "the run starts next"
+const paused = lib.pausedCovers(root), isPaused = c => paused.some(p => p.slug === c.slug);
+if (paused.length) add(95, "summary-paused", `${paused.map(p => `${p.title}'s summary is paused (last updated ${p.since ? String(p.since).slice(0, 10) : "never"}${p.waiting ? `, ${p.waiting} note${p.waiting === 1 ? "" : "s"} waiting` : ""})`).join("; ")}: it was edited by hand, so no summary run updates it until the edit is reviewed.`, "A paused summary stays on its old date while notes pile up, and every chat reads the old one.", `Say: review the ${paused[0].title} summary edit (Codex shows it, keeps what matters as notes, then asks before releasing it).`);
+const stalled = c => { const o = oldestPending(c); return !isPaused(c) && c.stale && o && days(o) >= 1 && !busy && !(plan.wait !== null && plan.wait > 0) && !gaveUp; };
 // a summary that should have been written and was not is the machine's fault, never the person's todo: the run is started again here
 const stalledOnes = active.filter(stalled);
 if (stalledOnes.length) { const started = process.env.GTM_BRAIN_NOW ? false : lib.kickCompile(root, { force: true }); add(90, "behind", `${stalledOnes.map(c => c.title).join(", ")} ${stalledOnes.length === 1 ? "has" : "have"} had notes waiting for a summary for ${Math.max(...stalledOnes.map(c => days(oldestPending(c))))} day(s)${stalledOnes.some(c => !c.compiledAt) ? " (never summarised yet)" : ""}.`, "The summary is what every chat reads first; without it a chat reads raw notes, or nothing.", started ? "Nothing: a summary run was started just now and lands in a minute or two." : "Nothing to do by hand; the run starts at the next note or chat."); }
@@ -68,6 +72,9 @@ for (const p of lib.readProjects(root)) {
 const team = new Set((admin.team || []).map(p => String(p.name || "").toLowerCase()));
 const firstOnly = names.filter(n => n.kind === "person" && !team.has(n.name.toLowerCase()) && !n.name.trim().includes(" "));
 if (firstOnly.length) add(30, "first-name", `${firstOnly.length} ${firstOnly.length === 1 ? "person is" : "people are"} known by a first name only: ${firstOnly.slice(0, 4).map(n => n.name).join(", ")}${firstOnly.length > 4 ? ", ..." : ""}.`, "A first name alone cannot be matched to an email or a CRM record.", `Say who they are: "${firstOnly[0].name} is <Full Name>".`);
+// 6b. the brain against its own rules: names and files (the detail is query rules, on request)
+const broken = rc.ruleFindings(root).filter(f => !["P3", "P4"].includes(f.rule));   // first names and look-alikes have their own findings above
+if (broken.length) add(28, "rules", `${broken.length} file${broken.length === 1 ? "" : "s and folders"} break the brain's RULES.md rules (${[...new Set(broken.map(f => f.subject))].slice(0, 3).join(", ")}${broken.length > 3 ? ", ..." : ""}).`, "A file nobody can explain is where trust in the brain goes first.", "Say: check the brain against its rules (each finding comes with its choices).");
 // 7. notes without a trace
 const recent = active.flatMap(c => lib.effectiveMemories(c.memories)).filter(m => days(m.at) <= 30 && m.kind === "note");
 const bare = recent.filter(m => !m.source.length && !m.people.length && !m.tools.length);
@@ -81,8 +88,9 @@ const load = words(admin.body) + loaded.reduce((n, c) => n + coverWords(c), 0);
 for (const c of active) { if (words(c.rule) > 120) add(20, "long-rule", `${c.title}'s standing rule is ${words(c.rule)} words.`, "A rule is read at every load; past a paragraph it is skimmed, not followed.", `Say: edit context ${c.slug}, shorten the rule to the three things that matter.`); if (words(c.now) > 120) add(20, "long-now", `${c.title}'s Next guidance is ${words(c.now)} words.`, "Next guidance should be a few sentences; compile writes it from the notes, so the notes are too many for one summary.", "Fork the biggest thread into its own context, or close what is done."); }
 if (load > 2000) add(15, "heavy-load", `Every chat starts by loading about ${load} words of this brain's own (workplace info, ${loaded.length} open context${loaded.length === 1 ? "" : "s"}) on top of the rules (${agentsWords}).`, "The more a chat loads before you speak, the less attention is left for what you say.", "Open fewer contexts at once, and shorten the rules that grew.");
 
-// 9. how the brain is actually used: the tool log the PostToolUse hook writes (work/tool-usage.jsonl), and the
-//    actions memories record. The screen reached for, an interaction that keeps recurring, a tool nobody listed.
+// 9. how the brain is actually used: the GTM Brain calls the MCP server logs (work/tool-usage.jsonl), and the
+//    actions memories record. An interaction that keeps recurring, a tool nobody listed. GTM Brain has no hooks,
+//    so calls to other connectors and what people typed are not seen here.
 let usage = []; try { usage = readFileSync(join(root, "work", "tool-usage.jsonl"), "utf8").split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(u => u && days(u.at) <= 30); } catch {}
 const screen = usage.filter(u => u.computer);
 if (screen.length) { const titles = [...new Set(screen.map(u => u.title).filter(Boolean))].slice(0, 3); const failedFirst = usage.filter(u => u.server === "gtm_brain" && u.error).length; add(75, "computer-use", `Computer Use was used ${screen.length} time${screen.length === 1 ? "" : "s"} in the last 30 days${titles.length ? ` (${titles.join("; ")})` : ""}${failedFirst ? `, and ${failedFirst} GTM Brain call${failedFirst === 1 ? "" : "s"} failed in the same period` : ""}.`, "Each one is a GTM Brain operation that was missing, failed, or not chosen; the screen is the fallback the policy allows only with approval for that step.", "Say what you were doing when it happened. If a GTM Brain tool should have done it, that is a gap for the plugin's review; if the dashboard tab, nothing."); }
@@ -109,16 +117,7 @@ for (const [k, r] of recur) {
   const skill = ownSkills.find(s => s.id === wanted || (s.description.toLowerCase().includes(tool.toLowerCase()) && s.description.toLowerCase().includes(action.toLowerCase())));
   add(55, "recurring-action", `"${k}" was done on ${r.days.size} separate days in the last 30 (${r.n} times; ${[...r.contexts].join(", ")}).`, "Work that repeats is worth keeping as a skill, so every chat does it the same way.", covered ? "It is one of this company's interactions already: the assistant runs it with interact." : internal ? "That is a GTM Brain operation: use its tool." : skill ? `The skill ${skill.id} covers it: say /${skill.id}.` : has ? "A proposal is on the dashboard: discuss and approve it in Codex and this becomes an interaction the assistant runs and records the same way each time." : `Say: make a skill for "${action}" in ${tool}.`);
 }
-if (pendingProposal) add(80, "interaction-proposed", `A new interaction is proposed: ${pendingProposal.name} in ${pendingProposal.tool}.`, "Until it is approved the assistant keeps doing it by hand; once approved it runs and records it the same way every time.", "Review it on the dashboard; approve with APPROVE or drop it in Codex.");
-// what people asked (work/turns.jsonl, the UserPromptSubmit hook) against what the reads found: an ask the
-// brain had nothing for is a memory gap; the same ask three times is a summary or a rule that should carry it
-let turns = []; try { turns = readFileSync(join(root, "work", "turns.jsonl"), "utf8").split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(t => t && t.kind === "prompt" && t.text && days(t.at) <= 30); } catch {}
-const gist = t => String(t).toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter(w => w.length > 3).slice(0, 8).join(" ");
-const emptyReads = usage.filter(u => u.empty);
-const unmet = turns.filter(t => emptyReads.some(u => u.session && u.session === t.session && Date.parse(u.at) >= Date.parse(t.at) && Date.parse(u.at) - Date.parse(t.at) < 10 * 60000));
-if (unmet.length) add(65, "asked-empty", `${unmet.length} ask${unmet.length === 1 ? "" : "s"} in the last 30 days found nothing in the brain: "${unmet[0].text.slice(0, 70)}${unmet[0].text.length > 70 ? "..." : ""}"${unmet.length > 1 ? ` and ${unmet.length - 1} more` : ""}.`, "An ask the brain had nothing for is a note nobody wrote, or wrote somewhere it is not found.", "If you know the answer, record it where it belongs; if a tool would know, connect it and let sync read it.");
-const askedAgain = new Map(); for (const t of turns) { const g = gist(t.text); if (!g) continue; const r = askedAgain.get(g) || { n: 0, text: t.text }; r.n++; askedAgain.set(g, r); }
-for (const [, r] of askedAgain) if (r.n >= 3) add(50, "asked-again", `"${r.text.slice(0, 70)}${r.text.length > 70 ? "..." : ""}" was asked ${r.n} times in the last 30 days.`, "What is asked again and again should be on the summary or in the rule of its context, so the chat starts with it.", "Say: compile <context>, or edit its rule so the answer is there at every load.");
+if (pendingProposal) add(80, "interaction-proposed", `A new interaction is proposed: ${pendingProposal.name} in ${pendingProposal.tool}.`, "Until it is approved the assistant keeps doing it by hand; once approved it runs and records it the same way every time.", "Review it on the dashboard; in Codex say: approve the interaction (a form asks for APPROVE), or drop it.");
 const listed = new Set((admin.tools || []).map(toolKey));
 const usedTools = new Set([...recentAll.flatMap(({ m }) => m.tools || []), ...usage.map(u => u.server).filter(s => s && !["gtm_brain", "cua_repl", "codex_app", "codex_apps"].includes(s))].map(String));
 for (const t of usedTools) if (!listed.has(toolKey(t))) add(45, "tool-unlisted", `${t} is used in the notes but is not in the workplace info.`, "The tools list is what the connect check reads and what every chat is told the company runs on.", `Say: add ${t} to the tools (a workplace change, APPROVE), or: connect ${t}.`);

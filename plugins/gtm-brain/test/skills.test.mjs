@@ -1,7 +1,7 @@
 process.env.GTM_BRAIN_NO_WATCH = "1";
 process.env.GTM_BRAIN_NO_COMPILE = "1"; // Model runs are opt-in through test doubles.
 // End-to-end tests of the skill scripts on a brain made by setup.sh. Run: node --test plugins/gtm-brain/test
-process.env.GTM_BRAIN_NO_HOOK_CHECK = "1"; // the hooks-off check talks to a real Codex; hooks-notice.test covers it with a fake one
+process.env.GTM_BRAIN_NO_SESSION_START = "1"; // servers here test tools; chat-start.test.mjs covers the chat start
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
@@ -246,7 +246,7 @@ test("activity log round-trips and unsaved changes list what save would commit",
 });
 
 test("a standing rule that contains a Now: line survives archive and unarchive unchanged", () => {
-  run(root, "contexts", "contexts.mjs", "--new", "launch", "Launch", "Now: is not the time to discount.\nNever promise a date.");
+  run(root, "contexts", "contexts.mjs", "--new", "launch", "Launch", "Now: is not the time to discount.\nNever promise a date.", "--distinct", "no context covers the launch");
   const before = lib.readContext(root, "launch");
   run(root, "contexts", "contexts.mjs", "--archive", "launch"); run(root, "contexts", "contexts.mjs", "--unarchive", "launch");
   const after = lib.readContext(root, "launch");
@@ -323,11 +323,35 @@ test("the cover carries the names it is about, with kinds; action is no longer a
   assert.throws(() => run(root, "remember", "remember.mjs", "--by", "marta", "--kind", "action", "--content", "x"), /no longer a kind/);
 });
 
+test("an installed plugin used in this brain is on the dashboard without admin.md: a read test, a memory from it, a mention (2026-11-11)", () => {
+  const cr = mkdtempSync(join(tmpdir(), "gtm-brain-used-")); execFileSync("git", ["init", "-q", cr]);
+  run(cr, "setup", "setup.sh", "--company", "X", "--one-liner", "y", "--owner", "Ann Lee <ann@b.c>", "--tools", "Attio");
+  const bin = mkdtempSync(join(tmpdir(), "gtm-brain-ubin-")), cat = mkdtempSync(join(tmpdir(), "gtm-brain-ucat-"));
+  writeFileSync(join(bin, "codex"), `#!/bin/sh\ncat <<'L'\nMarketplace \`openai-curated-remote\`\nattio@openai-curated-remote installed, enabled 1 x\nlinear@openai-curated-remote installed, enabled 1 x\nslack@openai-curated-remote installed, enabled 1 x\nhubspot@openai-curated-remote installed, enabled 1 x\napp-9@openai-curated-remote installed, enabled 1 x\nsales@openai-curated-remote installed, enabled 1 x\nwork-pets@openai-curated-remote installed, enabled 1 x\nnotion@openai-curated-remote installed, enabled 1 x\nL\n`); execFileSync("chmod", ["755", join(bin, "codex")]);
+  writeFileSync(join(cat, "c.json"), JSON.stringify({ plugins: ["attio:Attio", "linear:Linear", "slack:Slack", "hubspot:HubSpot", "app-9:MagicPath", "sales:Sales", "work-pets:Work Pets", "notion:Notion"].map(x => ({ name: x.split(":")[0], installation_policy: "AVAILABLE", release: { display_name: x.split(":")[1] } })) }));
+  const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, GTM_BRAIN_CATALOG_DIR: cat, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1" };
+  const remember = (...a) => execFileSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann-lee", "--context", "company", ...a], { cwd: cr, env });
+  remember("--tools", "slack", "--content", "Collected the speaker replies.");
+  remember("--content", "Built the Berlin hero in MagicPath. Sales cycle is three months; Work Pets is fun.");
+  execFileSync(process.execPath, [`${P}/scripts/gtm-brain-connect/connect.mjs`, ".", "--mark", "Linear", "ok", "3 issues"], { cwd: cr, env });
+  const out = execFileSync(process.execPath, [`${P}/scripts/gtm-brain-connect/connect.mjs`, ".", "--check"], { cwd: cr, encoding: "utf8", env });
+  assert.match(out, /used in this brain, on the dashboard, not in admin\.md tools: [^\n]*Linear \(used in chat\)/);
+  assert.match(out, /Slack \(a memory came from it\)/); assert.match(out, /MagicPath \(mentioned in a memory\)/);
+  const st = JSON.parse(readFileSync(join(cr, "work", "tools.json"), "utf8"));
+  assert.equal(st.magicpath.status, "installed"); assert.equal(st.linear.test, "ok", "the read test stays with it");
+  for (const k of ["sales", "work pets", "notion"]) assert.equal(st[k], undefined, `${k}: an everyday word, a helper, or no trace`);
+  assert.match(out, /installed in Codex but not in admin\.md tools: [^\n]*Notion/); assert.doesNotMatch(out.split("installed in Codex")[1] || "", /MagicPath|Linear/, "a used one is not offered twice");
+  execFileSync(process.execPath, [`${P}/scripts/gtm-brain-render/render.mjs`, "."], { cwd: cr, env: { ...env, GTM_BRAIN_NO_OPEN: "1" } });
+  const page = readFileSync(join(cr, "work", "home", "data.json"), "utf8");
+  for (const t of ["MagicPath", "Linear", "Slack"]) assert.match(page, new RegExp(`"tool":"${t}"`), `${t} is on the dashboard`);
+  assert.doesNotMatch(page, /"tool":"Sales"/);
+});
+
 test("connect matches tools against the live catalog: by id, by display name, short forms, prefix; never a table", () => {
   const cr = mkdtempSync(join(tmpdir(), "gtm-brain-connect-")); execFileSync("git", ["init", "-q", cr]);
-  run(cr, "setup", "setup.sh", "--company", "X", "--one-liner", "y", "--owner", "A B <a@b.c>", "--tools", "Gmail, Wispr Flow, Granola, Calendar, Apollo, Todoist, Fax machine, Salesforce");
+  run(cr, "setup", "setup.sh", "--company", "X", "--one-liner", "y", "--owner", "A B <a@b.c>", "--tools", "Gmail, Wispr Flow, Granola, Calendar, Apollo, Todoist, Fax machine, Salesforce, Luma");
   const bin = mkdtempSync(join(tmpdir(), "gtm-brain-cbin-")); const cat = mkdtempSync(join(tmpdir(), "gtm-brain-cat-"));
-  writeFileSync(join(bin, "codex"), `#!/bin/sh\ncat <<'L'\nMarketplace \`openai-bundled\`\nbrowser@openai-bundled            installed, enabled  1.0  x\nMarketplace \`openai-curated-remote\`\ngmail@openai-curated-remote       installed, enabled  0.1.10  x\ngranola@openai-curated-remote     not installed       1.0.0   x\nlinear@openai-curated-remote      installed, enabled  5.0.1   x\ngithub@openai-curated-remote      installed, enabled  0.1     x\nplugin-management@openai-curated-remote installed, enabled 0.1 x\nL\n`); execFileSync("chmod", ["755", join(bin, "codex")]);
+  writeFileSync(join(bin, "codex"), `#!/bin/sh\ncat <<'L'\nMarketplace \`openai-bundled\`\nbrowser@openai-bundled            installed, enabled  1.0  x\nMarketplace \`openai-curated-remote\`\ngmail@openai-curated-remote       installed, enabled  0.1.10  x\ngranola@openai-curated-remote     not installed       1.0.0   x\nlinear@openai-curated-remote      installed, enabled  5.0.1   x\ngithub@openai-curated-remote      installed, enabled  0.1     x\nplugin-management@openai-curated-remote installed, enabled 0.1 x\nwork-pets@openai-curated-remote installed, enabled 0.1 x\nsites@openai-curated-remote installed, enabled 0.1 x\nopenai-templates@openai-curated-remote installed, enabled 0.1 x\nL\n`); execFileSync("chmod", ["755", join(bin, "codex")]);
   writeFileSync(join(cat, "abc.json"), JSON.stringify({ schema_version: 1, fetched_at: "2026-09-05T09:21:24Z", plugins: [
     { name: "gmail", installation_policy: "AVAILABLE", release: { display_name: "Gmail" } }, { name: "granola", installation_policy: "AVAILABLE", release: { display_name: "Granola" } },
     { name: "app-6a5ae9736be0819199d06d61ac171080", installation_policy: "AVAILABLE", release: { display_name: "Wispr Flow" } },
@@ -336,7 +360,8 @@ test("connect matches tools against the live catalog: by id, by display name, sh
     { name: "app-3", installation_policy: "AVAILABLE", release: { display_name: "Todoist: To Do List & Calendar" } }, { name: "app-4", installation_policy: "AVAILABLE", release: { display_name: "Todoist Helper" } },
     { name: "linear", installation_policy: "AVAILABLE", release: { display_name: "Linear" } }, { name: "app-2", installation_policy: "AVAILABLE", release: { display_name: "LINEAR" } },
     { name: "salesforce", installation_policy: "NOT_AVAILABLE", status: "DISABLED_BY_ADMIN", release: { display_name: "Salesforce" } },
-    { name: "plugin-management", installation_policy: "INSTALLED_BY_DEFAULT", release: { display_name: "Plugin Management" } }, { name: "github", installation_policy: "AVAILABLE", release: { display_name: "GitHub" } } ] }));
+    { name: "plugin-management", installation_policy: "INSTALLED_BY_DEFAULT", release: { display_name: "Plugin Management" } }, { name: "github", installation_policy: "AVAILABLE", release: { display_name: "GitHub" } },
+    { name: "luma", installation_policy: "AVAILABLE", release: { display_name: "Luma AI" } }, { name: "app-5", installation_policy: "AVAILABLE", release: { display_name: "Luma" } } ] }));
   const out = execFileSync(process.execPath, [`${P}/scripts/gtm-brain-connect/connect.mjs`, ".", "--check"], { cwd: cr, encoding: "utf8", env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, GTM_BRAIN_CATALOG_DIR: cat } });
   assert.ok(out.includes(`catalog as of ${lib.localDateTime("2026-09-05T09:21:24Z")}`));
   assert.match(out, /- Gmail\s+installed/); assert.match(out, /- Granola\s+available, not installed/);
@@ -344,8 +369,9 @@ test("connect matches tools against the live catalog: by id, by display name, sh
   assert.match(out, /- Calendar\s+available, not installed[^\n]*plugin "Google Calendar"/, "a short form");
   assert.match(out, /- Apollo\s+available, not installed[^\n]*plugin "Apollo.io"\n\s+install: [^\n]*\n- Todoist/, "an exact id wins outright, nothing else named");
   assert.match(out, /- Todoist\s+available, not installed[^\n]*plugin "Todoist: To Do List & Calendar"\n[^\n]*\n\s+also matches: "Todoist Helper" \(app-4\)/, "prefix match: the app whose own name is the tool first, the rest named");
+  assert.match(out, /- Luma\s+available, not installed\s+install: codex plugin add app-5@openai-curated-remote/, "the plugin named exactly Luma beats the id luma named Luma AI (2026-11-11)");
   assert.match(out, /- Fax machine\s+no official plugin/); assert.match(out, /- Salesforce\s+not available \(disabled by your workspace admin\)/);
-  assert.match(out, /installed in Codex but not in admin.md tools: Linear\./, "defaults and developer plugins are not offered");
+  assert.match(out, /installed in Codex but not in admin.md tools: Linear\./, "defaults, developer plugins and OpenAI's own helpers (Work Pets, Sites, Templates) are not offered");
   const st = JSON.parse(readFileSync(join(cr, "work", "tools.json"), "utf8"));
   assert.equal(st["wispr flow"].plugin, "app-6a5ae9736be0819199d06d61ac171080"); assert.equal(st["wispr flow"].display, "Wispr Flow"); assert.equal(st.gmail.status, "installed");
   // the read test stands, then `codex plugin list` fails: the last known state is kept and said to be old, nothing becomes "not installed"
@@ -393,6 +419,13 @@ test("the floor: HubSpot is suggested as the CRM before anyone names one, Attio 
   out = check(none); assert.match(out, /declined earlier: HubSpot \(not offered again unless they ask\)/); assert.doesNotMatch(out, /suggested[^\n]*HubSpot/);
   st = JSON.parse(readFileSync(join(cr, "work", "tools.json"), "utf8")); assert.equal(st.hubspot.declined, true); assert.equal(st.hubspot.status, "available, not installed");
   assert.ok(!adv().some(x => x.key === "tool-suggested" && /HubSpot/.test(x.what)), "a decline is never nagged");
+  // the model passes the plugin id (google-calendar): the decline lands on the entry the check wrote, no twin
+  check(none, "--skip", "google-calendar");
+  st = JSON.parse(readFileSync(join(cr, "work", "tools.json"), "utf8")); assert.equal(st["google calendar"].declined, true); assert.ok(!st["google-calendar"], "no second entry");
+  // a twin left by an older version folds into the real entry at the next check, its decline kept
+  delete st["google calendar"].declined; st["google-calendar"] = { tool: "google-calendar", status: "not checked", declined: true, declined_at: "2026-11-10T23:08:51Z" };
+  writeFileSync(join(cr, "work", "tools.json"), JSON.stringify(st)); check(none);
+  st = JSON.parse(readFileSync(join(cr, "work", "tools.json"), "utf8")); assert.ok(!st["google-calendar"], "the twin is gone"); assert.equal(st["google calendar"].declined, true);
   execFileSync(process.execPath, [`${P}/scripts/gtm-brain-render/render.mjs`, "."], { cwd: cr, env: { ...process.env, GTM_BRAIN_NO_OPEN: "1" } });
   const data = JSON.parse(readFileSync(join(cr, "work", "home", "data.json"), "utf8"));
   const hs = data.tools.find(t => t.tool === "HubSpot"); assert.equal(hs.declined, true); assert.equal(hs.suggested, true);
@@ -420,13 +453,13 @@ test("a brain with the old names.md keeps working; the first write and the upgra
 
 test("remember holds a note whose name looks like a known one until the person answers", () => {
   const before = lib.readMemories(root, "icp").length;
-  assert.throws(() => run(root, "remember", "remember.mjs", "--by", "marta", "--context", "icp", "--people", "Pierre Dupont", "--content", "Pierre Dupont joined the call."), /not remembered yet: "Pierre Dupont" may be Pierre Aubert\. Ask the person/);
-  assert.ok(!lib.readNames(root).some(n => n.name === "Pierre Dupont"), "not in the registry"); assert.equal(lib.readMemories(root, "icp").length, before, "not written");
-  const out = run(root, "remember", "remember.mjs", "--by", "marta", "--context", "icp", "--people", "Pierre Dupont", "--new", "Pierre Dupont", "--content", "Pierre Dupont joined the call.");
-  assert.match(out, /people: Pierre Dupont/); assert.match(out, /new person in entities\/: Pierre Dupont/);
-  const missed = run(root, "remember", "remember.mjs", "--by", "marta", "--context", "icp", "--people", "Pierre Dupont", "--content", "Pierre Dupont said Castorama will sign the NDA with ByteDance next Monday.");
-  assert.match(missed, /names in this note not yet registered as entities: "Castorama", "ByteDance"\. For each that is a person, organization or product/);
-  assert.match(run(root, "entities", "entities.mjs", "--add", "Pierre Martin"), /looks like Pierre Aubert, Pierre Dupont already in the registry/);
+  assert.throws(() => run(root, "remember", "remember.mjs", "--by", "marta", "--context", "icp", "--people", "Pierre Aubart", "--content", "Pierre Aubart joined the call."), /not remembered yet: "Pierre Aubart" looks like Pierre Aubert \(P4\)/);
+  assert.ok(!lib.readNames(root).some(n => n.name === "Pierre Aubart"), "not in the registry"); assert.equal(lib.readMemories(root, "icp").length, before, "not written");
+  const out = run(root, "remember", "remember.mjs", "--by", "marta", "--context", "icp", "--people", "Pierre Aubart", "--new", "Pierre Aubart", "--content", "Pierre Aubart joined the call.");
+  assert.match(out, /people: Pierre Aubart/); assert.match(out, /new person in entities\/: Pierre Aubart/);
+  const missed = run(root, "remember", "remember.mjs", "--by", "marta", "--context", "icp", "--people", "Pierre Aubart", "--content", "Pierre Aubart said Castorama will sign the NDA with ByteDance next Monday (2026-11-16).");
+  assert.match(missed, /words in this note not linked to anything in the brain: "Castorama", "ByteDance"\. Decide what each is, by connect-dots\.md: a person, company or product/);
+  assert.match(run(root, "entities", "entities.mjs", "--add", "Pierre Aubirt"), /looks like Pierre Aub[ae]rt, Pierre Aub[ae]rt already in the registry/);
   run(root, "entities", "entities.mjs", "--add", "Nestle", "--kind", "company"); run(root, "entities", "entities.mjs", "--add", "Nestle Poland", "--kind", "company");
   assert.match(run(root, "entities", "entities.mjs"), /Might be the same: Nestle and Nestle Poland\. Ask the person; then "Nestle Poland is Nestle"/);
   run(root, "entities", "entities.mjs", "--add", "Nestle Poland", "--not", "Nestle");
@@ -520,7 +553,7 @@ test("remember takes a batch: every entry gets its own commit, and one look-alik
   writeFileSync(batch, JSON.stringify([
     { content: "Pierre Aubert asked for a three-year TCO.", people: ["Pierre Aubert"] },
     { content: "Who owns the security review?", kind: "question", context: "offer" },
-    { content: "Pierre Dupont joined the call." , people: ["Pierre Dupont"] },
+    { content: "Pierre Aubart joined the call." , people: ["Pierre Aubart"] },
   ]));
   const before = execFileSync("git", ["-C", b, "log", "--format=%s"], { encoding: "utf8" }).split("\n").filter(Boolean).length;
   const out = execFileSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann", "--batch", batch],
@@ -528,10 +561,10 @@ test("remember takes a batch: every entry gets its own commit, and one look-alik
 
   assert.match(out, /^kept 2 of 3/m, "the two clean entries land");
   assert.match(out, /not kept \(1 of 3\)/, "the blocked one is counted");
-  assert.match(out, /#3 .*"Pierre Dupont" may be Pierre Aubert/, "named by its position in the batch, so only it is re-sent");
+  assert.match(out, /#3 .*"Pierre Aubart" looks like Pierre Aubert \(P4\)/, "named by its position in the batch, so only it is re-sent");
   assert.equal(lib.readMemories(b, "icp").length, 1, "entry 1 in the loaded context");
   assert.equal(lib.readMemories(b, "offer").length, 1, "entry 2 in the context it named");
-  assert.ok(!lib.readNames(b).some(n => n.name === "Pierre Dupont"), "the held-back name is not registered");
+  assert.ok(!lib.readNames(b).some(n => n.name === "Pierre Aubart"), "the held-back name is not registered");
 
   const msgs = execFileSync("git", ["-C", b, "log", "--format=%s"], { encoding: "utf8" }).split("\n").filter(Boolean);
   assert.equal(msgs.length - before, 2, "one commit per memory written, never one commit for the batch");
@@ -544,7 +577,7 @@ test("a batch whose every entry is held back writes nothing and exits 2", () => 
   run(b, "load", "load.mjs", "icp", "--only");
   run(b, "entities", "entities.mjs", "--add", "Pierre Aubert");
   const batch = join(b, "work", "batch.json");
-  writeFileSync(batch, JSON.stringify([{ content: "Pierre Dupont called.", people: ["Pierre Dupont"] }, { content: "Pierre Duponte wrote back.", people: ["Pierre Duponte"] }]));
+  writeFileSync(batch, JSON.stringify([{ content: "Pierre Aubart called.", people: ["Pierre Aubart"] }, { content: "Pierre Auberte wrote back.", people: ["Pierre Auberte"] }]));
   try {
     execFileSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann", "--batch", batch], { cwd: b, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, PLUGIN_ROOT: P, GTM_BRAIN_NO_COMPILE: "1" } });
     assert.fail("should have exited 2");
@@ -697,16 +730,15 @@ test("recall hands over each hit's sources, with the chat it came from as a link
   assert.match(person, /Pierre Aubert signs in October/); assert.match(person, /contexts\/icp\/memories.jsonl/); assert.match(person, /codex:\/\/threads\/01a0-chat/, "the entity brief traces claims to memories and sources");
 });
 
-test("each question goes to the tool named for its purpose, so setup, settings and work questions are not all labelled onboarding (ALL-203)", () => {
+test("GTM Brain has no question forms: questions go to Codex's own box or plain chat text, and no procedure names a removed tool (2026-11-11)", () => {
   const policy = readFileSync(`${P}/policies/questions.md`, "utf8");
-  assert.match(policy, /`onboarding_question`[^.]*first-run setup/s);
-  assert.match(policy, /`configuration_question`[^.]*(tools|settings)/s);
-  assert.match(policy, /`question`[^.]*(everyday|ordinary|creative)/s);
-  const named = execFileSync("grep", ["-rl", "onboarding_question", `${P}/skills`, "--include=*.md"], { encoding: "utf8" }).trim().split("\n").filter(Boolean);
-  assert.deepEqual(named.filter(f => !f.includes("/gtm-brain-start/")), [], "only first-run setup asks with onboarding_question");
-  assert.match(readFileSync(`${P}/skills/gtm-brain-configure/references/connect-tools.md`, "utf8"), /`configuration_question`/);
-  assert.match(readFileSync(`${P}/skills/gtm-brain-use-brain/SKILL.md`, "utf8"), /asked with `question`/);
-  assert.match(readFileSync(`${P}/skills/gtm-brain-todo/references/whats-next.md`, "utf8"), /using `question`/);
+  assert.match(policy, /no question forms of its own/);
+  assert.match(policy, /`request_user_input`/);
+  assert.match(policy, /plain chat text and\s+end the turn/);
+  assert.match(policy, /`approve_change`/, "APPROVE keeps its own form");
+  let found = ""; try { found = execFileSync("grep", ["-rlE", "onboarding_question|configuration_question", `${P}/skills`, `${P}/policies`, `${P}/templates/AGENTS.md`, "--include=*.md"], { encoding: "utf8" }); } catch {}
+  const named = found.trim().split("\n").filter(Boolean);
+  assert.deepEqual(named, [], "no procedure names a removed question tool");
 });
 
 test("sync and resolution end without a next step, a reminder or a to-do; the brain is not the person's to-do system (ALL-208)", () => {
@@ -771,7 +803,7 @@ test("retired skills live on as references of the eight, and nothing names them 
   for (const gone of ["import", "whats-next", "advisor", "schedule", "new-project", "link-project", "connect-tools", "update-plugin", "load-context", "create-context", "edit-context", "render"]) assert.ok(!existsSync(`${P}/skills/gtm-brain-${gone}/SKILL.md`), `gtm-brain-${gone} is no longer a skill`);
   // a retired name may still appear as a script path (scripts/gtm-brain-render/render.mjs), never as a skill or a slash command
   const retired = /gtm-brain-(import|whats-next|advisor|schedule|new-project|link-project|connect-tools|update-plugin|load-context|create-context|edit-context|render)(?![-\w]*\/)/;
-  const files = execFileSync("grep", ["-rlE", "gtm-brain-(import|whats-next|advisor|schedule|new-project|link-project|connect-tools|update-plugin|load-context|create-context|edit-context|render)", `${P}/skills`, `${P}/policies`, `${P}/hooks`, `${P}/templates/AGENTS.md`, `${P}/server/server.mjs`, `${P}/scripts/gtm-brain-render/skill-catalog.json`, join(P, "..", "..", "COMMANDS.md"), join(P, "..", "..", "ONBOARDING.md"), join(P, "..", "..", "GUIDE.md")], { encoding: "utf8" }).trim().split("\n").filter(Boolean);
+  const files = execFileSync("grep", ["-rlE", "gtm-brain-(import|whats-next|advisor|schedule|new-project|link-project|connect-tools|update-plugin|load-context|create-context|edit-context|render)", `${P}/skills`, `${P}/policies`, `${P}/session`, `${P}/templates/AGENTS.md`, `${P}/server/server.mjs`, `${P}/scripts/gtm-brain-render/skill-catalog.json`, join(P, "..", "..", "COMMANDS.md"), join(P, "..", "..", "ONBOARDING.md"), join(P, "..", "..", "GUIDE.md")], { encoding: "utf8" }).trim().split("\n").filter(Boolean);
   const offenders = files.filter(f => !f.includes("/legacy/")).filter(f => readFileSync(f, "utf8").split("\n").some(line => retired.test(line)));
   assert.deepEqual(offenders, [], "these still name a retired skill");
 });
@@ -788,7 +820,7 @@ test("Slack replies: optional in onboarding, read live, scope asked once, style 
   assert.match(discovery, /No, skip it[\s\S]*`mark_tool` \(status\s+`skip`\)/);
   assert.match(discovery, /When nothing points to Slack, do not bring it up/);
   // privacy: the scope is the person's choice, saved once; a scheduled run never asks
-  assert.match(ref, /configuration_question/);
+  assert.match(ref, /When there is none, ask once/);
   assert.match(ref, /A\s+scheduled run never asks: no saved scope means no Slack scan/);
   assert.match(ref, /Read only: never send, react, mark read/);
   assert.match(ref, /Nothing from the scan by default/);

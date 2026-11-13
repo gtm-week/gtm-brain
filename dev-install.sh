@@ -30,9 +30,6 @@ if [ "$src" != "$R" ]; then
 fi
 before="$(ls ~/.codex/plugins/cache/gtm-brain/gtm-brain/ 2>/dev/null | tr '\n' ' ')"
 codex plugin add gtm-brain@gtm-brain | tail -1
-# Installing does not approve the hooks, and editing hooks.json drops the approval they had:
-# without this they are installed, enabled and never fire.
-node "$R/plugins/gtm-brain/hooks/trust-hooks.mjs" --trust | tail -1
 after="$(ls ~/.codex/plugins/cache/gtm-brain/gtm-brain/ 2>/dev/null | tr '\n' ' ')"
 # A new version is a new cache folder and the old one is gone: a running app still points at it and
 # its MCP server cannot start, so the skills say the tools are missing. Only a restart fixes that.

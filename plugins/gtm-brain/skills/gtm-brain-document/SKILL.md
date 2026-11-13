@@ -30,7 +30,7 @@ new md file to the design system with inspirations, first is Callstack"), there 
 draft and nothing to ask. Call `document` at once (`action: create`, title from their words,
 `folder` beside the document they named when it lives in one, `applies_to` the same kinds of
 work as that document, `body` with what they gave, status draft) and answer in one line with
-the path. Do not read any reference first and do not open a `question`: the person decided.
+the path. Do not read any reference first and do not ask a question: the person decided.
 The steps below are for a document written from material, where a draft needs confirming.
 
 A request to define or rework an ICP with nothing written yet belongs to
@@ -41,7 +41,7 @@ An ICP the person already wrote is added here like any other document.
    Pass it as `file`; nothing is retyped. A Markdown already at the brain root is adopted where
    it lies (its path does not change); one from outside is copied in. Otherwise the best
    document is written from what the company already says (the website, the last deck, the
-   loaded contexts), not from scratch; with nothing to read from, ask one `question` for the
+   loaded contexts), not from scratch; with nothing to read from, ask one question for the
    three things it must say.
 2. Decide the place: the root for a company-wide document (strategy, ICP, pricing); a folder
    when the person keeps a family together (`brand` for voice and design system). Use the
@@ -50,7 +50,7 @@ An ICP the person already wrote is added here like any other document.
    landing pages, design, proposals, planning). Three to six entries.
 4. A tone of voice follows [authoring](references/authoring.md), including the blind test when
    real samples exist.
-5. Confirm with one `question` showing the title, the place and the first rules (under 500
+5. Confirm with one question showing the title, the place and the first rules (under 500
    characters, never the whole text): "Add it as approved" first (after a passed blind test),
    "Add it as a draft", "Change something". Nothing is written before that answer.
 6. Call `document` with `action: create`, `title`, `applies_to`, `body` (or `file`), `folder`
@@ -76,7 +76,7 @@ in the document's files folder and `save` keeps it. Say the path in one line.
   only the person's word approves.
 - "check this against our documents": read the documents whose `applies_to` covers the draft,
   list each breach with the line it breaks, then the fixed draft. No write.
-- "remove the document ...": confirm with one `question`, then `action: remove`. Its files
+- "remove the document ...": confirm with one question, then `action: remove`. Its files
   folder stays; say so.
 
 A document is offered once, by name, when copy, a design, outreach or a plan is produced and no

@@ -17,16 +17,27 @@ const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
 const admin = lib.readAdmin(root); if (!admin) { console.error("no brain here"); process.exit(1); }
 const key = t => t.toLowerCase().replace(/\s*\(.*\)\s*$/, "").trim();
+// A name the model passes as a plugin id (google-calendar) finds the entry the check wrote (google calendar).
+const flatName = s => String(s || "").toLowerCase().replace(/\s*\(.*\)\s*$/, "").replace(/[^a-z0-9]/g, "");
+const entryKey = (state, t) => Object.keys(state).find(k => k === key(t)) || Object.keys(state).find(k => [k, state[k] && state[k].plugin, state[k] && state[k].tool].some(x => x && flatName(x) === flatName(t))) || key(t);
 const wf = join(root, "work", "tools.json"); mkdirSync(join(root, "work"), { recursive: true });
 let state = {}; try { state = JSON.parse(readFileSync(wf, "utf8")); } catch {}
+// A twin written by a skip or test under the plugin id (google-calendar beside google calendar, 0.33.9 and earlier):
+// its decline or test result moves to the real entry and the twin goes, so the page lists the tool once.
+for (const k of Object.keys(state)) {
+  const twin = state[k]; if (!twin || twin.plugin || twin.mcp) continue;
+  const to = Object.keys(state).find(o => o !== k && [o, state[o] && state[o].plugin, state[o] && state[o].tool].some(x => x && flatName(x) === flatName(k)));
+  if (!to) continue;
+  const { tool, status, ...carried } = twin; state[to] = { ...state[to], ...carried }; delete state[k];
+}
 
 if (args[0] === "--skip") {
   const names = args.slice(1).filter(Boolean); if (!names.length) { console.error("--skip needs a tool name"); process.exit(1); }
-  for (const t of names) state[key(t)] = { ...(state[key(t)] || { tool: t, status: "not checked" }), declined: true, declined_at: new Date().toISOString() };
+  for (const t of names) { const k = entryKey(state, t); state[k] = { ...(state[k] || { tool: t, status: "not checked" }), declined: true, declined_at: new Date().toISOString() }; }
   writeFileSync(wf, JSON.stringify(state, null, 1)); console.log(`${names.join(", ")}: declined; not offered again (say "connect ${names[0]}" to change your mind)`); process.exit(0);
 }
 
-// A successful call in chat counts as the read test (PostToolUse hook, ALL-211). The server is the
+// A successful call in chat counts as the read test (--used; the model calls mark_tool, ALL-211). The server is the
 // tool itself (mcp__attio__...) or Codex's connector bus, whose tool names start with the app
 // (mcp__codex_apps__attio_whoami, gmail.search_emails): the longest tool key or plugin id that the
 // call name starts with wins. Only an installed, not yet tested tool is written; nothing else moves.
@@ -43,9 +54,9 @@ if (args[0] === "--used") {
 }
 
 if (args[0] === "--mark") {
-  const [tool, result, ...note] = args.slice(1); const { declined, declined_at, ...was } = state[key(tool)] || {};
+  const [tool, result, ...note] = args.slice(1); const k = entryKey(state, tool); const { declined, declined_at, ...was } = state[k] || {};
   // a test result is the person changing their mind about a tool they had declined: it is offered again
-  state[key(tool)] = { ...was, tool: was.tool || tool, status: was.status || "not checked", test: result, note: note.join(" "), at: new Date().toISOString() };
+  state[k] = { ...was, tool: was.tool || tool, status: was.status || "not checked", test: result, note: note.join(" "), at: new Date().toISOString() };
   writeFileSync(wf, JSON.stringify(state, null, 1)); console.log(`${tool}: ${result}${note.length ? " · " + note.join(" ") : ""}${declined ? " (no longer declined)" : ""}`); process.exit(0);
 }
 
@@ -73,7 +84,16 @@ try {
     if (c.fetched_at && (!catalogAt || c.fetched_at > catalogAt)) catalogAt = c.fetched_at;
   }
 } catch {}
-for (const p of plugins.values()) if (!p.display) p.display = p.id.startsWith("app-") ? null : p.id.replace(/-/g, " ").replace(/\b\w/g, ch => ch.toUpperCase());
+// An installed plugin the catalog cache misses keeps an opaque app-... id; its own manifest still has the name.
+const codexHome = process.env.CODEX_HOME || join(homedir(), ".codex");
+const manifestName = p => {
+  try {
+    const dir = join(codexHome, "plugins", "cache", p.marketplace, p.id);
+    for (const version of readdirSync(dir)) { const m = JSON.parse(readFileSync(join(dir, version, ".codex-plugin", "plugin.json"), "utf8")); const name = m.interface?.displayName || m.displayName; if (name) return name; }
+  } catch {}
+  return null;
+};
+for (const p of plugins.values()) if (!p.display) p.display = p.id.startsWith("app-") ? manifestName(p) : p.id.replace(/-/g, " ").replace(/\b\w/g, ch => ch.toUpperCase());
 
 /* ---------- matching a tool name to a plugin ---------- */
 const norm = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]/g, "");
@@ -84,8 +104,11 @@ const candidates = () => [...plugins.values()].filter(p => marketplaceOnly.inclu
 function findPlugin(tool) {
   const k = key(tool), nk = norm(k), pool = candidates();
   if (!nk) return { plugin: null, also: [] };
-  const exactId = pool.find(p => norm(p.id) === nk); if (exactId) return { plugin: exactId, also: [] };
+  const exactId = pool.find(p => norm(p.id) === nk);
   const exactName = pool.filter(p => p.display && norm(p.display) === nk);
+  // An id wins unless another plugin carries the tool's exact name: "Luma" is the events app (app-...),
+  // not the plugin with id luma named "Luma AI" (Artur's tools, 2026-11-11).
+  if (exactId && (norm(exactId.display) === nk || !exactName.length)) return { plugin: exactId, also: [] };
   if (exactName.length) { const best = prefer(exactName, nk); return { plugin: best, also: exactName.filter(p => p !== best) }; }
   if (k in SHORT) { const p = SHORT[k] && pool.find(x => x.id === SHORT[k]); return { plugin: p || null, also: [] }; }
   // the tool name as the first words of a display name: "Apollo" -> "Apollo.io", "Todoist" -> "Todoist: To Do List"
@@ -101,6 +124,17 @@ const prefer = (list, nk) => [...list].sort((a, b) => (b.state === "enabled") - 
 
 /* ---------- the report ---------- */
 const previous = Object.values(state);
+/* Remote MCP servers added to Codex by hand (ZYNT, Pocket): not plugins, so `codex plugin list` never names them.
+   Local command servers are left out: those are developer tools, not a GTM person's. */
+// Not a GTM person's tools, so never offered for admin.md: developer plugins and OpenAI's own helpers
+// (the catalog cache often misses the latter, so their install policy cannot tell).
+const DEV = new Set(["github", "vercel", "supabase", "data-analytics", "openai-developers", "openai-templates", "sites", "plugin-management", "work-pets", "defense-factory"]);
+const mcpServers = (() => {
+  let text; try { text = readFileSync(join(codexHome, "config.toml"), "utf8"); } catch { return []; }
+  return [...text.matchAll(/^\[mcp_servers\.(?:"([^"]+)"|([A-Za-z0-9_-]+))\]\s*\n((?:^(?!\[).*\n?)*)/gm)]
+    .filter(m => /^\s*url\s*=/m.test(m[3])).map(m => m[1] || m[2]).filter(s => !DEV.has(s) && norm(s) !== "gtmbrain");
+})();
+const mcpFor = tool => { const nk = norm(key(tool)); return mcpServers.find(s => norm(s).length >= 3 && nk.startsWith(norm(s))) || null; };
 const rows = [];
 for (const tool of admin.tools || []) {
   const { plugin: p, also } = findPlugin(tool); const prev = state[key(tool)] || {};
@@ -108,7 +142,8 @@ for (const tool of admin.tools || []) {
     : p.state === "enabled" ? "installed" : p.state === "disabled" ? "installed, disabled" : "available, not installed";
   // Without `codex plugin list` the install state is unknown: the last known one stands, never a guess.
   if (!listed) status = prev.status && prev.status !== "not checked" ? prev.status : "not checked (codex plugin list failed)";
-  state[key(tool)] = { ...prev, suggested: false, tool, plugin: p ? p.id : prev.plugin || null, marketplace: p ? p.marketplace : prev.marketplace || null, display: p ? p.display : prev.display || null, status, ...(listed ? { checked_at: new Date().toISOString() } : {}) };
+  const server = status === "installed" ? null : mcpFor(tool); if (server) status = "installed";
+  state[key(tool)] = { ...prev, suggested: false, mcp: false, tool, plugin: server || (p ? p.id : prev.plugin || null), marketplace: p ? p.marketplace : prev.marketplace || null, display: p ? p.display : prev.display || null, status, ...(listed ? { checked_at: new Date().toISOString() } : {}) };
   rows.push({ tool, p, also, status, test: prev.test || null, note: prev.note || "", stale: !listed && !!prev.checked_at ? prev.checked_at : null });
 }
 /* ---------- the floor: email, calendar and the CRM are suggested even before admin.md names them ----------
@@ -120,6 +155,10 @@ for (const tool of admin.tools || []) {
    connect picker and the session status line show it from the very first check. Recomputed each
    run; disappears the moment admin.md names a tool that covers it. */
 if (listed) for (const k of Object.keys(state)) if (state[k] && state[k].suggested) delete state[k];
+// Connected by hand and not in admin.md: on the page as they are, no APPROVE needed. Gone from config.toml, gone here.
+const manual = mcpServers.filter(s => !(admin.tools || []).some(t => mcpFor(t) === s));
+for (const k of Object.keys(state)) if (state[k] && state[k].mcp && !manual.some(s => key(s) === k)) delete state[k];
+for (const s of manual) state[key(s)] = { ...(state[key(s)] || {}), tool: state[key(s)]?.tool || s.replace(/[-_]+/g, " ").replace(/\b\w/g, ch => ch.toUpperCase()), plugin: s, status: "installed", mcp: true, suggested: false };
 const covered = re => rows.some(r => re.test(norm(r.tool)) || (r.p && re.test(norm(r.p.id))));
 const SUGGEST = [{ re: /mail/, ids: ["gmail", "outlook-email"] }, { re: /calendar/, ids: ["google-calendar"] },
   { re: /crm|hubspot|attio|salesforce|pipedrive|zoho|freshsales|^close$|closeio|folk|nutshell/, ids: ["hubspot", "attio"], why: p => p.id === "hubspot" ? "the CRM: the course gives you HubSpot; say so if yours is Attio" : `the CRM: ${p.display || p.id} is installed here` }];
@@ -134,7 +173,31 @@ if (listed) for (const { re, ids, why } of SUGGEST) {
   state[key(tool)] = { ...prev, tool, plugin: p.id, marketplace: p.marketplace, display: p.display, status, suggested: true, checked_at: new Date().toISOString() };
   suggested.push({ tool, status, p, why: typeof why === "function" ? why(p) : why, declined: !!prev.declined });
 }
-for (const k of Object.keys(state)) if (!(state[k] && state[k].suggested) && !(admin.tools || []).some(t => key(t) === k)) delete state[k]; // a tool removed from admin.md leaves the record
+/* ---------- used in this brain: an installed plugin with a trace here is on the page, admin.md or not ----------
+   A trace: a read test in chat (mark_tool), a memory that names it in tools or as its source, or a memory
+   that mentions it by name ("pulled the guests from Luma"). Codex's defaults and helpers never count.
+   Recomputed each run: uninstalled, it leaves the page. */
+const brainText = (() => {
+  const recs = lib.listContexts(root).flatMap(c => lib.effectiveMemories(lib.readMemories(root, c.slug)));
+  return { tools: new Set(recs.flatMap(r => [...(r.tools || []), ...(r.source || []).map(x => x && x.kind)]).filter(Boolean).map(norm)), content: recs.map(r => String(r.content || "")).join("\n") };
+})();
+// A plugin named with an everyday word (Sales, Sites) is in every GTM memory: a mention of it proves nothing.
+const COMMON = new Set(["sales", "sites", "notes", "tasks", "calendar", "contacts", "drive", "docs", "sheets", "slides", "files", "email", "mail", "messages", "search", "maps", "news", "meetings", "forms", "chat", "teams"]);
+const mentions = name => name.length >= 4 && !COMMON.has(norm(name)) && new RegExp(`(^|[^\\p{L}\\p{N}])${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^\\p{L}\\p{N}])`, "u").test(brainText.content);
+const used = [];
+if (listed) {
+  const taken = new Set([...rows.map(r => r.p && r.p.id), ...suggested.map(x => x.p.id)].filter(Boolean));
+  for (const k of Object.keys(state)) if (state[k] && state[k].used) delete state[k].used;
+  for (const p of candidates()) {
+    if (p.state !== "enabled" || taken.has(p.id) || DEV.has(p.id) || p.policy === "INSTALLED_BY_DEFAULT") continue;
+    const name = p.display || p.id, k = entryKey(state, name), prev = state[k] || {};
+    const why = prev.test ? "used in chat" : [p.id, name].some(x => brainText.tools.has(norm(x))) ? "a memory came from it" : mentions(name) ? "mentioned in a memory" : null;
+    if (!why) continue;
+    state[k] = { ...prev, tool: prev.tool || name, plugin: p.id, marketplace: p.marketplace, display: p.display, status: "installed", used: why, suggested: false, mcp: false, checked_at: new Date().toISOString() };
+    used.push({ tool: state[k].tool, why });
+  }
+}
+for (const k of Object.keys(state)) if (!(state[k] && (state[k].suggested || state[k].mcp || state[k].used)) && !(admin.tools || []).some(t => key(t) === k)) delete state[k]; // a tool removed from admin.md leaves the record
 writeFileSync(wf, JSON.stringify(state, null, 1));
 console.log(`tools in admin.md: ${rows.length}${listed ? "" : " · codex plugin list failed: install state as last checked, not re-checked now"}${catalogAt ? ` · catalog as of ${lib.localDateTime(catalogAt)}` : " · no catalog cache yet (open the Codex app once)"}`);
 for (const r of rows) {
@@ -145,10 +208,11 @@ for (const r of rows) {
 }
 // installed official plugins that admin.md does not mention: offer to add them. Codex's own defaults
 // (installed by default) and developer plugins are left out; they are not a GTM person's tools.
-const DEV = new Set(["github", "vercel", "supabase", "data-analytics", "openai-developers"]);
 const known = new Set(rows.map(r => r.p && r.p.id).filter(Boolean));
-const extra = candidates().filter(p => p.state === "enabled" && !known.has(p.id) && !DEV.has(p.id) && p.policy !== "INSTALLED_BY_DEFAULT").map(p => p.display || p.id);
+const extra = candidates().filter(p => p.state === "enabled" && !known.has(p.id) && !used.some(u => norm(u.tool) === norm(p.display || p.id)) && !DEV.has(p.id) && p.policy !== "INSTALLED_BY_DEFAULT" && !mcpServers.some(m => norm(p.display).startsWith(norm(m)))).map(p => p.display || p.id);
+if (used.length) console.log(`\nused in this brain, on the dashboard, not in admin.md tools: ${used.map(u => `${u.tool} (${u.why})`).join(", ")}. Offer once to add them to the company profile (gtm-brain-configure workplace-change procedure).`);
 if (extra.length) console.log(`\ninstalled in Codex but not in admin.md tools: ${extra.join(", ")}. Offer to add them (gtm-brain-configure workplace-change procedure).`);
+if (manual.length) console.log(`\nconnected as MCP servers, not in admin.md tools: ${manual.map(s => state[key(s)].tool).join(", ")}. They are on the dashboard already; offer once to add them to the company profile (gtm-brain-configure workplace-change procedure).`);
 for (const s of suggested) {
   if (s.declined) { console.log(`\ndeclined earlier: ${s.tool} (not offered again unless they ask)`); continue; }
   console.log(`\nsuggested (${s.why || "the pulse of the company"}, not yet in admin.md): ${s.tool}  ${s.status}`);

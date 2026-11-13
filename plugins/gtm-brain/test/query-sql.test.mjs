@@ -3,7 +3,7 @@ process.env.GTM_BRAIN_NO_COMPILE = "1";
 process.env.GTM_BRAIN_NO_COMMIT = "1";
 // One read tool (ALL-204 step 2a): query gains views for the derived reads and a read-only SQL mode
 // over the memory index, with the dashboard's visibility rules baked into the views.
-process.env.GTM_BRAIN_NO_HOOK_CHECK = "1"; // the hooks-off check talks to a real Codex; hooks-notice.test covers it with a fake one
+process.env.GTM_BRAIN_NO_SESSION_START = "1"; // servers here test tools; chat-start.test.mjs covers the chat start
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
@@ -59,7 +59,7 @@ test("sql: anything but one SELECT is refused with the reason, and results are c
   assert.equal(sql(root, "SELECT n FROM (SELECT 1 AS n)").truncated, false);
 });
 
-const server = spawn(process.execPath, [`${P}/server/server.mjs`], { stdio: ["pipe", "pipe", "pipe"], env: { ...process.env, GTM_BRAIN_NO_OPEN: "1" } });
+const server = spawn(process.execPath, [`${P}/server/server.mjs`], { stdio: ["pipe", "pipe", "pipe"], env: { ...process.env, GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_SESSION_START: "1" } });
 const pending = new Map(); let seq = 0;
 createInterface({ input: server.stdout }).on("line", line => { const m = JSON.parse(line); const r = pending.get(m.id); if (r) { pending.delete(m.id); r(m); } });
 const rpc = (method, params = {}) => new Promise(res => { const id = ++seq; pending.set(id, res); server.stdin.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n"); });

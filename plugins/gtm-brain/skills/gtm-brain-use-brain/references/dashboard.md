@@ -10,7 +10,7 @@ Keep authored brain content in English. Preserve names, source quotes and the ex
 Two tools, no shell command, both with `brain` = this workspace folder:
 
 1. `open_dashboard` when the person wants to see it ("open", "show me", `/gtm-brain-use-brain`):
-   pass `project` from the session hook when this chat is in a linked project. Do not ask
+   pass `project` from the opening lines when this chat is in a linked project. Do not ask
    the person to select it again. The returned URL selects that project; retain its full
    fragment when opening or reusing a tab. Omit `project` in the brain folder for All company.
    Rebuilds the page and starts its local server if needed. Open the exact returned URL in
@@ -27,7 +27,7 @@ Two tools, no shell command, both with `brain` = this workspace folder:
 
 ## One tab, kept between chats
 
-The session hook requests server startup and refresh in the background. It never makes opening
+The chat start requests server startup and refresh in the background. It never makes opening
 or reloading a page a prerequisite to answering. Open the in-app dashboard only when asked.
 
 - One dashboard tab, never a second. If a tab already shows the address, reuse it instead of

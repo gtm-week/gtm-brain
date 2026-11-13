@@ -11,7 +11,7 @@ what changed. No shell command. Only when the person asks; never on your own.
 
 Report in the person's language, without git words: *"Kept: your edit to the pipeline
 summary."* If it says nothing to save, say so in one line. If it refused because a change to the
-workplace info is waiting for APPROVE, ask for APPROVE or a drop first.
+workplace info is waiting for APPROVE, offer the `approve_change` form or a drop first.
 
 Saving records a manual edit but does not approve overwriting it. If compilation is paused,
 review the changes with the person using the compile procedure. Never clear a pause merely

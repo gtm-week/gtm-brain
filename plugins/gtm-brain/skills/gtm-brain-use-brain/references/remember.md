@@ -8,6 +8,9 @@ Keep authored brain content in English. Preserve names, source quotes and the ex
 > and sources available. Fix a note with a new one
 > that supersedes it; withdraw one with a note that retracts it. Nothing is ever edited.
 
+The saving rules (names, dates, forget, projects, contexts, where questions go) are in
+[saving-rules.md](saving-rules.md), numbered; the brain hands them to you on a chat's first save.
+
 Call the GTM Brain tool `remember` (no shell command). **Record a whole turn's findings in one
 call**: put them in `memories`, one entry per finding, in the order they happened. Do not call the
 tool once per note. Each entry may name its own `context`, so notes belonging to different contexts
@@ -49,8 +52,9 @@ Each entry takes:
   it plain. If the tool answers *possibly entities, not recorded as such: "Castorama"*, do that
   now for each one that is an entity. Compile collects these names, with their kinds, into the
   context's cover, and the dashboard counts them from the text as well once they are known.
-- `new_names`: only after the tool answered that a name may be someone already known and the
-  person said it is not: the names confirmed as new. Never filled on a guess.
+- `new_names`: only after the tool held a name (it may be someone already known, or it is one
+  word nobody has) and the person said it is someone new: the names confirmed as new. Never
+  filled on a guess.
 - `tools`: the tools or slots actually used. Unknown tools produce a warning; still recorded.
 - `sources`: where it comes from, `kind:ref` (`gmail:19faef...`, `granola:<note id>`, `attio:deal/123`).
   Prefer a direct source URL returned by the connector when available (for example,
@@ -61,8 +65,8 @@ Each entry takes:
   from an opaque ID, or substitute an API endpoint, search URL, attachment download URL or
   credential-bearing URL. If only an ID is available, keep it.
   The dashboard groups sources by provider and keeps raw references inside expandable details.
-  The chat the note is recorded in is added by itself as `codex:<thread id>` (from the session
-  hook); name a `codex:` source only to point at another chat. Readers see it as a link,
+  The chat the note is recorded in is added by itself as `codex:<thread id>` (from the host's
+  own session files); name a `codex:` source only to point at another chat. Readers see it as a link,
   `codex://threads/<id>`; hand the link over, never open it.
 - `actions`: what was done, `tool:action:ref`. One per action.
 - `supersedes`: this note replaces that one (a correction). `retracts`: that note is withdrawn; say why in the content.
@@ -88,7 +92,7 @@ Aubert`. Ask the one line, then send back **only entry #3** with `add_name` done
 filled. Never re-send the entries that were kept: they are already in the memory and would be
 recorded twice.
 
-If a single note is held back, nothing was written. Ask with `question`: *"Is this the Pierre Aubert we know?"* (options: the same person, someone new). Yes: `add_name` with `name`
+If a single note is held back, nothing was written. Ask: *"Is this the Pierre Aubert we know?"* (options: the same person, someone new). Yes: `add_name` with `name`
 "Pierre Aubert" and `aliases` ["Pierre Dupont"], then call `remember` again unchanged. No: call
 `remember` again with `new_names` ["Pierre Dupont"]. Never decide this yourself; a wrong merge
 is worse than a question.
@@ -99,13 +103,24 @@ else; when the person says it is, `remember` again with `new_names` ["Maciej"] a
 recorded for a new person (from then on "Maciej" means the new one; the teammate needs the full
 name). A first name shared by two known entities is asked about like any look-alike.
 
+Before saving, connect the note to what the brain knows: [connect the dots](connect-dots.md).
+
+A first name alone that nobody known has is never saved as a new person (rule P3 in the brain's
+README): the entry is held with *"Max" is one word and nobody known has it*. When the note or its
+source plainly says it is a company, product or team, send it in `companies` (or `new_names` and
+`add_name` with its kind) without asking. A person: ask once for the full name, all held names in
+one question (*"Max who? The full name, so the brain knows him later"*), then `remember` with the
+full name in `people`. The note keeps how each name matched and by which rule (P1-P4), and the
+person's brief shows it under *How this name was matched*: that is the answer to "who is Max, and
+why do you think so".
+
 ## Answers and corrections in Codex
 
 *"remember in pipeline: Pierre wants the TCO by Friday"* names the context: write it there
 (`context: pipeline`) without asking, unless it plainly belongs elsewhere; then suggest as below.
 *"close question m_xxx: <answer>"* (in chat): write a note with
 `retracts: m_xxx` and the answer as content (kind `decision` if it was decided). Without an
-answer, ask *"What is the answer?"* first, with `question` (free text).
+answer, ask *"What is the answer?"* first (free text).
 *"forget memory m_xxx, it was wrong"*: a note with `retracts: m_xxx` saying it was withdrawn. The
 retracted note leaves every view; your note stays, so the answer or the reason is never lost.
 
@@ -242,18 +257,22 @@ through separate memories; approval and retirement apply independently to each r
 Relative paths resolve against the selected project folder, or the brain when no project was
 passed. An absolute file inside that folder is stored relatively. Other absolute paths are
 local to this computer. Only paths are stored: sharing the brain does not share the file.
-No folder is scanned for attachments. A file landed with `add-file.mjs --entity` sits in
+No folder is scanned for attachments. A file in `work/` (a task's scratch, not shared) is copied
+into `brain/entities/<id>/` and committed when attached, so the approved file outlives the task. A file landed with `add-file.mjs --entity` sits in
 `brain/entities/<id>/` beside the entity file; one landed with `--document` belongs to that
 document and needs no attachment ([files](files.md)). Keep project files in their existing folder.
 
-Before using a file, read the entity's brief with `query` (brief) or query its effective memories
-and read the asset field. The brief gives the resolved absolute file location and availability. Use approved
+The opening lines list the approved files (person · role: path). Use exactly those for a photo or
+a logo; a task folder or a package's own asset list is never the source. For anything else, read
+the entity's brief with `query` (brief) or query its effective memories and read the asset field. The brief gives the resolved absolute file location and availability. Use approved
 assets for the requested role. Ask if several approved files match, only drafts exist, or a
 file is unavailable. The tool does not inspect file contents or infer usage rights. Read the
 file through the appropriate tool before making claims about it.
 
-To replace, approve, repair or retire an attachment, read its latest memory id and context,
-then write a new memory with `supersedes` and the full asset fields. Omit `path` to retain the
+"Use this photo", "this is our logo now": attach the file with status approved and the same role,
+in the same turn. When one approved file holds that role, the tool replaces it by itself, in its
+context, and says so; nothing else to pass. To approve, repair or retire an attachment, read its
+latest memory id and context, then write a new memory with `supersedes` and the full asset fields. Omit `path` to retain the
 previous file for a status change. A retirement can omit path even when the old file is gone.
 A replacement with a new path leaves the original file untouched. Withdraw a mistaken attachment
 with `retracts` and a reason, without an asset field. Historical records remain append-only.

@@ -9,12 +9,11 @@
 import { readFileSync, writeFileSync, appendFileSync, existsSync, readdirSync, statSync, lstatSync, realpathSync, mkdirSync , unlinkSync, rmSync, renameSync, linkSync, chmodSync} from "node:fs";
 import { join, isAbsolute, resolve, basename, dirname } from "node:path";
 import { homedir } from "node:os";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomUUID, randomBytes } from "node:crypto";
 import { spawnSync, execFileSync, execFile, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { parseOntology } from "./ontology/ontology.mjs";
 import { validateAsset } from './assets.mjs';
-import { savePaths as documentSavePaths } from "./documents.mjs";
 import { rankEntityCandidates } from './entity-search.mjs';
 export { rankEntityCandidates } from './entity-search.mjs';
 import { checkSchema } from "./ontology/validation.mjs";
@@ -22,7 +21,7 @@ import { readEntityFiles, writeEntityFiles, entityId, entityType, ENTITY_FORMAT,
 import { appendMemoryBytes } from './memory-journal.mjs';
 import { requestDashboardRefresh } from './dashboard-refresh.mjs';
 import { MEETING_FIELDS, validateMeetingEvidence, prepareMeetingMemory, duplicateMeetingMemory, meetingMetadata } from './meetings.mjs';
-export { meetingOverview, meetingSourceSuggestions, validateMeetingEvidence, prepareMeetingMemory, meetingMetadata } from './meetings.mjs';
+export { meetingOverview, meetingCaptureStatus, meetingSourceSuggestions, validateMeetingEvidence, prepareMeetingMemory, meetingMetadata } from './meetings.mjs';
 import { validateCustomerEvidence, guardCustomerCorrection } from "./customers.mjs";
 import { host, hostId, HOST_DIRS } from "./host.mjs";
 export { customerOverview, customerIdentity, validateCustomerEvidence, guardCustomerCorrection } from "./customers.mjs";
@@ -41,7 +40,7 @@ export function readPreferences() {
   if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("Invalid GTM Brain preferences file");
   return data;
 }
-/* The brains this machine has opened (the session hook registers a brain chat, setup registers a
+/* The brains this machine has opened (the chat start registers a brain chat, setup registers a
    new brain): what the gtm-brain-project skill offers when a folder is linked. Paths that are gone are
    dropped on read; nothing else in the preferences is touched. */
 function writePreferences(preferences) {
@@ -148,6 +147,18 @@ export function setAdminSetting(root, key, value) {
 export function readCompileState(root) {
   try { const s = JSON.parse(readFileSync(join(root, "work", "compile.json"), "utf8")); if (s.state === "queued" || s.state === "running") { if (Date.now() - Date.parse(s.at) > 20 * 60 * 1000) return { ...s, state: "failed" }; } return s; } catch { return null; }
 }
+/* How a context's summary stands, in the words the chat and the dashboard use. A summary more than 2 days
+   behind says so with its date: "updating shortly" a month later is what Artur saw (ICP, 2026-10-15). */
+export function summaryState(c, busy = false, nowMs = process.env.GTM_BRAIN_NOW ? Date.parse(process.env.GTM_BRAIN_NOW) : Date.now()) {
+  const eff = effectiveMemories(c.memories), fresh = c.compiledAt ? eff.filter(m => newer(m.at, c.compiledAt)) : eff;
+  const day = iso => String(iso || "").slice(0, 10);
+  if (!eff.length) return "nothing recorded yet";
+  if (!c.stale) return `summary up to date (as of ${day(c.compiledAt)})`;
+  if (busy) return `summary updating (${fresh.length} new, in the background)`;
+  const oldest = fresh.map(m => Date.parse(m.at)).filter(Boolean).sort((a, b) => a - b)[0];
+  if (oldest && nowMs - oldest > 2 * 864e5) return `summary out of date: ${c.compiledAt ? `as of ${day(c.compiledAt)}` : "never compiled"}, ${fresh.length} new not in it`;
+  return `summary updating shortly (${fresh.length} new)`;
+}
 export function compileBusy(root) { const s = readCompileState(root); return !!s && (s.state === "queued" || s.state === "running"); }
 /* a failed run that will not try again by itself: the last attempt failed and something is still behind */
 export function compileGaveUp(root) { const s = readCompileState(root); return !!s && (s.state === "blocked" || (s.state === "failed" && (s.attempt || 1) >= (s.tries || 1))) && activeContexts(root).some(c => c.stale); }
@@ -248,6 +259,22 @@ export function manualCoverChanges(root) {
   }
   return [...slugs].map(slug => ({ slug, ...manualCoverState(root, slug) })).filter(s => s.blocked)
     .map(({ slug, status, path, hash, reason }) => ({ slug, status, path, hash, reason }));
+}
+/* Summaries no run will touch: a hand edit waits for review (compile.md, release with --reviewed-cover).
+   Background and scheduled runs skip them, so without a word they freeze on their last date. */
+export function pausedCovers(root) {
+  const blocked = new Set(manualCoverChanges(root).map(e => e.slug));
+  return activeContexts(root).filter(c => blocked.has(c.slug)).map(c => ({ slug: c.slug, title: c.title, status: c.manualEdit.status, since: c.compiledAt || null,
+    waiting: effectiveMemories(c.memories).filter(m => !c.compiledAt || newer(m.at, c.compiledAt)).length }));
+}
+const pausedText = p => `${p.title} (last updated ${p.since ? String(p.since).slice(0, 10) : "never"}${p.waiting ? `, ${p.waiting} note${p.waiting === 1 ? "" : "s"} waiting` : ""})`;
+/* The chat start's line for them, once per set (work/paused-covers.json), so the person hears it where they work. */
+export function pausedCoversHint(root) {
+  const paused = pausedCovers(root), memo = join(root, "work", "paused-covers.json"), key = paused.map(p => p.slug).join(" ");
+  let seen = ""; try { seen = JSON.parse(readFileSync(memo, "utf8")).slugs || ""; } catch {}
+  try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(memo, JSON.stringify({ slugs: key, at: new Date().toISOString() })); } catch {}
+  if (!paused.length || key === seen) return "";
+  return `Summaries paused, not updating: ${paused.map(pausedText).join("; ")}. Each was edited by hand outside a summary run, so no run replaces it until the person reviews the edit. Say it in one line and offer the review: show the edit, keep what matters as sourced notes or the context rule, and only after an explicit yes release it (gtm-brain-use-brain compile.md, compile.mjs --release with --reviewed-cover).`;
 }
 export function adoptGeneratedCover(root, slug) {
   const state = manualCoverState(root, slug);
@@ -569,7 +596,7 @@ export function similarNames(names, mention) {
   const words = new Set(nameWords(mention)), letters = nameLetters(mention);
   if (!letters) return [];
   const fuzzy = new Set(rankEntityCandidates(names, mention, { limit: 10 }).matches.map(m => m.entry));
-  return names.filter(n => fuzzy.has(n) || [n.name, ...n.aliases].some(x => nameLetters(x) === letters || nameWords(x).some(w => words.has(w)))).map(n => ({ name: n.name, kind: n.kind }));
+  return names.filter(n => (fuzzy.has(n) || [n.name, ...n.aliases].some(x => nameLetters(x) === letters || nameWords(x).some(w => words.has(w))))).map(n => ({ name: n.name, kind: n.kind }));
 }
 /* add a person, or merge aliases/emails into an existing one (matched by name, alias or email) */
 export function addName(root, name, options = {}) {
@@ -690,28 +717,42 @@ export function candidateEntities(content, people, names) {
   }
   return out;
 }
+/* How a mention becomes an entity. Fixed codes, so a saved memory and the brain's README cite the
+   same rule and the answer to "who is Max, and why" never depends on a file someone edited. */
+export const NAME_RULES = {
+  P1: "A name, alias or email that belongs to exactly one known person, company or product is that one.",
+  P2: "A first name alone means a known person only when exactly one known person has that first name; otherwise ask.",
+  P3: "A first name alone is never saved as a new person: ask for the full name, or say it is a company, product or team.",
+  P4: "A name that looks like a known one is never merged on a guess: ask \"same as X?\" first. The same first name with a different surname is someone else.",
+  C1: "A company the note plainly names as one is saved as a company, and asked for its website once.",
+};
 /* normalise a list of mentions: known -> canonical; unknown -> added as new people, unless one
    looks like a name already known (similarNames): then nothing is added and `similar` says which
-   mention may be whom, so the caller can ask "same as X?" first. confirmedNew lists mentions the
-   person has said are new. Returns {people, added, similar}. */
-export function normalisePeople(root, mentions, { confirmedNew = [], companies = [] } = {}) {
-  const names = readNames(root), sure = new Set(confirmedNew.map(foldName)), people = [], fresh = [], similar = [], inferred = [];
+   mention may be whom, so the caller can ask "same as X?" first. A single word nobody has (P3) is
+   held the same way in `unnamed`, unless the person confirmed it (confirmedNew) or it is a company
+   or an already resolved name (trusted). Every mention that took judgment is in `mentions`, as
+   {mention, name, resolution, rule}, for the memory to keep. Returns {people, added, similar, unnamed, inferred, mentions}. */
+export function normalisePeople(root, mentions, { confirmedNew = [], companies = [], trusted = [] } = {}) {
+  const names = readNames(root), sure = new Set(confirmedNew.map(foldName)), people = [], fresh = [], similar = [], unnamed = [], inferred = [], said = [];
+  const plain = new Set([...companies, ...trusted].map(foldName));
   const take = c => { if (!people.includes(c)) people.push(c); };
+  const note = (mention, name, resolution, rule) => { if (!said.some(x => x.mention === mention)) said.push({ mention, name, resolution, rule }); };
   for (const m of mentions) {
     const t = String(m || "").trim(); if (!t) continue;
-    const exact = exactName(names, t); if (exact) { take(exact); continue; }
-    if (sure.has(foldName(t))) { names.push({ name: t, aliases: [], emails: [], kind: "person" }); fresh.push(t); take(t); continue; }   // the person said: someone new
-    const guess = inferredName(names, t); if (guess) { inferred.push({ mention: t, name: guess }); take(guess); continue; }
+    const exact = exactName(names, t); if (exact) { take(exact); if (exact !== t) note(t, exact, "exact", "P1"); continue; }
+    if (sure.has(foldName(t))) { names.push({ name: t, aliases: [], emails: [], kind: "person" }); fresh.push(t); take(t); note(t, t, "confirmed_new", plain.has(foldName(t)) ? "C1" : /\s/.test(t) ? "P1" : "P3"); continue; }   // the person said: someone new
+    const guess = inferredName(names, t); if (guess) { inferred.push({ mention: t, name: guess }); take(guess); note(t, guess, "inferred_first_name", "P2"); continue; }
     const like = similarNames(names, t);
     if (like.length) { similar.push({ mention: t, matches: like }); continue; }
-    names.push({ name: t, aliases: [], emails: [], kind: "person" }); fresh.push(t); take(t);
+    if (!/\s/.test(t) && !plain.has(foldName(t))) { unnamed.push(t); continue; }
+    names.push({ name: t, aliases: [], emails: [], kind: "person" }); fresh.push(t); take(t); note(t, t, "new", plain.has(foldName(t)) ? "C1" : "P1");
   }
-  if (similar.length) return { people: [], added: [], similar, inferred: [] };
+  if (similar.length || unnamed.length) return { people: [], added: [], similar, unnamed, inferred: [], mentions: [] };
   // Resolve all mentions before writing, so an ambiguous company cannot leave a partial registry.
   const companyNames = new Set(companies.map(m => canonicalName(names, m)).filter(Boolean));
   for (const t of fresh) addName(root, t, { kind: companyNames.has(t) ? "company" : "person" });
   for (const name of companyNames) if (!fresh.includes(name)) addName(root, name, { kind: "company" });
-  return { people, added: fresh, similar: [], inferred };
+  return { people, added: fresh, similar: [], unnamed: [], inferred, mentions: said };
 }
 
 /* ---------- the loaded set: work/loaded-contexts.json, per brain, local ---------- */
@@ -795,7 +836,7 @@ export function removePointer(dir) {
   cutBlock(join(dir, "CLAUDE.md"), "<!-- gtm-os rulebook -->", "<!-- /gtm-os rulebook -->"); return true;
 }
 /* Where the brain is, from any working directory: cwd is a brain; or cwd or an ancestor up to the git
-   root (or the filesystem root) carries the pointer block. Mirrored by hooks/resolve.sh for the shell hooks. */
+   root (or the filesystem root) carries the pointer block. Mirrored by session/resolve.sh for the shell hooks. */
 export function resolveBrain(cwd) {
   let dir = resolve(cwd);
   for (;;) {
@@ -818,11 +859,20 @@ export const NOT_COMMITTED_YET = "written to disk, not committed yet: say save t
 /* What a save covers: the brain and the plugin-owned files, never work/. */
 export const BRAIN_PATHS = ["brain", "AGENTS.md", "CLAUDE.md", ".githooks", ".gitignore", ".gitattributes", ".agents"];
 /* Everything save keeps: the engine's paths, the root README, and the documents with their files (lib/documents.mjs). */
-export function savePathsFor(root) { return [...BRAIN_PATHS, "README.md", ...documentSavePaths(root)].filter(p => existsSync(join(root, p))); }
+/* Files too big for git (videos, recordings, renders; GitHub refuses a file over 100 MB): never committed. They
+   belong on the shared drive, linked from the brain (RULES.md); save and the chat start name them. */
+export const LARGE_FILE_MB = 25;
+export function largeUnsaved(root, limit = LARGE_FILE_MB * 1024 * 1024) {
+  let out = ""; try { out = execFileSync("git", ["--no-optional-locks", "-C", root, "ls-files", "-z", "--others", "--modified", "--exclude-standard"], { encoding: "utf8", stdio: "pipe", maxBuffer: 64 << 20 }); } catch { return []; }
+  return [...new Set(out.split("\0").filter(Boolean))].map(path => { try { return { path, size: statSync(join(root, path)).size }; } catch { return null; } }).filter(f => f && f.size > limit);
+}
+/* Every change in the brain folder: what .gitignore keeps out (work/, .env), a project's local pointer and a file
+   too big for git stay out. */
+export function savePathsFor(root) { return [...[".", "brain"].filter(p => existsSync(join(root, p))), ...largeUnsaved(root).map(f => `:(exclude,literal)${f.path}`)]; }
 /* Every writer calls this once after writing: everything written is kept at once, one commit per
    change. The message is also the activity line the dashboard shows. GTM_BRAIN_NO_COMMIT (tests,
    dry runs) turns committing off; `always` lets save ignore it. */
-export function commit(root, paths, message, { always = false, push = true } = {}) {
+export function commit(root, paths, message, { always = false, push = true, allowEmpty = false } = {}) {
   // Keep identity files and derived evidence views with every brain write.
   if (readAdmin(root) && paths.some(p => /brain(?:\/|$)|context\.md$|memories\.jsonl$/.test(p))) {
     withEntityLock(root, () => { if (!migrateEntities(root)) refreshEntityPages(root); });
@@ -834,12 +884,16 @@ export function commit(root, paths, message, { always = false, push = true } = {
   // moment: wait for it rather than fail the note. Short waits, a few times, then give up.
   const git = (...a) => { for (let i = 0; ; i++) { try { return execFileSync("git", ["-C", root, ...a], { stdio: "pipe", encoding: "utf8" }); } catch (e) { if (i < 8 && /index\.lock|Unable to create .*\.lock/i.test(String(e.stderr || e.message))) { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250); continue; } throw e; } } };
   try {
-    paths = paths.filter(p => existsSync(join(root, p)) || git("ls-files", "--", p).trim());
-    if (!paths.length) return { ok: true, note: "nothing to commit" };
-    git("add", "--", ...paths);
-    if (!git("diff", "--cached", "--name-only", "--", ...paths).trim()) return { ok: true, note: "nothing to commit" };
-    // The pathspec keeps anything else the person had staged out of this commit.
-    git("-c", "commit.gpgsign=false", "commit", "-q", "-m", message, "--", ...paths);
+    paths = paths.filter(p => p.startsWith(":(") || existsSync(join(root, p)) || git("ls-files", "--", p).trim());
+    if (!paths.some(p => !p.startsWith(":(")) && !allowEmpty) return { ok: true, note: "nothing to commit" };
+    if (!paths.length && !allowEmpty) return { ok: true, note: "nothing to commit" };
+    if (paths.length) git("add", "--", ...paths);
+    const staged = paths.length && git("diff", "--cached", "--name-only", "--", ...paths).trim();
+    if (!staged && !allowEmpty) return { ok: true, note: "nothing to commit" };
+    // The pathspec keeps anything else the person had staged out of this commit. A reason recorded for a
+    // file already kept (allowEmpty) is a commit of its own, with nothing staged in it.
+    if (staged) git("-c", "commit.gpgsign=false", "commit", "-q", "-m", message, "--", ...paths);
+    else git("-c", "commit.gpgsign=false", "commit", "-q", "--allow-empty", "--only", "-m", message);
     // Shared right away when the brain has a remote; in the background, so a slow network never
     // holds a note. A failed push is retried by the next commit and by the session start's pull.
     let shared = false;
@@ -866,21 +920,25 @@ export const COVER_PATHS = [":(glob)brain/contexts/*/context.md"];
 /* what git would commit on save */
 export function unsavedChanges(root, paths = savePathsFor(root)) {
   paths = paths.filter(p => p.startsWith(":(") || existsSync(join(root, p)));
-  try { return execFileSync("git", ['--no-optional-locks', "-C", root, "status", "--short", "--", ...paths], { encoding: "utf8", stdio: "pipe" }).split("\n").filter(Boolean).map(l => ({ state: l.slice(0, 2).trim() || "M", path: l.slice(3) })); } catch { return []; }
+  try { return execFileSync("git", ['--no-optional-locks', "-C", root, "status", "--short", "--untracked-files=all", "--", ...paths], { encoding: "utf8", stdio: "pipe" }).split("\n").filter(Boolean).map(l => ({ state: l.slice(0, 2).trim() || "M", path: l.slice(3) })); } catch { return []; }
 }
 /* Every push names its remote and branch and sets the upstream: a remote the person added by hand
    (git remote add, no -u) has none, and a bare "git push" then fails in the background with nothing
    said while the note reads "kept and shared". origin when there is one, else the first remote. */
 export const PUSH = ["push", "-q", "-u"];
 export const pushRemote = list => { const r = String(list || "").split("\n").map(x => x.trim()).filter(Boolean); return r.includes("origin") ? "origin" : r[0] || ""; };
+export const largeNote = large => `Too big for git, not kept (over ${LARGE_FILE_MB} MB): ${large.map(f => `${f.path} (${Math.round(f.size / 1048576)} MB)`).join(", ")}. Offer to move each to the shared drive (Google Drive) and link it from its project's README.md, as RULES.md says; delete the local copy only after the person says yes and the upload is verified. If Google Drive is not connected in this Codex, offer to connect it first (connect my tools); if they decline, the file stays on this computer only, and say once that teammates will not get it.`;
 /* The person's save: commit what unsavedChanges lists, push when there is a remote. */
-export function save(root, message, { covers = false } = {}) {
+export function save(root, message, { covers = false, trailers = [] } = {}) {
   if (!covers && existsSync(join(root, "work", "admin.proposed.md"))) return { ok: false, note: "a change to brain/admin.md is waiting for APPROVE; ask for APPROVE or a drop, then save" };
+  // A direct edit of a protected file is never saved: it is put back first (guardProtected).
+  if (!covers) { const back = restoredNotice(guardProtected(root)); if (back) logActivity(root, "save", back.split(".")[0]); }
   const paths = covers ? COVER_PATHS : savePathsFor(root);
   const files = unsavedChanges(root, paths);
-  if (!files.length) return { ok: true, note: covers ? "nothing to save: no cover changed" : "nothing to save: everything is committed", files };
+  if (!files.length && !trailers.length) { const large = covers ? [] : largeUnsaved(root); return { ok: true, note: covers ? "nothing to save: no cover changed" : large.length ? `nothing else to save\n${largeNote(large)}` : "nothing to save: everything is committed", files, large }; }
   // save pushes in the foreground below; a background push from commit would race it for the ref.
-  const r = commit(root, paths, String(message || "save").split("\n")[0].slice(0, 120), { always: true, push: false });
+  const subject = String(message || (files.length ? "save" : "why: placed files")).split("\n")[0].slice(0, 120);
+  const r = commit(root, files.length ? paths : [], trailers.length ? `${subject}\n\n${trailers.join("\n")}` : subject, { always: true, push: false, allowEmpty: !files.length });
   if (!r.ok) return { ok: false, note: r.note, files };
   const git = (...a) => execFileSync("git", ["-C", root, ...a], { encoding: "utf8", stdio: "pipe" }).trim();
   const hash = git("rev-parse", "--short", "HEAD");
@@ -888,10 +946,61 @@ export function save(root, message, { covers = false } = {}) {
   try { const remote = pushRemote(git("remote")); if (remote) { execFileSync("git", ["-C", root, ...PUSH, remote, "HEAD"], { stdio: "pipe", timeout: 30000 }); pushed = `pushed to ${remote}`; } }
   catch (e) { pushed = `commit is local; push failed: ${String(e.stderr || e.message).trim().split("\n")[0].slice(0, 160)}`; }
   logActivity(root, "save", `saved ${hash}: ${files.length} file(s), ${pushed}`);
-  return { ok: true, note: `saved ${hash}: ${files.length} file(s)\n${files.map(f => `${f.state} ${f.path}`).join("\n")}\n${pushed}`, hash, files, pushed };
+  const large = largeUnsaved(root), left = large.length ? `\n${largeNote(large)}` : "";
+  return { ok: true, note: `saved ${hash}: ${files.length} file(s)\n${files.map(f => `${f.state} ${f.path}`).join("\n")}\n${pushed}${left}`, hash, files, pushed, large };
 }
-/* The Codex chat a brain folder was last opened in: the session hook records it, the dashboard
-   sends its buttons there. Input is the hook's JSON (session_id, cwd). */
+/* ---------- the protected files, without a write gate ----------
+   brain/admin.md and brain/ontology.ossie.json change only through APPROVE (approve.mjs commits at once),
+   and a memories.jsonl only by appending (lib, then a commit). GTM Brain has no hook that stops a direct
+   edit, so one is caught before anything commits it: at each chat's start and on every save. The edited
+   file is kept in work/manual-edits/protected/ and the committed version comes back. An uncommitted file
+   with no committed version is not judged; GTM_BRAIN_NO_COMMIT (tests, dry runs) turns the check off. */
+/* ---------- the person's APPROVE, as a single-use ticket ----------
+   approve_change issues one after the person chose APPROVE in its form: the secret goes to approve.mjs in
+   its environment only, and only its hash is kept, in ~/.gtm-brain/approvals/ (outside the brain, which a
+   sandboxed chat can write). approve.mjs takes the ticket once; a chat's shell has no secret to offer. */
+const APPROVALS = () => join(homedir(), ".gtm-brain", "approvals");
+const ticketFile = secret => join(APPROVALS(), createHash("sha256").update(String(secret)).digest("hex"));
+const realRoot = root => { try { return realpathSync(root); } catch { return resolve(root); } };
+export function issueApproval(root, kind) {
+  const secret = randomBytes(32).toString("hex");
+  mkdirSync(APPROVALS(), { recursive: true, mode: 0o700 });
+  writeFileSync(ticketFile(secret), JSON.stringify({ brain: realRoot(root), kind, at: Date.now() }), { mode: 0o600, flag: "wx" });
+  return secret;
+}
+export function takeApproval(root, kind, secret) {
+  if (typeof secret !== "string" || !/^[0-9a-f]{64}$/.test(secret)) return false;
+  const file = ticketFile(secret);
+  let t; try { t = JSON.parse(readFileSync(file, "utf8")); unlinkSync(file); } catch { return false; }
+  return t.brain === realRoot(root) && t.kind === kind && Date.now() - t.at < 120000;
+}
+export const PROTECTED_PATHS = ["brain/admin.md", "brain/ontology.ossie.json", ":(glob)brain/contexts/*/memories.jsonl"];
+export function guardProtected(root) {
+  if (process.env.GTM_BRAIN_NO_COMMIT) return [];
+  const git = (...a) => execFileSync("git", ["--no-optional-locks", "-C", root, ...a], { encoding: "utf8", stdio: "pipe" });
+  let changed;
+  try { git("rev-parse", "--verify", "-q", "HEAD"); changed = git("diff", "--name-only", "HEAD", "--", ...PROTECTED_PATHS).split("\n").filter(Boolean); }
+  catch { return []; }
+  const restored = [];
+  for (const path of changed) {
+    let committed; try { committed = git("show", `HEAD:${path}`); } catch { continue; }
+    const file = join(root, path), now = existsSync(file) ? readFileSync(file, "utf8") : null;
+    if (/memories\.jsonl$/.test(path) && now !== null && now.startsWith(committed)) continue;
+    let backup = null;
+    if (now !== null) {
+      const dir = join(root, "work", "manual-edits", "protected"); mkdirSync(dir, { recursive: true });
+      backup = join("work", "manual-edits", "protected", `${path.replace(/\//g, "__")}.${Date.now()}`);
+      writeFileSync(join(root, backup), now);
+    }
+    mkdirSync(dirname(file), { recursive: true }); writeFileSync(file, committed);
+    logActivity(root, "restored", `${path}: changed outside GTM Brain; the committed version is back${backup ? `, the edit is in ${backup}` : ""}`);
+    restored.push({ path, backup });
+  }
+  return restored;
+}
+export const restoredNotice = restored => restored.length ? `PROTECTED FILES RESTORED: ${restored.map(r => `${r.path}${r.backup ? ` (the edit is kept in ${r.backup})` : " (it had been deleted)"}`).join("; ")}. These change only through GTM Brain: admin.md and the company's interactions through a proposal and APPROVE (approve_change), notes through remember. Tell the person in one line; if the edit was wanted, propose it that way.` : "";
+/* The Codex chat a brain folder was last opened in: the chat start records it (session/session.mjs),
+   the dashboard sends its buttons there. Input is JSON with session_id and cwd. */
 function landingSession(root, input) {
   try {
     const session = typeof input === "string" ? JSON.parse(input) : input;
@@ -900,6 +1009,16 @@ function landingSession(root, input) {
     return session;
   } catch { return null; }
 }
+/* A folder too broad to be a brain: every chat there works at the brain root, so downloads and builds land
+   among the person's own files (Artur, 2026-11-06: a brain in his home folder). The name or "" when fine. */
+export function broadFolder(dir) {
+  const real = p => { try { return realpathSync(p); } catch { return p; } };
+  const here = real(dir), home = real(homedir());
+  if (here === home) return "your home folder";
+  if (here === dirname(home) || here === dirname(here)) return "a system folder";
+  return ["Desktop", "Documents", "Downloads"].find(name => here === real(join(home, name))) || "";
+}
+
 /* Before setup, work may contain only the session captured from actual hook stdin.
    Never adopt unrelated work files or follow bootstrap symlinks. The same check governs
    the empty-folder opener and setup, so capturing a chat does not make its folder dirty. */
@@ -1018,13 +1137,6 @@ export function openExternal(url) {
 
 /* ---------- the chat and the dashboard server (both local, in work/) ---------- */
 export function readSession(root, project = null) { try { return JSON.parse(readFileSync(join(projectDir(root, project), "session.json"), "utf8")); } catch { return null; } }
-/* APPROVE counts only as the person's own last message in this chat: the last prompt hooks/turns.sh
-   logged for the session (any session when the hook names none) starts with the word. */
-export function approvedByPerson(root, session = "") {
-  let prompts = [];
-  try { prompts = readFileSync(join(root, "work", "turns.jsonl"), "utf8").split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(t => t && t.kind === "prompt" && (!session || t.session === session)); } catch {}
-  return /^\s*APPROVE\b/.test(prompts.at(-1)?.text || "");
-}
 export function readDash(root) {
   try { const s = JSON.parse(readFileSync(join(root, "work", "dash.json"), "utf8")); process.kill(s.pid, 0); return s; } catch { return null; }
 }
@@ -1054,8 +1166,9 @@ export function rerender(root) {
 /* ---------- memories ---------- */
 // The record. See PLAN.md. Modify and Forget are new records pointing at old ones (supersedes,
 // retracts); the file is never rewritten. effectiveMemories() resolves them for readers.
-export const MEMORY_FIELDS = ["id", "context", "at", "authors", "via", "kind", "tools", "people", "content", "source", "actions", "supersedes", "retracts", "tags", "asset", "entities", "customer", "customer_coverage", ...MEETING_FIELDS];
+export const MEMORY_FIELDS = ["id", "context", "at", "authors", "via", "kind", "tools", "people", "content", "source", "actions", "supersedes", "retracts", "tags", "asset", "entities", "entity_mentions", "customer", "customer_coverage", ...MEETING_FIELDS];
 export const KINDS = ["note", "decision", "question"];
+export const MENTION_RESOLUTIONS = ["exact", "inferred_first_name", "new", "confirmed_new"];
 export const LEGACY_KINDS = ["action"]; // retired; records written before stay valid
 const isList = (v, f) => Array.isArray(v) && v.every(f);
 const isStr = s => typeof s === "string" && s.length > 0;
@@ -1072,6 +1185,7 @@ export function validateMemory(r) {
   if (!isList(r.tools, isStr)) errs.push("tools must be a list of strings");
   if (!isList(r.people, isStr)) errs.push("people must be a list of names");
   if (r.entities !== undefined && !isList(r.entities, id => /^e_[0-9a-f]{16}$/.test(id))) errs.push("entities must be a list of stable entity IDs");
+  if (r.entity_mentions !== undefined && !isList(r.entity_mentions, x => x && isStr(x.mention) && /^e_[0-9a-f]{16}$/.test(x.entity || "") && MENTION_RESOLUTIONS.includes(x.resolution) && Object.hasOwn(NAME_RULES, x.rule || ""))) errs.push("entity_mentions must be a list of {mention, entity (stable ID), resolution, rule}");
   if (!isStr(r.content)) errs.push("content required");
   if (/[\u2013\u2014\u2015\u2212]/.test(r.content || "")) errs.push("long dash in content; use a plain hyphen");
   if (!isList(r.source, s => s && isStr(s.kind) && isStr(s.ref))) errs.push("source must be a list of {kind, ref}");
@@ -1138,7 +1252,7 @@ export function unknownTools(root, tools) {
 export function appendMemory(root, slug, options) {
   return withEntityLock(root, () => appendMemoryRecord(root, slug, prepareMeetingMemory(root, slug, options)));
 }
-function appendMemoryRecord(root, slug, { authors, via = "codex", kind = "note", tools = [], people = [], content, source = [], actions = [], supersedes = null, retracts = null, tags = [], at = null, asset, customer, customer_coverage, ...meetingFields }) {
+function appendMemoryRecord(root, slug, { authors, via = "codex", kind = "note", tools = [], people = [], mentions = [], content, source = [], actions = [], supersedes = null, retracts = null, tags = [], at = null, asset, customer, customer_coverage, ...meetingFields }) {
   const dir = join(root, "brain", "contexts", slug);
   if (!existsSync(join(dir, "context.md"))) throw new Error(`no such context: ${slug}`);
   const when = at || new Date().toISOString();
@@ -1158,6 +1272,8 @@ function appendMemoryRecord(root, slug, { authors, via = "codex", kind = "note",
     if (!mentioned.includes(entity.name)) mentioned.push(entity.name);
   }
   rec.entities = registry.filter(e => mentioned.includes(e.name)).map(e => e.id);
+  const resolved = mentions.map(x => ({ mention: x.mention, entity: registry.find(e => e.name === x.name)?.id, resolution: x.resolution, rule: x.rule })).filter(x => x.entity);
+  if (resolved.length) rec.entity_mentions = resolved;
   const errs = validateMemory(rec); if (errs.length) throw new Error(errs.join("; "));
   guardCustomerCorrection(root, slug, rec);
   const duplicate = duplicateMeetingMemory(root, rec);
@@ -1193,7 +1309,7 @@ export function validateMemoriesFile(path, context = null) {
 export const INTERACTIONS_PATH = "brain/ontology.ossie.json";
 // every name the plugin serves; server.test.mjs holds this equal to the live catalog, so a company
 // interaction can never shadow a tool
-export const RESERVED_TOOLS = new Set(["memory_index", "update_plugin", "where_we_are", "list_contexts", "load_context", "recall", "compile_facts", "compile_apply", "render_dashboard", "open_dashboard", "new_context", "fork_context", "edit_context", "archive_context", "advise", "who_is", "add_name", "check_tools", "mark_tool", "propose_admin_change", "save", "check_environment", "setup_brain", "upgrade_brain", "onboarding_question", "configuration_question", "question", "list_objects", "describe_object", "query", "remember", "interact", "propose_interaction", "link_project", "unlink_project", "list_projects", "list_brains", "customer_overview", "meeting_overview", "entity_facts", "compile_entity", "update_entity", "merge_entities", "archive_entity", "undo_entity_merge", "skill", "guideline", "document", "workflow", "share_brain"]);
+export const RESERVED_TOOLS = new Set(["memory_index", "update_plugin", "where_we_are", "list_contexts", "load_context", "recall", "compile_facts", "compile_apply", "render_dashboard", "open_dashboard", "new_context", "fork_context", "edit_context", "archive_context", "advise", "who_is", "why_here", "check_rules", "add_name", "check_tools", "mark_tool", "propose_admin_change", "approve_change", "keep_approved_file", "save", "check_environment", "setup_brain", "upgrade_brain", "list_objects", "describe_object", "query", "remember", "interact", "propose_interaction", "link_project", "unlink_project", "list_projects", "list_brains", "customer_overview", "meeting_overview", "entity_facts", "compile_entity", "update_entity", "merge_entities", "archive_entity", "undo_entity_merge", "skill", "guideline", "document", "workflow", "share_brain"]);
 const LONG_DASH = /[\u2013\u2014\u2015\u2212]/;
 const interactionOf = (raw, parsed) => ({
   name: parsed.name, title: String(raw.title || parsed.name), tool: String(raw.tool || "").trim(), operation: String(raw.operation || "").trim(), description: String(raw.description || "").trim(),

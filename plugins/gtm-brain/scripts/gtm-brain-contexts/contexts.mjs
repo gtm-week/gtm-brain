@@ -5,7 +5,9 @@
 //   node contexts.mjs <root> --new <slug> "<Title>" ["<one rule for When loaded>"]
 //   node contexts.mjs <root> --archive <slug> | --unarchive <slug>   (status on the cover; archived is unloaded, not offered)
 //   node contexts.mjs <root> --edit <slug> [--title "..."] [--rule "..."]   the cover's title and standing rule; summary and working guidance kept
-import { existsSync } from "node:fs";
+import { host } from "../../lib/host.mjs";
+import { existsSync, readdirSync } from "node:fs";
+import * as dots from "../../lib/dots.mjs";
 import { join } from "node:path";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
@@ -17,6 +19,15 @@ if (args[0] === "--new") {
   const slug = (args[1] || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); const title = args[2] || slug; const rule = args[3] || "";
   if (!slug) { console.error('usage: --new <slug> "<Title>" ["<rule>"]'); process.exit(1); }
   const dir = join(root, "brain", "contexts", slug); if (existsSync(dir)) { console.error(`context exists: ${slug}`); process.exit(1); }
+  // X1-X3 are judgment (saving-rules.md): the brain states what exists, Codex decides, and says why the new one is
+  // distinct before it is created ("berlin-event" for the project berlin-event-2026 slipped past a name match, 2026-11-12)
+  const di = args.indexOf("--distinct"), distinct = di > 0 ? (args[di + 1] || "").trim() : "";
+  if (!distinct) {
+    const ctxs = lib.listContexts(root).map(c => `${c.title} (${c.slug}${c.status === "archived" ? ", archived" : ""})`);
+    const projects = [...new Set([...lib.readProjects(root).map(p => p.slug), ...(existsSync(join(root, "projects")) ? readdirSync(join(root, "projects"), { withFileTypes: true }).filter(d => d.isDirectory()).map(d => d.name) : [])])];
+    console.error(`not created yet: check "${title}" against what exists. Contexts: ${ctxs.join(", ") || "none"}. Projects: ${projects.join(", ") || "none"}. X1: a project (by any shorter or longer name) is not a context. X3: a topic an existing or archived context covers is that context. If it is one of these, do not create it: say which, and ask the person only when it is unclear (Q1). If it is a new lasting topic (X2) and the person agreed, call new_context again with distinct set to one line on why no context or project above covers it.${dots.rulebookOnce(root, lib.readSession(root, project)?.session_id)}`);
+    process.exit(2);
+  }
   lib.writeContext(root, slug, { title, rule });
   // A new context is loaded right away: you created it because you are about to work in it.
   const loaded = lib.readLoaded(root, project); if (!loaded.includes(slug)) loaded.push(slug); lib.writeLoaded(root, loaded, project);
@@ -66,15 +77,15 @@ if (args[0] === "--fork") {
 
 const cs = lib.listContexts(root);
 if (args.includes("--json")) { console.log(JSON.stringify(cs.map(c => ({ slug: c.slug, title: c.title, rule: c.rule, status: c.status, summary: c.summary, memories: lib.effectiveMemories(c.memories).length, stored: c.memories.length, lastMemory: c.lastMemory, compiledAt: c.compiledAt, stale: c.stale, people: c.people, tools: c.tools, related: c.related })), null, 1)); process.exit(0); }
-// Same words as the dashboard: "summary up to date" / "summary updating (shortly)", "loaded in this chat". Never "behind".
+// Same words as the dashboard: "summary up to date" / "summary updating (shortly)", "loaded in this chat"; "out of date" only after 2 days behind.
 console.log("admin: brain/admin.md (always loaded)");
 const loadedNow = lib.readLoaded(root, project); const busy = lib.compileBusy(root);
-// --brief-loaded: the session hook prints each loaded context in full right after this list, so its
+// --brief-loaded: the chat start prints each loaded context in full right after this list, so its
 // summary excerpt and standing rule are left out here instead of reaching the chat twice.
 const briefLoaded = args.includes("--brief-loaded");
 for (const c of cs.filter(c => c.status === "active")) {
   const eff = lib.effectiveMemories(c.memories); const fresh = c.compiledAt ? eff.filter(m => lib.newer(m.at, c.compiledAt)).length : eff.length;
-  const state = !eff.length ? "nothing recorded yet" : c.stale ? (busy ? `summary updating (${fresh} new, in the background)` : `summary updating shortly (${fresh} new)`) : "summary up to date";
+  const state = lib.summaryState(c, busy);
   console.log(`• ${c.title} (${c.slug}) · ${eff.length} memories · ${state}${loadedNow.includes(c.slug) ? (project ? " · loaded in this project" : " · loaded in this chat") : ""}${eff.length && !c.stale && !(briefLoaded && loadedNow.includes(c.slug)) ? `  ${c.summary.slice(0, 80)}` : ""}`);
   if (c.rule && !(briefLoaded && loadedNow.includes(c.slug))) console.log(`  ${c.rule}`);
 }

@@ -23,7 +23,7 @@ Follow [question handling](../gtm-brain-start/references/questions.md) for nativ
 1. Draft. When the request follows something this chat just did more than once (the same
    connector steps, the same document shape), draft from those steps: a title, one English
    sentence of at most 200 characters saying what it does and when it applies, and the steps
-   another chat should follow. Otherwise ask one `question`: what the skill does, when it
+   another chat should follow. Otherwise ask one question: what the skill does, when it
    should apply, which connected tool it uses, and what it produces and where that lands
    (memories, a guideline, a draft in the project folder).
    Write the body by [authoring](references/authoring.md).
@@ -33,7 +33,7 @@ Follow [question handling](../gtm-brain-start/references/questions.md) for nativ
    over memories whose actions name that tool and action; `describe_object` shows the columns), and
    take the steps, the inputs that changed between them and the connector. Then confirm the draft
    as for any other skill.
-2. Confirm. One `question` shows the draft: the name (`gtm-brain-<slug>`), the description and
+2. Confirm. One question shows the draft: the name (`gtm-brain-<slug>`), the description and
    the first line of the steps, with "Create it" first and "Change something" second. Nothing
    is written before that answer.
 3. Call `skill` with `action: create`, `title`, `description`, `body` and the person's `by`.
@@ -47,7 +47,7 @@ Follow [question handling](../gtm-brain-start/references/questions.md) for nativ
   yours, in this brain (travel with the brain, teammates get them); Codex's own, on this
   machine (`~/.agents/skills`, theirs alone, GTM Brain never sees or updates them). When asked
   to make a skill inside a brain, say in one line that it is the second kind and why.
-- "remove the skill X": confirm with one `question` ("Remove /gtm-brain-x? Its folder goes; notes
+- "remove the skill X": confirm with one question ("Remove /gtm-brain-x? Its folder goes; notes
   stay."), then `action: remove` with `id`.
 - "install ... from GitHub": read [install and share](references/install-share.md).
 - "share this skill": the same reference; nothing leaves the machine from here.

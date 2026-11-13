@@ -2,7 +2,7 @@
 // and the actual dashboard client. Capture consent is assumed submitted before link_project;
 // native question widgets, OS deep-link dispatch and model compilation remain manual checks.
 process.env.GTM_BRAIN_NO_SESSION_MAINTENANCE = '1'; // Covered by session-maintenance.test.mjs.
-process.env.GTM_BRAIN_NO_HOOK_CHECK = "1"; // the hooks-off check talks to a real Codex; hooks-notice.test covers it with a fake one
+process.env.GTM_BRAIN_NO_SESSION_START = "1"; // a fresh server per call is a fresh chat; chat-start.test.mjs covers the chat start
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, realpathSync, readdirSync } from 'node:fs';
@@ -90,7 +90,8 @@ for (const mode of ['existing', 'new']) test(`${mode} project: MCP link, session
   if (mode === 'new') {
     assert.match(linked, /Created Website Test/);
     assert.doesNotMatch(linked, /channels|loaded:/i);
-    assert.deepEqual(readdirSync(project), ['AGENTS.md', 'CLAUDE.md'], 'the pointer, and its import for Claude Code');
+    assert.deepEqual(readdirSync(project), ['AGENTS.md', 'CLAUDE.md', 'README.md'], 'the pointer, its import for Claude Code, and the README whose first line the chat start lists');
+    assert.equal(readFileSync(join(project, 'README.md'), 'utf8'), '# Website Test\n');
     assert.deepEqual(lib.readLoaded(f.root, slug), []);
   }
   const pointer = lib.readPointer(project);
@@ -125,7 +126,7 @@ for (const mode of ['existing', 'new']) test(`${mode} project: MCP link, session
   assert.equal(existsSync(join(nested, 'brain')), false);
   assert.equal(existsSync(join(nested, 'AGENTS.md')), false);
   const session = '11111111-1111-4111-8111-111111111111';
-  const hook = f.run('bash', [join(plugin, 'hooks/session-start.sh')], nested,
+  const hook = f.run('bash', [join(plugin, 'session/session-start.sh')], nested,
     JSON.stringify({ cwd: nested, session_id: session }));
   assert.match(hook, /PROJECT website-test/);
   assert.equal(lib.resolveBrain(nested).root, f.root);

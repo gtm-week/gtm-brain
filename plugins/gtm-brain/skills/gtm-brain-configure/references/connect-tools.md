@@ -40,11 +40,27 @@ earlier* is a decision already made: never propose that tool again unless they a
 When the person declines in chat ("no CRM yet", "skip HubSpot"), record it at once with
 `mark_tool` (`status` = skip, `note` = their words).
 
+Past the floor, which tool fits a need is judgment: follow [which tool fits a need](tool-fit.md).
+
 ## Step 1b: plugins installed but not in the tools list
 
 If the check ends with *"installed in Codex but not in admin.md tools: linear, google-calendar"*,
 offer once: *"You have Linear and Google Calendar connected; add them to the tools list?"* On
-yes, propose the `admin.md` change through the `gtm-brain-configure` workplace-change procedure (the person types APPROVE).
+yes, propose the `admin.md` change through the `gtm-brain-configure` workplace-change procedure (the person chooses APPROVE in the `approve_change` form).
+
+An installed plugin this brain has used is on the dashboard already, admin.md or not: it was
+read-tested in chat (`mark_tool`), a memory came from it (its `tools` or source), or a memory
+mentions it by name (*"used in this brain, on the dashboard, not in admin.md tools: MagicPath
+(mentioned in a memory)"*). A plugin named with an everyday word (Sales) never counts by mention.
+Offer once to add it to the company profile, the same way. After using a plugin for brain work,
+call `mark_tool` so it shows.
+
+## Step 1c: MCP servers added by hand
+
+The check also reads remote MCP servers from Codex's `config.toml`. One that matches a tool in
+`admin.md` counts as installed. One that does not (*"connected as MCP servers, not in admin.md
+tools: Zynt"*) is on the dashboard already, as installed and untested, with no APPROVE. Offer once
+to add it to the company profile. A tool used outside Codex has no entry and stays listed only.
 
 ## Step 2: choose once, install the selected tools
 
@@ -53,9 +69,9 @@ If no selection exists, offer an available structured choice control in Codex. F
 and "Skip both"; then the CRM as its
 own question: "HubSpot (the course gives it to you)", "Attio", "Another CRM or none yet".
 
-Prefer `configuration_question` with the named tools as `options` and `multiple: true`.
-Its submitted selections choose what to connect, not account permissions. If the person
-submits none or cancels, do not infer declines. Record an explicit Skip response as a
+Ask with the named tools as a numbered list; they may pick several.
+Their picks choose what to connect, not account permissions. If the person
+picks none or does not answer, do not infer declines. Record an explicit Skip response as a
 skip of this question, and clarify scope only when necessary to continue.
 
 Prefer a blocking question tool when available in the current mode. Async questions
@@ -90,6 +106,10 @@ relevant context's rule says so (`Granola: export the transcript and drop it in`
 
 ## Step 3: read test, per installed tool
 
+Codex lists a chat's tools when the chat starts. If a tool was connected in this chat and its
+tools are not here, say so and ask the person to open a new chat and run the read test there.
+Never use the tool's website instead.
+
 Call the plugin's smallest read operation yourself and report what came back in one line:
 
 | Tool | Read test |
@@ -102,9 +122,10 @@ Call the plugin's smallest read operation yourself and report what came back in 
 
 Then record it:
 
-A connector call that succeeds in any chat also records the read test by itself, so a tool used in
-real work is never left "untested". Otherwise call `mark_tool` with `tool` (hubspot), `status` (ok or fail) and `note` ("57 deals, 342 companies",
-"not signed in").
+Call `mark_tool` with `tool` (hubspot), `status` (ok or fail) and `note` ("57 deals, 342 companies",
+"not signed in"). GTM Brain does not see calls to other connectors, so the same holds in real work:
+the first time a tool shown as installed, untested (○) returns data in any chat, call `mark_tool`
+with `status` ok once.
 
 Never `remember` the read test results; they are not company knowledge. Never store what you
 read. If a read fails because the person is not signed in, explain the one sign-in action they need. During onboarding, keep its flag pending and follow [continuation](../../gtm-brain-start/references/continuation.md). Continue independent steps or offer an explicit skip; one unavailable connection does not end onboarding.

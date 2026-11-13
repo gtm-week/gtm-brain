@@ -295,3 +295,8 @@ test('the attention view lists workflow runs with their steps, read-only, and sa
   assert.match(html, /Workflow runs · 1/); assert.match(html, /outbound-2026-09-28-q4 · Our offer/); assert.match(html, /1 done/); assert.match(html, /2 pending · 2026-10-08/);
   assert.doesNotMatch(html, /<button|<input|<form/, 'read-only');
 });
+test('settings show the version line with no safety-locks notice: GTM Brain has no hooks to switch off',()=>{
+ const D=data();D.plugin={installed:'0.33.9',latest:'0.33.9',status:'current',checkedAt:'2026-09-11T10:00:00.000Z'};
+ const line=page(D).node('#plugin-line').innerHTML;
+ assert.match(line,/0\.33\.9, the latest/); assert.doesNotMatch(line,/Safety locks|hooks/);
+});

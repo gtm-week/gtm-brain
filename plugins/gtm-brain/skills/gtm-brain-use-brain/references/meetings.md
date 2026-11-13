@@ -13,7 +13,7 @@ remain ordinary memories without an invented conversation.
    installed, tested connectors. It never calls those connectors itself.
 2. Use their submitted policy when available. For a directly requested capture, the request
    supplies the scope. For broader recurring ingestion, propose source/account scopes and
-   relevant conversations through `configuration_question`; store the submitted choice using
+   relevant conversations and ask; store the submitted choice using
    `remember.meeting_policy` in the person's existing `personal-<handle>` context. Setup's
    language preference establishes that context. Do not use a company-wide language or policy.
    Policy records need `sources: ["user:<handle>"]`. They do not install a scheduler or grant access.
@@ -119,7 +119,7 @@ A failed calendar refresh must not block recording notes or compiling available 
 Use source reads when the person works, bounded polling during sync, and provider event hooks
 only where the actual connector/host supports them. A notification queues a fetch of the record;
 it is not evidence of the conversation. Do not invent MCP notifications, install a webhook
-listener, or run connector fetches from every Codex tool-use hook.
+listener, or run connector fetches after every tool call.
 
 ## Calendar enrichment and daily maintenance
 

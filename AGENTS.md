@@ -8,57 +8,40 @@ the plugin's `check_environment` and `setup_brain` tools do the work.
 ## Default onboarding interaction
 
 <!-- generated: questions; edit plugins/gtm-brain/policies/questions.md -->
-Ask through the GTM Brain question tool named for the purpose whenever available: `onboarding_question`
-for first-run setup only, `configuration_question` for tools, connections and settings, and
-`question` for everyday and creative work (which context, same as X?, which direction or photo?).
-The host labels the call by the tool's name, so the name is the person's only cue to what kind
-of question it is. All three are the same native form: it waits inside the call and supports
-radio choices, `multiple: true` checkboxes and free text. Do not show the same question with a
-second tool or end the turn with a text question while these tools are available.
-In Plan mode, ask through the host's own planning question tool instead: it is the form the
-person expects there, and it shows the choices and their own answer on one page.
+GTM Brain shows no question forms of its own. Ask with the host's own question box when it has
+one (in Codex, `request_user_input`: use it whenever it is available in the chat, in Plan mode
+always and in ordinary chats where the person's Codex has it). Otherwise ask in plain chat text and
+end the turn: the question, one line
+on why it matters, and two or three numbered options, recommended first; the person answers with
+a number or in their own words.
 
-Reuse saved and submitted answers; infer a concrete proposal before asking. Use structured
-questions proactively for missing information and decisions in the person's current mode.
-Do not ask them to enable Plan mode or experimental settings, call a plan-only tool outside
-Plan mode, or perform writes when restricted to planning. If GTM Brain questions are unavailable,
-prefer a blocking question tool when its current contract allows it, then an async form.
-Use a plain text question only when an appropriate structured control is unavailable.
+Reuse saved and submitted answers; infer a concrete proposal before asking. Ask only for missing
+information and real decisions. Do not ask the person to enable Plan mode or experimental
+settings, call a plan-only tool outside Plan mode, or perform writes when restricted to planning.
 
-Explain why the answer matters before the widget. Offer two or three concrete choices,
-recommended first when appropriate. A choice question is one page: the host shows each field
-on its own page, so `text_label` next to `options` adds a second step. Pass it only when a note
-is really needed. When another answer is likely, let the last choice name it (Different company,
-Needs corrections) and ask the follow-up as a free-text question; do not add a bare Other option.
-When the form is not shown and the choices become chat buttons, each one sends a whole answer:
-never a half sentence for the person to finish ("A different company: "); ask for the rest next.
-Use genuine multi-select for independent choices only when the tool's schema supports it;
-otherwise offer concrete combinations in a single-select chat question. The dashboard is
-view-only. Aim for clicks or at most five words per answer. Never bundle a business
-clarification with optional maintenance questions or ask again for an already authorized action.
+Explain why the answer matters before the question. Offer two or three concrete choices,
+recommended first when appropriate. Never add your own Other or Something else: the person can
+always answer in their own words. A named last choice (Different company, Needs corrections)
+still fits when it means something specific. Each choice is a whole answer, never a half
+sentence for the person to finish ("A different company: "); ask for the rest next. Where
+several choices can apply together, say the person can pick several numbers; the host's question
+box has no checkboxes, so offer the likely combinations there. The dashboard is view-only. Aim
+for a number or at most five words per answer. Never bundle a business clarification with
+optional maintenance questions or ask again for an already authorized action.
 
-A yes/no or permission question always passes `options`, for example Yes, go ahead and No, skip it.
-Omit `options` only when the answer is a name, a link or other free text, and then name what to
-type in `text_label` or leave it out. A yes or no the person already gave for that exact step, in
-a form or in the chat, is the answer: act on it and never show the same question again in another form.
+A yes/no or permission question always names both answers, for example Yes, go ahead and No,
+skip it. A free-text question (a name, a link) says what to type. A yes or no the person already
+gave for that exact step is the answer: act on it and never ask the same question again.
 
-Keep one question pending. Only `status: answered` from a question tool supplies
-submitted `selections` and/or `text`; preserve both. `declined` skips that question only,
-`cancelled` stops it, and `unanswered` supplies no decision. None of those three authorizes
-dependent work; an `answered` yes does, for the ordinary step it named.
-`not_shown` means the host closed the form before the person could see it: it is no answer
-and no refusal. Ask that question, and the rest of this chat's questions, as plain chat text.
-For async forms, an acknowledgement is not an answer: pause dependent work and keep the
-turn alive with interruptible waits, repeating until an answer or cancellation arrives.
-Never end the turn, even with an empty final response, while an async question is pending.
-Defaults, empty results, errors, timeouts, elapsed time and unrelated messages are not answers.
-Do not use shell sleep or a busy loop. Waiting does not keep the host's panel expanded;
-accept a short chat answer if it collapses and never repost a question to reset its timer.
-A plain text question without a pending widget ends in a final message and waits for a reply.
+Keep one question pending. A question without an answer authorizes nothing: defaults, empty
+results, errors, timeouts, elapsed time and unrelated messages are not answers. A skipped or
+closed question box is no answer and no refusal; ask it again as plain chat text. A plain text
+question ends the turn and waits for the reply. Do not use shell sleep or a busy loop to wait.
 
-Security permissions, account sign-in and the exact APPROVE flow stay native. A preference
-widget cannot authorize shell commands, trust hooks or grant account access. Carry out a
-submitted ordinary choice through its owning workflow with the normal permission prompts.
+Security permissions and account sign-in stay native. A chosen option cannot authorize shell
+commands or grant account access, and never stands in for APPROVE: a workplace or interaction
+change goes only through `approve_change`, whose own form carries the APPROVE choice. Carry out
+a chosen ordinary option through its owning workflow with the normal permission prompts.
 
 No slop. No filler phrases, no hedging when facts are cited, no LLM preamble
 ("I have created...", "Here is the updated...", "Certainly!"). No placeholder dates.
@@ -110,20 +93,25 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
 - GTM Brain is English-only: conversations, dashboard labels, user-facing commands and brain
   records. There is no language preference to read, save or ask about. Keep tool identifiers,
   CLI flags, and the APPROVE token stable.
-- `plugins/gtm-brain/lib/` is the file format; skills and hooks go through it.
-- A hook runs only while Codex holds the approval for its declaration: `config.toml` keeps a
-  `trusted_hash` per hook and `codex plugin add` writes none, so a hook installed by a command
-  is enabled and silent. `hooks/trust-hooks.mjs` writes that approval; `dev-install.sh`,
-  `update.mjs` and the install flow all run it. Before Codex 0.164 the hash covered only
-  `hooks.json` (command, matcher, timeout, status message). From 0.164 Codex also keeps a
-  `trusted_content_hash` of the plugin's files (`currentHash` is "declaration/contents"), so any
-  change to the plugin, a version bump included, switches every hook off until it is approved
-  again. `update.mjs` re-approves; an update the Codex app makes itself does not, so the MCP
-  server checks once per start and tells the person (`host.texts.hooksOff`). After any change to
-  the plugin, re-run `./dev-install.sh` or the hooks stay off without saying so.
+- `plugins/gtm-brain/lib/` is the file format; skills and the session scripts go through it.
+- GTM Brain declares no hooks. Since Codex 0.164 any change to a plugin, a version bump
+  included, switches all its hooks off until the person approves a "Review hooks" dialog, and
+  no other installed plugin has hooks. Everything runs through the MCP server instead. The chat
+  start: on a chat's first GTM Brain call (once per brain and project per server, again after 30
+  quiet minutes) the server runs `session/session-start.sh` and returns its opening lines before
+  that call's result; the server's instructions make `query` (status) the first call in a brain
+  folder or a linked project. The chat id comes from the host's own session files
+  (`lib/host.mjs` `currentChat`). APPROVE: `approve_change` shows the person a native form and
+  only their click applies the change; `approve.mjs --apply/--interaction` refuses otherwise,
+  except in a terminal where the person types APPROVE. Protection: `lib.guardProtected` runs at
+  each chat start and before every save; a direct edit of `admin.md`, `ontology.ossie.json` or a
+  `memories.jsonl` not committed through GTM Brain is copied to `work/manual-edits/protected/` and
+  the committed version restored. The server logs its own calls to `work/tool-usage.jsonl`; it
+  does not see other connectors' calls, so the model marks an untested tool with `mark_tool`.
+  After any change to the plugin, re-run `./dev-install.sh` to install it.
 - A change under `plugins/gtm-brain/` that people should receive bumps the version in
   `.codex-plugin/plugin.json`. `check-version.mjs` compares that number with the installed one,
-  and the dashboard, the hook and the advisor all read its answer: everything shipped without a
+  and the dashboard, the chat start and the advisor all read its answer: everything shipped without a
   bump is invisible, so nobody is ever offered it. The cache path in SETUP.md and COMMANDS.md
   carries the same number, and a test holds them together. A change to `templates/AGENTS.md`
   snapshots the outgoing template into `templates/legacy/AGENTS-<old version>.md` and lists that
@@ -137,16 +125,16 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
   and generated as first-class tools; a company's, described in its `brain/ontology.ossie.json`,
   listed per brain by the catalog tools and run through the one fixed tool `interact`. Codex lists a
   server's tools once, at startup, and the server does not know the brain then, so company
-  interactions cannot be tools of their own. The company file is protected truth (the gate,
-  `approve.mjs --interaction`); `lib.RESERVED_TOOLS` is held equal to the live catalog by a test.
+  interactions cannot be tools of their own. The company file is protected truth (`lib.guardProtected`,
+  `approve_change` with kind interaction); `lib.RESERVED_TOOLS` is held equal to the live catalog by a test.
 - A project is a tag and a local pointer, never an object: `project:<slug>` on memories, a marked
   block in the folder's `AGENTS.md` (`lib.writePointer`; the format lives in `lib` and
-  `hooks/resolve.sh` mirrors it), and `work/projects.json` for this machine's paths. Nothing
+  `session/resolve.sh` mirrors it), and `work/projects.json` for this machine's paths. Nothing
   under `brain/`. Codex reads `AGENTS.md` from the git root down to cwd and never below cwd
   (https://learn.chatgpt.com/docs/agent-configuration/agents-md), so an external folder needs the
   pointer with the rulebook line and a sub-folder of the brain needs only the two values.
   `lib.readLoaded/writeLoaded(root, ..., project)` are the only place that knows a loaded set's
-  path; every hook resolves the brain through `resolve.sh` / `lib.resolveBrain`, never
+  path; the session scripts resolve the brain through `session/resolve.sh` / `lib.resolveBrain`, never
   `$cwd/brain/admin.md` directly.
 - Entity identity lives in `brain/entities/*.md`, with stable IDs and generated cited briefs.
   Facts stay in context memories. Migrations preserve old records, retired IDs and source files.
@@ -162,23 +150,23 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
 - Two hosts, one plugin folder: Codex and Claude Code (beta, 0.30). `lib/host.mjs` is the only place that
   knows which one runs (`GTM_BRAIN_HOST`, set only by the generated Claude declarations; unset is Codex) and
   holds every difference: texts, links, tool names, what the machine can do. A test fails on a host branch
-  anywhere else. Codex's `hooks.json`, `.mcp.json` and manifest stay the source; the Claude files are
+  anywhere else. Codex's `.mcp.json` and manifest stay the source; the Claude files are
   generated by `scripts/sync-derived.mjs`. `via` stays `codex` for a chat on either host (older versions
   reject other values); the host is the chat source's kind (`codex:` or `claude:`).
 - No em dashes anywhere. Plain hyphens.
 - The plugin ships from `gtm-week/gtm-brain`, branch `main`.
 - Tests: `node --test 'plugins/gtm-brain/test/*.test.mjs'` (Node's own runner, no dependencies).
   `brain.test.mjs` covers the lib, `skills.test.mjs` runs the scripts on a brain made by setup,
-  `server.test.mjs` drives the MCP server, `dash.test.mjs` the dashboard server and the session
-  hook. Run them before every commit that touches `lib/`, a skill script, a server or the hook.
+  `server.test.mjs` drives the MCP server, `dash.test.mjs` the dashboard server and the chat
+  start. Run them before every commit that touches `lib/`, a skill script, a server or the session scripts.
   Before a push to `main`, `.githooks/pre-push` runs them and, when what ships changed,
   `test/live/harness-bench.mjs`: the plugin must not cost Codex solved tasks on work that is not
   GTM (see README.md, Before pushing to main).
 - The model reaches the skills through the MCP server (`server/server.mjs`, one tool per
   operation, each runs the skill's script in the brain). The server runs outside the sandbox, so
   every writer commits what it wrote at once (`lib.commit`, pushed in the background when there
-  is a remote); `save` keeps edits made by hand. Applying an APPROVE stays a shell step with
-  Codex's permission prompt. `GTM_BRAIN_NO_COMMIT` turns committing off for tests and dry runs. A new operation is a script plus a tool entry; add its instructions to the owning workflow.
+  is a remote); `save` keeps edits made by hand. An APPROVE is applied only from the person's
+  click in the `approve_change` form. `GTM_BRAIN_NO_COMMIT` turns committing off for tests and dry runs. A new operation is a script plus a tool entry; add its instructions to the owning workflow.
   Skills are user workflows, not one entry per operation. Internal procedures live in their
   `references/` folders. Existing script paths under `skills/gtm-brain-*/` stay stable even when
   that directory has no `SKILL.md`.

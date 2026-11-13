@@ -6,6 +6,10 @@ Keep authored brain content in English. Preserve names, source quotes and the ex
 > A context holds shared knowledge about a topic, such as Strategy. This creates one,
 > splits a topic into its own context, or archives one that is finished.
 
+Rules X1-X3 are in [saving-rules.md](saving-rules.md). `new_context` without `distinct` creates nothing and
+lists the contexts and projects to check against; call it again with `distinct` (one line on why
+none covers the topic) only after the person agreed.
+
 ## First, what exists
 
 Call the GTM Brain tool `query` (contexts) with `brain` = this workspace folder (archived ones

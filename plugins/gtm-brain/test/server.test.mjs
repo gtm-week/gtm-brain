@@ -2,7 +2,6 @@ process.env.GTM_BRAIN_NO_WATCH = "1";
 process.env.GTM_BRAIN_NO_COMPILE = "1"; // Model runs are opt-in through test doubles.
 // The MCP server: handshake, tool list, and the tools on a brain made by setup_brain.
 // Run: node --test 'plugins/gtm-brain/test/*.test.mjs'
-process.env.GTM_BRAIN_NO_HOOK_CHECK = "1"; // the hooks-off check talks to a real Codex; hooks-notice.test covers it with a fake one
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, existsSync, readFileSync, mkdirSync, writeFileSync, unlinkSync } from "node:fs";
@@ -15,7 +14,7 @@ const lib = await import(`${P}/lib/brain.mjs`);
 // Keep real installation preferences out of synthetic test brains.
 process.env.CODEX_HOME = mkdtempSync(join(tmpdir(), "gtm-brain-test-profile-"));
 
-const server = spawn(process.execPath, [`${P}/server/server.mjs`], { stdio: ["pipe", "pipe", "pipe"], env: { ...process.env, GTM_BRAIN_NO_OPEN: "1" } });
+const server = spawn(process.execPath, [`${P}/server/server.mjs`], { stdio: ["pipe", "pipe", "pipe"], env: { ...process.env, GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_SESSION_START: "1" } });
 const pending = new Map(); let seq = 0;
 createInterface({ input: server.stdout }).on("line", line => { const m = JSON.parse(line); const r = pending.get(m.id); if (r) { pending.delete(m.id); r(m); } });
 const rpc = (method, params = {}) => new Promise(res => { const id = ++seq; pending.set(id, res); server.stdin.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n"); });
@@ -104,7 +103,7 @@ test("memory dates stay in content while MCP capture assigns the recording times
   lib.writeContext(brain, "events", { title: "Events" });
   const started = Date.now();
   const content = "Chris agreed the sponsorship plan around June 2026.";
-  const captured = await call("remember", { brain, by: "ann", context: "events", content, people: ["Chris"] });
+  const captured = await call("remember", { brain, by: "ann", context: "events", content, people: ["Chris Novak"] });
   assert.ok(!captured.isError, captured.text);
   const batch = await call("remember", { brain, by: "ann", memories: [{ context: "events", content: "Chris prefers concise proposals.", people: ["Chris"] }] });
   assert.ok(!batch.isError, batch.text);
@@ -221,7 +220,13 @@ test("load, remember (not committed by the server), recall, compile facts, rende
   assert.match(behind.text, /icp/);
   const facts = await call("compile_facts", { brain: root, context: "icp" });
   const asOf = facts.text.match(/as_of: (\S+)/)?.[1]; assert.ok(asOf, facts.text);
-  const applied = await call("compile_apply", { brain: root, context: "icp", by: "marta", as_of: asOf, summary: "Bergstrom gets no discount.", now: "Hold the price." });
+  // a model's summary cites its notes and dates nothing relatively (new-brain, 2026-11-12: "next Tuesday" frozen in a summary)
+  const refused = await call("compile_apply", { brain: root, context: "icp", by: "marta", as_of: asOf, summary: "Bergstrom gets no discount from next Tuesday.", now: "Hold the price." });
+  assert.ok(refused.isError); assert.match(refused.text, /cites no note.*"next Tuesday" .* is a relative date/s);
+  const noteId = rem.text.match(/remembered (m_[0-9a-f]{12})/)[1];
+  const applied = await call("compile_apply", { brain: root, context: "icp", by: "marta", as_of: asOf, summary: `Bergstrom gets no discount [${noteId}].`, now: "Hold the price." });
+  assert.deepEqual(lib.readContext(root, "icp").fm.summary_sources, [noteId], "the note ids are kept as the summary's sources");
+  assert.equal(lib.readContext(root, "icp").summary, "Bergstrom gets no discount.");
   assert.ok(!applied.isError, applied.text); assert.match(applied.text, /kept/);
   const rendered = await call("render_dashboard", { brain: root });
   assert.ok(!rendered.isError, rendered.text); assert.ok(existsSync(join(root, "work", "home", "index.html")));
@@ -367,7 +372,7 @@ test("the interactions are the ontology's: none hand-written twice, names and ti
   assert.ok(!r.extra.some(x => onto.actions.some(a => a.tool_name === x.name)), "a described interaction is not also hand-written");
   for (const [name, title] of [["new_context", "Opening a context"], ["add_name", "Adding a name"]]) assert.equal(result.tools.find(t => t.name === name).title, title);
   // and they run: a channel opened through the generated tool is a channel
-  const made = await call("new_context", { brain: root, slug: "pipeline", title: "Pipeline", rule: "Deals in flight." });
+  const made = await call("new_context", { brain: root, slug: "pipeline", title: "Pipeline", rule: "Deals in flight.", distinct: "no context covers deals in flight" });
   assert.ok(!made.isError, made.text); assert.match(made.text, /^ok: new_context/); assert.ok(existsSync(join(root, "brain", "contexts", "pipeline", "context.md")));
 });
 
@@ -440,7 +445,7 @@ test("evaluation proxy exposes a harmless competitor and refuses other roots and
 });
 
 test("interact: the company's interaction records the prescribed memory and says what to do in the connector", async () => {
-  if (!existsSync(join(root, "brain", "contexts", "pipeline", "context.md"))) execFileSync(process.execPath, [`${P}/scripts/gtm-brain-contexts/contexts.mjs`, root, "--new", "pipeline", "Pipeline", "Deals in flight."], { env: { ...process.env, PLUGIN_ROOT: P, GTM_BRAIN_NO_COMMIT: "1" }, stdio: "ignore" });
+  if (!existsSync(join(root, "brain", "contexts", "pipeline", "context.md"))) execFileSync(process.execPath, [`${P}/scripts/gtm-brain-contexts/contexts.mjs`, root, "--new", "pipeline", "Pipeline", "Deals in flight.", "--distinct", "no context covers deals in flight"], { env: { ...process.env, PLUGIN_ROOT: P, GTM_BRAIN_NO_COMMIT: "1" }, stdio: "ignore" });
   await call("add_name", { brain: root, name: "Castorama", kind: "company" });
   lib.writeInteractions(root, [{ name: "move_deal", title: "Moving a deal", tool: "attio", operation: "Move the deal to the given stage in Attio.", description: "A deal changes stage.",
     input_schema: { type: "object", properties: { deal: { type: "string" }, stage: { type: "string", enum: ["lead", "proposal", "won"] }, note: { type: "string" } }, required: ["deal", "stage"], additionalProperties: false },
@@ -469,7 +474,7 @@ test("a broken company file is reported in the catalog, and the rest of the serv
 
 test("context tools expose purpose and boundaries through rule and refuse the retired scope field", async () => {
   const slug = "context-instructions", rule = "Keep launch work here. Pricing decisions belong in offer.";
-  const created = await call("new_context", { brain: root, slug, title: "Launch work", rule });
+  const created = await call("new_context", { brain: root, slug, title: "Launch work", rule, distinct: "no context covers launch work" });
   assert.ok(!created.isError, created.text);
   const { result: catalog } = await rpc("tools/list");
   for (const name of ["new_context", "edit_context"]) {
@@ -497,11 +502,12 @@ test("context tools expose purpose and boundaries through rule and refuse the re
 
 test("compile_apply accepts empty working guidance through MCP and rejects missing or invalid values without writes", async () => {
   const context = "empty-guidance";
-  assert.ok(!(await call("new_context", { brain: root, slug: context, title: "Renewals", rule: "Use confirmed renewal terms." })).isError);
-  assert.ok(!(await call("remember", { brain: root, by: "marta", context, content: "Confirm the renewal owner." })).isError);
+  assert.ok(!(await call("new_context", { brain: root, slug: context, title: "Renewals", rule: "Use confirmed renewal terms.", distinct: "no context covers renewals" })).isError);
+  const noted = await call("remember", { brain: root, by: "marta", context, content: "Confirm the renewal owner." }); assert.ok(!noted.isError, noted.text);
+  const noteId = noted.text.match(/remembered (m_[0-9a-f]{12})/)[1];
   const before = lib.readContext(root, context), original = readFileSync(before.path, "utf8");
   const facts = await call("compile_facts", { brain: root, context });
-  const args = { brain: root, context, by: "marta", as_of: facts.text.match(/^as_of: (\S+)/m)[1], summary: "A renewal needs an owner. Confirm the renewal owner." };
+  const args = { brain: root, context, by: "marta", as_of: facts.text.match(/^as_of: (\S+)/m)[1], summary: `A renewal needs an owner [${noteId}]. Confirm the renewal owner [${noteId}].` };
   for (const extra of [{}, { now: null }, { now: false }]) assert.ok((await call("compile_apply", { ...args, ...extra })).isError);
   assert.equal(readFileSync(before.path, "utf8"), original);
   const done = await call("compile_apply", { ...args, now: "" });
@@ -516,8 +522,7 @@ test("compile_apply accepts empty working guidance through MCP and rejects missi
 
 test("RESERVED_TOOLS is the live catalog, so no company interaction can shadow a tool", async () => {
   const { result } = await rpc("tools/list");
-  // the question tools are listed only to a client that can show forms; this test client cannot
-  const hidden = ["onboarding_question", "configuration_question", "question", "compile_facts", "compile_apply", "compile_entity", "entity_facts", "recall", "who_is", "list_contexts", "list_projects", "list_brains", "customer_overview", "meeting_overview", "advise", "where_we_are", "guideline"];
+  const hidden = ["compile_facts", "compile_apply", "compile_entity", "entity_facts", "recall", "who_is", "list_contexts", "list_projects", "list_brains", "customer_overview", "meeting_overview", "advise", "where_we_are", "why_here", "check_rules", "guideline"];
   assert.deepEqual([...lib.RESERVED_TOOLS].sort(), [...new Set([...result.tools.map(t => t.name), ...hidden])].sort());
 });
 

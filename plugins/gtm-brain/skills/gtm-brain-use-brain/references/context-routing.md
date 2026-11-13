@@ -20,9 +20,9 @@ persisted loaded set. Explicit switch/close requests still use the load workflow
 For orientation, use `last: 0` to avoid an unrelated recent-memory dump, then query relevant
 memories. This still returns the cover and a bounded freshness excerpt; it is not an empty read.
 
-If no destination clearly fits, do safe read-only research first and ask through `question`
+If no destination clearly fits, do safe read-only research first and ask
 before a write whose destination remains ambiguous. Follow the normal question procedure;
-an unanswered form supplies no decision. Do not create a placeholder to avoid asking.
+an unanswered question supplies no decision. Do not create a placeholder to avoid asking.
 
 ## Read evidence without changing where work belongs
 

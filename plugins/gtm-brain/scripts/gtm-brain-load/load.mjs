@@ -3,7 +3,7 @@
 // Adds to the loaded set (work/loaded-contexts.json) so remember and the hook know; --only
 // replaces the set with what you name ("instead"), --clear empties it. AGENTS.md rule 1.
 //   node load.mjs <root> <slug> [<slug>...] [--last 15] [--only]      node load.mjs <root> --clear
-//   --last 0: cover and what is new only, no memories list (the session hook, so a chat opens light)
+//   --last 0: cover and what is new only, no memories list (the chat start, so a chat opens light)
 //   node load.mjs <root> --drop <slug> [<slug>...]                     unload these, keep the rest
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args.shift() || ".";
@@ -25,10 +25,10 @@ for (const slug of args) {
   if (!loaded.includes(slug)) loaded.push(slug);
   const eff = lib.effectiveMemories(c.memories); const mem = last ? eff.slice(-last) : [];
   const fresh = c.compiledAt ? eff.filter(m => lib.newer(m.at, c.compiledAt)) : eff;
-  out.push(`# Context loaded: ${c.title} (${c.slug})${c.stale ? `   [summary updating shortly: ${fresh.length} new since it was written]` : "   [summary up to date]"}`);
+  out.push(`# Context loaded: ${c.title} (${c.slug})   [${lib.summaryState(c, lib.compileBusy(root))}]`);
   if (c.stale) { out.push(`\n## New since the last compile (${fresh.length}), not yet in the summary`); for (const m of fresh.slice(-6)) out.push(`- ${lib.memoryTimeText(m)} · ${m.kind} · ${m.content}`); if (fresh.length > 6) out.push(`- ... and ${fresh.length - 6} more`); }
   out.push(`Context refreshed: ${lib.localDateTime(c.compiledAt) || "never"}`);
-  out.push(`Summary: ${c.summary}`);
+  out.push(`Summary${c.compiledAt ? ` (as of ${String(c.compiledAt).slice(0, 10)})` : ""}: ${c.summary}`);
   if (c.people.length) out.push(`People mentioned: ${c.people.join(", ")}`);
   if (c.tools.length) out.push(`Tools used: ${c.tools.join(", ")}`);
   if (c.related.length) out.push(`Related contexts: ${c.related.join(", ")}`);

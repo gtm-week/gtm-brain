@@ -17,8 +17,8 @@ The scope is the person's choice, saved as a preference memory in their personal
     Slack reply scan scope: all of Slack, including DMs and private conversations (chosen 2026-10-01);
     queue twice a day at 09:00 and 17:00 Europe/Warsaw, task slack-reply-queue.
 
-Read it with `query` before the first Slack read. When there is none, ask once with
-`configuration_question` and say why first: the broad search reads DMs and private conversations,
+Read it with `query` before the first Slack read. When there is none, ask once
+and say why first: the broad search reads DMs and private conversations,
 so it only runs with their yes.
 
 - All of Slack, including DMs and private conversations (Recommended)
@@ -47,8 +47,8 @@ language and code-switching, greeting and sign-off, capitals and punctuation, em
 say yes, no and later, and how it changes between teammates and people outside the company.
 No quotes, names or message content in the memory.
 
-The first time, suggest it before saving: show the description in a few lines and ask with
-`question` (Yes, that's me; Needs corrections). Save it as confirmed, with their corrections in
+The first time, suggest it before saving: show the description in a few lines and ask
+(Yes, that's me; Needs corrections). Save it as confirmed, with their corrections in
 their words, through `remember` (kind preference, the person's personal context, source:
 "learned from their Slack replies, <date>"). A scheduled run never asks: it drafts in the style
 it just read and offers the description for confirmation in its report. Refresh it with a new memory that `retracts` the

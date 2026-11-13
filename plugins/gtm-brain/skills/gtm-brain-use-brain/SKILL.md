@@ -30,8 +30,17 @@ When beginning company work or the objective changes, follow
 evidence, honor manual restrictions, and select each memory's destination by meaning.
 Short continuations reuse the current scope; do not rerun discovery before every reply.
 
+When the person says something to keep, connect it to what the brain knows before saving: follow
+[connect the dots](references/connect-dots.md). Settle what has one answer, ask the rest in one
+question, never guess.
+
+Asked why something is in the brain ("why did you add Florian?", "who is Max?", "why is this file
+here?"): read it, never answer from the chat. A person or company: `query` (brief, search = the name),
+then say when it was first saved, by whom, from which note, and how each spelling matched (the rule).
+A file or folder: `query` (why, search = the path).
+
 Before producing copy, outreach, posts, landing pages, creatives, proposals, a design or a plan,
-read the document that applies (the session hook and `query` (status) list the documents at the
+read the document that applies (the opening lines and `query` (status) list the documents at the
 brain root with what each applies to) and follow it, saying which one in one line; AGENTS.md
 rule 11. Adding or changing one is `gtm-brain-document`.
 
@@ -80,18 +89,17 @@ recording a note from refreshing its summary. Report failures or partial complet
 Do not paste file diffs, raw records, file paths or commit output unless explicitly requested.
 The host app may still expose its own review UI; these instructions do not disable it.
 
-Before the first question that uses a form (`question`), read [question handling](../gtm-brain-start/references/questions.md) once for the tool parameters; a plain answer needs no reading.
+Before the first question, read [question handling](../gtm-brain-start/references/questions.md) once; a plain answer needs no reading.
 This applies after onboarding too: every question in everyday work (which context, same as X?,
-is this a company?, what is the answer?, which direction or photo?) is asked with `question`,
-or `configuration_question` for tools and settings, with two or three concrete options on one page.
-A question typed into the chat is the fallback only when those tools are unavailable.
+is this a company?, what is the answer?, which direction or photo?) is asked
+with two or three concrete options, recommended first.
 This company's own interactions: `list_objects` lists them, `interact` runs them (it records and
 says what to do in the connector); propose one with `propose_interaction` when the same thing
 keeps being done by hand. Keep one pending question alive until answered or cancelled;
 never send a final response while an async widget is pending. Ask only for missing information
 that affects the task, not identity or maintenance already resolved by the brain.
 
-Reuse the current person supplied by the session hook or `work/person.json`, validated against
+Reuse the current person supplied by the opening lines or `work/person.json`, validated against
 `brain/admin.md` team. Do not ask who the user is again when this resolves a teammate. Do not
 substitute the owner when it does not. Capture partial information immediately with unknowns
 marked; missing meeting time or model detail need not block saving a named opportunity.
@@ -179,6 +187,8 @@ one already read in this chat is still in context, so reuse it instead of readin
 | Load, switch, or unload a context; list what exists | [Loading](references/load.md), [load context](references/load-context.md) | `load_context`, `query` (contexts) |
 | Create, fork or archive a context | [Create a context](references/create-context.md) | `new_context`, `fork_context`, `archive_context` |
 | Change a context's title or standing instructions | [Edit a context](references/edit-context.md) | `edit_context` |
+| Explain how the brain works, what it cannot do, how to change it | [The manual](../../MANUAL.md) | read it, answer in a few lines |
+| The rules for any save or new context | [Saving rules](references/saving-rules.md) | `remember`, `new_context` |
 | Record, correct, forget, or answer a question | [Memory recording](references/remember.md) | `remember` |
 | Find prior knowledge, count or join it, or build a person view | [Recall](references/recall.md) | `query` (memories with search; `sql` for counts, joins and dates; brief for a person view) |
 | How healthy a deal is, what is missing before the next call | [Deal health](references/deal-health.md) | `query` (deal; search = the company) |

@@ -18,11 +18,14 @@ else
 fi
 PENDING="$(node "$P/scripts/gtm-brain-compile/compile-status.mjs" .)" || { printf '%s  scheduled-run  failed: cannot inspect pending compilation\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log; exit 1; }
 STALE="${PENDING%%|*}"; ENTITIES="${PENDING#*|}"
+# Summaries paused by a hand edit are skipped on purpose; the log names them every run, so "nothing stale" never hides them.
+PAUSED="$(node --disable-warning=ExperimentalWarning -e 'const l=await import(process.argv[1]);console.log(l.pausedCovers(process.argv[2]).map(p=>p.slug).join(" "))' "$P/lib/brain.mjs" . 2>/dev/null)"
+[ -n "$PAUSED" ] && printf '%s  scheduled-run  skipped, paused by a hand edit until reviewed: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$PAUSED" >> work/hooks.log
 if [ -z "$STALE$ENTITIES" ]; then
   printf '%s  scheduled-run  nothing stale\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log; echo "nothing stale"; exit 0
 fi
 echo "stale contexts: $STALE; entity briefs: $ENTITIES"
-# The run tells its own session hook what it is (GTM_BRAIN_RUN): the hook then records this run's
+# The run tells its own chat start what it is (GTM_BRAIN_RUN): the hook then records this run's
 # thread on work/compile.json for the page to link, and leaves the person's chat in work/session.json alone.
 export GTM_BRAIN_RUN="$BY"
 HEAD_BEFORE="$(git rev-parse -q --verify HEAD 2>/dev/null)"

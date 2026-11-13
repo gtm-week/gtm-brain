@@ -3,13 +3,26 @@ const nonempty = (value, max) => typeof value === 'string' && value.trim().lengt
 
 const OR_LABEL = 'Or type an answer';
 
+// A choice question always lets the person type their own answer, on one page: the last choice opens a
+// free-text form only when picked (Artur, 2026-11-06: "no third option"). A text field next to the
+// choices would be a second page on every question (2026-09-21). A choice the model wrote that already
+// means this ("Other", "Something else") plays the part, so it is never offered twice.
+// The label says what happens: Codex shows the typed answer's field on a second screen after Submit, not
+// under the choices as its own question box does (Maciej, 2026-11-10: picked it and saw no text box).
+export const SOMETHING_ELSE = 'Something else (type it on the next screen)';
+// Only the bare words: "Other company" or "Something else entirely" is a real choice, which must not lose the typed answer.
+const ELSE = /^(other|something else|none of (these|the above))[.:!]?$|^something else \(type it on the next screen\)$/i;
+// A model's own Other or Something else becomes this one choice, with its hint, in the same place.
+export const elseChoice = () => SOMETHING_ELSE;
+const choices = args => args.options && (args.options.some(o => ELSE.test(o.trim())) ? args.options.map(o => ELSE.test(o.trim()) ? SOMETHING_ELSE : o) : [...args.options, SOMETHING_ELSE]);
+
 export const inputSchema = {
   type: 'object', additionalProperties: false,
   properties: {
     question: { type: 'string', minLength: 1, maxLength: 500, description: 'One short question in the person\'s language.' },
     options: { type: 'array', minItems: 2, maxItems: 8, uniqueItems: true,
       items: { type: 'string', minLength: 1, maxLength: 100 },
-      description: 'Concrete choices, recommended first. Always pass them for a yes/no or permission question. Omit only when the answer is a name, a link or other free text.' },
+      description: 'Concrete choices, recommended first. Always pass them for a yes/no or permission question. Omit only when the answer is a name, a link or other free text. The form adds Something else as the last choice and asks for the typed answer itself: do not add your own Other.' },
     multiple: { type: 'boolean', description: 'True for independent checkbox selections; otherwise radio choices.' },
     text_label: { type: 'string', minLength: 1, maxLength: 100,
       description: 'Optional label for a free-text field, in the person\'s language. With options, omit it: the host shows one field per page, so it adds a second step after the choices. Pass it only when a note is really needed, for example Add a note. Without options it names what to type, for example Company website; omit it to show the question alone.' },
@@ -32,10 +45,10 @@ export function buildQuestion(args) {
     throw Error('options must contain 2-8 distinct nonempty labels');
   }
   if (args.multiple && !options) throw Error('multiple requires options');
-  const properties = {};
+  const properties = {}, offered = choices(args);
   if (options) properties.selection = args.multiple
-    ? { type: 'array', title: args.question, items: { type: 'string', enum: options }, minItems: 0, maxItems: options.length }
-    : { type: 'string', title: args.question, enum: options };
+    ? { type: 'array', title: args.question, items: { type: 'string', enum: offered }, minItems: 0, maxItems: offered.length }
+    : { type: 'string', title: args.question, enum: offered };
   // The host shows one field per page. A text field next to choices is a second step ("2 of 2"),
   // so a choice question carries one only when the caller names it. Without choices the host's
   // header already shows the question, so the field repeats nothing. The old default label is
@@ -57,8 +70,20 @@ export function readAnswer(args, result) {
     if (!args.options) throw Error('this question has no selectable options');
     if (args.multiple ? !Array.isArray(selection) : typeof selection !== 'string') throw Error('invalid selection type');
     selections = args.multiple ? selection : [selection];
-    if (selections.some(s => !args.options.includes(s)) || new Set(selections).size !== selections.length) throw Error('invalid selection');
+    if (selections.some(s => !choices(args).includes(s)) || new Set(selections).size !== selections.length) throw Error('invalid selection');
   }
   if (!selections.length && !text.trim()) return { status: 'unanswered' };
   return { status: 'answered', selections, text: text.trim() };
+}
+
+// The form shown after the person picks the else choice: the same question, one free-text field.
+export const buildFollowUp = args => ({ mode: 'form', message: args.question,
+  requestedSchema: { type: 'object', properties: { text: { type: 'string', title: 'Type your answer', maxLength: 1000 } }, required: [] } });
+
+// The typed answer replaces the else choice. Closing the follow-up with nothing else picked is that
+// outcome (cancelled, declined, unanswered), never a choice of "Something else".
+export function withFollowUp(args, first, follow) {
+  const selections = first.selections.filter(s => s !== elseChoice(args));
+  if (follow.status === 'answered') return { status: 'answered', selections, text: [first.text, follow.text].filter(Boolean).join('\n') };
+  return selections.length || first.text ? { status: 'answered', selections, text: first.text } : follow;
 }

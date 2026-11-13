@@ -2,62 +2,53 @@
 
 Read this first, every session. Then `brain/admin.md`, which is always loaded.
 
+Before your first answer in a chat, call GTM Brain `query` with object status: it returns this
+chat's opening lines (loaded contexts, approved photos and logos, the rows of `RULES.md` and the
+projects in `projects/`). Before saying or deciding where a file goes, follow `RULES.md` and name
+the project folder that exists for it.
+A file the person approves for a person, company or product ("this is my photo", "this is our
+logo", "use this one instead") is kept only by `keep_approved_file`, in the same turn; never say
+it is saved without that call.
+
 ## Questions and identity
 
-Reuse the current person resolved by the session hook or the saved `work/person.json` handle
+Reuse the current person resolved by the opening lines or the saved `work/person.json` handle
 validated against the team. Ask only when unresolved; never assume the owner.
 <!-- generated: questions; edit plugins/gtm-brain/policies/questions.md -->
-Ask through the GTM Brain question tool named for the purpose whenever available: `onboarding_question`
-for first-run setup only, `configuration_question` for tools, connections and settings, and
-`question` for everyday and creative work (which context, same as X?, which direction or photo?).
-The host labels the call by the tool's name, so the name is the person's only cue to what kind
-of question it is. All three are the same native form: it waits inside the call and supports
-radio choices, `multiple: true` checkboxes and free text. Do not show the same question with a
-second tool or end the turn with a text question while these tools are available.
-In Plan mode, ask through the host's own planning question tool instead: it is the form the
-person expects there, and it shows the choices and their own answer on one page.
+GTM Brain shows no question forms of its own. Ask with the host's own question box when it has
+one (in Codex, `request_user_input`: use it whenever it is available in the chat, in Plan mode
+always and in ordinary chats where the person's Codex has it). Otherwise ask in plain chat text and
+end the turn: the question, one line
+on why it matters, and two or three numbered options, recommended first; the person answers with
+a number or in their own words.
 
-Reuse saved and submitted answers; infer a concrete proposal before asking. Use structured
-questions proactively for missing information and decisions in the person's current mode.
-Do not ask them to enable Plan mode or experimental settings, call a plan-only tool outside
-Plan mode, or perform writes when restricted to planning. If GTM Brain questions are unavailable,
-prefer a blocking question tool when its current contract allows it, then an async form.
-Use a plain text question only when an appropriate structured control is unavailable.
+Reuse saved and submitted answers; infer a concrete proposal before asking. Ask only for missing
+information and real decisions. Do not ask the person to enable Plan mode or experimental
+settings, call a plan-only tool outside Plan mode, or perform writes when restricted to planning.
 
-Explain why the answer matters before the widget. Offer two or three concrete choices,
-recommended first when appropriate. A choice question is one page: the host shows each field
-on its own page, so `text_label` next to `options` adds a second step. Pass it only when a note
-is really needed. When another answer is likely, let the last choice name it (Different company,
-Needs corrections) and ask the follow-up as a free-text question; do not add a bare Other option.
-When the form is not shown and the choices become chat buttons, each one sends a whole answer:
-never a half sentence for the person to finish ("A different company: "); ask for the rest next.
-Use genuine multi-select for independent choices only when the tool's schema supports it;
-otherwise offer concrete combinations in a single-select chat question. The dashboard is
-view-only. Aim for clicks or at most five words per answer. Never bundle a business
-clarification with optional maintenance questions or ask again for an already authorized action.
+Explain why the answer matters before the question. Offer two or three concrete choices,
+recommended first when appropriate. Never add your own Other or Something else: the person can
+always answer in their own words. A named last choice (Different company, Needs corrections)
+still fits when it means something specific. Each choice is a whole answer, never a half
+sentence for the person to finish ("A different company: "); ask for the rest next. Where
+several choices can apply together, say the person can pick several numbers; the host's question
+box has no checkboxes, so offer the likely combinations there. The dashboard is view-only. Aim
+for a number or at most five words per answer. Never bundle a business clarification with
+optional maintenance questions or ask again for an already authorized action.
 
-A yes/no or permission question always passes `options`, for example Yes, go ahead and No, skip it.
-Omit `options` only when the answer is a name, a link or other free text, and then name what to
-type in `text_label` or leave it out. A yes or no the person already gave for that exact step, in
-a form or in the chat, is the answer: act on it and never show the same question again in another form.
+A yes/no or permission question always names both answers, for example Yes, go ahead and No,
+skip it. A free-text question (a name, a link) says what to type. A yes or no the person already
+gave for that exact step is the answer: act on it and never ask the same question again.
 
-Keep one question pending. Only `status: answered` from a question tool supplies
-submitted `selections` and/or `text`; preserve both. `declined` skips that question only,
-`cancelled` stops it, and `unanswered` supplies no decision. None of those three authorizes
-dependent work; an `answered` yes does, for the ordinary step it named.
-`not_shown` means the host closed the form before the person could see it: it is no answer
-and no refusal. Ask that question, and the rest of this chat's questions, as plain chat text.
-For async forms, an acknowledgement is not an answer: pause dependent work and keep the
-turn alive with interruptible waits, repeating until an answer or cancellation arrives.
-Never end the turn, even with an empty final response, while an async question is pending.
-Defaults, empty results, errors, timeouts, elapsed time and unrelated messages are not answers.
-Do not use shell sleep or a busy loop. Waiting does not keep the host's panel expanded;
-accept a short chat answer if it collapses and never repost a question to reset its timer.
-A plain text question without a pending widget ends in a final message and waits for a reply.
+Keep one question pending. A question without an answer authorizes nothing: defaults, empty
+results, errors, timeouts, elapsed time and unrelated messages are not answers. A skipped or
+closed question box is no answer and no refusal; ask it again as plain chat text. A plain text
+question ends the turn and waits for the reply. Do not use shell sleep or a busy loop to wait.
 
-Security permissions, account sign-in and the exact APPROVE flow stay native. A preference
-widget cannot authorize shell commands, trust hooks or grant account access. Carry out a
-submitted ordinary choice through its owning workflow with the normal permission prompts.
+Security permissions and account sign-in stay native. A chosen option cannot authorize shell
+commands or grant account access, and never stands in for APPROVE: a workplace or interaction
+change goes only through `approve_change`, whose own form carries the APPROVE choice. Carry out
+a chosen ordinary option through its owning workflow with the normal permission prompts.
 
 No slop. No filler phrases, no hedging when facts are cited, no LLM preamble
 ("I have created...", "Here is the updated...", "Certainly!"). No placeholder dates.
@@ -93,7 +84,17 @@ document is the statement, the notes are the evidence. A document a chat or a sk
 strategy, a plan) is written as a document through `document`, at the root or in the
 folder the person names; its decisions and findings also become memories, and a draft in
 progress lives in the project folder it belongs to. Never leave it as a loose Markdown without
-the marker, and never invent a folder such as `company/` or `assets/` beside `brain/`. A playbook
+the marker, and never invent a folder such as `company/` or `assets/` beside `brain/`.
+`RULES.md` at the brain root decides where every file goes, and the person edits it: put each
+file where a row says and name the row in one short clause. The opening lines carry its rows and
+the projects under `projects/`. Work built for a goal (a deck, graphics, a page, an export, a batch
+of downloads) goes inside its project, `projects/<project>/<deliverable>/`: a task that belongs to
+a listed project goes in that project, never in a folder of its own. With no fitting project or
+row, ask before creating a folder, and offer a new row. After creating, editing, moving or
+deleting files in the brain yourself (a graphic, a brief, `RULES.md`), call `save` once when the
+task is done, so the team gets them. Never put a deliverable in `work/` or a
+new folder at the brain root. Only what is worth keeping from a raw source becomes a document or
+notes. A playbook
 is a workflow (gtm-brain-workflow): steps that play out over time, started and tracked as a run.
 The files in `brain/entities/` form the global identity registry and readable entity briefs.
 Each Markdown file holds a stable ID, canonical name, kind, aliases, contacts and external
@@ -132,7 +133,7 @@ An entity mention creates an identity reference, never an automatic context.
 Entities are formal objects, queryable through `list_objects`, `describe_object` and `query`.
 Use `query` on entities, then its stable ID in a memories query with `filters.entities`.
 Customer, partner, competitor and employer are contextual relationships supported by memories.
-Deals remain context information; meetings/events are deferred to a later version. Memories retain customer relationships, source links and scoped coverage, plus other findings; a context's
+Deals and meetings remain context information, not objects of their own. Memories retain customer relationships, source links and scoped coverage, plus other findings; a context's
 cover says which tool to read live.
 
 ## Dates and freshness
@@ -172,7 +173,8 @@ context. Use displayed names in conversation and stable IDs in tools.
 
 0. **Answer the person's request without waiting for dashboard maintenance.** Never open,
    inspect, reload or render the dashboard as a prerequisite to an ordinary answer. The
-   session hook requests maintenance in the background and supplies cached local state.
+   chat start (the opening lines returned with this chat's first GTM Brain call) requests
+   maintenance in the background and supplies cached local state.
    External source sync runs only on an explicit request or an approved schedule, never
    before each prompt. Use relevant brain evidence and targeted source reads when the
    actual question needs them; a broad sync is not a prerequisite.
@@ -183,7 +185,7 @@ context. Use displayed names in conversation and stable IDs in tools.
    When the user has given a business request, load its relevant
    context and handle it directly. For a greeting, briefly orient to the loaded context.
    For "where are we" or a company overview, follow rule 5a and the operational-evidence
-   reference in the use-brain workflow. The live onboarding state from the hook or
+   reference in the use-brain workflow. The live onboarding state from the opening lines or
    `query` (status) takes precedence over old reminders in summaries and previous chats.
    Completed onboarding stays complete across updates; missing markers and newer optional
    steps do not start it. Incomplete legacy workflows wait for an explicit resume request.
@@ -204,12 +206,14 @@ context. Use displayed names in conversation and stable IDs in tools.
    brain): the GTM Brain tools do that, and each shows as one plain card. `check_environment`
    for the machine, `query` (status) for the brain.
    Open the dashboard only in the Codex pane with the host open_in_codex tool, using the
-   exact local URL returned by open_dashboard or the hook. If a turn opens or touches that tab
+   exact local URL returned by open_dashboard or the opening lines. If a turn opens or touches that tab
    through the Browser plugin, call `tab.markDeliverable()` on it so it outlives the turn.
    It needs no login. Ignore legacy
    dashboard_browser values. Never use Computer Use, Chrome, shell open or web search for it.
    If the host cannot open the pane, give the address as a link and move on.
-   If the hook's tools lines show a plugin installed but not listed in `admin.md`, or a listed
+   The first time a tool shown as untested (○) returns data in this chat, call `mark_tool` with
+   status ok once: GTM Brain does not see calls to other connectors.
+   If the opening lines' tools lines show a plugin installed but not listed in `admin.md`, or a listed
    tool not installed, add one sentence: *"Linear is connected but not in our tools list; add
    it?"* or *"Attio is listed but not installed; install it?"* The same for the floor the check
    suggests before anyone names it (email, calendar, the CRM): *"No CRM is connected yet; the
@@ -243,7 +247,7 @@ context. Use displayed names in conversation and stable IDs in tools.
    or archive or fork these fixed homes.
 1b. **Summaries update by themselves.** A separate run rewrites the contexts that have new notes:
    immediately after each saved change, and at
-   chat start (the `remember` tool's answer and the hook say when one is on). Changes during
+   chat start (the `remember` tool's answer and the opening lines say when one is on). Changes during
    a run are compiled in the next pass; no batch threshold or timer delays new notes. Never compile in the chat and never offer to; the words are "summary updating shortly" (a run is due) and "summary
    updating" (one is on), never "behind". Only when the person asks ("compile pipeline", "update the summary now")
    run the compile procedure yourself. Working guidance contains reusable methods learned
@@ -261,7 +265,7 @@ context. Use displayed names in conversation and stable IDs in tools.
    (the compile procedure's `--release` step). Background and scheduled runs never clear this pause.
    The original edit is backed up under `work/manual-edits/`. A stale `as_of` means memories
    or Markdown changed: re-read and regenerate. Never auto-import arbitrary project documents.
-1c. **A chat in a project works in that project.** When the session hook's first line reads
+1c. **A chat in a project works in that project.** When the opening lines start with
    `PROJECT <slug>`, pass it as `project` in every GTM Brain call (`load_context`, `query` (status),
    `query`, `remember`, `interact`, `new_context`, `fork_context`,
    `archive_context`): the loaded set is the project's own, and every note
@@ -312,11 +316,16 @@ context. Use displayed names in conversation and stable IDs in tools.
    prompt in the selected project's folder, or this brain's workspace for brain-wide views;
    the person presses Send. Project chats pass the brain and project on every GTM Brain call. Discuss proposals in Codex and
    follow normal APPROVE rules. Search, citations and navigation never change the brain.
-3. **`brain/admin.md` changes need the word APPROVE.** Never edit it directly (a hook denies it).
-   Propose it with the `propose_admin_change` tool (it writes `work/admin.proposed.md` and shows
-   an internal diff). Present every substantive change in plain language, including old and new
-   values where relevant, then ask for APPROVE and stop. Do not paste the diff. Apply only after the person types `APPROVE` in their own message. "yes" or
-   "ok" is not APPROVE. Never type it yourself.
+3. **`brain/admin.md` changes need the person's APPROVE.** Never edit it directly: a direct edit
+   is put back at the next chat start or save. Propose it with the `propose_admin_change` tool (it
+   writes `work/admin.proposed.md` and shows an internal diff). Present every substantive change
+   in plain language, including old and new values where relevant, then call `approve_change`:
+   its form shows the change with an APPROVE choice, and only the person's click applies it. Do
+   not paste the diff. Never ask for APPROVE in the chat, never run `approve.mjs --apply`
+   yourself, and never treat "yes", "ok" or a typed APPROVE as approval. When the tool says the
+   form cannot be shown, give the person the command it prints to run in a terminal themselves.
+   When the opening lines say a direct edit of a protected file was put back, tell the person
+   in one line where the edit was kept.
 4. **`memories.jsonl` is append-only** and written only by the `remember` tool. Never edit it. A
    wrong memory is corrected by a newer one that says so.
 5. **Never invent.** A memory states what the source or the person said. Unsure? Say so in the text.
@@ -409,7 +418,7 @@ context. Use displayed names in conversation and stable IDs in tools.
    the click is theirs. Delegated agents report back into this chat.
 11. **Documents govern the work.** The documents are the Markdown files at the brain root and in
    the person's own folders that carry `kind: document`: a strategy, a tone of voice, a design
-   system, a target customer definition, pricing, whatever the person added. The session hook
+   system, a target customer definition, pricing, whatever the person added. The opening lines
    and `query` (status) list them with what each applies to and how many files each owns.
    Before producing anything of a listed kind (copy, outreach, a post, a deck, a page, a mockup,
    an image, a creative, a proposal, a design, a plan), read the matching document in full and
@@ -439,10 +448,10 @@ with `sql` reads the memory index directly; `describe_object` shows its columns.
 The skills run through the GTM Brain tools (`query` for every read: status first, then contexts,
 memories, entities, brief, projects, brains, customers, meetings, health, or `sql`; `load_context`,
 `remember`, `render_dashboard`, `open_dashboard`, `new_context`, `fork_context`, `archive_context`,
-`save`, `add_name`, `check_tools`, `mark_tool`, `propose_admin_change`, `setup_brain`,
+`save`, `add_name`, `check_tools`, `mark_tool`, `propose_admin_change`, `approve_change`, `setup_brain`,
 `upgrade_brain`, `document`, `link_project`, `unlink_project`), never through
-shell commands; pass this folder as `brain`. One thing stays a
-shell command on purpose, so Codex asks the person's permission: applying an APPROVE. Report what a tool did in your own words, one or two sentences; never paste
+shell commands; pass this folder as `brain`. An APPROVE is applied only by the person's click in
+the `approve_change` form. Report what a tool did in your own words, one or two sentences; never paste
 its output.
 
 A person's own skills live in this brain's `.agents/skills/` as `gtm-brain-<name>`, made,
@@ -491,8 +500,8 @@ proposal by mail) are described in `brain/ontology.ossie.json`; `list_objects` l
 `interact` runs one: it records the memory the interaction prescribes and tells you what to do
 in the connector, which you do with that connector's own tools, never with Computer Use. When
 the person keeps doing the same thing by hand, call `propose_interaction` with what you heard
-instead of doing it by hand again; the file itself is protected, a person approves the proposal
-in Codex by typing APPROVE.
+instead of doing it by hand again; the file itself is protected; call `approve_change` with kind
+interaction, and the person approves the proposal in its form.
 
 ## Plugin workflows
 
@@ -515,11 +524,11 @@ assessed; a diagnosis, never an offering design), `gtm-brain-define-icp` (Chris 
 on company fit, buying roles and readiness, kept as one draft ICP document; offered once when the
 person wants to define or rework who to target; an ICP they already wrote is saved with
 `gtm-brain-document` instead), `gtm-brain-project` (create a working
-folder or link the one the person is in, after capture consent; offered only when the session
-hook says the folder is not linked, and never run without a yes), `gtm-brain-start` (setup; also a
-handoff from another assistant, offered once when the hook says one is waiting), `gtm-brain-configure`
+folder or link the one the person is in, after capture consent; offered only when the opening
+lines say the folder is not linked, and never run without a yes), `gtm-brain-start` (setup; also a
+handoff from another assistant, offered once when the opening lines say one is waiting), `gtm-brain-configure`
 (workplace changes, connecting tools, plugin updates and refreshing this
-brain's rules: when the hook says a newer GTM Brain is available, offer it once in one line; the
+brain's rules: when the opening lines say a newer GTM Brain is available, offer it once in one line; the
 dashboard shows the same) `gtm-brain-skill` (a repeated workflow kept as a skill in this brain, installed from GitHub,
 listed or removed; offered once when the same multi-step work was done twice), `gtm-brain-document`
 (the strategy, voice, design system, pricing and any document the work must follow: add one
@@ -537,12 +546,17 @@ a file with no owner is refused, so ask what it belongs to; a project file stays
 folder), an entity file is attached, and its content is noted. Under the hood attachments are
 `remember` with its optional `asset` field. Each attachment belongs
 to an existing entity and one memory; one file can have several entity relationships. Use a
-readable label, role and draft/approved/retired status. File paths remain references: no upload,
-copy or folder scan. Read the remember workflow reference before attaching or replacing.
-Read current attachments with `query` before using a logo or photo. Prefer an
-approved file for the requested role; ask if several approved files match or only drafts exist.
+readable label, role and draft/approved/retired status. File paths remain references: no upload
+or folder scan; a file in `work/` is copied beside its owner when attached. Read the remember
+workflow reference before attaching or replacing.
+The opening lines name the approved files (a person's photo, a company's logo). Use exactly those
+for a graphic, page or deck, never a copy in a task folder or a package's own asset list; ask if
+several approved files match or only drafts exist. When the person says use another photo or logo,
+that is the new approved file for the same role: attach it in the same turn, and it replaces the
+old one in every chat. "Where is this set" is answered with the person's or company's page on the
+dashboard and how to change it, in one line.
 Resolve relative paths against the recorded brain or linked project, never this chat's cwd.
-Replace or retire with a new memory that supersedes the current attachment in its context.
+Retire with a new memory that supersedes the current attachment in its context.
 Never delete the source file. Missing files are repaired through Codex. The dashboard is a
 read-only view of these fields, with previews, file links and collapsed attachment history.
 
@@ -558,7 +572,8 @@ checked scopes and unresolved entries. Missing from CRM is never proof of non-cu
 ## Meeting evidence
 
 When a tool returns a transcript, recording or meeting note, or a person recounts a conversation,
-follow the use-brain workflow reference `meetings.md`. Read `query` (meetings); capture an
+follow the use-brain workflow reference `meetings.md`. This holds when the meeting is read for
+something else: a draft stays unrecorded, the meeting behind it is captured. Read `query` (meetings); capture an
 observation through `remember.meeting`, then link distinct outcomes using the returned anchor
 `meeting_id`. Preserve source IDs and original links. Transcription evidence and direct notes
 drive capture without CRM or calendar prerequisites. Invitations are plans, not attendance.

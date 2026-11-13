@@ -30,12 +30,12 @@ be followed this way. Resolve names to actual paths; never guess paths from proj
 Explain first: "GTM Brain can follow work in your existing Codex projects and keep the useful
 notes in <company>. Choose the projects whose future work you want captured."
 
-When candidates are known, ask `onboarding_question` with `multiple: true`:
+When candidates are known, ask with a numbered list; they may pick several:
 **"Which existing Codex projects should GTM Brain follow?"** Use the actual project titles as
 choices, with paths only where needed to distinguish them. Offer two or three at a time;
-for a longer list, keep the selected set across successive batches. Explain that submitting
-with none selected skips that batch. Free text can name a missing project or correct a path.
-Do not include "None" or "Skip" as an independent checkbox beside project choices.
+for a longer list, keep the selected set across successive batches. Explain that picking
+none skips that batch. Their own words can name a missing project or correct a path.
+Do not include "None" or "Skip" as a numbered choice beside project choices.
 
 When no candidates can be listed, explain that limitation and ask a single-select question:
 **"Do you already have Codex projects GTM Brain should follow?"** Choices: **Choose existing

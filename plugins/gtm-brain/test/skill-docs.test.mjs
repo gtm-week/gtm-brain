@@ -101,3 +101,18 @@ test("the live skill cases name a shipped skill, open with its slash command and
     assert.doesNotMatch(c.prompt + c.expect, /[–—―−]/, `${c.name} uses plain hyphens`);
   }
 });
+
+test("the contributor template passes the same rules once copied into skills/, and its README names real files", () => {
+  const T = join(P, "../../skill-template"), id = "gtm-brain-example", home = join(P, "skills", id);
+  const skill = readFileSync(join(T, id, "SKILL.md"), "utf8"), method = readFileSync(join(T, id, "references/method.md"), "utf8");
+  assert.match(frontmatter(skill), new RegExp(`^name: ${id}$`, "m"));
+  assert.match(readFileSync(join(T, id, "agents/openai.yaml"), "utf8"), new RegExp(`\\$${id}\\b`));
+  // links are written for the folder the skill is copied into
+  for (const [, target] of skill.matchAll(/\]\(([^)\s]+\.md)\)/g)) assert.ok(existsSync(resolve(home, target)) || existsSync(resolve(join(T, id), target)), target);
+  const readme = readFileSync(join(T, "README.md"), "utf8");
+  for (const text of [skill, method, readme]) assert.doesNotMatch(text, /[–—―−]/);
+  for (const [, path] of readme.matchAll(/`((?:plugins\/gtm-brain|templates)\/[^`<>*]+?\.(?:json|md|mjs))`/g)) {
+    const full = path.startsWith("templates/") ? join(P, path) : join(P, "../..", path);
+    assert.ok(existsSync(full), `README names ${path}`);
+  }
+});

@@ -34,9 +34,9 @@ run a sequence of memory commands.
 
 The sections below document the underlying operations, tools, and script paths for reference.
 They are not additional discoverable skills. Tools show outcomes such as "Remembering" or
-"Searching the brain" in chat. Review proposals on the read-only dashboard. APPROVE typed in Codex stays a shell step with its permission prompt.
+"Searching the brain" in chat. Review proposals on the read-only dashboard. APPROVE is a choice in the form `approve_change` shows; in a chat nothing else applies it.
 Scripts retain their paths for terminal use with
-`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.32.0`.
+`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.33.9`.
 
 Legend for "writes": what files the command changes. Nothing else is ever touched.
 
@@ -47,7 +47,7 @@ Legend for "writes": what files the command changes. Nothing else is ever touche
 
 Chooses the context(s) for this chat. Codex reads the cover (summary, standing rules, the
 Working guidance), people and tools, and the last memories; if the context's summary is behind it lists
-what is new since the last compile and offers to compile. Loading adds to the loaded set;
+what is new since the last compile (the summary refreshes by itself 2 minutes after the last save). Loading adds to the loaded set;
 "switch to gtm" or "only gtm" replaces it. Creating or forking a context adds to it. A new
 chat re-loads what was loaded last time, so you only say `load` to change context.
 
@@ -58,6 +58,10 @@ Tool: `load_context`. Writes: `work/loaded-contexts.json` (local).
 ### remember
 *"remember that Pierre asked for a three-year TCO before 12.09"*, *"note this"*, *"log that we decided ..."*,
 *"correct memory m_xxxxxx: ..."*, *"forget memory m_xxxxxx, it was wrong"*
+
+The saving rules are one numbered page, `skills/gtm-brain-use-brain/references/saving-rules.md`, printed at
+every chat start with the "Our rules" section of the brain's own [RULES.md](#rulesmd) after it (its people's
+rules, which win). A held note quotes the rule it broke. Codex offers a line there when a save is questioned.
 
 Appends one record to the loaded context's time series: who (your handle), when, via codex,
 kind (note, decision, question), tools used, names mentioned (normalised through `brain/entities/`;
@@ -88,8 +92,8 @@ Tool: `interact`. Writes: `brain/contexts/<slug>/memories.jsonl` (via remember).
 
 Drafts one of this company's interactions from the person's words (name, tool, the operation in
 words, inputs, what it records), validates it and writes `work/interaction.proposed.json`. The
-dashboard shows it in words; typing APPROVE in Codex
-applies it too. `approve.mjs <root> --interaction --by <person>` is the only writer of
+dashboard shows it in words; Codex then calls `approve_change` with kind interaction, and
+choosing APPROVE in its form applies it. `approve.mjs <root> --interaction --by <person>` is the only writer of
 `brain/ontology.ossie.json`: it appends the proposal and commits `interactions: <name>`. The
 advisor only suggests one, from an action recorded three times in a month: a brain check never writes a proposal.
 
@@ -150,8 +154,8 @@ and reference index, including old spellings and shared aliases.
 *"compile"*, *"compile pipeline"*, *"update the summaries"*, or "yes" when Codex offers it
 
 Rewrites the cover of a context whose summary is behind from its memories. The script computes the names mentioned (with their kinds), tools,
-related contexts (shared people), confidence, timestamps; Codex writes the summary (3 to 6
-sentences, every one traceable to a memory) and Working guidance: reusable methods learned in this context, including tool-use lessons.
+related contexts (shared people), confidence, timestamps; Codex writes the summary (2 to 4
+sentences, each ending with the note ids it rests on, kept as `summary_sources`; absolute dates only; `compile_apply` refuses anything else) and Working guidance: reusable methods learned in this context, including tool-use lessons.
 Immediate next steps belong in the summary and source follow-ups. Guidance may be empty. Compilation sees memory
 IDs, source/action references, and prior guidance; it revalidates older lessons against the
 effective memories and cites memory IDs for durable tool guidance. There is no fixed sentence
@@ -159,7 +163,7 @@ cap on this guidance. Your standing rule from setup is never changed. Only conte
 one. Runs unattended on the schedule.
 
 Tools: `compile_facts`, `compile_apply`. Writes: `brain/contexts/<slug>/context.md`; kept at once.
-A separate run does it by itself (`background-compile.sh`, state in `work/compile.json`): immediately after each saved change and at chat start; changes during a run get a follow-up pass; the chat only compiles when asked.
+A separate run does it by itself (`background-compile.sh`, state in `work/compile.json`): after each saved change, once no note has been saved for 2 minutes (`GTM_BRAIN_COMPILE_DELAY`), and at chat start; changes during a run get a follow-up pass; the chat only compiles when asked.
 Model passes have a 15-minute timeout (`GTM_BRAIN_COMPILE_TIMEOUT_MS` overrides it in milliseconds).
 Failed scans and timed-out runs enter the three-attempt retry path; completed compilations stay
 saved. Successful passes that reduce the pending context or entity set continue without using
@@ -180,7 +184,7 @@ IDs through the tools. Review the prompt and press Send to begin. All changes ha
 The live viewer refreshes after each saved answer, preserving browsing state independently
 of summary compilation. A saved HTML copy offers the same chat link without live updates.
 
-The page stays between chats: the session hook starts the server, and the tab is marked
+The page stays between chats: the chat start starts the server, and the tab is marked
 deliverable so it survives the turn. One tab, reloaded rather than reopened, never closed in
 cleanup. The dashboard always uses the Codex pane and needs no login. Legacy
 `dashboard_browser` values are ignored. Chrome setup is separate, personal to the machine,
@@ -193,7 +197,7 @@ hold). A sentence with no pill has no source note, so the summary itself is what
 Correcting a wrong sentence means forgetting the note behind its pill, not editing the summary.
 
 Tools: `render_dashboard` (rebuild), `open_dashboard` (rebuild, start the server, open the browser). Writes: `work/home/` (local); `work/dash.json`, `work/session.json`
-(the chat the session hook recorded).
+(the chat recorded at chat start).
 `node $PLUGIN_ROOT/scripts/gtm-brain-render/render.mjs . && open work/home/index.html`
 
 ### save
@@ -209,7 +213,23 @@ cover changed in an editor, names fixed by hand). APPROVE commits the workplace 
 scheduled run's compile commits its covers; setup makes the first commit; upgrade keeps the rules
 it refreshed. Anything you had staged yourself stays out of these commits.
 
-Tool: `save`. Writes: a git commit (never `work/`).
+Files Codex makes with its own shell (a graphic, a brief, a project folder) are kept by `save` too,
+with `placed`: for each new file or folder, its path, the RULES.md row it followed and why. Each
+becomes a `gtm-brain-why: <path>: RULES.md row 5 (...): <why>` line in that commit, so git
+history is the shared log of where things went and why. *"Why is this file here?"* is `query`
+with object `why` and the path: the row, the reason, who put it there and when, or, with none
+recorded, when it arrived and that you should be asked. The chat start names new files that
+arrived with no reason (made by shell, kept by background maintenance), once per set.
+
+*"Check the brain against its rules"* is `query` with object `rules`: people known by a first name
+only (P3), look-alike names nobody confirmed (P4), top-level folders no RULES.md row names, files
+with no recorded reason (grouped by folder), names with capitals or spaces. Each finding names its
+rule, the person or path, and two or three fixed choices carried out through the tools above
+(`add_name`, `merge_entities`, `save` with `placed`), so each fix leaves its own reason. It reads
+only and changes nothing; `query` with object `health` counts what it found.
+
+Tool: `save`. Writes: a git commit (never `work/`); with only `placed`, a commit that carries the
+reasons and nothing else.
 
 ### share_brain
 *"push this brain to my GitHub"*, *"share the brain"*, *"put the brain on GitHub"*
@@ -302,7 +322,7 @@ A document is one Markdown file at the brain root (`strategy.md`) or in a folder
 work it governs: copy, outreach, posts, landing pages, design, proposals, planning), a status
 (`draft` or `approved`, approved only on the person's word) and the body in the person's language.
 Its files live in a folder of its name beside it (`brand/design-system/`), or around it when it is
-alone in its folder. The session hook and `query` (status) name every document in every chat with
+alone in its folder. The opening lines and `query` (status) name every document in every chat with
 its file count, in the brain and in each linked project, and rule 11 of the brain's rules makes
 Codex read the matching one in full before that kind of work and say which it followed. Nothing
 compiles or summarizes a document. Hand edits in an editor are kept by `save`; a hand-written
@@ -325,6 +345,15 @@ entity file. With no owner named it refuses, so nothing lands in the brain unask
 links keep working). It prints where it landed and the owner; an
 entity file is then attached through `remember` with `asset`. No skill to invoke: use-brain's
 `references/files.md` is the procedure.
+
+### keep_approved_file
+*"this is my photo, use it from now on"*, *"this is our logo"*, *"use this one instead"*
+
+One call keeps an approved file for a person, company or product: copied from outside the brain (an
+attachment in Downloads) or from `work/`, moved when loose in `brain/entities/`, into
+`brain/entities/<name>/`, committed, and recorded as the approved file for its role (portrait,
+primary-logo, ...). A previous approved file for the same role is replaced. Every chat's opening
+lines name the approved files.
 
 ## Workflows
 
@@ -354,13 +383,15 @@ Tool: `check_environment`. Writes: nothing.
 ### setup
 *"set up a new company brain in this folder"* (empty folder)
 
-Nine questions: company, one line, your name and email, teammates, tools, whether the dashboard opens at every chat, one standing rule
-for each of `pipeline`, `marketing`, `gtm`. Creates `brain/admin.md`, the three contexts,
-`brain/entities/` with the team, `AGENTS.md`, git, the pre-commit hook; then checks the tools.
-Handles are full names, lowercase, hyphenated (`maciej-konczal`).
+Four questions, one at a time: your full name and work email; the company, what it sells and to
+whom; teammates; the tools you use (a numbered list, pick several, CRM first). Creates `brain/admin.md`, the
+contexts Our company (`company`), Strategy, Market, Target customers (`icp`), Our offer and your
+personal context, `brain/entities/` with the team, `AGENTS.md`, `README.md`, `RULES.md`,
+`strategy.md`, `workflows/`, git and the pre-commit check; then checks the tools. Handles are full
+names, lowercase, hyphenated (`maciej-konczal`).
 
 Tool: `setup_brain`. Writes: everything in a new brain; the first commit.
-`bash $PLUGIN_ROOT/scripts/gtm-brain-setup/setup.sh --company X --one-liner "..." --owner "Name <email>" --team "Name <email>, ..." --tools "Attio (CRM), Gmail" [--pipeline "..."] [--marketing "..."] [--gtm "..."]`
+`bash $PLUGIN_ROOT/scripts/gtm-brain-setup/setup.sh --company X --one-liner "..." --owner "Name <email>" --team "Name <email>, ..." --tools "Attio (CRM), Gmail"`
 
 ### new project / link project
 During onboarding, GTM Brain asks which existing Codex projects to follow. `list_projects` with
@@ -372,8 +403,10 @@ as the sixth onboarding step. Completed v1 onboarding resumes only this new choi
 
 *"create a project for the curriculum at ~/curriculum"*, *"link this folder"*, *"unlink this project"*, *"list projects"*
 
-`/gtm-brain-project` creates `<brain-root>/<project-slug>/` by default, beside `brain/`
-and `work/`. It reuses the known brain and name, combines the destination and capture consent
+`/gtm-brain-project` creates `<brain-root>/projects/<project-slug>/` by default, the projects
+folder [RULES.md](#rulesmd) names. A project inside the brain is the team's: its files go in the brain's git, and only
+its two pointer files (`AGENTS.md`, `CLAUDE.md`, which name this machine's brain path) stay out, in
+`.git/info/exclude`. A folder an earlier version kept out of git whole is shared at the next chat start. It reuses the known brain and name, combines the destination and capture consent
 in one question when needed, and handles relevant existing context in the background. No
 context selection or matching context creation is needed. An explicit alternative location
 is respected. The tool uses `create: true` to refuse occupied destinations and protects the
@@ -383,7 +416,7 @@ files and instructions. It also repairs broken connections, unlinks projects, an
 `/gtm-brain-project` workflow is now Link Project.
 
 An external linked folder stays one working project. For several new projects, use separate
-folders directly inside the GTM Brain workspace. Nested or overlapping linked projects are
+folders in the GTM Brain workspace's `projects/`. Nested or overlapping linked projects are
 refused, including aliases; existing application directories and files stay intact. GTM Brain
 does not scaffold another brain or move the existing project as part of this flow.
 
@@ -409,24 +442,28 @@ Checks each tool in `admin.md` against the live catalog of official Codex plugin
 list` for the install state, Codex's cached remote catalog for display names, so "Wispr Flow"
 resolves to its `app-...` id): installed / available (with the install command) / no official
 plugin / not available (disabled by the workspace admin), and lists installed
-plugins that `admin.md` does not mention. The check itself runs at every session start; Codex
-offers fixes unasked. Saying it runs the read tests too. Installs on a yes per tool. Sign-in is
+plugins that `admin.md` does not mention. The check itself runs at every chat start; Codex
+offers fixes unasked. Saying it runs the read tests too. GTM Brain does not see calls to other
+connectors, so a tool stays installed, untested (○) until a read test: the first time one returns
+data in a chat, Codex calls `mark_tool` with status ok. Installs on a yes per tool. Sign-in is
 yours and lives in your Codex.
 
-Tools: `check_tools`, `mark_tool`. Writes: `work/tools.json` (local); installs Codex plugins on request.
+Tools: `check_tools`, `mark_tool`. Also reads remote MCP servers from Codex's `config.toml`. Writes: `work/tools.json` (local); installs Codex plugins on request.
 `node $PLUGIN_ROOT/scripts/gtm-brain-connect/connect.mjs . --check`, `... --mark <tool> ok|fail "note"`
 
 ### approve
-*"change what we sell to also include UK retailers"*, then `APPROVE`
+*"change what we sell to also include UK retailers"*, then choose `APPROVE` in the form
 
 The only way `brain/admin.md` changes. Codex writes the full proposed file to
-`work/admin.proposed.md`, shows the diff, waits for the literal word `APPROVE`. Then the
-script writes an audit line to `~/.gtm-brain/approvals.log` (outside the sandbox, so Codex asks
-your permission a second time), replaces the file, commits with your handle. Only team members
-can approve. "ok" or "yes" is not APPROVE.
+`work/admin.proposed.md`, explains the change, then calls `approve_change`: its form shows the
+change with an APPROVE choice, and only your click applies it. Then the script writes an audit
+line to `~/.gtm-brain/approvals.log`, replaces the file, commits with your handle. Only team
+members can approve. APPROVE, "ok" or "yes" typed in the chat applies nothing. When the host
+cannot show the form, Codex gives you the `approve.mjs` command to run in a terminal yourself,
+where it asks you to type APPROVE.
 
-Tool: `propose_admin_change` for the proposal; applying is a shell command with your permission. Writes: `brain/admin.md`, `~/.gtm-brain/approvals.log`, a commit.
-`node $PLUGIN_ROOT/scripts/gtm-brain-approve/approve.mjs . --diff`, `... --apply --by <handle|name|email>`
+Tools: `propose_admin_change` for the proposal, `approve_change` (kind `admin` or `interaction`, `by`) to apply it. Writes: `brain/admin.md`, `~/.gtm-brain/approvals.log`, a commit.
+`node $PLUGIN_ROOT/scripts/gtm-brain-approve/approve.mjs . --diff`, `... --apply --by <handle|name|email>` (in a terminal; asks you to type APPROVE)
 
 ### schedule
 *"set up the weekly compile"*, *"schedule"*
@@ -458,11 +495,11 @@ the installed files before choosing between a source refresh and an app restart.
 
 An update asked for in a brain refreshes that brain's rules in the same step (`brain`): the newly
 installed version's upgrader runs right after the verified install and prints its report, so
-`update GTM Brain` alone is enough there. Other brains are offered "refresh the rules" when next opened.
+`update GTM Brain` alone is enough there. Other brains refresh unedited recent rules on their own when next opened; the rest are offered "refresh the rules".
 
 Tool: `update_plugin` (`mode: check | update`, `brain` optional). Writes: Codex's plugin installation and
 marketplace cache when updating. No brain files.
-`node $PLUGIN_ROOT/scripts/gtm-brain-update-plugin/update.mjs --check`, `... --update`; `check-version.mjs <root>` asks the source whether a newer version exists (the hook runs it daily in the background; the dashboard and the advisor read `work/plugin-version.json`)
+`node $PLUGIN_ROOT/scripts/gtm-brain-update-plugin/update.mjs --check`, `... --update`; `check-version.mjs <root>` asks the source whether a newer version exists (the chat start runs it daily in the background; the dashboard and the advisor read `work/plugin-version.json`)
 
 ### Refresh brain rules
 *"upgrade the brain"*, *"refresh the rules"*
@@ -470,6 +507,11 @@ marketplace cache when updating. No brain files.
 After a plugin update: refreshes `AGENTS.md`, the pre-commit hook and `.gitignore` in an
 existing brain. Validates editable identities first and migrates legacy identity files with
 backups when needed. Contexts, memories, workplace settings and personal preferences remain.
+The chat start refreshes `AGENTS.md` on its own when it is exactly a recent shipped version with no
+other upgrade step still to run, and says so in one line. Older brains, edited rules and scheduled
+runs are offered "refresh the rules" instead; a refresh of edited rules pauses with a proposed file
+to merge. It also refreshes `README.md`, silently, when that is exactly what a release wrote. Each
+refresh commits only its own file.
 
 Tool: `upgrade_brain`. Writes: `AGENTS.md`, `.githooks/pre-commit`, `.gitignore`, upgrade
 backups, and identity files only when migration is needed.
@@ -477,16 +519,17 @@ backups, and identity files only when migration is needed.
 
 ## What runs by itself
 
-- **Session start**: pulls the repo, lists contexts with staleness, re-loads what was loaded
+- **Chat start** (on a chat's first GTM Brain call, again after 30 quiet minutes): pulls the repo, lists contexts with staleness, re-loads what was loaded
   last time (cover, rules and what is new; not the memories, which the tools fetch on demand), checks the tools against the installed Codex plugins,
   records which chat this is (for session context), starts the dashboard server, rebuilds
   the page. The dashboard is available inside Codex, with no Chrome launch. The chat opens with
   one line saying where you are and what is new, plus at most one tool offer. One more line
   names the documents (the marked Markdown at the brain root) with what each applies to and how
   many files each owns, in a linked project too.
-- **Before any file edit or shell command by Codex**: the gate denies patches to
-  `brain/admin.md` and any `memories.jsonl`, and shell commands that write to
-  them (reads pass); the skills are the only writers. Best effort, logged in `work/hooks.log`.
+- **At chat start and before every save**: a direct edit of `brain/admin.md`,
+  `brain/ontology.ossie.json` or any `memories.jsonl` not committed through GTM Brain is copied
+  to `work/manual-edits/protected/` and the committed version restored; the opening lines say
+  so. The skills are the only writers.
 - **Before any commit**: every staged `memories.jsonl` is validated line by line and must keep
   the committed records unchanged (append-only). Without the plugin on the machine the commit
   is refused (`GTM_BRAIN_SKIP_VALIDATE=1` to override once).
@@ -507,7 +550,7 @@ strategy.md                          the strategy document, there from setup; gt
 <slug>.md, <folder>/<slug>.md        the documents the work must follow (kind: document); document tool or a hand edit
 <folder>/<slug>/                     a document's files; add-file.mjs --document, or dropped in by hand
 brain/entities/<id>/                 an entity's files; add-file.mjs --entity
-README.md                            what goes where, written by setup and by the first upgrade
+README.md                            what goes where; setup writes it, upgrade refreshes it while unedited
 AGENTS.md                            the rules Codex reads every session
 work/                                local, ignored: dashboard, loaded set, tools, logs, proposals
 ~/.gtm-brain/approvals.log              who approved what, outside every brain
@@ -526,3 +569,22 @@ Daily maintenance can refresh meeting sources and calendar references before com
 summaries. Configure capture scopes and timing in chat. A failed calendar refresh does not
 block meeting capture or compilation. The system-scheduler entry point is
 `scripts/gtm-brain-schedule/daily-run.mjs <brain> <confirmed-handle>` under the installed plugin.
+
+## RULES.md
+
+`/gtm-brain-rules` (*"show my rules"*, *"from now on ..."*, *"change where X goes"*) shows the file
+and adds, changes or removes one row or one line in the person's words, then calls `save`. A rule
+cannot switch off APPROVE, the protected files or W1.
+
+`RULES.md` at the brain root is the brain's own rules, in two sections. "Our rules" holds its people's
+rules for what Codex saves and asks, one line each; the chat start prints them after the shared saving
+rules (R1, R2). "Where things go" is the table of where every file goes: rules at the root, brand in
+`brand/`, projects in `projects/<project>/` with their deliverables inside, raw sources with their
+project or owner, approved photos and logos on their entity, scratch in `work/`. Setup writes it,
+and a brain without one gets it at the next chat start. Every chat's opening lines carry its rows
+(numbered) and the projects under `projects/` with the first line of each one's `README.md`; Codex
+files each thing where a row says, names the row, and asks before creating a folder when nothing
+fits. The person edits it freely: an edited `RULES.md` is never overwritten, an unedited one
+follows the shipped template. `save` keeps it. A brain from before 0.33.9 had `WHERE.md` for the table
+and a `RULES.md` with only its own lines; the next chat start merges both into one `RULES.md` (an
+unedited `WHERE.md` becomes the new template, an edited one keeps its rows) and removes `WHERE.md`.

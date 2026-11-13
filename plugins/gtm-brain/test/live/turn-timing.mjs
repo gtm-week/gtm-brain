@@ -19,7 +19,7 @@ const root = join(process.env.CODEX_HOME || join(homedir(), ".codex"), "sessions
 const files = [];
 (function walk(d) { if (!existsSync(d)) return; for (const e of readdirSync(d)) { const p = join(d, e); statSync(p).isDirectory() ? walk(p) : e.endsWith(".jsonl") && files.push(p); } })(root);
 
-const isBrain = cwd => {   // the brain itself, or a folder linked to one (mirrors hooks/resolve.sh)
+const isBrain = cwd => {   // the brain itself, or a folder linked to one (mirrors session/resolve.sh)
   let d = cwd;
   for (;;) {
     if (existsSync(join(d, "brain", "admin.md"))) return true;

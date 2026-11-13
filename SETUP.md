@@ -13,10 +13,10 @@ grows with the steps: each section is a step you can run and check.
   nothing to type in a terminal. The ChatGPT desktop app works too;
   the CLI is used below because it is easier to describe.
 - Node 22.16+ or 24+ (`node --version`), git.
-- Hooks are the guardrails (the safety locks): the session refresh and the write gate. Codex
-  runs a plugin's hooks only after they are approved, and installing does not approve them,
-  so the install ends with `trust-hooks.mjs --trust` (below). Without it the brain still works
-  but nothing refreshes at chat start and nothing stops the model editing protected files.
+- GTM Brain declares no Codex hooks, so there is nothing to approve after installing (a brain's
+  own git pre-commit check in `.githooks` is separate). The chat start (the
+  brain refresh and its opening lines) runs on a chat's first GTM Brain call, and a direct edit
+  of a protected file is put back at the next chat start or save.
 
 ## 1. Install the plugin
 
@@ -28,8 +28,7 @@ needed only if you later choose to share your own private company brain through 
 codex plugin marketplace add gtm-week/gtm-brain   # straight from GitHub (verified)
 codex plugin marketplace upgrade gtm-brain        # refresh an existing marketplace snapshot
 codex plugin add gtm-brain@gtm-brain
-node "$(ls -d ~/.codex/plugins/cache/gtm-brain/gtm-brain/*/ | sort -V | tail -1)hooks/trust-hooks.mjs" --trust   # approve the hooks; installing does not
-codex plugin list | grep gtm-brain                                      # installed, enabled, 0.32.0
+codex plugin list | grep gtm-brain                                      # installed, enabled, 0.33.9
 ```
 
 The install is a snapshot of the configured branch. In the Codex app, say **"update GTM Brain"**
@@ -52,14 +51,13 @@ codex plugin marketplace upgrade gtm-brain
 codex plugin add gtm-brain@gtm-brain
 ```
 
-After these manual commands, run the installed `update.mjs --check` and
-`hooks/trust-hooks.mjs --trust` from the version reported by `codex plugin list`, then quit
-and reopen Codex. The in-app update performs these checks and hook approval for you.
+After these manual commands, run the installed `update.mjs --check` from the version reported
+by `codex plugin list`, then quit and reopen Codex. The in-app update performs this check for you.
 
-Brains you already have keep working; open one in Codex and the session hook refreshes its
+Brains you already have keep working; open one in Codex and the chat start refreshes its
 git config, or say "upgrade the brain" to refresh its AGENTS.md and pre-commit hook too. A brain set up
 before the full-name handles (`maciej` instead of `maciej-konczal`) gets a note from upgrade:
-say "change the team handles to full names" and type APPROVE; old memories keep the old
+say "change the team handles to full names" and choose APPROVE; old memories keep the old
 handle, and both resolve to the same person.
 
 To work on the plugin itself, clone the repo and install from the checkout instead; no push,
@@ -81,17 +79,12 @@ new chat in Codex on the test folder (restart the app only if old skills linger)
 Set this once in your shell; the scripts below use it:
 
 ```bash
-export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.32.0
+export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.33.9
 ```
 
-The last install line approves the plugin's hooks; it ends with `Safety locks: on`. Codex does
-not ask by itself: a hook installed from a command is enabled and silent until approved, and a
-release that changes `hooks.json` drops the approval again (an update through "update GTM Brain"
-puts it back; `./dev-install.sh` does the same for a checkout).
-
 In a chat the skills run as GTM Brain tools: you see "Remembering", "Searching the brain",
-"Writing the summary", "Saving" with the plugin's icon, not shell commands. One thing is still a
-shell command, so Codex asks your permission: applying an APPROVE.
+"Writing the summary", "Saving" with the plugin's icon, not shell commands. A workplace change is
+applied only when you choose APPROVE in the form the `approve_change` tool shows.
 
 ## 2. Create a brain (step 1: objects and setup)
 
@@ -130,28 +123,29 @@ bash $PLUGIN_ROOT/scripts/gtm-brain-setup/setup.sh --company Reflow --one-liner 
 `brain/admin.md` is protected. In Codex, in the brain folder:
 
 1. Say: *"Change what we sell to also include UK retailers."*
-   Expected: Codex writes `work/admin.proposed.md`, shows the diff, asks you to type APPROVE.
-   It does **not** edit the file (a hook denies that; see `work/hooks.log`).
-2. Type `APPROVE`.
-   Expected: the script tries to write an audit line to `~/.gtm-brain/approvals.log`, which is
-   outside the sandbox, so **Codex asks you to allow the command**. Allow it. Then:
-   *applied and committed <hash>, approved by <your handle>*.
+   Expected: Codex writes `work/admin.proposed.md`, explains the change and calls
+   `approve_change`, which shows a form with the change and an APPROVE choice. It does **not**
+   edit the file and does not ask for APPROVE in the chat.
+2. Choose APPROVE in the form.
+   Expected: *applied and committed <hash>, approved by <your handle>*.
 3. `git log -1` shows the commit; `tail ~/.gtm-brain/approvals.log` shows the audit line.
-4. Try "ok" instead of APPROVE on another change: nothing is applied.
+4. Type "APPROVE" or "ok" in the chat instead on another change: nothing is applied.
+5. Edit `brain/admin.md` by hand, then start a new chat: the opening lines say the edit was put
+   back, and the edited file is in `work/manual-edits/protected/`.
 
 Without Codex:
 
 ```bash
 sed 's/returns automation/returns automation, also UK/' brain/admin.md > work/admin.proposed.md
 node $PLUGIN_ROOT/scripts/gtm-brain-approve/approve.mjs . --diff
-node $PLUGIN_ROOT/scripts/gtm-brain-approve/approve.mjs . --apply --by marta@reflow.io      # name, email or handle of a team member
+node $PLUGIN_ROOT/scripts/gtm-brain-approve/approve.mjs . --apply --by marta@reflow.io      # asks you to type APPROVE; --by: name, email or handle
 ```
 
 ## 4. Contexts and memories (step 2: contexts, load, remember)
 
 In Codex:
 
-1. New session in the brain folder. Ask *"what did the session start hook tell you?"*
+1. New session in the brain folder. Ask *"what did the chat start tell you?"*
    Expected: the list of contexts with memory counts and whether each summary is up to date or behind, and "loaded last time".
 2. *"load pipeline"*. Expected: the cover, the rule, and "Last 0 of 0 memories".
 3. *"Remember that Pierre Aubert asked for a three-year TCO before the 12.09 steering meeting;
@@ -298,11 +292,11 @@ scheduled run's compile commits its covers; setup makes the first commit; upgrad
 it refreshed. Anything you had staged yourself stays out of these commits.
 
 Every writer ends with *kept* or *kept and shared*. There is nothing for you to do; the badge on
-the session hook keeps files changed outside Codex; ask Codex to save if needed. From a terminal the scripts commit by themselves, one commit per change (`git log`
-reads as a diary). `approve` commits in the app too, after its permission prompt.
+the chat start keeps files changed outside Codex; ask Codex to save if needed. From a terminal the scripts commit by themselves, one commit per change (`git log`
+reads as a diary). `approve` commits in the app too, after you choose APPROVE in its form.
 
 A clone on another machine needs the plugin installed: the pre-commit hook validates memories
-through the plugin's lib and refuses to commit them without it. The session hook points the
+through the plugin's lib and refuses to commit them without it. The chat start points the
 clone's git config at the running plugin, so opening the folder in Codex once is enough.
 
 ## 10. Fork (step 6)
@@ -352,7 +346,7 @@ matches each tool name against the live catalog, by plugin id or display name, s
 appears next week is found without a plugin update; nothing is listed in the plugin itself.
 Installing one is one command; you sign in once in the app.
 
-The check runs by itself at every session start (about a second) and feeds the dashboard's Tools
+The check runs by itself at every chat start (about a second) and feeds the dashboard's Tools
 panel; Codex then offers, unasked, to install a listed tool that is missing or to add an installed
 plugin that `admin.md` does not mention. On demand: *"connect my tools"*. Expected, per tool:
 *installed* / *available, not installed*
@@ -379,7 +373,7 @@ plugins/gtm-brain/
   lib/brain.mjs              the file format: read, validate, append. Everything goes through it.
   skills/<workflow>/SKILL.md user workflow; references/ holds internal procedures
   skills/gtm-brain-*/           operation scripts keep their existing paths
-  hooks/                     SessionStart (lists contexts), PreToolUse (protects admin.md, memories.jsonl)
+  session/                   the chat start the MCP server runs (lists contexts, puts back protected-file edits)
   templates/                 AGENTS.md, admin.md, pre-commit hook, gitignore
 ```
 
@@ -390,15 +384,15 @@ brain/admin.md                          workplace info, protected, changed via A
 brain/entities/*.md                        identity metadata and cited briefs from context memories
 brain/contexts/<slug>/context.md        the context cover
 brain/contexts/<slug>/memories.jsonl    append-only records; the fields are validated in lib/brain.mjs
-work/                                   ignored: loaded-contexts.json, hooks.log, proposals
+work/                                   ignored: loaded-contexts.json, hooks.log (activity), proposals
 ```
 
 ## When something is off
 
 - Codex offers a skill that does not exist (`init`): the app cached an old skill list. Start a
   new chat, then quit and reopen the app. If it persists: `codex plugin add gtm-brain@gtm-brain` again.
-- The hook never fires: the hooks are not approved (`work/hooks.log` is empty in that case).
-  `node <plugin>/hooks/trust-hooks.mjs` reports each hook; `--trust` approves them.
+- No opening lines in a chat: the chat start runs on the chat's first GTM Brain call, so a chat
+  that never calls a GTM Brain tool gets none. Ask for the brain's status to trigger it.
 - A local install (`./dev-install.sh`) works in chats but GTM Brain is missing from the app's Plugins
   tab: the tab lists a local marketplace only when its folder is a trusted project. Open the
   checkout as a project in Codex and accept the trust prompt. `codex plugin list` shows the truth
@@ -407,9 +401,9 @@ work/                                   ignored: loaded-contexts.json, hooks.log
   that Codex trusts still has `.agents/plugins/marketplace.json` with the marketplace name
   `gtm-brain`, and the app reinstalls from it at launch whatever `config.toml` says. Rename or remove
   that manifest in the other checkout, then run `./dev-install.sh` again.
-- `codex exec` hangs: add `</dev/null`. Hooks under exec need `--dangerously-bypass-hook-trust`.
+- `codex exec` hangs: add `</dev/null`.
 - Pre-commit says the plugin is not installed: `git config gtm-brain.lib <path to plugins/gtm-brain/lib/brain.mjs>`,
-  or open the folder in Codex once (the session hook sets it).
+  or open the folder in Codex once (the chat start sets it).
 - Pre-commit says a record "was changed" or "removed": memories are append-only. Restore the
   file (`git checkout brain/contexts/<slug>/memories.jsonl`) and record the correction with
   `remember --supersedes` or `--retracts`.
@@ -422,9 +416,10 @@ Chat about this is a navigation link; changes and approvals happen in Codex.
 
 ## What the guards do and do not do
 
-The write gate and the pre-commit hook stop the model, and you, from editing the protected files
-by mistake: a direct edit is denied, a changed or removed memory is refused at commit, admin
-changes need the word APPROVE plus Codex's own permission prompt for the audit line. The GTM Brain
+The protected-file guard and the pre-commit hook stop the model, and you, from changing the
+protected files by mistake: a direct edit is put back at the next chat start or save (the edit
+is kept in `work/manual-edits/protected/`), a changed or removed memory is refused at commit,
+admin changes need the person's APPROVE in the `approve_change` form or typed in a terminal. The GTM Brain
 tools run outside the sandbox and commit only through `save`, on your word. They do not
 stop a determined person with the terminal: `git commit --no-verify`, a rewritten history, or
 Codex run with full access and no sandbox all get past them. The audit is the git history on the

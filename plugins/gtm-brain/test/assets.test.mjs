@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { execFileSync, spawn } from 'node:child_process';
 import * as lib from '../lib/brain.mjs';
-import { prepareAsset, resolveAssetFile, assetRows, validateAsset } from '../lib/assets.mjs';
+import { prepareAsset, resolveAssetFile, assetRows, validateAsset, assetsLine } from '../lib/assets.mjs';
 import { createFilesBackend } from '../server/files-backend.mjs';
 import { loadOntology, buildTools } from '../lib/ontology/index.mjs';
 const P = new URL('../', import.meta.url).pathname.replace(/\/$/, '');
@@ -56,6 +56,51 @@ test('MCP attach, recall, replace and retire retain history and leave file bytes
  const retired=await remember({content:'Demo retired its logo.',context:'market',supersedes:current.id,asset:{entity:'Demo',label:'Demo logo',role:'primary-logo',status:'retired'}});
  assert.ok(!retired.isError,JSON.stringify(retired));assert.equal(assetRows(f.root).filter(a=>a.active).length,0);
  assert.equal(lib.readMemories(f.root,'market').length,3);assert.deepEqual(lib.readMemories(f.root,'market')[0],old);
+});
+
+test("Artur's portrait: a photo from a task's work/ folder moves beside him; the new approved one replaces it in every chat",async()=>{
+ const f=fixture(),remember=await writer(f);
+ lib.writeNames(f.root,[...lib.readNames(f.root),{name:'Artur Wala',kind:'person',aliases:[],emails:[],not:[]}]);
+ lib.writeContext(f.root,'personal',{title:'Personal',rule:'About Artur.',summary:'Nothing here yet.',now:''});
+ mkdirSync(join(f.root,'work/berlin-event-graphics-2026/assets'),{recursive:true});
+ writeFileSync(join(f.root,'work/berlin-event-graphics-2026/assets/artur-cap.png'),'cap');
+ const cap=await remember({content:'Artur approved this portrait for the Berlin graphics.',context:'market',asset:{entity:'Artur Wala',label:'Portrait with cap',role:'portrait',status:'approved',path:'work/berlin-event-graphics-2026/assets/artur-cap.png'}});
+ assert.ok(!cap.isError,JSON.stringify(cap));
+ const stored=lib.readMemories(f.root,'market').find(m=>m.asset?.role==='portrait').asset.file;
+ assert.match(stored.path,/^brain\/entities\/[^/]+\/artur-cap\.png$/,'kept beside the person, not in the task folder');
+ assert.equal(readFileSync(join(f.root,stored.path),'utf8'),'cap');
+ assert.ok(existsSync(join(f.root,'work/berlin-event-graphics-2026/assets/artur-cap.png')),'the task copy stays');
+ assert.match(assetsLine(f.root),new RegExp(`Approved files[^\\n]*\\n  Artur Wala · portrait: ${stored.path.replace(/[.]/g,'\\.')}`));
+ // "use my recent photo": attached in another context, with no supersedes: it replaces the cap photo anyway.
+ writeFileSync(join(f.root,'artur-smiling.png'),'smile');
+ const smile=await remember({content:'Artur: use my recent smiling photo, no cap.',context:'personal',asset:{entity:'Artur Wala',label:'Portrait, smiling, no cap',role:'portrait',status:'approved',path:'artur-smiling.png'}});
+ assert.ok(!smile.isError,JSON.stringify(smile));
+ const said=JSON.stringify(smile);
+ assert.match(said,/replaced the approved portrait of Artur Wala \(Portrait with cap/);
+ const portraits=assetRows(f.root).filter(a=>a.entity==='Artur Wala'&&a.active);
+ assert.deepEqual(portraits.map(a=>[a.label,a.status]),[['Portrait, smiling, no cap','approved']]);
+ const line=assetsLine(f.root);assert.match(line,/Artur Wala · portrait: artur-smiling\.png/);assert.doesNotMatch(line,/artur-cap/);
+});
+
+test("a photo Codex dropped loose in brain/entities/ moves into the person's folder when it is approved (new-brain, 2026-11-11)",async()=>{
+ const f=fixture(),remember=await writer(f);
+ lib.writeNames(f.root,[...lib.readNames(f.root),{name:'Maciej Konczal',kind:'person',aliases:[],emails:[],not:[]}]);
+ writeFileSync(join(f.root,'brain/entities/maciej-konczal.jpg'),'me');
+ const r=await remember({content:'Maciej approved this photo as his portrait.',context:'market',asset:{entity:'Maciej Konczal',label:'Portrait',role:'portrait',status:'approved',path:'brain/entities/maciej-konczal.jpg'}});
+ assert.ok(!r.isError,JSON.stringify(r));
+ const stored=lib.readMemories(f.root,'market').find(m=>m.asset?.role==='portrait').asset.file;
+ assert.equal(stored.path,'brain/entities/maciej-konczal/maciej-konczal.jpg','in his folder');
+ assert.equal(readFileSync(join(f.root,stored.path),'utf8'),'me');
+ assert.ok(!existsSync(join(f.root,'brain/entities/maciej-konczal.jpg')),'not left loose beside the pages');
+ assert.match(assetsLine(f.root),/Maciej Konczal · portrait: brain\/entities\/maciej-konczal\/maciej-konczal\.jpg/);
+});
+
+test('the opening line names no files when nothing is approved, and flags two approved files for one role',()=>{
+ const f=fixture();
+ assert.equal(assetsLine(f.root),'');
+ f.add(); writeFileSync(join(f.root,'logo2.svg'),logo);
+ lib.appendMemory(f.root,'market',{authors:['ann'],people:['Demo'],content:'Second logo.',asset:prepareAsset(f.root,f.input({path:'logo2.svg',label:'Logo two'}))});
+ assert.match(assetsLine(f.root),/Demo · primary-logo: logo\.svg \(two approved for this role: ask which one\)/);
 });
 
 test('linked project paths survive a folder move; local paths cannot resolve on a different brain copy',()=>{

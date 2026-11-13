@@ -1,0 +1,4 @@
+interface:
+  display_name: "GTM Brain: Example"
+  short_description: "What it does, in under ten words"
+  default_prompt: "Use $gtm-brain-example to <do the work> from what the brain already knows."

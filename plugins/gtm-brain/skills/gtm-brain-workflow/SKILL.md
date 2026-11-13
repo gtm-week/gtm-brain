@@ -37,7 +37,7 @@ Draft it from what the brain knows and the person's words: what to settle before
 steps in order with the tool category each uses (crm, email, calendar, sequencer, ads,
 analytics, slack) and a gate where a step waits (after N days, on a date, when something is
 known), and what to read back at the end. Use the shipped drafts in `workflows/` as the model.
-Show it once and ask through `question` (Save it; Change something). Then `workflow` with
+Show it once and ask (Save it; Change something). Then `workflow` with
 `action: create`, the title, the body with the three headings and `applies_to`. It is saved as
 a draft; the person edits it in Finder like any document, and a run can start at once.
 
@@ -50,8 +50,8 @@ problem and the file to fix; do not offer to fix it yourself.
 ## Start a run
 
 Read [start](references/start.md). In short: read the workflow file in full; fill the "Before
-starting" items from what the brain already knows; ask `question` only for the blank ones, one
-page each; confirm the brief on one page ("Start it", "Change something"); then `workflow` with
+starting" items from what the brain already knows; ask only for the blank ones, one
+question each; confirm the brief on one page ("Start it", "Change something"); then `workflow` with
 `action: start`. Nothing is written before that answer.
 
 ## Where a run stands
@@ -71,7 +71,7 @@ asks.
 ## Skip, abandon
 
 Both need a reason in the person's words: `action: skip` with the step number, `action: abandon`
-for the run. Ask once through `question` when the reason was not given.
+for the run. Ask once when the reason was not given.
 
 ## Hard rules
 

@@ -10,8 +10,8 @@ Keep authored brain content in English. Preserve names, source quotes and the ex
 ## Step 1: the file
 
 A path in the message is the file. A dropped image reaches Codex as pixels with no path, and
-"here is the deck" with nothing attached reaches it as words: in both cases ask once with
-`question` (free text) for the file's location, saying that dragging the file from Finder
+"here is the deck" with nothing attached reaches it as words: in both cases ask once
+(free text) for the file's location, saying that dragging the file from Finder
 into the chat pastes its path. Do not search the disk for it.
 
 ## Step 2: land it
@@ -22,7 +22,7 @@ Surfer"`). The file then lands beside its owner: for a document, its own folder 
 moves the document into a folder of its name, `design-system.md` becoming
 `design-system/design-system.md`; the JSON says so under `moved`), or `brain/entities/<id>/`
 next to the entity file. A file with no owner is refused: nothing lands
-in the brain unasked. When the owner is not obvious, ask once with `question` offering the two
+in the brain unasked. When the owner is not obvious, ask once offering the two
 or three most likely documents or entities, then run, through the shell:
 
 ```
@@ -62,6 +62,6 @@ what it is attached to (entity, role, status) when it is an entity file, what wa
 
 ## Hard rules
 
-- Never move, rename or delete the person's original file; a copy lands in the brain.
+- Never move, rename or delete the person's original file; a file from outside lands in the brain as a copy.
 - Never overwrite a file in the brain; a different file with the same name gets a suffix.
 - The extraction under `work/` is derived and disposable; the notes cite the file, not it.

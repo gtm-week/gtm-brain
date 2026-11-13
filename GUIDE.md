@@ -1,6 +1,7 @@
 # Your company brain: a quick guide
 
-For the person using it, not for the person building it. Ten minutes to read.
+For the person using it, not for the person building it. Ten minutes to read. How the brain works
+inside, and how to change it, is in [the manual](plugins/gtm-brain/MANUAL.md); ask Codex in your brain and it answers from it.
 
 ## What it is
 
@@ -50,21 +51,21 @@ Then you just talk. The things worth knowing:
 | see one person | **tell me about Pierre Aubert** | a one-page view built from every note about them |
 | tell Codex two names are one person | **Chris is Krzysztof Pawlak** | from now on "Chris" and "Krzysztof" are the same in search |
 | say a name is not a person | **Telli is a company** | it shows as a company, not a contact; products and teams work the same |
-| refresh a context's summary | **compile** (or say yes when offered) | the summary is rewritten from the notes; your rules stay |
+| refresh a context's summary now | **update the summary now** | rewritten from the notes at once; otherwise it refreshes by itself 2 minutes after your last save; your rules stay |
 | see everything | **open the dashboard** | it opens inside Codex, in the in-app browser; **render** only refreshes it |
 | keep an edit you made by hand | **save** | everything Codex writes is kept at once; this is for a file you changed yourself |
 | open a new context | say what you are starting on; Codex offers | *"Create a `berlin-expansion` context?"* yes, and it is loaded |
 | leave a context | **unload marketing** | the others stay loaded |
 | put a context away | **archive berlin-expansion** | asks once; unloaded, hidden, notes still searchable; **unarchive** brings it back |
 | split a context | **Bergstrom is becoming its own thing, fork it out of pipeline** | a new context with the matching notes copied |
-| change the company info | **change what we sell to also include UK retailers**, then type **APPROVE** | shown as a diff first; applied only on the word APPROVE |
-| stop the dashboard opening by itself | **open the dashboard only when I ask**, then **APPROVE** | a setting changed through Codex |
+| change the company info | **change what we sell to also include UK retailers**, then choose **APPROVE** | shown as a form first; applied only when you choose APPROVE there |
+| stop the dashboard opening by itself | **open the dashboard only when I ask**, then choose **APPROVE** | a setting changed through Codex |
 | see who is who | **what entities do we have** | the Entities page groups them: team, people, companies, products, teams; filter by kind or search |
 | tell Codex two names are one | **Maciej is Maciej Kończal** | an alias; Codex asks this itself when a new name looks like one it knows, and never merges on its own |
 
 Codex also does four things on its own: it suggests a better context if your note fits another
-one, it offers a new context when you start a new stream of work, it offers to compile when a
-context's summary is behind, and it offers to install a missing tool or add one it noticed you
+one, it offers a new context when you start a new stream of work, it asks to compile and set up the
+weekly run when summaries have been behind for days with no schedule, and it offers to install a missing tool or add one it noticed you
 using. Each is a question; nothing happens without your yes.
 
 ## The dashboard
@@ -188,9 +189,10 @@ brain/admin.md                       company, team, tools
 brain/entities/<id>.md               identity and cited briefs
 brain/contexts/<context>/context.md  the context summary and rules
 brain/contexts/<context>/memories.jsonl   the notes, one per line
-README.md                            what goes where, written by setup
+README.md                            what goes where; setup writes it, upgrade refreshes it while unedited
 strategy.md, brand/voice.md, ...     your documents, with their files in a folder of the same name
-<project>/                           a working folder you created or linked, beside brain/
+RULES.md                             where every file goes and your own saving rules; you edit it
+projects/<project>/                  one folder per project (an event, a campaign), its deliverables inside
 work/home/index.html                 the dashboard
 ```
 

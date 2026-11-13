@@ -27,12 +27,14 @@ for (const command of ["open", "google-chrome", "google-chrome-stable", "chromiu
 }
 const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, PLUGIN_ROOT: P, GTM_BRAIN_NO_OPEN: "1", CODEX_HOME: mkdtempSync(join(tmpdir(), "gtm-brain-dash-home-")) };
 const lib = await import(`${P}/lib/brain.mjs`);
+// A workplace setting as an approved change lands it: written and committed (a bare edit is put back at the chat start).
+const setAdmin = (admin, text) => { writeFileSync(admin, text); lib.commit(root, ["brain/admin.md"], "test: workplace setting", { always: true, push: false }); };
 const dash = (...a) => execFileSync(process.execPath, [`${P}/server/dash.mjs`, root, ...a], { encoding: "utf8", env }).trim();
 after(() => { try { dash("--stop"); } catch {} });
 
 test("the session hook keeps edits made by hand outside Codex", () => {
   const cover = join(root, "brain", "contexts", "market", "context.md"); writeFileSync(cover, readFileSync(cover, "utf8") + "\nEdited by hand.\n");
-  const out = execFileSync("bash", [`${P}/hooks/session-start.sh`], { cwd: root, encoding: "utf8", env, input: JSON.stringify({ session_id: "thread-123", cwd: root }) });
+  const out = execFileSync("bash", [`${P}/session/session-start.sh`], { cwd: root, encoding: "utf8", env, input: JSON.stringify({ session_id: "thread-123", cwd: root }) });
   for (const name of ["questions", "computer-use"]) {
     const policy = readFileSync(join(P, `policies/${name}.md`), "utf8");
     assert.ok(readFileSync(join(root, "AGENTS.md"), "utf8").includes(policy), `the brain's AGENTS.md carries the shared ${name} policy`);
@@ -40,37 +42,37 @@ test("the session hook keeps edits made by hand outside Codex", () => {
   }
   assert.match(out, /references\/questions\.md once/);
   assert.match(out, /maintenance requested in the background/);
-  execFileSync(process.execPath, [`${P}/hooks/session-maintenance.mjs`, root, '--run'], { env });
+  execFileSync(process.execPath, [`${P}/session/session-maintenance.mjs`, root, '--run'], { env });
   assert.equal(execFileSync("git", ["-C", root, "status", "--short", "--", "brain"], { encoding: "utf8" }).trim(), "", "nothing left unkept");
   assert.match(execFileSync("git", ["-C", root, "log", "-1", "--format=%s"], { encoding: "utf8" }), /kept: edited by hand outside Codex/);
 });
 
-test("the session hook records the chat id from its stdin", () => {
+test("the chat start records the chat id from its stdin", () => {
   dash('--start');
-  const out = execFileSync("bash", [`${P}/hooks/session-start.sh`], { cwd: root, encoding: "utf8", env, input: JSON.stringify({ hook_event_name: "SessionStart", session_id: "thread-123", cwd: root }) });
+  const out = execFileSync("bash", [`${P}/session/session-start.sh`], { cwd: root, encoding: "utf8", env, input: JSON.stringify({ hook_event_name: "SessionStart", session_id: "thread-123", cwd: root }) });
   assert.equal(JSON.parse(readFileSync(join(root, "work", "session.json"), "utf8")).session_id, "thread-123");
   assert.match(out, /Dashboard: http:\/\/127\.0\.0\.1:\d+\//);
   assert.doesNotMatch(out, /FIRST ACTION OF THIS CHAT/, "ordinary answers never wait for a browser");
   assert.match(out, /open only when asked/);
-  const admin = join(root, "brain", "admin.md"); writeFileSync(admin, readFileSync(admin, "utf8").replace("dashboard: always", "dashboard: on-demand"));
-  const quiet = execFileSync("bash", [`${P}/hooks/session-start.sh`], { cwd: root, encoding: "utf8", env, input: JSON.stringify({ session_id: "thread-123", cwd: root }) });
+  const admin = join(root, "brain", "admin.md"); setAdmin(admin, readFileSync(admin, "utf8").replace("dashboard: always", "dashboard: on-demand"));
+  const quiet = execFileSync("bash", [`${P}/session/session-start.sh`], { cwd: root, encoding: "utf8", env, input: JSON.stringify({ session_id: "thread-123", cwd: root }) });
   assert.doesNotMatch(quiet, /FIRST ACTION/); assert.match(quiet, /opens it on demand/);
-  writeFileSync(admin, readFileSync(admin, "utf8").replace("dashboard: on-demand", "dashboard: always"));
-  writeFileSync(admin, readFileSync(admin, "utf8").replace("dashboard: always", "dashboard: always\ndashboard_browser: chrome"));
-  const chrome = execFileSync("bash", [`${P}/hooks/session-start.sh`], { cwd: root, encoding: "utf8", env, input: JSON.stringify({ session_id: "thread-123", cwd: root }) });
+  setAdmin(admin, readFileSync(admin, "utf8").replace("dashboard: on-demand", "dashboard: always"));
+  setAdmin(admin, readFileSync(admin, "utf8").replace("dashboard: always", "dashboard: always\ndashboard_browser: chrome"));
+  const chrome = execFileSync("bash", [`${P}/session/session-start.sh`], { cwd: root, encoding: "utf8", env, input: JSON.stringify({ session_id: "thread-123", cwd: root }) });
   assert.doesNotMatch(chrome, /FIRST ACTION/); assert.match(chrome, /Dashboard: http:\/\/127\.0\.0\.1:\d+\//);
   assert.match(chrome, /Codex pane/);
   assert.doesNotMatch(chrome, /Chrome opening is handled/);
-  writeFileSync(admin, readFileSync(admin, "utf8").replace("dashboard_browser: chrome\n", ""));
+  setAdmin(admin, readFileSync(admin, "utf8").replace("dashboard_browser: chrome\n", ""));
   // a loaded context behind at chat start: the hook starts the background run
   execFileSync(process.execPath, [`${P}/scripts/gtm-brain-load/load.mjs`, ".", "icp"], { cwd: root, env });
   execFileSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "marta", "--context", "icp", "--content", "First note."], { cwd: root, env: { ...env, GTM_BRAIN_NO_COMPILE: "1" } });
-  const bgo = execFileSync("bash", [`${P}/hooks/session-start.sh`], { cwd: root, encoding: "utf8", env: { ...env, GTM_BRAIN_NO_COMPILE: "1" }, input: JSON.stringify({ session_id: "thread-123", cwd: root }) });
+  const bgo = execFileSync("bash", [`${P}/session/session-start.sh`], { cwd: root, encoding: "utf8", env: { ...env, GTM_BRAIN_NO_COMPILE: "1" }, input: JSON.stringify({ session_id: "thread-123", cwd: root }) });
   assert.match(bgo, /compile: background \(brain\/admin.md\): the summaries that are behind will be updated by a separate run/);
 });
 
 test("a separate run's session hook keeps the person's chat and records its own thread for the dashboard", () => {
-  const hook = (id, extra) => execFileSync("bash", [`${P}/hooks/session-start.sh`], { cwd: root, encoding: "utf8", env: { ...env, GTM_BRAIN_NO_COMPILE: "1", ...extra }, input: JSON.stringify({ hook_event_name: "SessionStart", session_id: id, cwd: root }) });
+  const hook = (id, extra) => execFileSync("bash", [`${P}/session/session-start.sh`], { cwd: root, encoding: "utf8", env: { ...env, GTM_BRAIN_NO_COMPILE: "1", ...extra }, input: JSON.stringify({ hook_event_name: "SessionStart", session_id: id, cwd: root }) });
   writeFileSync(join(root, "work", "compile.json"), JSON.stringify({ state: "running", at: new Date().toISOString(), contexts: "icp" }));
   const bg = hook("01a0-bg-run", { GTM_BRAIN_RUN: "background" });
   assert.equal(JSON.parse(readFileSync(join(root, "work", "session.json"), "utf8")).session_id, "thread-123", "the background run is not the person's chat");

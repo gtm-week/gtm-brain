@@ -15,7 +15,7 @@ file: say so in one line and give the person the paste sentence for their other 
 > exactly. Read nothing else in that repository.
 
 Then stop; do not look anywhere else for what another assistant knows (`.claude` and the
-other assistants' folders are off limits, reads included; the gate denies them).
+other assistants' folders are off limits, reads included; the opening lines say so).
 
 ## Step 2: review with the person
 
@@ -34,7 +34,7 @@ Which is right?"
 
 - **Who, Company, Tools observed, People that are teammates**: workplace facts. Propose one
   `admin.md` change through the gtm-brain-configure workplace-change procedure (the person
-  types APPROVE in Codex). Tools named there are then checked
+  chooses APPROVE in the `approve_change` form). Tools named there are then checked
   by the gtm-brain-configure skill; a CRM named here counts as the CRM.
 - **People outside the company, companies, products**: entities, through `add_name` (kind,
   aliases, email when given).
@@ -50,7 +50,7 @@ Which is right?"
 
 One line: what was filed where, what was skipped, and that the file can be deleted
 (`~/.gtm-brain/handoff.md`; offer to delete it, do it on a yes). Record one note in #company:
-`Imported the handoff from <by> on YYYY-MM-DD: N facts filed, M skipped.` so the hook stops
+`Imported the handoff from <by> on YYYY-MM-DD: N facts filed, M skipped.` so the opening lines stop
 mentioning it.
 
 ## Hard rules

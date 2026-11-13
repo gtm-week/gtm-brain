@@ -49,6 +49,10 @@ fi
 if [ ! -f README.md ]; then
   sed -e "s|{{COMPANY}}|$(printf '%s' "$COMPANY" | sed -e 's/[&|]/\\&/g')|g" "$T/README.md" > README.md
   echo "added README.md"; changed=1; paths="$paths README.md"
+else
+  # A README exactly as a release wrote it carries nothing of the person's: refresh it. An edited one stays.
+  readme_out="$(node -e 'const fs=require("fs"),p=require("path"),[t,c]=process.argv.slice(1),r=f=>fs.readFileSync(f,"utf8").replaceAll("{{COMPANY}}",c),now=fs.readFileSync("README.md","utf8"),next=r(p.join(t,"README.md")),L=p.join(t,"legacy","readme");if(now!==next&&fs.readdirSync(L).some(f=>/\.md$/.test(f)&&r(p.join(L,f))===now)){fs.writeFileSync("README.md",next);console.log("changed")}' "$T" "$COMPANY")"
+  if [ "$readme_out" = "changed" ]; then echo "updated README.md (what goes where)"; changed=1; paths="$paths README.md"; fi
 fi
 # A document beside a folder of its own name moves into it (design-system.md + design-system/ -> design-system/design-system.md).
 cons_out="$(node --input-type=module -e 'const d=await import(process.argv[1]);for(const m of d.consolidateDocuments("."))console.log(`${m.from}\t${m.to}`)' "$PLUGIN/lib/documents.mjs" 2>/dev/null || true)"

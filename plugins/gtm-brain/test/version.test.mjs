@@ -46,7 +46,7 @@ test("check-version: a git source is fetched shallowly into a cache under CODEX_
 test("a newer version is said by the hook, shown as status, and discussed in Codex", async () => {
   const root = brain(); mkdirSync(join(root, "work"), { recursive: true });
   const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, PLUGIN_ROOT: P, GTM_BRAIN_NO_VERSION_CHECK: "1", GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_COMPILE: "1" };
-  const hook = () => execFileSync("bash", [`${P}/hooks/session-start.sh`], { cwd: root, encoding: "utf8", env, input: JSON.stringify({ session_id: "v", cwd: root }) });
+  const hook = () => execFileSync("bash", [`${P}/session/session-start.sh`], { cwd: root, encoding: "utf8", env, input: JSON.stringify({ session_id: "v", cwd: root }) });
   assert.doesNotMatch(hook(), /GTM Brain UPDATE/, "nothing known, nothing said");
   writeFileSync(join(root, "work", "plugin-version.json"), JSON.stringify({ installed, latest: bump(installed), status: "newer", source: "git", checkedAt: new Date().toISOString() }));
   assert.match(hook(), new RegExp(`GTM Brain UPDATE available: ${bump(installed).replace(/\./g, "\\.")} \\(installed ${installed.replace(/\./g, "\\.")}\\)\\. Offer once`));
@@ -84,7 +84,7 @@ test("after an update the page shows the running version and the hook re-checks 
   const data = JSON.parse(readFileSync(join(root, "work", "home", "data.json"), "utf8"));
   assert.equal(data.plugin.installed, installed, "the running plugin's version, never the cached one");
   assert.equal(data.plugin.status, "unchecked"); assert.equal(data.plugin.checkedAt, null);
-  const hook = () => execFileSync("bash", [`${P}/hooks/session-start.sh`], { cwd: root, encoding: "utf8", env, input: JSON.stringify({ session_id: "v", cwd: root }) });
+  const hook = () => execFileSync("bash", [`${P}/session/session-start.sh`], { cwd: root, encoding: "utf8", env, input: JSON.stringify({ session_id: "v", cwd: root }) });
   hook();
   const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (Date.now() < end) { if (ok()) return true; await new Promise(r => setTimeout(r, 100)); } return ok(); };
   assert.ok(await until(() => state(root).installed === installed), "the version changed, so the daily gate re-checks now");

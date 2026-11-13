@@ -21,57 +21,40 @@ ask to allow opening your GTM Brain project"). Batch freely everything that need
 no authorization.
 
 <!-- generated: questions; edit plugins/gtm-brain/policies/questions.md -->
-Ask through the GTM Brain question tool named for the purpose whenever available: `onboarding_question`
-for first-run setup only, `configuration_question` for tools, connections and settings, and
-`question` for everyday and creative work (which context, same as X?, which direction or photo?).
-The host labels the call by the tool's name, so the name is the person's only cue to what kind
-of question it is. All three are the same native form: it waits inside the call and supports
-radio choices, `multiple: true` checkboxes and free text. Do not show the same question with a
-second tool or end the turn with a text question while these tools are available.
-In Plan mode, ask through the host's own planning question tool instead: it is the form the
-person expects there, and it shows the choices and their own answer on one page.
+GTM Brain shows no question forms of its own. Ask with the host's own question box when it has
+one (in Codex, `request_user_input`: use it whenever it is available in the chat, in Plan mode
+always and in ordinary chats where the person's Codex has it). Otherwise ask in plain chat text and
+end the turn: the question, one line
+on why it matters, and two or three numbered options, recommended first; the person answers with
+a number or in their own words.
 
-Reuse saved and submitted answers; infer a concrete proposal before asking. Use structured
-questions proactively for missing information and decisions in the person's current mode.
-Do not ask them to enable Plan mode or experimental settings, call a plan-only tool outside
-Plan mode, or perform writes when restricted to planning. If GTM Brain questions are unavailable,
-prefer a blocking question tool when its current contract allows it, then an async form.
-Use a plain text question only when an appropriate structured control is unavailable.
+Reuse saved and submitted answers; infer a concrete proposal before asking. Ask only for missing
+information and real decisions. Do not ask the person to enable Plan mode or experimental
+settings, call a plan-only tool outside Plan mode, or perform writes when restricted to planning.
 
-Explain why the answer matters before the widget. Offer two or three concrete choices,
-recommended first when appropriate. A choice question is one page: the host shows each field
-on its own page, so `text_label` next to `options` adds a second step. Pass it only when a note
-is really needed. When another answer is likely, let the last choice name it (Different company,
-Needs corrections) and ask the follow-up as a free-text question; do not add a bare Other option.
-When the form is not shown and the choices become chat buttons, each one sends a whole answer:
-never a half sentence for the person to finish ("A different company: "); ask for the rest next.
-Use genuine multi-select for independent choices only when the tool's schema supports it;
-otherwise offer concrete combinations in a single-select chat question. The dashboard is
-view-only. Aim for clicks or at most five words per answer. Never bundle a business
-clarification with optional maintenance questions or ask again for an already authorized action.
+Explain why the answer matters before the question. Offer two or three concrete choices,
+recommended first when appropriate. Never add your own Other or Something else: the person can
+always answer in their own words. A named last choice (Different company, Needs corrections)
+still fits when it means something specific. Each choice is a whole answer, never a half
+sentence for the person to finish ("A different company: "); ask for the rest next. Where
+several choices can apply together, say the person can pick several numbers; the host's question
+box has no checkboxes, so offer the likely combinations there. The dashboard is view-only. Aim
+for a number or at most five words per answer. Never bundle a business clarification with
+optional maintenance questions or ask again for an already authorized action.
 
-A yes/no or permission question always passes `options`, for example Yes, go ahead and No, skip it.
-Omit `options` only when the answer is a name, a link or other free text, and then name what to
-type in `text_label` or leave it out. A yes or no the person already gave for that exact step, in
-a form or in the chat, is the answer: act on it and never show the same question again in another form.
+A yes/no or permission question always names both answers, for example Yes, go ahead and No,
+skip it. A free-text question (a name, a link) says what to type. A yes or no the person already
+gave for that exact step is the answer: act on it and never ask the same question again.
 
-Keep one question pending. Only `status: answered` from a question tool supplies
-submitted `selections` and/or `text`; preserve both. `declined` skips that question only,
-`cancelled` stops it, and `unanswered` supplies no decision. None of those three authorizes
-dependent work; an `answered` yes does, for the ordinary step it named.
-`not_shown` means the host closed the form before the person could see it: it is no answer
-and no refusal. Ask that question, and the rest of this chat's questions, as plain chat text.
-For async forms, an acknowledgement is not an answer: pause dependent work and keep the
-turn alive with interruptible waits, repeating until an answer or cancellation arrives.
-Never end the turn, even with an empty final response, while an async question is pending.
-Defaults, empty results, errors, timeouts, elapsed time and unrelated messages are not answers.
-Do not use shell sleep or a busy loop. Waiting does not keep the host's panel expanded;
-accept a short chat answer if it collapses and never repost a question to reset its timer.
-A plain text question without a pending widget ends in a final message and waits for a reply.
+Keep one question pending. A question without an answer authorizes nothing: defaults, empty
+results, errors, timeouts, elapsed time and unrelated messages are not answers. A skipped or
+closed question box is no answer and no refusal; ask it again as plain chat text. A plain text
+question ends the turn and waits for the reply. Do not use shell sleep or a busy loop to wait.
 
-Security permissions, account sign-in and the exact APPROVE flow stay native. A preference
-widget cannot authorize shell commands, trust hooks or grant account access. Carry out a
-submitted ordinary choice through its owning workflow with the normal permission prompts.
+Security permissions and account sign-in stay native. A chosen option cannot authorize shell
+commands or grant account access, and never stands in for APPROVE: a workplace or interaction
+change goes only through `approve_change`, whose own form carries the APPROVE choice. Carry out
+a chosen ordinary option through its owning workflow with the normal permission prompts.
 
 No slop. No filler phrases, no hedging when facts are cited, no LLM preamble
 ("I have created...", "Here is the updated...", "Certainly!"). No placeholder dates.
@@ -80,8 +63,8 @@ thinking; do not paraphrase or clean up their language.
 <!-- /generated: questions -->
 
 Security approval belongs to the app's permission prompt, never a preference widget.
-A tool checklist selects what to connect; it cannot grant shell permissions, trust hooks,
-or authorize account access. Do not change approval settings to speed up installation.
+A tool checklist selects what to connect; it cannot grant shell permissions or authorize
+account access. Do not change approval settings to speed up installation.
 When the app offers a scoped remembered permission, describe exactly what it covers;
 never ask for unrestricted access. Do not ask for a second chat confirmation for an
 installation action the person already requested.
@@ -131,16 +114,12 @@ and path do not appear in anything you say to them; commands and their names sta
 tool calls. Substitutions:
 
 - checking prerequisites -> "checking this computer has everything it needs"
-- enabling hooks -> "turning on the safety locks so nothing important changes without your
-  say-so"
 - marketplace add + plugin add -> "installing GTM Brain"
 - verifying -> "done, and I checked it works"
 
 The test for every line you say: would it make sense to someone who has never opened a
 terminal? Bad: "Codex, Node and Git meet the installation requirements." Good: "This computer
-has everything it needs." Bad: "I will enable the plugin's protection mechanisms that block
-direct edits of protected files." Good: "Turning on the safety locks: nothing important
-changes without your say-so." One short line per step: what just happened, in their
+has everything it needs." One short line per step: what just happened, in their
 world, not yours.
 
 ## What you are installing
@@ -152,7 +131,7 @@ person's own git repo. This repo is the plugin. Branch: `main`.
 
 Before installing, inspect `codex plugin list --json`. If `gtm-os@gtm-os` is installed,
 this is a migration, not a new brain. Use the following explicit migration, which verifies
-the new connector and hooks before removing the old plugin registration:
+the new connector before removing the old plugin registration:
 
 ```bash
 migration_dir="$(mktemp -d "${TMPDIR:-/tmp}/gtm-brain-migrate.XXXXXX")"
@@ -197,26 +176,11 @@ Check each step before the next. Report progress as you go, one line per step.
    codex plugin add gtm-brain@gtm-brain
    ```
 
-3. **Turn on the safety locks.** Installing does not switch them on: Codex keeps them off
-   until someone approves them, so a plugin installed from a command has no session refresh
-   and no write protection until this step runs.
-
-   ```bash
-   node <plugin>/hooks/trust-hooks.mjs --trust
-   ```
-
-   `<plugin>` is the folder you installed from: a local checkout is
-   `<that folder>/plugins/gtm-brain`, a GitHub install is
-   `~/.codex/plugins/cache/gtm-brain/gtm-brain/<version>`. It prints one line per lock and ends
-   with `Safety locks: on`; anything else means they are still off, so say so plainly and
-   do not report the installation as finished. Say one line before running it (see How to
-   talk); this is the person's approval, so do not bundle it with anything else.
-
-4. **Verify:** `codex plugin list | grep gtm-brain` must say installed and enabled.
+3. **Verify:** `codex plugin list | grep gtm-brain` must say installed and enabled.
 
    Do not run the Claude handoff during install; onboarding offers it itself later, at
    the tools step, inside the brain's own chat.
-5. **Hand over one small step at a time.** Installing is all this file does. First say exactly:
+4. **Hand over one small step at a time.** Installing is all this file does. First say exactly:
    "Now create a new, empty project in Codex called GTM Brain and tell me when it's ready."
    Once it is ready, give the next action only: open a new chat there and send "Set up GTM Brain here".
    Do not present the whole installation and onboarding checklist at once. The sequence is:
@@ -233,7 +197,7 @@ Check each step before the next. Report progress as you go, one line per step.
    A new empty-folder chat proactively offers setup on a greeting. After setup succeeds,
    a saved onboarding flag keeps the next steps moving without a continuation command.
    The brain is born in the person's own project, in a chat they opened, where the plugin's
-   hooks and skills are active. If they ask you to make the folder for them, make an empty
+   tools and skills are active. If they ask you to make the folder for them, make an empty
    one where they say and stop there.
 
 ## If something fails
@@ -243,15 +207,11 @@ Explain the failure simply and what to do. Known cases:
 - **Marketplace add fails:** check network and that the repo URL is reachable. Retry once.
 - **Plugin add fails after a marketplace change:** run `codex plugin add gtm-brain@gtm-brain`
   again; re-adding is safe.
-- **The safety locks stay off:** `trust-hooks.mjs` reaches Codex through its app-server, so
-  it needs the installed plugin and a working `codex` command. Retry once after the install
-  step. If it still fails, hand over anyway and tell the person that the locks are off and
-  that Codex will offer to review them: everything else works, and nothing is lost.
 
 ## Scope
 
 Install. Nothing else: the brain is created by
-`/gtm-brain-start` in the person's own project, in their next chat, where the plugin's hooks
+`/gtm-brain-start` in the person's own project, in their next chat, where the plugin's tools
 and skills are active.
 
 ## New brain defaults

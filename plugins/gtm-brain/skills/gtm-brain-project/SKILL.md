@@ -22,10 +22,11 @@ Follow [question handling](../gtm-brain-start/references/questions.md) for nativ
 
 1. Reuse the known brain and project name. If the brain is unknown, call `query` (brains) and
    resolve which existing brain to use; verify it with `check_environment`. Never use the
-   plugin checkout as a brain. Ask only for missing information through `configuration_question`.
-2. Default to a direct child of the brain's workspace root: `<brain-root>/<project-slug>/`.
-   For example, a Website project in FDE OS goes in `FDE OS/website/`, beside `brain/` and
-   `work/`. Resolve from the brain root even when this chat is in another linked project.
+   plugin checkout as a brain. Ask only for missing information.
+2. Default to the brain's projects folder, as RULES.md says: `<brain-root>/projects/<project-slug>/`.
+   For example, a Website project in FDE OS goes in `FDE OS/projects/website/`. A deliverable for
+   a project that already exists goes inside it, not into a new project. Resolve from the brain
+   root even when this chat is in another linked project.
    Keep the shared brain where it is. Do not propose a sibling folder outside the workspace
    or an extra projects container. Honor an explicit alternative location only when it is
    separate from other linked projects. For a requested subproject in an external linked
@@ -59,6 +60,14 @@ Follow [question handling](../gtm-brain-start/references/questions.md) for nativ
    another task. Say "Created Website inside FDE OS. Work here uses your shared company
    knowledge" for an internal project, then the opening result. Do not call it an external
    project, list context slugs, or explain the ontology during this flow.
+8. When step 5 found no context for the lasting topic behind the project (a website, a
+   product, a market), offer one once, after the report, in Codex's question box when it is
+   on: "The website work has no context of its own yet. Create a Website context for its
+   messaging, pages and decisions?" with Yes, create Website and No, keep notes in
+   <the closest context>. On yes call `new_context` with a slug that is not the project's
+   (X1). On no, do not offer it again for this project. An event, campaign or one-off client
+   job needs no context of its own: skip the offer. (Artur, 2026-11-11: the website folder
+   was made and no context followed, and nothing said why.)
 
 Creating a folder alone does not authorize capturing its work. A No or cancellation before
 linking leaves the folder uncreated. Memories stay in the existing brain, tagged with this
@@ -68,8 +77,7 @@ project; there are no per-project brains or summaries.
 
 
 Use the person's saved conversation language. Keep authored brain data in English.
-Follow [question handling](../gtm-brain-start/references/questions.md) for `configuration_question`
-and its fallbacks. Reuse submitted answers; never link without a yes to capturing work.
+Follow [question handling](../gtm-brain-start/references/questions.md) when asking. Reuse submitted answers; never link without a yes to capturing work.
 
 ## Link an existing folder
 

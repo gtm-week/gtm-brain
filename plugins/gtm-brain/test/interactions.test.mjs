@@ -16,7 +16,7 @@ const lib = await import(`${P}/lib/brain.mjs`);
 const root = mkdtempSync(join(tmpdir(), "gtm-brain-interactions-"));
 execFileSync("git", ["init", "-q", root]); execFileSync("git", ["-C", root, "config", "commit.gpgsign", "false"]);
 execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "Reflow", "--one-liner", "returns automation", "--owner", "Marta Nowak <marta@reflow.io>"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P }, stdio: "ignore" });
-execFileSync(process.execPath, [`${P}/scripts/gtm-brain-contexts/contexts.mjs`, root, "--new", "pipeline", "Pipeline", "Deals in flight."], { env: { ...process.env, PLUGIN_ROOT: P, GTM_BRAIN_NO_COMMIT: "1" }, stdio: "ignore" });
+execFileSync(process.execPath, [`${P}/scripts/gtm-brain-contexts/contexts.mjs`, root, "--new", "pipeline", "Pipeline", "Deals in flight.", "--distinct", "no context covers deals in flight"], { env: { ...process.env, PLUGIN_ROOT: P, GTM_BRAIN_NO_COMMIT: "1" }, stdio: "ignore" });
 
 export const MOVE = { name: "move_deal", title: "Moving a deal", tool: "attio", operation: "Move the deal to the given stage in Attio (Deals > the deal > Stage).", description: "A deal changes stage.",
   input_schema: { type: "object", properties: { deal: { type: "string" }, stage: { type: "string", enum: ["lead", "proposal", "won"] }, note: { type: "string" } }, required: ["deal", "stage"], additionalProperties: false },
@@ -71,22 +71,41 @@ test("writeInteractions writes a file readInteractions reads back", () => {
   assert.ok(existsSync(join(root, "brain", "ontology.ossie.json")));
 });
 
-test("the write gate denies a direct edit of the company file and names the proposal path", () => {
-  const gate = input => { try { return { out: execFileSync("bash", [`${P}/hooks/gate-protected-write.sh`], { input: JSON.stringify(input), encoding: "utf8", env: { ...process.env, PLUGIN_ROOT: P } }), code: 0 }; } catch (e) { return { out: String(e.stdout) + String(e.stderr), code: e.status }; } };
-  const denied = gate({ hook_event_name: "PreToolUse", session_id: "t", cwd: root, tool_name: "apply_patch", tool_input: { patch: "*** Update File: brain/ontology.ossie.json\n+x" } });
-  assert.equal(denied.code, 2); assert.match(denied.out, /propose_interaction/);
-  const read = gate({ hook_event_name: "PreToolUse", session_id: "t", cwd: root, tool_name: "shell_command", tool_input: { command: "cat brain/ontology.ossie.json" } });
-  assert.equal(read.code, 0);
+test("a direct edit of the company file is put back with the committed version and the edit kept", () => {
+  lib.commit(root, ["brain/ontology.ossie.json"], "test: the company file as committed", { always: true, push: false });
+  const before = readFileSync(join(root, "brain", "ontology.ossie.json"), "utf8");
+  writeFileSync(join(root, "brain", "ontology.ossie.json"), "{}\n");
+  const back = lib.guardProtected(root);
+  assert.deepEqual(back.map(r => r.path), ["brain/ontology.ossie.json"]);
+  assert.equal(readFileSync(join(root, "brain", "ontology.ossie.json"), "utf8"), before);
+  assert.equal(readFileSync(join(root, back[0].backup), "utf8"), "{}\n");
+  assert.match(lib.restoredNotice(back), /propose it that way/);
+  assert.deepEqual(lib.guardProtected(root), [], "nothing left to put back");
+});
+
+test("approve --interaction refuses without the person's APPROVE: no form flag, no terminal", () => {
+  writeFileSync(join(root, "work", "interaction.proposed.json"), JSON.stringify({ ...MOVE, name: "close_deal", tool: "attio", operation: "Mark the deal won or lost in Attio.", record: { ...MOVE.record, action: "attio:close deal:{deal}" } }));
+  const env = { ...process.env, PLUGIN_ROOT: P, HOME: mkdtempSync(join(tmpdir(), "gtm-brain-home-")) }; delete env.GTM_BRAIN_APPROVAL;
+  assert.throws(() => execFileSync(process.execPath, [`${P}/scripts/gtm-brain-approve/approve.mjs`, root, "--interaction", "--by", "marta"], { encoding: "utf8", env, stdio: "pipe" }), e => e.status === 4 && /approve_change/.test(String(e.stderr)));
+  assert.ok(!lib.readInteractions(root).actions.some(a => a.name === "close_deal")); assert.ok(existsSync(join(root, "work", "interaction.proposed.json")));
+  unlinkSync(join(root, "work", "interaction.proposed.json"));
 });
 
 test("approve --interaction appends to the company file, commits, removes the proposal; a second time is refused", () => {
   writeFileSync(join(root, "work", "interaction.proposed.json"), JSON.stringify({ ...MOVE, name: "close_deal", tool: "attio", operation: "Mark the deal won or lost in Attio.", record: { ...MOVE.record, action: "attio:close deal:{deal}" } }));
-  const env = { ...process.env, PLUGIN_ROOT: P, HOME: mkdtempSync(join(tmpdir(), "gtm-brain-home-")) };
-  const out = execFileSync(process.execPath, [`${P}/scripts/gtm-brain-approve/approve.mjs`, root, "--interaction", "--by", "marta"], { encoding: "utf8", env });
+  const home = mkdtempSync(join(tmpdir(), "gtm-brain-home-")), env = { ...process.env, PLUGIN_ROOT: P, HOME: home };
+  // What approve_change does after the person chose APPROVE: a single-use ticket, its hash under ~/.gtm-brain.
+  const ticket = () => { const was = process.env.HOME; process.env.HOME = home; try { return lib.issueApproval(root, "interaction"); } finally { process.env.HOME = was; } };
+  const apply = (secret, opts = {}) => execFileSync(process.execPath, [`${P}/scripts/gtm-brain-approve/approve.mjs`, root, "--interaction", "--by", "marta"], { encoding: "utf8", env: { ...env, GTM_BRAIN_APPROVAL_TICKET: secret }, ...opts });
+  assert.throws(() => apply("f".repeat(64), { stdio: "pipe" }), e => e.status === 4, "a made-up ticket is refused");
+  assert.throws(() => execFileSync(process.execPath, [`${P}/scripts/gtm-brain-approve/approve.mjs`, root, "--interaction", "--by", "marta"], { encoding: "utf8", env: { ...env, GTM_BRAIN_APPROVAL: "form" }, stdio: "pipe" }), e => e.status === 4, "the old flag means nothing");
+  const once = ticket();
+  const out = apply(once);
   assert.match(out, /added interaction close_deal \(attio\)/);
   assert.ok(lib.readInteractions(root).actions.some(a => a.name === "close_deal")); assert.ok(!existsSync(join(root, "work", "interaction.proposed.json")));
   assert.match(execFileSync("git", ["-C", root, "log", "-1", "--format=%s"], { encoding: "utf8" }), /^interactions: close_deal/);
   writeFileSync(join(root, "work", "interaction.proposed.json"), JSON.stringify({ ...MOVE, name: "close_deal" }));
-  assert.throws(() => execFileSync(process.execPath, [`${P}/scripts/gtm-brain-approve/approve.mjs`, root, "--interaction", "--by", "marta"], { encoding: "utf8", env, stdio: "pipe" }), /already/);
+  assert.throws(() => apply(once, { stdio: "pipe" }), e => e.status === 4, "a ticket works once");
+  assert.throws(() => apply(ticket(), { stdio: "pipe" }), /already/);
   unlinkSync(join(root, "work", "interaction.proposed.json"));
 });

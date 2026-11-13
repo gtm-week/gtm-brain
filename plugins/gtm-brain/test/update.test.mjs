@@ -1,6 +1,5 @@
 process.env.GTM_BRAIN_NO_WATCH = "1";
 process.env.GTM_BRAIN_NO_COMPILE = "1"; // Model runs are opt-in through test doubles.
-process.env.GTM_BRAIN_NO_HOOK_CHECK = "1"; // the hooks-off check talks to a real Codex; hooks-notice.test covers it with a fake one
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from "node:fs";
@@ -50,23 +49,6 @@ import { appendFileSync, readFileSync, cpSync, rmSync, writeFileSync } from "nod
 import { join } from "node:path";
 const args = process.argv.slice(2), command = args.join(" ");
 const config = JSON.parse(process.env.UPDATE_TEST_CONFIG);
-// The hook trust check talks to the app-server. It is not one of the plugin commands under test,
-// so it stays out of the call log; its effect is read from the reported lines instead.
-if (command === "app-server") {
-  if (config.noAppServer) process.exit(2);
-  let buffer = "";
-  process.stdin.setEncoding("utf8");
-  process.stdin.on("data", chunk => {
-    buffer += chunk;
-    for (let i; (i = buffer.indexOf("\\n")) >= 0; ) {
-      const { id, method, params } = JSON.parse(buffer.slice(0, i)); buffer = buffer.slice(i + 1);
-      const hooks = [{ key: "gtm-brain@gtm-brain:hooks.json:session_start:0:0", eventName: "sessionStart",
-        trustStatus: "untrusted", currentHash: "sha256:now", pluginId: "gtm-brain@gtm-brain", enabled: true }];
-      const result = method === "hooks/list" ? { data: [{ cwd: params.cwds[0], hooks, warnings: [], errors: [] }] } : {};
-      process.stdout.write(JSON.stringify({ id, result }) + "\\n");
-    }
-  });
-} else {
 appendFileSync(process.env.UPDATE_TEST_LOG, JSON.stringify(args) + "\\n");
 if (command === config.fail) { console.error("private credential in stderr"); process.exit(1); }
 const statePath = join(process.env.CODEX_HOME, "installation.json");
@@ -89,7 +71,6 @@ else if (command === "plugin add gtm-brain@gtm-brain") {
   }
   writeFileSync(statePath, JSON.stringify({ version: config.wrongInstalledVersion || config.candidate || "0.4.0", installed: true, added: true }));
 } else if (command !== "plugin marketplace upgrade gtm-brain") process.exit(2);
-}
 `, { mode: 0o755 });
   const again = (nextMode, nextConfig = {}) => {
     writeFileSync(log, "");
@@ -108,20 +89,6 @@ test("check reports installed state without fetching or installing", t => {
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /Remote not checked/);
   assert.equal(r.calls.length, 2);
-});
-test("check reports the hook trust and never grants it", t => {
-  const r = run(t, "--check");
-  assert.match(r.stdout, /Safety locks: 1 of 1 not running yet/);
-});
-test("an update puts back the trust a changed hooks.json dropped", t => {
-  const r = run(t, "--update");
-  assert.match(r.stdout, /Safety locks: on \(1 approved just now\)/);
-});
-test("an unreachable app-server does not fail the update or claim the locks are on", t => {
-  const r = run(t, "--update", { noAppServer: true });
-  assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /GTM Brain refreshed/);
-  assert.match(r.stdout, /Safety locks: not checked/);
 });
 test("Git update refreshes only GTM Brain, installs, then verifies", t => {
   const r = run(t, "--update");
@@ -250,11 +217,12 @@ test("same-version refresh is supported", t => {
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /0.3.0 -> 0.3.0/);
 });
-test("update finishes verification and hook approval when Codex removes its original working directory", t => {
+test("update finishes verification when Codex removes its original working directory, and approves no hooks", t => {
   const r = run(t, "--update", { fromInstalled: true, removePrevious: true });
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /Connector: GTM Brain 0.4.0 starts/);
-  assert.match(r.stdout, /Safety locks: on/);
+  assert.doesNotMatch(r.stdout, /Safety locks|hook/i);
+  assert.ok(!r.calls.some(c => c[0] === "app-server"), "no hook trust step");
 });
 test("consecutive updates and a failed install retry keep the same brain and preferences", t => {
   const first = run(t, "--update");

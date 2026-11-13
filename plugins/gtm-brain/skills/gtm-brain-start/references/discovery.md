@@ -1,7 +1,7 @@
 
 # Discovery: get to know the company (the procedure gtm-brain-start follows in its Step 2)
 
-> For humans: instead of a questionnaire, Codex figures your business out. It reads what is
+> For humans: after the four setup questions, there is no questionnaire: Codex figures your business out. It reads what is
 > already on your machine and in your connected tools, researches your website, drafts your
 > workplace info for you to approve, and sets up one or two things that help this week. You
 > correct a draft; you do not fill in a form.
@@ -15,20 +15,17 @@ conversational. Complete the steps in order unless the user asks to skip one; an
 recorded and never nagged about.
 
 For interactive onboarding questions, read [onboarding questions](questions.md) once.
-Use `onboarding_question` by default during setup when available. It waits inside the call
-and provides native choices, checkboxes and free text in ordinary mode. If only async
-questions are available, keep them alive until answered.
 
 ## How to talk during discovery
 
 The example questions below are patterns, not fixed wording. Draft brain content in English.
-The approval token is always the exact word APPROVE.
+The approval is always the person's APPROVE in the `approve_change` form, never typed in the chat.
 
-Questions are clicks wherever the harness allows it. If a structured question control
-with answer proposals is available in the current mode, use it for preferences and
+Questions are clicks wherever the harness allows it. If Codex's own question box is
+available in the current chat, use it for preferences and
 connection choices (never security permissions): yes/no answers, "connect these
-two?", "which provider?", with a free-text follow-up when the person means something
-else. The dashboard is view-only. If no appropriate structured control is available,
+two?", "which provider?", with room for an answer in the
+person's words. The dashboard is view-only. Otherwise
 ask in the Codex conversation, and then these rules keep it pleasant:
 
 - **Every question earns its keep.** One line of why you are asking, then the question,
@@ -63,14 +60,14 @@ either shows something you learned or offers something concrete. A question that
 no finding and no offer does not go out; go find something first.
 
 And in their words, not yours: no plugin, hook, repo, git, script, render, memory-file or
-context-slug talk with the person. Say what a thing does ("the safety locks", "your notes",
+context-slug talk with the person. Say what a thing does ("your company profile", "your notes",
 "the page next to this chat"), not what it is called in the codebase. Command names stay in
 tool calls; sentences describe outcomes.
 
 ## Trigger and state
 
 Follow [continuation](continuation.md) only for an active onboarding request: the pending flag is saved by setup itself, and the
-hook and MCP readers return the next unfinished step. Continue a pending workflow in this
+opening lines and MCP readers return the next unfinished step. Continue a pending workflow in this
 chat without asking for a separate start or continuation command. Record each completed
 outcome and proceed until the completion marker or an actual blocker.
 
@@ -119,8 +116,8 @@ Never ask what the machine already knows. Before the first question, gather sile
   draft or a memory, it cites `handoff:<by>` as its source. If the frontmatter says
   `confirmed: false` (a headless export nobody reviewed), walk the person through it line
   by line before using any of it (the gtm-brain-start skill has the procedure). `.claude`
-  and the other assistants' folders are off limits, reads included; the gate denies any
-  command touching them. The handoff file is the whole import path.
+  and the other assistants' folders are off limits, reads included, as the opening lines say;
+  never run a command touching them. The handoff file is the whole import path.
 - An existing brain in the folder: if `brain/` exists, read `admin.md`, the contexts and
   the marker; discovery becomes gap-filling, not setup.
 
@@ -155,9 +152,8 @@ sample from step 0. From it draft:
 - anything that looks like an ICP or a positioning claim, kept as **hypotheses to
   confirm**, never written as fact.
 
-If `brain/` does not exist, materialize it now by calling the setup script with the
-derived values (`setup.sh --company ... --one-liner ... --owner ...`), defaults for the
-rest. Context rules and the dashboard setting are point-of-need questions for later
+If `brain/` does not exist yet, create it now with the `setup_brain` tool and the derived
+values (company, one line, owner), defaults for the rest; never run the setup script yourself. Context rules and the dashboard setting are point-of-need questions for later
 sessions, not part of discovery.
 
 Show the drafted workplace info and all proposed changes in plain language, without raw file diffs, and invite corrections
@@ -167,7 +163,7 @@ like this:
 > for you: everything is a guess from your website and your tools, and one wrong line
 > costs one correction. Common fixes at this point: the one-liner is close but the
 > audience is wrong ("mid-market" not "enterprise"); a teammate is missing; a tool I saw
-> is actually being phased out. Tell me what to change, or type APPROVE to accept.
+> is actually being phased out. Tell me what to change, or choose APPROVE in the form to accept.
 
 Include known tools and clearly labelled proposed email/calendar providers in this first
 review, so accepting those same connections later needs no duplicate profile approval.
@@ -262,10 +258,10 @@ plugin (export or paste path). Credentials are personal and stay in the user's C
 brain never holds a token. If nothing connects, say so plainly and continue; the snapshot
 names the gap.
 
-The dashboard card is read-only. Collect choices through `onboarding_question`, using
-`multiple: true` when independent tools can be chosen together. Preserve submitted text
-as well as selections. Connect the selected tools without asking for another yes per tool.
-An unchecked tool, empty selection or cancelled form is not an explicit decline; record
+The dashboard card is read-only. Collect choices by asking, with a numbered list when independent tools can be chosen
+together; they may pick several. Preserve their own words
+as well as the picked numbers. Connect the selected tools without asking for another yes per tool.
+An unpicked tool, an empty answer or no answer is not an explicit decline; record
 only a submitted skip. Native shell permissions and account sign-in remain separate.
 Save accepted choices before any install that could require a fresh chat, following
 [continuation](continuation.md). If one connection cannot be completed yet, proceed with
@@ -359,7 +355,7 @@ memory so a later test reset can identify exactly what belongs to the run.
 ## Step 5: which existing projects to follow
 
 Follow [existing projects](projects.md). Ask which projects the person already works in
-should feed this brain, with native checkboxes when candidates can be listed. This selection
+should feed this brain, with a numbered list when candidates can be listed; they may pick several. This selection
 is consent to capture future work from those folders. Reuse it when calling `link_project`;
 do not ask another yes for each project. A skip or no existing projects is a valid outcome.
 Keep the person in the current Codex chat throughout this step.
@@ -383,7 +379,7 @@ is the user's map of where they are:
   5. Running for you - daily source sync at 09:00 Europe/Warsaw, confirmed task ID and sources
   6. Your projects - Marta chose Website and Curriculum; both linked
 - the current step marked, with one line on what happens next and whether Codex is
-  waiting on the user (e.g. "waiting for APPROVE in the chat");
+  waiting on the user (e.g. "waiting for APPROVE in the form");
 - the single **Chat about this** link opens a new Codex task in the brain folder with a
   prepared prompt. The person presses Send and continues discovery there. All connection
   choices, approvals and requests to skip happen in the Codex conversation.
@@ -462,8 +458,8 @@ framed by what it unlocks and with Skip as a choice:
 > It writes one file you review; then say "import from claude" here and I file what you
 > confirm. Want that, or skip it?
 
-When the `claude` CLI is on the PATH (`command -v claude`; never probe `~/.claude`, the
-gate denies it), add the faster path as the first choice: "Do it for me now" runs one
+When the `claude` CLI is on the PATH (`command -v claude`; never probe `~/.claude`, it is
+off limits), add the faster path as the first choice: "Do it for me now" runs one
 bounded headless export (at most 60 seconds):
 
 ```bash
@@ -479,7 +475,7 @@ again; "import from claude" still works any time.
 
 ## Hard rules
 
-- The gate is unchanged: `admin.md` only through APPROVE; memories append-only; every
+- The rules are unchanged: `admin.md` only through APPROVE; memories append-only; every
   fact cites its source. Discovery has no special powers.
 - One mandatory question. Everything else is a confirmation of a draft or an offer, and
   every question carries its why, examples, and an escape hatch.
