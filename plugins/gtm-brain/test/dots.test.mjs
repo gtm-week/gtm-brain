@@ -233,4 +233,6 @@ test("the rulebook: another company's brand rule goes to partner-brands.md, not 
   const text = dots.rulebookText(mkdtempSync(join(tmpdir(), "gtm-brain-partner-")));
   assert.match(text, /`design-system\.md` and `voice\.md` are about our own\s+company/);
   assert.match(text, /goes to `partner-brands\.md`, one heading\s+per company: "Add to partner-brands\.md under OpenAI: <the line>\?"/);
+  assert.match(text, /keeps `# Partner brands` as the only top heading;\s+each company is a `## <Company>` heading under it/);
+  assert.match(text, /A file whose top heading is a company \(an older layout\) is\s+put right in the same update/);
 });

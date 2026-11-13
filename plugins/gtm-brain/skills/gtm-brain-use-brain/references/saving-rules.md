@@ -80,7 +80,10 @@ says ask, ask once, everything in one question.
   "never put the OpenAI blossom next to the OpenAI name") goes to `partner-brands.md`, one heading
   per company: "Add to partner-brands.md under OpenAI: <the line>?"; the first one creates it
   (`document` with `action: create`, title "Partner brands" (the file `partner-brands.md`), applies_to graphics,
-  slides, social images, co-marketing). An instruction about saving, asking or filing goes to
+  slides, social images, co-marketing). Its body keeps `# Partner brands` as the only top heading;
+  each company is a `## <Company>` heading under it, a new one added below the others, and its
+  rules are lines under that heading. A file whose top heading is a company (an older layout) is
+  put right in the same update: `# Partner brands` on top, that company as a `##` heading. An instruction about saving, asking or filing goes to
   `RULES.md` instead (R2). Facts that come with it ("OpenAI is our partner") are still notes.
 - **G2** Before producing work of a kind a document covers, read that document even when the
   request seems small, and say which one you followed. When the person names a rule for this piece
