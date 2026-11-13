@@ -16,7 +16,7 @@ const lib = await import(`${P}/lib/brain.mjs`);
 const root = mkdtempSync(join(tmpdir(), "gtm-brain-interactions-"));
 execFileSync("git", ["init", "-q", root]); execFileSync("git", ["-C", root, "config", "commit.gpgsign", "false"]);
 execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "Reflow", "--one-liner", "returns automation", "--owner", "Marta Nowak <marta@reflow.io>"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P }, stdio: "ignore" });
-execFileSync(process.execPath, [`${P}/scripts/gtm-brain-contexts/contexts.mjs`, root, "--new", "pipeline", "Pipeline", "Deals in flight."], { env: { ...process.env, PLUGIN_ROOT: P, GTM_BRAIN_NO_COMMIT: "1" }, stdio: "ignore" });
+execFileSync(process.execPath, [`${P}/scripts/gtm-brain-contexts/contexts.mjs`, root, "--new", "pipeline", "Pipeline", "Deals in flight.", "--distinct", "no context covers deals in flight"], { env: { ...process.env, PLUGIN_ROOT: P, GTM_BRAIN_NO_COMMIT: "1" }, stdio: "ignore" });
 
 export const MOVE = { name: "move_deal", title: "Moving a deal", tool: "attio", operation: "Move the deal to the given stage in Attio (Deals > the deal > Stage).", description: "A deal changes stage.",
   input_schema: { type: "object", properties: { deal: { type: "string" }, stage: { type: "string", enum: ["lead", "proposal", "won"] }, note: { type: "string" } }, required: ["deal", "stage"], additionalProperties: false },

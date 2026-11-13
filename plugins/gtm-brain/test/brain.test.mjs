@@ -198,7 +198,7 @@ test("names: a mention that looks like a known name is not added; confirmed new,
   lib.addName(root, "Pierre Aubert"); lib.addName(root, "OpenAI", { kind: "company" }); lib.addName(root, "Maciej Kończal");
   const names = lib.readNames(root);
   assert.deepEqual(lib.similarNames(names, "Pierre Aubart"), [{ name: "Pierre Aubert", kind: "person" }], "a typo of the surname");
-  assert.deepEqual(lib.similarNames(names, "Pierre Dupont"), [], "same first name, another surname: someone else");
+  assert.deepEqual(lib.similarNames(names, "Pierre Dupont"), [{ name: "Pierre Aubert", kind: "person" }], "same first name: listed, Codex decides by P4 whether it is someone else");
   assert.deepEqual(lib.similarNames(names, "OpenAI Deployment"), [{ name: "OpenAI", kind: "organization" }], "shared word");
   assert.deepEqual(lib.similarNames(names, "Open AI"), [{ name: "OpenAI", kind: "organization" }], "same letters spelled apart");
   assert.deepEqual(lib.similarNames(names, "Konczal"), [{ name: "Maciej Kończal", kind: "person" }], "accents ignored");

@@ -3,7 +3,7 @@
 // question (a date with two readings, a new company's website, several projects). Nothing is guessed.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync, spawnSync } from "node:child_process";
@@ -43,7 +43,7 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   const dinner = remember("--content", "The speaker dinner moved to Thursday.");
   assert.equal(dinner.status, 2);
   assert.match(dinner.stderr, /"Thursday" can be Thu 2026-11-12 or Thu 2026-11-19: ask which/);
-  assert.match(dinner.stderr, /Ask the person once, everything in one question, as plain chat text with numbered parts, then end the turn/);
+  assert.match(dinner.stderr, /Whatever is still unclear: one question \(Q2\), in Codex's question box \(request_user_input\) when that tool is available in this chat .*otherwise as plain chat text with numbered parts, then end the turn \(Q1\), and wait for the reply \(Q3\)/);
   // the person turned Codex's question box on: the question goes there (new-brain rerun: plain text although it was on)
   writeFileSync(join(process.env.CODEX_HOME, "config.toml"), "[features]\ndefault_mode_request_user_input = true\n");
   assert.match(remember("--content", "The speaker dinner moved to Thursday.").stderr, /in Codex's question box \(request_user_input\)/);
@@ -52,7 +52,7 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   const deck = remember("--content", "Ola Nowak will send the deck on Friday.", "--people", "Ola Nowak");
   assert.equal(deck.status, 2);
   assert.match(deck.stderr, /"Friday" is Fri 2026-11-13 \(or Fri 2026-11-06 if it already happened; take it from the person's words/);
-  assert.match(deck.stderr, /No question needed: write the dates into the note/);
+  assert.match(deck.stderr, /write it into the note, no question \(D1\)\. No question needed: change the note as the rule says and send it again/);
   assert.equal(remember("--content", "Ola Nowak will send the deck on Friday (2026-11-13).", "--people", "Ola Nowak").status, 0);
   // from an email: counted from the email's date, not today
   assert.match(remember("--content", "Acme will sign next week.", "--source", "gmail:msg-1").stderr, /counted from the source's own date/);
@@ -86,14 +86,14 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   say("Forget the speaker dinner");
   const flipped = remember("--content", "There is no speaker dinner.", "--supersedes", dinner19);
   assert.equal(flipped.status, 2);
-  assert.match(flipped.stderr, new RegExp(`asked to forget it, not to correct it: send retracts: ${dinner19} \\(not supersedes\\).*No question needed: send it as said`));
+  assert.match(flipped.stderr, new RegExp(`asked to forget it, not to correct it: send retracts: ${dinner19} \\(not supersedes\\).*\\(F1\\)\\. No question needed: change the note as the rule says and send it again`));
   assert.equal(remember("--content", "Withdrawn: the speaker dinner note (the person said forget it).", "--retracts", dinner19).status, 0);
   // two Florians: Codex may not pick one from the chat so far ("lorian called me", saved as Florian Kim; new-brain, 2026-11-12)
   lib.addName(root, "Florian Kim");
   say("lorian called me about the venue.");
   const pick = remember("--content", "Florian Kim called about the venue.", "--people", "Florian Kim");
   assert.equal(pick.status, 2);
-  assert.match(pick.stderr, /the person did not write which Florian: Florian (Weber|Kim) or Florian (Weber|Kim) \(rule P2/);
+  assert.match(pick.stderr, /the person did not write which Florian: Florian (Weber|Kim) or Florian (Weber|Kim) \(W1, P2/);
   // Codex asked in its own question box before saving: the picked answer counts as the person's words, no second question
   writeFileSync(join(day, `rollout-2026-11-12T10-18-48-${id}.jsonl`), [{ type: "session_meta", payload: { cwd: root } },
     { type: "response_item", payload: { type: "message", role: "user", content: [{ type: "input_text", text: "lorian sent the agenda." }] } },
@@ -117,7 +117,7 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   // a new company: saved as a company under C1, and its website asked in the one question
   const acme = remember("--content", "Acme wants a booth at the Berlin event.", "--companies", "Acme", "--project", "berlin-event-2026");
   assert.equal(acme.status, 0, acme.stderr);
-  assert.match(acme.stdout, /Ask the person once, as plain chat text with numbered parts, then end the turn, after quoting the note, one numbered part each: 1\) Acme's website, so the brain knows which Acme this is/);
+  assert.match(acme.stdout, /Ask the person once, in Codex's question box \(request_user_input\) when that tool is available in this chat .*otherwise as plain chat text with numbered parts, then end the turn, after quoting the note, one numbered part each: 1\) Acme's website, so the brain knows which Acme this is/);
   assert.deepEqual(lib.readMemories(root, "company").at(-1).entity_mentions.map(x => [x.mention, x.rule]), [["Acme", "C1"]]);
   // Codex adds the company first and saves the note second (new-brain rerun, 2026-11-12): still asked, once
   lib.addName(root, "Initech", { kind: "company" });
@@ -195,12 +195,12 @@ test("contexts: a project or a look-alike is never a new context (X1, X3); a sum
   const env = { ...process.env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1" };
   const ctx = (...a) => spawnSync(process.execPath, [`${P}/scripts/gtm-brain-contexts/contexts.mjs`, ".", ...a], { cwd: root, env, encoding: "utf8" });
   mkdirSync(join(root, "projects", "website"), { recursive: true });
-  const project = ctx("--new", "website", "Website", "rule");
-  assert.equal(project.status, 2); assert.match(project.stderr, /website is a project \(rule X1/);
-  const like = ctx("--new", "market-research", "Market research", "rule");
-  assert.equal(like.status, 2); assert.match(like.stderr, /looks like Market \(market\) \(rule X3.*"same as Market\?"/);
+  // X1-X3 are Codex's judgment (saving-rules.md): the first call creates nothing and lists what exists to check against
+  const first = ctx("--new", "website", "Website", "rule");
+  assert.equal(first.status, 2); assert.match(first.stderr, /^not created yet: check "Website" against what exists\. Contexts: .*Market \(market\).*\. Projects: website\. X1: .* X3: /);
+  assert.ok(!existsSync(join(root, "brain", "contexts", "website")));
   assert.equal(ctx("--new", "market-research", "Market research", "rule", "--distinct", "research projects, not the market overview").status, 0);
-  assert.equal(ctx("--new", "pricing", "Pricing redesign", "rule").status, 0);
+  assert.ok(existsSync(join(root, "brain", "contexts", "market-research", "context.md")));
 
   lib.appendMemory(root, "icp", { authors: ["ann-lee"], content: "Mid-market SaaS fits best." });
   const c = () => lib.readContext(root, "icp");

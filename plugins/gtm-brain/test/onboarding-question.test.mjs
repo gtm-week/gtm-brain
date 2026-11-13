@@ -175,6 +175,7 @@ test("GTM Brain lists no question forms: Codex's own box when it is on, chat tex
   const chat = await listed(profile);
   for (const name of ['onboarding_question', 'configuration_question', 'question']) assert.ok(!chat.names.includes(name), `${name} is off`);
   assert.ok(chat.names.includes('approve_change'), 'APPROVE keeps its own form');
-  assert.match(chat.instructions, /Ask every question as plain chat text and end the turn/);
-  assert.doesNotMatch(chat.instructions, /request_user_input/);
+  // the box can still be there in this chat (Plan mode): use it when it is, plain chat text only without it
+  assert.match(chat.instructions, /When request_user_input is available in this chat .*ask every question with it/);
+  assert.match(chat.instructions, /Without it, ask as plain chat text and end the turn/);
 });

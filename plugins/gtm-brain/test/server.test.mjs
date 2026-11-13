@@ -372,7 +372,7 @@ test("the interactions are the ontology's: none hand-written twice, names and ti
   assert.ok(!r.extra.some(x => onto.actions.some(a => a.tool_name === x.name)), "a described interaction is not also hand-written");
   for (const [name, title] of [["new_context", "Opening a context"], ["add_name", "Adding a name"]]) assert.equal(result.tools.find(t => t.name === name).title, title);
   // and they run: a channel opened through the generated tool is a channel
-  const made = await call("new_context", { brain: root, slug: "pipeline", title: "Pipeline", rule: "Deals in flight." });
+  const made = await call("new_context", { brain: root, slug: "pipeline", title: "Pipeline", rule: "Deals in flight.", distinct: "no context covers deals in flight" });
   assert.ok(!made.isError, made.text); assert.match(made.text, /^ok: new_context/); assert.ok(existsSync(join(root, "brain", "contexts", "pipeline", "context.md")));
 });
 
@@ -445,7 +445,7 @@ test("evaluation proxy exposes a harmless competitor and refuses other roots and
 });
 
 test("interact: the company's interaction records the prescribed memory and says what to do in the connector", async () => {
-  if (!existsSync(join(root, "brain", "contexts", "pipeline", "context.md"))) execFileSync(process.execPath, [`${P}/scripts/gtm-brain-contexts/contexts.mjs`, root, "--new", "pipeline", "Pipeline", "Deals in flight."], { env: { ...process.env, PLUGIN_ROOT: P, GTM_BRAIN_NO_COMMIT: "1" }, stdio: "ignore" });
+  if (!existsSync(join(root, "brain", "contexts", "pipeline", "context.md"))) execFileSync(process.execPath, [`${P}/scripts/gtm-brain-contexts/contexts.mjs`, root, "--new", "pipeline", "Pipeline", "Deals in flight.", "--distinct", "no context covers deals in flight"], { env: { ...process.env, PLUGIN_ROOT: P, GTM_BRAIN_NO_COMMIT: "1" }, stdio: "ignore" });
   await call("add_name", { brain: root, name: "Castorama", kind: "company" });
   lib.writeInteractions(root, [{ name: "move_deal", title: "Moving a deal", tool: "attio", operation: "Move the deal to the given stage in Attio.", description: "A deal changes stage.",
     input_schema: { type: "object", properties: { deal: { type: "string" }, stage: { type: "string", enum: ["lead", "proposal", "won"] }, note: { type: "string" } }, required: ["deal", "stage"], additionalProperties: false },
@@ -474,7 +474,7 @@ test("a broken company file is reported in the catalog, and the rest of the serv
 
 test("context tools expose purpose and boundaries through rule and refuse the retired scope field", async () => {
   const slug = "context-instructions", rule = "Keep launch work here. Pricing decisions belong in offer.";
-  const created = await call("new_context", { brain: root, slug, title: "Launch work", rule });
+  const created = await call("new_context", { brain: root, slug, title: "Launch work", rule, distinct: "no context covers launch work" });
   assert.ok(!created.isError, created.text);
   const { result: catalog } = await rpc("tools/list");
   for (const name of ["new_context", "edit_context"]) {
@@ -502,7 +502,7 @@ test("context tools expose purpose and boundaries through rule and refuse the re
 
 test("compile_apply accepts empty working guidance through MCP and rejects missing or invalid values without writes", async () => {
   const context = "empty-guidance";
-  assert.ok(!(await call("new_context", { brain: root, slug: context, title: "Renewals", rule: "Use confirmed renewal terms." })).isError);
+  assert.ok(!(await call("new_context", { brain: root, slug: context, title: "Renewals", rule: "Use confirmed renewal terms.", distinct: "no context covers renewals" })).isError);
   const noted = await call("remember", { brain: root, by: "marta", context, content: "Confirm the renewal owner." }); assert.ok(!noted.isError, noted.text);
   const noteId = noted.text.match(/remembered (m_[0-9a-f]{12})/)[1];
   const before = lib.readContext(root, context), original = readFileSync(before.path, "utf8");

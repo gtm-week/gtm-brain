@@ -246,7 +246,7 @@ test("activity log round-trips and unsaved changes list what save would commit",
 });
 
 test("a standing rule that contains a Now: line survives archive and unarchive unchanged", () => {
-  run(root, "contexts", "contexts.mjs", "--new", "launch", "Launch", "Now: is not the time to discount.\nNever promise a date.");
+  run(root, "contexts", "contexts.mjs", "--new", "launch", "Launch", "Now: is not the time to discount.\nNever promise a date.", "--distinct", "no context covers the launch");
   const before = lib.readContext(root, "launch");
   run(root, "contexts", "contexts.mjs", "--archive", "launch"); run(root, "contexts", "contexts.mjs", "--unarchive", "launch");
   const after = lib.readContext(root, "launch");
@@ -453,7 +453,7 @@ test("a brain with the old names.md keeps working; the first write and the upgra
 
 test("remember holds a note whose name looks like a known one until the person answers", () => {
   const before = lib.readMemories(root, "icp").length;
-  assert.throws(() => run(root, "remember", "remember.mjs", "--by", "marta", "--context", "icp", "--people", "Pierre Aubart", "--content", "Pierre Aubart joined the call."), /not remembered yet: "Pierre Aubart" may be Pierre Aubert\. Ask the person/);
+  assert.throws(() => run(root, "remember", "remember.mjs", "--by", "marta", "--context", "icp", "--people", "Pierre Aubart", "--content", "Pierre Aubart joined the call."), /not remembered yet: "Pierre Aubart" looks like Pierre Aubert \(P4\)/);
   assert.ok(!lib.readNames(root).some(n => n.name === "Pierre Aubart"), "not in the registry"); assert.equal(lib.readMemories(root, "icp").length, before, "not written");
   const out = run(root, "remember", "remember.mjs", "--by", "marta", "--context", "icp", "--people", "Pierre Aubart", "--new", "Pierre Aubart", "--content", "Pierre Aubart joined the call.");
   assert.match(out, /people: Pierre Aubart/); assert.match(out, /new person in entities\/: Pierre Aubart/);
@@ -561,7 +561,7 @@ test("remember takes a batch: every entry gets its own commit, and one look-alik
 
   assert.match(out, /^kept 2 of 3/m, "the two clean entries land");
   assert.match(out, /not kept \(1 of 3\)/, "the blocked one is counted");
-  assert.match(out, /#3 .*"Pierre Aubart" may be Pierre Aubert/, "named by its position in the batch, so only it is re-sent");
+  assert.match(out, /#3 .*"Pierre Aubart" looks like Pierre Aubert \(P4\)/, "named by its position in the batch, so only it is re-sent");
   assert.equal(lib.readMemories(b, "icp").length, 1, "entry 1 in the loaded context");
   assert.equal(lib.readMemories(b, "offer").length, 1, "entry 2 in the context it named");
   assert.ok(!lib.readNames(b).some(n => n.name === "Pierre Aubart"), "the held-back name is not registered");
@@ -734,7 +734,7 @@ test("GTM Brain has no question forms: questions go to Codex's own box or plain 
   const policy = readFileSync(`${P}/policies/questions.md`, "utf8");
   assert.match(policy, /no question forms of its own/);
   assert.match(policy, /`request_user_input`/);
-  assert.match(policy, /plain chat text and end the turn/);
+  assert.match(policy, /plain chat text and\s+end the turn/);
   assert.match(policy, /`approve_change`/, "APPROVE keeps its own form");
   let found = ""; try { found = execFileSync("grep", ["-rlE", "onboarding_question|configuration_question", `${P}/skills`, `${P}/policies`, `${P}/templates/AGENTS.md`, "--include=*.md"], { encoding: "utf8" }); } catch {}
   const named = found.trim().split("\n").filter(Boolean);

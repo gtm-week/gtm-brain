@@ -50,15 +50,17 @@ test("a bare first name is held and asked about; a full name is kept with where 
   assert.match(brief, /"Max Kowalski" first saved as Max Kowalski, rule P1:[^\n]*project gtm-os[^\n]*Gmail/);
   assert.match(brief, /"Max" taken as Max Kowalski, rule P2: A first name alone means a known person only when exactly one/);
 
-  // a typo of a known surname is held as "same as X?"; a different surname is someone else (scenario run: Florian Kim)
+  // a look-alike is held and Codex decides by P4: a typo is asked "same as X?", a different surname goes in new_names (scenario run: Florian Kim)
   const typo = remember("--content", "Max Kowalsky joined.", "--people", "Max Kowalsky");
   assert.equal(typo.status, 2);
-  assert.match(typo.stderr, /"Max Kowalsky" may be Max Kowalski/);
-  assert.equal(remember("--content", "Max Weber joined.", "--people", "Max Weber").status, 0);
+  assert.match(typo.stderr, /"Max Kowalsky" looks like Max Kowalski \(P4\)/);
+  assert.match(typo.stderr, /decide by P4\. One or two letters off a known name: ask "same as X\?".*A clearly different surname: someone else, send it in new_names without asking/);
+  assert.equal(remember("--content", "Max Weber joined.", "--people", "Max Weber").status, 2);
+  assert.equal(remember("--content", "Max Weber joined.", "--people", "Max Weber", "--new", "Max Weber").status, 0);
   // a second Max makes "Max" ambiguous again: held, never guessed
   const two = remember("--content", "Max called.", "--people", "Max");
   assert.equal(two.status, 2);
-  assert.match(two.stderr, /"Max" may be Max Kowalski or Max Weber/);
+  assert.match(two.stderr, /"Max" looks like Max Kowalski or Max Weber \(P4\)/);
 
   // the brain's README explains the same four rules
   assert.match(readFileSync(join(root, "README.md"), "utf8"), /## How we name people[\s\S]*\*\*P3\*\* A first name alone is never saved as a new person/);

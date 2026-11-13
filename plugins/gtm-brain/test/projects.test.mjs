@@ -515,7 +515,7 @@ test("interact from a project tags the memory with it and cites the project's ow
 test("a channel created, forked or archived from a project changes that project's set; archiving clears it everywhere", () => {
   const root = brain(); const a = folder(); project(root, "--link", a, "--slug", "curriculum", "--contexts", "icp");
   lib.writeLoaded(root, ["offer"]);
-  script(root, "gtm-brain-contexts/contexts.mjs", "--new", "fresh", "Fresh", "A new channel.", "--project", "curriculum");
+  script(root, "gtm-brain-contexts/contexts.mjs", "--new", "fresh", "Fresh", "A new channel.", "--project", "curriculum", "--distinct", "no context covers this channel");
   assert.deepEqual(lib.readLoaded(root, "curriculum"), ["icp", "fresh"]); assert.deepEqual(lib.readLoaded(root), ["offer"], "the brain's set is untouched");
   script(root, "gtm-brain-remember/remember.mjs", "--by", "marta", "--content", "Seed.", "--context", "icp");
   script(root, "gtm-brain-contexts/contexts.mjs", "--fork", "icp", "icp-eu", "ICP EU", "--project", "curriculum");
@@ -529,7 +529,7 @@ test("new_context and archive_context take project through the server", async ()
   const root = brain(); const a = folder(); project(root, "--link", a, "--slug", "seo");
   const { spawn } = await import("node:child_process");
   const call = (name, args) => new Promise((res, rej) => { const p = spawn(process.execPath, [`${P}/server/server.mjs`], { env: { ...env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_SESSION_START: "1" } }); let out = ""; p.stdout.on("data", d => out += d); p.on("close", () => { const lines = out.split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); const r = lines.find(l => l.id === 2); r ? res(r.result) : rej(new Error(out)); }); p.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {} } }) + "\n"); p.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name, arguments: args } }) + "\n"); p.stdin.end(); });
-  const r = await call("new_context", { brain: root, slug: "keywords", title: "Keywords", rule: "Keyword work.", project: "seo" });
+  const r = await call("new_context", { brain: root, slug: "keywords", title: "Keywords", rule: "Keyword work.", project: "seo", distinct: "no context covers keyword work" });
   assert.doesNotMatch(r.content[0].text, /refused|error/i, r.content[0].text);
   assert.deepEqual(lib.readLoaded(root, "seo"), ["keywords"]); assert.deepEqual(lib.readLoaded(root), []);
   await call("archive_context", { brain: root, slug: "keywords", project: "seo" });
