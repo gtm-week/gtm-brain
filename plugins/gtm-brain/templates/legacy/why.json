@@ -15,5 +15,6 @@
   "0.33.10": "every brain starts with strategy.md, icp.md, voice.md and design-system.md, shown as not filled until someone fills them; documents are everyday work, no separate skill",
   "0.34.0": "every brain gets SCHEMA.md: the fields kept per person, organization and product and the relationship types, filled from notes with citations, gaps asked; update every teammate, older versions cannot commit notes that carry a relationship",
   "0.34.1": "an instruction for later work (brand rules, always or never) goes into the document that work follows instead of a note; documents are filled only through the document tool, with one question and nothing invented; a website already given is not asked again",
-  "0.34.2": "a rule about another company's brand goes to partner-brands.md, not our own design system; our own company is never listed with SCHEMA.md gaps"
+  "0.34.2": "a rule about another company's brand goes to partner-brands.md, not our own design system; our own company is never listed with SCHEMA.md gaps",
+  "0.34.3": "partner-brands.md keeps one top heading, Partner brands, with a heading per company under it"
 }
