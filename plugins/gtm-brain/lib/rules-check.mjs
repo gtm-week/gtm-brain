@@ -8,6 +8,7 @@ import { join, basename } from "node:path";
 import * as lib from "./brain.mjs";
 import { whereRows, recordedReasons, MANAGED, WHERE } from "./where.mjs";
 import { strayFolders, listDocuments, filesDir } from "./documents.mjs";
+import { readSchema } from "./schema.mjs";
 
 const git = (root, ...a) => { try { return execFileSync("git", ["--no-optional-locks", "-C", root, ...a], { encoding: "utf8", stdio: "pipe" }); } catch { return ""; } };
 const BAD_NAME = /[A-Z\s]/;
@@ -57,14 +58,41 @@ export function ruleFindings(root) {
   for (const p of top.slice(0, 10)) add("RULES.md naming", "name", p, `${p} has capitals or spaces; RULES.md says lowercase words joined by hyphens.`, [
     `Rename to ${p.split("/").slice(0, -1).concat(suggest(basename(p))).join("/")} (ask first; save with placed)`, `Keep the name as it is`]);
   if (top.length > 10) add("RULES.md naming", "name", "more", `${top.length - 10} more names with capitals or spaces.`, [`Run the check again after the first ones are fixed`]);
+
+  // SCHEMA.md: a file that cannot be read, then required fields and relationships nobody has said yet. Only briefs
+  // compiled under the current schema count: an uncompiled one has not been read for its fields yet.
+  const schema = readSchema(root);
+  if (schema.error) add("SCHEMA.md", "schema", "SCHEMA.md", `SCHEMA.md cannot be read: ${schema.error.message}`, [`Apply the proposed fix with /gtm-brain-schema`, `Fix it by hand, then save`]);
+  if (schema.schema) {
+    const contexts = lib.listContexts(root), index = lib.entityEvidenceIndex(names, contexts), gaps = [], words = x => x.replace(/_/g, " ");
+    for (const e of names.filter(n => n.status !== "archived" && n._path)) {
+      let f; try { f = lib.entityFacts(root, e.id, { registry: names, contexts, index }); } catch { continue; }
+      if (!f.schema.hash || f.stale || f.schema_behind || !f.compiled_at || !f.evidence.length) continue;
+      const filled = new Set((f.previous_fields || []).map(x => x.field));
+      const latest = new Map();
+      for (const m of f.evidence.filter(m => m.relation && m.relation.from === e.id).sort((a, b) => Date.parse(a.relation.observed_at) - Date.parse(b.relation.observed_at))) latest.set(`${m.relation.type}|${m.relation.to}`, m.relation);
+      const current = new Set([...latest.values()].filter(r => r.status === "current").map(r => r.type));
+      const fields = f.schema.fields.filter(x => x.required && !filled.has(x.name)).map(x => x.name), rels = f.schema.relations_required.filter(r => !current.has(r.type)).map(r => r.type);
+      if (fields.length || rels.length) gaps.push({ e, n: f.evidence.length, fields, rels });
+    }
+    gaps.sort((a, b) => b.n - a.n);
+    for (const g of gaps.slice(0, 10)) {
+      const asks = [...g.fields.map(x => `What is ${g.e.name}'s ${words(x)}?`), ...g.rels.map(r => `Who does ${g.e.name} ${words(r)} now?`)];
+      add("SCHEMA.md", "gap", g.e.name, `${g.e.name} (${g.e.kind}${g.e.subtype ? `, ${g.e.subtype}` : ""}) has no ${[...g.fields.map(words), ...g.rels.map(r => `current ${words(r)}`)].join(", ")}, which SCHEMA.md marks required.`, [
+        `Ask "${asks.join(" ")}" and remember the answer${g.rels.length ? " (a relationship with remember's relation block)" : ""}; the brief fills at the next compile`,
+        `Does not apply: remember a note saying so, in the person's words`,
+        `Not needed for everyone: make it optional with /gtm-brain-schema`]);
+    }
+    if (gaps.length > 10) add("SCHEMA.md", "gap", "more", `${gaps.length - 10} more with required fields missing.`, [`Run the check again after the first ones are answered`]);
+  }
   return out;
 }
 
 export function rulesReport(root) {
   const f = ruleFindings(root);
-  if (!f.length) return "Rules check: nothing to fix. Every person has a full name or was confirmed, no look-alike pair is open, and every file has a recorded reason and a RULES.md-style name.";
+  if (!f.length) return "Rules check: nothing to fix. Every person has a full name or was confirmed, no look-alike pair is open, and every file has a recorded reason and a RULES.md-style name, and no compiled brief misses a field SCHEMA.md requires.";
   const count = k => f.filter(x => k.includes(x.kind)).length;
-  const head = `Rules check: ${f.length} thing${f.length === 1 ? "" : "s"} to look at (${count(["person", "organization", "product"])} names, ${count(["folder", "files", "name"])} files and folders). Reads only; nothing was changed.`;
+  const head = `Rules check: ${f.length} thing${f.length === 1 ? "" : "s"} to look at (${count(["person", "organization", "product"])} names, ${count(["folder", "files", "name"])} files and folders, ${count(["gap", "schema"])} SCHEMA.md gaps). Reads only; nothing was changed.`;
   const body = f.map((x, i) => `${i + 1}. [${x.rule}] ${x.what}\n${x.choices.map((c, j) => `   ${String.fromCharCode(97 + j)}) ${c}`).join("\n")}`).join("\n");
-  return `${head}\n${body}\nAsk the person about one at a time, choices as numbered options, the first recommended; carry out the answer through the tool named. The rules: P1-P4 in the brain's README (How we name people), the rows and naming in RULES.md.`;
+  return `${head}\n${body}\nAsk the person about one at a time, choices as numbered options, the first recommended; carry out the answer through the tool named. The rules: P1-P4 in the brain's README (How we name people), the rows and naming in RULES.md, the required fields and relationships in SCHEMA.md.`;
 }

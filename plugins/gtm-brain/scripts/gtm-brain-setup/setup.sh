@@ -75,6 +75,8 @@ node -e 'const l=await import(process.argv[1]);l.ensureRulebookShim(".")' "$PLUG
 [ -f README.md ] || sed -e "s|{{COMPANY}}|$(esc "$COMPANY")|g" "$T/README.md" > README.md
 # Where things go: the table Codex follows and the person edits (lib/where.mjs).
 [ -f RULES.md ] || cp "$T/RULES.md" RULES.md
+# What the brain keeps about people, organizations and products, and how they relate (lib/schema.mjs).
+[ -f SCHEMA.md ] || cp "$T/SCHEMA.md" SCHEMA.md
 # strategy.md from day one: a draft document waiting for the strategic intake (gtm-brain-strategy); a file already there is the person's.
 PLUGIN_VERSION="$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$T/../.codex-plugin/plugin.json" | head -1)"
 # The other starters the same way (GTM week sync, 2026-11-13: voice and design system out of the box, filling them is offered at the
@@ -102,7 +104,7 @@ OWNER_EMAIL="$(printf '%s' "$PEOPLE_JSON" | node -e 'const p=JSON.parse(require(
 [ -n "$OWNER_NAME" ] && git config user.name "$OWNER_NAME"; [ -n "$OWNER_EMAIL" ] && git config user.email "$OWNER_EMAIL"
 # Parallel branches (worktrees) merge notes as lines and keep the newer summary: .gitattributes, post-merge.
 node -e 'const l=await import(process.argv[1]);l.ensureMergeSetup(".")' "$PLUGIN/lib/brain.mjs" 2>/dev/null || true
-if git add -- brain AGENTS.md CLAUDE.md README.md RULES.md $(for doc in strategy icp voice design-system; do [ -f "$doc.md" ] && printf "%s.md " "$doc"; done) workflows .gitignore .gitattributes .githooks && git -c commit.gpgsign=false commit -q -m "setup: $COMPANY brain (gtm-brain v0)"; then
+if git add -- brain AGENTS.md CLAUDE.md README.md RULES.md SCHEMA.md $(for doc in strategy icp voice design-system; do [ -f "$doc.md" ] && printf "%s.md " "$doc"; done) workflows .gitignore .gitattributes .githooks && git -c commit.gpgsign=false commit -q -m "setup: $COMPANY brain (gtm-brain v0)"; then
   echo "gtm-brain: brain created for $COMPANY  ·  committed"
 else
   echo "gtm-brain: brain created for $COMPANY  ·  written to disk, NOT committed (git is read-only here): say save"

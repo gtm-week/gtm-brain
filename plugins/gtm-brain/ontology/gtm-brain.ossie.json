@@ -227,6 +227,12 @@
           "description": "Coverage of a named customer list or search. Record in a separate call after capture. Complete requires every record captured and no unresolved entries. Never implies all customers are known."
         },
         {
+          "name": "relation",
+          "expression": "relation",
+          "data_type": "Opaque",
+          "description": "A typed relationship from SCHEMA.md between two entities (to may be us): status current or ended, kept over time. Ended is a new note; a wrong one is corrected with supersedes. User evidence is never replaced by a source refresh."
+        },
+        {
           "name": "meeting",
           "expression": "meeting",
           "data_type": "Opaque",
@@ -629,6 +635,50 @@
                         },
                         "required": [
                           "entity",
+                          "status",
+                          "basis",
+                          "observed_at"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "relation": {
+                        "type": "object",
+                        "properties": {
+                          "from": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "type": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "to": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "current",
+                              "ended"
+                            ]
+                          },
+                          "basis": {
+                            "type": "string",
+                            "enum": [
+                              "user",
+                              "source"
+                            ]
+                          },
+                          "observed_at": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "from",
+                          "type",
+                          "to",
                           "status",
                           "basis",
                           "observed_at"
@@ -1173,6 +1223,51 @@
                   },
                   "required": [
                     "entity",
+                    "status",
+                    "basis",
+                    "observed_at"
+                  ],
+                  "additionalProperties": false
+                },
+                "relation": {
+                  "type": "object",
+                  "description": "A SCHEMA.md relationship; see the relations reference.",
+                  "properties": {
+                    "from": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "type": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "to": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "current",
+                        "ended"
+                      ]
+                    },
+                    "basis": {
+                      "type": "string",
+                      "enum": [
+                        "user",
+                        "source"
+                      ]
+                    },
+                    "observed_at": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "type",
+                    "to",
                     "status",
                     "basis",
                     "observed_at"
@@ -2000,6 +2095,37 @@
                           }
                         },
                         "required": [
+                          "text",
+                          "memories"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "fields": {
+                      "type": "array",
+                      "description": "Optional: one cited value per SCHEMA.md field listed in entity_facts.schema; never a field without notes.",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "field": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          },
+                          "memories": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "minItems": 1
+                          },
+                          "interpretation": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "field",
                           "text",
                           "memories"
                         ],

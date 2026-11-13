@@ -48,6 +48,10 @@ rule 11. Adding, filling or changing one: follow [documents](references/document
 writes `strategy.md`, `icp.md`, `voice.md` and `design-system.md` as starters; one shown as
 `[not filled]` holds no guidance yet.
 
+What the brain keeps about each person, organization and product, and the relationship types,
+are in `SCHEMA.md` (the chat start lists them; `/gtm-brain-schema` changes them). A relationship
+is a note with a `relation` block: follow [relationships](references/relations.md).
+
 A file in the chat (a path, a dropped PDF or image, "save this deck", "add this to the design
 system"): follow [files](references/files.md). No skill to invoke; it is part of everyday work.
 

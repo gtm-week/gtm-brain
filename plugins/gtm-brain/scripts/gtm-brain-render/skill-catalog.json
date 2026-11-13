@@ -72,6 +72,14 @@
     "example": "From now on, always ask before tagging a client."
   },
   {
+    "id": "gtm-brain-schema",
+    "group": "knowledge",
+    "featured": false,
+    "title": "Change what we keep",
+    "description": "See and edit the fields kept for people, companies and products, and how they relate.",
+    "example": "Every company must have a budget owner."
+  },
+  {
     "id": "gtm-brain-project",
     "group": "projects",
     "featured": true,

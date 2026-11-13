@@ -533,7 +533,8 @@ handoff from another assistant, offered once when the opening lines say one is w
 brain's rules: when the opening lines say a newer GTM Brain is available, offer it once in one line; the
 dashboard shows the same) `gtm-brain-skill` (a repeated workflow kept as a skill in this brain, installed from GitHub,
 listed or removed; offered once when the same multi-step work was done twice), `gtm-brain-rules` (show and change RULES.md: where files go and the
-brain's own saving rules), and `gtm-brain-use-brain` (everyday work: loading, creating and editing
+brain's own saving rules), `gtm-brain-schema` (show and change SCHEMA.md: the fields kept per
+person, organization and product, organization subtypes and relationship types), and `gtm-brain-use-brain` (everyday work: loading, creating and editing
 contexts, landing a file beside its owner, the dashboard, and the documents the work must follow:
 add, fill, list, update, check a draft against them). Natural requests
 such as "remember this", "load pipeline" and "what should I do" still work.

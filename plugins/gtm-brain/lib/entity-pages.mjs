@@ -4,7 +4,8 @@ import { readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { MemoryIndex } from './memory-index.mjs';
-import { identity, editedBody } from './entities.mjs';
+import { identity, editedBody, schemaFacts } from './entities.mjs';
+import { readSchema } from './schema.mjs';
 import { entityStamp } from './entity-stamp.mjs';
 import { memoryStamp } from './memory-journal.mjs';
 import * as lib from './brain.mjs';
@@ -22,8 +23,8 @@ export function refreshIndexedPages(root, registry, publish, { readOnly = false 
   let saved; try { saved = JSON.parse(readFileSync(path, 'utf8')); } catch {}
   const contexts = lib.listContexts(root, { includeMemories: false });
   const sources = () => digest(contexts.map(c => [c.slug, memoryStamp(join(c.dir, 'context.md'))?.key, memoryStamp(join(c.dir, 'memories.jsonl'))?.key]));
-  const sourceRevision = sources();
-  if (!readOnly && saved?.format === 1 && saved.sources === sourceRevision && saved.identities === entityStamp(root)) return [];
+  const sourceRevision = sources(), schemaRevision = readSchema(root).schema?.hash || readSchema(root).error?.message || null;
+  if (!readOnly && saved?.format === 1 && saved.sources === sourceRevision && saved.identities === entityStamp(root) && (saved.schema ?? null) === schemaRevision) return [];
   // A source write must not fail merely because a background view currently
   // reads the cache. Readers keep their short retry window; writers wait for it.
   const index = new MemoryIndex(root, { lockTimeoutMs: readOnly ? 1000 : 30000 }), changed = [], checkpoints = {};
@@ -49,7 +50,7 @@ export function refreshIndexedPages(root, registry, publish, { readOnly = false 
     for (const e of registry.filter(e => readOnly || e._path)) {
       const previous = saved?.pages?.[e.id], revision = version.get(JSON.stringify(e.id))?.version || 0;
       const notes = editedBody(e) ? { path: e._path, markdown: e._body } : null;
-      const signatureFor = (related, scoped) => digest([identity(e), related, scoped, notes, revision, e._fm?.compilation, e._fm?.compiled_as_of, e._fm?.compiled_at]);
+      const signatureFor = (related, scoped) => digest([identity(e), related, scoped, notes, revision, e._fm?.compilation, e._fm?.compiled_as_of, e._fm?.compiled_at, e._fm?.compiled_fields, e._fm?.compiled_schema, schemaRevision]);
       // Most writes do not change this entity's evidence, its known neighbors or
       // its context covers. Check those recorded dependencies before any history
       // query. The index bumps both old and new owners on every relink/correction.
@@ -69,14 +70,14 @@ export function refreshIndexedPages(root, registry, publish, { readOnly = false 
       if (!readOnly && saved?.pages?.[e.id]?.signature === signature && saved.pages[e.id].text === digest(e._text)) {
         checkpoints[e.id] = saved.pages[e.id]; continue;
       }
-      const facts = pageFacts(e, related, scoped, notes, records);
+      const facts = pageFacts(root, e, related, scoped, notes, records);
       const text = publish(e, facts, changed, index);
       checkpoints[e.id] = { signature, text: digest(text), contexts: scoped.map(c => c.context), related: related.map(e => e.id) }; refreshed++;
     }
     if (readOnly) return changed;
     const temporary = path + '.' + process.pid + '.tmp';
     if (sources() !== sourceRevision) throw new Error('Context files changed during entity refresh. Retry the save.');
-    writeFileSync(temporary, JSON.stringify({ format: 1, epoch, pages: checkpoints, sources: sourceRevision, identities: entityStamp(root), refreshed, checked: registry.length, at: new Date().toISOString() }));
+    writeFileSync(temporary, JSON.stringify({ format: 1, epoch, pages: checkpoints, sources: sourceRevision, identities: entityStamp(root), schema: schemaRevision, refreshed, checked: registry.length, at: new Date().toISOString() }));
     renameSync(temporary, path);
     return changed;
   } finally { index.close(); }
@@ -85,10 +86,10 @@ export function refreshIndexedPages(root, registry, publish, { readOnly = false 
 // Hash every effective record in file order, retaining only a bounded timeline,
 // a few recent notes per context and the citations required by a saved brief.
 // The snapshot hash is byte-compatible with the full entity_facts reader.
-function pageFacts(e, related, contexts, notes, records) {
+function pageFacts(root, e, related, contexts, notes, records) {
   const hash = createHash('sha256');
   hash.update('{"identity":' + JSON.stringify(identity(e)) + ',"related_identities":' + JSON.stringify(related) + ',"contexts":[');
-  const cited = new Set((JSON.stringify(e._compilation) || '').match(/m_[0-9a-f]{6,12}/g) || []);
+  const cited = new Set(((JSON.stringify(e._compilation) || '') + (e._fm?.compiled_fields || '')).match(/m_[0-9a-f]{6,12}/g) || []);
   const latest = [], retained = new Map(); let total = 0, latestAt = null;
   for (const [i, c] of contexts.entries()) {
     if (i) hash.update(',');
@@ -99,7 +100,7 @@ function pageFacts(e, related, contexts, notes, records) {
       if (count++) hash.update(',');
       hash.update(row.raw);
       const m = JSON.parse(row.raw);
-      if (cited.has(m.id)) retained.set(m.id, m);
+      if (cited.has(m.id) || m.relation || m.customer) retained.set(m.id, m);
       if (m.retracts) recent(withdrawals, m, 20);
       else {
         total++; recent(local, m, 3); if (row.timeline_visible) recent(latest, m, ENTITY_TIMELINE_LIMIT);
@@ -116,6 +117,6 @@ function pageFacts(e, related, contexts, notes, records) {
   for (const c of contexts) c.memories = memories.filter(m => m.context === c.context);
   const stale = total > 0 ? e._fm?.compiled_as_of !== as_of : !!e._compilation && e._fm?.compiled_as_of !== as_of;
   return { entity: { ...identity(e), path: e._path }, related_identities: related, as_of, stale, compiled_at: e._fm?.compiled_at || null,
-    latest_evidence_at: latestAt, contexts, previous: e._compilation || null, file_notes: notes,
+    latest_evidence_at: latestAt, contexts, previous: e._compilation || null, ...schemaFacts(root, e, total), file_notes: notes,
     evidence: memories.filter(m => !m.retracts), timeline: lib.memoryTimeline(latest), timeline_total: total };
 }
