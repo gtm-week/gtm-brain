@@ -72,4 +72,5 @@ says ask, ask once, everything in one question.
   should have gone to Strategy", "from now on always ask before ..."), fix the note first, then offer
   once to add a rule: "Add to RULES.md: <the rule in one line>?" with Yes, add it and No, just this
   once. On yes, add the line at the end of the `## Our rules` section of `RULES.md`, then call
-  `save`. One line per rule, in the person's words.
+  `save`. One line per rule, in the person's words. To see or change the rules on purpose, the
+  person says `/gtm-brain-rules`.

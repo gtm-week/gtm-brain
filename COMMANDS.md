@@ -572,6 +572,10 @@ block meeting capture or compilation. The system-scheduler entry point is
 
 ## RULES.md
 
+`/gtm-brain-rules` (*"show my rules"*, *"from now on ..."*, *"change where X goes"*) shows the file
+and adds, changes or removes one row or one line in the person's words, then calls `save`. A rule
+cannot switch off APPROVE, the protected files or W1.
+
 `RULES.md` at the brain root is the brain's own rules, in two sections. "Our rules" holds its people's
 rules for what Codex saves and asks, one line each; the chat start prints them after the shared saving
 rules (R1, R2). "Where things go" is the table of where every file goes: rules at the root, brand in

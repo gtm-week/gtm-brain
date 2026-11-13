@@ -64,6 +64,14 @@
     "example": "What do we know about our target customers?"
   },
   {
+    "id": "gtm-brain-rules",
+    "group": "knowledge",
+    "featured": false,
+    "title": "Change our rules",
+    "description": "See and edit where files go and what Codex saves and asks.",
+    "example": "From now on, always ask before tagging a client."
+  },
+  {
     "id": "gtm-brain-project",
     "group": "projects",
     "featured": true,
