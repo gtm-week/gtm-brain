@@ -35,7 +35,7 @@ evidence must stay labeled as such and cannot establish a real person's current 
 
 ## Compile the understanding
 
-Prepare a `brief` with three fields:
+Prepare a `brief` with three fields, plus `fields` when SCHEMA.md lists any for this kind:
 
 - `overview`: a short list of claims summarizing the supported current picture across contexts.
 - `contexts`: one entry for every context with effective evidence. Each entry has `context`
@@ -46,7 +46,18 @@ Prepare a `brief` with three fields:
   these appear with citations in the person details. Team membership in workplace info
   alone does not establish employment. Use an empty list if the evidence
   establishes only shared mentions. Never infer employment or a commercial relationship
-  from co-occurrence, an email domain, or the number of notes.
+  from co-occurrence, an email domain, or the number of notes. Relationships recorded with a
+  `relation` or `customer` block render on the page by themselves; list here only what the
+  notes state in prose and no such record holds.
+- `fields` (optional): the SCHEMA.md fields `entity_facts` lists in `schema.fields` for this
+  entity's kind and subtype, one entry each: `{ "field": "role", "text": "Head of Sales at
+  Northwind", "memories": ["m_..."] }`. The text is the value as the notes state it. Fill
+  only fields the notes support; leave the others out (the page shows them as not recorded
+  and the required ones as gaps to ask). When notes disagree, name both values and their
+  dates in one entry, citing both. A note saying a field does not apply fills it with "does
+  not apply" and its citation. Never fill a value from an email domain, a co-mention or what
+  seems likely (W1). `schema_behind: true` means SCHEMA.md changed since the last brief:
+  compile it again even when the evidence did not change.
 
 Each claim is `{ "text": "...", "memories": ["m_..."], "interpretation": false }`.
 `interpretation` is optional; set it to true for an assessment or inference. Cite the memory

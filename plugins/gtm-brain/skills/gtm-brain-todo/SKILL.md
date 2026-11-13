@@ -26,7 +26,8 @@ Call `query` (status), then `query` on `memories` with `filters: { "kind": "ques
 for current open questions. Load relevant contexts to read their summaries and newer
 notes. Use targeted `query` searches for the people and work items those results name.
 Respect result limits; do not describe a truncated list as everything pending.
-Candidates: open questions; follow-ups and dates in summaries and their source memories; a pending
+Candidates: open questions; follow-ups and dates in summaries and their source memories; at most two
+required fields SCHEMA.md asks for that nobody has said (`query` rules, its SCHEMA.md findings); a pending
 workplace proposal; tools not connected; when Slack is connected and its saved scope allows
 a scan, the Slack messages waiting on the person's reply, read live by
 [Slack replies](references/slack-replies.md). Never a summary that is behind: those update by

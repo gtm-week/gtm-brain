@@ -192,6 +192,7 @@ brain/contexts/<context>/memories.jsonl   the notes, one per line
 README.md                            what goes where; setup writes it, upgrade refreshes it while unedited
 strategy.md, icp.md, voice.md, ...  your documents (four from day one), files in a folder of the same name
 RULES.md                             where every file goes and your own saving rules; you edit it
+SCHEMA.md                            fields kept per person, organization, product; relationship types
 projects/<project>/                  one folder per project (an event, a campaign), its deliverables inside
 work/home/index.html                 the dashboard
 ```

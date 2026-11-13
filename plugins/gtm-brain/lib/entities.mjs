@@ -6,6 +6,7 @@ import * as lib from "./brain.mjs";
 import { acquireProcessLock, releaseProcessLock } from './process-lock.mjs';
 import { refreshIndexedPages } from './entity-pages.mjs';
 import { hasMemoryIndex } from './memory-index-store.mjs';
+import { readSchema, fieldsFor, requiredRelations, kindHash, US } from './schema.mjs';
 
 export const ENTITY_FORMAT = "gtm-brain-entity-v2";
 // Brains written before the GTM OS -> GTM Brain rename carry the gtm-os names; migration rewrites them.
@@ -334,6 +335,16 @@ export function entityEvidenceIndex(registry, contexts) {
   evidenceSlices.set(index, slices);
   return index;
 }
+/* SCHEMA.md for one entity: the fields and required relationships of its kind, whether its brief was compiled
+   under another schema (refilled, never hidden: as_of stays about evidence only), and the cited values kept. */
+export function schemaFacts(root, e, evidenceCount) {
+  const read = readSchema(root);
+  const schema = read.schema ? { fields: fieldsFor(read.schema, e.kind, e.subtype), relations_required: requiredRelations(read.schema, e.kind).map(r => ({ type: r.type, to: r.to, about: r.about })), hash: kindHash(read.schema, e.kind, e.subtype) }
+    : { fields: [], relations_required: [], hash: null, error: read.error?.message || null };
+  const schema_behind = !!schema.hash && schema.fields.length > 0 && evidenceCount > 0 && e._fm?.compiled_schema !== schema.hash;
+  let previous_fields = null; try { previous_fields = e._fm?.compiled_fields ? JSON.parse(e._fm.compiled_fields) : null; } catch {}
+  return { schema, schema_behind, previous_fields: Array.isArray(previous_fields) ? previous_fields : null };
+}
 export function entityFacts(root, name, { registry = lib.readNames(root), contexts = lib.listContexts(root), index = entityEvidenceIndex(registry, contexts) } = {}) {
   const e = resolveEntity(registry, name);
   if (!e) throw new Error(`Unknown or ambiguous entity: ${name}`);
@@ -361,8 +372,9 @@ export function entityFacts(root, name, { registry = lib.readNames(root), contex
     try { validateBrief({ evidence, contexts: relevant }, e._compilation); }
     catch (error) { invalid(e._path, "compilation", error.message, "reconcile the brief's citations with current context memories, preserving the edited text for review"); }
   }
+  const { schema, schema_behind, previous_fields } = schemaFacts(root, e, evidence.length);
   return { entity: { ...identity(e), path: e._path || null }, related_identities, as_of, stale, compiled_at: e._fm?.compiled_at || null, latest_evidence_at: newest(evidence), contexts: relevant,
-    previous: e._compilation || null, file_notes, evidence,
+    previous: e._compilation || null, previous_fields, schema, schema_behind, file_notes, evidence,
     timeline: lib.memoryTimeline(evidence) };
 }
 
@@ -416,6 +428,21 @@ function validateBrief(facts, brief) {
   if (facts.evidence.length && !brief.overview.length) fail("overview is required when evidence exists");
 }
 
+/* One cited value per field SCHEMA.md lists for this kind; a field nobody has said is left out, never guessed. */
+function validateFields(facts, fields) {
+  const fail = message => { throw new Error(`Invalid entity brief: ${message}`); };
+  if (!Array.isArray(fields)) fail("fields must be a list");
+  if (fields.length && !facts.schema.hash) fail(`fields need a readable SCHEMA.md${facts.schema.error ? ` (${facts.schema.error})` : ""}`);
+  const allowed = new Set(facts.schema.fields.map(f => f.name)), seen = new Set(), evidence = new Set(facts.evidence.map(m => m.id));
+  for (const f of fields) {
+    if (!f || typeof f !== "object" || Array.isArray(f) || !Object.keys(f).every(k => ["field", "text", "memories", "interpretation"].includes(k)) || typeof f.field !== "string" || typeof f.text !== "string" || !f.text.trim() || /[\u2013\u2014\u2015\u2212]/.test(f.text) || !strings(f.memories) || !f.memories.length) fail("each field needs field, plain text and supporting memory IDs");
+    if (!allowed.has(f.field)) fail(`${f.field} is not a field of this ${facts.entity.kind} in SCHEMA.md (it lists ${[...allowed].join(", ") || "none"}); SCHEMA.md may have changed: read entity_facts again`);
+    if (seen.has(f.field)) fail(`${f.field} is given twice`);
+    seen.add(f.field);
+    for (const id of f.memories) if (!evidence.has(id)) fail(`${id} is not current evidence about this entity`);
+  }
+}
+
 export function compileEntity(root, name, { as_of, by, brief }) {
   return withEntityLock(root, () => applyCompilation(root, name, { as_of, by, brief }));
 }
@@ -424,11 +451,16 @@ function applyCompilation(root, name, { as_of, by, brief }) {
   if (facts.as_of !== as_of) throw new Error("not applied: entity evidence or identity changed; read entity_facts again");
   const author = lib.teamHandle(root, by) || (["schedule", "background"].includes(by) ? by : null);
   if (!author) throw new Error("by must identify a team member, schedule or background");
+  // SCHEMA.md fields are kept beside the brief, never inside it: an older plugin reading the brief still sees its three lists.
+  const { fields = [], ...core } = brief || {};
+  brief = core;
   validateBrief(facts, brief);
+  validateFields(facts, fields);
   lib.writeNames(root, registry);
   // Migration preserves IDs. Re-read the file metadata before updating the compilation.
   const saved = lib.readNames(root).find(n => n.id === e.id);
-  const fm = { ...saved._fm, compiled_as_of: as_of, compiled_at: stamp(), compiled_by: author, compilation: JSON.stringify(brief) };
+  const fm = { ...saved._fm, compiled_as_of: as_of, compiled_at: stamp(), compiled_by: author, compilation: JSON.stringify(brief),
+    ...(facts.schema.hash ? { compiled_fields: JSON.stringify(fields), compiled_schema: facts.schema.hash } : {}) };
   atomic(join(root, saved._path), entityText(saved, fm, saved._body));
   refreshEntityPages(root);
   return { path: saved._path, note: lib.commit(root, lib.ENTITIES_PATHS, `compile entity: ${saved.name} by ${author}`).note };
@@ -470,6 +502,54 @@ function nameProvenance(facts, memories, citation, source) {
   return out;
 }
 
+const words = s => String(s).replace(/_/g, " ");
+/* SCHEMA.md's fields for this kind: each compiled value with its notes, "not recorded" for the rest, and the
+   required ones nobody has said yet as gaps, each with the question to ask. */
+function fieldsSection(facts, all, citation) {
+  const fields = facts.schema?.fields || [];
+  if (facts.schema?.error) return [`\n## Fields\n\nSCHEMA.md cannot be read, so no fields are shown: ${md(facts.schema.error)}`];
+  if (!fields.length) return [];
+  const name = md(facts.entity.name), filled = new Map((facts.stale ? [] : facts.previous_fields || []).filter(f => f.memories.every(id => all.has(id))).map(f => [f.field, f]));
+  const out = ["\n## Fields"];
+  if (!facts.compiled_at || facts.stale || facts.schema_behind && !filled.size) {
+    out.push(`\nFields fill at the next compile.${fields.some(f => f.required) ? ` Required in SCHEMA.md: ${fields.filter(f => f.required).map(f => words(f.name)).join(", ")}.` : ""}`);
+    return out;
+  }
+  out.push("\n" + fields.map(f => { const v = filled.get(f.name); return `- ${md(words(f.name))[0].toUpperCase()}${md(words(f.name)).slice(1)}: ${v ? `${v.interpretation ? "Interpretation: " : ""}${md(v.text)} ${v.memories.map(citation).join(" ")}` : "not recorded"}`; }).join("\n"));
+  const current = recordedRelations(facts).filter(r => r.status === "current" && r.from === facts.entity.id).map(r => r.type);
+  const gaps = [...fields.filter(f => f.required && !filled.has(f.name)).map(f => ({ what: words(f.name), ask: `What is ${name}'s ${words(f.name)}?` })),
+    ...(facts.schema.relations_required || []).filter(r => !current.includes(r.type)).map(r => ({ what: `a current ${words(r.type)}`, ask: `Who does ${name} ${words(r.type)} now?` }))];
+  if (facts.schema_behind) out.push("\nSCHEMA.md changed since this brief was compiled; the fields refill at the next compile.");
+  if (gaps.length) out.push(`\nGaps (required in SCHEMA.md): ${gaps.map(g => g.what).join(", ")}. Ask: ${gaps.map(g => `"${g.ask}"`).join(" ")}`);
+  return out;
+}
+/* The relation notes about this entity, grouped by (from, type, to): the latest the person confirmed, else the latest observed. */
+function recordedRelations(facts) {
+  const groups = new Map();
+  for (const m of facts.evidence.filter(m => m.relation && !m.retracts)) {
+    const key = JSON.stringify([m.relation.from, m.relation.type, m.relation.to]);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(m);
+  }
+  return [...groups.values()].map(notes => {
+    notes.sort((a, b) => Date.parse(b.relation.observed_at) - Date.parse(a.relation.observed_at) || Date.parse(b.at) - Date.parse(a.at));
+    const chosen = notes.filter(m => m.relation.basis === "user").sort((a, b) => Date.parse(b.at) - Date.parse(a.at))[0] || notes[0];
+    return { ...chosen.relation, memory: chosen.id, notes };
+  });
+}
+function relationLines(facts, registry, citation, scope) {
+  const nameOf = id => id === US ? "us" : registry.find(e => e.id === id || e.previous_ids?.includes(id))?.name || id;
+  const rows = recordedRelations(facts).filter(r => !scope || r.notes.some(m => m.context === scope));
+  const line = r => `- ${md(nameOf(r.from))} ${md(words(r.type))} ${md(nameOf(r.to))} (${r.status}, ${r.basis === "user" ? "said by the person" : "from a source"}, observed ${String(r.observed_at).slice(0, 10)}) ${citation(r.memory)}`;
+  const out = rows.filter(r => r.status === "current").map(line);
+  const ended = rows.filter(r => r.status === "ended");
+  if (ended.length) out.push("", "Ended:", "", ...ended.map(line));
+  const customer = facts.evidence.filter(m => m.customer && !m.retracts && m.customer.entity === facts.entity.id).sort((a, b) => Date.parse(b.customer.observed_at) - Date.parse(a.customer.observed_at));
+  const said = customer.find(m => m.customer.basis === "user") || customer[0];
+  if (said) out.unshift(`- Customer status: ${md(words(said.customer.status))} (${said.customer.basis === "user" ? "said by the person" : "from a source"}, observed ${String(said.customer.observed_at).slice(0, 10)}) ${citation(said.id)}`);
+  return out;
+}
+
 function renderBrief(facts, brief, evidence, registry, scope) {
   if (scope && !facts.contexts.some(c => c.context === scope)) throw new Error(`No evidence about ${facts.entity.name} in ${scope}`);
   const all = new Map(facts.contexts.flatMap(c => c.memories).map(m => [m.id, m]));
@@ -485,6 +565,7 @@ function renderBrief(facts, brief, evidence, registry, scope) {
   if (facts.entity.not_same.length) out.push(`\nKept separate from: ${facts.entity.not_same.map(md).join(", ")}.`);
   if (!scope) out.push(...nameProvenance(facts, [...all.values()], citation, source));
   if (!scope) out.push("\n## Overview", brief?.overview.length ? "\n" + claims(brief.overview) : "\nNo current synthesis yet. The context evidence below preserves what was recorded and where it applies.");
+  if (!scope) out.push(...fieldsSection(facts, all, citation));
   out.push("\n## By context");
   const contexts = facts.contexts.filter(c => !scope || c.context === scope);
   if (!contexts.length) out.push("\nNo context evidence recorded yet.");
@@ -502,8 +583,11 @@ function renderBrief(facts, brief, evidence, registry, scope) {
     for (const m of c.memories.filter(m => m.retracts)) out.push(`\nWithdrawal: ${md(m.content)} ${citation(m.id)}`);
   }
   out.push("\n## Relationships");
+  const recorded = relationLines(facts, registry, citation, scope);
+  if (recorded.length) out.push("\n" + recorded.join("\n"));
   const relationships = brief?.relationships.filter(c => !scope || c.memories.every(id => all.get(id).context === scope)) || [];
-  out.push(relationships.length ? "\n" + claims(relationships) : "\nNo compiled relationship claims. Shared mentions alone do not establish a relationship.");
+  if (relationships.length) out.push(recorded.length ? "\nAlso stated in notes:\n\n" + claims(relationships) : "\n" + claims(relationships));
+  if (!recorded.length && !relationships.length) out.push("\nNo recorded or compiled relationships. Shared mentions alone do not establish a relationship.");
   const selected = scope ? facts.evidence.filter(m => m.context === scope).sort((a, b) => Date.parse(b.at) - Date.parse(a.at)) : evidence;
   const mentions = lib.createMentionMatcher(registry);
   const peers = new Set(scope ? selected.flatMap(mentions).filter(n => n !== facts.entity.name) : facts.related_identities.map(n => n.name));
@@ -525,7 +609,7 @@ function renderBrief(facts, brief, evidence, registry, scope) {
 
 export function staleEntities(root) {
   const registry = lib.readNames(root), contexts = lib.listContexts(root), index = entityEvidenceIndex(registry, contexts);
-  return registry.filter(e => e.status !== "archived").map(e => entityFacts(root, e.id, { registry, contexts, index })).filter(f => f.stale).map(f => ({ id: f.entity.id, name: f.entity.name, latest_evidence_at: f.latest_evidence_at,
+  return registry.filter(e => e.status !== "archived").map(e => entityFacts(root, e.id, { registry, contexts, index })).filter(f => f.stale || f.schema_behind).map(f => ({ id: f.entity.id, name: f.entity.name, latest_evidence_at: f.latest_evidence_at, schema_behind: f.schema_behind,
     latest_change_at: [newest(f.contexts.flatMap(c => c.memories)), registry.find(e => e.id === f.entity.id)._fm?.updated_at].filter(Boolean).sort((a, b) => Date.parse(b) - Date.parse(a))[0],
     compiled_at: f.compiled_at, memories: f.evidence.length }));
 }

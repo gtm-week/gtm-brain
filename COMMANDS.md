@@ -35,7 +35,7 @@ The sections below document the underlying operations, tools, and script paths f
 They are not additional discoverable skills. Tools show outcomes such as "Remembering" or
 "Searching the brain" in chat. Review proposals on the read-only dashboard. APPROVE is a choice in the form `approve_change` shows; in a chat nothing else applies it.
 Scripts retain their paths for terminal use with
-`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.33.10`.
+`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.34.0`.
 
 Legend for "writes": what files the command changes. Nothing else is ever touched.
 
@@ -568,6 +568,32 @@ Daily maintenance can refresh meeting sources and calendar references before com
 summaries. Configure capture scopes and timing in chat. A failed calendar refresh does not
 block meeting capture or compilation. The system-scheduler entry point is
 `scripts/gtm-brain-schedule/daily-run.mjs <brain> <confirmed-handle>` under the installed plugin.
+
+## SCHEMA.md
+
+`SCHEMA.md` at the brain root says what the brain keeps about each person, organization and
+product, and how they relate. Each kind has a table of fields (`| Field | What it means | Required |`);
+organizations have subtypes (`### Subtypes`) with fields of their own; `## Relationships` lists the
+types (`| Type | From | To | What it means | Required |`, `us` = our company, `customer_of` = the
+customer block). Setup writes it; the chat start lists it in one digest, and reports a file that
+cannot be read with a fix per line, leaving it unchanged (`lib/schema.mjs`). The kinds are fixed in
+0.34.0: person, organization, product.
+
+Field values are never stored in SCHEMA.md: the background entity compile fills `fields` in each
+brief from the notes, each value citing them (`compiled_fields` beside `compilation` in the entity
+file), and the page shows the required ones nobody has said as Gaps with the question to ask. A
+SCHEMA.md edit refills the briefs of that kind (at most 20 per pass), never hiding the old ones.
+
+A relationship is a note with a `relation` block on `remember`: `{from, type, to, status: current |
+ended, basis: user | source, observed_at, reference?}`, the type checked against SCHEMA.md when it is
+written. "Ended" is a new note; a correction uses `supersedes` / `retracts`; a source never replaces
+what the person said. `query` object `relations` (search = an entity, filters.type) shows each one's
+current state, history and disagreeing sources. `query` object `rules` lists entities with a compiled
+brief missing a required field or relationship.
+
+`/gtm-brain-schema` (*"what do we keep about people"*, *"every company must have a budget owner"*,
+*"investors are a subtype"*) shows the file and adds, renames or removes one row in the person's
+words, then calls `save`. A relationship rename keeps the old name in `Was called`.
 
 ## RULES.md
 

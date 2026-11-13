@@ -16,6 +16,11 @@ every chat and follows it over its defaults:
   client", "notes about pricing go to Our offer"), one line each. Codex offers to add one when you
   correct how something was saved.
 
+[SCHEMA.md](SCHEMA.md) says what the brain keeps about each person, organization and product (a
+role, a website, an industry) and how they relate (works at, partner of). Codex fills the fields
+from your notes, citing them, and asks about the required ones nobody has said. Say
+`/gtm-brain-schema` to change it.
+
 Projects (an event, a campaign, a client) live in `projects/`, each in one folder with everything
 made for it. Processes that run over time, with steps, are in `workflows/`.
 

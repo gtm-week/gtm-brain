@@ -17,6 +17,7 @@ editor opens it.
 | A context's summary and rules | `brain/contexts/<context>/context.md` | the summary: the compile run; the rules: you, through Codex |
 | People, companies, products | `brain/entities/*.md` | Codex; you may edit the Markdown by hand |
 | Where files go, your own rules | `RULES.md` | you; Codex follows it |
+| What the brain keeps per person, organization and product, and relationship types | `SCHEMA.md` | you; Codex fills the fields from notes |
 | Your documents (strategy, ICP, tone of voice, design system, pricing) | `<name>.md` at the top (the first four from day one), files in a folder of the same name | you or Codex |
 | Projects (an event, a campaign, a client) | `projects/<project>/` | you or Codex |
 | Rules Codex follows in this folder | `AGENTS.md`, `CLAUDE.md` | GTM Brain; refreshed on update, never edit |
@@ -129,6 +130,7 @@ made there carry the project's tag, and everything stays searchable from the bra
 | Company profile, team, tools, settings | say it in chat; Codex shows the change and applies it only when you choose APPROVE |
 | What Codex saves and asks | your own rules under "Our rules" in `RULES.md`, one line each; Codex offers to add one when you correct a save, and yours win over the defaults |
 | Where files go | `/gtm-brain-rules`, or edit the rows under "Where things go" in `RULES.md` |
+| What the brain keeps (fields, subtypes, relationship types) | `/gtm-brain-schema`, or edit `SCHEMA.md`; briefs refill in the background |
 | How Codex works in a context | "change the rule of <context> to ..." |
 | A rule the work must follow (tone of voice, pricing, ICP) | write it as a document: `<name>.md` at the top, then "add <name>.md as a document" |
 | A recurring process with steps | "start the outbound workflow", or describe a new one; see `workflows/` |

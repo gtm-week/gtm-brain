@@ -100,7 +100,7 @@ export function whereLine(root) {
    the brain, no second store). whyHere reads those lines back; unplacedHint names new files that
    arrived without one. Rows are cited by number and their What text, so a reordered table still reads right. */
 export const WHY_TRAILER = "gtm-brain-why";
-export const MANAGED = p => /^(brain|work|\.githooks|\.agents)\//.test(p) || ["README.md", RULES, OLD_WHERE, "AGENTS.md", "CLAUDE.md", ".gitignore", ".gitattributes"].includes(p);
+export const MANAGED = p => /^(brain|work|\.githooks|\.agents)\//.test(p) || ["README.md", RULES, OLD_WHERE, "SCHEMA.md", "AGENTS.md", "CLAUDE.md", ".gitignore", ".gitattributes"].includes(p);
 const clean = p => String(p || "").trim().replace(/^\.\//, "").replace(/\/+$/, "");
 const oneLine = s => String(s || "").replace(/\s+/g, " ").trim();
 

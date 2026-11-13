@@ -1,7 +1,8 @@
 # Customer discovery, inspection and refresh
 
 Customer is an evidenced relationship of a person or company, not a new entity kind or
-context. Identity lives in entities; facts and source coverage live in context memories.
+context. SCHEMA.md lists it as `customer_of`; it is always written with the `customer` block
+below, never with `relation` ([relationships](relations.md)). Identity lives in entities; facts and source coverage live in context memories.
 Use the existing sales/account context when appropriate, otherwise Target customers (`icp`).
 
 ## Read first

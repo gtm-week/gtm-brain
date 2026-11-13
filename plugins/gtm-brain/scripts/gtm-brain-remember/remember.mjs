@@ -110,6 +110,10 @@ const problems = entries.map((e, i) => {
   if (customerErrors.length) return `${at(n)}${customerErrors.join("; ")}`;
   try { lib.guardCustomerCorrection(root, ctx, { ...e, source: sourceOf(e) }); }
   catch (err) { return `${at(n)}${err.message}`; }
+  const relationErrors = lib.validateRelationEvidence({ ...e, source: sourceOf(e) }, { stored: false });
+  if (relationErrors.length) return `${at(n)}${relationErrors.join("; ")}`;
+  try { lib.guardRelationCorrection(root, ctx, { ...e, source: sourceOf(e) }); }
+  catch (err) { return `${at(n)}${err.message}`; }
   // a correction points at a note that exists, in this context: readers resolve supersedes and
   // retracts per context, so a pointer into another one corrects nothing and the brain says both
   for (const [field, verb] of [["supersedes", "replace"], ["retracts", "withdraw"]]) {
@@ -173,7 +177,7 @@ for (let i = 0; i < entries.length; i++) {
   // P3: a one-word name in new_names counts only after it was held and asked about ("Max who?"); listing it
   // up front skips the question (2026-11-12, Codex sent new_names ["Max"] on the first try).
   const confirmed = list(e.new_names).map(mapped).filter(name => /\s/.test(String(name).trim()) || mappedCompanies.includes(name) || wasAsked(name));
-  const { people, added, similar, unnamed, inferred, mentions } = lib.normalisePeople(root, [...list(e.people).map(mapped), ...(e.meeting?.participants || []).map(p => p.name), ...mappedCompanies, ...(customerName ? [customerName] : []), ...(preparedAssets.has(i) ? [preparedAssets.get(i).entity] : [])], { confirmedNew: confirmed, companies: mappedCompanies, trusted: [...(customerName ? [customerName] : []), ...(preparedAssets.has(i) ? [preparedAssets.get(i).entity] : [])] });
+  const { people, added, similar, unnamed, inferred, mentions } = lib.normalisePeople(root, [...list(e.people).map(mapped), ...(e.meeting?.participants || []).map(p => p.name), ...mappedCompanies, ...(customerName ? [customerName] : []), ...(e.relation ? [e.relation.from, e.relation.to].filter(x => x && x !== "us").map(mapped) : []), ...(preparedAssets.has(i) ? [preparedAssets.get(i).entity] : [])], { confirmedNew: confirmed, companies: mappedCompanies, trusted: [...(customerName ? [customerName] : []), ...(preparedAssets.has(i) ? [preparedAssets.get(i).entity] : [])] });
   // a bare "Thursday" means nothing next week: the note carries the date, or the person is asked which
   const dated = e.retracts ? [] : dots.relativeDates(e.content), sourced = !!e.meeting || lib.parseSources(e.sources).some(s => !isChatSource(s));
   if (similar.length || unnamed.length || dated.length) {
@@ -199,6 +203,15 @@ for (let i = 0; i < entries.length; i++) {
       JSON.stringify(m.customer.reference || null) === JSON.stringify(e.customer.reference || null) && refs(m.source) === refs(sourceOf(e)) && !e.supersedes && !e.retracts);
     if (prior) { kept.push({ n, id: prior.id, ctx }); lines.push(`${at(n)}already recorded ${prior.id} in ${ctx}`); continue; }
   }
+  // a relationship's ends are the names the rules above settled (P1-P4, C1): "Max" taken as Max Weber stays Max Weber
+  const endpoint = name => name === "us" ? "us" : mentions.find(x => x.mention === mapped(name))?.name || lib.exactName(lib.readNames(root), mapped(name)) || mapped(name);
+  const relation = e.relation ? { ...e.relation, from: endpoint(e.relation.from), to: endpoint(e.relation.to) } : undefined;
+  if (relation) {
+    const reg = lib.readNames(root), id = v => v === "us" ? "us" : lib.resolveEntity(reg, v)?.id;
+    const prior = lib.effectiveMemories(lib.readMemories(root, ctx)).find(m => m.relation && !m.retracts && m.content === e.content.trim() && m.relation.type === relation.type &&
+      id(m.relation.from) === id(relation.from) && id(m.relation.to) === id(relation.to) && ["status", "basis", "observed_at"].every(k => m.relation[k] === relation[k]) && !e.supersedes && !e.retracts);
+    if (prior) { kept.push({ n, id: prior.id, ctx }); lines.push(`${at(n)}already recorded ${prior.id} in ${ctx}`); continue; }
+  }
   let rec, warnings, alreadyRecorded;
   try {
     ({ rec, warnings, alreadyRecorded } = lib.appendMemory(root, ctx, {
@@ -210,6 +223,7 @@ for (let i = 0; i < entries.length; i++) {
       supersedes: e.supersedes || null, retracts: e.retracts || null, tags: [...new Set([...list(e.tags), ...(project ? [`project:${project}`] : []), ...(where.one ? [`project:${where.one}`] : [])])],
       ...(e.customer ? { customer: { ...e.customer, entity: customerName } } : {}),
       ...(e.customer_coverage ? { customer_coverage: e.customer_coverage } : {}),
+      ...(relation ? { relation } : {}),
     }));
   } catch (err) { failed.push({ n, why: err.message }); lines.push(`${at(n)}not remembered: ${err.message}`); continue; }
   if (alreadyRecorded) { kept.push({ n, id: rec.id, ctx }); lines.push(`${at(n)}already recorded ${rec.id} in ${ctx}`); continue; }

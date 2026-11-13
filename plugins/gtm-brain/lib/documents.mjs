@@ -20,7 +20,7 @@ export const HEADER_LINE = "Made with GTM Brain. This document lives in the brai
 export const SUGGESTED = ["strategy", "tone of voice", "design system", "target customer definition", "pricing"];
 // The engine and the machine's own folders: never a document's home.
 export const SKIP_DIRS = new Set(["brain", "work", "files", ".agents", ".githooks", ".git", ".obsidian", ...HOST_DIRS, "node_modules"]);
-const ROOT_KEEP = new Set(["AGENTS.md", "CLAUDE.md", "README.md", "WHERE.md", "RULES.md"]);
+const ROOT_KEEP = new Set(["AGENTS.md", "CLAUDE.md", "README.md", "WHERE.md", "RULES.md", "SCHEMA.md"]);
 const posix = p => p.split(sep).join("/");
 const FOLDER = /^[a-z0-9][a-z0-9-]*(\/[a-z0-9][a-z0-9-]*)?$/;
 

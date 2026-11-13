@@ -63,6 +63,18 @@ says ask, ask once, everything in one question.
 - **X3** Never two contexts for one topic: a name like an existing or archived context ("Market
   research" and Market) is asked: use that one, or a different topic?
 
+## What the brain keeps (SCHEMA.md)
+
+- **S1** A note that gives a field SCHEMA.md lists (a role, a website, an industry) states the
+  value plainly in its text, as the person said it. A value nobody said is never written (W1).
+- **S2** A relationship of a type SCHEMA.md lists goes in the note's `relation` block (see the
+  relations reference); customer status goes in `customer`. A type it does not list is saved as
+  a plain note, and Codex offers once to add the type with `/gtm-brain-schema`. "It ended" is a
+  new note with status ended; "that was wrong" is a correction (F1, F2).
+- **S3** A save is never held only to ask for a missing field. When a note is already held with
+  a question (Q2), the same question also asks for a new person's or organization's required
+  fields, as one more option, never a second question.
+
 ## The brain's own rules
 
 - **R1** This brain's `RULES.md`, at the top of the brain folder, holds rules its people added under

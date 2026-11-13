@@ -25,6 +25,9 @@ export { meetingOverview, meetingCaptureStatus, meetingSourceSuggestions, valida
 import { validateCustomerEvidence, guardCustomerCorrection } from "./customers.mjs";
 import { host, hostId, HOST_DIRS } from "./host.mjs";
 export { customerOverview, customerIdentity, validateCustomerEvidence, guardCustomerCorrection } from "./customers.mjs";
+import { validateRelationEvidence, guardRelationCorrection } from "./relations.mjs";
+import { readSchema, checkRelation, US } from "./schema.mjs";
+export { validateRelationEvidence, guardRelationCorrection, relationOverview, relationsText } from "./relations.mjs";
 export { updateEntity, mergeEntities, archiveEntity, undoEntityMerge } from "./entity-lifecycle.mjs";
 export { entityFacts, entityBrief, entityRecords, compileEntity, resolveEntity, refreshEntityPages, staleEntities, entityEvidenceIndex, entityType, ENTITY_FORMAT } from "./entities.mjs";
 export { withEntityLock } from './entities.mjs';
@@ -1166,7 +1169,7 @@ export function rerender(root) {
 /* ---------- memories ---------- */
 // The record. See PLAN.md. Modify and Forget are new records pointing at old ones (supersedes,
 // retracts); the file is never rewritten. effectiveMemories() resolves them for readers.
-export const MEMORY_FIELDS = ["id", "context", "at", "authors", "via", "kind", "tools", "people", "content", "source", "actions", "supersedes", "retracts", "tags", "asset", "entities", "entity_mentions", "customer", "customer_coverage", ...MEETING_FIELDS];
+export const MEMORY_FIELDS = ["id", "context", "at", "authors", "via", "kind", "tools", "people", "content", "source", "actions", "supersedes", "retracts", "tags", "asset", "entities", "entity_mentions", "customer", "customer_coverage", "relation", ...MEETING_FIELDS];
 export const KINDS = ["note", "decision", "question"];
 export const MENTION_RESOLUTIONS = ["exact", "inferred_first_name", "new", "confirmed_new"];
 export const LEGACY_KINDS = ["action"]; // retired; records written before stay valid
@@ -1195,6 +1198,7 @@ export function validateMemory(r) {
   if (r.asset !== undefined) errs.push(...validateAsset(r.asset));
   errs.push(...validateCustomerEvidence({ ...r, source: Array.isArray(r.source) ? r.source : [] }));
   errs.push(...validateMeetingEvidence(r));
+  errs.push(...validateRelationEvidence({ ...r, source: Array.isArray(r.source) ? r.source : [] }));
   return errs;
 }
 export function readMemories(root, slug) {
@@ -1252,7 +1256,7 @@ export function unknownTools(root, tools) {
 export function appendMemory(root, slug, options) {
   return withEntityLock(root, () => appendMemoryRecord(root, slug, prepareMeetingMemory(root, slug, options)));
 }
-function appendMemoryRecord(root, slug, { authors, via = "codex", kind = "note", tools = [], people = [], mentions = [], content, source = [], actions = [], supersedes = null, retracts = null, tags = [], at = null, asset, customer, customer_coverage, ...meetingFields }) {
+function appendMemoryRecord(root, slug, { authors, via = "codex", kind = "note", tools = [], people = [], mentions = [], content, source = [], actions = [], supersedes = null, retracts = null, tags = [], at = null, asset, customer, customer_coverage, relation, ...meetingFields }) {
   const dir = join(root, "brain", "contexts", slug);
   if (!existsSync(join(dir, "context.md"))) throw new Error(`no such context: ${slug}`);
   const when = at || new Date().toISOString();
@@ -1271,11 +1275,22 @@ function appendMemoryRecord(root, slug, { authors, via = "codex", kind = "note",
     if (!rec.people.includes(entity.name)) rec.people.push(entity.name);
     if (!mentioned.includes(entity.name)) mentioned.push(entity.name);
   }
+  // A relationship names both ends by stable ID, checked against SCHEMA.md now (never when an old note is read).
+  if (relation !== undefined) {
+    const read = readSchema(root);
+    if (read.error) throw new Error(`SCHEMA.md cannot be read, so no relationship is saved: ${read.error.message}`);
+    const ends = [relation?.from, relation?.to].map(v => v === US ? null : registry.find(e => e.name === exactName(registry, v)));
+    if (!ends[0] || (relation?.to !== US && !ends[1])) throw new Error("relation.from and relation.to must resolve to registered entities (to may be \"us\")");
+    if (read.schema) checkRelation(read.schema, { type: relation.type, fromKind: ends[0].kind, toKind: ends[1]?.kind || US });
+    rec.relation = { ...relation, from: ends[0].id, to: ends[1]?.id || US };
+    for (const e of ends.filter(Boolean)) { if (!rec.people.includes(e.name)) rec.people.push(e.name); if (!mentioned.includes(e.name)) mentioned.push(e.name); }
+  }
   rec.entities = registry.filter(e => mentioned.includes(e.name)).map(e => e.id);
   const resolved = mentions.map(x => ({ mention: x.mention, entity: registry.find(e => e.name === x.name)?.id, resolution: x.resolution, rule: x.rule })).filter(x => x.entity);
   if (resolved.length) rec.entity_mentions = resolved;
   const errs = validateMemory(rec); if (errs.length) throw new Error(errs.join("; "));
   guardCustomerCorrection(root, slug, rec);
+  guardRelationCorrection(root, slug, rec);
   const duplicate = duplicateMeetingMemory(root, rec);
   if (duplicate) return { rec: duplicate, warnings: [], alreadyRecorded: true };
   appendMemoryBytes(root, slug, join(dir, "memories.jsonl"), JSON.stringify(rec) + "\n");

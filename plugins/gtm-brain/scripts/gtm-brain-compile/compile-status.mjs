@@ -20,6 +20,9 @@ function read(script, args, field) {
 }
 try {
   const contexts = read('gtm-brain-compile/compile.mjs', ['--stale'], 'slug').filter(c => !c.manualEdit).map(c => c.slug);
-  const entities = read('gtm-brain-entities/compile-entity.mjs', [], 'id').map(e => e.id);
+  // Briefs behind their evidence first, then those behind SCHEMA.md, most evidence first; a pass takes at most
+  // ENTITY_PASS, so a new SCHEMA.md refills a large brain over a few passes instead of one huge run.
+  const ENTITY_PASS = 20;
+  const entities = read('gtm-brain-entities/compile-entity.mjs', [], 'id').sort((a, b) => (a.schema_behind === true) - (b.schema_behind === true) || (b.memories || 0) - (a.memories || 0)).slice(0, ENTITY_PASS).map(e => e.id);
   console.log(contexts.join(' ') + '|' + entities.join(' '));
 } catch (e) { console.error(`Cannot inspect pending compilation: ${e.message}`); process.exitCode = 1; }
