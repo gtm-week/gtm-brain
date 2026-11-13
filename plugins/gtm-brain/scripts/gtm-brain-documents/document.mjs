@@ -18,7 +18,7 @@ const VERSION = (() => { try { return JSON.parse(readFileSync(new URL("../../.co
 const by = opt.by ? lib.teamHandle(root, String(opt.by)) : null; if (opt.by && !by) refuse(`"${opt.by}" is not in admin.md team`);
 const yours = () => docs.listDocuments(root).map(d => d.slug).join(", ") || "none";
 const find = ref => { try { return docs.readDocument(root, ref); } catch (e) { refuse(e.message); } };
-const line = d => `${d.title} [${d.status}] (${d.applies_to.join(", ")}) · ${d.path}${d.by ? ` · by ${d.by}` : ""}${d.updated ? ` · ${d.updated}` : ""}`;
+const line = d => `${d.title} [${d.filled ? d.status : "not filled"}] (${d.applies_to.join(", ")}) · ${d.path}${d.by ? ` · by ${d.by}` : ""}${d.updated ? ` · ${d.updated}` : ""}`;
 const inside = abs => { const r = relative(root, abs); return r && !isAbsolute(r) && !r.startsWith(".."); };
 
 // --file: the body as it is; a Markdown already at the root (depth 0-2, outside the engine and the projects) is
@@ -84,7 +84,7 @@ if (opt.files) {
 if (opt.list) {
   const all = docs.listDocuments(root);
   if (opt.json) { console.log(JSON.stringify(all.map(({ body, ...d }) => ({ ...d, files: docs.documentFiles(root, d, all).length })), null, 1)); process.exit(0); }
-  console.log(all.length ? all.map(line).join("\n") : `no documents yet. Say "add our tone of voice", "add strategy.md as a document" or /gtm-brain-document.`);
+  console.log(all.length ? all.map(line).join("\n") : `no documents yet. Say "add our tone of voice", or "add strategy.md as a document".`);
   process.exit(0);
 }
 console.error("usage: document.mjs <root> --create | --update <ref> | --list | --show <ref> | --files <ref> | --remove <ref>"); process.exit(1);

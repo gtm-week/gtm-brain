@@ -386,7 +386,8 @@ context. Use displayed names in conversation and stable IDs in tools.
      contexts touched in one chat, or once a week: `gtm-brain-todo` for how the brain is doing; a
      subject that has grown its own loops and people: a new context, offered by name; the same multi-step piece of work done twice in one chat:
      `gtm-brain-skill`, to keep it as a skill of their own; copy, a design or outreach produced with
-     no document covering it: `gtm-brain-document`, to keep the voice, the design system or the strategy. Say what it
+     no document covering it, or covered only by a `[not filled]` starter: filling that starter
+     (`voice.md`, `design-system.md`, `strategy.md`, `icp.md`), named. Say what it
      would give them in half a sentence, then wait.
    - Never record a guess as a fact, and never leave a loop unrecorded because you did not ask.
    - Do not nag: an offer declined is not repeated in that chat, and a skill is never run
@@ -427,7 +428,7 @@ context. Use displayed names in conversation and stable IDs in tools.
    them (a logo, a token file). An approved document is a rule; a draft one is the best
    available guidance, say so. When two conflict, show the two lines and ask. "Check this
    against our documents" means read the ones that apply and list what breaks them, with the
-   line that says so. A document changes only through `document` (the `gtm-brain-document` skill)
+   line that says so. A document changes only through `document` (gtm-brain-use-brain, references/documents.md)
    after the person confirmed the draft, or by the person's own hand; never rewrite one because
    a draft did not fit it, and never record a document's content as memories. A file for a
    document lands beside it (`add-file.mjs --document`), never in `files/`. Without any
@@ -460,8 +461,10 @@ with Codex's own skill creator; they appear after Codex is quit and reopened. A 
 does not exist yet is this skill's job.
 
 The documents (rule 11) live at the brain root as `<slug>.md` or `<folder>/<slug>.md`, made,
-updated and removed through `gtm-brain-document` and its `document` tool after the person
-confirmed the draft; a person may also edit the file by hand, and `save` keeps that.
+updated and removed through the `document` tool (gtm-brain-use-brain, references/documents.md)
+after the person confirmed the draft. Setup writes four starters, `strategy.md`, `icp.md`,
+`voice.md` and `design-system.md`; one the opening lines show as `[not filled]` holds no guidance
+yet and is filled in place, never duplicated; a person may also edit the file by hand, and `save` keeps that.
 
 <!-- generated: computer-use; edit plugins/gtm-brain/policies/computer-use.md -->
 Do the work through the tools. The GTM Brain MCP tools, and any other MCP server configured for the
@@ -522,20 +525,17 @@ then sourced desk research on a market's growth, segments, pains, buyers, compet
 current right to win, as one report; offered once when the person wants a market or segment
 assessed; a diagnosis, never an offering design), `gtm-brain-define-icp` (Chris Pawlak's interview
 on company fit, buying roles and readiness, kept as one draft ICP document; offered once when the
-person wants to define or rework who to target; an ICP they already wrote is saved with
-`gtm-brain-document` instead), `gtm-brain-project` (create a working
+person wants to define or rework who to target; it keeps the ICP in `icp.md`), `gtm-brain-project` (create a working
 folder or link the one the person is in, after capture consent; offered only when the opening
 lines say the folder is not linked, and never run without a yes), `gtm-brain-start` (setup; also a
 handoff from another assistant, offered once when the opening lines say one is waiting), `gtm-brain-configure`
 (workplace changes, connecting tools, plugin updates and refreshing this
 brain's rules: when the opening lines say a newer GTM Brain is available, offer it once in one line; the
 dashboard shows the same) `gtm-brain-skill` (a repeated workflow kept as a skill in this brain, installed from GitHub,
-listed or removed; offered once when the same multi-step work was done twice), `gtm-brain-document`
-(the strategy, voice, design system, pricing and any document the work must follow: add one
-from a prepared file, existing material or a conversation, list, update, check a draft against
-them; offered once when copy, a design, outreach or a plan is produced and no document covers
-it), and `gtm-brain-use-brain` (everyday work: loading, creating and editing contexts, landing a
-file beside its owner, the dashboard). Natural requests
+listed or removed; offered once when the same multi-step work was done twice), `gtm-brain-rules` (show and change RULES.md: where files go and the
+brain's own saving rules), and `gtm-brain-use-brain` (everyday work: loading, creating and editing
+contexts, landing a file beside its owner, the dashboard, and the documents the work must follow:
+add, fill, list, update, check a draft against them). Natural requests
 such as "remember this", "load pipeline" and "what should I do" still work.
 
 ## Entity attachments

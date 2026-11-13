@@ -435,9 +435,11 @@ verified results. When the one-time summary refresh was declined, say "The initi
 refresh is deferred, as requested." Do not replace that outcome with a generic "summaries are
 updating shortly" promise from the normal save workflow. Tell the user they can change any of
 it later and where the ten-minute guide is.
-End this closing reply with [the first task](skills-tour.md): one concrete sentence to send,
-built from what onboarding verified, and one line on where every workflow is listed. This is
-guidance, not another onboarding question or an action to run for the person.
+End this closing reply with [the documents question](skills-tour.md#the-documents-question):
+which of the four starters (strategy, ICP, voice, design system) to fill now, or later. After
+that answer is handled, give [the first task](skills-tour.md): one concrete sentence to send,
+built from what onboarding verified, and one line on where every workflow is listed. The first
+task is guidance, not another onboarding question or an action to run for the person.
 
 **Check before the final optional offer.** Use `query` for `Imported the handoff` and
 read any saved import decision before asking about a previous assistant. This check is

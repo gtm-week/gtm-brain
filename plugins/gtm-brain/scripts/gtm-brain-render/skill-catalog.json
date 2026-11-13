@@ -104,14 +104,6 @@
     "example": "Turn what we just did into a skill."
   },
   {
-    "id": "gtm-brain-document",
-    "group": "setup",
-    "featured": false,
-    "title": "Keep your documents",
-    "description": "The strategy, voice, design system, pricing and any document the work must follow, with their files beside them.",
-    "example": "Add our tone of voice as a document."
-  },
-  {
     "id": "gtm-brain-strategy",
     "group": "setup",
     "featured": false,

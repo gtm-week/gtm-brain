@@ -292,7 +292,6 @@ Ask for an outcome in ordinary language, or invoke one of the fourteen shipped s
 | `/gtm-brain-sync` | Pull relevant updates from connected sources and retain useful findings. |
 | `/gtm-brain-todo` | Review what is waiting on you across the brain and connected tools. |
 | `/gtm-brain-project` | Create or link a working folder to the shared brain. |
-| `/gtm-brain-document` | Maintain the ICP, offer, pricing, voice and other standing documents. |
 | `/gtm-brain-skill` | Turn a repeated process into your own reusable skill. |
 | `/gtm-brain-configure` | Change workplace information, tools and settings through the approval flow. |
 

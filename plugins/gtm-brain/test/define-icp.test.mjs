@@ -53,10 +53,11 @@ test('interview response check accepts a truthful no-write acknowledgement', () 
 
 test('a plain request reaches Define ICP and a written ICP still goes to documents', () => {
   const rules = readFileSync(new URL('../templates/AGENTS.md', import.meta.url), 'utf8');
-  const documents = readFileSync(new URL('../skills/gtm-brain-document/SKILL.md', import.meta.url), 'utf8');
+  const documents = readFileSync(new URL('../skills/gtm-brain-use-brain/references/documents.md', import.meta.url), 'utf8');
   assert.match(rules, /define or rework who to target[^:]*: `gtm-brain-define-icp`/);
   assert.match(rules, /`gtm-brain-define-icp` \(Chris Pawlak's interview/);
-  assert.match(documents, /use gtm-brain-define-icp; this skill saves one that is already written/);
+  assert.match(documents, /\[Define ICP\]\(\.\.\/\.\.\/gtm-brain-define-icp\/SKILL\.md\), which interviews first/);
+  assert.match(documents, /ICP: run `gtm-brain-define-icp`\. Its draft replaces the starter's body in `icp\.md`/);
   assert.match(documents, /An ICP the person already wrote is added here/);
 });
 

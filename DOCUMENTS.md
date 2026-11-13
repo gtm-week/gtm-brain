@@ -46,10 +46,20 @@ Playing to Win without ever naming the framework. Decks and notes shared along t
 `strategy/` beside it, and the decisions it surfaces are also notes in the Strategy context.
 Read it, then `approve the strategy`.
 
+## Out of the box
+
+Setup writes four starters at the top of the brain: `strategy.md`, `icp.md`, `voice.md` and
+`design-system.md`. Each holds headings and no guidance yet, and the chat line shows it as
+`[not filled]` until someone fills it (a hand edit counts). The end of onboarding asks once which
+to fill now; "Later" is a fine answer. Say `fill in our tone of voice` (or the ICP, the strategy,
+the design system) at any time: the strategy runs the strategic intake, the ICP the Define ICP
+interview, and voice and design system are drafted from the website and what you drop in the
+chat. Each is filled where it lies, never as a second document. There is no separate documents
+skill since 0.33.10: these requests are part of everyday work (gtm-brain-use-brain).
+
 ## Making one
 
-Say `add our tone of voice`, `save the design system`, `add strategy.md as a document`, or type
-`/gtm-brain-document`. A file you already wrote goes in as it is; one already at the top of the
+Say `add our tone of voice`, `save the pricing`, or `add pricing.md as a document`. A file you already wrote goes in as it is; one already at the top of the
 brain folder is adopted where it lies. Otherwise Codex writes the document from what the
 company already says (the website, the last deck, existing posts, what is already in Our offer
 and Target customers). It shows the title, the place and the first rules, and asks: "Add it as

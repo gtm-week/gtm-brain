@@ -41,20 +41,20 @@ export const skillCases = [
     expect: "One page on Bergstrom Home (organization, company, in offer): where it stands, a dated timeline of the three notes (Krzysztof Pawlak owns the rollout, the security review request, the proposal sent) with their sources, people on both sides, what is open, one suggested next step. A note's source (gmail:19fa01, the send action gmail:send:19fa02) may be cited as its evidence, and the notes' author is Marta Nowak, the brain's owner, so she may be named as the one who sent the proposal. Citing a note by its context and date, or by its file, is a citation of a note, not an invention. No tool is connected: live checks are marked unavailable, nothing is invented, nothing is written.",
   },
   {
-    judge: "advisory", name: "skill-document-create", workflow: "gtm-brain-document", answer: "^Add it as approved",
-    prompt: "/gtm-brain-document Add our tone of voice as a document. The rules: short sentences; no exclamation marks; name the customer's problem before our product. It applies to copy and outreach. I vouch for it, and there are no real samples to test against.",
+    judge: "advisory", name: "skill-document-fill", workflow: "gtm-brain-use-brain", answer: "^Save it as a draft",
+    prompt: "Fill in our tone of voice. The rules: short sentences; no exclamation marks; name the customer's problem before our product. There are no real samples to test against.",
     calls: calls => {
-      const create = firstIndex(calls, c => c.tool === "document" && c.arguments?.action === "create");
+      const update = firstIndex(calls, c => c.tool === "document" && c.arguments?.action === "update" && /voice/.test(String(c.arguments?.ref || "")));
       const ask = firstIndex(calls, asks);
-      return create >= 0 && ask >= 0 && ask < create && calls[create].arguments.status === "approved" && !calls.some(c => c.tool === "remember");
+      return update >= 0 && ask >= 0 && ask < update && !calls.some(c => c.tool === "document" && c.arguments?.action === "create") && !calls.some(c => c.tool === "remember");
     },
     verify: root => {
-      let full; try { full = readDocument(root, "tone-of-voice"); } catch { return false; } if (!full) return false;
-      return full.status === "approved" && ["copy", "outreach"].every(k => full.applies_to.includes(k)) && /exclamation/i.test(full.body) && /problem/i.test(full.body);
+      let full; try { full = readDocument(root, "voice"); } catch { return false; } if (!full) return false;
+      return full.filled && /exclamation/i.test(full.body) && /problem/i.test(full.body) && /^## Do not/m.test(full.body);
     },
-    responseCheck: text => /tone of voice/i.test(text) && /copy/i.test(text) && /outreach/i.test(text),
-    evidence: root => { let d = null; try { d = readDocument(root, "tone-of-voice"); } catch {} return d ? `DOCUMENT FILE ${d.path}, written by the run through the document tool:\n${JSON.stringify({ title: d.title, applies_to: d.applies_to, status: d.status, by: d.by })}\n${d.body}` : "(no document file was written)"; },
-    expect: "The final message is one or two lines: the document Tone of voice now exists, approved, at the brain root or in a folder the person named, governing copy and outreach, and Codex reads it before that kind of work from now on, in the brain and in every linked project (that sentence is the skill's own closing line, not an invention). The draft and the confirmation question happened before this message: see the form exchange, whose first option was Add it as approved and which the person accepted. The document file listed under tool results is the evidence it was written. The blind test needs real samples and the person said there are none, so skipping it is correct whether or not the final message repeats that.",
+    responseCheck: text => /voice/i.test(text),
+    evidence: root => { let d = null; try { d = readDocument(root, "voice"); } catch {} return d ? `DOCUMENT FILE ${d.path}, written by the run through the document tool:\n${JSON.stringify({ title: d.title, applies_to: d.applies_to, status: d.status, filled: d.filled, by: d.by })}\n${d.body}` : "(no voice.md)"; },
+    expect: "The final message is one or two lines: voice.md, the starter setup wrote, is now filled in place as a draft (no second voice document), with the three rules under its own headings, and Codex reads it before copy and outreach from now on. The draft and the confirmation question happened before this message: see the form exchange, whose first option was Save it as a draft and which the person accepted. The document file listed under tool results is the evidence it was written. The blind test needs real samples and the person said there are none, so skipping it is correct.",
   },
   {
     judge: "advisory", name: "skill-sync-nothing-connected", workflow: "gtm-brain-sync", answer: "No|skip|later|not now",

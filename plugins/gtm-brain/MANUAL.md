@@ -17,7 +17,7 @@ editor opens it.
 | A context's summary and rules | `brain/contexts/<context>/context.md` | the summary: the compile run; the rules: you, through Codex |
 | People, companies, products | `brain/entities/*.md` | Codex; you may edit the Markdown by hand |
 | Where files go, your own rules | `RULES.md` | you; Codex follows it |
-| Your documents (strategy, tone of voice, pricing) | `<name>.md` at the top, files in a folder of the same name | you or Codex |
+| Your documents (strategy, ICP, tone of voice, design system, pricing) | `<name>.md` at the top (the first four from day one), files in a folder of the same name | you or Codex |
 | Projects (an event, a campaign, a client) | `projects/<project>/` | you or Codex |
 | Rules Codex follows in this folder | `AGENTS.md`, `CLAUDE.md` | GTM Brain; refreshed on update, never edit |
 | This computer's working files | `work/` | GTM Brain; not in git, never a deliverable |

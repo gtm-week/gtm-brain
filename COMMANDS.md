@@ -20,7 +20,6 @@ to distinguish these workflows from other installed skills.
 | `gtm-brain-configure` | GTM Brain: Configure GTM Brain | Workplace info, team, tools and settings through APPROVE |
 | `gtm-brain-skill` | GTM Brain: Your skills | Turn a repeated workflow into a Codex skill kept in the brain's `.agents/skills`; install from GitHub, list, remove, share |
 | `gtm-brain-strategy` | GTM Brain: Strategic intake | A 10-15 minute conversation with a founder or a head of sales, growth or GTM that fills `strategy.md`, the document every brain starts with, mapped silently to Playing to Win; files shared on the way land in `strategy/` |
-| `gtm-brain-document` | GTM Brain: Documents | The documents the work must follow (strategy, tone of voice, design system, pricing) kept as Markdown at the brain root with their files beside them: add, adopt a hand-written one, list, show, update, approve, remove, check a draft against them. A file in the chat lands beside its owner through use-brain's files reference, no skill to invoke |
 
 Find workflow examples from Overview or Help > Ways to work in Codex.
 Each entry explains the workflow, shows an example and its command, and opens a prepared
@@ -36,7 +35,7 @@ The sections below document the underlying operations, tools, and script paths f
 They are not additional discoverable skills. Tools show outcomes such as "Remembering" or
 "Searching the brain" in chat. Review proposals on the read-only dashboard. APPROVE is a choice in the form `approve_change` shows; in a chat nothing else applies it.
 Scripts retain their paths for terminal use with
-`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.33.9`.
+`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.33.10`.
 
 Legend for "writes": what files the command changes. Nothing else is ever touched.
 
