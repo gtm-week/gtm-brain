@@ -42,7 +42,7 @@ export const skillCases = [
   },
   {
     judge: "advisory", name: "skill-document-fill", workflow: "gtm-brain-use-brain", answer: "^Save it as a draft",
-    prompt: "Fill in our tone of voice. The rules: short sentences; no exclamation marks; name the customer's problem before our product. There are no real samples to test against.",
+    prompt: "/gtm-brain-use-brain Fill in our tone of voice. The rules: short sentences; no exclamation marks; name the customer's problem before our product. There are no real samples to test against.",
     calls: calls => {
       const update = firstIndex(calls, c => c.tool === "document" && c.arguments?.action === "update" && /voice/.test(String(c.arguments?.ref || "")));
       const ask = firstIndex(calls, asks);
