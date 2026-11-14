@@ -228,7 +228,10 @@ export function readEntityFiles(root) {
   if (!existsSync(dir)) return [];
   if (lstatSync(dir).isSymbolicLink()) throw new Error("brain/entities must not be a symbolic link");
   const entries = [];
-  const kinds = brainKinds(root);
+  // a SCHEMA.md that cannot be read must not take a kind away from entities already registered:
+  // then the kind is only checked for its form
+  const kinds = root && readSchema(root).error ? "any" : brainKinds(root);
+  const kindNames = kinds === "any" ? ENTITY_KINDS : kinds;
   for (const file of readdirSync(dir).filter(f => f.endsWith(".md")).sort()) {
     const path = join(dir, file);
     if (lstatSync(path).isSymbolicLink()) throw new Error(`Entity file must not be a symbolic link: ${file}`);
@@ -237,12 +240,12 @@ export function readEntityFiles(root) {
     if (!idOK(fm.id)) invalid(relative, "id", "expected e_ followed by 16 lowercase hexadecimal characters", "restore this entity's stable ID from file history; do not invent a replacement ID");
     if (fm.redirect) { if (!idOK(fm.redirect)) invalid(relative, "redirect", "expected a stable entity ID", "restore the destination ID from the confirmed merge"); continue; }
     if (typeof fm.name !== "string" || !fm.name.trim()) invalid(relative, "name", "expected a non-empty name", "restore the intended canonical name as a string");
-    if (typeof fm.kind !== "string") invalid(relative, "kind", "expected an entity kind", `restore ${kinds.join(", ")} from the known identity`);
+    if (typeof fm.kind !== "string") invalid(relative, "kind", "expected an entity kind", `restore ${kindNames.join(", ")} from the known identity`);
     if (fm.status !== undefined && !["active", "archived"].includes(fm.status)) invalid(relative, "status", "expected active or archived", "restore the intended entity status");
     if (fm.merge_ids !== undefined && (!strings(fm.merge_ids) || !fm.merge_ids.every(id => /^ec_[a-f0-9-]{36}$/.test(id)))) invalid(relative, "merge_ids", "expected recorded merge IDs", "restore merge IDs from identity history");
     let type;
     try { type = entityType(fm.kind, fm.subtype ?? null, kinds); }
-    catch (e) { invalid(relative, "kind / subtype", e.message, `use ${kinds.join(", ")} (the kinds in SCHEMA.md), with an optional organization subtype, or add a ## ${fm.kind} section to SCHEMA.md; preserve the original values for review`); }
+    catch (e) { invalid(relative, "kind / subtype", e.message, `use ${kindNames.join(", ")} (the kinds in SCHEMA.md), with an optional organization subtype, or add a ## ${fm.kind} section to SCHEMA.md; preserve the original values for review`); }
     for (const field of ["aliases", "emails", "not_same", "previous_ids"]) {
       if (!strings(fm[field])) invalid(relative, field, "expected a list of non-empty strings", `write ${field}: [value] for a single value or ${field}: [] for an empty list, preserving existing entries`);
     }

@@ -91,3 +91,49 @@ test("end to end on a setup brain: add_name with event and tool, speaker_at and 
   assert.equal(lib.readNames(root).find(e => e.name === "Hotel Bristol").kind, "venue");
   assert.ok(schema.schemaLine(root).includes("event: date*, location, url. tool: category*"));
 });
+
+test("the MCP input schemas of add_name, update_entity and merge_entities accept event, tool and a SCHEMA.md kind", async () => {
+  const { validateValue } = await import(`${P}/lib/ontology/validation.mjs`);
+  const text = readFileSync(join(P, "ontology", "gtm-brain.ossie.json"), "utf8"), found = {};
+  (function walk(v) {
+    if (Array.isArray(v)) return v.forEach(walk);
+    if (!v || typeof v !== "object") return;
+    if (["add_name", "update_entity", "merge_entities"].includes(v.tool_name) && v.input_schema) found[v.tool_name] = v.input_schema;
+    Object.values(v).forEach(walk);
+  })(JSON.parse(text));
+  assert.deepEqual(Object.keys(found).sort(), ["add_name", "merge_entities", "update_entity"]);
+  for (const kind of ["event", "tool", "venue", "person"]) {
+    assert.equal(validateValue(found.add_name, { name: "SaaStr Europa", kind }), null, `add_name ${kind}`);
+    assert.equal(validateValue(found.update_entity.properties.set, { kind }), null, `update_entity ${kind}`);
+    assert.equal(validateValue(found.merge_entities.properties.resolution, { kind }), null, `merge_entities ${kind}`);
+  }
+  assert.ok(!/"enum": \[\s*"person",\s*"organization",\s*"product"/.test(text), "no three-kind enum is left in the ontology");
+});
+
+test("the entities script adds and lists an event, a tool and a SCHEMA.md kind; a broken SCHEMA.md does not break reading them", async () => {
+  const { mkdtempSync, realpathSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { execFileSync } = await import("node:child_process");
+  process.env.GTM_BRAIN_NO_COMPILE = "1"; process.env.GTM_BRAIN_NO_WATCH = "1"; process.env.GTM_BRAIN_NO_OPEN = "1"; process.env.GTM_BRAIN_NO_COMMIT = "1";
+  process.env.CODEX_HOME ||= mkdtempSync(join(tmpdir(), "gtm-kinds-home-"));
+  const env = { ...process.env, PLUGIN_ROOT: P, GTM_BRAIN_NO_VERSION_CHECK: "1", GTM_BRAIN_NO_SESSION_MAINTENANCE: "1" };
+  const lib = await import(`${P}/lib/brain.mjs`);
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "gtm-kinds-")));
+  execFileSync("git", ["init", "-q", root]);
+  execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "Demo Co", "--one-liner", "events", "--owner", "Marta Nowak <marta@demo.co>"], { cwd: root, env, stdio: "ignore" });
+  const script = (...args) => execFileSync(process.execPath, [`${P}/scripts/gtm-brain-entities/entities.mjs`, root, ...args], { cwd: root, env, encoding: "utf8" });
+  script("--add", "SaaStr Europa", "--kind", "event"); script("--add", "HubSpot", "--kind", "tool");
+  const path = join(root, "SCHEMA.md"), good = readFileSync(path, "utf8").replace("## Relationships", "## Venue\n\n| Field | What it means | Required |\n| --- | --- | --- |\n| capacity | Seats | no |\n\n## Relationships");
+  writeFileSync(path, good);
+  script("--add", "Hotel Bristol", "--kind", "venue");
+  const list = script();
+  assert.match(list, /Events \(1\)\n- SaaStr Europa/); assert.match(list, /Tools \(1\)\n- HubSpot/); assert.match(list, /Venues \(1\)\n- Hotel Bristol/);
+  // the file stops parsing: the venue already registered still reads, a new unknown kind is still refused
+  writeFileSync(path, good + "\n## Meeting\n\n| Field | What it means | Required |\n| --- | --- | --- |\n| date | When | yes |\n");
+  assert.ok(schema.readSchema(root).error);
+  assert.equal(lib.readNames(root).find(e => e.name === "Hotel Bristol").kind, "venue");
+  assert.throws(() => lib.addName(root, "Old Mill", { kind: "barn" }), /kind must be one of person, organization, product, event, tool;/);
+  // the section is removed from a file that parses: the entity file is reported with the fix
+  writeFileSync(path, good.replace(/## Venue[\s\S]*?(?=## Relationships)/, ""));
+  assert.throws(() => lib.readNames(root), /add a ## venue section to SCHEMA.md/);
+});

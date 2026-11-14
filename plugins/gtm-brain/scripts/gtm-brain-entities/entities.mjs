@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // The entity folder: identity metadata and compiled views. Source facts remain context memories.
 //   node entities.mjs <root>                                           list, grouped by kind
-//   node entities.mjs <root> --add "Krzysztof Pawlak" [--alias "Chris, Pawlak"] [--email "a@b.io"] [--kind person|organization|product] [--subtype company|team]
+//   node entities.mjs <root> --add "Krzysztof Pawlak" [--alias "Chris, Pawlak"] [--email "a@b.io"] [--kind person|organization|product|event|tool|<SCHEMA.md kind>] [--subtype company|team]
 //   node entities.mjs <root> --who "Chris"                             resolve a mention
 //   node entities.mjs <root> --add "Nestle Poland" --not "Nestle"       these two are different; never suggest merging them
 import { existsSync } from "node:fs"; import { join } from "node:path";
@@ -44,7 +44,7 @@ const all = lib.readNames(root).filter(n => n.status !== "archived"), members = 
 const contacts = rest.filter(n => n.kind === "person"), others = rest.filter(n => n.kind !== "person");
 console.log(`Team (${members.length}, from brain/admin.md)`); for (const n of members) console.log(line(n));
 console.log(`\nContacts (${contacts.length}, people named in memories)`); if (!contacts.length) console.log("- none yet"); for (const n of contacts) console.log(line(n));
-for (const kind of lib.NAME_KINDS.filter(k => k !== "person")) { const g = others.filter(n => n.kind === kind); if (g.length) { console.log(`\n${kind[0].toUpperCase() + kind.slice(1)}s (${g.length})`); for (const n of g) console.log(line(n)); } }
+for (const kind of [...new Set([...lib.NAME_KINDS, ...others.map(n => n.kind)])].filter(k => k !== "person")) { const g = others.filter(n => n.kind === kind); if (g.length) { console.log(`\n${kind[0].toUpperCase() + kind.slice(1)}s (${g.length})`); for (const n of g) console.log(line(n)); } }
 const merges = lib.suggestMerges(all);
 if (merges.length) console.log(`\nMight be the same: ${merges.map(m => `${m.a} and ${m.b}`).join("; ")}. Ask the person; then "${merges[0].b} is ${merges[0].a}" (one entity, the notes count together) or "${merges[0].b} is not ${merges[0].a}" (kept apart, not asked again).`);
 const incomplete = contacts.filter(n => !n.name.includes(" ") || !n.emails.length);

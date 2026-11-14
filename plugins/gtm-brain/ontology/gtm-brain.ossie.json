@@ -269,7 +269,7 @@
       "primary_key": [
         "id"
       ],
-      "description": "A person, organization or product with a global stable identity. Stored in brain/entities/*.md with readable cited briefs. Evidence remains in context memories.",
+      "description": "A person, organization, product, event, tool or another SCHEMA.md kind with a global stable identity. Stored in brain/entities/*.md with readable cited briefs. Evidence remains in context memories.",
       "ai_context": {
         "synonyms": [
           "people",
@@ -1891,14 +1891,9 @@
                 },
                 "kind": {
                   "type": "string",
-                  "description": "person (default), organization or product. Legacy company and team are accepted and normalized to organization with that subtype.",
-                  "enum": [
-                    "person",
-                    "organization",
-                    "product",
-                    "company",
-                    "team"
-                  ]
+                  "description": "person (default), organization, product, event, tool or another kind in SCHEMA.md. Legacy company and team are accepted and normalized to organization with that subtype.",
+                  "minLength": 1,
+                  "maxLength": 40
                 },
                 "not_same": {
                   "type": "array",
@@ -2176,11 +2171,9 @@
                     },
                     "kind": {
                       "type": "string",
-                      "enum": [
-                        "person",
-                        "organization",
-                        "product"
-                      ]
+                      "description": "A kind in SCHEMA.md: person, organization, product, event, tool or one the brain added",
+                      "minLength": 1,
+                      "maxLength": 40
                     },
                     "subtype": {
                       "anyOf": [
@@ -2417,11 +2410,9 @@
                   "properties": {
                     "kind": {
                       "type": "string",
-                      "enum": [
-                        "person",
-                        "organization",
-                        "product"
-                      ]
+                      "description": "A kind in SCHEMA.md: person, organization, product, event, tool or one the brain added",
+                      "minLength": 1,
+                      "maxLength": 40
                     },
                     "subtype": {
                       "anyOf": [
