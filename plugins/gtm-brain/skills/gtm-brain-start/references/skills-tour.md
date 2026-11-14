@@ -2,21 +2,22 @@
 
 ## The documents question
 
-Setup wrote four starters at the brain root: `strategy.md`, `icp.md`, `voice.md` and
-`design-system.md`. They stay in the brain whatever the answer; filling them is what is offered.
+Setup wrote five starters at the brain root: `strategy.md`, `icp.md`, `voice.md`,
+`design-system.md` and `market.md`. They stay in the brain whatever the answer; filling them is what is offered.
 At the end of completed onboarding (the closing reply, after its three-part confirmation), ask
 once which to fill now, and end the turn. One line on why first: Codex reads them before every
 email, post, design and plan, and a starter holds no guidance yet.
 
 In Codex's question box (Q1), which has no checkboxes, offer the likely combinations:
-"Voice and ICP now" (recommended), "All four, one at a time", "Just the voice", "Later". In
+"Voice and ICP now" (recommended), "All five, one at a time", "Just the voice", "Later". In
 chat text, numbered options, and say the person can pick several numbers:
 
 1. Voice: a draft from the website and texts you like (about 5 minutes)
 2. ICP: a short interview about your best customers (about 10 minutes)
 3. Strategy: the strategic intake (10-15 minutes)
 4. Design system: a draft from the website and your brand files (about 5 minutes)
-5. Later
+5. Market: a draft from the brain and competitors' websites (about 5 minutes)
+6. Later
 
 Leave out a starter that is already filled (the chat line does not show it `[not filled]`); with
 all four filled, skip the question. Fill the chosen ones one at a time, in the order picked, each
