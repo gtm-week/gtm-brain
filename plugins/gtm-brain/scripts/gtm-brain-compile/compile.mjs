@@ -66,7 +66,7 @@ if (opt.facts) {
     `\n## Decisions in force (${f.decisions.length})`, ...f.decisions.map(m => `- ${m.id} · ${lib.memoryTimeText(m)} ${m.authors.join(",")}: ${m.content}`)];
   // A digest, not the whole context: the notes since the last compile, newest first, within a budget.
   // The current summary carries the older ones; the run looks them up with query (memories).
-  const shown = [], fresh = [...f.newSince].reverse(); let lines = 0, bytes = 0;
+  const shown = [], fresh = [...f.newSince].reverse().sort((a, b) => Date.parse(b.at) - Date.parse(a.at)); let lines = 0, bytes = 0;
   for (const m of fresh) {
     const t = noteLines(m), n = t.split("\n").length, b = Buffer.byteLength(t);
     if (shown.length && (lines + n > FACTS_LINES || bytes + b > FACTS_BYTES)) break;
