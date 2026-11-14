@@ -7,6 +7,7 @@ import {spawn} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import * as lib from '../lib/brain.mjs';
 import { assetRows, resolveAssetFile } from '../lib/assets.mjs';
+import { pagePaths } from '../lib/layout.mjs';
 const root=resolve(process.argv[2]||'.'),mode=process.argv[3];
 const work=join(root,'work'),stateFile=join(work,'brain-watch.json'),lock=join(work,'brain-watch.lock');
 const state=()=>{try{return JSON.parse(readFileSync(stateFile,'utf8'))}catch{return null}};
@@ -36,7 +37,7 @@ function fingerprint(){
  try{for(const d of readdirSync(join(root,'brain','contexts'),{withFileTypes:true}))if(d.isDirectory()&&!d.isSymbolicLink()){
   files.push(`brain/contexts/${d.name}/context.md`,`brain/contexts/${d.name}/memories.jsonl`);
  }}catch{}
- try{for(const d of readdirSync(join(root,'brain','entities'),{withFileTypes:true}))if(d.isFile()&&d.name.endsWith('.md'))files.push(`brain/entities/${d.name}`)}catch{}
+ try{files.push(...pagePaths(root))}catch{}
  const key = JSON.stringify(files.sort().map(file=>{try{const s=statSync(join(root,file));return[file,s.mtimeMs,s.size]}catch{return[file,null]}}));
  if (key !== attachmentKey) { try { attachments = assetRows(root).map(({id,entity,label,role,status,file}) => ({id,asset:{entity,label,role,status,file}})); attachmentKey = key; } catch {} }
  // Stat only explicitly attached files, never scan the folders they live in.

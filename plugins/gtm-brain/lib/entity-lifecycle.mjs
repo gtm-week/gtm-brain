@@ -8,6 +8,7 @@ import * as lib from "./brain.mjs";
 import { pointerKey, sourceKind } from "./pointers.mjs";
 import { withEntityLock, entityType, identity, idOK, entityText, parseEntityText, editedBody, applyEntityChange, readEntityChange } from "./entities.mjs";
 import { brainKinds } from "./schema.mjs";
+import { linkFrom } from "./layout.mjs";
 
 const hash = value => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const object = v => v && typeof v === "object" && !Array.isArray(v);
@@ -140,7 +141,7 @@ export function mergeEntities(root, { source, target, by, as_of, resolution = {}
     const id = `ec_${randomUUID()}`;
     merged.merge_ids.push(id);
     const fm = updated(into, identity(merged));
-    const redirect = `\n# Merged identity\n\nMerged into [${into.id}](${into._path.split("/").at(-1)}). Recovery record: ${id}.\n` + (editedBody(from) ? from._body : "");
+    const redirect = `\n# Merged identity\n\nMerged into [${into.id}](${linkFrom(from._path, into._path)}). Recovery record: ${id}.\n` + (editedBody(from) ? from._body : "");
     return finish(root, { id, operation: "merge", source, target, by: who, resolution, impact: preview.impact,
       changes: [change(root, into, fm), change(root, from, updated(from, { redirect: target, merged_by: id }), redirect)] },
     { status: "merged", source, target, merge_id: id, entity: identity(merged) });

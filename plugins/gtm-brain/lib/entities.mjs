@@ -1,6 +1,6 @@
 // Identity files and their compiled views. Facts remain append-only context memories.
 import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync, mkdtempSync, copyFileSync, renameSync, lstatSync, rmSync } from "node:fs";
-import { join, basename, resolve } from "node:path";
+import { join, basename, resolve, dirname } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import * as lib from "./brain.mjs";
 import { acquireProcessLock, releaseProcessLock } from './process-lock.mjs';
@@ -8,6 +8,7 @@ import { refreshIndexedPages } from './entity-pages.mjs';
 import { hasMemoryIndex } from './memory-index-store.mjs';
 import { readSchema, fieldsFor, requiredRelations, kindHash, US, brainKinds } from './schema.mjs';
 import { DEFAULT_KINDS, KIND_NAME, NOT_KINDS } from './kinds.mjs';
+import { pagePaths, isPagePath, findPage, linkFrom, layout, kindPagePath, isKindPagePath, assetFolder, ENTITIES_DIR } from './layout.mjs';
 
 export const ENTITY_FORMAT = "gtm-brain-entity-v2";
 // Brains written before the GTM OS -> GTM Brain rename carry the gtm-os names; migration rewrites them.
@@ -168,7 +169,7 @@ export function readEntityChange(root, id, pending = false) {
   if (lstatSync(path).isSymbolicLink()) throw new Error("Entity history cannot use symbolic links");
   let rec;
   try { rec = JSON.parse(readFileSync(path, "utf8")); } catch { invalid(path, "history", "invalid JSON", "restore the original change record from Git"); }
-  if (!rec || rec.id !== id || !Array.isArray(rec.changes) || !rec.changes.length || rec.changes.some(c => !c || !/^brain\/entities\/[a-z0-9-]+\.md$/.test(c.path) || typeof c.before !== "string" || typeof c.after !== "string") || new Set(rec.changes.map(c => c.path)).size !== rec.changes.length) invalid(path, "history", "invalid recovery record", "restore the original change record from Git");
+  if (!rec || rec.id !== id || !Array.isArray(rec.changes) || !rec.changes.length || rec.changes.some(c => !c || !isPagePath(c.path) || (c.from !== undefined && !isPagePath(c.from)) || typeof c.before !== "string" || typeof c.after !== "string") || new Set(rec.changes.map(c => c.path)).size !== rec.changes.length) invalid(path, "history", "invalid recovery record", "restore the original change record from Git");
   if (rec.operation === "merge" && (!idOK(rec.source) || !idOK(rec.target) || rec.source === rec.target || rec.changes.length !== 2 || !Array.isArray(rec.impact) || rec.impact.some(i => !i || !Array.isArray(i.memories) || i.memories.some(m => typeof m !== "string")))) invalid(path, "history", "invalid merge recovery record", "restore the original change record from Git");
   return rec;
 }
@@ -192,7 +193,7 @@ export function applyEntityChange(root, record) {
     const changes = record.changes.filter(c => c.before !== c.after);
     if (!changes.length) return null;
     for (const c of changes) {
-      if (!/^brain\/entities\/[a-z0-9-]+\.md$/.test(c.path)) throw new Error("Invalid entity change path");
+      if (!isPagePath(c.path) || (c.from !== undefined && !isPagePath(c.from))) throw new Error("Invalid entity change path");
       const path = join(root, c.path);
       if (lstatSync(path).isSymbolicLink() || readFileSync(path, "utf8") !== c.before) throw new Error(`Entity file changed; read it again: ${c.path}`);
     }
@@ -232,10 +233,10 @@ export function readEntityFiles(root) {
   // then the kind is only checked for its form
   const kinds = root && readSchema(root).error ? "any" : brainKinds(root);
   const kindNames = kinds === "any" ? ENTITY_KINDS : kinds;
-  for (const file of readdirSync(dir).filter(f => f.endsWith(".md")).sort()) {
-    const path = join(dir, file);
-    if (lstatSync(path).isSymbolicLink()) throw new Error(`Entity file must not be a symbolic link: ${file}`);
-    const relative = `brain/entities/${file}`, original = readFileSync(path, "utf8"), { fm, body, header } = parseEntityText(original, relative);
+  for (const relative of pagePaths(root)) {
+    const path = join(root, relative);
+    if (lstatSync(path).isSymbolicLink()) throw new Error(`Entity file must not be a symbolic link: ${relative}`);
+    const original = readFileSync(path, "utf8"), { fm, body, header } = parseEntityText(original, relative);
     if (![ENTITY_FORMAT, ...LEGACY_FORMATS].includes(fm.format)) invalid(relative, "format", `expected ${ENTITY_FORMAT} or legacy ${LEGACY_FORMATS.join(", ")}`, `restore the format version from file history`);
     if (!idOK(fm.id)) invalid(relative, "id", "expected e_ followed by 16 lowercase hexadecimal characters", "restore this entity's stable ID from file history; do not invent a replacement ID");
     if (fm.redirect) { if (!idOK(fm.redirect)) invalid(relative, "redirect", "expected a stable entity ID", "restore the destination ID from the confirmed merge"); continue; }
@@ -319,7 +320,7 @@ export function writeEntityFiles(root, names) {
   for (const e of old.filter(x => !names.some(n => n.id === x.id))) {
     const winner = names.find(n => n.previous_ids.includes(e.id));
     if (!winner) throw new Error(`Refusing to remove ${e.name} without a confirmed identity merge`);
-    if (atomic(join(root, e._path), entityText(e, { ...e._fm, redirect: winner.id }, `\n# ${md(e.name)}\n\nMerged into ${link(winner.name, basename(winner._path))}.\n` + (editedBody(e) ? e._body : "")))) changed.push(e._path);
+    if (atomic(join(root, e._path), entityText(e, { ...e._fm, redirect: winner.id }, `\n# ${md(e.name)}\n\nMerged into ${link(winner.name, linkFrom(e._path, winner._path))}.\n` + (editedBody(e) ? e._body : "")))) changed.push(e._path);
   }
   return changed;
 }
@@ -492,8 +493,8 @@ export function entityBrief(root, name, options = {}) {
   const timeline = scoped ? scoped.slice(0, BRIEF_TIMELINE) : facts.timeline;
   let markdown = renderBrief({ ...facts, timeline, ...(scoped ? { timeline_total: scoped.length } : {}) }, compilation, evidence, registry, options.context);
   if (facts.file_notes && !options.context) markdown += `\n## Saved Markdown\n\nThis text was preserved from the editable file. It is not automatically treated as context evidence.\n\n${facts.file_notes.markdown}`;
-  if (options.absoluteLinks) markdown = markdown.replace(/\]\((\.\.\/contexts\/[^)]+|[a-z0-9-]+\.md)\)/g,
-    (_, path) => `](${dest(resolve(root, "brain", "entities", decodeURI(path)))})`);
+  if (options.absoluteLinks) markdown = markdown.replace(/\]\(((?:\.\.\/)+contexts\/[^)]+|(?:\.\.\/)?(?:[a-z0-9-]+\/)?[a-z0-9-]+\.md)\)/g,
+    (_, path) => `](${dest(resolve(root, dirname(e?._path || `${ENTITIES_DIR}/page.md`), decodeURI(path)))})`);
   return { ...facts, compilation, evidence, timeline, markdown, path: e._path || null };
 }
 
@@ -571,7 +572,9 @@ function relationLines(facts, registry, citation, scope) {
 function renderBrief(facts, brief, evidence, registry, scope) {
   if (scope && !facts.contexts.some(c => c.context === scope)) throw new Error(`No evidence about ${facts.entity.name} in ${scope}`);
   const all = new Map(facts.contexts.flatMap(c => c.memories).map(m => [m.id, m]));
-  const citation = id => { const m = all.get(id); return link(`${m.context}, recorded ${lib.localDateTime(m.at).slice(0, 10)}, ${id}`, `../contexts/${m.context}/memories.jsonl`); };
+  // links are relative to the page: ../contexts from a flat page, ../../contexts from a kind folder
+  const page = facts.entity.path || `${ENTITIES_DIR}/page.md`, contextsLink = linkFrom(page, "brain/contexts");
+  const citation = id => { const m = all.get(id); return link(`${m.context}, recorded ${lib.localDateTime(m.at).slice(0, 10)}, ${id}`, `${contextsLink}/${m.context}/memories.jsonl`); };
   const claims = a => a.map(c => `- ${c.interpretation ? "Interpretation: " : ""}${md(c.text)} ${c.memories.map(citation).join(" ")}`).join("\n");
   // A source that kept its direct link (url on the entry) links there; older entries link as before.
   const source = s => typeof s.url === "string" && /^https?:\/\//i.test(s.url) && s.url !== s.ref ? link(s.kind === "gmail" ? "Gmail" : `${s.kind}:${s.ref}`, s.url) : /^https?:\/\//.test(s.ref) ? link(s.kind, s.ref) : s.kind === "gmail" ? link("Gmail", `https://mail.google.com/mail/u/0/#all/${encodeURIComponent(s.ref)}`) : s.kind === "codex" ? link("Conversation", `codex://threads/${encodeURIComponent(s.ref)}`) : `\`${md(s.kind + ":" + s.ref)}\``;
@@ -590,7 +593,7 @@ function renderBrief(facts, brief, evidence, registry, scope) {
   if (!contexts.length) out.push("\nNo context evidence recorded yet.");
   for (const c of contexts) {
     const compiled = brief?.contexts.find(x => x.context === c.context);
-    out.push(`\n### ${link(c.title, `../contexts/${c.context}/context.md`)}${c.status === "archived" ? " (archived)" : ""}`);
+    out.push(`\n### ${link(c.title, `${contextsLink}/${c.context}/context.md`)}${c.status === "archived" ? " (archived)" : ""}`);
     out.push(`\nContext refreshed: ${lib.localDateTime(c.refreshed_at) || "never"}.`);
     if (compiled) {
       out.push("\n" + (claims(compiled.summary) || "No supported current state."));
@@ -612,7 +615,7 @@ function renderBrief(facts, brief, evidence, registry, scope) {
   const selected = scope ? facts.evidence.filter(m => m.context === scope).sort((a, b) => Date.parse(b.at) - Date.parse(a.at)) : evidence;
   const mentions = lib.createMentionMatcher(registry);
   const peers = new Set(scope ? selected.flatMap(mentions).filter(n => n !== facts.entity.name) : facts.related_identities.map(n => n.name));
-  if (peers.size) out.push("\nAlso mentioned with: " + [...peers].map(n => { const e = registry.find(x => x.name === n); return e?._path ? link(n, basename(e._path)) : md(n); }).join(", ") + ".");
+  if (peers.size) out.push("\nAlso mentioned with: " + [...peers].map(n => { const e = registry.find(x => x.name === n); return e?._path ? link(n, linkFrom(page, e._path)) : md(n); }).join(", ") + ".");
   const timeline = facts.timeline;
   out.push("\n## Timeline", "\nNotes in recording order, newest first. Relevant event dates are kept in the note text; the timestamp labels when the memory was recorded.");
   if (facts.timeline_total > timeline.length) out.push(`\nShowing the latest ${timeline.length} of ${facts.timeline_total} current context records. Follow the full memory histories below for earlier evidence. ${moreLine(facts.timeline_total - timeline.length, facts.entity.id)}${scope ? ` and filters.context=${scope}` : ""}.`);
@@ -621,7 +624,7 @@ function renderBrief(facts, brief, evidence, registry, scope) {
   }
   if (!timeline.length) out.push("\nNo effective memories in this view.");
   out.push("\n## Further information");
-  for (const c of contexts) out.push(`\n- ${link(c.title, `../contexts/${c.context}/context.md`)} · ${link("Full memory history", `../contexts/${c.context}/memories.jsonl`)}`);
+  for (const c of contexts) out.push(`\n- ${link(c.title, `${contextsLink}/${c.context}/context.md`)} · ${link("Full memory history", `${contextsLink}/${c.context}/memories.jsonl`)}`);
   const sources = new Map(selected.flatMap(m => m.source.map(s => [JSON.stringify(s), s])));
   for (const s of [...sources.values()].slice(0, BRIEF_SOURCES)) out.push(`\n- ${source(s)}`);
   if (sources.size > BRIEF_SOURCES) out.push(`\n${sources.size - BRIEF_SOURCES} more sources. ${moreLine(sources.size - BRIEF_SOURCES, facts.entity.id)}.`);
