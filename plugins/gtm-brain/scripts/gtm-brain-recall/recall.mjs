@@ -6,6 +6,7 @@
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { assetSummary, assetRows } from "../../lib/assets.mjs";
+import { nowMs } from "../../lib/staleness.mjs";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
 if (!existsSync(join(root, "brain", "admin.md"))) { console.error("no brain here"); process.exit(1); }
@@ -32,7 +33,7 @@ if (conflicts.length) console.log(`Attachments needing a choice: ${[...new Set(c
 if (args[0] === "--person" || args[0] === "--entity") {
   const who = args[1], scoped = args.indexOf("--context"), context = scoped >= 0 ? args[scoped + 1] : undefined;
   try {
-    const view = lib.entityBrief(root, who, { context, absoluteLinks: true });
+    const view = lib.entityBrief(root, who, { context, absoluteLinks: true, now: nowMs() });   // now: the chat reads ages, the stored page never carries them
     const count = view.evidence.filter(m => !context || m.context === context).length;
     console.log(view.entity.name + (context ? " in " + context : "") + ": " + count + " memories · " + (view.path ? resolve(root, view.path) : "identity has not been migrated yet"));
     // a byte budget on what reaches the chat: one brief reached 4 MB on a big brain

@@ -46,6 +46,9 @@ cannot settle. It asks in Codex's question box whenever Codex has it in the chat
   they are in several, Codex asks which.
 - **Your reply first.** A held question waits for your answer; Codex never picks it for you.
 
+A chat that keeps reading the brain and saves nothing is reminded once, with the third read, to save
+what the turn established; `save_nudge: off` in `brain/admin.md` turns the reminder off.
+
 Notes are never edited. "Actually the board meeting is on the 19th" saves a correction that
 replaces the old note. "Forget that Lena runs the workshop" withdraws it: the old note leaves every
 view, and a short note says what was withdrawn. Both stay in the file and in git.
@@ -160,6 +163,8 @@ in `work/manual-edits/protected/`.
 | You see | Check |
 |---|---|
 | A note saved that should not have been | "why did you add X?"; then "forget ..." |
+| Something said in a chat was not saved | say it again as a plain sentence, or "save that"; the status and each loaded context show "last note N days ago", and a brain with nothing saved for over a week says so at chat start |
+| A fact that may be out of date | ask for the brief ("who is X"): a fact or relationship older than 30 days shows "as of <date>, N days ago", and the brief says when the entity was last mentioned |
 | A summary that looks old | its "as of" date; "update the summary now"; `work/compile.json` shows queued, running, done or failed |
 | Summaries never update | `work/hooks.log` lines `scheduled-run ... failed`; `work/runs.jsonl` has one line per compile run with its tokens; no lines at all means no run started |
 | A file in the wrong place | "why is this here?"; fix the `RULES.md` row |

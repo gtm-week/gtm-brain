@@ -20,6 +20,7 @@ import { host } from "../lib/host.mjs";
 import { validateValue } from "../lib/ontology/validation.mjs";
 import { placementTrailers, whyHere, WHY_TRAILER } from "../lib/where.mjs";
 import { rulesReport } from "../lib/rules-check.mjs";
+import { createSaveNudge } from "../lib/save-nudge.mjs";
 
 const P = dirname(dirname(fileURLToPath(import.meta.url)));
 const lib = await import(join(P, "lib", "brain.mjs"));
@@ -454,6 +455,20 @@ function logCall(args, name, res) {
   try { appendFileSync(join(args.brain, "work", "tool-usage.jsonl"), JSON.stringify(line) + "\n"); } catch {}
 }
 
+/* ---------- The save nudge ---------- */
+// A chat that reads and reads and saves nothing gets one line with a read's reply (lib/save-nudge.mjs holds the
+// counts and the words). Only reads carry it; never in a separate run or the compile toolset; off with
+// save_nudge: off in brain/admin.md.
+const nudges = createSaveNudge({ quietMs: OPEN_AGAIN_MS });
+function saveNudge(args, name, res) {
+  if (process.env.GTM_BRAIN_RUN || process.env.GTM_BRAIN_TOOLSET === "compile" || process.env.GTM_BRAIN_NO_SAVE_NUDGE || !isBrain(args.brain)) return "";   // NO_SAVE_NUDGE: tests that parse a read as one text
+  const project = typeof args.project === "string" ? args.project : "";
+  const line = nudges.note(`${resolve(args.brain)}\t${project}`, name, { ok: !res?.isError });
+  if (!line) return "";
+  try { if (String(lib.readAdmin(args.brain)?.save_nudge ?? "on").toLowerCase() === "off") return ""; } catch {}
+  return line;
+}
+
 /* ---------- JSON-RPC over stdio ---------- */
 const send = m => process.stdout.write(JSON.stringify(m) + "\n");
 /* What a host is shown: the root of a tool's input schema is a plain object. OpenAI-style hosts
@@ -482,7 +497,8 @@ async function handle(req) {
     const start = await opening(args).catch(() => null);
     let r; try { r = await tool.call(args, id); } catch (e) { r = text(`${tool.name} failed: ${e.message}`, true); }
     logCall(args, tool.name, r);
-    return reply(id, start ? { ...r, content: [...(r.content || []), { type: "text", text: start }] } : r);
+    const extra = [saveNudge(args, tool.name, r), start].filter(Boolean).map(t => ({ type: "text", text: t }));
+    return reply(id, extra.length ? { ...r, content: [...(r.content || []), ...extra] } : r);
   }
   if (method === "prompts/list") return reply(id, { prompts: [] });
   if (method === "resources/list") return reply(id, { resources: [] });

@@ -114,6 +114,11 @@ Tool: `query` with object `deal` and search = the company. Off for a brain whose
 front matter has `deal_scoring: off` (new brains get `deal_scoring: on`; a brain without the line
 has it on). The line is workplace info, so it changes through APPROVE.
 
+`save_nudge` in the same front matter: after three reads in a chat (`query`, `load_context`) with
+nothing saved, the read's reply ends with one line asking to save what the turn established; it
+comes back only after five more reads and never in a scheduled or background run. `save_nudge: off`
+turns it off (a brain without the line has it on).
+
 `big_files` in the same front matter says where a file over 25 MB goes, since git never keeps it:
 `google-drive` (new brains, and a brain without the line) moves it to the shared drive and links it
 from the project's `README.md`; `local` keeps it in a folder on this computer outside git
