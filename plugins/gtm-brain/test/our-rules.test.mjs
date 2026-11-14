@@ -233,7 +233,7 @@ test("review: a fact that is denied does not satisfy a status check, in this not
   const root = withRules(brain(), CONTRACT);
   lib.addName(root, "Northwind", { kind: "organization" });
   const block = { entity: "Northwind", status: "customer", basis: "user", observed_at: NOW };
-  for (const content of ["Northwind is now a customer, though there is no signed contract yet.", "Northwind is a customer now. They have not signed the contract.", "Northwind is our customer without a signed contract.", "Northwind is a customer; the contract is still unsigned."])
+  for (const content of ["Northwind is now a customer, though there is no signed contract yet.", "Northwind is a customer now. They have not signed the contract.", "Northwind is our customer without a signed contract.", "Northwind is a customer; the contract is still unsigned.", "Northwind is our customer and will sign the contract next week."])
     assert.equal(R.saveRefusals(root, { context: "company", content, companies: ["Northwind"], customer: block }).length, 1, content);
   assert.equal(remember(root, { context: "company", content: "Northwind has not signed the contract yet.", companies: ["Northwind"], sources: ["gmail:a"] }).status, 0);
   assert.equal(R.saveRefusals(root, { context: "company", content: "Northwind is our customer.", companies: ["Northwind"], customer: block }).length, 1, "an earlier note that denies the fact");
@@ -252,7 +252,7 @@ test("review: only the company the sentence calls a customer is checked, not eve
 test("review: a field check accepts a field the compiled brief already holds", () => {
   const p = R.parseOurRules("Always include the role when saving a person.\n> applies to: person · when: saving · check\n", VOCAB);
   const root = brain();
-  const filled = reg(["Lena Fischer", "person", { compiled_fields: JSON.stringify([{ field: "role", value: "Head of events", memories: ["m_000000000001"] }]) }]), empty = reg(["Lena Fischer", "person"]);
+  const filled = reg(["Lena Fischer", "person", { compiled_fields: JSON.stringify([{ field: "role", text: "Head of events", memories: ["m_000000000001"] }]) }]), empty = reg(["Lena Fischer", "person"]);
   const note = { context: "company", content: "Lena Fischer moved to Berlin.", people: ["Lena Fischer"] };
   assert.equal(R.saveRefusals(root, note, { parsed: p, registry: empty }).length, 1);
   assert.deepEqual(R.saveRefusals(root, note, { parsed: p, registry: filled }), [], "the brief has the role");
@@ -293,8 +293,8 @@ test("review: the rules check lists at most ten unfiled rules, and says what a p
   assert.equal((report.match(/is not filed yet/g) || []).length, 10);
   assert.match(report, /21 more Our rules lines are not filed yet/);
   const one = rulesReport(withRules(brain(), `Never use "cheap" in a note or a draft.\n\nNever call a company a customer before a signed contract.\n`));
-  assert.match(one, /check \(refuses a note that says "cheap"\)/);
-  assert.match(one, /check \(refuses saving one as a customer until a note about it says "a signed contract"\)/);
+  assert.match(one, /check on the line under it; as a check it refuses a note that says "cheap"\n/);
+  assert.match(one, /as a check it refuses saving one as a customer until a note about it says "a signed contract"/);
 });
 
 test("review: a brain with no Our rules pays nothing: no scope is worked out for a brief or a save", () => {

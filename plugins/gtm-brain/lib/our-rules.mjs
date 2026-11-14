@@ -25,6 +25,7 @@ import * as lib from "./brain.mjs";
 
 export const VERBS = ["saving", "drafting", "reading"];
 export const MODES = ["check", "guidance"];
+const WRAP_AT = 70;   // a line this long that ends without punctuation was wrapped by an editor
 export const FEW = 3;   // general rules ride along with a scoped reply only while there are this many or fewer
 const TEMPLATES = fileURLToPath(new URL("../templates", import.meta.url));
 const OWN = /^##\s+Our rules\s*$/i, OLD_OWN = /^#\s+Our rules\s*$/i;
@@ -124,10 +125,11 @@ export function parseOurRules(text, vocab, { first = 1 } = {}) {
   let last = null;
   for (let i = 0; i < lines.length; i++) {
     const raw = lines[i], n = first + i;
+    if (/^\s*(?:#{1,6}\s|[-*_]{3,}\s*$|```)/.test(raw)) { last = last && { ...last, gap: true }; continue; }   // a sub-heading or a divider under Our rules is not a rule
     if (skip.has(i) || !raw.trim() || /^<!--.*-->$/.test(raw.trim())) { if (!raw.trim()) last = last && { ...last, gap: true }; continue; }
     if (/^\s*>/.test(raw)) {
       const target = last && !last.gap ? rules[last.index] : null;
-      if (!/^\s*>\s*(applies|for|scope|when|kind|check|guidance)\b/i.test(raw)) { if (target) target.note = squash(`${target.note || ""} ${raw.replace(/^\s*>\s?/, "")}`); continue; }   // a plain quote under a rule is part of it
+      if (!/^\s*>\s*(?:(?:applies to|applies|scope|kind)\b|(?:for|when|on|mode)\s*:|(?:check|checked|guidance|guide)\s*(?:[·•|;.]|$))/i.test(raw)) { if (target) target.note = squash(`${target.note || ""} ${raw.replace(/^\s*>\s?/, "")}`); continue; }   // a plain quote under a rule is part of it
       if (!target) { problems.push({ line: n, problem: "a tag line with no rule directly above it", proposal: "put it on the line right under the rule it is for, or remove it" }); continue; }
       if (target.tag) { problems.push({ line: n, problem: `a second tag line for the rule on line ${target.line}`, proposal: "keep one tag line per rule; remove this one or merge the two" }); continue; }
       const { tag, problems: p } = parseTag(raw, vocab, n);
@@ -135,14 +137,16 @@ export function parseOurRules(text, vocab, { first = 1 } = {}) {
       continue;
     }
     const clean = raw.replace(/^\s*(?:[-*+]|\d+[.)])\s+/, "").trim();
-    // a wrapped rule: a line that starts lowercase right under an unfinished one belongs to it
-    if (last && !last.gap && !rules[last.index].tag && /^[a-z]/.test(clean) && !/[.!?:]$/.test(rules[last.index].text)) { rules[last.index].text += " " + clean; continue; }
+    // a wrapped rule: an indented line, or a lowercase line right under a long unfinished one, belongs to it. Two
+    // short lowercase lines are two rules: "one line each" is the documented form, and its examples are lowercase.
+    const bullet = /^\s*(?:[-*+]|\d+[.)])\s+/.test(raw), indented = !bullet && /^\s{2,}\S/.test(raw);
+    if (last && !last.gap && !rules[last.index].tag && !rules[last.index].note && !bullet && (indented || (/^[a-z]/.test(clean) && last.len >= WRAP_AT && !/[.!?:]$/.test(rules[last.index].text)))) { rules[last.index].text += " " + clean; last.len = raw.length; continue; }
     rules.push({ line: n, text: clean, tag: null, tagLine: null });
-    last = { index: rules.length - 1, gap: false };
+    last = { index: rules.length - 1, gap: false, len: raw.length };
   }
   for (const r of rules) {
     r.check = r.tag?.mode === "check" ? checkOf(r.text, r.tag, vocab) : null;
-    r.work = workOffer(r.text, vocab);
+    r.work = r.tag ? null : workOffer(r.text, vocab);   // a tag line is the person's answer: it is a rule, shown and never offered again
   }
   return { rules, problems };
 }
@@ -241,7 +245,7 @@ const label = r => r.tag?.mode === "check" ? (r.check ? " [check]" : " [guidance
 export function scopedText({ scoped, general, moreGeneral }, about) {
   if (!scoped.length && !general.length) return "";
   const line = r => `- ${r.text}${r.note ? ` ${r.note}` : ""}${label(r)} (RULES.md line ${r.line})`;
-  return [`Our rules for ${about} (RULES.md; follow them${scoped.some(r => r.check) ? ", a [check] rule refuses a save that breaks it" : ""}):`, ...scoped.map(line), ...general.map(line), ...(moreGeneral ? [`(${moreGeneral} general rules: query rules lists them)`] : [])].join("\n");
+  return [`Our rules for ${about} (RULES.md; follow them${scoped.some(r => r.check) ? ", a [check] rule refuses a save that breaks it" : ""}):`, ...scoped.map(line), ...general.map(line), ...(moreGeneral ? [`(${moreGeneral} general rules: query rules with search general lists them)`] : [])].join("\n");
 }
 
 /* Once per chat per rule and action: the server keeps one of these; quietMs of silence starts a new chat. */
@@ -289,6 +293,26 @@ const quote = r => `"${r.text}" (RULES.md line ${r.line})`;
 const wordIn = (text, word) => new RegExp(`(^|[^a-z0-9])${word.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^a-z0-9])`, "i").test(String(text || ""));
 const CUSTOMER_SAID = /\b(?:is|are|became|becomes|become|now|as|turned into|signed up as)\s+(?:now\s+)?(?:a|an|our)\s+(?:new\s+|paying\s+)?customers?\b/i;
 
+/* A fact counts when one sentence says all its words and neither denies them ("no signed contract yet") nor only
+   expects them ("will sign the contract"). A doubtful sentence refuses: the refusal says what to save first. */
+const DENIED = /\b(?:no|not|never|without|missing|pending|awaiting|waiting|lacks?|will|going to|about to|(?:plan|expect|hope|intend|want|need)(?:s|ed|ing)? to|should|might|may|if|once|unless|until)\b|n['’]t\b/i;
+const sentences = t => String(t || "").split(/(?<=[.;!?])\s+|\n+/);
+const says = (text, words) => sentences(text).some(s => has(s, words) && !DENIED.test(s));
+/* Who a note calls a customer in plain words: the name nearest before the phrase in its sentence; with no name
+   there, the only organization in the note. */
+function saidCustomers(content, scopes) {
+  const out = new Set(), orgs = scopes.filter(s => s.kind === "organization");
+  for (const sentence of sentences(content)) for (const m of sentence.matchAll(new RegExp(CUSTOMER_SAID.source, "gi"))) {
+    const before = sentence.slice(0, m.index).toLowerCase(); let best = null, at = -1;
+    for (const s of scopes) { const i = before.lastIndexOf(s.name.toLowerCase()); if (i > at) { at = i; best = s; } }
+    if (best) out.add(best); else if (orgs.length === 1) out.add(orgs[0]);
+  }
+  return out;
+}
+/* remember checks a batch entry by entry in one synchronous pass: the registry and the notes are read once for it. */
+let pass = null;
+const thisPass = root => { if (pass?.root !== root) { pass = { root }; setImmediate(() => { pass = null; }); } return pass; };
+
 /* A saved note against the check rules that apply to it: a list of refusals (empty when it may be saved). Every
    refusal quotes the rule and says what would satisfy it. Reads RULES.md, and the notes only when a status or
    field rule needs an earlier fact. Never throws: a rule that cannot be evaluated refuses nothing. */
@@ -297,15 +321,16 @@ export function saveRefusals(root, entry, { parsed = null, registry = null } = {
     parsed ||= readOurRules(root);
     const checks = parsed.rules.filter(r => r.check && whenMatches(r, "saving"));
     if (!checks.length || !entry || typeof entry !== "object") return [];
-    registry ||= lib.readNames(root);
+    const batch = thisPass(root);
+    registry ||= (batch.registry ??= lib.readNames(root));
     const scopes = entryScopes(root, [entry], { registry, rules: checks });
-    let memories = null;
     const earlier = s => {
-      memories ??= lib.listContexts(root).flatMap(c => lib.effectiveMemories(c.memories)).filter(m => !m.retracts);
+      const memories = (batch.memories ??= lib.listContexts(root).flatMap(c => lib.effectiveMemories(c.memories)).filter(m => !m.retracts));
       const name = s.name.toLowerCase();
       return memories.filter(m => (s.id && (m.entities || []).includes(s.id)) || (m.people || []).some(p => String(p).toLowerCase() === name) || (m.companies || []).some(p => String(p).toLowerCase() === name));
     };
     const content = String(entry.content || ""), out = [];
+    let said = null;
     for (const r of checks) {
       const hit = scopes.filter(s => appliesTo(r, s)), general = isGeneral(r);
       if (!general && !hit.length) continue;
@@ -320,14 +345,16 @@ export function saveRefusals(root, entry, { parsed = null, registry = null } = {
         if (c.kind === "status") {
           const same = n => !!n && (n === s.name || n === s.id || (!!s.id && lib.resolveEntity(registry, n)?.id === s.id));
           const sets = c.status
-            ? (entry.customer ? entry.customer.status === c.status && same(entry.customer.entity) : c.status === "customer" && CUSTOMER_SAID.test(content) && wordIn(content, s.name))
+            ? (entry.customer ? entry.customer.status === c.status && same(entry.customer.entity) : c.status === "customer" && (said ??= saidCustomers(content, scopes)).has(s))
             : entry.relation?.type === c.link && entry.relation.status !== "ended" && (same(entry.relation.from) || same(entry.relation.to));
           if (!sets) continue;
-          if (has(content, c.fact) || earlier(s).some(m => has(m.content, c.fact))) continue;
+          if (says(content, c.fact) || earlier(s).some(m => says(m.content, c.fact))) continue;
           out.push(`refused by Our rules ${quote(r)}: ${s.name} would be saved as ${c.status ? (c.status === "former_customer" ? "a former customer" : `a ${c.status}`) : c.link.replace(/_/g, " ")}, and no note about it says "${c.factText}". Save that first (with its source), or save this without the ${c.status ? "status" : "relationship"}`);
         } else if (c.kind === "field") {
+          let filled = []; try { filled = JSON.parse(lib.resolveEntity(registry, s.id || s.name)?._fm?.compiled_fields || "[]"); } catch {}
+          if (Array.isArray(filled) && filled.some(f => f?.field === c.field && String(f.text ?? "").trim())) continue;   // the compiled brief already holds it
           if (has(content, c.words) || earlier(s).some(m => has(m.content, c.words))) continue;
-          out.push(`refused by Our rules ${quote(r)}: nothing about ${s.name} gives the ${c.field.replace(/_/g, " ")}. Add it to the note, or ask the person for it`);
+          out.push(`refused by Our rules ${quote(r)}: nothing about ${s.name} gives the ${c.field.replace(/_/g, " ")}. Add it to the note in words that name it ("${c.field.replace(/_/g, " ")}: ..."), or ask the person for it`);
         }
       }
     }
@@ -346,6 +373,11 @@ export function draftFindings(parsed, scopes, text) {
 }
 
 /* ---------- Filing: proposals for an untagged rule ---------- */
+/* What a check refuses, in one clause: the person accepts a check knowing what it does. */
+export const checkSays = c => c.kind === "word" ? `refuses a note that says "${c.word}"`
+  : c.kind === "status" ? `refuses saving one as ${c.status ? (c.status === "former_customer" ? "a former customer" : `a ${c.status}`) : c.link.replace(/_/g, " ")} until a note about it says "${c.factText}"`
+  : c.kind === "source" ? "refuses a note with no source besides the chat" : `refuses a note about one until a note or its brief gives the ${c.field.replace(/_/g, " ")}`;
+export const MAX_UNFILED = 10;   // the rules check lists this many unfiled rules, then one line counting the rest
 const KIND_WORDS = [[/\b(person|people|contacts?|leads?|someone|anyone|speakers?|candidates?)\b/i, "person"], [/\b(compan(y|ies)|organi[sz]ations?|accounts?|customers?|clients?|vendors?|firms?)\b/i, "organization"], [/\bproducts?\b/i, "product"], [/\b(events?|webinars?|conferences?|meetups?)\b/i, "event"], [/\btools?\b/i, "tool"]];
 /* A tag line for an untagged rule: what Codex proposes; the person accepts, changes it or keeps the rule general. */
 export function proposeTag(text, vocab) {
@@ -365,7 +397,7 @@ export function proposeTag(text, vocab) {
   if (check && !when) when = check.kind === "word" ? null : "saving";
   if (check?.kind === "word" && /\b(notes?|sav(e|ing))\b/i.test(t) && /\b(drafts?|writ(e|ing)|emails?|messages?)\b/i.test(t)) when = null;   // both: no when
   const parts = [`applies to: ${applies.length ? applies.join(", ") : "general"}`, ...(when ? [`when: ${when}${on ? ` ${on}` : ""}`] : []), check ? "check" : "guidance"];
-  return { line: `> ${parts.join(" · ")}`, check: !!check, general: !applies.length };
+  return { line: `> ${parts.join(" · ")}`, check: !!check, general: !applies.length, refuses: check ? checkSays(check) : "", keep: `> applies to: ${applies.length ? applies.join(", ") : "general"} · guidance` };
 }
 
 /* ---------- A rule that starts work is a workflow ---------- */
@@ -397,13 +429,14 @@ export function workOffer(text, vocab = null) {
 /* ---------- The rules check's part: Our rules, line by line ---------- */
 export function ourRulesFindings(root) {
   const out = [], add = (kind, line, what, choices, detail) => out.push({ rule: "RULES.md Our rules", kind, subject: `RULES.md line ${line}`, what, choices, ...(detail ? { detail } : {}) });
-  const parsed = readOurRules(root), vocab = vocabulary(root);
+  const parsed = readOurRules(root), vocab = vocabulary(root); let unfiled = 0;
   for (const p of parsed.problems) add("rule-problem", p.line, `RULES.md line ${p.line}, Our rules: ${p.problem}; until it is fixed, the rule above it applies more widely.`, [`Fix it: ${p.proposal} (say /gtm-brain-rules, or edit RULES.md and save)`, "Remove the tag line (the rule stays, as general)"]);
   for (const r of parsed.rules) {
-    if (r.work) { add("rule-work", r.line, `RULES.md line ${r.line}: ${r.work.text}`, [`Make it a workflow: workflow create (title "${r.work.title}", applies_to ${JSON.stringify(r.work.applies_to)}, the body below), then remove line ${r.line} and save`, "Keep it as a rule: it is shown as guidance and never starts anything"], r.work.body); continue; }
-    if (!r.tag) { const p = proposeTag(r.text, vocab); add("rule-unfiled", r.line, `RULES.md line ${r.line}: "${r.text}" is not filed yet, so it is shown in every chat${p.check ? " and nothing checks it" : ""}.`, [`File it: write ${p.line} on the line under it`, ...(p.general ? [] : ["Keep it general: write > applies to: general · guidance"]), "Change the proposal (the person's words)"]); continue; }
+    if (r.work) { add("rule-work", r.line, `RULES.md line ${r.line}: ${r.work.text}`, [`Make it a workflow: workflow create (title "${r.work.title}", applies_to ${JSON.stringify(r.work.applies_to)}, the body below), then remove line ${r.line} and save`, `Keep it as a rule: write ${proposeTag(r.text, vocab).keep} on the line under it; it is shown as guidance and never starts anything`], r.work.body); continue; }
+    if (!r.tag) { if (++unfiled > MAX_UNFILED) continue; const p = proposeTag(r.text, vocab); add("rule-unfiled", r.line, `RULES.md line ${r.line}: "${r.text}" is not filed yet, so it is shown in every chat${p.check ? " and nothing checks it" : ""}.`, [`File it: write ${p.line} on the line under it${p.refuses ? `; as a check it ${p.refuses}` : ""}`, ...(p.general ? [] : ["Keep it general: write > applies to: general · guidance"]), "Change the proposal (the person's words)"]); continue; }
     if (r.tag.mode === "check" && !r.check) add("rule-guidance", r.line, `RULES.md line ${r.line}: "${r.text}" is tagged check, but no check can be read from it; it is shown as guidance.`, [`Reword it as one the brain checks (${CHECK_PATTERNS.map(c => c.example).join(" / ")})`, "Tag it guidance"]);
   }
+  if (unfiled > MAX_UNFILED) add("rule-unfiled", "more", `${unfiled - MAX_UNFILED} more Our rules lines are not filed yet.`, ["Run the check again after the first ones are filed"]);
   return out;
 }
 
@@ -446,7 +479,9 @@ export function startRules(root) {
    createShownOnce), "" when nothing new applies. Never throws. */
 export function replyRules(root, { scopes, verb, shown = null, chatKey = root, about = null }) {
   try {
-    const parsed = readOurRules(root); if (!parsed.rules.length || !scopes.length) return "";
+    const parsed = readOurRules(root); if (!parsed.rules.some(r => !r.work)) return "";
+    if (typeof scopes === "function") scopes = scopes(parsed.rules) || [];   // worked out only when there is a rule to show
+    if (!scopes.length) return "";
     let picked = rulesFor(parsed, scopes, verb);
     if (shown) picked = shown.filter(chatKey, verb, picked);
     const kinds = [...new Set(scopes.map(s => s.subtype ? `${s.kind} (${s.subtype})` : s.kind))].join(", ");

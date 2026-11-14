@@ -405,7 +405,7 @@ const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [colu
   query.call = async ({ brain, object, sql, search, filters, limit, project, candidates }) => {
     if (sql) { try { return text(table(await memoryReader.read(brain, "sql", { sql, limit }))); } catch (e) { return text(e.message, true); } }
     if (!object) return text("Pass object or sql: query needs one of them.", true);
-    if (object === "brief") return search ? Promise.resolve(original.get("recall")({ brain, entity: search, ...(filters?.context ? { context: filters.context } : {}), ...(project ? { project } : {}) })).then(r => withRules(r, brain, project, () => [entityScope(brain, search)].filter(Boolean), ["reading", "drafting"])) : text("brief needs search: the entity name, alias, email or id.", true);
+    if (object === "brief") return search ? Promise.resolve(original.get("recall")({ brain, entity: search, ...(filters?.context ? { context: filters.context } : {}), ...(project ? { project } : {}) })).then(r => withRules(r, brain, project, rules => [entityScope(brain, search, { rules })].filter(Boolean), ["reading", "drafting"])) : text("brief needs search: the entity name, alias, email or id.", true);
     if (object === "rules") {   // with search or filters.when/text: the Our rules that apply (lib/our-rules.mjs); without: the check
       if (!search && !filters?.when && !filters?.text) return original.get("check_rules")({ brain });
       const r = scopedReport(brain, { search, when: filters?.when || null, text: filters?.text || null });
@@ -429,16 +429,16 @@ const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [colu
     const r = await base({ brain, object, ...(search !== undefined ? { search } : {}), ...(filters !== undefined ? { filters } : {}), ...(limit !== undefined ? { limit } : {}) });
     return object === "memories" && !r.isError ? withAskSource(brain, r) : r;
   };
-  // RULES.md Our rules: the rules for the entity in hand ride along with the reply, once per chat per rule and action
+  // RULES.md Our rules: the rules for the entity in hand ride along with the reply, once per chat per rule and action.
+  // scopes is called only when Our rules has a rule, so a brain without any reads nothing more for a brief or a save.
   const withRules = (r, brain, project, scopes, verb) => {
     if (r?.isError || !r?.content?.[0] || process.env.GTM_BRAIN_RUN) return r;
-    let s = []; try { s = scopes(); } catch {}
-    const lines = replyRules(brain, { scopes: s, verb, shown: rulesShown, chatKey: `${resolve(brain)}\t${typeof project === "string" ? project : ""}` });
+    const lines = replyRules(brain, { scopes, verb, shown: rulesShown, chatKey: `${resolve(brain)}\t${typeof project === "string" ? project : ""}` });
     return lines ? { ...r, content: [{ ...r.content[0], text: `${r.content[0].text}\n\n${lines}` }, ...r.content.slice(1)] } : r;
   };
   {
     const remember = byName("remember"), rememberBase = remember.call;
-    remember.call = async args => withRules(await rememberBase(args), args.brain, args.project, () => entryScopes(args.brain, Array.isArray(args.memories) ? args.memories : [args]), "saving");
+    remember.call = async args => withRules(await rememberBase(args), args.brain, args.project, rules => entryScopes(args.brain, Array.isArray(args.memories) ? args.memories : [args], { rules }), "saving");
   }
   // RULES.md Ask the source: memory rows from a connected tool, older than their row allows, get one line per row
   const withAskSource = (brain, r) => {

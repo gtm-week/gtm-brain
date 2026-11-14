@@ -53,7 +53,8 @@ or the name (filters.when: saving, drafting or reading).
 
 **File** (after `query` with object `rules` lists Our rules lines "not filed yet", or right after
 adding one): for each, one question with the proposed tag line quoted from the report as the
-first option: 1. Yes, file it 2. Keep it general 3. Change it. On yes, write that tag line on
+first option: 1. Yes, file it 2. Keep it general 3. Change it. When the proposal is a `check`,
+say in the question what it would refuse (the report gives the clause). On yes, write that tag line on
 the line directly under the rule, exactly as proposed or as the person changed it, and nothing
 else in the file. Never write a tag line without their yes; a rule nobody can scope stays general.
 A tag line the report says cannot be read: offer its fix the same way.
@@ -61,8 +62,9 @@ A tag line the report says cannot be read: offer its fix the same way.
 **Starts work** ("whenever a company becomes a customer, send the welcome pack"): a rule never
 starts work. The report offers it as a one-step workflow with its title and body; ask
 1. Make it a workflow 2. Keep it as a rule. On 1: `workflow` with action create, the title,
-applies_to and body from the report, then remove the line from Our rules and save. On 2 it stays
-guidance. When the person adds such a sentence, make the same offer instead of adding it.
+applies_to and body from the report, then remove the line from Our rules and save. On 2: write
+the guidance tag line the report gives under it and save; a line with a tag line is a rule and is
+not offered again. When the person adds such a sentence, make the same offer instead of adding it.
 
 **Add** ("from now on, pricing notes go to Our offer", "speaker graphics go in speakers/"):
 - About where a file goes: a new table row, or a change to the row that already covers it.
