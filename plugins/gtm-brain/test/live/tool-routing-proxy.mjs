@@ -2,7 +2,7 @@
 // plus a harmless simulated computer-use alternative. No application UI is accessed.
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
-import { appendFileSync, realpathSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { meetingFixtureTools, meetingFixtureResult, upcomingCalendarTool, upcomingCalendarResult } from './meeting-source-fixture.mjs';
@@ -32,6 +32,7 @@ const build = pluginBuild || process.env.GTM_BRAIN_PLUGIN;
 const serverFile = build ? `${build.replace(/\/?$/, "")}/server/server.mjs` : fileURLToPath(new URL("../../server/server.mjs", import.meta.url));
 const child = spawn(process.execPath, [serverFile], { stdio: ["pipe", "pipe", "inherit"], env: { ...process.env, ...(process.env.GTM_BRAIN_EVAL_PROFILE ? { CODEX_HOME: process.env.GTM_BRAIN_EVAL_PROFILE } : {}), GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_NO_COMMIT: process.env.GTM_BRAIN_EVAL_COMMIT === "1" ? "" : "1" } });
 const pending = new Map();
+mkdirSync(dirname(resolve(trace)), { recursive: true });   // a brain before setup has no work/ folder yet
 const log = record => appendFileSync(trace, JSON.stringify({ at: new Date().toISOString(), ...record }) + "\n");
 log({ kind: 'build', server: serverFile });
 const send = message => process.stdout.write(JSON.stringify(message) + "\n");
