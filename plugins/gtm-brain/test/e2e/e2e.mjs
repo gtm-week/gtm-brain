@@ -152,7 +152,9 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
   await check("dashboard.notes_first_page", "dashboard", async () => {
     const m = dash?.pillars?.memories; if (!m) return { pass: false };
     const all = JSON.parse(readFileSync(join(brain, "work", "home", m.file), "utf8")).notes, eff = Object.values(gold.contexts).reduce((a, c) => a + c.effective, 0);
-    return { pass: m.first.length <= 40 && all.length === m.total && m.in_force > 0 && m.in_force <= eff && all.every((n, i) => !i || all[i - 1].at >= n.at), bytes: Buffer.byteLength(JSON.stringify(all)), note: `${m.in_force} in force of ${m.total}` };
+    // the page carries one page of notes in force, plus the corrected ones between them, never more than three pages
+    const live = m.first.filter(n => n.state === "in force").length;
+    return { pass: live === Math.min(40, m.in_force) && m.first.length <= 120 && m.first.every((n, i) => n.id === all[i].id) && all.length === m.total && m.in_force > 0 && m.in_force <= eff && all.every((n, i) => !i || all[i - 1].at >= n.at), bytes: Buffer.byteLength(JSON.stringify(all)), note: `${m.in_force} in force of ${m.total}` };
   });
   if (sup) await check("dashboard.notes_replaced", "dashboard", async () => {
     const all = dash?.pillars?.memories ? JSON.parse(readFileSync(join(brain, "work", "home", dash.pillars.memories.file), "utf8")).notes : [];
