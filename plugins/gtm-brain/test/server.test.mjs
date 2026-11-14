@@ -463,10 +463,16 @@ test("evaluation proxy exposes a harmless competitor and refuses other roots and
     const catalog = await ask("tools/list", {});
     assert.ok(catalog.tools.some(t => t.name === "computer_use"));
     assert.ok(!catalog.tools.some(t => t.name === "setup_brain"));
-    for (const arguments_ of [{ brain: P, object: "memories" }, { brain, by: "marta", context: "../offer", content: "No write" }]) {
+    // The same calls on the fixture brain and its real context pass through: the two refusals
+    // below are the proxy's, each for its own reason, not a brain that fails every call.
+    const allowed = await ask("tools/call", { name: "query", arguments: { brain, object: "contexts" } });
+    assert.ok(!allowed.isError && /offer/.test(allowed.content[0].text), allowed.content[0].text);
+    for (const [arguments_, reason] of [[{ brain: P, object: "memories" }, /^Only the synthetic evaluation brain is allowed$/], [{ brain, by: "marta", context: "../offer", content: "No write" }, /^Only existing synthetic contexts are allowed$/]]) {
       const response = await ask("tools/call", { name: arguments_.object ? "query" : "remember", arguments: arguments_ });
-      assert.equal(response.isError, true);
+      assert.equal(response.isError, true); assert.match(response.content[0].text, reason);
     }
+    const journal = join(brain, "brain", "contexts", "offer", "memories.jsonl");
+    assert.ok(!existsSync(journal) || !readFileSync(journal, "utf8").includes("No write"), "the refused note was not written");
     const fallback = await ask("tools/call", { name: "computer_use", arguments: { action: "inspect" } });
     assert.equal(fallback.isError, true); assert.match(fallback.content[0].text, /No UI access or writes/);
   } finally { reader.close(); proxy.stdin.end(); proxy.kill(); }
