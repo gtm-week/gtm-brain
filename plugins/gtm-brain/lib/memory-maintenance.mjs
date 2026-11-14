@@ -37,7 +37,7 @@ export function memoryIndexMaintenance(root, { mode = 'status', budget_ms = 1000
     if (!existsSync(indexPath(root))) return describe(root, null, registry);
     let release, db;
     try {
-      release = cacheLock(root);
+      release = cacheLock(root, 5000);
       if (cacheResetPending(root)) return { status: 'rebuilding', next: 'Call memory_index with mode refresh to resume interrupted cache replacement.' };
       db = openDatabase(indexPath(root), { readOnly: true });
       if (db.prepare('PRAGMA user_version').get().user_version !== MEMORY_INDEX_VERSION) return { status: 'incompatible', next: 'Call memory_index with mode rebuild. Source files are preserved.' };
@@ -48,7 +48,7 @@ export function memoryIndexMaintenance(root, { mode = 'status', budget_ms = 1000
       throw e;
     } finally { db?.close(); release?.(); }
   }
-  const index = new MemoryIndex(root, { rebuild: mode === 'rebuild' });
+  const index = new MemoryIndex(root, { rebuild: mode === 'rebuild', lockTimeoutMs: 5000 });
   try {
     index.sync({ budgetMs: budget_ms });
     return { ...describe(root, index.db, JSON.stringify(index.identitySnapshot)), work: index.stats };

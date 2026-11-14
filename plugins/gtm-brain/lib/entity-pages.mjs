@@ -3,7 +3,7 @@
 import { readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
-import { MemoryIndex } from './memory-index.mjs';
+import { openForRead } from './memory-index.mjs';
 import { identity, editedBody, schemaFacts } from './entities.mjs';
 import { readSchema } from './schema.mjs';
 import { entityStamp } from './entity-stamp.mjs';
@@ -25,11 +25,10 @@ export function refreshIndexedPages(root, registry, publish, { readOnly = false 
   const sources = () => digest(contexts.map(c => [c.slug, memoryStamp(join(c.dir, 'context.md'))?.key, memoryStamp(join(c.dir, 'memories.jsonl'))?.key]));
   const sourceRevision = sources(), schemaRevision = readSchema(root).schema?.hash || readSchema(root).error?.message || null;
   if (!readOnly && saved?.format === 1 && saved.sources === sourceRevision && saved.identities === entityStamp(root) && (saved.schema ?? null) === schemaRevision) return [];
-  // A source write must not fail merely because a background view currently
-  // reads the cache. Readers keep their short retry window; writers wait for it.
-  const index = new MemoryIndex(root, { lockTimeoutMs: readOnly ? 1000 : 30000 }), changed = [], checkpoints = {};
+  // A pinned snapshot: the cache lock is held only while the cache catches up, not while
+  // the pages are built and written, so neither a save nor a read waits on a render.
+  const index = openForRead(root), changed = [], checkpoints = {};
   try {
-    index.sync(); index.requireReady();
     const db = index.db;
     const epoch = index.meta('started_at');
     if (saved?.format !== 1 || saved.epoch !== epoch) saved = null;
