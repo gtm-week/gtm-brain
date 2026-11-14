@@ -161,9 +161,11 @@ function forms(w) {
 }
 
 /* Run a parsed question against an open, synced MemoryIndex. Returns ranked rows and what was done. */
-export function searchIndex(index, question, { filters = {}, project = null, now = nowDate(), parsed = null, relationsFor = () => [] } = {}) {
+export function searchIndex(index, question, { filters = {}, project = null, now = nowDate(), parsed = null, relationsFor = () => [], everyWord = false } = {}) {
   const db = index.db;
   const q = parsed || parseQuestion(question, index.names, { now });
+  // a memories search made only of words a question drops ("current", "more") is a search for those words
+  if (everyWord && !q.terms.length && !q.entities.length && !q.kind && !q.tags.length && !q.period) q.terms = [...new Set(words(question).map(fold).filter(w => w.length >= 2))];
   // a product stands for the company it belongs to as well: its current relationships to an organization
   // add that organization's notes ("the Toolkit" finds the notes about the company that makes it)
   for (const e of [...q.entities]) {
@@ -414,7 +416,7 @@ export function answerText(index, root, question, { filters = {}, limit, project
 
 /* query (object memories, with search): the same engine, rows as JSON lines, best first, under the cap. */
 export function searchRows(index, root, search, { filters = {}, limit, project = null, now = nowDate(), relationsFor = () => [] } = {}) {
-  const r = searchIndex(index, search, { filters, project, now, relationsFor });
+  const r = searchIndex(index, search, { filters, project, now, relationsFor, everyWord: true });
   const n = Math.max(1, Math.min(501, Number(limit) || 50));
   const maxBytes = limit ? Math.min(MAX_RESULT_BYTES, Math.max(SEARCH_MAX_BYTES, n * PER_NOTE_BYTES)) : SEARCH_MAX_BYTES;
   const lines = [], rows = []; let bytes = 0;

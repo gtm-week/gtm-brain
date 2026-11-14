@@ -93,6 +93,14 @@ test('a tag or a source typed as-is is still found when its words also appear in
   assert.equal(ids(search(root, 'deal/7731'))[0], sourced.id);
 });
 
+test('a memories search made only of everyday words searches for them, not for every note', () => {
+  const root = fixture();
+  const hit = note(root, 'The current plan keeps two seats.', { at: '2026-10-01T10:00:00Z' });
+  for (let i = 0; i < 5; i++) note(root, `Unrelated note number ${i}.`, { at: '2026-11-10T10:00:00Z' });
+  assert.deepEqual(ids(search(root, 'current')), [hit.id]);
+  assert.match(search(root, 'whether'), /^no rows/);
+});
+
 test('Not found under a filter does not say the whole brain holds nothing', () => {
   const root = fixture();
   note(root, 'The hackathon budget is 2,000 EUR.');
