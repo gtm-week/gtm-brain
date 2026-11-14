@@ -603,11 +603,17 @@ brief missing a required field or relationship.
 Source pointers: `lib/pointers.mjs` gives each source one spelling. Kinds are lowercased and short
 forms mapped (`drive`, `gdrive` mean `google-drive`; `mail` means `gmail`), a doubled prefix
 (`attio:attio:people/9`) loses its repeat, and a record URL on app.hubspot.com, app.attio.com,
-mail.google.com, drive.google.com or notes.granola.ai becomes `provider:<stable id>` with the URL kept
-as an extra `url` source. Stored notes are never rewritten; readers normalize. A source object may
-carry an optional `account` (`{kind, account, ref}`) for a second mailbox or workspace. `query` object
-`reference` (search = `kind:ref` or a record URL) returns the entity whose references include it and
-every note citing it, from the memory index's `source` members.
+mail.google.com, drive.google.com or notes.granola.ai becomes one entry for the record:
+`{kind, account?, ref, url?}`. `ref` is the stable id, `url` is the link exactly as given, and `account`
+is read from the link when its path carries one (the HubSpot portal id, the Attio workspace slug).
+`remember` also takes a source as an object (`{kind, account, ref}`) for a second mailbox, workspace
+or portal. Identity is kind, account and ref; `url` is never compared, and of two sources that differ
+only in `url` the first stays. A link on another host, or one without a stable id, stays
+`{kind: "url", ref: <link>}`. Stored notes are never rewritten; readers normalize, so a 0.35.0 note
+that holds the pointer plus a separate `url` entry for the same link reads as one record. `query`
+object `reference` (search = `kind:ref`, `kind:account/ref` or a record URL) returns the entity whose
+references include it and every note citing it, from the memory index's `source` members; a search
+that names an account also finds what was saved without one.
 
 `/gtm-brain-schema` (*"what do we keep about people"*, *"every company must have a budget owner"*,
 *"investors are a subtype"*) shows the file and adds, renames or removes one row in the person's

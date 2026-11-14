@@ -382,9 +382,12 @@ const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [colu
     if (object === "relations") return run(brain, "gtm-brain-entities/entities.mjs", ["--relations", ...(search ? ["--entity", search] : []), ...(filters?.type ? ["--type", String(filters.type)] : [])]).then(result);
     if (object === "reference") {   // a source pointer (kind:ref or a record URL): the entity that holds it and every note citing it
       const p = lib.parsePointer(search); if (!p) return text("reference needs search: a kind:ref pointer (hubspot:0-1/42) or a record URL.", true);
-      const key = Buffer.from(lib.lookupKey(p), "utf8").toString("hex");   // a hex literal: no quote or semicolon of the reference reaches the SQL
-      try { const r = await memoryReader.read(brain, "sql", { sql: `SELECT m.id AS id, m.context AS context, m.at AS at, m.kind AS kind, m.content AS content FROM members v JOIN memories m ON m.id=v.memory_id WHERE v.field='source' AND v.value=CAST(x'${key}' AS TEXT) ORDER BY m.time DESC`, limit: limit || 200 });
-        return text(lib.referenceText(p, lib.readNames(brain), r.rows)); } catch (e) { return text(e.message, true); }
+      // Looked up by kind:ref; an account in the search (a record link names its portal or workspace) then
+      // keeps the notes that cite that account or none, so a link finds a note saved as kind:ref and back.
+      const key = Buffer.from(lib.lookupKey({ kind: p.kind, ref: p.ref }), "utf8").toString("hex");   // a hex literal: no quote or semicolon of the reference reaches the SQL
+      try { const r = await memoryReader.read(brain, "sql", { sql: `SELECT m.id AS id, m.context AS context, m.at AS at, m.kind AS kind, m.content AS content, m.sources AS sources FROM members v JOIN memories m ON m.id=v.memory_id WHERE v.field='source' AND v.value=CAST(x'${key}' AS TEXT) ORDER BY m.time DESC`, limit: limit || 200 });
+        const cites = row => { if (!p.account) return true; try { return lib.citesPointer(typeof row.sources === "string" ? JSON.parse(row.sources) : row.sources, p); } catch { return true; } };
+        return text(lib.referenceText(p, lib.readNames(brain), r.rows.filter(cites))); } catch (e) { return text(e.message, true); }
     }
     if (object === "deal") return search ? run(brain, "gtm-brain-recall/deal-health.mjs", ["--entity", search]).then(result) : text("deal needs search: the company name, alias or id.", true);
     if (VIEWS[object]) return original.get(VIEWS[object])(object === "brains" ? {} : { brain, ...(project ? { project } : {}), ...(filters && typeof filters === "object" ? filters : {}) });   // a view's options travel in filters (projects: include_available; meetings: its options)

@@ -674,6 +674,9 @@ test("remember attaches the chat it was called from as a codex: source, and only
   assert.deepEqual(rem([]), [{ kind: "codex", ref: "01a0-chat" }], "the chat from work/session.json is the source");
   assert.deepEqual(rem(["--source", "gmail:19fa"]), [{ kind: "gmail", ref: "19fa" }, { kind: "codex", ref: "01a0-chat" }], "tool sources keep their place, the chat comes last");
   assert.deepEqual(rem(["--source", "codex:01a0-named"]), [{ kind: "codex", ref: "01a0-named" }], "a codex source given by hand is not doubled");
+  assert.deepEqual(rem(["--source", '{"kind":"Gmail","account":"Sales@X.io","ref":"19fa"}', "--source", "https://app.hubspot.com/contacts/123456/record/0-1/42"]),
+    [{ kind: "gmail", account: "sales@x.io", ref: "19fa" }, { kind: "hubspot", account: "123456", ref: "0-1/42", url: "https://app.hubspot.com/contacts/123456/record/0-1/42" }, { kind: "codex", ref: "01a0-chat" }], "a source object names its account; a record link is one entry with its url");
+  assert.throws(() => rem(["--source", '{"kind":"gmail","account":"","ref":"19fa"}']), /source account/);
   assert.deepEqual(rem([], { ...env, GTM_BRAIN_RUN: "background" }), [], "a separate run is not the person's chat: no source is attached");
 });
 

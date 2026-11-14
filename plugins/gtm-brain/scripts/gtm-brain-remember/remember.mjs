@@ -7,6 +7,9 @@
 //        [--kind note|decision|question]          default note
 //        [--tools "attio, gmail"] [--people "Pierre Aubert, Ingrid Solberg"]
 //        [--source gmail:19faef...]  (repeatable)   [--action "gmail:sent email:19faef..."] (repeatable)
+//          a source is provider:reference, a direct URL, or an object as JSON text
+//          ('{"kind":"gmail","account":"sales@acme.com","ref":"19faef"}') when the record lives in a
+//          named mailbox, workspace or portal; in a batch file the object is given as it is
 //        [--supersedes m_xxxxxx] [--retracts m_xxxxxx] [--tags "synthetic"]
 //        [--new "Pierre Dupont"]  names the person confirmed as new, when one looked like a known name
 //

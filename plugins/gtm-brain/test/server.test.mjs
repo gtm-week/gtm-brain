@@ -551,12 +551,26 @@ test("MCP capture preserves direct links through memory storage and the rendered
   const r=await call("remember",{brain:root,by:"marta",context:"icp",content:"Direct source capture verified.",sources:[`gmail:${gmail}`,`attio:${attio}`,"https://example.com/original?part=a,b#section"]});
   assert.ok(!r.isError,r.text);
   const memory=lib.readMemories(root,"icp").find(m=>m.content==="Direct source capture verified.");
-  // An Attio record URL is kept as a link and also yields the record pointer (0.35.0 pointers).
-  const expected=[{kind:"gmail",ref:gmail},{kind:"attio",ref:"record/returned-id"},{kind:"url",ref:attio},{kind:"url",ref:"https://example.com/original?part=a,b#section"}];
+  // An Attio record URL is one entry: the record pointer, its workspace as the account, and the link kept as url.
+  const expected=[{kind:"gmail",ref:gmail},{kind:"attio",account:"workspace",ref:"record/returned-id",url:attio},{kind:"url",ref:"https://example.com/original?part=a,b#section"}];
   assert.deepEqual(memory.source.filter(s=>s.kind!=="codex"),expected);
   await call("render_dashboard", { brain: root });
   const data=JSON.parse(readFileSync(join(root,"work/home/data.json"),"utf8"));
-  assert.deepEqual(data.contexts.find(c=>c.slug==="icp").memories.find(m=>m.id===memory.id).source.filter(s=>s.kind!=="codex"),expected);
+  const shown=data.contexts.find(c=>c.slug==="icp").memories.find(m=>m.id===memory.id).source.filter(s=>s.kind!=="codex");
+  assert.deepEqual(shown,expected);
+  // The dashboard data still carries a usable link for every source: url on the entry, or the ref itself.
+  assert.deepEqual(shown.map(s=>new URL(s.url||s.ref).href),[gmail,attio,"https://example.com/original?part=a,b#section"]);
+  // A source given as an object names its account; an http link may ride along as url.
+  const obj=await call("remember",{brain:root,by:"marta",context:"icp",content:"Object source capture verified.",sources:[{kind:"Gmail",account:"Sales@Fixture.test",ref:"thread-77"},{kind:"hubspot",account:"123456",ref:"0-1/42",url:"https://app.hubspot.com/contacts/123456/record/0-1/42"}]});
+  assert.ok(!obj.isError,obj.text);
+  assert.deepEqual(lib.readMemories(root,"icp").find(m=>m.content==="Object source capture verified.").source.filter(s=>s.kind!=="codex"),
+    [{kind:"gmail",account:"sales@fixture.test",ref:"thread-77"},{kind:"hubspot",account:"123456",ref:"0-1/42",url:"https://app.hubspot.com/contacts/123456/record/0-1/42"}]);
+  assert.match((await call("query",{brain:root,object:"reference",search:"gmail:sales@fixture.test/thread-77"})).text,/Notes citing it \(1\)[\s\S]*Object source capture verified/);
+  for(const sources of [[{kind:"gmail",ref:"t",extra:"x"}],[{kind:"gmail"}],[{kind:"gmail",ref:"t",url:"javascript:alert(1)"}]]){
+    const refused=await call("remember",{brain:root,by:"marta",context:"icp",content:"Must not be saved.",sources}).catch(e=>({isError:true,text:String(e)}));
+    assert.ok(refused.isError,JSON.stringify(sources));
+  }
+  assert.ok(!lib.readMemories(root,"icp").some(m=>m.content==="Must not be saved."));
   const before=lib.readMemories(root,"icp").length;
   const bad=await call("remember",{brain:root,by:"marta",memories:[{context:"icp",content:"Must not be partially saved.",sources:[`gmail:${gmail}`]},{context:"icp",content:"Malformed source.",sources:["gmail:"]}]});
   assert.equal(bad.isError,true);assert.match(bad.text,/nothing remembered/);assert.equal(lib.readMemories(root,"icp").length,before);
@@ -681,7 +695,7 @@ test("query object reference finds every note citing a source pointer, whatever 
   const one = await call("remember", { brain: refRoot, by: "ann", context: "deals", content: "Renewal moved to March.", sources: [url] }); assert.ok(!one.isError, one.text);
   const two = await call("remember", { brain: refRoot, by: "ann", context: "deals", content: "Budget confirmed.", sources: ["Attio:attio:people/0a1b2c3d-4e5f-6789-abcd-ef0123456789"] }); assert.ok(!two.isError, two.text);
   const stored = lib.readMemories(refRoot, "deals");
-  assert.deepEqual(stored.find(m => /Renewal/.test(m.content)).source.slice(0, 2), [{ kind: "attio", ref: "people/0a1b2c3d-4e5f-6789-abcd-ef0123456789" }, { kind: "url", ref: url }]);
+  assert.deepEqual(stored.find(m => /Renewal/.test(m.content)).source.filter(s => s.kind !== "codex"), [{ kind: "attio", account: "fixture", ref: "people/0a1b2c3d-4e5f-6789-abcd-ef0123456789", url }]);
   const found = await call("query", { brain: refRoot, object: "reference", search: "ATTIO:people/0a1b2c3d-4e5f-6789-abcd-ef0123456789" });
   assert.ok(!found.isError, found.text);
   assert.match(found.text, /Notes citing it \(2\)/); assert.match(found.text, /Renewal moved/); assert.match(found.text, /Budget confirmed/);
@@ -696,6 +710,12 @@ test("query object reference finds every note citing a source pointer, whatever 
   const named = await call("query", { brain: refRoot, object: "reference", search: url });
   assert.match(named.text, new RegExp(`Entity: Dana Reference \\(${person.id}\\)`)); assert.match(named.text, /Notes citing it \(2\)/);
   for (const search of ["gmail:t1", "gmail:sales@fixture.test/t1", "mail:t1"]) assert.match((await call("query", { brain: refRoot, object: "reference", search })).text, /Notes citing it \(1\)[\s\S]*Thread about the renewal/, search);
+  // a note written by 0.35.0 (the pointer plus a separate url entry) is one citation, found by pointer and by link;
+  // a link into another workspace is another record
+  lib.appendMemory(refRoot, "deals", { authors: ["ann"], content: "Older two-entry note.", source: [{ kind: "attio", ref: "people/0a1b2c3d-4e5f-6789-abcd-ef0123456789" }, { kind: "url", ref: url }] });
+  for (const search of ["attio:people/0a1b2c3d-4e5f-6789-abcd-ef0123456789", url]) { const r = await call("query", { brain: refRoot, object: "reference", search }); assert.match(r.text, /Notes citing it \(3\)[\s\S]*Older two-entry note/, search); assert.equal(r.text.match(/Older two-entry note/g).length, 1, search); }
+  assert.match((await call("query", { brain: refRoot, object: "reference", search: url.replace("/fixture/", "/elsewhere/") })).text, /Notes citing it \(1\)[\s\S]*Budget confirmed/);
+  assert.match((await call("query", { brain: refRoot, object: "reference", search: "attio:fixture/people/0a1b2c3d-4e5f-6789-abcd-ef0123456789" })).text, /Notes citing it \(2\)[\s\S]*Older two-entry note[\s\S]*Renewal moved/);
   const odd = await call("query", { brain: refRoot, object: "reference", search: "hubspot:it's; DROP x" });
   assert.ok(!odd.isError, odd.text); assert.match(odd.text, /Notes citing it: none/);
 });

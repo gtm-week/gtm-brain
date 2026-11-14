@@ -14,10 +14,10 @@ import { spawnSync, execFileSync, execFile, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { parseOntology } from "./ontology/ontology.mjs";
 import { validateAsset } from './assets.mjs';
-import { normalizeSource, accountOK } from "./pointers.mjs";
+import { normalizeSource, accountOK, urlOK } from "./pointers.mjs";
 import { rankEntityCandidates } from './entity-search.mjs';
 export { rankEntityCandidates } from './entity-search.mjs';
-export { normalizeKind, normalizeSource, normalizeSources, pointerKey, parsePointer, urlPointer, lookupKey, sourceMembers, referenceText } from './pointers.mjs';
+export { normalizeKind, normalizeSource, normalizeSources, pointerKey, parsePointer, urlPointer, lookupKey, sourceMembers, citesPointer, referenceText } from './pointers.mjs';
 import { checkSchema } from "./ontology/validation.mjs";
 import { readEntityFiles, writeEntityFiles, entityId, entityType, ENTITY_FORMAT, refreshEntityPages, staleEntities, withEntityLock } from "./entities.mjs";
 import { appendMemoryBytes } from './memory-journal.mjs';
@@ -1131,28 +1131,44 @@ export function recordRunThread(root, kind, input) {
    one still links. foreign: the thread belongs to another project (null when unknown). */
 export const THREAD_URL = id => `codex://threads/${id}`;
 // Source strings split only at the provider delimiter. URLs keep their query, commas and fragment.
-// A connector-provided bare URL is also accepted; opaque IDs still need a provider.
+// A connector-provided bare URL is also accepted; opaque IDs still need a provider. A source can also
+// be an object {kind, account?, ref, url?} (or that object as JSON text, for the --source flag): the
+// way to name the mailbox, workspace or portal a record lives in. One entry per record: kind, account
+// and ref are the identity, and a repeat that differs only in url keeps the first url.
 export function parseSources(input = []) {
   const entries = Array.isArray(input) ? input : [input];
   const unique = new Map();
-  for (const value of entries) {
-    if (typeof value !== "string") throw new Error("sources must contain strings: provider:reference or a direct URL");
-    const text = value.trim();
-    let kind, ref;
-    if (/^https?:\/\//i.test(text)) { kind = "url"; ref = text; }
-    else {
-      const colon = text.indexOf(":");
-      if (colon < 1) throw new Error("source needs a provider:reference or a direct URL");
-      kind = text.slice(0, colon).trim(); ref = text.slice(colon + 1).trim();
-    }
+  for (let value of entries) {
+    if (typeof value === "string" && /^\s*\{/.test(value)) { try { value = JSON.parse(value); } catch { throw new Error("source object is not valid JSON: use {\"kind\": ..., \"ref\": ...} or provider:reference"); } }
+    let kind, ref, account, url;
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const extra = Object.keys(value).filter(k => !["kind", "account", "ref", "url"].includes(k));
+      if (extra.length) throw new Error(`source object takes kind, account, ref and url, not ${extra.join(", ")}`);
+      if (typeof value.kind !== "string" || typeof value.ref !== "string") throw new Error("source object needs a non-empty kind and ref");
+      kind = value.kind.trim(); ref = value.ref.trim();
+      if (value.account !== undefined && value.account !== null) { if (!accountOK(value)) throw new Error("source account must be a non-empty string when given"); account = value.account; }
+      if (value.url !== undefined && value.url !== null) { if (!urlOK(value)) throw new Error("source url must be an http or https link when given"); url = value.url; }
+    } else if (typeof value === "string") {
+      const text = value.trim();
+      if (/^https?:\/\//i.test(text)) { kind = "url"; ref = text; }
+      else {
+        const colon = text.indexOf(":");
+        if (colon < 1) throw new Error("source needs a provider:reference or a direct URL");
+        kind = text.slice(0, colon).trim(); ref = text.slice(colon + 1).trim();
+      }
+    } else throw new Error("sources must contain strings (provider:reference or a direct URL) or {kind, account, ref} objects");
     if (!kind || !ref) throw new Error("source needs a non-empty provider and reference");
-    for (const n of normalizeSource({ kind, ref })) if (n.kind && n.ref) unique.set(JSON.stringify([n.kind, n.ref]), n);
+    for (const n of normalizeSource({ kind, account, ref, url })) if (n.kind && n.ref) {
+      const key = JSON.stringify([n.kind, n.account || "", n.ref]), had = unique.get(key);
+      if (had) { if (!had.url && n.url) had.url = n.url; } else unique.set(key, n);
+    }
   }
   return [...unique.values()];
 }
 /* Sources as text, for the model to hand over: a Codex thread carries its link so a decision can be
-   traced back to the conversation it came from. The page links them instead (threadHtml). */
-export const sourceText = source => (source || []).map(s => s.kind === "codex" ? `codex:${s.ref} (${THREAD_URL(s.ref)})` : `${s.kind}:${s.ref}`).join(", ");
+   traced back to the conversation it came from, and a record its direct link when the note kept one.
+   The page links them instead (threadHtml). */
+export const sourceText = source => (source || []).map(s => s.kind === "codex" ? `codex:${s.ref} (${THREAD_URL(s.ref)})` : `${s.kind}:${s.ref}${s.url && s.url !== s.ref ? ` (${s.url})` : ""}`).join(", ");
 export function resolveThread(id, root, { codexHome = process.env.CODEX_HOME || join(homedir(), ".codex") } = {}) {
   if (typeof id !== "string" || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(id)) return null;
   const out = { id, url: THREAD_URL(id), name: null, cwd: null, originator: null, foreign: null };
@@ -1251,6 +1267,7 @@ export function validateMemory(r) {
   if (/[\u2013\u2014\u2015\u2212]/.test(r.content || "")) errs.push("long dash in content; use a plain hyphen");
   if (!isList(r.source, s => s && isStr(s.kind) && isStr(s.ref))) errs.push("source must be a list of {kind, ref}");
   else if (!r.source.every(accountOK)) errs.push("source account must be a non-empty string when given");
+  else if (!r.source.every(urlOK)) errs.push("source url must be an http or https link when given");
   if (!isList(r.actions, a => a && isStr(a.tool) && isStr(a.action))) errs.push("actions must be a list of {tool, action, ref?}");
   for (const k of ["supersedes", "retracts"]) if (r[k] !== null && !/^m_[0-9a-f]{6,12}$/.test(r[k] || "")) errs.push(`${k} must be a memory id or null`);
   if (!isList(r.tags, isStr)) errs.push("tags must be a list of strings");

@@ -3,7 +3,7 @@
 // on a note. "Ended" is a new note, "that was wrong" a correction, so memories.jsonl is the history,
 // shared through git. The types come from SCHEMA.md (lib/schema.mjs) and are checked when a note is
 // written, never when an old one is read: removing a type later leaves its notes valid.
-import { pointerKey, sourceKind } from "./pointers.mjs";
+import { recordKeys, sourceKind } from "./pointers.mjs";
 import * as lib from "./brain.mjs";
 import { CHAT_KINDS } from "./host.mjs";
 import { readSchema, relationType, US } from "./schema.mjs";
@@ -60,9 +60,10 @@ export function relationOverview(root, { registry = lib.readNames(root), context
   let relations = [...grouped.values()].map(({ from, to, type, notes }) => {
     notes.sort(latest);
     const user = notes.filter(m => m.relation.basis === "user").sort((a, b) => Date.parse(b.at) - Date.parse(a.at) || b.id.localeCompare(a.id))[0], chosen = user || notes[0];
-    const bySource = new Map();
-    for (const m of notes.filter(m => m.relation.basis === "source")) {
-      const k = m.relation.reference ? pointerKey(m.relation.reference) : [...new Set(m.source.filter(s => ![...CHAT_KINDS, "memory"].includes(s.kind)).map(sourceKind))].sort().join("|");
+    const bySource = new Map(), sourced = notes.filter(m => m.relation.basis === "source"), referenced = sourced.filter(m => m.relation.reference);
+    const recordKey = new Map(recordKeys(referenced.map(m => m.relation.reference)).map((key, i) => [referenced[i], key]));
+    for (const m of sourced) {
+      const k = m.relation.reference ? recordKey.get(m) : [...new Set(m.source.filter(s => ![...CHAT_KINDS, "memory"].includes(s.kind)).map(sourceKind))].sort().join("|");
       if (!bySource.has(k)) bySource.set(k, m);
     }
     return { from, type, to, status: chosen.relation.status, basis: chosen.relation.basis, observed_at: chosen.relation.observed_at, recorded_at: chosen.at,

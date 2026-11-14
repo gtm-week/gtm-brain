@@ -94,6 +94,19 @@ test("briefs compile across contexts with citations and scoped reads leave loade
   assert.deepEqual(lib.readLoaded(root), before);
 });
 
+test("a source that kept its direct link opens that link in the brief; an entity file keeps account and url", () => {
+  const root = setup(), hs = "https://app.hubspot.com/contacts/123456/record/0-1/42", mail = "https://mail.google.com/mail/u/2/#inbox/FMfcgzQXJWbcdefgh";
+  const pointer = { kind: "hubspot", account: "123456", ref: "0-1/42", url: hs };
+  const e = lib.addName(root, "Chris", { references: [pointer], sources: [{ kind: "gmail", ref: "FMfcgzQXJWbcdefgh", url: mail }] });
+  note(root, "events", "Chris coordinates sponsors.", { source: [pointer, { kind: "hubspot", ref: "0-1/43" }] });
+  const saved = lib.resolveEntity(lib.readNames(root), e.id);
+  assert.deepEqual(saved.references, [pointer]); assert.deepEqual(saved.identity_sources, [{ kind: "gmail", ref: "FMfcgzQXJWbcdefgh", url: mail }]);
+  const view = lib.entityBrief(root, "Chris").markdown, at = text => view.indexOf(text);
+  assert.ok(at(`External records: [hubspot:0-1/42](${hs})`) > 0, view);
+  assert.ok(at(`Identity evidence: [Gmail](${mail})`) > 0, view);              // the saved link, not one rebuilt for mailbox 0
+  assert.ok(at(`\n- [hubspot:0-1/42](${hs})`) > 0 && at("\n- `hubspot:0-1/43`") > 0, view);   // without a url: as before
+});
+
 test("new backdated evidence invalidates a brief; stale compilation and wrong-context citations are rejected", () => {
   const root = setup(); lib.addName(root, "Chris");
   const a = note(root, "events", "Chris coordinates sponsors."), b = note(root, "partners", "Referral terms remain unresolved.");

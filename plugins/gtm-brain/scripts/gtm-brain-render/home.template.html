@@ -357,7 +357,8 @@ function sourceEntity(s){
 }
 function sourceInfo(s){
  const kind=String(s.kind||"").toLowerCase(),ref=String(s.ref||"");
- let url=null;try{const parsed=new URL(ref);if(["https:","http:"].includes(parsed.protocol)&&!parsed.username&&!parsed.password)url=parsed}catch{}
+ // The direct link kept on the entry (url) wins; an older entry may carry the link as its ref.
+ let url=null;try{const parsed=new URL(typeof s.url==="string"&&s.url?s.url:ref);if(["https:","http:"].includes(parsed.protocol)&&!parsed.username&&!parsed.password)url=parsed}catch{}
  const host=url?.hostname||"";
  const provider=({gmail:"Gmail",attio:"Attio",hubspot:"HubSpot",granola:"Granola",codex:"Codex",slack:"Slack",notion:"Notion",linear:"Linear",user:"You",manual:"Manual",test:"Example"})[kind]||
   (host==="mail.google.com"?"Gmail":host==="app.attio.com"?"Attio":/(^|\.)hubspot\.com$/.test(host)?"HubSpot":host.replace(/^www\./,"")||"Source");
