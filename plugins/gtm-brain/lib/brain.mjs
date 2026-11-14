@@ -930,7 +930,24 @@ export function unsavedChanges(root, paths = savePathsFor(root)) {
    said while the note reads "kept and shared". origin when there is one, else the first remote. */
 export const PUSH = ["push", "-q", "-u"];
 export const pushRemote = list => { const r = String(list || "").split("\n").map(x => x.trim()).filter(Boolean); return r.includes("origin") ? "origin" : r[0] || ""; };
-export const largeNote = large => `Too big for git, not kept (over ${LARGE_FILE_MB} MB): ${large.map(f => `${f.path} (${Math.round(f.size / 1048576)} MB)`).join(", ")}. Offer to move each to the shared drive (Google Drive) and link it from its project's README.md, as RULES.md says; delete the local copy only after the person says yes and the upload is verified. If Google Drive is not connected in this Codex, offer to connect it first (connect my tools); if they decline, the file stays on this computer only, and say once that teammates will not get it.`;
+/* Where a file too big for git goes: brain/admin.md `big_files: google-drive | local`, changed through APPROVE like
+   any workplace setting. google-drive (the default, and what an unknown value means): the shared drive, linked
+   from the brain. local: a folder on this computer outside git (`big_files_folder:` in admin.md, else
+   ~/gtm-brain-files/<brain folder>), not shared, linked as a file: pointer. */
+export const BIG_FILES = ["google-drive", "local"];
+export function bigFiles(root) {
+  const a = root ? readAdmin(root) : null;
+  const mode = a && BIG_FILES.includes(String(a.big_files || "").trim()) ? String(a.big_files).trim() : "google-drive";
+  const folder = mode === "local" ? (a.big_files_folder && isAbsolute(String(a.big_files_folder)) ? String(a.big_files_folder) : join(homedir(), "gtm-brain-files", basename(resolve(root)))) : null;
+  return { mode, folder };
+}
+/* The one instruction for a file too big for git, shared by save, the chat start and add-file. */
+export function bigFileAdvice(root) {
+  const { mode, folder } = bigFiles(root);
+  if (mode === "local") return `This brain keeps big files on this computer (big_files: local in brain/admin.md): offer to move each to ${folder}, outside git, and link it from its project's README.md as file:${folder}/<name>; delete the original only after the person says yes and the copy is verified. That folder is not shared: say once that teammates will not get the file.`;
+  return `Offer to move each to the shared drive (Google Drive) and link it from its project's README.md, as RULES.md says; delete the local copy only after the person says yes and the upload is verified. If Google Drive is not connected in this Codex, offer to connect it first (connect my tools); if they decline, the file stays on this computer only, and say once that teammates will not get it.`;
+}
+export const largeNote = (large, root) => `Too big for git, not kept (over ${LARGE_FILE_MB} MB): ${large.map(f => `${f.path} (${Math.round(f.size / 1048576)} MB)`).join(", ")}. ${bigFileAdvice(root)}`;
 /* The person's save: commit what unsavedChanges lists, push when there is a remote. */
 export function save(root, message, { covers = false, trailers = [] } = {}) {
   if (!covers && existsSync(join(root, "work", "admin.proposed.md"))) return { ok: false, note: "a change to brain/admin.md is waiting for APPROVE; ask for APPROVE or a drop, then save" };
@@ -938,7 +955,7 @@ export function save(root, message, { covers = false, trailers = [] } = {}) {
   if (!covers) { const back = restoredNotice(guardProtected(root)); if (back) logActivity(root, "save", back.split(".")[0]); }
   const paths = covers ? COVER_PATHS : savePathsFor(root);
   const files = unsavedChanges(root, paths);
-  if (!files.length && !trailers.length) { const large = covers ? [] : largeUnsaved(root); return { ok: true, note: covers ? "nothing to save: no cover changed" : large.length ? `nothing else to save\n${largeNote(large)}` : "nothing to save: everything is committed", files, large }; }
+  if (!files.length && !trailers.length) { const large = covers ? [] : largeUnsaved(root); return { ok: true, note: covers ? "nothing to save: no cover changed" : large.length ? `nothing else to save\n${largeNote(large, root)}` : "nothing to save: everything is committed", files, large }; }
   // save pushes in the foreground below; a background push from commit would race it for the ref.
   const subject = String(message || (files.length ? "save" : "why: placed files")).split("\n")[0].slice(0, 120);
   const r = commit(root, files.length ? paths : [], trailers.length ? `${subject}\n\n${trailers.join("\n")}` : subject, { always: true, push: false, allowEmpty: !files.length });
@@ -949,7 +966,7 @@ export function save(root, message, { covers = false, trailers = [] } = {}) {
   try { const remote = pushRemote(git("remote")); if (remote) { execFileSync("git", ["-C", root, ...PUSH, remote, "HEAD"], { stdio: "pipe", timeout: 30000 }); pushed = `pushed to ${remote}`; } }
   catch (e) { pushed = `commit is local; push failed: ${String(e.stderr || e.message).trim().split("\n")[0].slice(0, 160)}`; }
   logActivity(root, "save", `saved ${hash}: ${files.length} file(s), ${pushed}`);
-  const large = largeUnsaved(root), left = large.length ? `\n${largeNote(large)}` : "";
+  const large = largeUnsaved(root), left = large.length ? `\n${largeNote(large, root)}` : "";
   return { ok: true, note: `saved ${hash}: ${files.length} file(s)\n${files.map(f => `${f.state} ${f.path}`).join("\n")}\n${pushed}${left}`, hash, files, pushed, large };
 }
 /* ---------- the protected files, without a write gate ----------

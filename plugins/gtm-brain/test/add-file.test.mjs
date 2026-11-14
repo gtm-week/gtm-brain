@@ -60,6 +60,37 @@ test('it refuses a folder, a missing file and anything over 25 MB, and says why'
  assert.ok(!existsSync(join(f.root, 'files')));
 });
 
+test('a file over 25 MB gets the same instruction as save and the chat start, following big_files in admin.md', () => {
+ const f = fixture();
+ const big = join(f.outside, 'keynote.mov'); const fd = openSync(big, 'w'); ftruncateSync(fd, 25 * 1024 * 1024 + 1); closeSync(fd);
+ const drive = f.fail('--file', big);
+ assert.match(drive, /too big for git, not kept/);
+ assert.ok(drive.includes(lib.bigFileAdvice(f.root)), 'the add-file refusal carries the lib advice word for word');
+ assert.match(drive, /shared drive \(Google Drive\)/);
+ assert.doesNotMatch(drive, /Keep it in a project folder/, 'the old contradicting advice is gone');
+ const admin = join(f.root, 'brain/admin.md');
+ writeFileSync(admin, readFileSync(admin, 'utf8').replace('dashboard: on-demand', 'dashboard: on-demand\nbig_files: local\nbig_files_folder: /Users/ann/big'));
+ const local = f.fail('--file', big);
+ assert.ok(local.includes(lib.bigFileAdvice(f.root)));
+ assert.match(local, /\/Users\/ann\/big, outside git/); assert.match(local, /file:\/Users\/ann\/big\/<name>/); assert.match(local, /not shared/);
+ assert.doesNotMatch(local, /Google Drive/);
+ assert.match(lib.largeNote([{ path: 'a.mov', size: 30 * 1048576 }], f.root), /^Too big for git, not kept \(over 25 MB\): a\.mov \(30 MB\)\. This brain keeps big files on this computer/);
+});
+
+test('big_files: google-drive by default and for an unknown value; local falls back to a folder outside the brain', () => {
+ const f = fixture(); const admin = join(f.root, 'brain/admin.md'); const base = readFileSync(admin, 'utf8');
+ assert.deepEqual(lib.bigFiles(f.root), { mode: 'google-drive', folder: null });
+ assert.deepEqual(lib.bigFiles(undefined), { mode: 'google-drive', folder: null }, 'no brain: the default');
+ writeFileSync(admin, base.replace('dashboard: on-demand', 'dashboard: on-demand\nbig_files: dropbox'));
+ assert.equal(lib.bigFiles(f.root).mode, 'google-drive');
+ writeFileSync(admin, base.replace('dashboard: on-demand', 'dashboard: on-demand\nbig_files: local'));
+ const { mode, folder } = lib.bigFiles(f.root);
+ assert.equal(mode, 'local'); assert.ok(!folder.startsWith(f.root), 'never inside the brain, so never in git');
+ assert.match(folder, /gtm-brain-files\/gtm-add-file-/);
+ writeFileSync(admin, base.replace('dashboard: on-demand', 'dashboard: on-demand\nbig_files: local\nbig_files_folder: relative/path'));
+ assert.match(lib.bigFiles(f.root).folder, /gtm-brain-files/, 'a relative folder is ignored');
+});
+
 test('text is extracted for the notes when an extractor exists, and its absence is said, not hidden', () => {
  const f = fixture(); writeFileSync(join(f.outside, 'notes.txt'), 'Acme wants a 30-day pilot.'); lib.addName(f.root, 'Acme', { kind: 'organization' });
  const txt = f.run('--file', join(f.outside, 'notes.txt'), '--entity', 'Acme');

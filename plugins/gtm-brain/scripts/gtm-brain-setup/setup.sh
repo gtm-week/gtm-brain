@@ -81,7 +81,7 @@ node -e 'const l=await import(process.argv[1]);l.ensureRulebookShim(".")' "$PLUG
 PLUGIN_VERSION="$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$T/../.codex-plugin/plugin.json" | head -1)"
 # The other starters the same way (GTM week sync, 2026-11-13: voice and design system out of the box, filling them is offered at the
 # end of onboarding and can wait). A file already there, at the root or in its own folder, is the person's.
-for doc in strategy icp voice design-system; do
+for doc in strategy icp voice design-system market; do
   [ -f "$doc.md" ] || [ -f "$doc/$doc.md" ] || sed -e "s|{{COMPANY}}|$(esc "$COMPANY")|g" -e "s|{{DATE}}|$(date +%F)|g" -e "s|{{VERSION}}|$PLUGIN_VERSION|g" "$T/$doc.md" > "$doc.md"
 done
 # workflows/ from day one (0.28.0): the two shipped workflow documents as drafts; a folder already there is the person's.
@@ -104,7 +104,7 @@ OWNER_EMAIL="$(printf '%s' "$PEOPLE_JSON" | node -e 'const p=JSON.parse(require(
 [ -n "$OWNER_NAME" ] && git config user.name "$OWNER_NAME"; [ -n "$OWNER_EMAIL" ] && git config user.email "$OWNER_EMAIL"
 # Parallel branches (worktrees) merge notes as lines and keep the newer summary: .gitattributes, post-merge.
 node -e 'const l=await import(process.argv[1]);l.ensureMergeSetup(".")' "$PLUGIN/lib/brain.mjs" 2>/dev/null || true
-if git add -- brain AGENTS.md CLAUDE.md README.md RULES.md SCHEMA.md $(for doc in strategy icp voice design-system; do [ -f "$doc.md" ] && printf "%s.md " "$doc"; done) workflows .gitignore .gitattributes .githooks && git -c commit.gpgsign=false commit -q -m "setup: $COMPANY brain (gtm-brain v0)"; then
+if git add -- brain AGENTS.md CLAUDE.md README.md RULES.md SCHEMA.md $(for doc in strategy icp voice design-system market; do [ -f "$doc.md" ] && printf "%s.md " "$doc"; done) workflows .gitignore .gitattributes .githooks && git -c commit.gpgsign=false commit -q -m "setup: $COMPANY brain (gtm-brain v0)"; then
   echo "gtm-brain: brain created for $COMPANY  ·  committed"
 else
   echo "gtm-brain: brain created for $COMPANY  ·  written to disk, NOT committed (git is read-only here): say save"

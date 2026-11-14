@@ -88,9 +88,9 @@ export function markdownFiles(root) {
   walk(root, 0); return out.sort();
 }
 
-/* The starters setup writes (strategy, icp, voice, design-system): a document whose body is still the shipped
+/* The starters setup writes (strategy, icp, voice, design-system, market): a document whose body is still the shipped
    one, word for word, is not filled. A hard fact, so a hand edit counts as filled; any company name matches. */
-export const STARTERS = ["strategy", "icp", "voice", "design-system"];
+export const STARTERS = ["strategy", "icp", "voice", "design-system", "market"];
 const starterBody = new Map();
 function isStarterBody(slug, body) {
   if (!STARTERS.includes(slug)) return false;
