@@ -353,3 +353,13 @@ test("review: a fact in one clause counts even when another clause of the senten
   for (const content of ["Northwind is our customer, but there is no signed contract.", "Northwind is our customer and we will sign the contract soon."])
     assert.equal(R.saveRefusals(root, { context: "company", content, companies: ["Northwind"], customer: block }).length, 1, content);
 });
+
+test("review: a tag line typed on a keyboard (hyphens, slashes, commas, full stops, no colon) reads like the owner's form", () => {
+  const want = { applies: [{ kind: "organization" }], when: "saving", on: "customer", mode: "check" };
+  for (const line of ["> applies to: organization - when: saving customer status - check", "> applies to: organization / when: saving customer status / check", "> applies to: organization, when: saving customer status, check", "> Applies to: Organization. When: saving customer status. Check.", "> applies to organization · when saving customer status · check", "> applies to: companies | when: saving customer status | check"]) {
+    const p = R.parseOurRules(`Never call a company a customer before a signed contract.\n${line}\n`, VOCAB);
+    assert.deepEqual([p.rules[0].tag, p.problems], [want, []], line);
+  }
+  assert.deepEqual(R.parseTag("> applies to: customers · drafting", VOCAB).tag, { applies: [{ kind: "organization" }], when: "drafting", on: null, mode: "guidance" });
+  assert.deepEqual(R.parseTag("> applies to: person, organization · guidance", VOCAB).tag.applies, [{ kind: "person" }, { kind: "organization" }], "a comma between kinds stays a list");
+});

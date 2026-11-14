@@ -36,6 +36,8 @@ const stem = w => w.length > 4 ? w.replace(/(ing|ed|es|s)$/, "") : w;
 export const stems = text => String(text || "").toLowerCase().match(/[a-z0-9]+/g)?.filter(w => !STOP.has(w)).map(stem) || [];
 const has = (text, words) => { const s = new Set(stems(text)); return words.length > 0 && words.every(w => s.has(w)); };
 const VERB_WORDS = [[/^sav(e|ing)$|^stor(e|ing)$|^record(ing)?$|^not(e|ing)$|^writ(e|ing) notes?$/, "saving"], [/^draft(ing)?$|^writ(e|ing)$|^send(ing)?$|^email(ing)?$|^outreach$|^repl(y|ying)$/, "drafting"], [/^read(ing)?$|^brief$|^answer(ing)?$|^look(ing)? up$/, "reading"]];
+const PLAIN_KIND = /^(?:people|persons|contacts?|compan(?:y|ies)|customers?|clients?|accounts?)$/;
+const plainKind = v => /^(?:people|persons|contacts?)$/.test(v) ? "person" : "organization";
 const verbOf = w => VERB_WORDS.find(([re]) => re.test(String(w).toLowerCase().trim()))?.[1] || null;
 
 /* The intro paragraphs GTM Brain shipped under "## Our rules" (the current template and every snapshot): they
@@ -66,15 +68,25 @@ export function vocabulary(root) {
   return { kinds, subtypes, links, fields, statuses: CUSTOMER_STATUSES.filter(s => s !== "unknown"), verified: !!schema };
 }
 
-/* One tag line -> {tag, problems}. Parts are split on · • | or ;, keys are case-insensitive, and a bare check or
-   guidance is the mode. Unknown values are problems; the part is then left out, so the rule stays wider, never lost. */
+/* One tag line -> {tag, problems}. Parts are split on · • | ; / or a spaced hyphen, and before a key or a mode word
+   even after a comma or a full stop (a keyboard has no middle dot: "applies to: organization - when: saving, check");
+   keys are case-insensitive and their colon may be left out ("when saving"); a bare check or guidance is the mode,
+   a bare saving, drafting or reading the when. Unknown values are problems; the part is then left out, so the rule
+   stays wider, never lost. */
+const KEY_START = /(?:applies\s+to|applies|scope|kind|for|when|on|mode)\s*:|applies\s+to\s|when\s+(?=sav|draft|read|writ|stor|record|send|email|answer)|(?:check|checked|guidance|guide)\s*$/i;
+export const tagParts = body => String(body)
+  .replace(/\s*(?:[·•|;/]|\s-\s)\s*/g, " · ")
+  .replace(new RegExp(`\\s*[,.]?\\s+(?=${KEY_START.source})`, "gi"), " · ")
+  .replace(/\s*[,.]\s*(?=(?:check|checked|guidance|guide)\b)/gi, " · ")
+  .split(/\s*·\s*/).map(x => x.trim().replace(/[.,]$/, "").trim()).filter(Boolean);
 export function parseTag(text, vocab, lineNo = 0) {
   const problems = [], add = (problem, proposal) => problems.push({ line: lineNo, problem, proposal });
   const tag = { applies: [], when: null, on: null, mode: null };
   const body = String(text).replace(/^\s*>\s?/, "").trim();
-  for (const raw of body.split(/\s*[·•|;]\s*/).map(s => s.trim()).filter(Boolean)) {
-    const m = raw.match(/^([a-z ]+?)\s*:\s*(.*)$/i), key = m ? m[1].toLowerCase().trim() : null, value = m ? m[2].trim().replace(/\.$/, "") : raw.replace(/\.$/, "");
+  for (const raw of tagParts(body)) {
+    const m = raw.match(/^([a-z ]+?)\s*:\s*(.*)$/i) || raw.match(/^(applies to|when)\s+(.*)$/i), key = m ? m[1].toLowerCase().replace(/\s+/g, " ").trim() : null, value = m ? m[2].trim().replace(/\.$/, "") : raw.replace(/\.$/, "");
     if (!m && /^(check|checked|guidance|guide)$/i.test(value)) { tag.mode = /^check/i.test(value) ? "check" : "guidance"; continue; }
+    if (!m && verbOf(value)) { tag.when = verbOf(value); continue; }   // a bare "drafting" is the when
     if (key === "mode") { if (/^(check|guidance)$/i.test(value)) tag.mode = value.toLowerCase(); else add(`mode "${value}" is not check or guidance`, "check or guidance"); continue; }
     if (key && /^(applies to|applies|for|scope|kind)$/.test(key)) {
       for (const v of value.split(/\s*,\s*|\s+and\s+/).map(s => s.trim().toLowerCase()).filter(Boolean)) {
@@ -85,7 +97,7 @@ export function parseTag(text, vocab, lineNo = 0) {
           if (vocab.links.includes(word) || !vocab.verified) tag.applies.push({ link: word });
           else add(`applies to link ${word}: SCHEMA.md has no relationship type ${word}`, `one of: ${vocab.links.map(l => `link ${l}`).join(", ")}`);
         }
-        else if (/^(people|compan(y|ies))$/.test(v)) tag.applies.push(v === "people" ? { kind: "person" } : { kind: "organization" });   // "company" is how people say organization
+        else if (PLAIN_KIND.test(v)) tag.applies.push({ kind: plainKind(v) });   // "company" or "customers" is how people say organization
         else if (vocab.kinds.includes(v) || vocab.kinds.includes(v.replace(/s$/, ""))) tag.applies.push({ kind: vocab.kinds.includes(v) ? v : v.replace(/s$/, "") });
         else if (vocab.subtypes.includes(v) || vocab.subtypes.includes(v.replace(/s$/, ""))) tag.applies.push({ kind: "organization", subtype: vocab.subtypes.includes(v) ? v : v.replace(/s$/, "") });
         else add(`applies to "${v}": SCHEMA.md has no such kind`, `one of: ${[...vocab.kinds, ...vocab.subtypes].join(", ")}, link <type>, or general`);
@@ -129,7 +141,7 @@ export function parseOurRules(text, vocab, { first = 1 } = {}) {
     if (skip.has(i) || !raw.trim() || /^<!--.*-->$/.test(raw.trim())) { if (!raw.trim()) last = last && { ...last, gap: true }; continue; }
     if (/^\s*>/.test(raw)) {
       const target = last && !last.gap ? rules[last.index] : null;
-      if (!/^\s*>\s*(?:(?:applies to|applies|scope|kind)\b|(?:for|when|on|mode)\s*:|(?:check|checked|guidance|guide)\s*(?:[·•|;.]|$))/i.test(raw)) { if (target) target.note = squash(`${target.note || ""} ${raw.replace(/^\s*>\s?/, "")}`); continue; }   // a plain quote under a rule is part of it
+      if (!/^\s*>\s*(?:(?:applies to|applies|scope|kind)\b|(?:for|when|on|mode)\s*:|when\s+(?:sav|draft|read)|(?:check|checked|guidance|guide)\s*(?:[·•|;.]|$))/i.test(raw)) { if (target) target.note = squash(`${target.note || ""} ${raw.replace(/^\s*>\s?/, "")}`); continue; }   // a plain quote under a rule is part of it
       if (!target) { problems.push({ line: n, problem: "a tag line with no rule directly above it", proposal: "put it on the line right under the rule it is for, or remove it" }); continue; }
       if (target.tag) { problems.push({ line: n, problem: `a second tag line for the rule on line ${target.line}`, proposal: "keep one tag line per rule; remove this one or merge the two" }); continue; }
       const { tag, problems: p } = parseTag(raw, vocab, n);
@@ -464,7 +476,7 @@ export function scopedReport(root, { search = "", when = null, text = null } = {
   let scopes, about;
   if (everything) { scopes = []; about = "everything"; }
   else if (link) { scopes = [{ kind: null, links: [link[1].toLowerCase()] }]; about = `link ${link[1].toLowerCase()}`; }
-  else if (vocab.kinds.includes(lower) || /^(people|compan(y|ies))$/.test(lower)) { const k = lower === "people" ? "person" : /^compan/.test(lower) ? "organization" : lower; scopes = [{ kind: k, links: [] }]; about = k; }
+  else if (vocab.kinds.includes(lower) || PLAIN_KIND.test(lower)) { const k = PLAIN_KIND.test(lower) ? plainKind(lower) : lower; scopes = [{ kind: k, links: [] }]; about = k; }
   else if (vocab.subtypes.includes(lower)) { scopes = [{ kind: "organization", subtype: lower, links: [] }]; about = `organization (${lower})`; }
   else {
     let s = null; try { s = entityScope(root, q, { rules: parsed.rules }); } catch {}
