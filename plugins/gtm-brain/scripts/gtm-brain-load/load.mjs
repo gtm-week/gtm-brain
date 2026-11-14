@@ -26,7 +26,7 @@ for (const slug of args) {
   const eff = lib.effectiveMemories(c.memories); const mem = last ? eff.slice(-last) : [];
   const fresh = c.compiledAt ? eff.filter(m => lib.newer(m.at, c.compiledAt)) : eff;
   out.push(`# Context loaded: ${c.title} (${c.slug})   [${lib.summaryState(c, lib.compileBusy(root))}]`);
-  if (c.stale) { out.push(`\n## New since the last compile (${fresh.length}), not yet in the summary`); for (const m of fresh.slice(-6)) out.push(`- ${lib.memoryTimeText(m)} · ${m.kind} · ${m.content}`); if (fresh.length > 6) out.push(`- ... and ${fresh.length - 6} more`); }
+  if (c.stale) { out.push(`\n## New since the last compile (${fresh.length}), not yet in the summary`); for (const m of fresh.slice(-6)) out.push(`- ${m.id} · ${lib.memoryTimeText(m)} · ${m.kind} · ${m.content}`); if (fresh.length > 6) out.push(`- ... and ${fresh.length - 6} more`); }
   out.push(`Context refreshed: ${lib.localDateTime(c.compiledAt) || "never"}`);
   out.push(`Summary${c.compiledAt ? ` (as of ${String(c.compiledAt).slice(0, 10)})` : ""}: ${c.summary}`);
   if (c.people.length) out.push(`People mentioned: ${c.people.join(", ")}`);
@@ -35,7 +35,7 @@ for (const slug of args) {
   out.push(`\n## When loaded\n${c.whenLoaded}`);
   if (!last) { out.push(`\n${eff.length} memories; call load_context or recall for them.`); out.push(""); continue; }
   out.push(`\n## Last ${mem.length} of ${lib.effectiveMemories(c.memories).length} memories`);
-  for (const m of mem) out.push(`- ${lib.memoryTimeText(m)} · ${m.authors.join(", ")} · ${m.kind}${m.tools.length ? " · tools: " + m.tools.join(", ") : ""}${m.people.length ? " · people: " + m.people.join(", ") : ""}\n  ${m.content}${m.actions.length ? "\n  actions: " + m.actions.map(a => `${a.tool}: ${a.action}${a.ref ? " (" + a.ref + ")" : ""}`).join("; ") : ""}${m.source.length ? "\n  source: " + lib.sourceText(m.source) : ""}`);
+  for (const m of mem) out.push(`- ${m.id} · ${lib.memoryTimeText(m)} · ${m.authors.join(", ")} · ${m.kind}${m.tools.length ? " · tools: " + m.tools.join(", ") : ""}${m.people.length ? " · people: " + m.people.join(", ") : ""}\n  ${m.content}${m.actions.length ? "\n  actions: " + m.actions.map(a => `${a.tool}: ${a.action}${a.ref ? " (" + a.ref + ")" : ""}`).join("; ") : ""}${m.source.length ? "\n  source: " + lib.sourceText(m.source) : ""}`);
   out.push("");
 }
 lib.writeLoaded(root, loaded, project);

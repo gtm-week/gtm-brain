@@ -35,9 +35,17 @@ if (args[0] === "--person" || args[0] === "--entity") {
     const view = lib.entityBrief(root, who, { context, absoluteLinks: true });
     const count = view.evidence.filter(m => !context || m.context === context).length;
     console.log(view.entity.name + (context ? " in " + context : "") + ": " + count + " memories · " + (view.path ? resolve(root, view.path) : "identity has not been migrated yet"));
-    console.log(view.markdown);
+    // a byte budget on what reaches the chat: one brief reached 4 MB on a big brain
+    const BUDGET = Number(process.env.GTM_BRAIN_BRIEF_BYTES) || 30 * 1024;
+    let text = view.markdown;
     const attachments = view.evidence.filter(m => m.asset && (!context || m.context === context));
-    if (attachments.length) console.log("\n## Attachments\n" + attachments.map(m => assetSummary(root, m)).join("\n"));
+    if (attachments.length) text += "\n\n## Attachments\n" + attachments.map(m => assetSummary(root, m)).join("\n");
+    if (Buffer.byteLength(text) > BUDGET) {
+      const lines = text.split("\n"), kept = []; let bytes = 0;
+      for (const l of lines) { const b = Buffer.byteLength(l) + 1; if (bytes + b > BUDGET) break; kept.push(l); bytes += b; }
+      text = kept.join("\n") + `\n\nBrief cut at ${Math.round(BUDGET / 1024)} KB; ${lines.length - kept.length} more lines: query memories with filters.entities=${view.entity.id}${context ? ` and filters.context=${context}` : ""}.`;
+    }
+    console.log(text);
   } catch (e) { console.error(e.message); process.exit(1); }
   await new Promise(done => process.stdout.write("", done));
   process.exit(0);

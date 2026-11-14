@@ -530,12 +530,13 @@ test("compilation exposes tool evidence and prior guidance, then reloads revised
   add({ content: "Acme's renewal owner is confirmed." });
   f = facts();
   assert.ok(f.includes(guidance), "prior guidance is available for reassessment");
-  assert.ok(f.split("## All effective memories, recording order (oldest first)")[1].includes(lesson.id), "older supporting evidence is still supplied");
+  assert.ok(f.split("## Older notes the current summary and working guidance cite")[1].includes("- " + lesson.id), "older supporting evidence is still supplied");
   const correction = add({ content: "The renewal field has changed to renewal_end.", tools: ["attio"],
     source: [{ kind: "attio", ref: "schema/renewals-v2" }], supersedes: lesson.id });
   f = facts();
-  const effective = f.split("## All effective memories, recording order (oldest first)")[1];
-  assert.ok(!effective.includes(lesson.id), "superseded evidence is excluded from effective facts");
+  const effective = f.split("## Effective notes since the last compile")[1];
+  assert.ok(!effective.includes("- " + lesson.id), "superseded evidence is excluded from effective facts");
+  assert.match(effective, new RegExp("No longer in force [^\\n]*" + lesson.id), "a cited note that was superseded is named");
   assert.ok(effective.includes(correction.id) && effective.includes("attio:schema/renewals-v2"));
   const revised = `Use renewal_end for renewals (${correction.id}).`;
   apply(f, revised);

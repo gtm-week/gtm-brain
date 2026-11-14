@@ -90,7 +90,7 @@ const TOOLS = [
     inputSchema: schema({ entity: str("Entity name, alias or stable ID; omit to list stale briefs") }),
     call: ({ brain, entity }) => run(brain, "gtm-brain-entities/compile-entity.mjs", entity ? ["--facts", entity] : []).then(result) },
   { name: "compile_facts", title: "Reading a context's memories", readOnly: true,
-    description: "Without context: which contexts are behind (memories newer than the last compile). With context: everything needed to rewrite its cover (rule, current summary, previous working guidance, people, tools, questions, decisions, every effective memory with IDs and source/action references) and the as_of id to pass to compile_apply.",
+    description: "Without context: which contexts are behind (memories newer than the last compile). With context: everything needed to rewrite its cover (rule, current summary, previous working guidance, people, tools, questions, decisions, the effective memories since the last compile with IDs and source/action references; older ones through query) and the as_of id to pass to compile_apply.",
     inputSchema: schema({ context: str("Context slug; omit to list what is behind") }),
     call: ({ brain, context }) => run(brain, "gtm-brain-compile/compile.mjs", context ? ["--facts", context] : ["--stale"]).then(result) },
   { name: "meeting_overview", title: "Reviewing meetings", readOnly: true,
@@ -319,7 +319,7 @@ const RUN_ONLY_TOOLS = new Set(["compile_facts", "compile_apply", "compile_entit
 const RETIRED_READS = { recall: "query (memories with search, or object brief)", who_is: "query (entities with search)", list_contexts: "query (contexts)", list_projects: "query (projects)", list_brains: "query (brains)", customer_overview: "query (customers)", meeting_overview: "query (meetings)", advise: "query (health)", where_we_are: "query (status)", why_here: "query (why)", check_rules: "query (rules)", guideline: "document" };
 // A summary run (GTM_BRAIN_TOOLSET=compile, set by scripts/gtm-brain-compile/run-args.mjs) is listed only what it
 // calls: every other description is re-sent with each of its requests and is pure cost there.
-const COMPILE_TOOLSET = new Set([...RUN_ONLY_TOOLS, "render_dashboard"]);
+const COMPILE_TOOLSET = new Set([...RUN_ONLY_TOOLS, "render_dashboard", "query"]);   // query: --facts is a digest, older notes are looked up
 // With Codex's own question box on in ordinary chats, it asks instead: the free text sits on the same screen.
 const NATIVE_QUESTIONS = (() => { try { return host().nativeQuestions(); } catch { return false; } })();
 const NATIVE_LINE = "\nQuestions: GTM Brain shows no question forms of its own. This Codex has its own question box on, so ask every question with request_user_input: one question per call unless a procedure groups them, two or three concrete options, recommended first. It adds the free-text answer itself, so never add Other or Something else. It has no checkboxes: where several can apply, offer the likely combinations as options. APPROVE still goes only through approve_change.";
