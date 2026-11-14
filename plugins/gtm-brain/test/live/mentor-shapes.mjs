@@ -27,6 +27,24 @@ const list = v => Array.isArray(v) ? v : v && typeof v === "object" ? Object.val
 const nameOf = x => typeof x === "string" ? x : x?.name || x?.title || x?.to || x?.target || x?.entity || "";
 export function readGold(path) {
   const g = JSON.parse(readFileSync(path, "utf8"));
+  // the generator's own format: gold.hub names the company with the most relations, gold.relations
+  // carries from_name/to_name, and gold.questions.open holds note ids per context of the brain at
+  // <out> for the ledger <out>.gold.json; the question text is read from that brain's memories
+  if (g.hub?.name && g.questions?.open && Array.isArray(g.relations)) {
+    const related = g.relations.filter(r => r.from === g.hub.id || r.to === g.hub.id)
+      .map(r => r.from === g.hub.id ? r.to_name : r.from_name).filter(n => n && n !== "us");
+    const ids = new Set(Object.values(g.questions.open).flat());
+    const brain = path.replace(/\.gold\.json$/, ""), questions = [];
+    for (const ctx of Object.keys(g.questions.open)) {
+      const file = join(brain, "brain", "contexts", ctx, "memories.jsonl");
+      if (!existsSync(file)) continue;
+      for (const line of readFileSync(file, "utf8").split("\n")) {
+        if (!line.trim()) continue;
+        try { const m = JSON.parse(line); if (ids.has(m.id) && m.content) questions.push(m.content); } catch {}
+      }
+    }
+    return { companies: [{ name: g.hub.name, related: [...new Set(related)] }], questions };
+  }
   const companies = list(g.companies || g.organizations || g.entities).filter(e => !e.kind || /org|company/i.test(e.kind))
     .map(e => ({ name: nameOf(e), related: list(e.relations || e.related || e.links || e.people || e.contacts).map(nameOf).filter(Boolean) }))
     .filter(e => e.name);
