@@ -95,6 +95,27 @@ test('big_files: google-drive by default and for an unknown value; local falls b
  assert.ok(!lib.bigFiles(f.root).folder.startsWith(f.root), 'a folder inside the brain would be in git: ignored');
 });
 
+test('big_files changes through APPROVE like any workplace setting, and the instruction follows at once', () => {
+ const scratch = realpathSync(mkdtempSync(join(tmpdir(), 'gtm-big-files-approve-'))); const root = join(scratch, 'brain'); const home = join(scratch, 'home'); mkdirSync(root); mkdirSync(home);
+ const env = { ...process.env, GTM_BRAIN_NO_COMPILE: '1', GTM_BRAIN_NO_SESSION_START: '1', HOME: home }; delete env.GTM_BRAIN_NO_COMMIT; delete env.GTM_BRAIN_APPROVAL_TICKET;
+ execFileSync('git', ['init', '-q', root]); execFileSync('git', ['-C', root, 'config', 'commit.gpgsign', 'false']);
+ execFileSync('bash', [join(P, 'scripts/gtm-brain-setup/setup.sh'), '--company', 'Reflow', '--one-liner', 'returns automation', '--owner', 'Marta Nowak <marta@reflow.io>', '--dashboard', 'on-demand'], { cwd: root, env, stdio: 'ignore' });
+ const admin = readFileSync(join(root, 'brain/admin.md'), 'utf8');
+ assert.match(admin, /^big_files: google-drive$/m, 'a new brain says where big files go');
+ assert.equal(lib.bigFiles(root).mode, 'google-drive');
+ writeFileSync(join(root, 'work/admin.proposed.md'), admin.replace('big_files: google-drive', 'big_files: local\nbig_files_folder: /Volumes/Media/reflow'));
+ // What approve_change does after the person chose APPROVE: a single-use ticket. The audit log goes to the scratch home.
+ const apply = `import os from 'node:os'; import { syncBuiltinESMExports } from 'node:module'; os.homedir = () => ${JSON.stringify(home)}; syncBuiltinESMExports();
+  const lib = await import(${JSON.stringify(join(P, 'lib/brain.mjs'))});
+  process.env.GTM_BRAIN_APPROVAL_TICKET = lib.issueApproval(${JSON.stringify(root)}, 'admin');
+  process.argv = [process.execPath, 'approve.mjs', ${JSON.stringify(root)}, '--apply', '--by', 'marta'];
+  await import(${JSON.stringify(join(P, 'scripts/gtm-brain-approve/approve.mjs'))});`;
+ execFileSync(process.execPath, ['--input-type=module', '-e', apply], { cwd: root, env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+ assert.deepEqual(lib.bigFiles(root), { mode: 'local', folder: '/Volumes/Media/reflow' });
+ assert.match(lib.largeNote([{ path: 'demo.mov', size: 40 * 1048576 }], root), /offer to move each to \/Volumes\/Media\/reflow, outside git/);
+ assert.equal(execFileSync('git', ['-C', root, 'status', '--porcelain', 'brain/admin.md'], { encoding: 'utf8' }).trim(), '', 'the approved admin.md is committed');
+});
+
 test('text is extracted for the notes when an extractor exists, and its absence is said, not hidden', () => {
  const f = fixture(); writeFileSync(join(f.outside, 'notes.txt'), 'Acme wants a 30-day pilot.'); lib.addName(f.root, 'Acme', { kind: 'organization' });
  const txt = f.run('--file', join(f.outside, 'notes.txt'), '--entity', 'Acme');
