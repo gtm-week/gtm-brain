@@ -32,7 +32,12 @@ test("1. one sentence starts it: prepare asks exactly one question, what work sh
   const root = brain();
   const out = document(root, "--prepare", "--title", "Pricing");
   assert.match(out, /Base file: Pricing \(pricing\.md at the brain root\)\. Nothing is saved by this read\./);
-  assert.match(out, /What work should follow this document\?\n1\. Proposals, outreach and landing pages \(recommended\)\n2\. Proposals\n3\. Outreach, calls and proposals/);
+  // literal lines the model copies: the why line right above the question, "(recommended)" on the first choice
+  assert.match(out, /word for word, the why line and "\(recommended\)" included:\n\nThe brain reads pricing\.md before the work you pick, so the pick decides when it is followed\. Picking one saves it as a draft\.\nWhat work should follow this document\?\n1\. Proposals, outreach and landing pages \(recommended\)\n2\. Proposals\n3\. Outreach, calls and proposals\n/);
+  // a pick is the yes: the second turn is one write, and the closing line names the saved path
+  assert.match(out, /A number or a kind of work is the yes: save with one call, document create, title "Pricing"/);
+  assert.match(out, /the closing line names the saved path: "Saved pricing\.md as a draft\. The brain reads it before <the work picked>\."/);
+  assert.doesNotMatch(out, /Kinds of work the brain's base files already name/, "no list the model does not need");
   assert.equal((out.match(/\?\n1\./g) || []).length, 1, "one question");
   assert.doesNotMatch(out, /Other|Something else/, "the person can always answer in their own words");
   assert.equal(status(root), "", "prepare writes nothing");
@@ -43,7 +48,9 @@ test("2. drafted from what the brain knows, notes listed; nothing known means it
   const root = brain();
   const empty = document(root, "--prepare", "--title", "Pricing");
   assert.match(empty, /The brain holds nothing about pricing \(\d+ notes? searched\)\. Say so in one line, write no draft, and ask in one question for: 1\) the plans or packages and the price of each, 2\) the billing unit/);
-  assert.match(empty, /Never invent them\./);
+  assert.match(empty, /Never invent them\. End the turn there\./);
+  // one question pending: with nothing known the work question waits for the draft, it is not asked in this turn too
+  assert.match(empty, /The one question\. Not in this turn: once the facts are in, draft from them, show the draft in full/);
   remember(root, "offer", "Pro plan is 49 EUR per seat per month, billed yearly; Starter is 19 EUR.");
   remember(root, "offer", "Discounts above 15 percent need Marta's approval.");
   remember(root, "market", "Loop Returns raised its price in October.");
@@ -64,15 +71,19 @@ test("3. the draft is shown before saving; the yes saves it as a draft through t
   assert.equal(lastCommit(root), "Added document pricing.md");
   assert.match(readFileSync(join(root, "pricing.md"), "utf8"), /^status: draft$/m);
   const prepared = document(root, "--prepare", "--title", "Pricing");
-  assert.match(prepared, /Save only on the person's yes, as a draft/);
-  assert.match(prepared, /pricing\.md already exists: offer to fill or extend it/);
+  // the subject's file exists: never a create (it would be refused), a section in it, with what it governs kept
+  assert.match(prepared, /pricing\.md already exists \[draft\] \(proposals, outreach, landing pages\): fill or extend it, never a second file\./);
+  assert.match(prepared, /\nThe brain reads pricing\.md before proposals, outreach and landing pages, so this text is followed there\.\nSave this to pricing\.md\?\n1\. Yes, save it \(recommended\)\n2\. No, change something/);
+  assert.match(prepared, /On yes, one call: document update, ref pricing, append the section/);
+  assert.doesNotMatch(prepared, /document create/);
 });
 
 test("4. an existing base file that covers the subject is offered first, and a section goes there without touching the rest", () => {
   const root = brain();
   const out = document(root, "--prepare", "--title", "Competitors");
   assert.match(out, /Already covered: market\.md \(Market, not filled: applies_to: competitors, battle cards; heading "Competitors"\)/);
-  assert.match(out, /Where should competitors go, and what work should follow it\?\n1\. Add it to market\.md as a section \(recommended\)\n2\. A new competitors\.md for outreach, proposals and battle cards/);
+  assert.match(out, /Where should competitors go, and what work should follow it\?\n1\. A section in market\.md \(recommended\)\n2\. A new competitors\.md for outreach, proposals and battle cards/);
+  assert.match(out, /save with one call, update, ref market, append the section \(choice 1\); or document create/);
   // our own pricing is not the market's: applies_to alone is not an overlap
   assert.match(document(root, "--prepare", "--title", "Pricing"), /No existing base file covers it/);
   // by content: a filled file about the subject, with the subject in applies_to
@@ -99,7 +110,11 @@ test("5. a Markdown dropped at the root by hand is recognised once, and adopted 
   const prepared = document(root, "--prepare", "--file", "pricing.md");
   assert.match(prepared, /pricing\.md is here but the brain does not use it yet\. Adopting it keeps every word of it/);
   assert.match(prepared, /---\nkind: document\ntitle: Our pricing\napplies_to: \[proposals, outreach, landing pages\]\nstatus: draft/);
-  assert.match(prepared, /What work should follow this document\?\n1\. Proposals, outreach and landing pages \(recommended\)/);
+  // the frontmatter shown is the one adoption writes: the plugin version too, not an empty field
+  const version = JSON.parse(readFileSync(`${P}/.codex-plugin/plugin.json`, "utf8")).version;
+  assert.match(prepared, new RegExp(`\\ngtm-brain: ${version.replace(/\./g, "\\.")}\\n---`));
+  assert.match(prepared, /What work should follow this file\?\n1\. Proposals, outreach and landing pages \(recommended\)/);
+  assert.match(prepared, /Picking one adopts it as a draft; its text stays as it is\./);
   const preview = document(root, "--create", "--title", "Our pricing", "--applies-to", "proposals", "--file", "pricing.md", "--preview");
   assert.match(preview, /Adopting pricing\.md adds only this frontmatter above its text/);
   assert.equal(readFileSync(join(root, "pricing.md"), "utf8"), text, "the preview writes nothing");
@@ -171,4 +186,31 @@ test("through the MCP document tool: prepare, a previewed adoption, then append,
     assert.equal(added.isError, false, added.text);
     assert.match(readFileSync(join(root, "objections.md"), "utf8"), /Too expensive -> show the payback table\.\n\n## Not now\n\nAsk what changes in Q2\.\n$/);
   } finally { server.kill(); }
+});
+
+test("8. the chat start says a dropped Markdown once, through the one process that prints the closing lines", () => {
+  const root = brain();
+  const start = () => execFileSync("bash", [`${P}/session/session-start.sh`], { cwd: root, encoding: "utf8", input: JSON.stringify({ session_id: "s1", cwd: root }), env: { ...env, GTM_BRAIN_NO_VERSION_CHECK: "1", GTM_BRAIN_NO_SESSION_MAINTENANCE: "1" } });
+  writeFileSync(join(root, "pricing.md"), "# Pricing\n\nPer store.\n");
+  const first = start();
+  assert.match(first, /base files: pricing\.md is here but the brain does not use it yet/);
+  assert.match(first, /^documents: /m, "the lines after the health line still print");
+  assert.doesNotMatch(start(), /base files: pricing\.md/, "said once per new file");
+  // the status call waited on one node per closing line; they run in one process now
+  const sh = readFileSync(`${P}/session/session-start.sh`, "utf8");
+  assert.match(sh, /node "\$P\/session\/start-lines\.mjs" "\$root" "\$project" "\$P\/templates"/);
+  for (const fn of ["healthLine", "documentsLine", "assetsLine", "runsLine", "strayFoldersHint", "autoRefresh", "refreshReadme", "whereLine", "askSourceLine", "schemaLine", "pausedCoversHint", "unplacedHint"])
+    assert.doesNotMatch(sh, new RegExp(`node -e '[^\\n]*${fn}`), `${fn} runs in start-lines.mjs, not its own node`);
+});
+
+test("9. adopting keeps the text byte for byte when the file has its own frontmatter or Windows line ends", () => {
+  const root = brain();
+  const own = "---\ntags: [sales]\n---\n\n# Price list\r\n\r\nPro: 49.  \r\n", crlf = "---\r\ntags: [ops]\r\n---\r\n# Notes\r\n\r\nA line.\r\n";
+  writeFileSync(join(root, "price-list.md"), own); writeFileSync(join(root, "notes.md"), crlf);
+  document(root, "--create", "--title", "Price list", "--applies-to", "proposals", "--file", "price-list.md");
+  document(root, "--create", "--title", "Notes", "--applies-to", "planning", "--file", "notes.md");
+  const a = readFileSync(join(root, "price-list.md"), "utf8"), b = readFileSync(join(root, "notes.md"), "utf8");
+  assert.ok(a.endsWith("\n---\n\n# Price list\r\n\r\nPro: 49.  \r\n") && /^tags: \[sales\]$/m.test(a), a);
+  assert.ok(b.endsWith("\n---\n# Notes\r\n\r\nA line.\r\n") && /^tags: \[ops\]$/m.test(b), b);
+  assert.deepEqual([docs.readDocument(root, "price-list").status, docs.readDocument(root, "notes").applies_to], ["draft", ["planning"]]);
 });
