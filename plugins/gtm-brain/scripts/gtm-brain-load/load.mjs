@@ -6,6 +6,7 @@
 //   --last 0: cover and what is new only, no memories list (the chat start, so a chat opens light)
 //   node load.mjs <root> --drop <slug> [<slug>...]                     unload these, keep the rest
 import { lastNoteDated } from "../../lib/staleness.mjs";
+import { askSourceLines } from "../../lib/ask-source.mjs";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args.shift() || ".";
 // --project <slug>: this chat runs in a linked folder; its loaded set is its own (lib.readLoaded(root, project))
@@ -34,6 +35,9 @@ for (const slug of args) {
   if (c.tools.length) out.push(`Tools used: ${c.tools.join(", ")}`);
   if (c.related.length) out.push(`Related contexts: ${c.related.join(", ")}`);
   out.push(`\n## When loaded\n${c.whenLoaded}`);
+  // RULES.md Ask the source: the summary rests on these notes; one line per row whose connected tool knows better by now
+  const ask = askSourceLines(root, eff, { day: at => lib.localDateTime(at).slice(0, 10) });
+  if (ask.length) out.push(`\n${ask.join("\n")}`);
   if (!last) { out.push(`\n${eff.length} memories; call load_context or recall for them.`); out.push(""); continue; }
   out.push(`\n## Last ${mem.length} of ${lib.effectiveMemories(c.memories).length} memories`);
   for (const m of mem) out.push(`- ${m.id} · ${lib.memoryTimeText(m)} · ${m.authors.join(", ")} · ${m.kind}${m.tools.length ? " · tools: " + m.tools.join(", ") : ""}${m.people.length ? " · people: " + m.people.join(", ") : ""}\n  ${m.content}${m.actions.length ? "\n  actions: " + m.actions.map(a => `${a.tool}: ${a.action}${a.ref ? " (" + a.ref + ")" : ""}`).join("; ") : ""}${m.source.length ? "\n  source: " + lib.sourceText(m.source) : ""}`);

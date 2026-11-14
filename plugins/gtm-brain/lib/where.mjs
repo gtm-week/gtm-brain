@@ -13,7 +13,7 @@ import { readAdmin, commit } from "./brain.mjs";
 export const RULES = "RULES.md", OLD_WHERE = "WHERE.md";
 export const WHERE = RULES; // the file the rows live in
 const MAX_PROJECTS = 20;
-const OWN = /^##\s+Our rules\s*$/m;
+const OWN = /^##\s+Our rules\s*$/m, ASK = /^##\s+Ask the source\s*$/m;   // lib/ask-source.mjs reads the Ask the source table
 const read = p => { try { return readFileSync(p, "utf8"); } catch { return null; } };
 const shipped = (templates, dir) => { try { return readdirSync(join(templates, "legacy", dir)).filter(f => f.endsWith(".md")).map(f => readFileSync(join(templates, "legacy", dir, f), "utf8")); } catch { return []; } };
 const hasTable = text => /^\|\s*-{3,}/m.test(text);
@@ -31,7 +31,7 @@ export function ensureRules(root, templates) {
     writeFileSync(path, next); commit(root, [RULES], "upgrade: RULES.md, the brain's rules"); return true;
   }
   // The where part: the shipped template when WHERE.md was never edited, the person's own WHERE.md otherwise.
-  const ourSection = next.slice(next.search(OWN));
+  const ourSection = next.slice(next.search(ASK) >= 0 ? next.search(ASK) : next.search(OWN));
   let merged = where === null || shipped(templates, "where").includes(where) ? next
     : `${where.replace(/^#\s+Where things go\s*$/m, "# Rules\n\n## Where things go").trimEnd()}\n\n${ourSection}`;
   const own = current === null ? "" : oldOwnLines(current);
@@ -60,6 +60,7 @@ export function ownRules(root, templates) {
 export function whereRows(root) {
   let text = read(join(root, RULES)); if (!text || !hasTable(text)) text = read(join(root, OLD_WHERE));
   if (!text) return [];
+  if (ASK.test(text)) text = text.slice(0, text.search(ASK));   // the Ask the source table is not a where row
   const lines = text.split("\n"), sep = lines.findIndex(l => /^\|\s*-{3,}/.test(l));
   if (sep < 0) return [];
   const rows = [];

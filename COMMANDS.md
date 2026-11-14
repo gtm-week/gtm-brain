@@ -236,7 +236,8 @@ arrived with no reason (made by shell, kept by background maintenance), once per
 
 *"Check the brain against its rules"* is `query` with object `rules`: people known by a first name
 only (P3), look-alike names nobody confirmed (P4), top-level folders no RULES.md row names, files
-with no recorded reason (grouped by folder), names with capitals or spaces. Each finding names its
+with no recorded reason (grouped by folder), names with capitals or spaces, Ask the source rows that
+cannot be read. Each finding names its
 rule, the person or path, and two or three fixed choices carried out through the tools above
 (`add_name`, `merge_entities`, `save` with `placed`), so each fix leaves its own reason. It reads
 only and changes nothing; `query` with object `health` counts what it found.
@@ -630,7 +631,7 @@ words, then calls `save`. A relationship rename keeps the old name in `Was calle
 and adds, changes or removes one row or one line in the person's words, then calls `save`. A rule
 cannot switch off APPROVE, the protected files or W1.
 
-`RULES.md` at the brain root is the brain's own rules, in two sections. "Our rules" holds its people's
+`RULES.md` at the brain root is the brain's own rules, in three sections. "Our rules" holds its people's
 rules for what Codex saves and asks, one line each; the chat start prints them after the shared saving
 rules (R1, R2). "Where things go" is the table of where every file goes: rules at the root, brand in
 `brand/`, projects in `projects/<project>/` with their deliverables inside, raw sources with their
@@ -642,3 +643,18 @@ fits. The person edits it freely: an edited `RULES.md` is never overwritten, an 
 follows the shipped template. `save` keeps it. A brain from before 0.33.9 had `WHERE.md` for the table
 and a `RULES.md` with only its own lines; the next chat start merges both into one `RULES.md` (an
 unedited `WHERE.md` becomes the new template, an edited one keeps its rows) and removes `WHERE.md`.
+
+"Ask the source" (0.35.0) is a table of `| Question about | Ask | Brain answer is good for |`: per kind of
+question, the tool that knows better than a saved note (CRM, billing, events tool, calendar, email,
+meeting notes, the brain, or a tool by name) and how old a note may be ("1 day", "2 weeks", "always
+ask", "no limit"). `lib/ask-source.mjs` reads it, columns by header name. A row applies only while a
+tool of its kind is connected (`work/tools.json`: installed, not declined, read test not failed); a
+note matches a row by its source kind (a `hubspot:` source for the CRM row), never by its words. Then
+the chat start prints one `Ask the source (RULES.md): ...` line naming those rows, and `query`
+(memories search, brief) and `load_context` add one line per row whose newest matching note is older
+than allowed (any matching note for "always ask"): *"Deal stage and amount: the newest note here from
+the CRM is 9 days old (2026-11-05); RULES.md says ask HubSpot (good for 1 day). Read it there before
+answering."* A `RULES.md` without the section (edited before 0.35.0, so never overwritten) uses the
+shipped rows; an unedited 0.33.10 template is refreshed to include it. A row that cannot be read is
+left out and listed by `query` with object `rules` with its line and a fix; when no row can be read,
+the shipped rows apply.

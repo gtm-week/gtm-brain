@@ -168,6 +168,8 @@ node -e 'const u=await import(process.argv[1]);const o=u.autoRefresh(process.arg
 node -e 'const u=await import(process.argv[1]);u.refreshReadme(process.argv[2],process.argv[3])' "$P/lib/upgrade-files.mjs" "$root" "$P/templates" 2>/dev/null || true
 # Where things go (RULES.md, the person's to edit; an older WHERE.md is merged into it once) and the projects under projects/: a deliverable goes into its project.
 node -e 'const w=await import(process.argv[1]);w.ensureRules(process.argv[2],process.argv[3]);const l=w.whereLine(process.argv[2]);if(l)console.log(l)' "$P/lib/where.mjs" "$root" "$P/templates" 2>/dev/null || true
+# Which questions go to a connected tool instead of a saved note (RULES.md Ask the source, the defaults when it has none): one line, only when such a tool is connected.
+node -e 'const a=await import(process.argv[1]);const l=a.askSourceLine(process.argv[2]);if(l)console.log(l)' "$P/lib/ask-source.mjs" "$root" 2>/dev/null || true
 # What the brain keeps per person, organization and product, and the relationship types (SCHEMA.md, the person's to edit).
 node -e 'const s=await import(process.argv[1]);s.ensureSchema(process.argv[2],process.argv[3]);const l=s.schemaLine(process.argv[2]);if(l)console.log(l)' "$P/lib/schema.mjs" "$root" "$P/templates" 2>/dev/null || true
 # A summary paused by a hand edit never updates by itself: said once per set, so the person hears it in the chat.
