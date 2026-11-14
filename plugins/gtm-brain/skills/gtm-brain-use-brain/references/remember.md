@@ -79,8 +79,11 @@ The tool assigns the existing `at` timestamp to when the memory is recorded. A h
 import is recorded now, with its relevant historical dates in the text. Correct a date with
 a new memory using `supersedes`. Structured event dates belong to the future event abstraction.
 
-If exactly one context is loaded, `context` can be omitted. The tool answers "kept" (or "kept
-and shared"): the note is in the company memory; nothing to save, nothing to add. For several
+`context` can be omitted: the note goes to the single loaded context, else to the one active
+context where its people or companies already have notes. With no unique answer the entry is held
+and the candidate contexts are listed in one line; send it again with `context`. Each kept note
+starts with one short line for the person: `saved in <Context title>: <the note>`. The tool
+answers "kept" (or "kept and shared"): the note is in the company memory; nothing to save, nothing to add. For several
 entries it answers `kept 3 of 4` and numbers each line `#1`, `#2` by the entry's position, so you
 can see which landed and which did not.
 
