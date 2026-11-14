@@ -291,7 +291,8 @@ cover changed in an editor, names fixed by hand). APPROVE commits the workplace 
 scheduled run's compile commits its covers; setup makes the first commit; upgrade keeps the rules
 it refreshed. Anything you had staged yourself stays out of these commits.
 
-Every writer ends with *kept* or *kept and shared*. There is nothing for you to do; the badge on
+Every writer ends with *kept*, or *kept, not shared yet* when the brain has a remote: the push runs
+in the background and the next chat start says so if it failed. There is nothing for you to do; the badge on
 the chat start keeps files changed outside Codex; ask Codex to save if needed. From a terminal the scripts commit by themselves, one commit per change (`git log`
 reads as a diary). `approve` commits in the app too, after you choose APPROVE in its form.
 

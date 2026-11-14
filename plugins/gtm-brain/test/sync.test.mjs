@@ -95,7 +95,7 @@ test("two teammates with diverged notes are merged by union, entity pages kept, 
   assert.match(notes, /Globex asked for pricing\./);
   assert.equal(git(b, "status", "--porcelain", "--", "brain"), "", "derived entity pages are regenerated and committed");
   assert.equal(git(bare, "rev-parse", "HEAD"), git(b, "rev-parse", "HEAD"), "the merge was sent back");
-  assert.equal(JSON.parse(readFileSync(join(b, "work", "sync.json"), "utf8")).status, "merged");
+  assert.equal(JSON.parse(readFileSync(join(b, "work", "teammates.json"), "utf8")).status, "merged");
   assert.equal(lib.syncNotice(b), "");
   // and the first teammate now fast-forwards onto it
   assert.equal(pullTeammates(a, "origin"), "ok");

@@ -5,7 +5,7 @@ import * as lib from '../lib/brain.mjs';
 
 /* A fast-forward first; when the histories diverged, a merge that uses the brain's merge drivers (notes
    merge by union, covers by the cover driver). A merge that still conflicts is aborted and recorded in
-   work/sync.json, which the next chat start reports (lib.syncNotice). After a merge the derived entity
+   work/teammates.json, which the next chat start reports (lib.syncNotice). After a merge the derived entity
    pages are regenerated and kept, then the merge is sent back. Returns ok, merged, conflict or failed. */
 export function pullTeammates(root, remote, failures = []) {
   const git = (args, timeout = 20000) => spawnSync('git', args, { cwd: root, timeout, encoding: 'utf8',

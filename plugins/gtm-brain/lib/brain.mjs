@@ -902,10 +902,10 @@ export function commit(root, paths, message, { always = false, push = true, allo
     // note never claims a share that has not happened: "not shared yet" until a push succeeds. A
     // failed push is retried by the next commit and by the session start.
     let sending = false;
-    const last = readPushState(root);
+    const last = pushFailure(root);
     try { const remote = push && pushRemote(git("remote")); if (remote) { pushInBackground(root, remote); sending = true; } } catch {}
     if (!sending) return { ok: true, note: "kept" };
-    return { ok: true, note: `${NOT_SHARED_YET}${last && last.ok === false ? `; the last push failed: ${last.error}` : ""}` };
+    return { ok: true, note: `${NOT_SHARED_YET}${last ? `; the last push failed: ${last.error}` : ""}` };
   } catch (e) {
     const err = String(e.stderr || e.message).trim().split("\n").filter(Boolean);
     const readOnly = /read-only|Permission denied|Operation not permitted|unable to create|not a git repository/i.test(err.join(" "));
@@ -941,16 +941,26 @@ export function recordPush(root, { ok, remote = "", error = "" }) {
   let head = ""; try { head = execFileSync("git", ["-C", root, "rev-parse", "--short", "HEAD"], { encoding: "utf8", stdio: "pipe" }).trim(); } catch {}
   try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(pushStatePath(root), JSON.stringify({ ok: !!ok, at: new Date().toISOString(), head, remote, error: String(error || "").trim().split("\n")[0].slice(0, 200) }) + "\n"); } catch {}
 }
+/* The last push when it failed and its commits are still not on the remote. Two background pushes can
+   overlap, and the loser's failure may be written last although the other one sent everything: a
+   branch with nothing ahead of its upstream has no failure to report. */
+export function pushFailure(root) {
+  const push = readPushState(root);
+  if (!push || push.ok !== false) return null;
+  try { if (execFileSync("git", ["-C", root, "rev-list", "--count", "@{u}..HEAD"], { encoding: "utf8", stdio: "pipe", timeout: 5000 }).trim() === "0") return null; } catch {}
+  return push;
+}
 /* A detached push that writes its own result where the next read (a note, the chat start) sees it. */
 export function pushInBackground(root, remote) {
   spawn(process.execPath, [fileURLToPath(new URL("./push-runner.mjs", import.meta.url)), root, remote], { detached: true, stdio: "ignore" }).unref();
 }
-/* What a teammate merge left behind (session maintenance): { status: "merged" | "conflict", files, at }. */
-export const syncStatePath = root => join(root, "work", "sync.json");
+/* What pulling teammates left behind (session maintenance): { status: "ok" | "merged" | "conflict" | "failed", files, at }.
+   Not work/sync.json: that file is the source sync's own (gtm-brain-sync), and its presence means a sync has finished. */
+export const syncStatePath = root => join(root, "work", "teammates.json");
 /* The chat-start lines for sharing: a failed last push, or a teammate merge that conflicted. Empty when all is well. */
 export function syncNotice(root) {
-  const out = [], push = readPushState(root);
-  if (push && push.ok === false) out.push(`Not shared yet: the last push to ${push.remote || "the remote"} failed (${push.error || "no reason given"}). Notes are kept on this computer; the next note or save tries again.`);
+  const out = [], push = pushFailure(root);
+  if (push) out.push(`Not shared yet: the last push to ${push.remote || "the remote"} failed (${push.error || "no reason given"}). Notes are kept on this computer; the next note or save tries again.`);
   let sync = null; try { sync = JSON.parse(readFileSync(syncStatePath(root), "utf8")); } catch {}
   if (sync && sync.status === "conflict") out.push(`Teammates' changes are not merged: pulling them conflicted in ${(sync.files || []).join(", ") || "some files"}. The merge was undone and nothing was lost; tell the person and offer to resolve it together.`);
   return out.join("\n");
