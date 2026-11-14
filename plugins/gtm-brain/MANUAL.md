@@ -123,6 +123,10 @@ made there carry the project's tag, and everything stays searchable from the bra
 - "Why did you add Florian?" answers from the page: the first note, when, by whom, from where. It
   never answers from the chat's memory.
 - "What is open?" lists open questions; answering one closes it.
+- "What stage is the Acme deal in?" goes to the CRM when the brain's note is older than the "Ask the
+  source" table in `RULES.md` allows and the CRM is connected; otherwise the brain answers and says
+  how old its note is. A row applies only when its tool is connected; without the section, the
+  shipped rows apply.
 - "Open the dashboard" shows contexts, notes, entities, questions and search, read-only. To change
   anything, use "Chat about this" on a card, or say it in chat.
 
@@ -133,6 +137,7 @@ made there carry the project's tag, and everything stays searchable from the bra
 | Company profile, team, tools, settings | say it in chat; Codex shows the change and applies it only when you choose APPROVE |
 | What Codex saves and asks | your own rules under "Our rules" in `RULES.md`, one line each; Codex offers to add one when you correct a save, and yours win over the defaults |
 | Where files go | `/gtm-brain-rules`, or edit the rows under "Where things go" in `RULES.md` |
+| Which questions go to a live tool, and how old a note may be | edit the rows under "Ask the source" in `RULES.md` (deal stage: CRM, 1 day; meeting times: calendar, always ask) |
 | What the brain keeps (fields, subtypes, relationship types) | `/gtm-brain-schema`, or edit `SCHEMA.md`; briefs refill in the background |
 | How Codex works in a context | "change the rule of <context> to ..." |
 | A rule the work must follow (tone of voice, pricing, ICP) | write it as a document: `<name>.md` at the top, then "add <name>.md as a document" |

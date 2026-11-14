@@ -7,6 +7,7 @@ import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { assetSummary, assetRows } from "../../lib/assets.mjs";
 import { nowMs } from "../../lib/staleness.mjs";
+import { askSourceLines } from "../../lib/ask-source.mjs";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
 if (!existsSync(join(root, "brain", "admin.md"))) { console.error("no brain here"); process.exit(1); }
@@ -46,7 +47,9 @@ if (args[0] === "--person" || args[0] === "--entity") {
       for (const l of lines) { const b = Buffer.byteLength(l) + 1; if (bytes + b > BUDGET) break; kept.push(l); bytes += b; }
       text = kept.join("\n") + `\n\nBrief cut at ${Math.round(BUDGET / 1024)} KB; ${lines.length - kept.length} more lines: query memories with filters.entities=${view.entity.id}${context ? ` and filters.context=${context}` : ""}.`;
     }
-    console.log(text);
+    // RULES.md Ask the source: the brief's notes from a connected tool, older than its row allows
+    const ask = askSourceLines(root, view.evidence.filter(m => !context || m.context === context), { now: nowMs(), day: at => lib.localDateTime(at).slice(0, 10) });
+    console.log(ask.length ? `${text}\n\n${ask.join("\n")}` : text);
   } catch (e) { console.error(e.message); process.exit(1); }
   await new Promise(done => process.stdout.write("", done));
   process.exit(0);

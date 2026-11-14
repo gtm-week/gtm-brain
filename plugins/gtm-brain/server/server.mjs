@@ -20,6 +20,7 @@ import { host } from "../lib/host.mjs";
 import { validateValue } from "../lib/ontology/validation.mjs";
 import { placementTrailers, whyHere, WHY_TRAILER } from "../lib/where.mjs";
 import { rulesReport } from "../lib/rules-check.mjs";
+import { askSourceLines } from "../lib/ask-source.mjs";
 import { createSaveNudge } from "../lib/save-nudge.mjs";
 
 const P = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -393,7 +394,16 @@ const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [colu
     if (object === "deal") return search ? run(brain, "gtm-brain-recall/deal-health.mjs", ["--entity", search]).then(result) : text("deal needs search: the company name, alias or id.", true);
     if (VIEWS[object]) return original.get(VIEWS[object])(object === "brains" ? {} : { brain, ...(project ? { project } : {}), ...(filters && typeof filters === "object" ? filters : {}) });   // a view's options travel in filters (projects: include_available; meetings: its options)
     if (object === "entities" && search && !filters) return original.get("who_is")({ brain, name: search, ...(candidates ? { candidates } : {}) });
-    return base({ brain, object, ...(search !== undefined ? { search } : {}), ...(filters !== undefined ? { filters } : {}), ...(limit !== undefined ? { limit } : {}) });
+    const r = await base({ brain, object, ...(search !== undefined ? { search } : {}), ...(filters !== undefined ? { filters } : {}), ...(limit !== undefined ? { limit } : {}) });
+    return object === "memories" && !r.isError ? withAskSource(brain, r) : r;
+  };
+  // RULES.md Ask the source: memory rows from a connected tool, older than their row allows, get one line per row
+  const withAskSource = (brain, r) => {
+    try {
+      const rows = (r.content?.[0]?.text || "").split("\n").filter(l => l.startsWith("{")).map(l => JSON.parse(l));
+      const lines = askSourceLines(brain, rows, { day: at => lib.localDateTime(at).slice(0, 10) });
+      return lines.length ? { ...r, content: [{ ...r.content[0], text: `${r.content[0].text}\n\n${lines.join("\n")}` }, ...r.content.slice(1)] } : r;
+    } catch { return r; }
   };
   describe.inputSchema = { ...describe.inputSchema, properties: { ...describe.inputSchema.properties, name: { ...describe.inputSchema.properties.name, enum: [...datasets, ...Object.keys(VIEWS), "deal", "why", "rules", "relations", "reference"] } } };
   describe.call = async args => {
