@@ -67,6 +67,12 @@ test("the server's instructions carry the core once, on either host", async () =
     assert.equal(count(text, core), 1, `${host || "codex"}: the core, whole and once`);
     assert.ok(text.indexOf(core) < text.indexOf("During company work"), "before the workflow pointers");
     assert.match(text, /kept at once/);
+    // Claude Code cuts a server's instructions at 2048 characters (MAX_MCP_DESCRIPTION_LENGTH): what must
+    // arrive on either host sits before that, the core whole.
+    const head = text.slice(0, 2048);
+    assert.equal(count(head, core), 1, `${host || "codex"}: the core ends at character ${text.indexOf(core) + core.length}, past the 2048 a host keeps`);
+    for (const must of [/start every chat with query \(object status\)/, /kept at once/, /keep_approved_file, in the same turn/])
+      assert.match(head, must, `${host || "codex"}: ${must} is past the first 2048 characters`);
   }
 });
 
