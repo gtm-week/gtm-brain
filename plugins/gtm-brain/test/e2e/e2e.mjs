@@ -136,6 +136,34 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
   await check("compile.facts_mcp", "compile", async () => { const r = await call("compile_facts", { context: "offer" }); const want = gold.contexts.offer.ids, miss = want.filter(x => !ids(r.text).includes(x)); const d = digest(r.text, want); return { pass: !r.isError && (!miss.length || d.ok), text: r.text, note: miss.length ? d.note : `${miss.length} of ${want.length} missing` }; }, { known_gap: "compile --facts is cut at 64 KiB" });
   await check("compile.stale", "compile", async () => { const r = await call("compile_facts", {}); return { pass: !r.isError, text: r.text }; });
 
+  /* ---------- dashboard: the front page's four tabs by pillar, rendered by the real renderer ---------- */
+  let dash = null, dashBytes = 0;
+  await check("dashboard.render_tabs", "dashboard", async () => {
+    const r = script("scripts/gtm-brain-render/render.mjs", [brain]);
+    dash = JSON.parse(readFileSync(join(brain, "work", "home", "data.json"), "utf8")); dashBytes = Buffer.byteLength(readFileSync(join(brain, "work", "home", "index.html")));
+    const p = dash.pillars || {};
+    return { pass: r.code === 0 && !!(p.configuration && p.entities && p.memories && p.workflows), bytes: dashBytes, text: r.text + r.err, note: `page ${Math.round(dashBytes / KiB)} KiB` };
+  });
+  await check("dashboard.entity_kinds", "dashboard", async () => {
+    const kinds = Object.fromEntries((dash?.pillars?.entities?.kinds || []).map(k => [k.kind, k.count]));
+    const bad = Object.entries(gold.counts.entities).filter(([k, n]) => !(kinds[k] >= n));
+    return { pass: !!dash && !bad.length, text: JSON.stringify(kinds), note: bad.map(b => b[0]).join(",") };
+  });
+  await check("dashboard.notes_first_page", "dashboard", async () => {
+    const m = dash?.pillars?.memories; if (!m) return { pass: false };
+    const all = JSON.parse(readFileSync(join(brain, "work", "home", m.file), "utf8")).notes, eff = Object.values(gold.contexts).reduce((a, c) => a + c.effective, 0);
+    return { pass: m.first.length <= 40 && all.length === m.total && m.in_force > 0 && m.in_force <= eff && all.every((n, i) => !i || all[i - 1].at >= n.at), bytes: Buffer.byteLength(JSON.stringify(all)), note: `${m.in_force} in force of ${m.total}` };
+  });
+  if (sup) await check("dashboard.notes_replaced", "dashboard", async () => {
+    const all = dash?.pillars?.memories ? JSON.parse(readFileSync(join(brain, "work", "home", dash.pillars.memories.file), "utf8")).notes : [];
+    const nu = all.find(n => n.id === sup.new), old = all.find(n => n.id === sup.old);
+    return { pass: nu?.replaces?.id === sup.old && old?.replacedBy?.id === sup.new && old?.state === "replaced" };
+  });
+  await check("dashboard.workflows_and_files", "dashboard", async () => {
+    const p = dash?.pillars; if (!p) return { pass: false };
+    return { pass: p.workflows.files.every(f => f.trigger) && p.files.includes("RULES.md") && !p.files.some(f => f.endsWith(".jsonl")) && p.configuration.documents.length >= 5, note: `${p.workflows.files.length} workflow files, ${p.files.length} openable files` };
+  });
+
   /* ---------- writes (on the scratch copy) ---------- */
   await check("remember.without_load", "remember", async () => { const r = await call("remember", { by, context: "offer", content: "E2E probe: pricing page gets a store calculator (e2eprobeone)." }); const s = await q({ object: "memories", search: "e2eprobeone" }); return { pass: !r.isError && rowIds(s.text).length > 0, text: r.text, note: r.text.slice(0, 160) }; }, { known_gap: "remember refuses without a loaded context" });
   await check("load_context.icp", "load", async () => { const r = await call("load_context", { contexts: ["icp"], mode: "only" }); return { pass: !r.isError && ids(r.text).length > 0, text: r.text }; }, { known_gap: "load_context read lines carry no note id" });

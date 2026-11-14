@@ -3,7 +3,7 @@
 // --start / --open / --open-chrome / --url / --stop manage the viewer's local server.
 // Chat about this is a codex:// link; this server never runs brain actions or Codex jobs.
 import { createServer } from "node:http";
-import { readFileSync, writeFileSync, existsSync, mkdirSync, openSync, statSync, watch, createReadStream, fstatSync, closeSync, constants } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, openSync, statSync, watch, createReadStream, fstatSync, closeSync, constants, realpathSync } from "node:fs";
 import { join, resolve, normalize, extname } from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -92,6 +92,24 @@ function serve() {
     }
     if (req.method === "GET" && url.pathname === "/data.json") lastSeen = Date.now();
     if (req.method !== "GET" && req.method !== "HEAD") return json(res, 405, { ok: false, note: "GET only" });
+    if (url.pathname === '/file') {
+      // Open a brain file the front page links to, as text. Only a path the last render listed
+      // (data.json pillars.files: documents, RULES.md, SCHEMA.md, admin.md, workflows, entity pages).
+      if (req.headers['sec-fetch-site'] === 'cross-site') return json(res, 403, { ok: false, note: 'Open this file from its dashboard.' });
+      let fd;
+      try {
+        const rel = String(url.searchParams.get('path') || '');
+        let listed = []; try { listed = JSON.parse(readFileSync(join(home, 'data.json'), 'utf8')).pillars?.files || []; } catch {}
+        if (!rel || rel.includes('\0') || rel.split('/').includes('..') || rel.startsWith('/') || !listed.includes(rel)) throw new Error('Unknown file');
+        const path = join(root, rel);
+        if (!path.startsWith(root + '/') || !realpathSync(path).startsWith(realpathSync(root) + '/')) throw new Error('Unknown file');
+        fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+        const stat = fstatSync(fd); if (!stat.isFile() || stat.size > 4 * 1024 * 1024) throw new Error('Not a file');
+        const body = readFileSync(fd); closeSync(fd); fd = undefined;
+        res.writeHead(200, { ...HDR, 'content-type': 'text/plain; charset=utf-8', 'content-security-policy': "default-src 'none'; sandbox", 'cross-origin-resource-policy': 'same-origin' });
+        return res.end(req.method === 'HEAD' ? undefined : body);
+      } catch { if (fd !== undefined) closeSync(fd); return json(res, 404, { ok: false, note: 'File unavailable. It may have moved since this dashboard was refreshed.' }); }
+    }
     if (url.pathname.startsWith('/assets/')) {
       if (req.headers['sec-fetch-site'] === 'cross-site') return json(res, 403, { ok: false, note: 'Open this attachment from its dashboard.' });
       // No caller-supplied filesystem paths. Resolve one recorded relationship, then recheck
