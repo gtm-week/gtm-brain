@@ -8,6 +8,8 @@ import * as lib from "../lib/brain.mjs";
 import { relationsToUs } from "../lib/relation-to-us.mjs";
 import { withMemoryIndex, MemoryIndex } from "../lib/memory-index.mjs";
 import { createFilesBackend } from "../server/files-backend.mjs";
+import { spawn } from "node:child_process";
+import { createInterface } from "node:readline";
 process.env.GTM_BRAIN_NO_COMMIT = "1";
 process.env.GTM_BRAIN_NO_COMPILE = "1";
 process.env.GTM_BRAIN_NO_WATCH = "1";
@@ -84,4 +86,21 @@ test("query entities filters on kind, subtype, relation_to_us and a compiled SCH
   assert.deepEqual(sql.rows.map(r => r.name), ["Eva Nowak"]);
   // the kind index shows the relation
   assert.match(readFileSync(join(root, "brain/entities/people/index.md"), "utf8"), /\[Max Jendral\][^\n]*· VP Sales EMEA at Acme\. · customer · /);
+});
+
+test("the MCP query accepts relation_to_us, short_id and the brain's SCHEMA.md fields as entity filters; an unknown name is still refused", async () => {
+  const { root } = brain();
+  const P = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
+  const server = spawn(process.execPath, [`${P}/server/server.mjs`], { stdio: ["pipe", "pipe", "ignore"], env: { ...process.env, PLUGIN_ROOT: P, GTM_BRAIN_NO_SESSION_START: "1", GTM_BRAIN_NO_SAVE_NUDGE: "1", GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_VERSION_CHECK: "1" } });
+  const pending = new Map(); let seq = 0;
+  createInterface({ input: server.stdout }).on("line", line => { const m = JSON.parse(line); pending.get(m.id)?.(m); pending.delete(m.id); });
+  const call = args => new Promise(res => { const id = ++seq; pending.set(id, res); server.stdin.write(JSON.stringify({ jsonrpc: "2.0", id, method: "tools/call", params: { name: "query", arguments: { brain: root, object: "entities", limit: 50, ...args } } }) + "\n"); }).then(m => m.result);
+  try {
+    const customers = await call({ filters: { kind: "person", relation_to_us: "customer" } });
+    assert.ok(!customers.isError && /Max Jendral/.test(customers.content[0].text), customers.content[0].text);
+    const byRole = await call({ filters: { kind: "person", role: "cfo" } });
+    assert.ok(!byRole.isError, byRole.content[0].text);
+    const bogus = await call({ filters: { shoe_size: "42" } });
+    assert.ok(bogus.isError && /has no field shoe_size/.test(bogus.content[0].text));
+  } finally { server.kill(); }
 });
