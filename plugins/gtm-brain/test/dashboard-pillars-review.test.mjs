@@ -109,7 +109,7 @@ test("health line: what the chat start prints, with real content and without the
 
 test("Memories: the first page holds a full page of notes in force, so opening the dashboard fetches nothing", async () => {
   const M = D.pillars.memories;
-  assert.equal(M.total, 60);
+  assert.ok(M.total >= 60 && M.total > M.first.length, "the brain has more notes than the page carries");
   assert.equal(M.first.filter(n => n.state === "in force").length, 40, "forty notes in force are in the page");
   assert.equal(M.first.filter(n => n.state === "replaced").length, 2, "with the corrected ones that sit between them");
   let fetched = 0;

@@ -21,7 +21,7 @@ import { relationOverview } from "./relations.mjs";
 export const NOTES_PAGE = 40;
 const EXCERPT = 320, SHORT = 90;
 const cut = (s, n) => { const t = String(s ?? "").replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n - 1) + "…" : t; };
-const git = (root, args) => { try { return execFileSync("git", ["--no-optional-locks", "-C", root, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], maxBuffer: 1 << 26 }); } catch { return ""; } };
+const git = (root, args) => { try { return execFileSync("git", ["--no-optional-locks", "-c", "core.quotePath=false", "-C", root, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], maxBuffer: 1 << 26 }); } catch { return ""; } };
 const mtime = (root, rel) => { try { return statSync(join(root, rel)).mtime.toISOString(); } catch { return null; } };
 const exists = (root, rel) => { try { return statSync(join(root, rel)).isFile(); } catch { return false; } };
 
@@ -42,10 +42,14 @@ const changedAt = (root, rel, commits, updated = null) => {
 };
 
 /* The chat start's health line without its instruction to the model. */
-export function healthText(root, overview) {
-  let line = null; try { line = healthLine(root, overview); } catch {}
+export function healthText(root, overview, read = healthLine) {
+  let line = null; try { line = read(root, overview); } catch {}
   if (!line) return null;
-  return line.replace(/^health:\s*/, "").replace(/\.\s*Say this if[\s\S]*$/, "").trim() || null;
+  // The instruction is the line's last sentence. Should its wording change, the last sentence still goes:
+  // losing a few words of the line is better than showing the person a sentence written for the model.
+  const body = String(line).replace(/^health:\s*/, ""), known = body.search(/\.\s*Say this if/);
+  const at = known >= 0 ? known : body.search(/\.\s+[A-Z][^.]*\.?\s*$/);
+  return (at >= 0 ? body.slice(0, at) : body).trim() || null;
 }
 
 /* "## Our rules" in RULES.md, read defensively: one rule per bullet or numbered line, comments skipped. */
@@ -137,13 +141,17 @@ function entityCards(root, registry, admin, notes, contexts) {
 
 /* A trigger, from whatever a workflow file says today: a frontmatter trigger or schedule, or a "## Trigger"
    section. Another version may add more; anything not understood is shown as written, and none is "manual". */
+const flat = (v, depth = 0) => {
+  if (v === undefined || v === null || depth > 4) return "";
+  if (Array.isArray(v)) return v.map(i => flat(i, depth + 1)).filter(Boolean).join(depth ? ", " : "; ");
+  if (typeof v === "object") return Object.entries(v).map(([k, x]) => { const t = flat(x, depth + 1); return t ? `${k} ${t}` : ""; }).filter(Boolean).join(" ");
+  return String(v).trim();
+};
 export function workflowTrigger(doc) {
-  const x = doc?.extra || {};
+  const x = doc?.extra && typeof doc.extra === "object" ? doc.extra : {};
   for (const k of ["trigger", "triggers", "schedule", "when", "on"]) {
-    const v = x[k]; if (v === undefined || v === null || v === "") continue;
-    if (Array.isArray(v)) { const t = v.map(i => typeof i === "object" ? Object.entries(i).map(([a, b]) => `${a} ${b}`).join(" ") : String(i)).join("; "); if (t.trim()) return cut(t, 120); }
-    else if (typeof v === "object") { const t = Object.entries(v).map(([a, b]) => `${a} ${b}`).join(" "); if (t.trim()) return cut(t, 120); }
-    else return cut(String(v), 120);
+    let t = ""; try { t = flat(x[k]); } catch {}
+    if (t) return cut(t, 120);
   }
   const m = String(doc?.body || "").match(/^##\s+Triggers?\s*\n([\s\S]*?)(?=^##\s|$(?![\s\S]))/m);
   if (m) { const t = m[1].split("\n").map(l => l.replace(/^\s*[-*]\s+/, "").trim()).filter(Boolean).join("; "); if (t) return cut(t, 120); }
@@ -154,13 +162,17 @@ function workflows(root, documents, runs, commits) {
   const docs = new Map(documents.filter(d => d.extra?.type === WORKFLOW_TYPE).map(d => [d.slug, d]));
   let parsed = []; try { parsed = listWorkflows(root); } catch {}
   const files = parsed.map(w => {
+    try { return fileRow(w); }   // one file nobody can read is one row saying so, not an empty tab
+    catch { return { slug: String(w?.slug || "?"), title: String(w?.title || w?.slug || "?"), path: typeof w?.path === "string" ? w.path : null, status: "draft", ok: false, problems: ["This workflow file could not be read."], steps: null, trigger: "manual", changed: null, runs: [] }; }
+  });
+  function fileRow(w) {
     const d = docs.get(w.slug), own = runs.filter(r => r.workflow === w.slug);
     return { slug: w.slug, title: w.title || w.slug, path: w.path || d?.path || null, status: w.status || d?.status || "draft", ok: !!w.ok, problems: (w.problems || []).map(p => cut(p, 160)),
       steps: w.ok ? w.steps.length : null, trigger: workflowTrigger(d), changed: w.path ? changedAt(root, w.path, commits, d?.updated) : null,
       runs: own.map(r => { const step = r.current, title = step && w.ok ? w.steps[step.n - 1]?.title || null : null;
         return { id: r.id, started: r.startedAt, by: r.by, context: r.context, ended: r.ended ? { how: r.ended.how, at: r.ended.at } : null,
           step: step ? { n: step.n, of: w.ok ? w.steps.length : r.steps.length, title, status: step.status, due: step.due || null } : null, waiting: r.open ? cut(r.open.content, 160) : null }; }) };
-  });
+  }
   // runs whose workflow file is gone still show, under their own name
   const known = new Set(files.map(f => f.slug));
   const orphans = runs.filter(r => !known.has(r.workflow)).map(r => ({ id: r.id, workflow: r.workflow, started: r.startedAt, ended: r.ended ? { how: r.ended.how, at: r.ended.at } : null,
@@ -175,22 +187,41 @@ export function pillarData(root, { registry = lib.readNames(root), admin = lib.r
   const paths = [...documents.map(d => d.path), RULES, "SCHEMA.md", "brain/admin.md"];
   const commits = lastCommits(root, paths.filter(p => exists(root, p)));
   let ruleList = findings; if (!ruleList) { try { ruleList = ruleFindings(root); } catch { ruleList = []; } }
-  const notes = noteIndex(full);
+  // Each tab is read on its own: a file one reader cannot handle empties that tab and names it in `unread`,
+  // and the page says so there. It never stops the render, so the other tabs and More stay usable.
+  const unread = [], section = (name, read, empty) => { try { return read(); } catch { unread.push(name); return empty; } };
+  const notes = section("memories", () => noteIndex(full), []);
   let runs = []; try { runs = listRuns(root); } catch {}
-  let pop = null; try { pop = population(root); } catch {}
-  const kinds = [...new Set([...brainKinds(root), ...registry.map(e => e.kind || "person")])];
-  const entities = entityCards(root, registry, admin, notes, full);
+  let pop = null;
+  try { const p = population(root); pop = { at: p.at, saved_this_week: p.saved.last_7_days, average_week: p.saved.average_4_weeks_before, duplicates: p.duplicates.exact + p.duplicates.near,
+    entities_without_notes: p.entities.without_notes, entities_total: p.entities.total, missing_required: p.entities.missing_required, notes: p.notes }; } catch { pop = null; }
+  const entities = section("entities", () => {
+    const kinds = [...new Set([...brainKinds(root), ...registry.map(e => e.kind || "person")])], rows = entityCards(root, registry, admin, notes, full);
+    return { kinds: kinds.map(k => ({ kind: k, count: rows.filter(e => e.kind === k).length })), rows };
+  }, { kinds: [], rows: [] });
   const tagCount = new Map(); for (const n of notes) for (const t of n.tags) tagCount.set(t, (tagCount.get(t) || 0) + 1);
   return {
     health: healthText(root, meetings),
-    configuration: configuration(root, admin, { documents, commits, findings: ruleList, tools, plugin, compileMode }),
-    entities: { kinds: kinds.map(k => ({ kind: k, count: entities.filter(e => e.kind === k).length })), rows: entities },
+    configuration: section("configuration", () => configuration(root, admin, { documents, commits, findings: ruleList, tools, plugin, compileMode }), EMPTY_CONFIGURATION()),
+    entities,
     memories: { notes, total: notes.length, in_force: notes.filter(n => n.state === "in force").length,
       kinds: [...new Set(notes.map(n => n.kind))].sort(), tags: [...tagCount].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 60).map(([t, n]) => ({ tag: t, n })),
-      population: pop ? { at: pop.at, saved_this_week: pop.saved.last_7_days, average_week: pop.saved.average_4_weeks_before, duplicates: pop.duplicates.exact + pop.duplicates.near,
-        entities_without_notes: pop.entities.without_notes, entities_total: pop.entities.total, missing_required: pop.entities.missing_required, notes: pop.notes } : null },
-    workflows: workflows(root, documents, runs, commits),
+      population: pop },
+    workflows: section("workflows", () => workflows(root, documents, runs, commits), { files: [], orphans: [] }),
+    unread,
   };
+}
+const EMPTY_CONFIGURATION = () => ({ documents: [],
+  rules: { path: null, changed: null, count: 0, placement: 0, own: [], problems: 0, by_rule: {}, findings: [], ask: { defaults: true, rows: [], problems: [] } },
+  schema: { path: null, changed: null, error: null, kinds: [], relations: [] },
+  settings: { path: null, changed: null, company: null, owner: null, team: 0, tools: [], dashboard: "always", compile: null, plugin: null } });
+
+/* The notes the page itself carries: the newest, up to a full page of notes in force (what the tab shows first),
+   with the corrected and withdrawn ones between them. Opening the dashboard then needs no second request. */
+export function firstNotes(notes, page = NOTES_PAGE) {
+  const out = []; let live = 0;
+  for (const n of notes) { if (live >= page || out.length >= page * 3) break; out.push(n); if (n.state === "in force") live++; }
+  return out;
 }
 
 /* The brain files the tabs link to, the only ones the dashboard server opens for reading (dash.mjs /file). */

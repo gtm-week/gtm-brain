@@ -11,7 +11,7 @@ import { contextGraph } from "../../lib/context-graph.mjs";
 import { entityGraph } from "../../lib/entity-graph.mjs";
 import { dashboardData, dashboardSourceRevision } from '../../lib/dashboard-data.mjs';
 import { listRuns } from '../../lib/workflows.mjs';
-import { pillarData, pillarFiles, NOTES_PAGE } from '../../lib/dashboard-pillars.mjs';
+import { pillarData, pillarFiles, firstNotes } from '../../lib/dashboard-pillars.mjs';
 import { refreshIndexedPages } from '../../lib/entity-pages.mjs';
 import { hasMemoryIndex, openDatabase } from '../../lib/memory-index-store.mjs';
 import { readJSON, writeJSON, renderQueue } from '../../lib/dashboard-refresh.mjs';
@@ -100,15 +100,19 @@ data.meetings = lib.meetingOverview(root, { by: lib.currentPerson(root) || undef
 data.meetings.captureStatus = lib.meetingCaptureStatus(root, data.meetings);
 // The front page's four tabs by pillar. The whole note list goes to a side file in the detail folder;
 // the page carries its first page and fetches the rest when a filter or a scroll needs it.
-{
+// The tabs never stop the render: if they cannot be read at all the page says so and More still works.
+try {
   const pillarsStarted = performance.now();
   const pillars = pillarData(root, { registry: reg, admin, contexts: snapshot ? lib.listContexts(root) : sourceContexts, meetings: data.meetings, tools: toolRows, plugin: data.plugin, compileMode });
   const notes = pillars.memories.notes; delete pillars.memories.notes;
   writeFileSync(join(detailDir, 'notes.json'), JSON.stringify({ notes }));
-  Object.assign(pillars.memories, { first: notes.slice(0, NOTES_PAGE), file: detailFolder + '/notes.json' });
+  Object.assign(pillars.memories, { first: firstNotes(notes), file: detailFolder + '/notes.json' });
   pillars.files = pillarFiles(pillars);
   data.pillars = pillars;
   if (process.env.GTM_BRAIN_RENDER_PROFILE) console.error(JSON.stringify({ stage: 'pillars', ms: Math.round(performance.now() - pillarsStarted) }));
+} catch (error) {
+  data.pillars = null; data.pillarsUnread = true;
+  console.error(`The front page tabs could not be read: ${error?.message || error}`);
 }
 for (const c of contexts) c.summaryPlaceholder = !c.compiledAt && c.summary === "Nothing here yet.";
 // Prebuilt frontend assets keep installation and rendering independent of npm.
