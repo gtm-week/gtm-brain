@@ -22,6 +22,8 @@ test("summary runs: the last good run, and an error only when it came after it",
   assert.deepEqual(summaryRuns(root), { good: "2026-11-12T08:00:00Z", error: null }, "a later good run clears the old error");
   writeFileSync(join(root, "work/compile.json"), JSON.stringify({ state: "failed", at: "2026-11-13T08:00:00Z", contexts: "icp" }));
   assert.match(summaryRuns(root).error.why, /failed \(icp\)/);
+  writeFileSync(join(root, "work/compile.json"), JSON.stringify({ state: "blocked", at: "2026-11-13T09:00:00Z", contexts: "icp" }));
+  assert.match(summaryRuns(root).error.why, /compiled nothing \(icp\)/, "a run that compiled nothing is an error too");
 });
 
 test("last sync per tool, from the checkpoint and from meeting coverage; unreadable coverage does not count", t => {
@@ -46,7 +48,8 @@ test("one line, with every part, and nothing when nothing is known", t => {
   assert.match(line, /summaries: last good run 2026-11-10 08:00 UTC, last error 2026-11-11 08:00 UTC: rate limited/);
   assert.match(line, /last sync: gmail 2026-11-12 06:00 UTC/);
   assert.match(line, /open gaps: 1 meeting not captured/);
-  assert.doesNotMatch(line, /[–—]/);
+  assert.doesNotMatch(line, /[\u2013\u2014]/);
+  assert.doesNotMatch(healthLine(bare(t), none), /\.\. Say this/, "a part that ends the list with its own full stop does not double it");
 });
 
 test("the chat start prints the health line once", t => {

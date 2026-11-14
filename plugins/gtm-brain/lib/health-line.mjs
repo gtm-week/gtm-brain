@@ -15,7 +15,7 @@ export function summaryRuns(root) {
   const runs = readRuns(root), state = readJson(join(root, "work", "compile.json"));
   const good = newest([...runs.filter(r => r.turns > 0 && !r.error), ...(state?.state === "done" ? [state] : [])]);
   const bad = newest([...runs.filter(r => r.error || !r.turns).map(r => ({ at: r.at, why: r.error || "the run did no work" })),
-    ...(state?.state === "failed" ? [{ at: state.at, why: `failed${state.contexts ? ` (${state.contexts})` : ""}` }] : [])]);
+    ...(["failed", "blocked"].includes(state?.state) ? [{ at: state.at, why: `${state.state === "blocked" ? "compiled nothing" : "failed"}${state.contexts ? ` (${state.contexts})` : ""}` }] : [])]);
   return { good: good?.at || null, error: bad && (!good || Date.parse(bad.at) > Date.parse(good.at)) ? bad : null };
 }
 
@@ -43,5 +43,5 @@ export function healthLine(root, overview) {
   const gaps = openGaps(overview);
   if (gaps) parts.push(`open gaps: ${gaps} meeting${gaps === 1 ? "" : "s"} not captured`);
   if (!parts.length) return null;
-  return `health: ${parts.join(" | ")}. Say this if the person asks about meetings, sync or summaries, or something is missing; do not raise it otherwise.`;
+  return `health: ${parts.join(" | ").replace(/\.$/, "")}. Say this if the person asks about meetings, sync or summaries, or something is missing; do not raise it otherwise.`;
 }
