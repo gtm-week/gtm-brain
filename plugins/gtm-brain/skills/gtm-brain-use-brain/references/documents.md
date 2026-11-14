@@ -54,6 +54,44 @@ An ICP the person already wrote is added here like any other document.
    (rule 11), so no `remember` call follows. The strategic intake (`gtm-brain-strategy`) is the
    one workflow that also notes decisions, and it does that itself.
 
+## Add a base file
+
+A base file is a document the team adds for itself beyond the five starters: "add pricing as a
+base file", "we need a positioning document", "make a competitors file". One sentence starts it;
+the flow is two turns, one tool call each after the chat's first status read.
+
+1. Call `document` with `action: prepare` and `title` (the subject in the person's words:
+   Pricing, Positioning, Competitors). It writes nothing and returns, in one read: the base file
+   that already covers the subject, if any (by title, `applies_to`, a heading of that name, or
+   three mentions in a filled one); the starter for pricing, positioning, competitors or
+   objections (`templates/base-files/`: headings, one line of guidance each); the notes and
+   entities the brain holds on it; and the one question with its choices.
+2. Already covered: the first choice is a section in that file, never a second file on the same
+   subject. Draft just the section and save it on the yes with `action: update`, its `ref` and
+   `append` (the rest of the file stays as it is).
+3. Notes found: draft from them under the starter's headings (without a starter, three to five
+   headings the notes support). Leave a heading empty rather than guess. End the draft with
+   "Drawn from:" and the notes used (id, context, date). No notes: say the brain knows nothing
+   about it yet, write no draft, and ask in one question for the two or three facts `prepare`
+   names. Never invent a price, a competitor or a quote.
+4. Show the draft in full, then copy the question lines `prepare` gives word for word: the why
+   line, the question (what work should follow this document) and its two or three choices with
+   "(recommended)" on the first. End the turn. A pick (a number or a kind of work) is the yes,
+   because the why line says picking saves it: one call, `action: create`, `title`, `applies_to`
+   from the pick, `body` the draft, status draft, the person's `by`. A change asked for is no yes:
+   make it, show the draft again with the same question. Nothing is written before the pick. When
+   the subject's own file already exists, `prepare` gives a yes/no on saving into it instead.
+5. One line back, with the saved path: "Saved pricing.md as a draft. The brain reads it before
+   proposals, outreach and landing pages." No `remember` follows (rule 11).
+
+A Markdown dropped at the root by hand that is not a document yet: the document list and the
+health line say "pricing.md is here but the brain does not use it yet" (the health line once per
+new file). Offer once to adopt it: `action: prepare` with `file`, then show the frontmatter it
+would gain and copy its question lines. On the pick, `action: create` with `file`: only the
+frontmatter is added, the person's text stays byte for byte. Never rewrite or tidy it.
+
+`preview: true` on create or update returns what would be written and writes nothing.
+
 ## Fill a starter
 
 Setup writes five starters at the brain root: `strategy.md`, `icp.md`, `voice.md`,
@@ -92,8 +130,9 @@ in the document's files folder and `save` keeps it. Say the path in one line.
 
 ## Everything else
 
-- "list the documents": `action: list`; one line per document with status, kinds of work, path
-  and file count; when none exists, the ones the course expects first.
+- "list the documents": `action: list`; one line per base file with its state (not filled,
+  draft, approved), the kinds of work, path and the day it last changed, then any Markdown at the
+  root the brain does not use yet; `--json` carries `state` and `changed` for the dashboard.
 - "show the strategy": `action: show`. "what files does the design system have": `action: files`.
 - "update the voice: ...": quote the line that changes, confirm, then `action: update` with
   `ref` and only that field. "approve the design system": `action: update`, `status: approved`;

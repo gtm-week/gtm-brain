@@ -7,6 +7,7 @@
 // the server, the hook, add-file and save go through it.
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync, rmdirSync, renameSync, statSync } from "node:fs";
 import { join, dirname, basename, relative, sep } from "node:path";
+import { execFileSync } from "node:child_process";
 import { handleFor, parseFrontmatter, renderFrontmatter, readProjects } from "./brain.mjs";
 import { HOST_DIRS } from "./host.mjs";
 
@@ -91,13 +92,18 @@ export function markdownFiles(root) {
 /* The starters setup writes (strategy, icp, voice, design-system, market): a document whose body is still the shipped
    one, word for word, is not filled. A hard fact, so a hand edit counts as filled; any company name matches. */
 export const STARTERS = ["strategy", "icp", "voice", "design-system", "market"];
+/* The ready starters for the common base files a team adds (templates/base-files/): headings, one line of
+   guidance each, the kinds of work to offer, the words that find the subject in notes, and the facts to ask
+   for when the brain holds nothing. A document whose body is still one of them is not filled either. */
+export const BASE_STARTERS = ["pricing", "positioning", "competitors", "objections"];
+const templateUrl = slug => new URL(BASE_STARTERS.includes(slug) ? `../templates/base-files/${slug}.md` : `../templates/${slug}.md`, import.meta.url);
 const starterBody = new Map();
 function isStarterBody(slug, body) {
-  if (!STARTERS.includes(slug)) return false;
+  if (!STARTERS.includes(slug) && !BASE_STARTERS.includes(slug)) return false;
   if (!starterBody.has(slug)) {
     let re = null;
     try {
-      const shipped = parseFrontmatter(readFileSync(new URL(`../templates/${slug}.md`, import.meta.url), "utf8")).body.trim();
+      const shipped = parseFrontmatter(readFileSync(templateUrl(slug), "utf8")).body.trim();
       re = new RegExp(`^${shipped.split("{{COMPANY}}").map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".+?")}$`, "s");
     } catch {}
     starterBody.set(slug, re);
@@ -111,7 +117,8 @@ export function parseDocument(root, path) {
   if (fm.kind !== KIND) return null;
   const slug = basename(path, ".md"), dir = posix(dirname(path));
   const extra = Object.fromEntries(Object.entries(fm).filter(([k]) => !DOCUMENT_KEYS.has(k)));
-  return { slug, path: posix(path), folder: dir === "." ? "" : dir, title: String(fm.title || slug), applies_to: normalizeAppliesTo(fm.applies_to), status: STATUSES.includes(fm.status) ? fm.status : "draft", filled: !isStarterBody(slug, body), by: fm.by ? String(fm.by) : null, updated: fm.updated ? String(fm.updated) : null, version: fm["gtm-brain"] ? String(fm["gtm-brain"]) : null, body: body.trim(), bytes: Buffer.byteLength(body, "utf8"), extra };
+  const status = STATUSES.includes(fm.status) ? fm.status : "draft", filled = !isStarterBody(slug, body);
+  return { slug, path: posix(path), folder: dir === "." ? "" : dir, title: String(fm.title || slug), applies_to: normalizeAppliesTo(fm.applies_to), status, filled, state: filled ? status : "not filled", by: fm.by ? String(fm.by) : null, updated: fm.updated ? String(fm.updated) : null, version: fm["gtm-brain"] ? String(fm["gtm-brain"]) : null, body: body.trim(), bytes: Buffer.byteLength(body, "utf8"), extra };
 }
 
 export function listDocuments(root) { return markdownFiles(root).map(p => parseDocument(root, p)).filter(Boolean); }
@@ -172,6 +179,95 @@ export function writeDocument(root, d) {
   const path = posix(d.path); mkdirSync(dirname(join(root, path)), { recursive: true });
   writeFileSync(join(root, path), renderDocument(d));
   return path;
+}
+
+/* The frontmatter a document needs, merged over the file's own keys (theirs kept after ours). */
+const documentFields = ({ title, applies_to, status, by, version }, own = {}) => ({ kind: KIND, title: String(title).trim(), applies_to: normalizeAppliesTo(applies_to), status, by: by || "", updated: new Date().toISOString().slice(0, 10), "gtm-brain": version || "", ...Object.fromEntries(Object.entries(own || {}).filter(([k]) => !DOCUMENT_KEYS.has(k))) });
+
+/* Writes the frontmatter and keeps every byte of the text below it as the person wrote it: adopting a file
+   dropped in by hand, or changing only its fields (status, applies_to, title). Returns what was written. */
+export function writeFields(root, path, fields, { preview = false } = {}) {
+  const abs = join(root, path), raw = readFileSync(abs, "utf8").replace(/^﻿/, "");
+  const { fm, body } = parseFrontmatter(raw.replace(/\r\n/g, "\n"));
+  const text = /\r\n/.test(raw) ? raw.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "") : body;   // a CRLF file keeps its own line ends below
+  const head = renderFrontmatter(documentFields(fields, fm));
+  if (!preview) writeFileSync(abs, head + text);
+  return { frontmatter: head, text };
+}
+
+/* A section added at the end of a document; everything above it stays as it is. */
+export function appendSection(root, doc, section, fields) {
+  const abs = join(root, doc.path), { body } = parseFrontmatter(readFileSync(abs, "utf8"));
+  const add = String(section || "").replace(/\r\n/g, "\n").trim();
+  writeFileSync(abs, renderFrontmatter(documentFields({ title: doc.title, applies_to: doc.applies_to, status: doc.status, by: doc.by, ...fields }, doc.extra)) + `${body.replace(/\s+$/, "")}\n\n${add}\n`);
+}
+
+/* Markdown dropped at the brain root by hand that is not a document yet: the brain does not read it before work. */
+export function unadoptedFiles(root) {
+  return markdownFiles(root).filter(p => !p.includes("/") && !parseDocument(root, p));
+}
+export const unadoptedText = files => files.map(f => `${f} is here but the brain does not use it yet`).join("; ");
+
+/* The health line's part for them, said once per set: the set is remembered in work/ and the part returns only when a new file appears. */
+export function unadoptedPart(root) {
+  const files = unadoptedFiles(root), memo = join(root, "work", "unadopted-seen.json");
+  let seen = []; try { seen = JSON.parse(readFileSync(memo, "utf8")).files || []; } catch {}
+  const fresh = files.filter(f => !seen.includes(f));
+  try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(memo, JSON.stringify({ files, at: new Date().toISOString() })); } catch {}
+  return fresh.length ? `base files: ${unadoptedText(fresh)}` : "";
+}
+
+/* A starter from templates/base-files/, by slug or by a word of the subject ("our pricing", "a competitors file"). */
+export function readStarter(slug) {
+  if (!BASE_STARTERS.includes(slug)) return null;
+  const { fm, body } = parseFrontmatter(readFileSync(templateUrl(slug), "utf8"));
+  const list = v => (Array.isArray(v) ? v : []).map(String);
+  return { slug, title: String(fm.title), applies_to: normalizeAppliesTo(fm.applies_to), choices: list(fm.choices), terms: list(fm.terms).map(t => t.toLowerCase()), needs: list(fm.needs), body: body.trim(), template: `templates/base-files/${slug}.md` };
+}
+const STOP = new Set(["a", "an", "the", "our", "my", "we", "us", "of", "for", "and", "to", "file", "files", "base", "document", "doc", "docs", "md", "new", "page", "sheet", "add", "make", "need", "as", "create", "write", "start", "set", "up"]);
+const stem = w => w.length > 4 && w.endsWith("s") ? w.slice(0, -1) : w;
+export const subjectWords = text => String(text || "").toLowerCase().replace(/\.md$/, "").split(/[^\p{L}\p{N}]+/u).filter(w => w && !STOP.has(w));
+export function matchStarter(subject) {
+  const words = new Set(subjectWords(subject).map(stem));
+  // the slug or one of its first three terms, which are its other names (price, competition, messaging, pushback)
+  return BASE_STARTERS.map(readStarter).find(s => [s.slug, ...s.terms.slice(0, 3)].some(t => words.has(stem(t)))) || null;
+}
+
+/* Which existing base files already cover a subject, strongest first: the title or slug names it (3), applies_to
+   names it (1), a heading is exactly it (1), the text mentions it three times or more (1). Two or more is an overlap. */
+export function overlaps(root, subject, starter = matchStarter(subject), all = listDocuments(root)) {
+  const words = new Set(subjectWords(subject).map(stem)); if (starter) words.add(stem(starter.slug));
+  if (!words.size) return [];
+  const terms = new Set([...words, ...(starter ? starter.terms.map(stem) : [])]);
+  const has = text => subjectWords(text).map(stem).some(w => words.has(w));
+  const out = [];
+  for (const d of all) {
+    if (d.extra?.type === "workflow") continue;
+    const reasons = [];
+    if (subjectWords(d.title).concat(subjectWords(d.slug)).map(stem).some(w => words.has(w))) reasons.push(["title", 3]);
+    const applies = d.applies_to.filter(a => has(a) || terms.has(stem(a)));
+    if (applies.length) reasons.push([`applies_to: ${applies.join(", ")}`, 1]);
+    const heading = (d.body.match(/^#{2,3}\s+.+$/gm) || []).map(h => h.replace(/^#+\s+/, "").trim()).find(h => { const w = subjectWords(h).map(stem); return w.length && w.every(x => words.has(x)); });
+    if (heading) reasons.push([`heading "${heading}"`, 1]);
+    const mentions = d.filled ? subjectWords(d.body).map(stem).filter(w => terms.has(w)).length : 0;
+    if (mentions >= 3) reasons.push([`${mentions} mentions in the text`, 1]);
+    const score = reasons.reduce((n, [, s]) => n + s, 0);
+    if (score >= 2) out.push({ doc: d, score, reasons: reasons.map(([r]) => r), heading: heading || null });
+  }
+  return out.sort((a, b) => b.score - a.score || a.doc.path.localeCompare(b.doc.path));
+}
+
+/* When each path last changed: its last commit's date, or today when it has changes not saved yet. */
+export function lastChanged(root, paths) {
+  const out = {}; if (!paths.length) return out;
+  try {
+    const log = execFileSync("git", ["--no-optional-locks", "-C", root, "log", "--format=%x00%cs", "--name-only", "--", ...paths], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], maxBuffer: 16 << 20 });
+    for (const chunk of log.split("\0").filter(Boolean)) { const [date, ...files] = chunk.split("\n").map(s => s.trim()).filter(Boolean); for (const f of files) if (!out[f]) out[f] = date; }
+    const status = execFileSync("git", ["--no-optional-locks", "-C", root, "status", "--porcelain", "--untracked-files=all", "--", ...paths], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+    for (const l of status.split("\n").filter(Boolean)) { const p = l.slice(3).replace(/^"|"$/g, ""); try { out[p] = statSync(join(root, p)).mtime.toISOString().slice(0, 10); } catch {} }
+  } catch {}
+  for (const p of paths) if (!out[p]) { try { out[p] = statSync(join(root, p)).mtime.toISOString().slice(0, 10); } catch {} }
+  return out;
 }
 
 export function removeDocument(root, doc) {
