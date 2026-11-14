@@ -49,11 +49,11 @@ test('whose voice is settled first, with one question under the shared policy, a
   assert.ok(skill.indexOf('## 1. Whose voice') < skill.indexOf('## 2. Evidence'), 'whose voice comes before any evidence');
   assert.match(one, /this\s+question comes first, before reading or asking for texts, with one line on why/);
   assert.match(one, /"our voice" is not one/, 'a bare "our voice" does not settle whose it is');
-  assert.match(one, /"The company's voice"\s+\(recommended; one standard for everything we publish and send, no persona per channel\), "My own\s+voice", "A team's voice"/);
+  assert.match(one, /"The company's voice"\s+\(recommended; one standard for everything we publish and send, no separate persona per medium\), "My own\s+voice", "A team's voice"/);
   assert.match(one, /reuse that, or an\s+answer already in the request \("our voice" is not one\), and never ask again/);
   assert.match(one, /whose voice it is and what it governs/);
   assert.match(skill, /\[question handling\]\(\.\.\/gtm-brain-start\/references\/questions\.md\)/);
-  assert.match(method, /one standard for what the company publishes and sends, across\s+channels/);
+  assert.match(method, /one standard for what the company publishes and sends, in every\s+medium/);
   assert.match(method, /never a separate persona/);
 });
 
