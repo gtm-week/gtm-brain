@@ -13,6 +13,7 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { SHORT } from "../../lib/pointers.mjs";   // the connector short forms, shared with source kinds
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
 const admin = lib.readAdmin(root); if (!admin) { console.error("no brain here"); process.exit(1); }
@@ -98,7 +99,6 @@ for (const p of plugins.values()) if (!p.display) p.display = p.id.startsWith("a
 /* ---------- matching a tool name to a plugin ---------- */
 const norm = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]/g, "");
 // short forms people write that are not the plugin's name; the catalog still decides whether the plugin exists
-const SHORT = { calendar: "google-calendar", gcal: "google-calendar", drive: "google-drive", gdrive: "google-drive", contacts: "google-contacts", outlook: "outlook-email", email: "gmail", mail: "gmail", crm: null };
 const marketplaceOnly = [REMOTE];   // where the official integrations live; bundled/runtime plugins are Codex's own
 const candidates = () => [...plugins.values()].filter(p => marketplaceOnly.includes(p.marketplace));
 function findPlugin(tool) {
