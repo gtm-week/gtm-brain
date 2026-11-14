@@ -39,6 +39,7 @@ const call = (name, args) => new Promise((res, rej) => {
 const store = join(root, "brain", "contexts", "pipeline", "memories.jsonl");
 const bytes = () => existsSync(store) ? readFileSync(store, "utf8") : "";
 const about = token => lib.readMemories(root, "pipeline").filter(m => m.content.includes(token));
+const DAY = (d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`)(new Date());
 
 test("the file keeps external false; validation lets a pure record go without a tool", () => {
   const [move, log] = lib.readInteractions(root).actions;
@@ -51,7 +52,7 @@ test("the file keeps external false; validation lets a pure record go without a 
 
 test("interactionMemory with outcome failed: a plain failure note, no action", () => {
   const m = lib.interactionMemory(MOVE, { deal: "Castorama", stage: "won" }, { outcome: "failed", error: "  403\n forbidden " });
-  assert.equal(m.content, "Failed in hubspot, not done: Moving a deal (deal Castorama, stage won). Error: 403 forbidden");
+  assert.equal(m.content, `Failed in hubspot, not done: Moving a deal (deal Castorama, stage won), tried ${DAY}. Error: 403 forbidden`);
   assert.deepEqual(m.actions, []); assert.deepEqual(m.companies, ["Castorama"]); assert.deepEqual(m.tools, ["hubspot"]); assert.deepEqual(m.tags, ["deal-stage", "interaction-failed"]);
   assert.match(lib.interactionMemory(MOVE, { deal: "X", stage: "won" }, { outcome: "failed" }).content, /No error text was returned\.$/);
 });
@@ -103,7 +104,7 @@ test("failed writes a failure note, plainly, and no action", async () => {
   assert.ok(!r.isError, r.text); assert.match(r.text, /^recorded failure: move_deal was not done in hubspot/);
   const got = about("Moving a deal (deal Lidl");
   assert.equal(got.length, 1);
-  assert.equal(got[0].content, "Failed in hubspot, not done: Moving a deal (deal Lidl, stage won). Error: INVALID_STAGE: won is not a stage of this pipeline");
+  assert.equal(got[0].content, `Failed in hubspot, not done: Moving a deal (deal Lidl, stage won), tried ${DAY}. Error: INVALID_STAGE: won is not a stage of this pipeline`);
   assert.deepEqual(got[0].actions || [], []); assert.ok(got[0].tags.includes("interaction-failed"));
   assert.equal(about("Moved Lidl").length, 0, "no note claims it happened");
 });

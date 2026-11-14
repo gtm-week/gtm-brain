@@ -44,9 +44,10 @@ if (opt.interaction) {
   lib.writeInteractions(root, [...actions, proposal]);
   const check = lib.readInteractions(root); if (check.error) { console.error(`written but does not load: ${check.error}`); process.exit(1); }
   unlinkSync(PROPI);
-  const r = lib.commit(root, [lib.INTERACTIONS_PATH], `interactions: ${proposal.name}\n\n${proposal.tool}: ${proposal.operation}`);
+  const where = proposal.external === false ? "record only" : proposal.tool;
+  const r = lib.commit(root, [lib.INTERACTIONS_PATH], `interactions: ${proposal.name}\n\n${proposal.external === false ? "record only: no tool step" : `${proposal.tool}: ${proposal.operation}`}`);
   lib.rerender(root);
-  console.log(`added interaction ${proposal.name} (${proposal.tool}) · ${r.note}\nlist_objects shows it from the next call; interact runs it.`);
+  console.log(`added interaction ${proposal.name} (${where}) · ${r.note}\nlist_objects shows it from the next call; interact runs it.`);
   process.exit(0);
 }
 if (!existsSync(ADMIN)) { console.error("no brain/admin.md here"); process.exit(1); }

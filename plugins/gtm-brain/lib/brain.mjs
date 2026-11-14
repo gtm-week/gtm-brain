@@ -1460,9 +1460,14 @@ export function interactionMemory(a, params = {}, { outcome = "done", error = ""
   const r = a.record; const pick = fields => fields.map(f => params[f]).filter(v => v !== undefined && v !== null && String(v).trim()).map(String);
   const base = { context: r.context, people: pick(r.people), companies: pick(r.companies), tools: a.tool ? [a.tool] : [] };
   if (outcome === "failed") {
-    const inputs = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && String(v).trim()).map(([k, v]) => `${k} ${typeof v === "object" ? JSON.stringify(v) : v}`).join(", ");
-    const said = String(error || "").replace(/\s+/g, " ").trim();
-    return { ...base, kind: "note", content: `Failed in ${a.tool || "the tool"}, not done: ${a.title || a.name}${inputs ? ` (${inputs})` : ""}. ${said ? `Error: ${said}` : "No error text was returned."}`, actions: [], tags: [...new Set([...r.tags, "interaction-failed"])] };
+    // The connector's words must never keep the failure from being recorded: long dashes become hyphens,
+    // a page of text is cut, and the note carries the day it was tried, so "try again tomorrow" in the
+    // error is not held as a bare relative date.
+    const plain = (v, max) => { const s = String(v).replace(/[–—―−]/g, "-").replace(/\s+/g, " ").trim(); return s.length > max ? s.slice(0, max - 3) + "..." : s; };
+    const inputs = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && String(v).trim()).map(([k, v]) => `${k} ${plain(typeof v === "object" ? JSON.stringify(v) : v, 120)}`).join(", ");
+    const said = plain(error || "", 500), now = process.env.GTM_BRAIN_NOW ? new Date(process.env.GTM_BRAIN_NOW) : new Date();
+    const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    return { ...base, kind: "note", content: `Failed in ${a.tool || "the tool"}, not done: ${plain(a.title || a.name, 120)}${inputs ? ` (${plain(inputs, 400)})` : ""}, tried ${day}. ${said ? `Error: ${said}` : "No error text was returned."}`, actions: [], tags: [...new Set([...r.tags, "interaction-failed"])] };
   }
   return { ...base, kind: r.kind || "note", content: renderTemplate(r.content, params), actions: r.action ? [renderTemplate(r.action, params)] : [], tags: [...r.tags] };
 }

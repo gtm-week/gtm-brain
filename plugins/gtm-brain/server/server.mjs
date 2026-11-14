@@ -21,6 +21,7 @@ import { validateValue } from "../lib/ontology/validation.mjs";
 import { placementTrailers, whyHere, WHY_TRAILER } from "../lib/where.mjs";
 import { rulesReport } from "../lib/rules-check.mjs";
 import { createSaveNudge } from "../lib/save-nudge.mjs";
+import { relativeDates } from "../lib/dots.mjs";
 
 const P = dirname(dirname(fileURLToPath(import.meta.url)));
 const lib = await import(join(P, "lib", "brain.mjs"));
@@ -264,21 +265,30 @@ const TOOLS = [
       const a = actions.find(x => x.name === name);
       if (!a) return text(`refused: no interaction "${name}" here; this company has: ${actions.map(x => x.name).join(", ") || "none yet (propose_interaction adds one)"}`, true);
       const invalid = validateValue(a.input_schema, params, name); if (invalid) return text(`refused: ${invalid}; nothing recorded`, true);
+      if (outcome === null || outcome === "") outcome = undefined;   // an empty outcome is a first call, never a record
       if (outcome !== undefined && outcome !== "done" && outcome !== "failed") return text(`refused: outcome is done or failed, not ${outcome}; nothing recorded`, true);
-      // a bare id is the interaction's own tool; everything else is a source as remember reads it
-      const list = (Array.isArray(refs) ? refs : [refs]).filter(x => x !== undefined && x !== null && x !== "")
+      // a bare id (a number too: HubSpot ids are numbers) is the interaction's own tool; everything else is a source as remember reads it
+      const list = (Array.isArray(refs) ? refs : [refs]).filter(x => x !== undefined && x !== null && x !== "").map(x => typeof x === "number" ? String(x) : x)
         .map(x => typeof x === "string" && a.tool && !/^https?:\/\//i.test(x.trim()) && !/^\s*\{/.test(x) && x.indexOf(":") < 1 ? { kind: a.tool, ref: x.trim() } : x);
       let sources; try { sources = lib.parseSources(list); } catch (e) { return text(`refused: refs: ${e.message}; nothing recorded`, true); }
       if (a.external && !outcome) {
+        // What would refuse the note after the connector has written is refused now, before anything is done.
+        const note = lib.interactionMemory(a, params), dated = relativeDates(note.content);
+        const why = !lib.teamHandle(brain, by) ? `"${by}" is not in admin.md team`
+          : note.context && !lib.listContexts(brain).some(c => c.slug === note.context && c.status === "active") ? `its context ${note.context} is not an active context here`
+          : /[–—―−]/.test(note.content) ? "its note would contain a long dash; use a plain hyphen in params"
+          : dated.length ? `its note would say ${dated.map(d => `"${d.word}"`).join(", ")}; give the date itself in params (${dated.map(d => d.means.join(" or ")).join("; ")})` : "";
+        if (why) return text(`refused: ${why}; nothing recorded, and do nothing in ${a.tool} yet`, true);
         const rule = a.refuse_when ? `First check: refuse when ${a.refuse_when}. If it holds, stop and tell the person why; nothing is recorded.\n` : "";
         return text(`checked: ${name}; nothing recorded yet.\n${rule}Now in ${a.tool}: ${a.operation}\nThen call interact again with the same name and params and outcome: done with refs (the record id or direct link ${a.tool} returned, with the account when known), or failed with error (what ${a.tool} said). Only that call records it.`);
       }
-      const failed = a.external && outcome === "failed";
+      // failed never records that it happened, whatever the interaction's external flag says
+      const failed = outcome === "failed";
       const m = lib.interactionMemory(a, params, { outcome: failed ? "failed" : "done", error });
       const r = await run(brain, "gtm-brain-remember/remember.mjs", ["--by", by, "--via", "codex", "--context", m.context, "--kind", m.kind, "--content", m.content, ...(m.people.length ? ["--people", m.people.join(", ")] : []), ...(m.companies.length ? ["--companies", m.companies.join(", ")] : []), ...(m.tools.length ? ["--tools", m.tools.join(", ")] : []), ...m.actions.flatMap(x => ["--action", x]), ...sources.flatMap(x => ["--source", JSON.stringify(x)]), ...(m.tags.length ? ["--tags", m.tags.join(", ")] : []), ...(project ? ["--project", project] : [])]);
       const said = [r.out, r.err].filter(Boolean).join("\n").trim();
       if (r.code !== 0) return text(`${r.code === 2 ? "refused" : "error"}: ${said}`, true);
-      if (failed) return text(`recorded failure: ${name} was not done in ${a.tool}\n${said}\nTell the person it failed and what ${a.tool} said; do not retry a create without checking whether it happened.`);
+      if (failed) return text(`recorded failure: ${name} was not done in ${a.tool || "the tool"}\n${said}\nTell the person it failed and what ${a.tool || "the tool"} said; do not retry a create without checking whether it happened.`);
       const noRef = a.external && !sources.length ? `\nNo reference from ${a.tool} was given; when one comes back, save it with remember: supersedes the note above, the same content, the reference as its source.` : "";
       return text(`ok: ${name}\n${said}${noRef}`);
     } },
@@ -292,7 +302,7 @@ const TOOLS = [
       mkdirSync(join(brain, "work"), { recursive: true });
       writeFileSync(join(brain, "work", "interaction.proposed.json"), JSON.stringify(interaction, null, 2) + "\n");
       lib.rerender(brain);
-      return text(`proposed: ${interaction.name} (${interaction.tool}); then call approve_change with kind interaction: its form asks the person for APPROVE. It records in ${interaction.record.context}: ${interaction.record.content}`);
+      return text(`proposed: ${interaction.name} (${interaction.external === false ? "no tool step, recorded at once" : interaction.tool}); then call approve_change with kind interaction: its form asks the person for APPROVE. It records in ${interaction.record.context}: ${interaction.record.content}`);
     } },
   { name: "keep_approved_file", title: "Keeping the approved file", readOnly: false,
     description: "The person approves a file for a person, company or product: \"this is my photo, use it from now on\", \"this is our logo\", \"use this one instead\". Keeps the file in the owner's folder in the brain (brain/entities/<name>/), records it as the approved file for that role and replaces the previous one; every later chat starts with it. Call it in the same turn; never only say it is saved.",
@@ -310,7 +320,7 @@ const TOOLS = [
       if (!existsSync(file)) return text(`nothing to approve: no ${admin ? "work/admin.proposed.md (propose_admin_change writes it)" : "work/interaction.proposed.json (propose_interaction writes it)"}.`, true);
       let what;
       if (admin) { const d = await run(brain, "gtm-brain-approve/approve.mjs", ["--diff"]); if (d.code) return result(d); what = d.out.replace(/\n*Apply it with approve_change[^\n]*\s*$/, "").trim(); }
-      else { try { const i = JSON.parse(readFileSync(file, "utf8")); what = `Interaction ${i.name} (${i.tool}: ${i.operation}). It records in ${i.record?.context}: ${i.record?.content}`; } catch (e) { return text(`the proposal is not valid JSON: ${e.message}`, true); } }
+      else { try { const i = JSON.parse(readFileSync(file, "utf8")); what = `Interaction ${i.name} (${i.external === false ? "no tool step: the note is recorded at once, without a tool confirming anything" : `${i.tool}: ${i.operation}`}). It records in ${i.record?.context}: ${i.record?.content}`; } catch (e) { return text(`the proposal is not valid JSON: ${e.message}`, true); } }
       const apply = ["--by", String(by || ""), admin ? "--apply" : "--interaction"];
       const terminal = `node ${join(P, "scripts", "gtm-brain-approve", "approve.mjs")} ${brain} ${apply.join(" ")}`;
       if (!questions.available()) return text(`This host cannot show the APPROVE form. Nothing was applied. Ask the person to run this in a terminal themselves; it asks them to type APPROVE: ${terminal}`);
@@ -353,7 +363,7 @@ const companyCatalog = ctx => {
   const { actions, error } = lib.readInteractions(ctx.brain);
   if (error) return `(this company's interactions could not be read: ${error})`;
   if (!actions.length) return "";
-  const sig = a => `${a.name}(${Object.keys(a.input_schema.properties || {}).map(k => (a.input_schema.required || []).includes(k) ? k : `${k}?`).join(", ")}) [${a.tool}]`;
+  const sig = a => `${a.name}(${Object.keys(a.input_schema.properties || {}).map(k => (a.input_schema.required || []).includes(k) ? k : `${k}?`).join(", ")}) [${a.external ? a.tool : "record only"}]`;
   return `Interactions of this company (run with interact):\n${actions.map(a => `- ${sig(a)}: ${a.description || a.title}`).join("\n")}`;
 };
 const companyLine = brain => { if (!isBrain(brain)) return ""; const { actions } = lib.readInteractions(brain); return actions.length ? `\nThis company's interactions: ${actions.map(a => `${a.name} (${a.tool})`).join(", ")}; list_objects shows them, interact runs them.` : ""; };
