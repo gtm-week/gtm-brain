@@ -279,7 +279,7 @@
           "teams",
           "identity registry"
         ],
-        "instructions": "Use kind person, organization or product; teams and companies are organization subtypes. query entities with filters.contexts for a context perspective, or search a name/email/alias. Then query memories with filters.entities set to the returned ID and optionally filters.context. Use query (brief) for its readable brief. add_name creates identities or adds unclaimed aliases. update_entity edits by stable ID. merge_entities previews and applies explicit merges; archive_entity with undo restores archived identities, and undo_entity_merge reverses a recorded merge. Query defaults to active entities; filter status to include archives, or id for direct lookup; compile_entity refreshes a cited view. Never infer customer status or employment from identity kind or shared mentions."
+        "instructions": "Use kind person, organization, product, event, tool or another kind in SCHEMA.md; teams and companies are organization subtypes. query entities with filters.contexts for a context perspective, or search a name/email/alias. Then query memories with filters.entities set to the returned ID and optionally filters.context. Use query (brief) for its readable brief. add_name creates identities or adds unclaimed aliases. update_entity edits by stable ID. merge_entities previews and applies explicit merges; archive_entity with undo restores archived identities, and undo_entity_merge reverses a recorded merge. Query defaults to active entities; filter status to include archives, or id for direct lookup; compile_entity refreshes a cited view. Never infer customer status or employment from identity kind or shared mentions."
       },
       "fields": [
         {
@@ -298,7 +298,7 @@
           "name": "kind",
           "expression": "kind",
           "data_type": "String",
-          "description": "person, organization or product. Customer, partner and employer are relationships, not kinds."
+          "description": "A kind in SCHEMA.md: person, organization, product, event, tool or one the brain added. Customer, partner and employer are relationships, not kinds."
         },
         {
           "name": "subtype",
@@ -1866,7 +1866,7 @@
             "tool_name": "add_name",
             "title": "Adding a name",
             "returns": "Opaque",
-            "description": "Create an Entity or add unclaimed aliases, emails and references. This never merges two existing identities: use merge_entities for that. For renaming, replacing or removing metadata use update_entity with a current stable ID. Kinds: person, organization, product; legacy company/team map to organization subtypes. Facts and relationships stay in context memories. Never infer an identity match.",
+            "description": "Create an Entity or add unclaimed aliases, emails and references. This never merges two existing identities: use merge_entities for that. For renaming, replacing or removing metadata use update_entity with a current stable ID. Kinds: person, organization, product, event, tool and any kind in SCHEMA.md; legacy company/team map to organization subtypes. Facts and relationships stay in context memories. Never infer an identity match.",
             "input_schema": {
               "type": "object",
               "properties": {
