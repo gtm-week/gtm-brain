@@ -1463,7 +1463,7 @@ export function interactionMemory(a, params = {}, { outcome = "done", error = ""
     // The connector's words must never keep the failure from being recorded: long dashes become hyphens,
     // a page of text is cut, and the note carries the day it was tried, so "try again tomorrow" in the
     // error is not held as a bare relative date.
-    const plain = (v, max) => { const s = String(v).replace(/[–—―−]/g, "-").replace(/\s+/g, " ").trim(); return s.length > max ? s.slice(0, max - 3) + "..." : s; };
+    const plain = (v, max) => { const s = String(v).replace(/[\u2013\u2014\u2015\u2212]/g, "-").replace(/\s+/g, " ").trim(); return s.length > max ? s.slice(0, max - 3) + "..." : s; };
     const inputs = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && String(v).trim()).map(([k, v]) => `${k} ${plain(typeof v === "object" ? JSON.stringify(v) : v, 120)}`).join(", ");
     const said = plain(error || "", 500), now = process.env.GTM_BRAIN_NOW ? new Date(process.env.GTM_BRAIN_NOW) : new Date();
     const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;

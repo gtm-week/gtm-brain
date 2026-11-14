@@ -36,7 +36,7 @@ const about = token => lib.readMemories(root, "pipeline").filter(m => m.content.
 test("a failure is recorded whatever the connector said: a relative day, a long dash, a page of text", async () => {
   const day = await call("interact", { name: "move_deal", params: { deal: "Alfa", stage: "won" }, outcome: "failed", error: "Rate limited. Try again tomorrow or on Thursday." });
   assert.ok(!day.isError, day.text); assert.equal(about("deal Alfa").length, 1, day.text);
-  const dash = await call("interact", { name: "move_deal", params: { deal: "Beta", stage: "won" }, outcome: "failed", error: "Forbidden — missing scope crm.objects.deals.write" });
+  const dash = await call("interact", { name: "move_deal", params: { deal: "Beta", stage: "won" }, outcome: "failed", error: "Forbidden \u2014 missing scope crm.objects.deals.write" });
   assert.ok(!dash.isError, dash.text); assert.equal(about("deal Beta").length, 1, dash.text);
   const long = await call("interact", { name: "move_deal", params: { deal: "Gamma", stage: "won" }, outcome: "failed", error: "<html>" + "502 Bad Gateway ".repeat(2000) + "</html>" });
   assert.ok(!long.isError, long.text); const g = about("deal Gamma"); assert.equal(g.length, 1, long.text); assert.ok(g[0].content.length < 1500, `the error is cut: ${g[0].content.length}`);
@@ -63,7 +63,7 @@ test("what would refuse the note is refused on the first call, before the connec
   assert.equal(stranger.isError, true); assert.match(stranger.text, /^refused: "nobody" is not in admin\.md team; nothing recorded, and do nothing in hubspot yet/);
   const day = await call("interact", { name: "move_deal", params: { deal: "Theta", stage: "proposal by Thursday" } });
   assert.equal(day.isError, true); assert.match(day.text, /^refused: its note would say "Thursday"; give the date itself in params/);
-  const dash = await call("interact", { name: "move_deal", params: { deal: "Theta — Nord", stage: "lead" } });
+  const dash = await call("interact", { name: "move_deal", params: { deal: "Theta \u2014 Nord", stage: "lead" } });
   assert.equal(dash.isError, true); assert.match(dash.text, /long dash/);
   lib.writeInteractions(root, [MOVE, LOG, { ...MOVE, name: "move_lost", record: { ...MOVE.record, context: "no-such-context" } }]);
   const nowhere = await call("interact", { name: "move_lost", params: { deal: "Theta", stage: "lead" } });

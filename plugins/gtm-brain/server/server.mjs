@@ -276,7 +276,7 @@ const TOOLS = [
         const note = lib.interactionMemory(a, params), dated = relativeDates(note.content);
         const why = !lib.teamHandle(brain, by) ? `"${by}" is not in admin.md team`
           : note.context && !lib.listContexts(brain).some(c => c.slug === note.context && c.status === "active") ? `its context ${note.context} is not an active context here`
-          : /[–—―−]/.test(note.content) ? "its note would contain a long dash; use a plain hyphen in params"
+          : /[\u2013\u2014\u2015\u2212]/.test(note.content) ? "its note would contain a long dash; use a plain hyphen in params"
           : dated.length ? `its note would say ${dated.map(d => `"${d.word}"`).join(", ")}; give the date itself in params (${dated.map(d => d.means.join(" or ")).join("; ")})` : "";
         if (why) return text(`refused: ${why}; nothing recorded, and do nothing in ${a.tool} yet`, true);
         const rule = a.refuse_when ? `First check: refuse when ${a.refuse_when}. If it holds, stop and tell the person why; nothing is recorded.\n` : "";
