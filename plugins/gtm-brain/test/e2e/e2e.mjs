@@ -42,7 +42,7 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
   const pending = new Map(); let seq = 0;
   createInterface({ input: server.stdout }).on("line", line => { let m; try { m = JSON.parse(line); } catch { return; } const r = pending.get(m.id); if (r) { pending.delete(m.id); r(m); } });
   const rpc = (method, params = {}) => new Promise(res => { const id = ++seq; pending.set(id, res); server.stdin.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n"); });
-  await rpc("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "e2e", version: "0" } });
+  const init = await rpc("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "e2e", version: "0" } });
   const call = async (name, args) => { const m = await rpc("tools/call", { name, arguments: { brain, ...args } }); if (m.error) return { text: m.error.message || "", isError: true }; return { text: (m.result.content || []).map(c => c.text).join("\n"), isError: !!m.result.isError }; };
   const script = (rel, args, input) => { const r = spawnSync(process.execPath, [join(P, rel), ...args], { cwd: brain, env, input, maxBuffer: 1 << 30, encoding: "utf8" }); return { text: r.stdout || "", err: r.stderr || "", code: r.status }; };
   const by = gold.owner.handle;
@@ -119,6 +119,10 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
 
   /* ---------- deal, rules, status, health ---------- */
   if (gold.hub) await check("deal.hub", "deal", async () => { const r = await q({ object: "deal", search: gold.hub.name }); return { pass: !r.isError && ids(r.text).length > 0, text: r.text }; });
+  // The core rules (policies/core.md): the brain's AGENTS.md opens with them and the server's instructions carry them.
+  const core = readFileSync(join(P, "policies/core.md"), "utf8").trimEnd();
+  await check("rules.core_first", "rules", async () => { const t = readFileSync(join(brain, "AGENTS.md"), "utf8"); const first = t.split("\n").find(l => l.startsWith("## ")); return { pass: first === "## Core rules" && t.split(core).length === 2 && t.indexOf(core) < t.indexOf("\n## ", t.indexOf("## Core rules") + 1), text: t.slice(0, 2000) }; });
+  await check("rules.core_in_instructions", "rules", async () => { const t = init.result?.instructions || ""; return { pass: t.split(core).length === 2, text: t }; });
   await check("rules.check", "rules", async () => { const r = await q({ object: "rules" }); return { pass: !r.isError && r.text.length > 0, text: r.text }; });
   await check("status.view", "status", async () => { const r = await q({ object: "status" }); return { pass: !r.isError && /icp/i.test(r.text), text: r.text }; });
   await check("status.health", "status", async () => { const r = await q({ object: "health" }); return { pass: !r.isError, text: r.text }; });

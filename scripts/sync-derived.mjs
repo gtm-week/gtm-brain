@@ -14,7 +14,8 @@ const outputs = new Map();
 // holds them through the brain's AGENTS.md and the session line, so the reference keeps only the tool details.
 for (const path of ["AGENTS.md", "INSTALL.md", "plugins/gtm-brain/templates/AGENTS.md"]) {
   let text = read(path);
-  for (const name of ["questions", "computer-use"]) {
+  // core: the brain's first section only; server/server.mjs reads the same policies/core.md for its instructions.
+  for (const name of ["questions", "computer-use", ...(path.startsWith("plugins/") ? ["core"] : [])]) {
     const start = `<!-- generated: ${name}; edit plugins/gtm-brain/policies/${name}.md -->`;
     const end = `<!-- /generated: ${name} -->`;
     if (text.split(start).length !== 2 || text.split(end).length !== 2)
