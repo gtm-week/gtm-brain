@@ -80,7 +80,7 @@ const write = title => ({ title, readOnlyHint: false, destructiveHint: false, op
 const textResult = (s, isError = false) => ({ content: [{ type: "text", text: s }], ...(isError ? { isError: true } : {}) });
 
 /* the tools: name, description, inputSchema, annotations, and call(args, ctx) -> MCP result */
-export function buildTools(onto, backend, { maxRows = 200, scope = null, extraCatalog = null } = {}) {
+export function buildTools(onto, backend, { maxRows = 200, scope = null, extraCatalog = null, extraFilters = null } = {}) {
   const objects = onto.datasets.map(d => d.name);
   // a host's own additions to the catalog, computed per call: what the host knows only then
   // (GTM Brain: the company's interactions, which depend on the brain the call names)
@@ -100,7 +100,9 @@ export function buildTools(onto, backend, { maxRows = 200, scope = null, extraCa
         limit: { type: "integer", minimum: 1, maximum: maxRows, description: `At most this many rows (default 50, max ${maxRows})` } }, required: ["object"], additionalProperties: false }, annotations: read("Query"),
       call: async ({ object, filters = {}, search = "", limit = 50 }, ctx) => {
         if (!onto.has(object)) return textResult(`Unknown object "${object}". Objects: ${objects.join(", ")}`, true);
-        const d = onto.dataset(object), known = new Set(d.fields.map(f => f.name));
+        // the host may accept more filter names for an object (GTM Brain: an entity's SCHEMA.md fields, per brain)
+        let more = []; try { more = extraFilters ? (await extraFilters(object, ctx || {})) || [] : []; } catch {}
+        const d = onto.dataset(object), known = new Set([...d.fields.map(f => f.name), ...more]);
         const bad = Object.keys(filters).filter(k => !known.has(k));
         if (bad.length) return textResult(`${object} has no field ${bad.join(", ")}. Fields: ${[...known].join(", ")}`, true);
         const n = Math.max(1, Math.min(maxRows, Number(limit) || 50));

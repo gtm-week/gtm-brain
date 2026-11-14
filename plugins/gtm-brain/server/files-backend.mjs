@@ -7,6 +7,7 @@ import { isDeepStrictEqual } from "node:util";
 import * as lib from "../lib/brain.mjs";
 import { hasMemoryIndex, withMemoryIndex } from "../lib/memory-index.mjs";
 import { brainRelationsToUs } from "../lib/relation-to-us.mjs";
+import { shortId } from "../lib/layout.mjs";
 
 const brainRoot = ctx => {
   const root = ctx?.brain;
@@ -18,7 +19,7 @@ function rows(root, object) {
   if (object === "entities") {
     // the same relation to us and SCHEMA.md fields the index filters on, for a host without node:sqlite
     const relation = brainRelationsToUs(root, lib), fields = new Map(lib.readNames(root).map(e => { let f = []; try { f = JSON.parse(e._fm?.compiled_fields || "[]"); } catch {} return [e.id, Object.fromEntries((Array.isArray(f) ? f : []).filter(x => x?.field).map(x => [x.field, x.text]))]; }));
-    return lib.entityRecords(root).map(e => ({ ...fields.get(e.id), ...e, relation_to_us: relation.get(e.id) || null, fields: fields.get(e.id) || {} }));
+    return lib.entityRecords(root).map(e => ({ ...fields.get(e.id), ...e, relation_to_us: relation.get(e.id) || null, short_id: shortId(e.id), fields: fields.get(e.id) || {} }));
   }
   const contexts = lib.listContexts(root);
   if (object === "memories") {

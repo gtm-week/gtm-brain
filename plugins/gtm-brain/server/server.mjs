@@ -21,6 +21,7 @@ import { validateValue } from "../lib/ontology/validation.mjs";
 import { placementTrailers, whyHere, WHY_TRAILER } from "../lib/where.mjs";
 import { rulesReport } from "../lib/rules-check.mjs";
 import { askSourceLines } from "../lib/ask-source.mjs";
+import { readSchema, fieldsFor } from "../lib/schema.mjs";
 import { createSaveNudge } from "../lib/save-nudge.mjs";
 import { relativeDates } from "../lib/dots.mjs";
 
@@ -369,7 +370,9 @@ const companyCatalog = ctx => {
 };
 const companyLine = brain => { if (!isBrain(brain)) return ""; const { actions } = lib.readInteractions(brain); return actions.length ? `\nThis company's interactions: ${actions.map(a => `${a.name} (${a.tool})`).join(", ")}; list_objects shows them, interact runs them.` : ""; };
 const withCompanyLine = (brain, t) => { if (!t.isError && t.content?.[0]) t.content[0].text += companyLine(brain); return t; };
-const generated = buildTools(ontology, createFilesBackend({ run, memoryRead: memoryReader.read }), { scope: { name: "brain", schema: BRAIN }, extraCatalog: companyCatalog });
+// entities filter on the SCHEMA.md fields of the brain (role: VP Sales) as well as the ontology's own fields
+const schemaFilters = (object, ctx) => { if (object !== "entities" || !ctx.brain) return []; const s = readSchema(ctx.brain).schema; return s ? [...new Set(Object.keys(s.kinds).flatMap(k => fieldsFor(s, k).map(f => f.name)))] : []; };
+const generated = buildTools(ontology, createFilesBackend({ run, memoryRead: memoryReader.read }), { scope: { name: "brain", schema: BRAIN }, extraCatalog: companyCatalog, extraFilters: schemaFilters });
 for (const tool of generated) {
   if (TOOLS.some(t => t.name === tool.name)) throw new Error(`duplicate tool: ${tool.name}`);
   TOOLS.push({ ...tool, title: tool.title || tool.annotations.title, readOnly: tool.annotations.readOnlyHint, call: args => tool.call(args, {}) });

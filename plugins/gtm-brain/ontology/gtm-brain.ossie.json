@@ -307,6 +307,18 @@
           "description": "Optional organization category, e.g. company or team. Null when unspecified. Legacy company/team kinds map here."
         },
         {
+          "name": "relation_to_us",
+          "expression": "relation_to_us",
+          "data_type": "String",
+          "description": "Derived from the notes: team, customer, partner, investor, prospect or other (people through their employer); null for other kinds. Filter on it with kind and any SCHEMA.md field (role: VP Sales)."
+        },
+        {
+          "name": "short_id",
+          "expression": "short_id",
+          "data_type": "String",
+          "description": "The first six hex characters of id, the suffix of the page name (people/max-jendral-3f9a2c.md)."
+        },
+        {
           "name": "aliases",
           "expression": "aliases",
           "data_type": "String[]",
