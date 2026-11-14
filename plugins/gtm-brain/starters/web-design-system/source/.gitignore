@@ -1,0 +1,27 @@
+# build output
+dist/
+.astro/
+
+# dependencies
+node_modules/
+
+# screenshots from `npm run shots`, and what `node scripts/extract.mjs` reads from a site
+.shots/
+.design-extract/
+
+# linked from .agents/skills by `npm i` (scripts/setup-skills.mjs); local agent settings
+.claude/
+
+# a Vercel CLI link (deploy-vercel's fallback)
+.vercel/
+
+# logs and env
+npm-debug.log*
+.env
+.env.*
+!.env.example
+
+# OS and editors
+.DS_Store
+.vscode/
+.idea/

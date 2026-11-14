@@ -59,7 +59,7 @@ gitignored `.dev-brains`); it never deletes a real brain.
 
 Everything that ships is under `plugins/gtm-brain/`. The layers, from the outside in:
 
-- **Skills** (`skills/gtm-brain-*/SKILL.md`): the fifteen user-facing workflows. Detailed procedures
+- **Skills** (`skills/gtm-brain-*/SKILL.md`): the twenty user-facing workflows. Detailed procedures
   live in each skill's `references/`. These are what people install, so developer workflows never
   go here.
 - **MCP server** (`server/server.mjs`): hand-rolled stdio JSON-RPC, Node built-ins only. Each tool
@@ -128,6 +128,8 @@ work/                                  gitignored: dashboard, loaded set, tools.
 (`<!-- generated: <name>; edit plugins/gtm-brain/policies/<name>.md -->`) in `AGENTS.md`, `INSTALL.md`,
 `plugins/gtm-brain/templates/AGENTS.md` and `skills/gtm-brain-start/references/questions.md`. The batch
 memory schema in the ontology is derived from `remember.input_schema.properties` the same way.
+`policies/core.md` (the core rules) fills only the template's first section, and `server/server.mjs`
+reads it into the MCP instructions.
 Edit the source, run `node scripts/sync-derived.mjs`, commit source and output together.
 `templates/legacy/` snapshots are immutable fixtures and are excluded. The Claude Code declarations
 (`plugins/gtm-brain/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`) are derived from

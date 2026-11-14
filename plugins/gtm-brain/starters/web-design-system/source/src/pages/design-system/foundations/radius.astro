@@ -1,0 +1,22 @@
+---
+import DesignSystem from "../../../layouts/DesignSystem.astro";
+import DsBlock from "../../../components/design-system/DsBlock.astro";
+import DsStage from "../../../components/design-system/DsStage.astro";
+import DsState from "../../../components/design-system/DsState.astro";
+import { radii } from "../../../components/design-system/tokens";
+---
+
+<DesignSystem title="Radius" lead="The corners this site uses, as a closed set. A new one is a token in global.css first, never a value typed in a component.">
+  <DsBlock title="The set" description="Read from global.css, with what each is for.">
+    <DsStage layout="states" cols={3}>
+      {
+        radii.map((r) => (
+          <DsState label={`${r.name} · ${r.value}${r.comment ? ` · ${r.comment}` : ""}`}>
+            {/* Drawn from the token itself, so a radius the site adds shows here without an edit. */}
+            <span class="block size-24 border border-line-2 bg-surface-2" style={`border-radius: var(${r.token})`} />
+          </DsState>
+        ))
+      }
+    </DsStage>
+  </DsBlock>
+</DesignSystem>

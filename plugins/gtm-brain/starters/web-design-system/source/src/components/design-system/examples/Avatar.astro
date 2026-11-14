@@ -1,0 +1,30 @@
+---
+import DsBlock from "../DsBlock.astro";
+import DsStage from "../DsStage.astro";
+import DsState from "../DsState.astro";
+import DsProps from "../DsProps.astro";
+import Avatar from "../../ui/Avatar.astro";
+
+interface Props {
+  /** A small preview for the overview grid. */
+  thumb?: boolean;
+}
+const { thumb = false } = Astro.props;
+---
+
+{
+  thumb ? (
+    <div class="flex gap-2"><Avatar name="Ada Lovelace" /><Avatar name="Grace Hopper" /><Avatar name="Alan Turing" /></div>
+  ) : (
+    <>
+      <DsBlock title="Sizes" description="A photo, or initials when there is none.">
+        <DsStage layout="states">
+          <DsState label="sm"><Avatar name="Ada Lovelace" size="sm" /></DsState>
+          <DsState label="md"><Avatar name="Ada Lovelace" /></DsState>
+          <DsState label="lg"><Avatar name="Ada Lovelace" size="lg" /></DsState>
+        </DsStage>
+      </DsBlock>
+      <DsBlock title="Props"><DsProps of="components/ui/Avatar" /></DsBlock>
+    </>
+  )
+}

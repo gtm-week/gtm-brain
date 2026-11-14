@@ -1,0 +1,45 @@
+---
+/**
+ * The frame on its own, for the Frame and Breakpoints pages to show in a frame at a true
+ * width: one band per tone, each the real Section and Container, printing what it measures.
+ */
+import Base from "../../../layouts/Base.astro";
+import Section from "../../../components/layout/Section.astro";
+import Container from "../../../components/layout/Container.astro";
+import Tagline from "../../../components/ui/Tagline.astro";
+
+const tones = ["default", "muted", "inverted"] as const;
+---
+
+<Base title="Frame" description="The frame on its own." noindex>
+  <main>
+    {
+      tones.map((tone) => (
+        <Section tone={tone}>
+          <Container>
+            <div data-measure class="flex flex-col gap-2 rounded-sm border border-dashed border-line-2 p-6">
+              <Tagline>Section tone="{tone}"</Tagline>
+              <p data-readout class="text-small text-ink-2">Measuring…</p>
+            </div>
+          </Container>
+        </Section>
+      ))
+    }
+  </main>
+</Base>
+
+<script>
+  /* Each band prints its column's left edge and width, and its padding top and bottom. */
+  const measure = () => {
+    for (const box of document.querySelectorAll<HTMLElement>("[data-measure]")) {
+      const column = box.parentElement!;
+      const rect = column.getBoundingClientRect();
+      const padding = parseFloat(getComputedStyle(column).paddingTop);
+      const out = box.querySelector("[data-readout]");
+      if (out)
+        out.textContent = `Column: left ${Math.round(rect.left)} px, width ${Math.round(rect.width)} px. Band padding: ${padding} px top and bottom. Window: ${document.documentElement.clientWidth} px.`;
+    }
+  };
+  measure();
+  addEventListener("resize", measure);
+</script>

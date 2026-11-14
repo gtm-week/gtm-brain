@@ -1,0 +1,29 @@
+---
+import DsBlock from "../DsBlock.astro";
+import DsStage from "../DsStage.astro";
+import DsState from "../DsState.astro";
+import DsProps from "../DsProps.astro";
+import Badge from "../../ui/Badge.astro";
+
+interface Props {
+  /** A small preview for the overview grid. */
+  thumb?: boolean;
+}
+const { thumb = false } = Astro.props;
+---
+
+{
+  thumb ? (
+    <div class="flex gap-2"><Badge>Beta</Badge><Badge tone="brand">New</Badge></div>
+  ) : (
+    <>
+      <DsBlock title="Tones" description="neutral for a category, brand for the one that should stand out.">
+        <DsStage layout="states">
+          <DsState label="neutral"><Badge>Beta</Badge></DsState>
+          <DsState label="brand"><Badge tone="brand">New</Badge></DsState>
+        </DsStage>
+      </DsBlock>
+      <DsBlock title="Props"><DsProps of="components/ui/Badge" /></DsBlock>
+    </>
+  )
+}

@@ -20,7 +20,7 @@ editor opens it.
 | What the brain keeps per person, organization and product, and relationship types | `SCHEMA.md` | you; Codex fills the fields from notes |
 | Your documents (strategy, ICP, tone of voice, design system, pricing) | `<name>.md` at the top (the first four from day one), files in a folder of the same name | you or Codex |
 | Projects (an event, a campaign, a client) | `projects/<project>/` | you or Codex |
-| Rules Codex follows in this folder | `AGENTS.md`, `CLAUDE.md` | GTM Brain; refreshed on update, never edit |
+| Rules Codex follows in this folder (six core rules first, also sent with every GTM Brain chat) | `AGENTS.md`, `CLAUDE.md` | GTM Brain; refreshed on update, never edit |
 | This computer's working files | `work/` | GTM Brain; not in git, never a deliverable |
 
 ## Saving: what you say, what it keeps
@@ -30,12 +30,16 @@ Bergstrom", "open question: who signs for Acme?". You do not need to say "rememb
 outcome, in the context its meaning fits, with the people, companies, tools and project it names.
 
 Before saving, Codex connects the sentence to what the brain knows and asks, once, about what it
-cannot settle. It asks in Codex's question box whenever Codex has it in the chat, otherwise in plain text:
+cannot settle (an unclear name is asked right after the note is saved). It asks in Codex's question box whenever Codex has it in the chat, otherwise in plain text:
 
 - **Names.** Four rules, also in the brain's README:
   - P1: a known name, alias or email is that one.
   - P2: a first name alone ("Max") is a known person only when exactly one known person has it.
-  - P3: a first name alone is never saved as a new person: Codex asks "Max who?".
+    With several, the note is saved without a guess and Codex asks which one.
+  - P3: a first name alone is never saved as a new person. The note is saved with the name as
+    written, then Codex asks "Who is Anna? Full name or company." The question waits on the
+    dashboard with the other open brain questions; the answer attaches the name to the saved note
+    through a new note that replaces it.
   - P4: a name like a known one is never merged on a guess: "same as X?". The same first name with
     a different surname is someone else.
 - **Dates.** "Thursday" said on a Thursday can be today or next week: Codex asks. A date with one
@@ -59,6 +63,9 @@ SCHEMA.md fields without opening pages. A captured meeting becomes a page in `me
 collects the notes saved with its meeting id and lists who attended; the transcript stays in its
 tool. A brain from before 0.35 keeps its flat `brain/entities/*.md` until "upgrade the brain"
 moves the pages into the kind folders in one commit.
+
+A chat that keeps reading the brain and saves nothing is reminded once, with the third read, to save
+what the turn established; `save_nudge: off` in `brain/admin.md` turns the reminder off.
 
 Notes are never edited. "Actually the board meeting is on the 19th" saves a correction that
 replaces the old note. "Forget that Lena runs the workshop" withdraws it: the old note leaves every
@@ -134,8 +141,22 @@ made there carry the project's tag, and everything stays searchable from the bra
 - "Why did you add Florian?" answers from the page: the first note, when, by whom, from where. It
   never answers from the chat's memory.
 - "What is open?" lists open questions; answering one closes it.
+- "What stage is the Acme deal in?" goes to the CRM when the brain's note is older than the "Ask the
+  source" table in `RULES.md` allows and the CRM is connected; otherwise the brain answers and says
+  how old its note is. A row applies only when its tool is connected; without the section, the
+  shipped rows apply.
 - "Open the dashboard" shows contexts, notes, entities, questions and search, read-only. To change
   anything, use "Chat about this" on a card, or say it in chat.
+
+"Is the brain too full or too empty?" is `query` (population): counted from the files, with no
+model: notes saved in the last 7 days against the weekly average of the 4 weeks before, exact
+duplicates (same text) and near ones (same source record on the same day), entities no note
+mentions, entities missing a field SCHEMA.md marks required, notes no summary or brief cites, and
+notes without a source. Each number has a range (in `lib/population.mjs`, no setting yet); when one
+is out of range the chat start's `health:` line says so in one part. Capture rate and noise rate
+show as "not measured": they need a capture pass that is not built. The same line marks a tool
+whose last sync is older than its window (7 days, or the `window_days` its checkpoint carries):
+each source keeps its own checkpoint in `work/sync.json`, by kind and account.
 
 ## Changing how it works
 
@@ -144,12 +165,13 @@ made there carry the project's tag, and everything stays searchable from the bra
 | Company profile, team, tools, settings | say it in chat; Codex shows the change and applies it only when you choose APPROVE |
 | What Codex saves and asks | your own rules under "Our rules" in `RULES.md`, one line each; Codex offers to add one when you correct a save, and yours win over the defaults |
 | Where files go | `/gtm-brain-rules`, or edit the rows under "Where things go" in `RULES.md` |
+| Which questions go to a live tool, and how old a note may be | edit the rows under "Ask the source" in `RULES.md` (deal stage: CRM, 1 day; meeting times: calendar, always ask) |
 | What the brain keeps (fields, subtypes, relationship types) | `/gtm-brain-schema`, or edit `SCHEMA.md`; briefs refill in the background |
 | How Codex works in a context | "change the rule of <context> to ..." |
 | A rule the work must follow (tone of voice, pricing, ICP) | write it as a document: `<name>.md` at the top, then "add <name>.md as a document" |
 | A recurring process with steps | "start the outbound workflow", or describe a new one; see `workflows/` |
 | A new skill for your team | "make a skill that ..." (gtm-brain-skill) |
-| An action your own tools run (a CRM write) | "propose an interaction for ..."; applied only after APPROVE |
+| An action your own tools run (a CRM write) | "propose an interaction for ..."; applied only after APPROVE. When it runs, Codex does it in the tool first and the note is written only after the tool confirms, with the record's link or id; a failed write is noted as a failure |
 | Which tools are connected | "connect my tools" |
 | A person's or company's name, alias, kind | "Chris is Krzysztof Pawlak", "Telli is a company" |
 | A wrong note | "correct ...", or "forget ..." |
@@ -164,6 +186,7 @@ in `work/manual-edits/protected/`.
 - Copy your CRM, mail or calendar into the brain: it reads them live and keeps what happened and
   what you decided.
 - Invent a fact: what is not in a note or a tool, it says it does not know.
+- Note a CRM write that did not happen: an interaction is recorded after the tool confirms it.
 - Merge two names, create a context, change company info or a scheduled task without your yes.
 - Run when your computer is off or asleep: summaries catch up at the next run.
 - Read other connectors' calls: it only sees its own tools; Codex marks an untested tool itself.
@@ -174,6 +197,8 @@ in `work/manual-edits/protected/`.
 | You see | Check |
 |---|---|
 | A note saved that should not have been | "why did you add X?"; then "forget ..." |
+| Something said in a chat was not saved | say it again as a plain sentence, or "save that"; the status and each loaded context show "last note N days ago", and a brain with nothing saved for over a week says so at chat start |
+| A fact that may be out of date | ask for the brief ("who is X"): a fact or relationship older than 30 days shows "as of <date>, N days ago", and the brief says when the entity was last mentioned |
 | A summary that looks old | its "as of" date; "update the summary now"; `work/compile.json` shows queued, running, done or failed |
 | Summaries never update | `work/hooks.log` lines `scheduled-run ... failed`; `work/runs.jsonl` has one line per compile run with its tokens; no lines at all means no run started |
 | A file in the wrong place | "why is this here?"; fix the `RULES.md` row |

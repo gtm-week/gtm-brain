@@ -1,0 +1,37 @@
+---
+/** The introduction: one door per group, each to its "All" page. */
+import DesignSystem from "../../layouts/DesignSystem.astro";
+import { groups } from "../../components/design-system/nav";
+
+const about: Record<string, string> = {
+  foundations: "Colour roles, type, breakpoints, the frame, radius, the app icons and design.md: what everything is built on.",
+  components: "Buttons, links, fields, cards, photos, a carousel, the FAQ: each in every state.",
+  chrome: "The navbar and the footer that sit around every page's sections.",
+  sections: "The bands a page is built from, each at desktop, tablet and mobile width.",
+};
+---
+
+<DesignSystem
+  title="Design system"
+  lead="The foundations, components, site chrome and sections this site is built from, rendered from the code that builds it, so what you see here is what ships."
+>
+  <section class="px-6 py-10 lg:px-12 lg:py-12">
+    <ul class="grid gap-4 md:grid-cols-2">
+      {
+        groups.map((group) => (
+          <li class="group relative flex flex-col gap-3 rounded-sm border border-line p-6 transition-colors hover:border-line-2 hover:bg-surface-2 has-[a:focus-visible]:border-line-brand">
+            <h2 class="heading-h5 text-ink-1">
+              <a href={group.href} class="after:absolute after:inset-0 focus-visible:outline-none">
+                {group.label}
+              </a>
+            </h2>
+            <p class="max-w-measure-sm text-small text-ink-2">{about[group.key]}</p>
+            <p class="mt-4 tagline text-ink-3">
+              {group.items.length} {group.unit}
+            </p>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+</DesignSystem>

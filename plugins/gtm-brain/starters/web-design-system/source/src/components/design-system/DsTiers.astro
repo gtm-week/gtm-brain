@@ -1,0 +1,28 @@
+---
+/** One card per tier (phone, tablet, desktop) with what holds there: side by side, stacked on a phone. */
+interface Props {
+  tiers: { name: string; range: string; values: { label: string; value: string }[] }[];
+}
+const { tiers } = Astro.props;
+---
+
+<ul class="grid gap-4 md:grid-cols-3">
+  {
+    tiers.map((tier) => (
+      <li class="flex flex-col rounded-sm border border-line">
+        <div class="flex items-baseline justify-between gap-4 border-b border-line bg-surface-2 px-4 py-3">
+          <span class="text-small font-medium text-ink-1">{tier.name}</span>
+          <code class="text-small text-ink-3">{tier.range}</code>
+        </div>
+        <dl class="flex flex-col divide-y divide-line">
+          {tier.values.map((row) => (
+            <div class="flex items-baseline justify-between gap-4 px-4 py-3 text-small">
+              <dt class="text-ink-2">{row.label}</dt>
+              <dd class="font-medium text-ink-1">{row.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </li>
+    ))
+  }
+</ul>

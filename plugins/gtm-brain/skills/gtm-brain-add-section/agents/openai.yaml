@@ -1,0 +1,4 @@
+interface:
+  display_name: "GTM Brain: Add a reusable section"
+  short_description: "Add a reusable section to our website design system"
+  default_prompt: "Use $gtm-brain-add-section to add a reusable section to our website from this source page or brief."

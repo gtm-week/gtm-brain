@@ -77,8 +77,9 @@ question. The starting contexts are explained together, not interviewed one by o
 ## Step 2: get to know the business
 
 Follow [discovery](references/discovery.md) from its Step 0: pull what the machine and the
-already connected tools know, research the website, draft the workplace info and show it for
-APPROVE, propose the tools to connect, read them for a first snapshot, propose one or two
+already connected tools know, research the website, ask once where big files go (recordings and
+files over 25 MB; [big files](../gtm-brain-use-brain/references/big-files.md) is what happens with
+each one later), draft the workplace info and show it for APPROVE, propose the tools to connect, read them for a first snapshot, propose one or two
 automations, ask which existing Codex projects to follow using
 [existing projects](references/projects.md), then write the completion marker. The dashboard's
 onboarding card follows each step. A completed v1 onboarding stays complete. New project

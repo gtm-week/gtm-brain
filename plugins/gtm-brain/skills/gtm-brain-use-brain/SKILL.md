@@ -54,6 +54,7 @@ is a note with a `relation` block: follow [relationships](references/relations.m
 
 A file in the chat (a path, a dropped PDF or image, "save this deck", "add this to the design
 system"): follow [files](references/files.md). No skill to invoke; it is part of everyday work.
+A recording or a file over 25 MB never goes into git: follow [big files](references/big-files.md).
 
 When asked to create subprojects or a workspace structure in a linked folder, follow
 [project structure](../gtm-brain-project/references/structure.md): propose separate projects
@@ -101,8 +102,8 @@ Before the first question, read [question handling](../gtm-brain-start/reference
 This applies after onboarding too: every question in everyday work (which context, same as X?,
 is this a company?, what is the answer?, which direction or photo?) is asked
 with two or three concrete options, recommended first.
-This company's own interactions: `list_objects` lists them, `interact` runs them (it records and
-says what to do in the connector); propose one with `propose_interaction` when the same thing
+This company's own interactions: `list_objects` lists them, `interact` runs them (the first call
+says what to do in the connector; the second, with the outcome and the connector's refs, records it); propose one with `propose_interaction` when the same thing
 keeps being done by hand. Keep one pending question alive until answered or cancelled;
 never send a final response while an async widget is pending. Ask only for missing information
 that affects the task, not identity or maintenance already resolved by the brain.

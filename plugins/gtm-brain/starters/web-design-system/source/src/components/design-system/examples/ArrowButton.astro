@@ -1,0 +1,31 @@
+---
+import DsBlock from "../DsBlock.astro";
+import DsStage from "../DsStage.astro";
+import DsState from "../DsState.astro";
+import DsProps from "../DsProps.astro";
+import ArrowButton from "../../ui/ArrowButton.astro";
+
+interface Props {
+  /** A small preview for the overview grid. */
+  thumb?: boolean;
+}
+const { thumb = false } = Astro.props;
+---
+
+{
+  thumb ? (
+    <div class="flex gap-3"><ArrowButton label="Open" /><ArrowButton label="Open" data-state="hover" /></div>
+  ) : (
+    <>
+      <DsBlock title="States" description="A link with href, a button without. Inside a card that is one link, it is decorative and follows the card's hover.">
+        <DsStage layout="states">
+          <DsState label="default"><ArrowButton label="Open" /></DsState>
+          <DsState label="hover"><ArrowButton label="Open" data-state="hover" /></DsState>
+          <DsState label="focus"><ArrowButton label="Open" data-state="focus" /></DsState>
+          <DsState label="disabled"><ArrowButton label="Open" disabled /></DsState>
+        </DsStage>
+      </DsBlock>
+      <DsBlock title="Props"><DsProps of="components/ui/ArrowButton" /></DsBlock>
+    </>
+  )
+}

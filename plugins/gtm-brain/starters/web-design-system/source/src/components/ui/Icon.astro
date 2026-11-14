@@ -1,0 +1,28 @@
+---
+/**
+ * One Lucide icon (lucide.dev), inline in `currentColor`. Pass the icon itself:
+ *   import { ArrowRight } from "@lucide/astro";  <Icon icon={ArrowRight} />
+ * One stroke width for the whole site: STROKE below.
+ */
+import type { AstroComponent } from "@lucide/astro";
+
+interface Props {
+  icon: AstroComponent;
+  size?: "sm" | "md" | "lg";
+  /** Say what it means when the icon stands alone; leave empty when text beside it says it. */
+  label?: string;
+  class?: string;
+}
+const { icon: Lucide, size = "md", label, class: className } = Astro.props;
+
+const STROKE = 1.5;
+const sizes = { sm: "size-4", md: "size-5", lg: "size-6" } as const;
+---
+
+<Lucide
+  stroke-width={STROKE}
+  class:list={["shrink-0", sizes[size], className]}
+  aria-hidden={label ? undefined : "true"}
+  aria-label={label}
+  role={label ? "img" : undefined}
+/>

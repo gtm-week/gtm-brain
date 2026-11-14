@@ -1,0 +1,45 @@
+---
+/**
+ * The round arrow in a card's corner. With `href` it is a link; inside a card that is
+ * already one link, pass `decorative` and it only follows the card's hover.
+ */
+import type { HTMLAttributes } from "astro/types";
+import { ArrowLeft, ArrowRight } from "@lucide/astro";
+import Icon from "./Icon.astro";
+
+type Props = Omit<HTMLAttributes<"button">, "class"> & {
+  /** What it does, for screen readers ("Read the case study"). Not needed when decorative. */
+  label?: string;
+  href?: string;
+  decorative?: boolean;
+  /** Which way it points: right (default), or left for "back" in a carousel. */
+  direction?: "left" | "right";
+  class?: string;
+};
+const { label, href, decorative, direction = "right", disabled, class: className, ...rest } = Astro.props;
+const arrow = direction === "left" ? ArrowLeft : ArrowRight;
+
+const classes = [
+  "inline-grid size-10 shrink-0 place-items-center rounded-full border border-line-2 bg-surface-1 text-ink-1 transition-colors focus-visible:border-line-brand focus-visible:outline-none",
+  "hover:border-transparent hover:bg-surface-inverted-1 hover:text-ink-inverted",
+  "group-hover:border-transparent group-hover:bg-surface-inverted-1 group-hover:text-ink-inverted",
+  "disabled:pointer-events-none disabled:opacity-40",
+  className,
+];
+---
+
+{
+  decorative ? (
+    <span aria-hidden="true" class:list={classes} {...rest}>
+      <Icon icon={arrow} size="sm" />
+    </span>
+  ) : href ? (
+    <a href={href} aria-label={label} class:list={classes} {...rest}>
+      <Icon icon={arrow} size="sm" />
+    </a>
+  ) : (
+    <button type="button" aria-label={label} disabled={disabled} class:list={classes} {...rest}>
+      <Icon icon={arrow} size="sm" />
+    </button>
+  )
+}

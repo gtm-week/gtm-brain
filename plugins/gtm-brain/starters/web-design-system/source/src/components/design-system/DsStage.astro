@@ -1,0 +1,34 @@
+---
+/** A framed stage for live examples on the muted surface. `states` lays out labelled DsState cells. */
+interface Props {
+  layout?: "center" | "start" | "states" | "stack" | "bleed";
+  /** Columns from lg, for `states`: as many as fit the example, not as many as there are. */
+  cols?: 2 | 3 | 4 | 5;
+  tone?: "default" | "muted";
+  class?: string;
+}
+const { layout = "center", cols = 4, tone = "muted", class: className } = Astro.props;
+
+const layouts = {
+  center: "flex min-h-40 flex-wrap items-center justify-center gap-6 px-6 py-10",
+  start: "flex flex-wrap items-start gap-6 p-6 md:p-8",
+  stack: "flex flex-col gap-4 p-4 md:p-6",
+  /* No padding and a size container: the example pads itself, a carousel runs to the edges. */
+  bleed: "@container overflow-hidden",
+  states: "grid grid-cols-1 gap-4 p-4 md:grid-cols-2 md:p-6",
+} as const;
+/* Whole class names, so Tailwind sees them. */
+const columns = { 2: "lg:grid-cols-2", 3: "lg:grid-cols-3", 4: "lg:grid-cols-4", 5: "lg:grid-cols-5" } as const;
+---
+
+<div
+  class:list={[
+    "rounded-sm border border-line",
+    tone === "muted" ? "bg-surface-2" : "bg-surface-1",
+    layouts[layout],
+    layout === "states" && columns[cols],
+    className,
+  ]}
+>
+  <slot />
+</div>

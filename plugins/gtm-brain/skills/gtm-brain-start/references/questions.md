@@ -24,6 +24,7 @@ A question never saves preferences, configures tools or applies approvals.
 | --- | --- |
 | Inferred company | Yes, this is my company; Different company. Then a free-text question for the website. |
 | Unknown website or identity | Structured free-text question, with one example in the prompt. |
+| Where big files go (once, before the profile draft) | One line of why (git cannot keep recordings or files over 25 MB), then Google Drive, shared with the team (Recommended); This computer only. Skipped when the opening lines say Big files: answered. |
 | Company profile corrections | Offer concrete sections to revise when helpful. Applying the profile still requires the APPROVE form below. |
 | Connections | One numbered list of the tools; the person picks several numbers at once. No second yes per tool. |
 | Existing Codex projects | Ask which projects to follow, listing the actual project names. Selection consents to future capture; reuse it when linking. If the catalog is unavailable, ask for the folder, or offer Not yet / Skip for now. Stay in the onboarding chat. |

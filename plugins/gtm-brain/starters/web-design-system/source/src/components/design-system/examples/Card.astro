@@ -1,0 +1,32 @@
+---
+import DsBlock from "../DsBlock.astro";
+import DsStage from "../DsStage.astro";
+import DsState from "../DsState.astro";
+import DsProps from "../DsProps.astro";
+import Card from "../../ui/Card.astro";
+import { CreditCard, Receipt, Plane } from "@lucide/astro";
+
+interface Props {
+  /** A small preview for the overview grid. */
+  thumb?: boolean;
+}
+const { thumb = false } = Astro.props;
+const text = "One sentence on what this is and why it matters.";
+---
+
+{
+  thumb ? (
+    <div class="w-72 scale-75"><Card icon={CreditCard} title="A card title" text="One sentence on what it is." /></div>
+  ) : (
+    <>
+      <DsBlock title="Variants" description="With href the whole card is one link and shows the arrow; without, it is static.">
+        <DsStage layout="states" tone="muted" cols={3} class="items-stretch">
+          <DsState label="link" class="h-full items-stretch"><Card icon={CreditCard} title="A card title" text={text} href="#" /></DsState>
+          <DsState label="link, hover" class="h-full items-stretch"><Card icon={Receipt} title="A card title" text={text} href="#" data-state="hover" /></DsState>
+          <DsState label="static, with tagline" class="h-full items-stretch"><Card icon={Plane} tagline="Tagline" title="A card title" text={text} /></DsState>
+        </DsStage>
+      </DsBlock>
+      <DsBlock title="Props"><DsProps of="components/ui/Card" /></DsBlock>
+    </>
+  )
+}

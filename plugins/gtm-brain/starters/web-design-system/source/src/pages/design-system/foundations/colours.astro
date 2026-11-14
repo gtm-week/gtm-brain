@@ -1,0 +1,92 @@
+---
+import DesignSystem from "../../../layouts/DesignSystem.astro";
+import DsBlock from "../../../components/design-system/DsBlock.astro";
+import Badge from "../../../components/ui/Badge.astro";
+import { primitives, roles, isGrey } from "../../../components/design-system/tokens";
+
+const families = [
+  { key: "ink", title: "Ink", use: "Text and icons: text-ink-1, fill-ink-1." },
+  { key: "surface", title: "Surface", use: "Backgrounds: bg-surface-1." },
+  { key: "line", title: "Line", use: "Borders: border-line." },
+  { key: "danger", title: "Danger", use: "A field's error: text-danger, border-danger." },
+  { key: "accent", title: "Accent", use: "The brand's second colour, if it has one: bars, tags, highlights. Optional, grey until the site shows one; never the main action." },
+] as const;
+
+/* Inks and lines are shown on the surface they are read on. */
+const backdrop: Record<string, string> = {
+  "ink-inverted": "var(--color-surface-inverted-1)",
+  "ink-on-brand": "var(--color-surface-brand)",
+  "ink-on-accent": "var(--color-surface-accent)",
+};
+const swatch = (name: string, family: string) => {
+  const own = `var(--color-${name})`;
+  const on = backdrop[name] ?? "var(--color-surface-1)";
+  if (name.startsWith("surface")) return `background: ${own}`;
+  if (family === "line") return `background: ${on}; border: 2px solid ${own}`;
+  return `background: ${on}; color: ${own}`;
+};
+/* The starter ships `--site-brand` as this grey; once it is anything else, the foundations are
+   someone's. (A grey brand role can be right: a brand whose main colour is black.) */
+const STARTER_BRAND = "#d4d4d8";
+const neutral = primitives.find((p) => p.name === "brand")?.value.toLowerCase() === STARTER_BRAND;
+const neutralBrand = neutral ? roles.filter((r) => r.name.includes("brand") && isGrey(r.value)) : [];
+---
+
+<DesignSystem
+  title="Colours"
+  lead="Three families, one per CSS property, and an optional accent. Components name a role; the role points at a primitive. Everything here is read from src/styles/global.css."
+>
+  {
+    neutralBrand.length > 0 && (
+      <div class="flex flex-wrap items-center gap-3 border-b border-line bg-surface-2 px-4 py-4 md:px-8 lg:px-12">
+        <Badge>Still neutral</Badge>
+        <p class="text-small text-ink-2">
+          {neutralBrand.map((r) => r.name).join(", ")} still point at a grey. Fill the foundations from your site.
+        </p>
+      </div>
+    )
+  }
+  {
+    families.map((family) => (
+      <DsBlock title={family.title} description={family.use}>
+        <ul class="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {roles
+            .filter((r) => r.family === family.key)
+            .map((role) => (
+              <li class="flex items-center gap-4 rounded-lg border border-line p-3">
+                <span
+                  class="grid h-14 w-16 shrink-0 place-items-center rounded-sm border border-line text-large font-medium"
+                  style={swatch(role.name, role.family)}
+                >
+                  {(role.family === "danger" || role.name.startsWith("ink")) && "Aa"}
+                </span>
+                <span class="flex min-w-0 flex-col">
+                  <code class="text-small font-medium text-ink-1">{role.name}</code>
+                  <span class="text-small text-ink-3">{role.primitive} · {role.value}</span>
+                  {role.comment && <span class="text-small text-ink-2">{role.comment}</span>}
+                </span>
+              </li>
+            ))}
+        </ul>
+      </DsBlock>
+    ))
+  }
+  <DsBlock
+    title="Primitives"
+    description="The raw values (--site-* in :root). No utility exists for them: markup reaches them only through a role."
+  >
+    <ul class="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
+      {
+        primitives.map((p) => (
+          <li class="flex flex-col gap-2">
+            <span class="block h-14 rounded-sm border border-line" style={`background: ${p.value}`} />
+            <span class="flex flex-col text-small">
+              <code class="text-ink-1">{p.name}</code>
+              <span class="text-ink-3">{p.value}</span>
+            </span>
+          </li>
+        ))
+      }
+    </ul>
+  </DsBlock>
+</DesignSystem>

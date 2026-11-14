@@ -24,6 +24,12 @@ the task status, or the meeting time. Use source references and the context's to
 to make the smallest useful read. Do not scan every connector or sync the whole company for
 one answer. An explicit request for recorded knowledge only needs the brain.
 
+The brain's `RULES.md` table "Ask the source" says which tool owns which question and how old a
+note may be (the chat start prints it when such a tool is connected). When a read adds a line
+"<question>: the newest note here from <tool> is N days old; RULES.md says ask <tool>", read that
+tool before answering; a changed value is a new note, never an edit. Otherwise answer from the
+brain and say how old the note is.
+
 An old question is not proof someone still owes an answer. A sent proposal is not proof it
 was accepted. "No signed contract confirmed" means confirmation is missing, not that no
 contract was signed. Preserve that distinction in the answer. A successful search with no

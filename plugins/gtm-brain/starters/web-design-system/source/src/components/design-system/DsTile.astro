@@ -1,0 +1,30 @@
+---
+/** One tile: a live preview of the element on the muted stage, its name, what it is for. */
+import type { Item } from "./nav";
+
+interface Props {
+  item: Item;
+}
+const { item } = Astro.props;
+const { Thumb } = item;
+/* Hairlines between tiles only: none on the right of a row's last tile, which would
+   double the column's line, and none under the last row's. */
+const cell =
+  "border-b border-line md:border-r md:even:border-r-0 lg:even:border-r lg:[&:nth-child(3n)]:border-r-0";
+---
+
+<li class:list={["group relative flex min-w-0 flex-col gap-4 p-4 transition-colors hover:bg-surface-2 has-[a:focus-visible]:bg-surface-2", cell]}>
+  <div
+    inert
+    aria-hidden="true"
+    class="flex h-44 items-center justify-center overflow-hidden rounded-sm border border-line bg-surface-2 p-6 transition-colors group-hover:bg-surface-1"
+  >
+    <Thumb {...item.thumbProps} />
+  </div>
+  <div class="flex flex-col gap-1 px-2 pb-2">
+    <h3 class="text-regular font-medium text-ink-1">
+      <a href={item.href} class="after:absolute after:inset-0 focus-visible:outline-none">{item.name}</a>
+    </h3>
+    <p class="text-small text-ink-3">{item.lead}</p>
+  </div>
+</li>

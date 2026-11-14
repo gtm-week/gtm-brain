@@ -1,0 +1,73 @@
+---
+/**
+ * One question and its answer (`<details>`). Opening one closes the others beside it, and
+ * the answer slides open and shut. Without JavaScript it still opens and closes. A page
+ * with an FAQ also gets FAQPage JSON-LD (docs/seo.md).
+ */
+import type { HTMLAttributes } from "astro/types";
+import { Plus } from "@lucide/astro";
+import Icon from "./Icon.astro";
+
+type Props = Omit<HTMLAttributes<"details">, "class"> & {
+  question: string;
+  answer: string;
+  open?: boolean;
+  class?: string;
+};
+const { question, answer, open = false, class: className, ...rest } = Astro.props;
+---
+
+<details
+  data-faq
+  data-expanded={open || undefined}
+  open={open}
+  class:list={["group border-b border-line", className]}
+  {...rest}
+>
+  <summary
+    class="flex list-none items-center justify-between gap-6 py-5 text-large font-medium text-ink-1 underline decoration-transparent underline-offset-4 transition-colors hover:text-ink-2 focus-visible:decoration-line-brand focus-visible:outline-none [&::-webkit-details-marker]:hidden"
+  >
+    {question}
+    <Icon icon={Plus} class="transition-transform group-data-expanded:rotate-45" />
+  </summary>
+  <div data-faq-body class="overflow-hidden">
+    <p class="max-w-measure-lg pb-6 text-regular text-ink-2">{answer}</p>
+  </div>
+</details>
+
+<script>
+  /* Height can't transition to `auto` everywhere yet, so the answer's height is measured
+     and animated. The siblings of an item form its group: one open at a time. */
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const timing = { duration: reduced ? 0 : 300, easing: "cubic-bezier(0.25, 0.1, 0.25, 1)" };
+
+  const body = (item: HTMLDetailsElement) => item.querySelector<HTMLElement>("[data-faq-body]")!;
+
+  const close = (item: HTMLDetailsElement) => {
+    item.removeAttribute("data-expanded");
+    const height = body(item).offsetHeight;
+    const animation = body(item).animate([{ height: `${height}px` }, { height: "0px" }], timing);
+    animation.onfinish = () => {
+      if (!item.hasAttribute("data-expanded")) item.open = false;
+    };
+  };
+
+  const open = (item: HTMLDetailsElement) => {
+    const siblings = [...(item.parentElement?.children ?? [])].filter(
+      (el): el is HTMLDetailsElement => el !== item && el.matches("details[data-faq][data-expanded]"),
+    );
+    siblings.forEach(close);
+    item.setAttribute("data-expanded", "");
+    item.open = true;
+    const height = body(item).scrollHeight;
+    body(item).animate([{ height: "0px" }, { height: `${height}px` }], timing);
+  };
+
+  for (const item of document.querySelectorAll<HTMLDetailsElement>("details[data-faq]")) {
+    item.querySelector("summary")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      if (item.hasAttribute("data-expanded")) close(item);
+      else open(item);
+    });
+  }
+</script>

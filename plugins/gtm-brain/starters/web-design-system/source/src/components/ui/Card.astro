@@ -1,0 +1,51 @@
+---
+/**
+ * A card: optional icon tile and tagline, a heading, a sentence. With `href` the whole
+ * card is one link (the heading's link covers the card) and shows the arrow button.
+ */
+import type { HTMLAttributes } from "astro/types";
+import type { AstroComponent } from "@lucide/astro";
+import IconTile from "./IconTile.astro";
+import Tagline from "./Tagline.astro";
+import Heading from "./Heading.astro";
+import ArrowButton from "./ArrowButton.astro";
+
+type Props = Omit<HTMLAttributes<"article">, "class" | "title"> & {
+  title: string;
+  text?: string;
+  icon?: AstroComponent;
+  tagline?: string;
+  href?: string;
+  level?: 2 | 3 | 4;
+  class?: string;
+};
+const { title, text, icon, tagline, href, level = 3, class: className, ...rest } = Astro.props;
+---
+
+<article
+  class:list={[
+    "group relative flex h-full flex-col gap-4 rounded-sm border border-line bg-surface-1 p-6",
+    href && "transition-colors hover:bg-surface-2 has-[a:focus-visible]:border-line-brand",
+    className,
+  ]}
+  {...rest}
+>
+  {icon && <IconTile icon={icon} />}
+  <div class="flex flex-col gap-2">
+    {tagline && <Tagline>{tagline}</Tagline>}
+    <Heading level={level} size="h5">
+      {
+        href ? (
+          <a href={href} class="after:absolute after:inset-0 focus-visible:outline-none">
+            {title}
+          </a>
+        ) : (
+          title
+        )
+      }
+    </Heading>
+    {text && <p class="max-w-measure-sm text-regular text-ink-2">{text}</p>}
+  </div>
+  <slot />
+  {href && <ArrowButton decorative class="mt-auto self-end" />}
+</article>

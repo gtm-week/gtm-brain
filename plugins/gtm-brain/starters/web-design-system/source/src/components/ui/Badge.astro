@@ -1,0 +1,21 @@
+---
+/** A short status or category: "New", "Beta". `brand` for the one that should stand out. */
+interface Props {
+  tone?: "neutral" | "brand";
+  class?: string;
+}
+const { tone = "neutral", class: className } = Astro.props;
+
+const tones = {
+  neutral: "bg-surface-2 text-ink-2 border-line",
+  brand: "bg-surface-brand text-ink-on-brand border-transparent",
+} as const;
+---
+
+<span
+  class:list={[
+    "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-small font-medium",
+    tones[tone],
+    className,
+  ]}><slot /></span
+>

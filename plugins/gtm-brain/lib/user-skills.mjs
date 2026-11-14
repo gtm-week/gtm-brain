@@ -3,11 +3,12 @@
 // folders (https://learn.chatgpt.com/docs/build-skills, read 2026-09-16); the plugin updater never
 // touches a brain, so these survive updates. This file is the format; the script and the hook go through it.
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, lstatSync, readlinkSync, symlinkSync, unlinkSync, realpathSync } from "node:fs";
-import { join, relative, resolve, sep } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { gitExcludePath, handleFor, readProjects } from "./brain.mjs";
+import { host, PROJECT_SKILL_DIRS } from "./host.mjs";
 
 export const SKILLS_DIR = ".agents/skills";
 export const PREFIX = "gtm-brain-";
@@ -83,11 +84,18 @@ export function writeUserSkill(root, { id, title, description, body, by, version
 
 /* Symlinks into linked projects: Codex scans each project's own .agents/skills, so the brain's skills
    are linked there by absolute path. Machine-specific, never in the brain. A project inside the brain
-   folder already sees the brain's .agents/skills through the ancestor scan; a link there would list
-   every skill twice, so such projects are skipped. */
-const insideBrain = (root, path) => { try { return realpathSync(path).startsWith(realpathSync(root) + sep); } catch { return false; } };
+   folder inherits skills only when no independent repository separates it from the brain.
+   Each host's discovery directory comes from host.mjs. */
+const insideBrain = (root, path) => {
+  try {
+    const parent = realpathSync(root); let dir = realpathSync(path);
+    if (!dir.startsWith(parent + sep)) return false;
+    for (; dir !== parent; dir = dirname(dir)) if (existsSync(join(dir, ".git"))) return false;
+    return true;
+  } catch { return false; }
+};
 const outsideProjects = root => readProjects(root).filter(p => !insideBrain(root, p.path) && existsSync(p.path));
-const linkPath = (projectPath, id) => join(projectPath, ".agents", "skills", id);
+const linkPath = (projectPath, id) => join(projectPath, host().projectSkillsDir, id);
 const isOurLink = (path, root) => { try { return lstatSync(path).isSymbolicLink() && resolve(readlinkSync(path)).startsWith(skillsDir(root) + sep); } catch { return false; } };
 /* A linked folder is usually someone's code repo: the skill links are this machine's, never its
    history, so each one is listed in that repo's own .git/info/exclude (local, uncommitted, shared by
@@ -109,7 +117,7 @@ function ensureLink(root, projectPath, id) {
   if (isOurLink(path, root) && resolve(readlinkSync(path)) === target) { excludeLink(path); return false; }
   if (isOurLink(path, root)) unlinkSync(path);
   if (existsSync(path)) throw new Error(`${path} exists and is not a GTM Brain link`);
-  mkdirSync(join(projectPath, ".agents", "skills"), { recursive: true }); symlinkSync(target, path, "dir"); excludeLink(path); return true;
+  mkdirSync(dirname(path), { recursive: true }); symlinkSync(target, path, "dir"); excludeLink(path); return true;
 }
 export function linkSkillIntoProjects(root, id) {
   const linked = [], failed = [];
@@ -118,15 +126,25 @@ export function linkSkillIntoProjects(root, id) {
 }
 export function unlinkSkillFromProjects(root, id) {
   const removed = [];
-  for (const p of outsideProjects(root)) { const path = linkPath(p.path, id); if (isOurLink(path, root)) { unlinkSync(path); removed.push(p.slug); } }
+  for (const p of outsideProjects(root)) {
+    let changed = false;
+    for (const dir of PROJECT_SKILL_DIRS) { const path = join(p.path, dir, id); if (isOurLink(path, root)) { unlinkSync(path); changed = true; } }
+    if (changed) removed.push(p.slug);
+  }
   return removed;
+}
+export function removeProjectSkillLinks(root, path) {
+  for (const dir of PROJECT_SKILL_DIRS) {
+    const folder = join(path, dir); if (!existsSync(folder)) continue;
+    for (const id of readdirSync(folder)) { const link = join(folder, id); if (isOurLink(link, root)) unlinkSync(link); }
+  }
 }
 /* One project brought up to date: every brain skill linked, every dangling GTM Brain link gone. */
 export function reconcileProjectSkills(root, slug) {
   const p = outsideProjects(root).find(x => x.slug === slug); if (!p || !existsSync(p.path)) return { linked: [], removed: [] };
   const linked = [], removed = [];
   for (const s of listUserSkills(root)) { try { if (ensureLink(root, p.path, s.id)) linked.push(s.id); } catch {} }
-  const dir = join(p.path, ".agents", "skills");
+  const dir = join(p.path, host().projectSkillsDir);
   if (existsSync(dir)) for (const id of readdirSync(dir)) { const path = join(dir, id); if (isOurLink(path, root) && !existsSync(join(skillsDir(root), id, "SKILL.md"))) { unlinkSync(path); removed.push(id); } }
   return { linked, removed };
 }

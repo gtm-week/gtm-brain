@@ -43,6 +43,11 @@ or reloading a page a prerequisite to answering. Open the in-app dashboard only 
 - `work/` is ignored by git. The page is disposable: rebuilding it loses nothing, because every
   fact on it is read from `brain/`.
 
+To reserve a port for a forwarded dashboard, set `GTM_BRAIN_DASH_PORT` before the dashboard
+starts, or pass `--port=<port>` to the dashboard server. The explicit port is persisted in
+`work/dash.json` and fails instead of moving when it is already in use. The setting must be
+present in the environment that starts the dashboard process.
+
 ## Read-only viewer, discussion in Codex
 
 Lead with useful information: context summaries, questions, notes and their sources.

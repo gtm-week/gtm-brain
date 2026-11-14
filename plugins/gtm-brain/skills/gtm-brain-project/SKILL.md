@@ -14,6 +14,12 @@ A project is a working folder linked to the brain: its notes are tagged with the
 its chat keeps its own loaded contexts. Two flows, one skill: create a folder that does not
 exist yet, or link one that does.
 
+For a web design system from an existing brand, use
+[Build our design system](../gtm-brain-design-system/SKILL.md). It reuses a linked website or
+adds `starter: "web-design-system"` to creation after the same validation and capture consent.
+That workflow continues building in the current chat. Plain project creation still creates
+an empty folder; it does not install a website by default.
+
 ## Create a new project folder
 
 

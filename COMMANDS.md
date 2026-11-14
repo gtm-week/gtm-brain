@@ -8,6 +8,10 @@ to distinguish these workflows from other installed skills.
 | Skill identifier | Display name | What it does |
 |---|---|---|
 | `gtm-brain-project` | GTM Brain: Projects | Create a project folder, or link an existing one to your brain; repair, unlink, list |
+| `gtm-brain-design-system` | GTM Brain: Build our design system | Brian Woloszczak and Peakout's starter: one shared website project (`link_project` with `starter: "web-design-system"`), tokens, components and a local catalogue; `design-system.md` points to it |
+| `gtm-brain-add-section` | GTM Brain: Add a reusable section | A section from a source page or a brief, registered once in the website project for every page |
+| `gtm-brain-build-landing-page` | GTM Brain: Build a landing page | A campaign page on the shared website from strategy, ICP, voice and offer; stops at a local preview |
+| `gtm-brain-publish-website` | GTM Brain: Publish the website | Vercel preview first, production only on its own decision, through the Vercel and GitHub connectors |
 | `gtm-brain-start` | GTM Brain: Start | The first command in a project: creates the brain here, gets to know the business, connects the tools, opens the dashboard; resumes what is unfinished |
 | `gtm-brain-sync` | GTM Brain: Sync | Pull what came in through the connected tools since the last sync, one subagent per tool, and record what matters |
 | `gtm-brain-todo` | GTM Brain: Todo | What should I do now: everything waiting on you, ordered, walked through one by one |
@@ -20,6 +24,7 @@ to distinguish these workflows from other installed skills.
 | `gtm-brain-configure` | GTM Brain: Configure GTM Brain | Workplace info, team, tools and settings through APPROVE |
 | `gtm-brain-skill` | GTM Brain: Your skills | Turn a repeated workflow into a Codex skill kept in the brain's `.agents/skills`; install from GitHub, list, remove, share |
 | `gtm-brain-strategy` | GTM Brain: Strategic intake | A 10-15 minute conversation with a founder or a head of sales, growth or GTM that fills `strategy.md`, the document every brain starts with, mapped silently to Playing to Win; files shared on the way land in `strategy/` |
+| `gtm-brain-voice` | GTM Brain: Voice | Asks whose voice it is (the company's, a person's, a team's), then reads evidence that fits: pasted texts at once, for the company the website, public posts and outbound mail (never internal chat), for a person their own writing (smallest reads, connectors only). Fills `voice.md` through `document` (a person's or team's voice is its own document): rules in the structure the evidence supports, observed apart from suggested, corrections quoted; saved as a draft on the person's yes, tested on one fresh email or post, then the kinds of work it governs and the sentence to try in a new chat; re-run to revise |
 
 Find workflow examples from Overview or Help > Ways to work in Codex.
 Each entry explains the workflow, shows an example and its command, and opens a prepared
@@ -81,18 +86,34 @@ held with the candidate contexts in one line. Each kept note starts with `saved 
 described as its own interaction.
 
 Runs one of this company's own interactions (`brain/ontology.ossie.json`; `list_objects` lists
-them): the inputs are checked against the interaction's schema, the memory it prescribes is
-recorded through `remember` (context, kind, people, companies, the action as `tool:action:ref`),
-and the reply says exactly what to do in the connector, which Codex does with that connector's
-own tools. A plugin tool's name is refused: call the tool.
+them). Check, act, then record, in two calls that carry everything themselves (nothing waits in
+server memory between them):
 
-Tool: `interact`. Writes: `brain/contexts/<slug>/memories.jsonl` (via remember). Kept at once.
+1. `interact {name, params}`: the inputs are checked against the interaction's schema, and so is
+   what would refuse the note later (a person not in the team, a context that is not active, a
+   long dash or a bare relative date in the note); a refusal writes nothing. Otherwise the reply gives the interaction's `refuse_when` rule and exactly what
+   to do in the connector, which Codex does with that connector's own tools. Nothing is written yet.
+2. `interact {name, params, outcome, refs, error}` with the same name and params, after the
+   connector answered. `outcome: "done"` records the memory the interaction prescribes through
+   `remember` (context, kind, people, companies, the action as `tool:action:ref`), with `refs` (what
+   the connector returned: a direct URL, `provider:id`, a bare id read as the interaction's tool, or
+   `{kind, account, ref, url}`) as its source pointers, account included when known.
+   `outcome: "failed"` records a failure note instead: `Failed in <tool>, not done: <title>
+   (<inputs>), tried <date>. Error: <error>`, tagged `interaction-failed`, with no action. Long
+   inputs and a long error are cut, and long dashes become hyphens, so the note is always kept.
+
+An interaction with `external: false` in its file has no connector step and records at once on the
+first call (`outcome: "failed"` still records a failure note). `list_objects` shows it as
+`[record only]`. A plugin tool's name is refused: call the tool.
+
+Tool: `interact`. Writes: nothing on the first call; `brain/contexts/<slug>/memories.jsonl` (via
+remember) on the second, or at once for `external: false`.
 
 ### propose_interaction
 *"every week I move deals in Attio by hand; make that a thing"*, including after the advisor points out an action that recurs.
 
 Drafts one of this company's interactions from the person's words (name, tool, the operation in
-words, inputs, what it records), validates it and writes `work/interaction.proposed.json`. The
+words, inputs, what it records; `external: false` and no tool when nothing is done in a connector), validates it and writes `work/interaction.proposed.json`. The
 dashboard shows it in words; Codex then calls `approve_change` with kind interaction, and
 choosing APPROVE in its form applies it. `approve.mjs <root> --interaction --by <person>` is the only writer of
 `brain/ontology.ossie.json`: it appends the proposal and commits `interactions: <name>`. The
@@ -114,12 +135,24 @@ Tool: `query` with object `deal` and search = the company. Off for a brain whose
 front matter has `deal_scoring: off` (new brains get `deal_scoring: on`; a brain without the line
 has it on). The line is workplace info, so it changes through APPROVE.
 
-`big_files` in the same front matter says where a file over 25 MB goes, since git never keeps it:
-`google-drive` (new brains, and a brain without the line) moves it to the shared drive and links it
-from the project's `README.md`; `local` keeps it in a folder on this computer outside git
-(`big_files_folder:`, an absolute path, else `~/gtm-brain-files/<brain folder>`), not shared, linked
-as a `file:` path. `save`, the chat start and `add-file.mjs` give the same instruction
-(`lib.bigFileAdvice`). It changes through APPROVE.
+`save_nudge` in the same front matter: after three reads in a chat (`query`, `load_context`) with
+nothing saved, the read's reply ends with one line asking to save what the turn established; it
+comes back only after five more reads and never in a scheduled or background run. `save_nudge: off`
+turns it off (a brain without the line has it on).
+
+`big_files` in the same front matter says where a recording (audio or video, any size) or a file
+over 25 MB goes, since git never keeps it: `google-drive` (new brains, and a brain without the
+line) places it in one Drive folder (`big_files_drive_folder:`, else "<company> GTM Brain files")
+with the Drive connector; `local` copies it to a folder on this computer outside git
+(`big_files_folder:`, an absolute path, else `~/gtm-brain-files/<brain folder>`), not shared. Either
+way the note that says what it is keeps a pointer (`{kind: "google-drive", account, ref, url}` or
+`{kind: "file", ref: <absolute path>}`, `lib/pointers.mjs` `bigFilePointer`), never the bytes.
+`save`, the chat start and `add-file.mjs` give the same instruction (`lib.bigFileAdvice`) and the
+walk-through is `skills/gtm-brain-use-brain/references/big-files.md`: `add-file.mjs --file <path>
+--big` copies and checks the file (local) or names the Drive folder, `add-file.mjs --drive <link>
+[--account <a>]` prints the Drive pointer. Onboarding asks the choice once and saves the answer as
+the note `Big files: google-drive.` or `Big files: local.` in `company` (`lib.bigFilesChoice`). It
+changes through APPROVE.
 
 ### recall
 *"what do we know about the TCO?"*, *"did we ever talk about Berlin?"*, *"tell me about Pierre Aubert"*
@@ -171,7 +204,7 @@ cap on this guidance. Your standing rule from setup is never changed. Only conte
 one. Runs unattended on the schedule.
 
 Tools: `compile_facts`, `compile_apply`. Writes: `brain/contexts/<slug>/context.md`; kept at once.
-A separate run does it by itself (`background-compile.sh`, state in `work/compile.json`): after each saved change, once no note has been saved for 2 minutes (`GTM_BRAIN_COMPILE_DELAY`), and at chat start; changes during a run get a follow-up pass; the chat only compiles when asked. The chat start carries one `health:` line when there is something to say: why meetings may be missing, the last good summary run and the last error (`work/runs.jsonl`, `work/compile.json`), the last sync per tool (`work/sync.json`, meeting coverage) and the count of held meetings not captured.
+A separate run does it by itself (`background-compile.sh`, state in `work/compile.json`): after each saved change, once no note has been saved for 2 minutes (`GTM_BRAIN_COMPILE_DELAY`), and at chat start; changes during a run get a follow-up pass; the chat only compiles when asked. The chat start carries one `health:` line when there is something to say: why meetings may be missing, the last good summary run and the last error (`work/runs.jsonl`, `work/compile.json`), the last sync per tool (`work/sync.json`, meeting coverage; a tool older than its window, 7 days or the checkpoint's `window_days`, is marked overdue), the count of held meetings not captured, and a `population:` part when a population number is out of range.
 Model passes have a 15-minute timeout (`GTM_BRAIN_COMPILE_TIMEOUT_MS` overrides it in milliseconds).
 Failed scans and timed-out runs enter the three-attempt retry path; completed compilations stay
 saved. Successful passes that reduce the pending context or entity set continue without using
@@ -231,10 +264,28 @@ arrived with no reason (made by shell, kept by background maintenance), once per
 
 *"Check the brain against its rules"* is `query` with object `rules`: people known by a first name
 only (P3), look-alike names nobody confirmed (P4), top-level folders no RULES.md row names, files
-with no recorded reason (grouped by folder), names with capitals or spaces. Each finding names its
+with no recorded reason (grouped by folder), names with capitals or spaces, Ask the source rows that
+cannot be read. Each finding names its
 rule, the person or path, and two or three fixed choices carried out through the tools above
 (`add_name`, `merge_entities`, `save` with `placed`), so each fix leaves its own reason. It reads
 only and changes nothing; `query` with object `health` counts what it found.
+
+*"Is the brain too full or too empty?"* is `query` with object `population`
+(`scripts/gtm-brain-advisor/population.mjs`, numbers in `lib/population.mjs`). Deterministic, from
+the files, no model: notes saved in the last 7 days and the weekly average of the 4 weeks before;
+exact duplicates (same normalized text) and near duplicates (same source record, same day, same
+context; chat, person and fork pointers do not count); entities no note in force mentions;
+entities missing a field SCHEMA.md marks required (no cited value in the compiled brief); notes no
+context summary or entity brief cites, of those recorded before their context's last summary; the
+share of notes without a source pointer. Our own company and the team are not counted as entities.
+Each number is shown with its range (`POPULATION_RANGES`, no setting yet; shares are judged from 20
+notes and 10 entities, the week from 35 days of notes); capture rate and noise rate read "not measured". `--json` gives the data.
+Reads only. Writes: `work/population.json`, a cache keyed on the files it reads and the hour.
+
+The source sync keeps one checkpoint per source in `work/sync.json`:
+`{"at", "tools", "sources": {"<kind>" | "<kind>:<account>": {"at", "window_days"?}}}`, with the
+kind and account of a note's source pointer. A source without its own entry reads from the
+top-level `at`, which is all a brain from before 0.35.0 has.
 
 Tool: `save`. Writes: a git commit (never `work/`); with only `placed`, a commit that carries the
 reasons and nothing else.
@@ -441,7 +492,30 @@ the folder linked. An existing task in the brain keeps its brain-wide scope.
 Tools: `list_brains`, `link_project`, `unlink_project`, `list_projects`. Writes: the pointer
 block in the project's `AGENTS.md`, plus `work/projects.json` and the project's loaded set
 inside the brain. The underlying script path remains stable:
-`node $PLUGIN_ROOT/skills/gtm-brain-project/project.mjs . --link <path> [--create] [--slug s] [--title "T"] [--contexts a,b] [--by handle]`, `... --unlink <slug>`, `... --list`
+`node $PLUGIN_ROOT/skills/gtm-brain-project/project.mjs . --link <path> [--create] [--starter web-design-system] [--slug s] [--title "T"] [--contexts a,b] [--by handle]`, `... --unlink <slug>`, `... --list`
+
+### Build and publish a company website
+
+*"build our design system from our website"*, *"add a comparison table to our website"*,
+*"build a page for our event"*, *"prepare a hosted preview of our website"*
+
+`/gtm-brain-design-system` reuses the company's one website project, or creates
+`<brain-root>/projects/website` through `link_project` with `create: true` and
+`starter: "web-design-system"`, after capture consent. That copies Brian Woloszczak and
+Peakout's pinned starter into a project with its own local git. Installing dependencies and
+starting the local preview follow through the shell, in the same chat. An occupied folder is
+never replaced; an interrupted starter resumes without recopying.
+
+Brian's four procedures stay unchanged in the project's `docs/workflows/`. GTM Brain supplies
+the project, the company knowledge and one "Website" section in `design-system.md` pointing to
+the project. Design values stay in the project's code and manual. Later campaigns add pages
+to the same component library, and plugin updates never rewrite a company's project.
+
+`/gtm-brain-add-section` takes a source URL and heading or a brief, including interactive
+sections. `/gtm-brain-build-landing-page` uses the strategy, ICP, voice and offer, then
+composes registered sections. Both end at a local preview. `/gtm-brain-publish-website` runs
+only on its own request: a Vercel preview first, production on a separate decision. See the
+[preservation and packaging contract](plugins/gtm-brain/starters/web-design-system/README.md).
 
 ### connect
 *"connect my tools"*, *"is HubSpot connected?"*
@@ -625,7 +699,7 @@ words, then calls `save`. A relationship rename keeps the old name in `Was calle
 and adds, changes or removes one row or one line in the person's words, then calls `save`. A rule
 cannot switch off APPROVE, the protected files or W1.
 
-`RULES.md` at the brain root is the brain's own rules, in two sections. "Our rules" holds its people's
+`RULES.md` at the brain root is the brain's own rules, in three sections. "Our rules" holds its people's
 rules for what Codex saves and asks, one line each; the chat start prints them after the shared saving
 rules (R1, R2). "Where things go" is the table of where every file goes: rules at the root, brand in
 `brand/`, projects in `projects/<project>/` with their deliverables inside, raw sources with their
@@ -637,3 +711,18 @@ fits. The person edits it freely: an edited `RULES.md` is never overwritten, an 
 follows the shipped template. `save` keeps it. A brain from before 0.33.9 had `WHERE.md` for the table
 and a `RULES.md` with only its own lines; the next chat start merges both into one `RULES.md` (an
 unedited `WHERE.md` becomes the new template, an edited one keeps its rows) and removes `WHERE.md`.
+
+"Ask the source" (0.35.0) is a table of `| Question about | Ask | Brain answer is good for |`: per kind of
+question, the tool that knows better than a saved note (CRM, billing, events tool, calendar, email,
+meeting notes, the brain, or a tool by name) and how old a note may be ("1 day", "2 weeks", "always
+ask", "no limit"). `lib/ask-source.mjs` reads it, columns by header name. A row applies only while a
+tool of its kind is connected (`work/tools.json`: installed, not declined, read test not failed); a
+note matches a row by its source kind (a `hubspot:` source for the CRM row), never by its words. Then
+the chat start prints one `Ask the source (RULES.md): ...` line naming those rows, and `query`
+(memories search, brief) and `load_context` add one line per row whose newest matching note is older
+than allowed (any matching note for "always ask"): *"Deal stage and amount: the newest note here from
+the CRM is 9 days old (2026-11-05); RULES.md says ask HubSpot (good for 1 day). Read it there before
+answering."* A `RULES.md` without the section (edited before 0.35.0, so never overwritten) uses the
+shipped rows; an unedited 0.33.10 template is refreshed to include it. A row that cannot be read is
+left out and listed by `query` with object `rules` with its line and a fix; when no row can be read,
+the shipped rows apply.

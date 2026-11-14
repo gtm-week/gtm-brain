@@ -1,0 +1,69 @@
+---
+/**
+ * Every page's head tags, in one place (docs/seo.md). The brand suffix is added here,
+ * so no page can forget it. `noindex` also drops the page from the sitemap.
+ */
+import { SITE_URL, SITE_NAME, SITE_LANG, NOINDEX } from "../../site.config.mjs";
+
+export type JsonLd = Record<string, unknown>;
+
+interface Props {
+  /** ≤ 60 characters with the suffix; unique. */
+  title: string;
+  /** ≤ 165 characters; one sentence that answers "why click". */
+  description: string;
+  /** Path or absolute URL; defaults to this page. */
+  canonical?: string;
+  /** A 1200×630 share card; defaults to /og.png. */
+  image?: string;
+  noindex?: boolean;
+  /** This page's own structured data (an FAQPage, say). Organization and WebSite are always added. */
+  jsonLd?: JsonLd[];
+}
+
+const { title, description, canonical, image = "/og.png", noindex = false, jsonLd = [] } =
+  Astro.props;
+
+const fullTitle = title.includes(SITE_NAME) ? title : `${title} | ${SITE_NAME}`;
+/* One URL form: absolute, no trailing slash (the home page is `/`). */
+const path = (canonical ?? Astro.url.pathname).replace(/(.)\/$/, "$1");
+const canonicalUrl = new URL(path, SITE_URL + "/").href;
+const imageUrl = new URL(image, SITE_URL + "/").href;
+const hidden = noindex || NOINDEX;
+
+const graph = {
+  "@context": "https://schema.org",
+  "@graph": [
+    { "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: SITE_NAME, url: `${SITE_URL}/` },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+      name: SITE_NAME,
+      url: `${SITE_URL}/`,
+      inLanguage: SITE_LANG,
+      publisher: { "@id": `${SITE_URL}/#organization` },
+    },
+    ...jsonLd,
+  ],
+};
+---
+
+<title>{fullTitle}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonicalUrl} />
+{hidden && <meta name="robots" content="noindex, nofollow" />}
+
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content={SITE_NAME} />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonicalUrl} />
+<meta property="og:image" content={imageUrl} />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={imageUrl} />
+
+<script is:inline type="application/ld+json" set:html={JSON.stringify(graph)} />

@@ -37,14 +37,19 @@ Copies the brain to a scratch folder (the write checks append notes), starts `se
 and runs about 50 checks in sections: search (single and multi-word, stemmed, typo, names, aliases,
 SQL), entities (name, id, alias, typo, email), briefs (facts, cited ids, size), relations and their
 history, customers, meetings, deal, rules, status, compile (`--facts` read through a pipe, full
-size, and over MCP), load_context, remember (single, batch over MCP, `--batch` script),
-corrections (supersede, retract), and on messy the traps. Each result: `id`, `section`, `pass`,
+size, and over MCP), load_context, remember (single, batch over MCP, `--batch` script, a bare first name saved then
+asked, and the answer linked back),
+corrections (supersede, retract), the tool path of the two demo loops (the voice document, the
+outbound workflow, a recorded send, a user-confirmed prospect; the live run is
+`test/live/demo-loops.mjs`), and on messy the traps. Each result: `id`, `section`, `pass`,
 `ms`, `bytes`, `note`. A failure caused by a gap main is known to have carries `known_gap`; the run
 exits 1 only on a plain failure. `E2E_DEBUG=1` adds the reply text to failed checks.
 
 Known gaps marked today: unstemmed search, no typo tolerance in memory search, note ids missing on
 `recall` and `load_context` read lines and in relation history, unbounded entity briefs, the
-64 KiB cut on `compile --facts`, and `remember` refusing without a loaded context. Some only show
-on the bigger shapes.
+64 KiB cut on `compile --facts`, `remember` refusing without a loaded context, and the 64 KiB cut
+on `query relations` and `query customers` (`entities.mjs` prints, then exits, and the server reads
+it through a pipe; from medium up most of the list is missing). Some only show on the bigger shapes.
 
-`baseline.json` is the run on unchanged main.
+`baseline.json` is the run on unchanged main. `validation-0.35.0.json` is the validation of
+release 0.35.0 against main on medium, messy and large, with the root cause of every failure.

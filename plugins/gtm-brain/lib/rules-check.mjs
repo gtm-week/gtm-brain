@@ -9,6 +9,7 @@ import * as lib from "./brain.mjs";
 import { whereRows, recordedReasons, MANAGED, WHERE } from "./where.mjs";
 import { strayFolders, listDocuments, filesDir } from "./documents.mjs";
 import { readSchema } from "./schema.mjs";
+import { readAskSource } from "./ask-source.mjs";
 
 const git = (root, ...a) => { try { return execFileSync("git", ["--no-optional-locks", "-C", root, ...a], { encoding: "utf8", stdio: "pipe" }); } catch { return ""; } };
 const BAD_NAME = /[A-Z\s]/;
@@ -59,6 +60,11 @@ export function ruleFindings(root) {
     `Rename to ${p.split("/").slice(0, -1).concat(suggest(basename(p))).join("/")} (ask first; save with placed)`, `Keep the name as it is`]);
   if (top.length > 10) add("RULES.md naming", "name", "more", `${top.length - 10} more names with capitals or spaces.`, [`Run the check again after the first ones are fixed`]);
 
+  // RULES.md Ask the source: a row that cannot be read is left out (the defaults apply when none can), named with its line and fix
+  const ask = readAskSource(root);
+  for (const p of ask.problems) add("RULES.md Ask the source", "ask", `RULES.md line ${p.line}`, `RULES.md line ${p.line}, Ask the source: ${p.problem}${ask.defaults ? "; until it is fixed, the built-in rows apply" : "; the other rows still apply"}.`, [
+    `Fix it: ${p.proposal} (say /gtm-brain-rules, or edit RULES.md and save)`, `Remove the row (or the whole section, to use the built-in rows)`]);
+
   // SCHEMA.md: a file that cannot be read, then required fields and relationships nobody has said yet. Only briefs
   // compiled under the current schema count: an uncompiled one has not been read for its fields yet.
   const schema = readSchema(root);
@@ -92,7 +98,7 @@ export function rulesReport(root) {
   const f = ruleFindings(root);
   if (!f.length) return "Rules check: nothing to fix. Every person has a full name or was confirmed, no look-alike pair is open, and every file has a recorded reason and a RULES.md-style name, and no compiled brief misses a field SCHEMA.md requires.";
   const count = k => f.filter(x => k.includes(x.kind)).length;
-  const head = `Rules check: ${f.length} thing${f.length === 1 ? "" : "s"} to look at (${count(["person", "organization", "product"])} names, ${count(["folder", "files", "name"])} files and folders, ${count(["gap", "schema"])} SCHEMA.md gaps). Reads only; nothing was changed.`;
+  const head = `Rules check: ${f.length} thing${f.length === 1 ? "" : "s"} to look at (${count(["person", "organization", "product"])} names, ${count(["folder", "files", "name"])} files and folders, ${count(["gap", "schema"])} SCHEMA.md gaps${count(["ask"]) ? `, ${count(["ask"])} Ask the source rows` : ""}). Reads only; nothing was changed.`;
   const body = f.map((x, i) => `${i + 1}. [${x.rule}] ${x.what}\n${x.choices.map((c, j) => `   ${String.fromCharCode(97 + j)}) ${c}`).join("\n")}`).join("\n");
-  return `${head}\n${body}\nAsk the person about one at a time, choices as numbered options, the first recommended; carry out the answer through the tool named. The rules: P1-P4 in the brain's README (How we name people), the rows and naming in RULES.md, the required fields and relationships in SCHEMA.md.`;
+  return `${head}\n${body}\nAsk the person about one at a time, choices as numbered options, the first recommended; carry out the answer through the tool named. The rules: P1-P4 in the brain's README (How we name people), the rows, naming and Ask the source table in RULES.md, the required fields and relationships in SCHEMA.md.`;
 }

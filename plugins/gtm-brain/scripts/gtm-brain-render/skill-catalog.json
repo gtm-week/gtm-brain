@@ -88,6 +88,38 @@
     "example": "Create a new project for our website."
   },
   {
+    "id": "gtm-brain-design-system",
+    "group": "projects",
+    "featured": false,
+    "title": "Build our design system",
+    "description": "Use Brian Woloszczak and Peakout's starter to build a reusable web design system from your existing brand.",
+    "example": "Build our design system from our company website."
+  },
+  {
+    "id": "gtm-brain-add-section",
+    "group": "projects",
+    "featured": false,
+    "title": "Add a reusable section",
+    "description": "Extend your shared website library with a section from a source page or a new brief.",
+    "example": "Add a comparison table to our website's reusable sections."
+  },
+  {
+    "id": "gtm-brain-build-landing-page",
+    "group": "projects",
+    "featured": false,
+    "title": "Build a landing page",
+    "description": "Use your offer, audience and voice to compose a campaign page from the shared design system.",
+    "example": "Build a follow-up page for our event leads and show me the local preview."
+  },
+  {
+    "id": "gtm-brain-publish-website",
+    "group": "projects",
+    "featured": false,
+    "title": "Publish the website",
+    "description": "Prepare a Vercel preview and release the reviewed shared website when requested.",
+    "example": "Prepare a hosted preview of our website and keep its access private."
+  },
+  {
     "id": "gtm-brain-start",
     "group": "setup",
     "featured": false,
@@ -118,5 +150,13 @@
     "title": "Run the strategic intake",
     "description": "A 10-15 minute conversation about where the company is going that fills strategy.md, the document every brain starts with.",
     "example": "Run the strategic intake."
+  },
+  {
+    "id": "gtm-brain-voice",
+    "group": "setup",
+    "featured": false,
+    "title": "Draft our tone of voice",
+    "description": "Settle whose voice it is, draft it from writing that fits, test it on one fresh email or post, then check a new chat follows it.",
+    "example": "Draft our tone of voice from our website and posts."
   }
 ]

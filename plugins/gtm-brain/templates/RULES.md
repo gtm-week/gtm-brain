@@ -30,6 +30,24 @@ that belongs to one goes inside it (a speaker graphic for the Berlin event goes 
 Name folders and files in lowercase words joined by hyphens, no spaces: `speakers/florian-weber/`,
 not `speakers/Florian Weber/`.
 
+## Ask the source
+
+Some answers live in a tool that knows better than a saved note: a deal moves, a meeting is
+rescheduled, a new email arrives. For these questions Codex reads the tool in the Ask column
+instead of answering from the brain, once the brain's note is older than the last column allows.
+A row applies only when that tool is connected; otherwise the brain answers and says how old its
+note is. Edit the rows freely: "1 day", "3 days", "2 weeks", "always ask" or "no limit".
+
+| Question about | Ask | Brain answer is good for |
+| --- | --- | --- |
+| Deal stage and amount | CRM | 1 day |
+| Invoice or payment status | Billing | 1 day |
+| Who registered for an event | Events tool | 1 day |
+| Meeting times, the next meeting | Calendar | always ask |
+| The latest email in a thread | Email | always ask |
+| What was said in a meeting | Meeting notes | no limit, once saved |
+| Who someone is, decisions, our strategy | The brain | no limit |
+
 ## Our rules
 
 Rules for what Codex saves and asks, one line each, in your words ("always ask before tagging a

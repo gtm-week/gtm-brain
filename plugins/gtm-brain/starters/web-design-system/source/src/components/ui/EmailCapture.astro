@@ -1,0 +1,45 @@
+---
+/**
+ * An email field joined to a button: the one-field form in a hero or a closing band.
+ * It posts to `action`; until a form tool is connected (a CRM, a form service) it goes nowhere.
+ */
+import Input from "./Input.astro";
+import Button from "./Button.astro";
+
+interface Props {
+  /** Where the form posts. */
+  action?: string;
+  label?: string;
+  placeholder?: string;
+  button: string;
+  hint?: string;
+  error?: string;
+  class?: string;
+}
+const {
+  action,
+  label = "Work email",
+  placeholder = "Work email",
+  button,
+  hint,
+  error,
+  class: className,
+} = Astro.props;
+---
+
+<form action={action} method="post" class:list={["flex w-full max-w-measure-md items-start", className]}>
+  <Input
+    type="email"
+    name="email"
+    label={label}
+    hideLabel
+    placeholder={placeholder}
+    autocomplete="email"
+    required
+    hint={hint}
+    error={error}
+    class="flex-1"
+    fieldClass="rounded-r-none"
+  />
+  <Button type="submit" class="rounded-l-none">{button}</Button>
+</form>

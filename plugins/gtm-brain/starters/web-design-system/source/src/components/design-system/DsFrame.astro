@@ -1,0 +1,90 @@
+---
+/**
+ * A page in a frame at a true width, scaled down to fit. A frame, because breakpoints
+ * read the window, not the column. With `switcher`, Desktop · Tablet · Mobile buttons.
+ */
+import Icon from "../ui/Icon.astro";
+import { ArrowUpRight } from "@lucide/astro";
+
+interface Props {
+  src: string;
+  title: string;
+  switcher?: boolean;
+}
+const { src, title, switcher = false } = Astro.props;
+
+const widths = [
+  { label: "Desktop", width: 1440 },
+  { label: "Tablet", width: 768 },
+  { label: "Mobile", width: 375 },
+];
+---
+
+<div data-frame class="flex w-full flex-col gap-4">
+  {
+    switcher && (
+      <div class="flex items-center justify-between gap-4">
+        <div role="group" aria-label="Preview width" class="flex gap-1 rounded-sm bg-surface-2 p-1">
+          {widths.map((w, i) => (
+            <button
+              type="button"
+              data-width={w.width}
+              aria-pressed={i === 0 ? "true" : "false"}
+              class="rounded-sm px-3 py-1.5 text-small text-ink-2 transition-colors hover:text-ink-1 aria-pressed:bg-surface-1 aria-pressed:text-ink-1"
+            >
+              {w.label} <span class="hidden text-ink-3 md:inline">{w.width}</span>
+            </button>
+          ))}
+        </div>
+        <a
+          href={src}
+          target="_blank"
+          class="flex items-center gap-1 text-small text-ink-2 transition-colors hover:text-ink-1"
+        >
+          Open <Icon icon={ArrowUpRight} size="sm" />
+        </a>
+      </div>
+    )
+  }
+  <div data-stage class="w-full overflow-hidden">
+    <div data-canvas class="mx-auto overflow-hidden rounded-lg border border-line bg-surface-1">
+      <iframe src={src} title={title} class="block origin-top-left border-0"></iframe>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* Each frame renders at the chosen width and the height of its content, scaled to fit. */
+  for (const root of document.querySelectorAll<HTMLElement>("[data-frame]")) {
+    const stage = root.querySelector<HTMLElement>("[data-stage]")!;
+    const canvas = root.querySelector<HTMLElement>("[data-canvas]")!;
+    const frame = root.querySelector("iframe")!;
+    const buttons = [...root.querySelectorAll<HTMLButtonElement>("[data-width]")];
+    let width = buttons.length && innerWidth < 768 ? 375 : 1440;
+
+    const fit = () => {
+      const scale = Math.min(1, stage.clientWidth / width);
+      frame.style.width = `${width}px`; // first: the height depends on the width
+      // The body, not the document: the document is never shorter than the frame itself.
+      // A frame that has not loaded yet has no body: keep a placeholder height.
+      const body = frame.contentDocument?.body;
+      const height = Math.ceil(body?.getBoundingClientRect().height ?? 0) || 600;
+      frame.style.height = `${height}px`;
+      frame.style.transform = `scale(${scale})`;
+      canvas.style.width = `${width * scale}px`;
+      canvas.style.height = `${height * scale}px`;
+      buttons.forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.width) === width)));
+    };
+    buttons.forEach((b) => b.addEventListener("click", () => ((width = Number(b.dataset.width)), fit())));
+    frame.addEventListener("load", () => {
+      const doc = frame.contentDocument;
+      if (doc?.body) {
+        doc.documentElement.style.overflow = "hidden";
+        new ResizeObserver(fit).observe(doc.body);
+      }
+      fit();
+    });
+    new ResizeObserver(fit).observe(stage);
+    fit();
+  }
+</script>

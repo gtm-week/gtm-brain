@@ -14,10 +14,10 @@ import { spawnSync, execFileSync, execFile, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { parseOntology } from "./ontology/ontology.mjs";
 import { validateAsset } from './assets.mjs';
-import { normalizeSource, accountOK, urlOK } from "./pointers.mjs";
+import { normalizeSource, accountOK, urlOK, isRecording } from "./pointers.mjs";
 import { rankEntityCandidates } from './entity-search.mjs';
 export { rankEntityCandidates } from './entity-search.mjs';
-export { normalizeKind, normalizeSource, normalizeSources, pointerKey, parsePointer, urlPointer, lookupKey, sourceMembers, citesPointer, referenceText } from './pointers.mjs';
+export { normalizeKind, normalizeSource, normalizeSources, pointerKey, parsePointer, urlPointer, lookupKey, sourceMembers, citesPointer, referenceText, isRecording, bigFilePointer } from './pointers.mjs';
 import { checkSchema } from "./ontology/validation.mjs";
 import { readEntityFiles, writeEntityFiles, entityId, entityType, ENTITY_FORMAT, refreshEntityPages, staleEntities, withEntityLock } from "./entities.mjs";
 import { appendMemoryBytes } from './memory-journal.mjs';
@@ -36,6 +36,7 @@ export { withEntityLock, startKindLayout, migrateToKindFolders } from './entitie
 export { ensureMeetingEntities, deriveMeetingEntities, meetingEntityId, meetingAttendees } from './meeting-entities.mjs';
 import { ensureMeetingEntities as meetingEntitiesFor, meetingAnchors, anchorOf } from './meeting-entities.mjs';
 export { layout as entityLayout, pagePaths as entityPagePaths, kindFolder, kindPagePath, assetFolder, findPage } from './layout.mjs';
+import { ENTITIES_DIR } from './layout.mjs';
 
 /* The machine-wide GTM Brain preferences file. */
 export const preferencesPath = () => join(process.env.CODEX_HOME || join(homedir(), ".codex"), "gtm-brain", "preferences.json");
@@ -492,6 +493,7 @@ export function listContexts(root, options) {
 /* ---------- global identity registry and derived briefs ----------
    Files live in brain/entities/. Identity is metadata; facts stay in context memories.
    Legacy registry files remain readable until a write or upgrade migrates them. */
+// the literal, not layout.ENTITIES_DIR: this constant is evaluated while layout.mjs may still be loading (import cycle)
 export const ENTITIES_PATHS = ["brain/entities", "brain/entities.md", "brain/names.md"];
 const entitiesFiles = root => [join(root, "brain", "entities.md"), join(root, "brain", "names.md")].filter(f => existsSync(f));
 const separateEntities = (a, b) => (a.not || []).some(n => exactName([b], n)) || (b.not || []).some(n => exactName([a], n));
@@ -561,7 +563,7 @@ export function writeNames(root, names) {
 export function migrateEntities(root) {
   return withEntityLock(root, () => {
     const names = readNames(root);
-    if (!entitiesFiles(root).length && existsSync(join(root, "brain", "entities")) && names.every(e => e._fm?.format === ENTITY_FORMAT)) return false;
+    if (!entitiesFiles(root).length && existsSync(join(root, ENTITIES_DIR)) && names.every(e => e._fm?.format === ENTITY_FORMAT)) return false;
     writeNames(root, names);
     return true;
   });
@@ -745,9 +747,14 @@ export const NAME_RULES = {
    mention may be whom, so the caller can ask "same as X?" first. A single word nobody has (P3) is
    held the same way in `unnamed`, unless the person confirmed it (confirmedNew) or it is a company
    or an already resolved name (trusted). Every mention that took judgment is in `mentions`, as
-   {mention, name, resolution, rule}, for the memory to keep. Returns {people, added, similar, unnamed, inferred, mentions}. */
-export function normalisePeople(root, mentions, { confirmedNew = [], companies = [], trusted = [] } = {}) {
-  const names = readNames(root), sure = new Set(confirmedNew.map(foldName)), people = [], fresh = [], similar = [], unnamed = [], inferred = [], said = [];
+   {mention, name, resolution, rule}, for the memory to keep. Returns {people, added, similar, unnamed, inferred, mentions, unclear}.
+   With saveUnclear, a bare first name nobody known has (P3), or one several known people have (P2), does
+   not hold the note: it goes in `unclear` as {mention, candidates} and stays out of people, so the note
+   is saved with the name as written and the caller asks who it is. */
+export function normalisePeople(root, mentions, { confirmedNew = [], companies = [], trusted = [], saveUnclear = false } = {}) {
+  const names = readNames(root), sure = new Set(confirmedNew.map(foldName)), people = [], fresh = [], similar = [], unnamed = [], inferred = [], said = [], unclear = [];
+  const sharing = t => names.filter(n => n.kind === "person" && [n.name, ...n.aliases].some(x => foldName(x).split(/\s+/)[0] === foldName(t))).map(n => n.name);
+  const askLater = (t, candidates) => { if (!unclear.some(x => foldName(x.mention) === foldName(t))) unclear.push({ mention: t, candidates }); };
   const plain = new Set([...companies, ...trusted].map(foldName));
   const take = c => { if (!people.includes(c)) people.push(c); };
   const note = (mention, name, resolution, rule) => { if (!said.some(x => x.mention === mention)) said.push({ mention, name, resolution, rule }); };
@@ -756,17 +763,19 @@ export function normalisePeople(root, mentions, { confirmedNew = [], companies =
     const exact = exactName(names, t); if (exact) { take(exact); if (exact !== t) note(t, exact, "exact", "P1"); continue; }
     if (sure.has(foldName(t))) { names.push({ name: t, aliases: [], emails: [], kind: "person" }); fresh.push(t); take(t); note(t, t, "confirmed_new", plain.has(foldName(t)) ? "C1" : /\s/.test(t) ? "P1" : "P3"); continue; }   // the person said: someone new
     const guess = inferredName(names, t); if (guess) { inferred.push({ mention: t, name: guess }); take(guess); note(t, guess, "inferred_first_name", "P2"); continue; }
+    const one = !/\s/.test(t) && !plain.has(foldName(t));
+    if (saveUnclear && one) { const several = sharing(t); if (several.length > 1) { askLater(t, several); continue; } }
     const like = similarNames(names, t);
     if (like.length) { similar.push({ mention: t, matches: like }); continue; }
-    if (!/\s/.test(t) && !plain.has(foldName(t))) { unnamed.push(t); continue; }
+    if (one) { if (saveUnclear) askLater(t, []); else unnamed.push(t); continue; }
     names.push({ name: t, aliases: [], emails: [], kind: "person" }); fresh.push(t); take(t); note(t, t, "new", plain.has(foldName(t)) ? "C1" : "P1");
   }
-  if (similar.length || unnamed.length) return { people: [], added: [], similar, unnamed, inferred: [], mentions: [] };
+  if (similar.length || unnamed.length) return { people: [], added: [], similar, unnamed, inferred: [], mentions: [], unclear };
   // Resolve all mentions before writing, so an ambiguous company cannot leave a partial registry.
   const companyNames = new Set(companies.map(m => canonicalName(names, m)).filter(Boolean));
   for (const t of fresh) addName(root, t, { kind: companyNames.has(t) ? "company" : "person" });
   for (const name of companyNames) if (!fresh.includes(name)) addName(root, name, { kind: "company" });
-  return { people, added: fresh, similar: [], unnamed: [], inferred, mentions: said };
+  return { people, added: fresh, similar: [], unnamed: [], inferred, mentions: said, unclear };
 }
 
 /* ---------- the loaded set: work/loaded-contexts.json, per brain, local ---------- */
@@ -874,11 +883,15 @@ export const NOT_COMMITTED_YET = "written to disk, not committed yet: say save t
 export const BRAIN_PATHS = ["brain", "AGENTS.md", "CLAUDE.md", ".githooks", ".gitignore", ".gitattributes", ".agents"];
 /* Everything save keeps: the engine's paths, the root README, and the documents with their files (lib/documents.mjs). */
 /* Files too big for git (videos, recordings, renders; GitHub refuses a file over 100 MB): never committed. They
-   belong on the shared drive, linked from the brain (RULES.md); save and the chat start name them. */
+   belong on the shared drive, linked from the brain (RULES.md); save and the chat start name them. A recording
+   (audio or video, lib/pointers.mjs isRecording) is kept out at any size: RULES.md never puts one in the brain. */
 export const LARGE_FILE_MB = 25;
 export function largeUnsaved(root, limit = LARGE_FILE_MB * 1024 * 1024) {
-  let out = ""; try { out = execFileSync("git", ["--no-optional-locks", "-C", root, "ls-files", "-z", "--others", "--modified", "--exclude-standard"], { encoding: "utf8", stdio: "pipe", maxBuffer: 64 << 20 }); } catch { return []; }
-  return [...new Set(out.split("\0").filter(Boolean))].map(path => { try { return { path, size: statSync(join(root, path)).size }; } catch { return null; } }).filter(f => f && f.size > limit);
+  // -t tags each path: "?" is a file git does not hold yet. A recording git already holds (kept before 0.35.0) stays
+  // saveable under the size limit: leaving its edits out would not take it out of git, only strand them.
+  let out = ""; try { out = execFileSync("git", ["--no-optional-locks", "-C", root, "ls-files", "-z", "-t", "--others", "--modified", "--exclude-standard"], { encoding: "utf8", stdio: "pipe", maxBuffer: 64 << 20 }); } catch { return []; }
+  const seen = new Map(); for (const row of out.split("\0").filter(Boolean)) { const path = row.slice(2); seen.set(path, seen.get(path) || row[0] === "?"); }
+  return [...seen].map(([path, untracked]) => { try { return { path, size: statSync(join(root, path)).size, untracked }; } catch { return null; } }).filter(f => f && (f.size > limit || (f.untracked && isRecording(f.path)))).map(({ path, size }) => ({ path, size }));
 }
 /* Every change in the brain folder: what .gitignore keeps out (work/, .env), a project's local pointer and a file
    too big for git stay out. */
@@ -990,13 +1003,26 @@ export function bigFiles(root) {
   const folder = mode === "local" ? (given && isAbsolute(given) && !inside ? resolve(given) : join(homedir(), "gtm-brain-files", basename(resolve(root)))) : null;
   return { mode, folder };
 }
+/* The one Google Drive folder big files go to: `big_files_drive_folder:` in admin.md, else "<company> GTM Brain files". */
+export function bigFilesDriveFolder(root) {
+  const a = root ? readAdmin(root) : null, named = String(a?.big_files_drive_folder || "").trim();
+  return named || `${String(a?.company || "").trim() || "Company"} GTM Brain files`;
+}
+// The walk-through every big file follows, from save, the chat start, add-file and onboarding.
+export const BIG_FILES_GUIDE = "gtm-brain-use-brain/references/big-files.md";
 /* The one instruction for a file too big for git, shared by save, the chat start and add-file. */
 export function bigFileAdvice(root) {
   const { mode, folder } = bigFiles(root);
-  if (mode === "local") return `This brain keeps big files on this computer (big_files: local in brain/admin.md): offer to move each to ${folder}, outside git, and link it from its project's README.md as file:${folder}/<name>; delete the original only after the person says yes and the copy is verified. That folder is not shared: say once that teammates will not get the file.`;
-  return `Offer to move each to the shared drive (Google Drive) and link it from its project's README.md, as RULES.md says; delete the local copy only after the person says yes and the upload is verified. If Google Drive is not connected in this Codex, offer to connect it first (connect my tools); if they decline, the file stays on this computer only, and say once that teammates will not get it.`;
+  if (mode === "local") return `This brain keeps big files on this computer (big_files: local in brain/admin.md): follow the big-files walk-through (${BIG_FILES_GUIDE}): offer to move each to ${folder}, outside git (add-file.mjs --big copies it and checks the copy), and save the pointer file:${folder}/<name> on the note that says what it is; delete the original only after the person says yes and the copy is verified. That folder is not shared: say once that teammates will not get the file.`;
+  return `Follow the big-files walk-through (${BIG_FILES_GUIDE}): offer to move each to the shared drive (Google Drive), in the folder "${bigFilesDriveFolder(root)}", with the Drive connector, and save its pointer {kind: google-drive, account, ref, url} on the note that says what it is; the bytes are never committed. Delete the local copy only after the person says yes and the upload is verified. If Google Drive is not connected in this Codex, say so and ask for the file's Drive link instead (connect my tools connects it); without a link the file stays on this computer only: say once that teammates will not get it.`;
 }
-export const largeNote = (large, root) => `Too big for git, not kept (over ${LARGE_FILE_MB} MB): ${large.map(f => `${f.path} (${Math.round(f.size / 1048576)} MB)`).join(", ")}. ${bigFileAdvice(root)}`;
+export function largeNote(large, root) {
+  const over = large.filter(f => f.size > LARGE_FILE_MB * 1048576), rec = large.filter(f => !over.includes(f));
+  const parts = [];
+  if (over.length) parts.push(`Too big for git, not kept (over ${LARGE_FILE_MB} MB): ${over.map(f => `${f.path} (${Math.round(f.size / 1048576)} MB)`).join(", ")}.`);
+  if (rec.length) parts.push(`Recordings stay out of git, not kept: ${rec.map(f => `${f.path} (${(f.size / 1048576).toFixed(1)} MB)`).join(", ")}.`);
+  return `${parts.join(" ")} ${bigFileAdvice(root)}`;
+}
 /* The person's save: commit what unsavedChanges lists, push when there is a remote. */
 export function save(root, message, { covers = false, trailers = [] } = {}) {
   if (!covers && existsSync(join(root, "work", "admin.proposed.md"))) return { ok: false, note: "a change to brain/admin.md is waiting for APPROVE; ask for APPROVE or a drop, then save" };
@@ -1299,7 +1325,7 @@ export function effectiveMemories(list) {
 }
 /* Timestamps compare as instants, whatever their precision (older records have minutes). */
 export const newer = (a, b) => Date.parse(a) > Date.parse(b);
-export { ONBOARDING_VERSION, readOnboarding, seedOnboarding, onboardingInstruction, closeOnboardingFromOutcomes } from './onboarding.mjs';
+export { ONBOARDING_VERSION, readOnboarding, seedOnboarding, onboardingInstruction, closeOnboardingFromOutcomes, bigFilesChoice, bigFilesAnswer } from './onboarding.mjs';
 /* A snapshot key of a memory list: compile reads the facts under one key and applies under the
    same key, so a memory added, corrected or retracted in between is noticed. */
 export const snapshotKey = list => list.length ? "s_" + createHash("sha256").update(list.map(m => m.id).join("\n")).digest("hex").slice(0, 12) : "none";
@@ -1418,6 +1444,9 @@ const interactionOf = (raw, parsed) => ({
   input_schema: parsed.input_schema || { type: "object", properties: {}, additionalProperties: false },
   record: { context: raw.record?.context || null, kind: raw.record?.kind || "note", content: String(raw.record?.content || ""), people: [...(raw.record?.people || [])], companies: [...(raw.record?.companies || [])], action: raw.record?.action || null, tags: [...(raw.record?.tags || [])] },
   refuse_when: raw.refuse_when ? String(raw.refuse_when) : null,
+  // external false: nothing to do in a connector, so interact records at once. Otherwise the record
+  // waits for the outcome the connector returned (interactionMemory with outcome done or failed).
+  external: raw.external !== false,
 });
 export function readInteractions(root) {
   const path = join(root, INTERACTIONS_PATH);
@@ -1435,8 +1464,10 @@ export function validateInteraction(root, a, { existing = [] } = {}) {
   if (!/^[a-z][a-z0-9_]*$/.test(String(a.name || ""))) say(`name must be a bare identifier (letters, digits, underscore): ${a.name}`);
   if (RESERVED_TOOLS.has(a.name)) say(`${a.name} is a tool of its own; call it`);
   if (existing.some(x => x.name === a.name)) say(`${a.name} is already one of this company's interactions`);
-  if (!String(a.tool || "").trim()) say("tool is needed: the connector this is done in (attio, gmail, ...)");
-  if (!String(a.operation || "").trim()) say("operation is needed: what to do in the tool, in words the model follows");
+  if (a.external !== undefined && typeof a.external !== "boolean") say("external must be true or false: false when there is nothing to do in a connector and the note is recorded at once");
+  const external = a.external !== false;
+  if (external && !String(a.tool || "").trim()) say("tool is needed: the connector this is done in (attio, gmail, ...); external false when there is none");
+  if (external && !String(a.operation || "").trim()) say("operation is needed: what to do in the tool, in words the model follows");
   for (const [k, v] of Object.entries({ title: a.title, operation: a.operation, description: a.description, content: a.record?.content, refuse_when: a.refuse_when })) if (LONG_DASH.test(String(v || ""))) say(`${k} contains a long dash; use a plain hyphen`);
   const schema = a.input_schema || { type: "object", properties: {} };
   try { checkSchema(schema, "input_schema"); } catch (e) { say(e.message); }
@@ -1459,12 +1490,26 @@ export function renderTemplate(tpl, params = {}) {
     .replace(/\{([a-z_][a-z0-9_]*)\}/g, (_, k) => val(k))
     .replace(/[ \t]+$/gm, "").trim();
 }
-export function interactionMemory(a, params = {}) {
+/* The memory an interaction prescribes, as remember flags. outcome "failed" (the connector refused or
+   errored) gives a plain failure note instead: what was tried, with which inputs, and the error; no
+   action, since nothing was done. */
+export function interactionMemory(a, params = {}, { outcome = "done", error = "" } = {}) {
   const r = a.record; const pick = fields => fields.map(f => params[f]).filter(v => v !== undefined && v !== null && String(v).trim()).map(String);
-  return { context: r.context, kind: r.kind || "note", content: renderTemplate(r.content, params), people: pick(r.people), companies: pick(r.companies), tools: a.tool ? [a.tool] : [], actions: r.action ? [renderTemplate(r.action, params)] : [], tags: [...r.tags] };
+  const base = { context: r.context, people: pick(r.people), companies: pick(r.companies), tools: a.tool ? [a.tool] : [] };
+  if (outcome === "failed") {
+    // The connector's words must never keep the failure from being recorded: long dashes become hyphens,
+    // a page of text is cut, and the note carries the day it was tried, so "try again tomorrow" in the
+    // error is not held as a bare relative date.
+    const plain = (v, max) => { const s = String(v).replace(/[\u2013\u2014\u2015\u2212]/g, "-").replace(/\s+/g, " ").trim(); return s.length > max ? s.slice(0, max - 3) + "..." : s; };
+    const inputs = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && String(v).trim()).map(([k, v]) => `${k} ${plain(typeof v === "object" ? JSON.stringify(v) : v, 120)}`).join(", ");
+    const said = plain(error || "", 500), now = process.env.GTM_BRAIN_NOW ? new Date(process.env.GTM_BRAIN_NOW) : new Date();
+    const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    return { ...base, kind: "note", content: `Failed in ${a.tool || "the tool"}, not done: ${plain(a.title || a.name, 120)}${inputs ? ` (${plain(inputs, 400)})` : ""}, tried ${day}. ${said ? `Error: ${said}` : "No error text was returned."}`, actions: [], tags: [...new Set([...r.tags, "interaction-failed"])] };
+  }
+  return { ...base, kind: r.kind || "note", content: renderTemplate(r.content, params), actions: r.action ? [renderTemplate(r.action, params)] : [], tags: [...r.tags] };
 }
 export function writeInteractions(root, actions) {
   const admin = readAdmin(root) || {};
-  const raw = { version: "1", name: String(admin.company || "company").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "company", description: "This company's own interactions: what it does on its tools, and what each records.", custom_extensions: [{ vendor_name: "ALLETHIC", data: { actions: actions.map(a => ({ name: a.name, title: a.title, tool: a.tool, operation: a.operation, description: a.description, input_schema: a.input_schema, record: a.record, ...(a.refuse_when ? { refuse_when: a.refuse_when } : {}) })) } }] };
+  const raw = { version: "1", name: String(admin.company || "company").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "company", description: "This company's own interactions: what it does on its tools, and what each records.", custom_extensions: [{ vendor_name: "ALLETHIC", data: { actions: actions.map(a => ({ name: a.name, title: a.title, tool: a.tool, operation: a.operation, description: a.description, input_schema: a.input_schema, record: a.record, ...(a.refuse_when ? { refuse_when: a.refuse_when } : {}), ...(a.external === false ? { external: false } : {}) })) } }] };
   writeFileSync(join(root, INTERACTIONS_PATH), JSON.stringify(raw, null, 2) + "\n");
 }

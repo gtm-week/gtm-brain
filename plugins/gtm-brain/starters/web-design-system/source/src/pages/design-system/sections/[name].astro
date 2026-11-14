@@ -1,0 +1,36 @@
+---
+/** One section at Desktop · Tablet · Mobile width, in a frame that loads its preview. */
+import DesignSystem from "../../../layouts/DesignSystem.astro";
+import DsBlock from "../../../components/design-system/DsBlock.astro";
+import DsFrame from "../../../components/design-system/DsFrame.astro";
+import DsProps from "../../../components/design-system/DsProps.astro";
+import { sectionList } from "../../../sections";
+
+export const getStaticPaths = () =>
+  sectionList.map((entry) => ({ params: { name: entry.name }, props: { entry } }));
+
+const { entry } = Astro.props;
+const file = Object.keys(import.meta.glob("/src/sections/*.astro")).find((path) =>
+  entry.component.name ? path.endsWith(`/${entry.component.name.replace(/^\$\$/, "")}.astro`) : false,
+);
+---
+
+<DesignSystem title={entry.title} lead={entry.source} file={file?.replace(/^\//, "")}>
+  <DsBlock title={entry.variants ? "Default" : "Preview"} description="The section with its example content, at a true width.">
+    <DsFrame src={`/design-system/preview/sections/${entry.name}`} title={`${entry.title} section`} switcher />
+  </DsBlock>
+  {
+    Object.keys(entry.variants ?? {}).map((variant) => (
+      <DsBlock title={variant.charAt(0).toUpperCase() + variant.slice(1)} description="The same section, placed another way.">
+        <DsFrame src={`/design-system/preview/sections/${entry.name}/${variant}`} title={`${entry.title} section, ${variant}`} switcher />
+      </DsBlock>
+    ))
+  }
+  {
+    file && (
+      <DsBlock title="Props">
+        <DsProps of={file.replace(/^\/src\//, "").replace(/\.astro$/, "")} />
+      </DsBlock>
+    )
+  }
+</DesignSystem>

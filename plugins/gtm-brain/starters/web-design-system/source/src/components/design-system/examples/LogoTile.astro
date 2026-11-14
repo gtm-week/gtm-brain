@@ -1,0 +1,29 @@
+---
+import DsBlock from "../DsBlock.astro";
+import DsStage from "../DsStage.astro";
+import DsState from "../DsState.astro";
+import DsProps from "../DsProps.astro";
+import LogoTile from "../../ui/LogoTile.astro";
+
+interface Props {
+  /** A small preview for the overview grid. */
+  thumb?: boolean;
+}
+const { thumb = false } = Astro.props;
+---
+
+{
+  thumb ? (
+    <div class="grid w-80 scale-75 grid-cols-2 gap-2"><LogoTile name="Company" /><LogoTile name="Company" data-state="hover" /></div>
+  ) : (
+    <>
+      <DsBlock title="States" description="Quiet at rest, full on hover. Shows the name until the logo file arrives.">
+        <DsStage layout="states" tone="muted" cols={4}>
+          <DsState label="default" class="w-full"><LogoTile name="Company" class="w-full" /></DsState>
+          <DsState label="hover" class="w-full"><LogoTile name="Company" class="w-full" data-state="hover" /></DsState>
+        </DsStage>
+      </DsBlock>
+      <DsBlock title="Props"><DsProps of="components/ui/LogoTile" /></DsBlock>
+    </>
+  )
+}

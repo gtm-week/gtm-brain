@@ -1,0 +1,61 @@
+---
+import DesignSystem from "../../../layouts/DesignSystem.astro";
+import DsBlock from "../../../components/design-system/DsBlock.astro";
+import DsTiers from "../../../components/design-system/DsTiers.astro";
+import { breakpoints, headings, gutter, bandPadding } from "../../../components/design-system/tokens";
+
+const [md, lg] = breakpoints;
+const end = 1440;
+const ladder = [
+  { name: "base", from: 0, to: md.px, active: "bg-surface-inverted-1 text-ink-inverted md:bg-surface-2 md:text-ink-1" },
+  { name: "md", from: md.px, to: lg.px, active: "bg-surface-2 text-ink-1 md:bg-surface-inverted-1 md:text-ink-inverted lg:bg-surface-2 lg:text-ink-1" },
+  { name: "lg", from: lg.px, to: end, active: "bg-surface-2 text-ink-1 lg:bg-surface-inverted-1 lg:text-ink-inverted" },
+];
+const h1 = headings[0].sizes;
+const tiers = [
+  { name: "Phone", prefix: "base", range: `up to ${md.px - 1}` },
+  { name: "Tablet", prefix: "md:", range: `${md.px}–${lg.px - 1}` },
+  { name: "Desktop", prefix: "lg:", range: `${lg.px} and up` },
+].map((tier, i) => ({
+  name: `${tier.name} · ${tier.prefix}`,
+  range: tier.range,
+  values: [
+    { label: "heading-h1", value: `${h1[i]} px` },
+    { label: "Gutter", value: `${gutter[i]} px` },
+    { label: "Band padding", value: `${bandPadding[i]} px` },
+  ],
+}));
+---
+
+<DesignSystem
+  title="Breakpoints"
+  lead="Mobile first, two breakpoints. Pages are checked at 375, 768 and 1440. Tailwind's sm, xl and 2xl are switched off: nothing is designed at those widths."
+>
+  <DsBlock title="The ladder" description="The dark step is the one this window is on.">
+    <div class="flex overflow-hidden rounded-sm border border-line">
+      {
+        ladder.map((step) => (
+          <div class:list={["flex h-12 items-center border-r border-line px-3 text-small font-medium last:border-r-0", step.active]} style={`flex: ${step.to - step.from}`}>
+            {step.name}
+          </div>
+        ))
+      }
+    </div>
+    <div class="flex text-small text-ink-3">
+      {ladder.map((step) => <span style={`flex: ${step.to - step.from}`}>{step.from}</span>)}
+      <span>{end}</span>
+    </div>
+    <p class="text-small text-ink-2">This window: <span data-window class="font-medium text-ink-1">…</span> px</p>
+  </DsBlock>
+
+  <DsBlock title="What switches" description="Type, gutter and band padding switch together: tablet means the same in every dimension. Read from global.css and Container.astro.">
+    <DsTiers tiers={tiers} />
+  </DsBlock>
+</DesignSystem>
+
+<script>
+  const out = document.querySelector("[data-window]");
+  const show = () => out && (out.textContent = String(document.documentElement.clientWidth));
+  show();
+  addEventListener("resize", show);
+</script>

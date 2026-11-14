@@ -1,0 +1,32 @@
+---
+import DsBlock from "../DsBlock.astro";
+import DsStage from "../DsStage.astro";
+import DsProps from "../DsProps.astro";
+import Stat from "../../ui/Stat.astro";
+
+interface Props {
+  /** A small preview for the overview grid. */
+  thumb?: boolean;
+}
+const { thumb = false } = Astro.props;
+---
+
+{
+  thumb ? (
+    <Stat value="00,000+" label="What it counts" class="w-48" />
+  ) : (
+    <>
+      <DsBlock title="In a row" description="One number and what it counts, under a hairline. A section decides how many sit in a row; here, two.">
+        <DsStage layout="stack">
+          <div class="grid gap-8 md:grid-cols-2">
+          <Stat value="00,000+" label="What the number counts" />
+          <Stat value="0.0x" label="What the number counts" />
+          <Stat value="$00M" label="What the number counts" />
+          <Stat value="00%" label="What the number counts" />
+          </div>
+        </DsStage>
+      </DsBlock>
+      <DsBlock title="Props"><DsProps of="components/ui/Stat" /></DsBlock>
+    </>
+  )
+}

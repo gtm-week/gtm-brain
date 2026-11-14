@@ -1,0 +1,10 @@
+---
+/** The small label above a heading. Write it in normal case; the capitals are style. */
+interface Props {
+  as?: "p" | "span";
+  class?: string;
+}
+const { as: Tag = "p", class: className } = Astro.props;
+---
+
+<Tag class:list={["tagline text-ink-3", className]}><slot /></Tag>

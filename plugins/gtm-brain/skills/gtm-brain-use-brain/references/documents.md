@@ -65,7 +65,10 @@ thing.
 - Strategy: run `gtm-brain-strategy` (the strategic intake). It writes `strategy.md` itself.
 - ICP: run `gtm-brain-define-icp`. Its draft replaces the starter's body in `icp.md`
   (`action: update`, `ref: icp`), never a new ICP document.
-- Voice or design system: draft from what the company already says, not from an interview. Read
+- Voice: run [gtm-brain-voice](../../gtm-brain-voice/SKILL.md). It asks whose voice it is first, reads
+  writing that fits that choice, and fills `voice.md` itself. A voice guide the person
+  already wrote, or rules they dictate in the chat with nothing to read, is filled here as below.
+- Design system (or a voice from rules the person gives): draft from what the company already says, not from an interview. Read
   the website (the home page and one or two content pages) and anything the person drops in the
   chat (texts they like, an old brand guide, a Figma or PDF export). Keep the starter's headings
   and fill each one; leave a heading empty rather than guess. The voice follows

@@ -1,0 +1,35 @@
+---
+/** A section header and three to six cards, each with an icon tile, a title and a sentence. */
+import type { AstroComponent } from "@lucide/astro";
+import Section from "../components/layout/Section.astro";
+import Container from "../components/layout/Container.astro";
+import SectionHeader, { type Action } from "../components/ui/SectionHeader.astro";
+import Card from "../components/ui/Card.astro";
+
+interface Props {
+  tagline?: string;
+  heading: string;
+  muted?: string;
+  lead?: string;
+  actions?: Action[];
+  /** Three to six. With `href` a card is a link. */
+  features: { icon: AstroComponent; title: string; text: string; href?: string }[];
+  tone?: "default" | "muted" | "inverted";
+}
+const { tagline, heading, muted, lead, actions, features, tone = "muted" } = Astro.props;
+---
+
+<Section tone={tone}>
+  <Container class="flex flex-col gap-10 md:gap-12">
+    <SectionHeader tagline={tagline} heading={heading} muted={muted} lead={lead} actions={actions} />
+    <ul class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {
+        features.map((feature) => (
+          <li>
+            <Card {...feature} />
+          </li>
+        ))
+      }
+    </ul>
+  </Container>
+</Section>

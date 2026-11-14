@@ -1,0 +1,24 @@
+---
+/**
+ * The gutter, the column and a band's vertical padding: the only place any of
+ * them lives, so no section writes its own outer spacing (docs/design.md → Space).
+ */
+interface Props {
+  padding?: "both" | "top" | "bottom" | "none";
+  class?: string;
+}
+const { padding = "both", class: className } = Astro.props;
+
+const paddings = {
+  both: "py-16 md:py-20 lg:py-24",
+  top: "pt-16 md:pt-20 lg:pt-24",
+  bottom: "pb-16 md:pb-20 lg:pb-24",
+  none: "",
+} as const;
+---
+
+<div class="px-4 md:px-8">
+  <div class:list={["mx-auto w-full max-w-frame", paddings[padding], className]}>
+    <slot />
+  </div>
+</div>

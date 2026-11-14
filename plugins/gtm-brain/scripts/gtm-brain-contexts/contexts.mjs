@@ -9,6 +9,7 @@ import { host } from "../../lib/host.mjs";
 import { existsSync, readdirSync } from "node:fs";
 import * as dots from "../../lib/dots.mjs";
 import { join } from "node:path";
+import { lastNoteAgo, quietBrainLine } from "../../lib/staleness.mjs";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
 if (!existsSync(join(root, "brain", "admin.md"))) { console.error("no brain here (brain/admin.md missing). Run setup."); process.exit(1); }
@@ -86,8 +87,10 @@ const briefLoaded = args.includes("--brief-loaded");
 for (const c of cs.filter(c => c.status === "active")) {
   const eff = lib.effectiveMemories(c.memories); const fresh = c.compiledAt ? eff.filter(m => lib.newer(m.at, c.compiledAt)).length : eff.length;
   const state = lib.summaryState(c, busy);
-  console.log(`• ${c.title} (${c.slug}) · ${eff.length} memories · ${state}${loadedNow.includes(c.slug) ? (project ? " · loaded in this project" : " · loaded in this chat") : ""}${eff.length && !c.stale && !(briefLoaded && loadedNow.includes(c.slug)) ? `  ${c.summary.slice(0, 80)}` : ""}`);
+  console.log(`• ${c.title} (${c.slug}) · ${eff.length} memories · ${state}${loadedNow.includes(c.slug) ? `${project ? " · loaded in this project" : " · loaded in this chat"}${eff.length ? ` · ${lastNoteAgo(eff)}` : ""}` : ""}${eff.length && !c.stale && !(briefLoaded && loadedNow.includes(c.slug)) ? `  ${c.summary.slice(0, 80)}` : ""}`);
   if (c.rule && !(briefLoaded && loadedNow.includes(c.slug))) console.log(`  ${c.rule}`);
 }
 const archived = cs.filter(c => c.status !== "active");
 if (archived.length) console.log(`archived (searchable, not offered): ${archived.map(c => `${c.slug} (${lib.effectiveMemories(c.memories).length} memories)`).join(", ")}`);
+// a brain nobody saved to for more than a week says so once, here: status and the chat start both print this list
+{ const quiet = quietBrainLine(cs, at => lib.localDateTime(at).slice(0, 10)); if (quiet) console.log(quiet); }

@@ -1,0 +1,139 @@
+---
+/**
+ * docs/design.md, as it is: one source, nothing copied. Preview reads it as a document,
+ * with each `[fill: …]` line as a quiet chip; Raw shows the file an agent reads, to copy
+ * or download. Before the foundations are filled you see what is still to define; after,
+ * what the agent wrote.
+ */
+import DesignSystem from "../../../layouts/DesignSystem.astro";
+import Badge from "../../../components/ui/Badge.astro";
+import Icon from "../../../components/ui/Icon.astro";
+import { Copy, Download } from "@lucide/astro";
+import { compiledContent } from "../../../../docs/design.md";
+import raw from "../../../../docs/design.md?raw";
+
+const chip = (text: string) =>
+  `<span class="ds-fill">${text ? text.replace(/^:\s*/, "") : "to fill"}</span>`;
+const fill = /\[fill(:[^\]]*)?\]/g;
+let open = 0;
+const html = (await compiledContent())
+  .replace(/<h1[^>]*>.*?<\/h1>/, "") // the page has its own title
+  // `[fill: …]` quoted in code is the doc talking about itself, not a gap.
+  .split(/(<code>[\s\S]*?<\/code>)/)
+  .map((part) => (part.startsWith("<code>") ? part : part.replace(fill, (_, text = "") => (open++, chip(text)))))
+  .join("");
+const download = `data:text/markdown;charset=utf-8,${encodeURIComponent(raw)}`;
+const tab =
+  "h-8 rounded-sm px-3 text-small text-ink-3 transition-colors hover:text-ink-1 aria-pressed:bg-surface-1 aria-pressed:text-ink-1 focus-visible:text-ink-1 focus-visible:outline-none";
+const tool =
+  "inline-flex h-8 items-center gap-1.5 rounded-sm border border-line bg-surface-1 px-3 text-small text-ink-1 transition-colors hover:bg-surface-2 focus-visible:border-line-brand focus-visible:outline-none";
+---
+
+<DesignSystem
+  title="design.md"
+  lead="The contract: how to use the tokens, in the words an agent reads before it builds. Rendered from docs/design.md, so this page is the file."
+  file="docs/design.md"
+>
+  <section class="px-4 py-8 md:px-6 lg:px-12 lg:py-12">
+    <div data-doc class="mx-auto max-w-measure-lg overflow-hidden rounded-lg border border-line bg-surface-1">
+      <div class="flex flex-wrap items-center gap-3 border-b border-line bg-surface-2 px-3 py-2">
+        <div role="group" aria-label="View" class="flex gap-0.5 rounded-sm border border-line p-0.5">
+          <button type="button" data-view="preview" aria-pressed="true" class={tab}>Preview</button>
+          <button type="button" data-view="raw" aria-pressed="false" class={tab}>Raw</button>
+        </div>
+        {open > 0 && <Badge>{open} to fill</Badge>}
+        <div class="ml-auto flex gap-2">
+          <button type="button" data-copy class={tool}><Icon icon={Copy} size="sm" /><span data-copy-label>Copy</span></button>
+          <a href={download} download="design.md" class={tool}><Icon icon={Download} size="sm" />.md</a>
+        </div>
+      </div>
+      <article data-panel="preview" class="ds-doc px-6 py-10 md:px-12 md:py-12" set:html={html} />
+      <pre data-panel="raw" hidden class="ds-raw px-6 py-8 text-small text-ink-1 md:px-12"><code>{raw}</code></pre>
+    </div>
+  </section>
+</DesignSystem>
+
+<script is:inline define:vars={{ raw }}>
+  for (const doc of document.querySelectorAll("[data-doc]")) {
+    const show = (view) => {
+      for (const b of doc.querySelectorAll("[data-view]")) b.setAttribute("aria-pressed", String(b.dataset.view === view));
+      for (const p of doc.querySelectorAll("[data-panel]")) p.hidden = p.dataset.panel !== view;
+    };
+    for (const b of doc.querySelectorAll("[data-view]")) b.addEventListener("click", () => show(b.dataset.view));
+    const label = doc.querySelector("[data-copy-label]");
+    doc.querySelector("[data-copy]")?.addEventListener("click", async () => {
+      await navigator.clipboard.writeText(raw);
+      label.textContent = "Copied";
+      setTimeout(() => (label.textContent = "Copy"), 1600);
+    });
+  }
+</script>
+
+<style>
+  @reference "../../../styles/global.css";
+
+  /* One document: body copy in ink-2, a hairline only above each numbered section. */
+  .ds-doc {
+    @apply flex flex-col gap-4 text-regular text-ink-2;
+  }
+  .ds-doc :global(h2) {
+    @apply mt-8 border-t border-line pt-10 heading-h4 text-ink-1;
+  }
+  .ds-doc :global(h2:first-of-type) {
+    @apply mt-4;
+  }
+  .ds-doc :global(h3) {
+    @apply mt-2 heading-h5 text-ink-1;
+  }
+  .ds-doc :global(strong) {
+    @apply font-medium text-ink-1;
+  }
+  .ds-doc :global(a) {
+    @apply text-ink-1 underline decoration-line-2 underline-offset-4;
+  }
+  .ds-doc :global(ul),
+  .ds-doc :global(ol) {
+    @apply flex list-outside flex-col gap-2 pl-5;
+  }
+  .ds-doc :global(ul) {
+    @apply list-disc;
+  }
+  .ds-doc :global(ol) {
+    @apply list-decimal;
+  }
+  .ds-doc :global(li::marker) {
+    @apply text-ink-4;
+  }
+  .ds-doc :global(code) {
+    @apply rounded-sm bg-surface-2 px-1 py-0.5 text-small text-ink-1;
+  }
+  .ds-doc :global(pre) {
+    @apply overflow-x-auto rounded-sm bg-surface-2 p-5 text-small text-ink-1;
+  }
+  .ds-doc :global(pre code) {
+    @apply bg-transparent p-0;
+  }
+  .ds-doc :global(table) {
+    @apply block w-full overflow-x-auto text-small;
+  }
+  .ds-doc :global(th) {
+    @apply border-b border-line-2 py-2 pr-4 text-left font-medium text-ink-1;
+  }
+  .ds-doc :global(td) {
+    @apply border-b border-line py-2.5 pr-4 align-top;
+  }
+  /* A role or section name in the first column stays on one line. */
+  .ds-doc :global(td:first-child code) {
+    @apply whitespace-nowrap;
+  }
+  /* The next section brings its own hairline; the last row needs none. */
+  .ds-doc :global(tr:last-child td) {
+    @apply border-b-0;
+  }
+  .ds-doc :global(.ds-fill) {
+    @apply inline-block rounded-sm border border-dashed border-line-2 bg-surface-2 px-1.5 text-small text-ink-3;
+  }
+  .ds-raw {
+    @apply whitespace-pre-wrap break-words;
+  }
+</style>

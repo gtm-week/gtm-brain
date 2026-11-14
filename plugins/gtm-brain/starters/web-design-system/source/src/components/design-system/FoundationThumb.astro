@@ -1,0 +1,68 @@
+---
+/** The foundations' tiles on the overview: a glimpse of each, live from the tokens. */
+import { radii } from "./tokens";
+interface Props {
+  kind: string;
+}
+const { kind } = Astro.props;
+---
+
+{
+  kind === "colours" && (
+    <div class="flex gap-2">
+      <span class="size-10 rounded-full border border-line bg-surface-1" />
+      <span class="size-10 rounded-full bg-surface-3" />
+      <span class="size-10 rounded-full bg-surface-brand" />
+      <span class="size-10 rounded-full bg-surface-inverted-1" />
+    </div>
+  )
+}
+{
+  kind === "typography" && (
+    <p class="heading-h2 text-ink-1">
+      Aa <span class="text-ink-3">Aa</span>
+    </p>
+  )
+}
+{
+  kind === "radius" && (
+    <div class="flex items-center gap-4">
+      {radii.map((r) => <span class="size-12 border border-line-2 bg-surface-1" style={`border-radius: var(${r.token})`} />)}
+    </div>
+  )
+}
+{
+  kind === "breakpoints" && (
+    <div class="flex w-56 overflow-hidden rounded-sm border border-line text-small font-medium">
+      <span class="flex-3 bg-surface-1 px-2 py-2 text-ink-3">base</span>
+      <span class="flex-1 border-x border-line bg-surface-1 px-2 py-2 text-ink-3">md</span>
+      <span class="flex-2 bg-surface-inverted-1 px-2 py-2 text-ink-inverted">lg</span>
+    </div>
+  )
+}
+{
+  kind === "frame" && (
+    <div class="w-56 rounded-sm border border-line bg-surface-1 px-6 py-5">
+      <div class="h-14 rounded-sm border border-dashed border-line-2" />
+    </div>
+  )
+}
+{
+  kind === "design-md" && (
+    <div class="flex w-48 flex-col gap-2 rounded-sm border border-line bg-surface-1 p-4">
+      <span class="text-small font-medium text-ink-1">design.md</span>
+      <span class="h-1.5 w-full rounded-full bg-surface-3" />
+      <span class="h-1.5 w-4/5 rounded-full bg-surface-3" />
+      <span class="h-1.5 w-2/3 rounded-full border border-dashed border-line-2" />
+    </div>
+  )
+}
+{
+  kind === "app-icons" && (
+    <div class="flex items-end gap-4">
+      <img src="/favicon.svg" alt="" width="16" height="16" />
+      <img src="/favicon.svg" alt="" width="32" height="32" />
+      <img src="/favicon.svg" alt="" width="56" height="56" />
+    </div>
+  )
+}

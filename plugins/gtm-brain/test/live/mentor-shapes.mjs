@@ -17,7 +17,6 @@ import { resolve, join } from "node:path";
 const WRITES = ["remember", "new_context", "fork_context", "archive_context", "edit_context", "compile_apply", "guideline", "document", "skill", "update_entity", "merge_entities", "archive_entity", "add_name", "interact", "save"];
 const readOnly = c => (c.tool === "document" && ["list", "show", "files"].includes(c.arguments?.action)) || (["guideline", "skill"].includes(c.tool) && ["list", "show"].includes(c.arguments?.action));
 export const noWrites = calls => !calls.some(c => WRITES.includes(c.tool) && !readOnly(c));
-const asks = c => ["question", "configuration_question", "onboarding_question"].includes(c.tool);
 const unchanged = (root, { before, after }) => JSON.stringify(before) === JSON.stringify(after);
 const reads = calls => calls.some(c => ["query", "recall", "who_is", "load_context", "describe_object", "list_objects"].includes(c.tool));
 
@@ -56,12 +55,16 @@ const salient = text => (text.match(/[A-Za-z][\w'-]{4,}/g) || []).sort((a, b) =>
 const escape = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const mentions = (text, words) => words.filter(w => new RegExp(escape(w), "i").test(text)).length;
 
-// an interview skill on any brain: it starts with one focused question and writes nothing yet
+// an interview skill on any brain: it starts with one focused question and writes nothing yet.
+// GTM Brain has had no question tool of its own since 0.34 (7ed4f4d), and codex exec has no question
+// box, so the question is plain chat text that ends the turn: it is checked in the final message
+// (wording), never as a tool call. Requiring a question tool call here failed every interview case.
 const interview = (skill, prompt) => ({
   name: `mentor-${skill.replace(/^gtm-brain-/, "")}`, workflow: skill, judge: "advisory", answer: "later|stop|not now",
-  prompt: `/${skill} ${prompt} Ask only your first focused question through the question form, then stop this turn. Do not save anything and do not research the web yet.`,
-  calls: calls => noWrites(calls) && calls.some(asks),
+  prompt: `/${skill} ${prompt} Ask only your first focused question, then stop this turn. Do not save anything and do not research the web yet.`,
+  calls: calls => noWrites(calls),
   verify: unchanged,
+  responseCheck: text => /\?/.test(text),
   expect: "The skill starts its intake: it reuses what the brain already holds and asks one focused question. Nothing is written, no web research is run, no tool is claimed as checked.",
 });
 

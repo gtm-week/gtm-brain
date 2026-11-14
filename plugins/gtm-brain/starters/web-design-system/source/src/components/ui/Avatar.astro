@@ -1,0 +1,54 @@
+---
+/** A person: their photo, or their initials when there is none. */
+import type { ImageMetadata } from "astro";
+import { Image } from "astro:assets";
+
+interface Props {
+  name: string;
+  src?: ImageMetadata | string;
+  size?: "sm" | "md" | "lg";
+  class?: string;
+}
+const { name, src, size = "md", class: className } = Astro.props;
+
+const sizes = {
+  sm: { class: "size-8 text-small", px: 32 },
+  md: { class: "size-10 text-small", px: 40 },
+  lg: { class: "size-14 text-regular", px: 56 },
+} as const;
+const initials = name
+  .split(/\s+/)
+  .map((word) => word[0])
+  .slice(0, 2)
+  .join("")
+  .toUpperCase();
+const classes = ["shrink-0 rounded-full", sizes[size].class, className];
+---
+
+{
+  !src ? (
+    <span
+      aria-label={name}
+      role="img"
+      class:list={[classes, "inline-grid place-items-center bg-surface-3 font-medium text-ink-2"]}
+    >
+      {initials}
+    </span>
+  ) : typeof src === "string" ? (
+    <img
+      src={src}
+      alt={name}
+      width={sizes[size].px}
+      height={sizes[size].px}
+      class:list={[classes, "object-cover"]}
+    />
+  ) : (
+    <Image
+      src={src}
+      alt={name}
+      width={sizes[size].px * 2}
+      height={sizes[size].px * 2}
+      class:list={[classes, "object-cover"]}
+    />
+  )
+}

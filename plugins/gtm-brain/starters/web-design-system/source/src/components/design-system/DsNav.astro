@@ -1,0 +1,60 @@
+---
+/**
+ * The sidebar: every group from nav.ts as a fold that opens on click, the current page's
+ * group open and the page marked. Components and Sections start with their "All"
+ * page, so Sections is listed even while it is empty.
+ */
+import Icon from "../ui/Icon.astro";
+import { ChevronDown } from "@lucide/astro";
+import { groups, groupOf } from "./nav";
+
+interface Props {
+  current: string;
+}
+const { current } = Astro.props;
+/* The overview opens Foundations, where the work starts. */
+const open = groupOf(current)?.key ?? "foundations";
+const link =
+  "block rounded-sm px-3 py-1.5 text-small text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink-1 focus-visible:bg-surface-2 focus-visible:outline-none aria-[current=page]:bg-surface-3 aria-[current=page]:text-ink-1";
+const label = "px-3 tagline text-ink-3";
+---
+
+<nav aria-label="Design system" class="flex flex-col gap-6 px-3 py-8">
+  <div class="flex flex-col gap-2">
+    <p class={label}>Overview</p>
+    <a href="/design-system" aria-current={current === "/design-system" ? "page" : undefined} class={link}>
+      Introduction
+    </a>
+  </div>
+
+  {
+    groups.map((group) => (
+      <details open={group.key === open || undefined} class="group/fold">
+        <summary class="flex list-none items-center justify-between rounded-sm py-1 pr-2 transition-colors hover:bg-surface-2 focus-visible:bg-surface-2 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+          <span class={label}>{group.label}</span>
+          <Icon
+            icon={ChevronDown}
+            size="sm"
+            class="text-ink-3 transition-transform group-open/fold:rotate-180"
+          />
+        </summary>
+        <ul class="mt-2 flex flex-col">
+          {group.all && (
+            <li>
+              <a href={group.href} aria-current={current === group.href ? "page" : undefined} class={link}>
+                All {group.label.toLowerCase()}
+              </a>
+            </li>
+          )}
+          {group.items.map((item) => (
+            <li>
+              <a href={item.href} aria-current={current === item.href ? "page" : undefined} class={link}>
+                {item.name}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </details>
+    ))
+  }
+</nav>

@@ -2,6 +2,8 @@
 # and the reference workshop kit. Not tracked.
 gtm-week-context/
 docs/
+!plugins/gtm-brain/starters/web-design-system/source/docs/
+!plugins/gtm-brain/starters/web-design-system/source/docs/**
 
 # Arthur's reference kit keeps its own work/ convention
 reference/gtm-week-workshop/work/*

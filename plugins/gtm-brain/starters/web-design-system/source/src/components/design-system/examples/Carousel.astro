@@ -1,0 +1,49 @@
+---
+import DsBlock from "../DsBlock.astro";
+import DsStage from "../DsStage.astro";
+import DsProps from "../DsProps.astro";
+import Carousel from "../../ui/Carousel.astro";
+import Card from "../../ui/Card.astro";
+import Heading from "../../ui/Heading.astro";
+import ArrowButton from "../../ui/ArrowButton.astro";
+import { CreditCard, Receipt, Plane, ChartLine, ShieldCheck, Zap } from "@lucide/astro";
+
+interface Props {
+  /** A small preview for the overview grid. */
+  thumb?: boolean;
+}
+const { thumb = false } = Astro.props;
+const cards = [CreditCard, Receipt, Plane, ChartLine, ShieldCheck, Zap].map((icon, i) => ({ icon, title: `Card ${i + 1}` }));
+---
+
+{
+  thumb ? (
+    <div class="flex items-center gap-3">
+      <span class="h-20 w-16 rounded-sm border border-line bg-surface-1" />
+      <span class="h-20 w-16 rounded-sm border border-line bg-surface-1" />
+      <span class="h-20 w-8 rounded-l-sm border-y border-l border-line bg-surface-1" />
+      <span class="ml-2 flex gap-2"><ArrowButton label="Previous" direction="left" decorative /><ArrowButton label="Next" decorative /></span>
+    </div>
+  ) : (
+    <>
+      <DsBlock
+        title="A row and its arrows"
+        description="The row runs past the column to the edges of its band (here, the stage), so the next card shows instead of being cut. Scroll, swipe, or use the arrows (from 1024): each step is one card; an arrow with nothing left on its side turns off."
+      >
+        <DsStage layout="bleed">
+          <div class="p-6 md:p-10">
+            <Carousel label="Stand-in cards">
+              <Heading slot="header" level={3} size="h4">A header beside the arrows</Heading>
+              {cards.map((card) => (
+                <div class="w-72"><Card icon={card.icon} title={card.title} text="One sentence on what this is." /></div>
+              ))}
+            </Carousel>
+          </div>
+        </DsStage>
+      </DsBlock>
+      <DsBlock title="Props" description="Each item gives itself its width; the header goes in the header slot.">
+        <DsProps of="components/ui/Carousel" />
+      </DsBlock>
+    </>
+  )
+}

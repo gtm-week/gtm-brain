@@ -156,6 +156,20 @@ If `brain/` does not exist yet, create it now with the `setup_brain` tool and th
 values (company, one line, owner), defaults for the rest; never run the setup script yourself. Context rules and the dashboard setting are point-of-need questions for later
 sessions, not part of discovery.
 
+**Where big files go: the one question before the draft.** The opening lines and
+`check_environment` say `Big files: answered` or `not asked yet`; when answered, do not ask. Else
+ask once, following [questions](questions.md), with the reason in one line: "Git cannot keep
+recordings or files over 25 MB, so they need one home and the brain keeps a link to it."
+Choices, recommended first: "Google Drive, shared with the team", "This computer only". Save the
+answer at once with `remember` in the onboarding context, kind `note`, content exactly
+`Big files: google-drive.` or `Big files: local.`, tags `onboarding` and `big-files`, source
+`user:<handle>`. Google Drive changes nothing in the draft (a new brain already says
+`big_files: google-drive`) and puts Google Drive among the Step 2 candidates when it is not
+connected. This computer puts `big_files: local` in the draft below, plus `big_files_folder:`
+only when the person named a folder, so the same APPROVE covers it. A skip saves nothing: the
+default stays and the question comes once more with the first big file. What happens with each
+file later is [big files](../../gtm-brain-use-brain/references/big-files.md).
+
 Show the drafted workplace info and all proposed changes in plain language, without raw file diffs, and invite corrections
 like this:
 

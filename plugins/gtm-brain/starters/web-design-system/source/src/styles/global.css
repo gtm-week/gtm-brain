@@ -1,0 +1,350 @@
+@import "tailwindcss";
+
+/* Prose is not source: a class named in a doc would ship in every page's stylesheet. */
+@source not "../../README.md";
+@source not "../../AGENTS.md";
+@source not "../../CLAUDE.md";
+@source not "../../docs";
+@source not "../../.agents";
+@source not "../../.claude";
+@source not "../../scripts";
+
+/* The design system's values, in two layers. docs/design.md says how to use them.
+   1. Primitives: the paint in the tin. Raw values in `:root`, outside `@theme`,
+      so no utility exists for them and markup cannot reach them.
+   2. Roles (`@theme`): what a value is for. Components use roles only.
+   The starter's values are neutral greys on purpose: replace them with your
+   brand's, keep the names. */
+
+/* Fonts are files in the repo, never a CDN. Inter (OFL, src/assets/fonts/OFL.txt). */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../assets/fonts/inter-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../assets/fonts/inter-latin-ext-wght-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* Primitives. Outside `@theme` on purpose. */
+:root {
+  --site-white: #ffffff;
+  --site-neutral-50: #fafafa;
+  --site-neutral-100: #f4f4f5;
+  --site-neutral-200: #e4e4e7;
+  --site-neutral-300: #d4d4d8;
+  --site-neutral-400: #a1a1aa;
+  --site-neutral-500: #71717a;
+  --site-neutral-600: #52525b;
+  --site-neutral-700: #3f3f46;
+  --site-neutral-800: #27272a;
+  --site-neutral-900: #18181b;
+  /* The brand colour. Grey until your foundations are filled. */
+  --site-brand: #d4d4d8;
+  /* A second colour, if the brand has one (a chart's bars, a tag). Optional: grey until then.
+     An extra hue becomes its own steps (`--site-blue-500`) and the accent roles point at them. */
+  --site-accent: #a1a1aa;
+  --site-accent-subtle: #e4e4e7;
+  --site-red: #dc2626;
+}
+
+/* `static`: every role is emitted, so the preview can paint any of them. */
+@theme static {
+  /* Tailwind's default scales off: `text-gray-500`, `rounded-xl`, `shadow-lg`, `sm:`
+     do not exist and render nothing. Spacing stays: a ladder, not a decision. */
+  --color-*: initial;
+  --font-*: initial;
+  --font-weight-*: initial;
+  --text-*: initial;
+  --leading-*: initial;
+  --tracking-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
+  --text-shadow-*: initial;
+  --breakpoint-*: initial;
+  --container-*: initial;
+
+  --color-transparent: transparent;
+  --color-current: currentcolor;
+
+  /* Two families: body and headings. Equal until the brand says otherwise. */
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-heading: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Two weights. */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+
+  /* Mobile first, two breakpoints. Media queries below repeat the numbers. */
+  --breakpoint-md: 48rem; /* 768 */
+  --breakpoint-lg: 64rem; /* 1024 */
+
+  /* One family per CSS property. The comment after a role is shown on /design-system. */
+
+  /* Ink: text and icons, from the loudest. */
+  --color-ink-1: var(--site-neutral-900); /* headings, links */
+  --color-ink-2: var(--site-neutral-700); /* body copy */
+  --color-ink-3: var(--site-neutral-500); /* captions, labels, the grey half of a two-tone heading */
+  --color-ink-4: var(--site-neutral-400); /* placeholder, a logo at rest */
+  --color-ink-inverted: var(--site-white); /* on surface-inverted-1 */
+  --color-ink-brand: var(--site-neutral-600); /* the brand colour as text */
+  --color-ink-on-brand: var(--site-neutral-900); /* text on surface-brand */
+
+  /* Surface: backgrounds, from the page outwards. */
+  --color-surface-1: var(--site-white); /* the page */
+  --color-surface-2: var(--site-neutral-100); /* a muted band, a card */
+  --color-surface-3: var(--site-neutral-200); /* a card on a muted band, an icon tile */
+  --color-surface-inverted-1: var(--site-neutral-900); /* a dark band, the black button */
+  --color-surface-brand: var(--site-brand); /* the main action */
+
+  /* Accent: the brand's second colour, optional. Never on the main action. */
+  --color-ink-accent: var(--site-accent); /* the second colour as text or an icon */
+  --color-ink-on-accent: var(--site-white); /* text on surface-accent */
+  --color-surface-accent: var(--site-accent); /* a bar, a tag, a highlight */
+  --color-surface-accent-subtle: var(--site-accent-subtle); /* its track or tint */
+
+  /* Line: borders. */
+  --color-line: var(--site-neutral-200); /* every hairline */
+  --color-line-2: var(--site-neutral-300); /* an input, a frame, the scrollbar */
+  --color-line-brand: var(--site-neutral-900); /* the border of whatever has focus */
+
+  /* Form errors: text and border. */
+  --color-danger: var(--site-red); /* a field's error */
+
+  /* The corners the site uses, smallest first; the comment is shown on /design-system. Names
+     and count follow the site (add `md`, drop `lg`), and every component's class with them. */
+  --radius-sm: 6px; /* the whole UI: buttons, cards, fields */
+  --radius-lg: 12px; /* a large panel */
+  --radius-full: 9999px; /* pills, avatars, the arrow button */
+
+  /* The column (1440 minus two 32px gutters) and reading widths. */
+  --container-frame: 86rem;
+  --container-measure-sm: 22.5rem; /* copy in a card */
+  --container-measure-md: 32rem; /* a lead next to a heading */
+  --container-measure-lg: 45rem; /* a centred lead */
+
+  /* Motion: every hover, focus and state change eases over this, unless a class says
+     otherwise. One place to make the whole site calmer or snappier. */
+  --default-transition-duration: 300ms;
+  --default-transition-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+/* A dark band (`<Section tone="inverted">`) re-points the roles inside it, so every
+   component works on it unchanged: ink-1 turns light, the black button turns white. */
+[data-tone="inverted"] {
+  --color-ink-1: var(--site-white);
+  --color-ink-2: var(--site-neutral-300);
+  --color-ink-3: var(--site-neutral-400);
+  --color-ink-4: var(--site-neutral-500);
+  --color-ink-inverted: var(--site-neutral-900);
+  --color-surface-1: var(--site-neutral-900);
+  --color-surface-2: var(--site-neutral-800);
+  --color-surface-3: var(--site-neutral-700);
+  --color-surface-inverted-1: var(--site-white);
+  --color-line: var(--site-neutral-800);
+  --color-line-2: var(--site-neutral-600);
+  --color-line-brand: var(--site-white);
+}
+
+/* Heading sizes per tier: mobile, then 768 (md), then 1024 (lg). The queries repeat
+   48rem and 64rem because a media query cannot read a token. */
+:root {
+  --text-h1: 2.5rem;
+  --text-h2: 2rem;
+  --text-h3: 1.75rem;
+  --text-h4: 1.375rem;
+  --text-h5: 1.125rem;
+  --text-h6: 1rem;
+}
+@media (min-width: 48rem) {
+  :root {
+    --text-h1: 3.5rem;
+    --text-h2: 2.5rem;
+    --text-h3: 2rem;
+    --text-h4: 1.5rem;
+    --text-h5: 1.25rem;
+    --text-h6: 1.125rem;
+  }
+}
+@media (min-width: 64rem) {
+  :root {
+    --text-h1: 4rem;
+    --text-h2: 3rem;
+    --text-h3: 2.25rem;
+    --text-h4: 1.75rem;
+    --text-h5: 1.25rem;
+    --text-h6: 1.125rem;
+  }
+}
+
+/* The design-system page shows hover and focus without a pointer: `data-state="hover"`
+   or `"focus"` on an element turns on the same classes. */
+@custom-variant hover {
+  @media (hover: hover) {
+    &:hover {
+      @slot;
+    }
+  }
+  &[data-state~="hover"] {
+    @slot;
+  }
+}
+@custom-variant focus-visible (&:focus-visible, &[data-state~="focus"]);
+
+@layer base {
+  html {
+    background-color: var(--color-surface-1);
+    -webkit-text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* A plain `<p>` needs no class. */
+  body {
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.5;
+    font-weight: var(--font-weight-normal);
+    color: var(--color-ink-1);
+    background-color: var(--color-surface-1);
+  }
+
+  :where(h1, h2, h3, h4, h5, h6) {
+    text-wrap: balance;
+  }
+  :where(p) {
+    text-wrap: pretty;
+  }
+
+  /* One scrollbar everywhere: thin, its thumb in line-2 (re-pointed on a dark band), no
+     track. A brand that wants its colour here changes line-2 or this rule, nothing else. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line-2) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: var(--radius-full);
+    background: var(--color-line-2) padding-box;
+  }
+
+  button:not(:disabled),
+  summary,
+  [role="button"] {
+    cursor: pointer;
+  }
+
+  /* Focus changes a border to line-brand: each component does it with
+     `focus-visible:border-line-brand focus-visible:outline-none`. Anything without a
+     border of its own falls back to this hairline, so nothing loses its focus. */
+  :focus-visible,
+  [data-state~="focus"] {
+    outline: 1px solid var(--color-line-brand);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      transition-duration: 0s !important;
+    }
+  }
+}
+
+/* Headings: one class carries every tier. Tag is not style: `<h2 class="heading-h3">`. */
+@utility heading-h1 {
+  font-family: var(--font-heading);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--text-h1);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+@utility heading-h2 {
+  font-family: var(--font-heading);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--text-h2);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+}
+@utility heading-h3 {
+  font-family: var(--font-heading);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--text-h3);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+@utility heading-h4 {
+  font-family: var(--font-heading);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--text-h4);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+@utility heading-h5 {
+  font-family: var(--font-heading);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--text-h5);
+  line-height: 1.3;
+}
+@utility heading-h6 {
+  font-family: var(--font-heading);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--text-h6);
+  line-height: 1.4;
+}
+
+/* Body: size only; weight is its own class (`font-medium`). On a phone every
+   paragraph reads at 16: the two loud sizes start at md. */
+@utility text-small {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+@utility text-regular {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+@utility text-medium {
+  font-size: 1rem;
+  line-height: 1.5;
+  @media (min-width: 48rem) {
+    font-size: 1.125rem;
+  }
+}
+@utility text-large {
+  font-size: 1.125rem;
+  line-height: 1.5;
+  @media (min-width: 48rem) {
+    font-size: 1.25rem;
+  }
+}
+
+/* The small label over a heading. Copy is written in normal case; the capitals are style. */
+@utility tagline {
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-medium);
+  font-size: 0.75rem;
+  line-height: 1.3;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}

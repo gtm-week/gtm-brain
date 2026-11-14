@@ -1,0 +1,38 @@
+---
+import DsBlock from "../DsBlock.astro";
+import DsStage from "../DsStage.astro";
+import DsState from "../DsState.astro";
+import DsProps from "../DsProps.astro";
+import Chip from "../../ui/Chip.astro";
+
+interface Props {
+  /** A small preview for the overview grid. */
+  thumb?: boolean;
+}
+const { thumb = false } = Astro.props;
+---
+
+{
+  thumb ? (
+    <div class="flex flex-wrap justify-center gap-2"><Chip>Category</Chip><Chip>Topic</Chip><Chip href="#" selected>All</Chip></div>
+  ) : (
+    <>
+      <DsBlock title="Tags" description="sm on a card, md in a row of their own. Write the label in normal case.">
+        <DsStage>
+          <Chip>Category</Chip>
+          <Chip>Another</Chip>
+          <Chip size="md">A larger one</Chip>
+        </DsStage>
+      </DsBlock>
+      <DsBlock title="A filter" description="With href each is a link; selected marks the chosen one.">
+        <DsStage layout="states" cols={4}>
+          <DsState label="selected"><Chip href="#" size="md" selected>All</Chip></DsState>
+          <DsState label="default"><Chip href="#" size="md">Topic</Chip></DsState>
+          <DsState label="hover"><Chip href="#" size="md" data-state="hover">Topic</Chip></DsState>
+          <DsState label="focus"><Chip href="#" size="md" data-state="focus">Topic</Chip></DsState>
+        </DsStage>
+      </DsBlock>
+      <DsBlock title="Props"><DsProps of="components/ui/Chip" /></DsBlock>
+    </>
+  )
+}

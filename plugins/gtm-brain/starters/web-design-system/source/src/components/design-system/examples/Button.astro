@@ -1,0 +1,55 @@
+---
+import DsBlock from "../DsBlock.astro";
+import DsStage from "../DsStage.astro";
+import DsState from "../DsState.astro";
+import DsProps from "../DsProps.astro";
+import Button from "../../ui/Button.astro";
+import { ArrowRight } from "@lucide/astro";
+
+interface Props {
+  /** A small preview for the overview grid. */
+  thumb?: boolean;
+}
+const { thumb = false } = Astro.props;
+const variants = ["primary", "secondary", "ghost"] as const;
+---
+
+{
+  thumb ? (
+    <div class="flex gap-2"><Button size="sm">Primary</Button><Button size="sm" variant="secondary">Secondary</Button></div>
+  ) : (
+    <>
+      <DsBlock title="Variants" description="primary for the main action, one per view; secondary for the second; ghost for the quiet one.">
+        <DsStage>
+          <Button>Get started</Button>
+          <Button variant="secondary">See a demo</Button>
+          <Button variant="ghost">Learn more</Button>
+        </DsStage>
+      </DsBlock>
+      <DsBlock title="Sizes" description="sm · md · lg. md is the default and matches a field's height.">
+        <DsStage>
+          <Button size="sm">Get started</Button>
+          <Button>Get started</Button>
+          <Button size="lg">Get started</Button>
+        </DsStage>
+      </DsBlock>
+      <DsBlock title="With an icon" description="An icon after the label, from Lucide.">
+        <DsStage>
+          <Button icon={ArrowRight}>Get started</Button>
+          <Button variant="secondary" icon={ArrowRight}>See a demo</Button>
+        </DsStage>
+      </DsBlock>
+      <DsBlock title="States" description="Default, hover, focus (keyboard), disabled.">
+        {variants.map((variant) => (
+          <DsStage layout="states">
+            <DsState label={variant}><Button variant={variant}>Get started</Button></DsState>
+            <DsState label="hover"><Button variant={variant} data-state="hover">Get started</Button></DsState>
+            <DsState label="focus"><Button variant={variant} data-state="focus">Get started</Button></DsState>
+            <DsState label="disabled"><Button variant={variant} disabled>Get started</Button></DsState>
+          </DsStage>
+        ))}
+      </DsBlock>
+      <DsBlock title="Props"><DsProps of="components/ui/Button" /></DsBlock>
+    </>
+  )
+}

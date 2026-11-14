@@ -1,0 +1,14 @@
+---
+/** One number and what it counts ("85,000+ companies"). */
+interface Props {
+  value: string;
+  label: string;
+  class?: string;
+}
+const { value, label, class: className } = Astro.props;
+---
+
+<div class:list={["flex flex-col gap-1 border-t border-line pt-4", className]}>
+  <span class="heading-h2 text-ink-1">{value}</span>
+  <span class="text-small text-ink-3">{label}</span>
+</div>

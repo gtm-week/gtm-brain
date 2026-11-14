@@ -1,0 +1,32 @@
+---
+/**
+ * The band: one full-width strip and its background. Put a Container inside.
+ * `inverted` is a dark band: it re-points the roles (global.css), so every component
+ * inside works unchanged. The band is a size container: a carousel measures it to run
+ * to the band's edges.
+ */
+interface Props {
+  tone?: "default" | "muted" | "inverted";
+  id?: string;
+  /** Names the landmark when the band has no visible heading. */
+  label?: string;
+  as?: "section" | "div" | "header" | "footer";
+  class?: string;
+}
+const { tone = "default", id, label, as: Tag = "section", class: className } = Astro.props;
+
+const tones = {
+  default: "bg-surface-1",
+  muted: "bg-surface-2",
+  inverted: "bg-surface-1",
+} as const;
+---
+
+<Tag
+  id={id}
+  aria-label={label}
+  data-tone={tone === "inverted" ? "inverted" : undefined}
+  class:list={[tones[tone], "@container text-ink-1", className]}
+>
+  <slot />
+</Tag>

@@ -20,10 +20,15 @@ Keep authored brain content in English. Preserve names, source quotes and the ex
 
 Call `query` (status) first: a chat's first GTM Brain call runs the chat start, which writes
 RULES.md when it is missing and merges an older WHERE.md into it. Then read `RULES.md` at the
-brain root. It has two sections:
+brain root. It has three sections:
 
 - `## Where things go`: a table, `| What | Where |`, one row per kind of file. The chat start
   numbers the rows, and saves cite them ("RULES.md row 5").
+- `## Ask the source`: a table, `| Question about | Ask | Brain answer is good for |`: which tool
+  knows better than a saved note (CRM, calendar, email, a tool by name, or the brain) and how old
+  a note may be ("1 day", "2 weeks", "always ask", "no limit"). A row applies only when its tool
+  is connected. A file without this section (edited before 0.35.0) follows the shipped rows; when
+  showing the rules, say so and offer to add the section with those rows.
 - `## Our rules`: one line per rule for what Codex saves and asks, in the person's words. They
   come after the shared saving rules and win where they differ (R1).
 
@@ -35,6 +40,9 @@ one line that the person can add, change or remove any of them. Nothing else.
 **Add** ("from now on, pricing notes go to Our offer", "speaker graphics go in speakers/"):
 - About where a file goes: a new table row, or a change to the row that already covers it.
   Look first; never two rows for one kind of file.
+- About which tool answers a question, or how old a note may be ("check HubSpot for deal
+  stage", "event registrations: ask Luma"): a row in `## Ask the source`, or a change to the
+  row that covers it.
 - About what Codex saves or asks: one line at the end of `## Our rules`.
 - Use the person's own words. When the sentence is plain, write it without asking. When it is
   unclear which row, which context or which kind of rule it is, ask once (Q1, Q2), with the
@@ -43,7 +51,7 @@ one line that the person can add, change or remove any of them. Nothing else.
 **Change or remove**: find the row or line they mean. With more than one candidate, ask which,
 quoting each. Removing a table row renumbers the rows after it; say so in one clause.
 
-Edit `RULES.md` with the shell, keeping its shape: the table stays one block of `|` lines
+Edit `RULES.md` with the shell, keeping its shape: each table stays one block of `|` lines
 directly under its header, and `## Our rules` stays the last section. Never touch the shipped
 intro text above a section unless the person asks.
 

@@ -1,0 +1,81 @@
+---
+/**
+ * The site's header: the logo, a few links and the main action. Below lg the links fold
+ * into a menu button that opens them under the bar; the action stays in the bar at every width. Sticky on surface-1 with a hairline.
+ * The logo is the site's name in text until you put your mark in src/assets/brand/.
+ * The links live in src/data/navigation.ts; a page can pass others.
+ */
+import Button from "../ui/Button.astro";
+import Icon from "../ui/Icon.astro";
+import { Menu, X } from "@lucide/astro";
+import { SITE_NAME } from "../../../site.config.mjs";
+import { navbar } from "../../data/navigation";
+
+export interface NavLink {
+  label: string;
+  href: string;
+}
+
+interface Props {
+  links?: NavLink[];
+  /** The one action in the bar, a primary button. */
+  action?: NavLink;
+}
+const { links = navbar.links, action = navbar.action } = Astro.props;
+const here = Astro.url.pathname;
+const link =
+  "rounded-sm text-small text-ink-2 transition-colors hover:text-ink-1 focus-visible:text-ink-1 focus-visible:outline-none aria-[current=page]:text-ink-1";
+---
+
+<header data-navbar class="sticky top-0 z-40 border-b border-line bg-surface-1">
+  <div class="px-4 md:px-8">
+    <div class="mx-auto flex h-16 w-full max-w-frame items-center gap-8">
+      <a href="/" class="mr-auto text-regular font-medium text-ink-1">{SITE_NAME}</a>
+      <nav aria-label="Main" class="hidden items-center gap-8 lg:flex">
+        {
+          links.map((item) => (
+            <a href={item.href} aria-current={item.href === here ? "page" : undefined} class={link}>
+              {item.label}
+            </a>
+          ))
+        }
+      </nav>
+      <Button href={action.href} size="sm">{action.label}</Button>
+      <button
+        type="button"
+        data-navbar-toggle
+        aria-expanded="false"
+        aria-controls="navbar-menu"
+        class="grid size-10 place-items-center rounded-sm border border-transparent text-ink-1 transition-colors hover:bg-surface-2 focus-visible:border-line-brand focus-visible:outline-none lg:hidden"
+      >
+        <span data-icon-open><Icon icon={Menu} label="Open the menu" /></span>
+        <span data-icon-close class="hidden"><Icon icon={X} label="Close the menu" /></span>
+      </button>
+    </div>
+  </div>
+  <div id="navbar-menu" hidden class="border-t border-line px-4 pt-4 pb-6 md:px-8 lg:hidden">
+    <nav aria-label="Main" class="flex flex-col">
+      {
+        links.map((item) => (
+          <a href={item.href} class="border-b border-line py-3 text-large text-ink-1 transition-colors hover:text-ink-2 focus-visible:text-ink-2 focus-visible:outline-none">
+            {item.label}
+          </a>
+        ))
+      }
+    </nav>
+  </div>
+</header>
+
+<script>
+  for (const bar of document.querySelectorAll<HTMLElement>("[data-navbar]")) {
+    const toggle = bar.querySelector<HTMLButtonElement>("[data-navbar-toggle]");
+    const menu = bar.querySelector<HTMLElement>("#navbar-menu");
+    toggle?.addEventListener("click", () => {
+      const open = toggle.getAttribute("aria-expanded") !== "true";
+      toggle.setAttribute("aria-expanded", String(open));
+      if (menu) menu.hidden = !open;
+      bar.querySelector("[data-icon-open]")?.classList.toggle("hidden", open);
+      bar.querySelector("[data-icon-close]")?.classList.toggle("hidden", !open);
+    });
+  }
+</script>

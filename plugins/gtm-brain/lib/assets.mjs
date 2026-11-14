@@ -2,7 +2,7 @@
 // uploads, deletes or searches for files. The one copy it makes: a file attached from work/ (this
 // computer's, gitignored, a task's scratch) goes to its owner's folder first, so the approved file
 // travels with the brain and outlives the task (Artur, 2026-11-10: his portrait in a Berlin package).
-import { readFileSync, writeFileSync, mkdirSync, realpathSync, statSync, existsSync, copyFileSync, unlinkSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, realpathSync, statSync, existsSync, copyFileSync, unlinkSync, openSync, readSync, closeSync } from 'node:fs';
 import { resolve, relative, isAbsolute, join, extname, basename, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import * as lib from './brain.mjs';
@@ -132,6 +132,40 @@ export function assetsLine(root, rows = assetRows(root)) {
   const shown = approved.slice(0, MAX_LINE_ASSETS).map(a => `  ${a.entity} · ${a.role}: ${where(a)}${a.ambiguous ? ' (two approved for this role: ask which one)' : ''}`);
   const more = approved.length > MAX_LINE_ASSETS ? `\n  and ${approved.length - MAX_LINE_ASSETS} more (query attachments)` : '';
   return `Approved files (the person's photo, the company's logo): use exactly these, never a copy in a task folder or a package's own list. When the person says use another one, attach it as approved for the same role at once; it replaces the old one. They see and change them on the person's or company's page of the dashboard.\n${shown.join('\n')}${more}`;
+}
+/* big_files: local. The copy of one big file (a recording, or over lib.LARGE_FILE_MB) in the big-files folder on this
+   computer, outside the brain and so outside git, under a free name; the same bytes already there are reused. The
+   copy is read back and compared before the pointer is returned, so the person is only offered to delete the
+   original once a verified copy exists. The original is never touched here. */
+// Two files compared a megabyte at a time: a recording can be larger than a Buffer.
+function sameBytes(a, b) {
+  const fa = openSync(a, 'r'), fb = openSync(b, 'r'), ba = Buffer.alloc(1 << 20), bb = Buffer.alloc(1 << 20);
+  try {
+    for (;;) {
+      const na = readSync(fa, ba, 0, ba.length, null), nb = readSync(fb, bb, 0, bb.length, null);
+      if (na !== nb || !ba.subarray(0, na).equals(bb.subarray(0, nb))) return false;
+      if (na === 0) return true;
+    }
+  } finally { closeSync(fa); closeSync(fb); }
+}
+export function placeBigFile(root, source) {
+  const { mode, folder } = lib.bigFiles(root);
+  if (mode !== 'local') throw new Error('This brain keeps big files on Google Drive (big_files: google-drive): upload it with the Drive connector, then pass its link with --drive.');
+  let real; try { real = realpathSync(source); } catch { throw new Error(`no file at ${source}`); }
+  if (!statSync(real).isFile()) throw new Error('Place a file, not a folder.');
+  mkdirSync(folder, { recursive: true });
+  const dir = realpathSync(folder), home = realpathSync(root);
+  // Checked before any byte is copied: a folder that resolves into the brain (a link, another spelling of the path) would put the file in git's reach.
+  if (dir === home || within(home, dir)) throw new Error(`the big-files folder ${folder} is inside the brain, so git would keep the file: name a folder outside it (big_files_folder in brain/admin.md)`);
+  if (within(dir, real)) return { path: real, copied: false, pointer: lib.bigFilePointer('local', { path: real }, { root: realpathSync(root), folder: dir }) };
+  const ext = extname(real), stem = basename(real, ext), size = statSync(real).size;
+  const same = p => existsSync(p) && statSync(p).size === size && sameBytes(p, real);
+  let name = `${stem}${ext}`, n = 1;
+  while (existsSync(join(dir, name)) && !same(join(dir, name))) name = `${stem}-${++n}${ext}`;
+  const target = join(dir, name), had = same(target);
+  if (!had) copyFileSync(real, target);
+  if (!same(target)) throw new Error(`the copy at ${target} does not match ${real}; the original is untouched`);
+  return { path: target, copied: !had, pointer: lib.bigFilePointer('local', { path: target }, { root: realpathSync(root), folder: dir }) };
 }
 export const assetMime = path => ({ '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml' })[extname(path).toLowerCase()] || null;
 

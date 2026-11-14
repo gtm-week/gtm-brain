@@ -1,0 +1,22 @@
+---
+/** One variant of a section alone: what its frame on the section's page loads. */
+import Base from "../../../../../layouts/Base.astro";
+import { sectionList } from "../../../../../sections";
+
+export const getStaticPaths = () =>
+  sectionList.flatMap((entry) =>
+    Object.entries(entry.variants ?? {}).map(([variant, props]) => ({
+      params: { name: entry.name, variant },
+      props: { entry, variant, props },
+    })),
+  );
+
+const { entry, variant, props } = Astro.props;
+const Component = entry.component;
+---
+
+<Base title={`${entry.title}, ${variant} · Preview`} description={`The ${entry.title} section, ${variant}.`} noindex>
+  <main>
+    <Component {...props} />
+  </main>
+</Base>

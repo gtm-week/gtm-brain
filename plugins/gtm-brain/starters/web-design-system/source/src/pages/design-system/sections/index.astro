@@ -1,0 +1,17 @@
+---
+import DesignSystem from "../../../layouts/DesignSystem.astro";
+import DsBlock from "../../../components/design-system/DsBlock.astro";
+import DsGrid from "../../../components/design-system/DsGrid.astro";
+import DsAddSections from "../../../components/design-system/DsAddSections.astro";
+import { sections } from "../../../components/design-system/nav";
+---
+
+<DesignSystem
+  title="Sections"
+  lead="The bands your pages are built from. Each one is a component with typed content; a page places them in order and gives each its own."
+>
+  {sections.length > 0 && <DsGrid title="All sections" count={`${sections.length} sections`} items={sections} />}
+  <DsBlock title="Add a section">
+    <DsAddSections empty={sections.length === 0} />
+  </DsBlock>
+</DesignSystem>

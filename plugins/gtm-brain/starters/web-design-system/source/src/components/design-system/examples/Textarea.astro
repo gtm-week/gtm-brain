@@ -1,0 +1,33 @@
+---
+import DsBlock from "../DsBlock.astro";
+import DsStage from "../DsStage.astro";
+import DsState from "../DsState.astro";
+import DsProps from "../DsProps.astro";
+import Textarea from "../../ui/Textarea.astro";
+
+interface Props {
+  /** A small preview for the overview grid. */
+  thumb?: boolean;
+}
+const { thumb = false } = Astro.props;
+const field = { label: "Message", placeholder: "What do you need?", rows: 3, class: "w-full" } as const;
+---
+
+{
+  thumb ? (
+    <Textarea {...field} rows={2} class="w-56" />
+  ) : (
+    <>
+      <DsBlock title="States" description="As Input.">
+        <DsStage layout="states" cols={3}>
+          <DsState label="default" class="w-full"><Textarea {...field} /></DsState>
+          <DsState label="hover" class="w-full"><Textarea {...field} data-state="hover" /></DsState>
+          <DsState label="focus" class="w-full"><Textarea {...field} data-state="focus" /></DsState>
+          <DsState label="disabled" class="w-full"><Textarea {...field} disabled /></DsState>
+          <DsState label="error" class="w-full"><Textarea {...field} error="Tell us a little more." /></DsState>
+        </DsStage>
+      </DsBlock>
+      <DsBlock title="Props"><DsProps of="components/ui/Textarea" /></DsBlock>
+    </>
+  )
+}

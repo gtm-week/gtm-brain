@@ -1,0 +1,34 @@
+---
+/**
+ * A group's tiles in a hairline grid that runs edge to edge, under the group's name and
+ * count. The lines meet the column's, so nothing floats.
+ */
+import DsTile from "./DsTile.astro";
+import type { Item } from "./nav";
+
+interface Props {
+  title: string;
+  /** "20 components". */
+  count?: string;
+  href?: string;
+  items: readonly Item[];
+}
+const { title, count, href, items } = Astro.props;
+---
+
+<section class="border-b border-line">
+  <div class="flex items-baseline justify-between gap-4 px-6 pt-10 pb-6 lg:px-12">
+    <h2 class="heading-h5 text-ink-1">
+      {href ? <a href={href} class="rounded-sm transition-colors hover:text-ink-2">{title}</a> : title}
+    </h2>
+    {count && <span class="tagline text-ink-3">{count}</span>}
+  </div>
+  {
+    items.length > 0 && (
+      <ul class="-mb-px grid grid-cols-1 border-t border-line md:grid-cols-2 lg:grid-cols-3">
+        {items.map((item) => <DsTile item={item} />)}
+      </ul>
+    )
+  }
+  <slot />
+</section>

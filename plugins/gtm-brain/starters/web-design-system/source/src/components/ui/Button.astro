@@ -1,0 +1,70 @@
+---
+/**
+ * The site's buttons. `href` makes it a link (`<a>`), otherwise a `<button>`.
+ * primary: the main action, one per view · secondary: the second action · ghost: the quiet one.
+ */
+import type { HTMLAttributes } from "astro/types";
+import type { AstroComponent } from "@lucide/astro";
+import Icon from "./Icon.astro";
+
+type Props = Omit<HTMLAttributes<"button">, "class"> & {
+  variant?: "primary" | "secondary" | "ghost";
+  size?: "sm" | "md" | "lg";
+  href?: string;
+  /** An icon after the label. */
+  icon?: AstroComponent;
+  class?: string;
+};
+
+const {
+  variant = "primary",
+  size = "md",
+  href,
+  icon,
+  disabled,
+  type = "button",
+  class: className,
+  ...rest
+} = Astro.props;
+
+const variants = {
+  primary: "border border-transparent bg-surface-brand text-ink-on-brand hover:bg-surface-brand/80 focus-visible:border-line-brand",
+  secondary: "border border-transparent bg-surface-inverted-1 text-ink-inverted hover:bg-surface-inverted-1/80 focus-visible:border-line-2",
+  ghost: "border border-line-2 text-ink-1 hover:bg-surface-2 focus-visible:border-line-brand",
+} as const;
+const sizes = {
+  sm: "h-9 gap-1.5 px-3 text-small",
+  md: "h-11 gap-2 px-5 text-regular",
+  lg: "h-13 gap-2 px-6 text-regular",
+} as const;
+
+const classes = [
+  "inline-flex shrink-0 items-center justify-center rounded-sm font-medium whitespace-nowrap transition-colors focus-visible:outline-none",
+  "disabled:pointer-events-none disabled:opacity-40 aria-disabled:pointer-events-none aria-disabled:opacity-40",
+  variants[variant],
+  sizes[size],
+  className,
+];
+const external = href?.startsWith("http");
+---
+
+{
+  href ? (
+    <a
+      href={disabled ? undefined : href}
+      aria-disabled={disabled ? "true" : undefined}
+      target={external ? "_blank" : undefined}
+      rel={external ? "noopener noreferrer" : undefined}
+      class:list={classes}
+      {...rest}
+    >
+      <slot />
+      {icon && <Icon icon={icon} size="sm" />}
+    </a>
+  ) : (
+    <button type={type} disabled={disabled} class:list={classes} {...rest}>
+      <slot />
+      {icon && <Icon icon={icon} size="sm" />}
+    </button>
+  )
+}
