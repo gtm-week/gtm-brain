@@ -13,16 +13,7 @@ cd "$ROOT"
 [ -f brain/admin.md ] || { echo "not a brain: $ROOT"; exit 1; }
 # The layout first, before anything is backed up or replaced: a brain on a newer layout than this plugin
 # understands is never written; a layout change waits for the person's yes.
-layout_out="$(node --input-type=module - "$PLUGIN/lib/layout-version.mjs" "$PLUGIN/lib/brain.mjs" "$CONFIRM" <<'JS'
-const v = await import(process.argv[2]), lib = await import(process.argv[3]);
-const blocked = v.layoutBlock(".");
-if (blocked) { console.log(`BLOCKED\t${blocked}`); process.exit(0); }
-const names = Object.fromEntries((lib.readAdmin(".")?.team || []).map(p => [p.handle, p.name]));
-const plan = v.layoutPlan(".", { me: lib.currentPerson("."), names });
-if (plan.changes && process.argv[4] !== "1") console.log(`ASK\t${plan.line}`);
-else if (plan.changes) console.log(`CHANGE\t${plan.from}\t${plan.to}`);
-JS
-)"
+layout_out="$(node --input-type=module -e 'const u = await import(process.argv[1]); console.log(u.layoutStep(".", process.argv[2] === "1"))' "$PLUGIN/lib/upgrade-files.mjs" "$CONFIRM")"
 case "$layout_out" in
   BLOCKED*) echo "${layout_out#BLOCKED$'\t'}"; echo "Nothing was upgraded."; exit 3;;
   ASK*) echo "not upgraded yet: ${layout_out#ASK$'\t'}"; echo "Nothing was changed."; exit 0;;
@@ -90,14 +81,7 @@ fi
 # change happens only with --confirm. One node process for the three: one line each.
 PLUGIN_VERSION="$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$PLUGIN/.codex-plugin/plugin.json" | head -1)"
 had_rules=0; [ -f RULES.md ] && had_rules=1; had_schema=0; [ -f SCHEMA.md ] && had_schema=1
-delivered="$(node --input-type=module - "$PLUGIN/lib" "$T" "$PLUGIN_VERSION" <<'JS'
-const [lib, templates, version] = process.argv.slice(2);
-const u = await import(`${lib}/upgrade-files.mjs`), w = await import(`${lib}/where.mjs`), s = await import(`${lib}/schema.mjs`), v = await import(`${lib}/layout-version.mjs`);
-console.log(u.addStarters(".", templates, { version }).join(" "));
-console.log([w.ensureRules(".", templates) && "RULES.md", s.ensureSchema(".", templates) && "SCHEMA.md"].filter(Boolean).join(" "));
-console.log(v.writeLayout(".", { starters: u.STARTERS }) ? "changed" : "");
-JS
-)"
+delivered="$(node --input-type=module -e 'const u = await import(process.argv[1]); console.log(u.deliverMissing(".", process.argv[2], process.argv[3]))' "$PLUGIN/lib/upgrade-files.mjs" "$T" "$PLUGIN_VERSION")"
 starters="$(sed -n 1p <<< "$delivered")"; ensured="$(sed -n 2p <<< "$delivered")"; layout_change="$(sed -n 3p <<< "$delivered")"
 added_strategy=0; other_starters=""
 for f in $starters; do

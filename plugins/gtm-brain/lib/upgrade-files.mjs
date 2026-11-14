@@ -1,8 +1,10 @@
 // Protect locally edited instructions before refreshing plugin-owned files.
 import { existsSync, readFileSync, readdirSync, mkdirSync, copyFileSync, writeFileSync, mkdtempSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { readAdmin, readNames, commit } from "./brain.mjs";
-import { readLayout } from "./layout-version.mjs";
+import { readAdmin, readNames, commit, currentPerson } from "./brain.mjs";
+import { readLayout, layoutBlock, layoutPlan, writeLayout } from "./layout-version.mjs";
+import { ensureRules } from "./where.mjs";
+import { ensureSchema } from "./schema.mjs";
 
 // Shared with the upgrade matrix tests. Aliases point to the same immutable snapshot.
 export const legacyTemplates = JSON.parse(readFileSync(new URL("../templates/legacy/manifest.json", import.meta.url), "utf8"));
@@ -134,4 +136,23 @@ export function addStarters(root, templates, { version = "", date = new Date().t
     added.push(`${doc}.md`);
   }
   return added;
+}
+
+/* upgrade.sh, before anything is backed up or replaced: one line, BLOCKED\t<line> for a brain on a newer layout,
+   ASK\t<question> for a layout change without the person's yes, CHANGE\t<from>\t<to> with it, "" otherwise. */
+export function layoutStep(root, confirmed) {
+  const blocked = layoutBlock(root);
+  if (blocked) return `BLOCKED\t${blocked}`;
+  const names = Object.fromEntries((readAdmin(root)?.team || []).map(p => [p.handle, p.name]));
+  const plan = layoutPlan(root, { me: currentPerson(root), names });
+  if (!plan.changes) return "";
+  return confirmed ? `CHANGE\t${plan.from}\t${plan.to}` : `ASK\t${plan.line}`;
+}
+
+/* upgrade.sh: what a brain lacks, as three lines: the starters added, RULES.md and SCHEMA.md written, and
+   "changed" when brain/layout.json was written. The layout is recorded last, after the starters it lists. */
+export function deliverMissing(root, templates, version) {
+  const starters = addStarters(root, templates, { version });
+  const files = [ensureRules(root, templates) && "RULES.md", ensureSchema(root, templates) && "SCHEMA.md"].filter(Boolean);
+  return [starters.join(" "), files.join(" "), writeLayout(root, { starters: STARTERS }) ? "changed" : ""].join("\n");
 }
