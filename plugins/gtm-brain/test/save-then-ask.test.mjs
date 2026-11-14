@@ -201,3 +201,23 @@ test("what the feature writes stays readable by the released validator: no new s
   const released = ["exact", "inferred_first_name", "new", "confirmed_new"];   // lib.MENTION_RESOLUTIONS in 0.34.3; an older teammate's index refuses any other
   for (const m of b.all()) for (const x of m.entity_mentions || []) assert.ok(released.includes(x.resolution), `${m.id}: ${x.resolution}`);
 });
+
+test("a meeting note with a one-word participant: saved and asked, and the reply does not promise a relink the brain will not do", () => {
+  const b = brain();
+  const meeting = { title: "Budget sync", reference: { kind: "granola", account: "work", ref: "note-1" }, evidence: "transcript", occurrence: "happened", basis: "source", observed_at: "2026-11-10T10:00:00Z", occurred_at: "2026-11-10", capture: "complete", participants: [{ name: "Anna", role: "attended" }] };
+  const f = join(b.root, "work", "meeting.json");
+  writeFileSync(f, JSON.stringify([{ context: "company", content: "Anna said the budget is approved.", meeting, sources: ["granola:note-1"] }]));
+  const r = b.remember("--batch", f);
+  assert.equal(r.status, 0, r.stderr);
+  const note = b.live().find(m => m.meeting);
+  const [q] = b.pending();
+  assert.ok(q.tags.includes(`about:${note.id}`));
+  assert.doesNotMatch(r.stdout, /attaches it to .* by itself/);
+  assert.match(r.stdout, new RegExp(`remember ${note.id} again with supersedes: ${note.id}`));
+  // the answer closes the question and says the same; the meeting note is not rewritten
+  const a = b.remember("--content", "Anna Kowalska.", "--kind", "decision", "--retracts", q.id, "--people", "Anna Kowalska");
+  assert.equal(a.status, 0, a.stderr);
+  assert.match(a.stdout, new RegExp(`${note.id} is not a plain note`));
+  assert.ok(b.live().some(m => m.id === note.id));
+  assert.equal(b.pending().length, 0);
+});
