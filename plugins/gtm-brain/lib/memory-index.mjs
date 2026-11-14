@@ -1,4 +1,5 @@
 // Disposable disk-backed memory projection. The MCP host uses this API in a worker.
+import { sourceMembers } from './pointers.mjs';
 import { openSync, closeSync, readSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -11,7 +12,7 @@ import { hasMemoryIndex, indexPath, openDatabase, cacheLock, retireCache, cacheR
 export { hasMemoryIndex };
 export const MAX_RECORD_BYTES = 4 * 1024 * 1024;
 export const MAX_RESULT_BYTES = 2 * 1024 * 1024;
-export const MEMORY_INDEX_VERSION = 4;
+export const MEMORY_INDEX_VERSION = 5;   // 5: source pointers as members (field source)
 const VERSION = MEMORY_INDEX_VERSION;
 const normalizeMention = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 function hashFile(path, size) {
@@ -238,6 +239,7 @@ export class MemoryIndex {
             const rowid = insert.run(f.file, line, r.id, r.context, r.kind, r.via, r.at, Date.parse(r.at) || 0, JSON.stringify(r), JSON.stringify(row.entities), r.authors.join(' '), r.people.join(' '), r.tools.join(' '), r.content, ...asset(r), normalizeMention(r.content)).lastInsertRowid;
             for (const field of ['authors', 'people', 'tools', 'tags', 'entities']) for (const value of row[field]) member.run(rowid, field, JSON.stringify(value));
             for (const ref of new Set([...(r.entities || []), ...r.people, ...(r.asset ? [r.asset.entity] : [])])) member.run(rowid, 'identity_ref', String(ref).trim().toLowerCase());
+            for (const key of sourceMembers(r.source)) member.run(rowid, 'source', JSON.stringify(key));
             touch.run(rowid);
             for (const target of [r.supersedes, r.retracts].filter(Boolean)) { correction.run(rowid, f.file, target); touchTarget.run(f.file, target); }
             if (lib.isForkCopy(r)) for (const source of r.source.filter(s => s.kind === 'memory')) fork.run(rowid, source.ref);

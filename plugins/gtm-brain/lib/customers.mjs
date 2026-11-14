@@ -1,5 +1,6 @@
 // Customer relationships and search coverage are evidence in ordinary memories.
 // This module only validates and projects them; remember remains the writer.
+import { pointerKey, sourceKind } from "./pointers.mjs";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as lib from "./brain.mjs";
@@ -52,7 +53,7 @@ export function guardCustomerCorrection(root, context, entry) {
 
 const evidence = m => ({ id: m.id, context: m.context, at: m.at, content: m.content, sources: m.source, ...m.customer });
 const latest = (a, b) => Date.parse(b.customer?.observed_at || b.customer_coverage?.checked_at || b.at) - Date.parse(a.customer?.observed_at || a.customer_coverage?.checked_at || a.at) || Date.parse(b.at) - Date.parse(a.at) || b.id.localeCompare(a.id);
-const uniqueRefs = refs => [...new Map(refs.map(r => [JSON.stringify([r.kind, r.ref]), r])).values()];
+const uniqueRefs = refs => [...new Map(refs.map(r => [pointerKey(r), r])).values()];
 
 export function customerOverview(root, { registry = lib.readNames(root), contexts = lib.listContexts(root) } = {}) {
   const memories = lib.hideForkCopies(contexts.flatMap(c => lib.effectiveMemories(c.memories))).filter(m => !m.retracts && !m.tags?.some(t => /^(synthetic|demo)(:|$)/i.test(t)));
@@ -69,7 +70,7 @@ export function customerOverview(root, { registry = lib.readNames(root), context
     // Retain the latest observation from each source record (or source kind).
     const bySource = new Map();
     for (const m of notes.filter(m => m.customer.basis === "source")) {
-      const key = m.customer.reference ? JSON.stringify(m.customer.reference) : [...new Set(m.source.filter(s => ![...CHAT_KINDS, "memory"].includes(s.kind)).map(s => s.kind))].sort().join("|");
+      const key = m.customer.reference ? pointerKey(m.customer.reference) : [...new Set(m.source.filter(s => ![...CHAT_KINDS, "memory"].includes(s.kind)).map(sourceKind))].sort().join("|");
       if (!bySource.has(key)) bySource.set(key, m);
     }
     const conflicts = [...bySource.values()].filter(m => m.customer.status !== chosen.customer.status);

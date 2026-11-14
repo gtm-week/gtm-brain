@@ -14,8 +14,10 @@ import { spawnSync, execFileSync, execFile, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { parseOntology } from "./ontology/ontology.mjs";
 import { validateAsset } from './assets.mjs';
+import { normalizeSource, accountOK } from "./pointers.mjs";
 import { rankEntityCandidates } from './entity-search.mjs';
 export { rankEntityCandidates } from './entity-search.mjs';
+export { normalizeKind, normalizeSource, normalizeSources, pointerKey, parsePointer, urlPointer, lookupKey, sourceMembers, referenceText } from './pointers.mjs';
 import { checkSchema } from "./ontology/validation.mjs";
 import { readEntityFiles, writeEntityFiles, entityId, entityType, ENTITY_FORMAT, refreshEntityPages, staleEntities, withEntityLock } from "./entities.mjs";
 import { appendMemoryBytes } from './memory-journal.mjs';
@@ -1107,7 +1109,7 @@ export function parseSources(input = []) {
       kind = text.slice(0, colon).trim(); ref = text.slice(colon + 1).trim();
     }
     if (!kind || !ref) throw new Error("source needs a non-empty provider and reference");
-    unique.set(JSON.stringify([kind, ref]), { kind, ref });
+    for (const n of normalizeSource({ kind, ref })) if (n.kind && n.ref) unique.set(JSON.stringify([n.kind, n.ref]), n);
   }
   return [...unique.values()];
 }
@@ -1211,6 +1213,7 @@ export function validateMemory(r) {
   if (!isStr(r.content)) errs.push("content required");
   if (/[\u2013\u2014\u2015\u2212]/.test(r.content || "")) errs.push("long dash in content; use a plain hyphen");
   if (!isList(r.source, s => s && isStr(s.kind) && isStr(s.ref))) errs.push("source must be a list of {kind, ref}");
+  else if (!r.source.every(accountOK)) errs.push("source account must be a non-empty string when given");
   if (!isList(r.actions, a => a && isStr(a.tool) && isStr(a.action))) errs.push("actions must be a list of {tool, action, ref?}");
   for (const k of ["supersedes", "retracts"]) if (r[k] !== null && !/^m_[0-9a-f]{6,12}$/.test(r[k] || "")) errs.push(`${k} must be a memory id or null`);
   if (!isList(r.tags, isStr)) errs.push("tags must be a list of strings");

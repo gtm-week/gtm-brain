@@ -600,6 +600,15 @@ what the person said. `query` object `relations` (search = an entity, filters.ty
 current state, history and disagreeing sources. `query` object `rules` lists entities with a compiled
 brief missing a required field or relationship.
 
+Source pointers: `lib/pointers.mjs` gives each source one spelling. Kinds are lowercased and short
+forms mapped (`drive`, `gdrive` mean `google-drive`; `mail` means `gmail`), a doubled prefix
+(`attio:attio:people/9`) loses its repeat, and a record URL on app.hubspot.com, app.attio.com,
+mail.google.com, drive.google.com or notes.granola.ai becomes `provider:<stable id>` with the URL kept
+as an extra `url` source. Stored notes are never rewritten; readers normalize. A source object may
+carry an optional `account` (`{kind, account, ref}`) for a second mailbox or workspace. `query` object
+`reference` (search = `kind:ref` or a record URL) returns the entity whose references include it and
+every note citing it, from the memory index's `source` members.
+
 `/gtm-brain-schema` (*"what do we keep about people"*, *"every company must have a budget owner"*,
 *"investors are a subtype"*) shows the file and adds, renames or removes one row in the person's
 words, then calls `save`. A relationship rename keeps the old name in `Was called`.

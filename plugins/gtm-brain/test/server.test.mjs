@@ -670,3 +670,31 @@ test("workflow: listed as a tool, lists the shipped workflows, refuses an unsett
   const started = await call("workflow", { brain, action: "start", slug: "outbound", context: "offer", handle: "Q4", settled: { "Target accounts": "list A", "Why now": "budget season", Owner: "Ann", Sequencer: "lemlist" }, by: "ann" });
   assert.ok(!started.isError, started.text); assert.match(started.text, /^started outbound-\d{4}-\d{2}-\d{2}-q4 in Our offer: step 1 of 4, Build the target list, due now/);
 });
+
+test("query object reference finds every note citing a source pointer, whatever its spelling", async () => {
+  const refRoot = mkdtempSync(join(tmpdir(), "gtm-reference-mcp-"));
+  mkdirSync(join(refRoot, "brain"));
+  writeFileSync(join(refRoot, "brain/admin.md"), lib.renderFrontmatter({ company: "Reference Fixture", team: [{ name: "Ann Lee", handle: "ann", email: "ann@fixture.test" }] }));
+  lib.writeContext(refRoot, "deals", { title: "Deals" });
+  const url = "https://app.attio.com/fixture/person/0a1b2c3d-4e5f-6789-abcd-ef0123456789/overview";
+  const one = await call("remember", { brain: refRoot, by: "ann", context: "deals", content: "Renewal moved to March.", sources: [url] }); assert.ok(!one.isError, one.text);
+  const two = await call("remember", { brain: refRoot, by: "ann", context: "deals", content: "Budget confirmed.", sources: ["Attio:attio:people/0a1b2c3d-4e5f-6789-abcd-ef0123456789"] }); assert.ok(!two.isError, two.text);
+  const stored = lib.readMemories(refRoot, "deals");
+  assert.deepEqual(stored.find(m => /Renewal/.test(m.content)).source.slice(0, 2), [{ kind: "attio", ref: "people/0a1b2c3d-4e5f-6789-abcd-ef0123456789" }, { kind: "url", ref: url }]);
+  const found = await call("query", { brain: refRoot, object: "reference", search: "ATTIO:people/0a1b2c3d-4e5f-6789-abcd-ef0123456789" });
+  assert.ok(!found.isError, found.text);
+  assert.match(found.text, /Notes citing it \(2\)/); assert.match(found.text, /Renewal moved/); assert.match(found.text, /Budget confirmed/);
+  const byUrl = await call("query", { brain: refRoot, object: "reference", search: url });
+  assert.match(byUrl.text, /Notes citing it \(2\)/);
+  assert.ok((await call("query", { brain: refRoot, object: "reference" })).isError);
+  assert.match((await call("query", { brain: refRoot, object: "reference", search: "hubspot:0-1/1" })).text, /Notes citing it: none/);
+  // the entity that holds the pointer is named, and a source with an account is found with or without it
+  const person = lib.addName(refRoot, "Dana Reference");
+  lib.updateEntity(refRoot, { entity: person.id, by: "ann", add: { references: [{ kind: "Attio", ref: "people/0a1b2c3d-4e5f-6789-abcd-ef0123456789" }] } });
+  lib.appendMemory(refRoot, "deals", { authors: ["ann"], content: "Thread about the renewal.", source: [{ kind: "gmail", account: "sales@fixture.test", ref: "t1" }] });
+  const named = await call("query", { brain: refRoot, object: "reference", search: url });
+  assert.match(named.text, new RegExp(`Entity: Dana Reference \\(${person.id}\\)`)); assert.match(named.text, /Notes citing it \(2\)/);
+  for (const search of ["gmail:t1", "gmail:sales@fixture.test/t1", "mail:t1"]) assert.match((await call("query", { brain: refRoot, object: "reference", search })).text, /Notes citing it \(1\)[\s\S]*Thread about the renewal/, search);
+  const odd = await call("query", { brain: refRoot, object: "reference", search: "hubspot:it's; DROP x" });
+  assert.ok(!odd.isError, odd.text); assert.match(odd.text, /Notes citing it: none/);
+});

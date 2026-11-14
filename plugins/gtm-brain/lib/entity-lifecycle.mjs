@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import * as lib from "./brain.mjs";
+import { pointerKey, sourceKind } from "./pointers.mjs";
 import { withEntityLock, entityType, identity, idOK, entityText, parseEntityText, editedBody, applyEntityChange, readEntityChange } from "./entities.mjs";
 import { brainKinds } from "./schema.mjs";
 
@@ -102,7 +103,7 @@ function mergePlan(root, source, target, resolution) {
   }
   const distinct = (from.not || []).some(n => lib.exactName([into], n)) || (into.not || []).some(n => lib.exactName([from], n));
   if (distinct) { conflicts.push({ field: "not_same", source, target }); if (resolution.allow_distinct !== true) unresolved.push("allow_distinct"); }
-  const referenceConflicts = unique(from.references.filter(a => into.references.some(b => a.kind === b.kind && a.ref !== b.ref)).map(a => a.kind));
+  const referenceConflicts = unique(from.references.filter(a => into.references.some(b => sourceKind(a) === sourceKind(b) && pointerKey(a) !== pointerKey(b))).map(sourceKind));
   if (referenceConflicts.length) {
     conflicts.push({ field: "references", kinds: referenceConflicts, source: from.references, target: into.references });
     if (!["combine", "source", "target"].includes(resolution.references)) unresolved.push("references");
@@ -113,8 +114,8 @@ function mergePlan(root, source, target, resolution) {
     aliases: unique([...into.aliases, from.name, ...from.aliases]).filter(n => n.toLowerCase() !== into.name.toLowerCase()),
     emails: unique([...into.emails, ...from.emails]),
     references: unique([
-      ...into.references.filter(r => resolution.references !== "source" || !referenceConflicts.includes(r.kind)),
-      ...from.references.filter(r => resolution.references !== "target" || !referenceConflicts.includes(r.kind)),
+      ...into.references.filter(r => resolution.references !== "source" || !referenceConflicts.includes(sourceKind(r))),
+      ...from.references.filter(r => resolution.references !== "target" || !referenceConflicts.includes(sourceKind(r))),
     ]),
     identity_sources: unique([...into.identity_sources, ...from.identity_sources]),
     previous_ids: unique([...into.previous_ids, source, ...from.previous_ids]),
