@@ -443,7 +443,7 @@ test("the plugin people install carries no developer tooling", async () => {
   assert.ok(!existsSync(`${P}/skills/gtm-brain-review-tools`), "no developer skill under the shipped skills");
 });
 
-test("evaluation proxy exposes a harmless competitor and refuses other roots and contexts", async () => {
+test("evaluation proxy exposes a harmless competitor and refuses other roots and contexts", { timeout: 60000 }, async () => {
   // Its own brain: run alone (--test-name-pattern) this test used to hang, because the shared
   // brain had no work/ folder before the setup test ran, the proxy died writing its trace there,
   // and nothing ever answered the first request. A proxy that exits now fails the request.
