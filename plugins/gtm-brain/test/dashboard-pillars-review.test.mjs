@@ -149,3 +149,20 @@ test("dashboard server: a listed file swapped for a link after the render is not
   const dir = await get("/file?path=workflows/outbound.md"); assert.equal(dir.status, 404); assert.doesNotMatch(await dir.text(), /outside the brain/);
   for (const bad of ["pricing.md%00", "./pricing.md/../brain/contexts/company/memories.jsonl", "brain/../brain/admin.md", "PRICING.MD"]) assert.equal((await get("/file?path=" + bad)).status, 404, bad);
 });
+
+test("dashboard server: a server an older plugin started is replaced, so Open file works after an upgrade", async () => {
+  // What a 0.34 install leaves running: a live process recorded in work/dash.json with the older protocol and no /file route.
+  try { execFileSync(process.execPath, [`${P}/server/dash.mjs`, root, "--stop"], { env }); } catch {}
+  const { spawn } = await import("node:child_process");
+  const older = spawn(process.execPath, ["-e", "setInterval(()=>{},1e9)"], { detached: true, stdio: "ignore" });
+  const exited = new Promise(r => { older.on("exit", () => r(true)); setTimeout(() => r(false), 3000).unref(); });
+  writeFileSync(join(root, "work", "dash.json"), JSON.stringify({ port: 48881, pid: older.pid, protocol: 3, url: "http://127.0.0.1:48881/" }));
+  try {
+    const url = execFileSync(process.execPath, [`${P}/server/dash.mjs`, root, "--start", "--port=48881"], { encoding: "utf8", env }).trim(); dashStarted = true;
+    const state = JSON.parse(readFileSync(join(root, "work", "dash.json"), "utf8"));
+    assert.notEqual(state.pid, older.pid, "the older server is not reused");
+    assert.ok(await exited, "the older server is stopped");
+    const r = await fetch(url + "file?path=RULES.md", { headers: { connection: "close" } });
+    assert.equal(r.status, 200);
+  } finally { try { process.kill(older.pid); } catch {} }
+});

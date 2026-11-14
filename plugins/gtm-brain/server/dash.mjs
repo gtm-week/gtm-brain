@@ -25,6 +25,9 @@ const requestedPort = configuredPort === undefined ? undefined : Number(configur
 const project = args.find(a => a.startsWith("--project="))?.slice(10) || "";
 if (project && !lib.readProjects(root).some(p => p.slug === project)) { console.error(`Unknown dashboard project: ${project}`); process.exit(1); }
 const viewingUrl = url => project ? `${url}#view=home&project=${encodeURIComponent(project)}` : url;
+// The server's protocol: a start replaces a running server of another one. 4 added /file, so a server an
+// older plugin left running (no /file) is retired on the first start after an upgrade.
+const PROTOCOL = 4;
 const work = join(root, "work"), stateFile = join(work, "dash.json"), home = join(work, "home");
 if (!existsSync(join(root, "brain", "admin.md"))) { console.error(`not a brain: ${root}`); process.exit(1); }
 mkdirSync(work, { recursive: true });
@@ -42,7 +45,7 @@ if (flag === "--stop") { lib.stopBrainWatcher(root); const s = readState(); if (
 if (flag === "--start" || flag === "--open" || flag === "--open-chrome") {
   lib.startBrainWatcher(root);
   const s = readState();
-  if (alive(s) && s.protocol === 3 && (requestedPort === undefined || s.port === requestedPort)) { console.log(viewingUrl(s.url)); process.exit(0); }
+  if (alive(s) && s.protocol === PROTOCOL && (requestedPort === undefined || s.port === requestedPort)) { console.log(viewingUrl(s.url)); process.exit(0); }
   if (alive(s)) { try { process.kill(s.pid); } catch {} } // retire older action-capable servers
   const out = openSync(join(work, "dash.log"), "a");
   const childArgs = [fileURLToPath(import.meta.url), root, ...(requestedPort === undefined ? [] : [`--port=${requestedPort}`])];
@@ -147,7 +150,7 @@ function serve() {
   server.on("error", e => { if (e.code === "EADDRINUSE" && requestedPort === undefined && tries++ < 20) { port++; server.listen(port, "127.0.0.1"); } else { console.error(e.message); process.exit(1); } });
   server.on("listening", () => {
     const url = `http://127.0.0.1:${port}/`;
-    writeFileSync(stateFile, JSON.stringify({ port, pid: process.pid, protocol: 3, url, startedAt: new Date().toISOString() }, null, 1));
+    writeFileSync(stateFile, JSON.stringify({ port, pid: process.pid, protocol: PROTOCOL, url, startedAt: new Date().toISOString() }, null, 1));
     log(`serving ${url}`);
     console.log(url);
   });
