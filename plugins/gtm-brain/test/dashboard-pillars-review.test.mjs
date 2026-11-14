@@ -166,3 +166,45 @@ test("dashboard server: a server an older plugin started is replaced, so Open fi
     assert.equal(r.status, 200);
   } finally { try { process.kill(older.pid); } catch {} }
 });
+
+test("Workflows and Entities on a brain with runs, its own skill and a customer: current step and due date, ended and orphan runs, relation to us", async () => {
+  const b = mkdtempSync(join(tmpdir(), "gtm-brain-pillars-runs-"));
+  try {
+    execFileSync("git", ["init", "-q", b]); execFileSync("git", ["-C", b, "config", "commit.gpgsign", "false"]);
+    execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "Reflow", "--one-liner", "returns automation", "--owner", "Marta Nowak <marta@reflow.io>"], { cwd: b, env });
+    mkdirSync(join(b, "workflows"), { recursive: true });
+    writeFileSync(join(b, "workflows", "outbound.md"), outbound);
+    const { writeUserSkill } = await import(`${P}/lib/user-skills.mjs`);
+    writeUserSkill(b, { id: "gtm-brain-weekly-pipeline", title: "Weekly pipeline", description: "Go through the open deals every Monday.", body: "# Weekly pipeline\n\nRead the deals.\n", by: "marta", version: "0.35.0" });
+    lib.writeNames(b, [...lib.readNames(b), { name: "Northwind", kind: "organization", subtype: "company" }]);
+    const mem = fields => lib.appendMemory(b, "company", { authors: ["marta"], ...fields }).rec;
+    const tags = (wf, id) => [`workflow:${wf}`, `run:${id}`];
+    mem({ content: "Started workflow Outbound as run outbound-2026-11-01-marta.", tags: [...tags("outbound", "outbound-2026-11-01-marta"), "run-start"], at: day(10) });
+    mem({ content: "Step 1 of 4: done.", tags: [...tags("outbound", "outbound-2026-11-01-marta"), "step:1", "step-status:done"], at: day(9) });
+    mem({ content: "Step 2 of 4: pending, due 2026-11-20.", tags: [...tags("outbound", "outbound-2026-11-01-marta"), "step:2", "step-status:pending", "due:2026-11-20"], at: day(8) });
+    mem({ content: "Started workflow Outbound as run outbound-2026-10-01-marta.", tags: [...tags("outbound", "outbound-2026-10-01-marta"), "run-start"], at: day(40) });
+    mem({ kind: "decision", content: "Run outbound-2026-10-01-marta done.", tags: [...tags("outbound", "outbound-2026-10-01-marta"), "run-done"], at: day(30) });
+    mem({ content: "Started workflow Webinar as run webinar-2026-11-02-marta.", tags: [...tags("webinar", "webinar-2026-11-02-marta"), "run-start"], at: day(9) });
+    mem({ content: "Step 1 of 3: due.", tags: [...tags("webinar", "webinar-2026-11-02-marta"), "step:1", "step-status:due"], at: day(8) });
+    mem({ content: "Northwind signed with us.", source: [{ kind: "user", ref: "marta" }], customer: { entity: "Northwind", status: "customer", basis: "user", observed_at: day(2) }, at: day(2) });
+    execFileSync("git", ["-C", b, "add", "-A"]); execFileSync("git", ["-C", b, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "fixture"]);
+    const r = spawnSync(process.execPath, [`${P}/scripts/gtm-brain-render/render.mjs`, b], { env, encoding: "utf8" });
+    assert.equal(r.status, 0, r.stderr);
+    const B = JSON.parse(readFileSync(join(b, "work", "home", "data.json"), "utf8")), W = B.pillars.workflows;
+    const ob = W.files.find(f => f.slug === "outbound");
+    const live = ob.runs.find(x => x.id === "outbound-2026-11-01-marta"), done = ob.runs.find(x => x.id === "outbound-2026-10-01-marta");
+    assert.deepEqual([live.step.n, live.step.of, live.step.status, live.step.due, live.ended], [2, ob.steps, "pending", "2026-11-20", null]);
+    assert.ok(live.step.title, "the current step carries its title from the workflow file");
+    assert.equal(done.ended.how, "done"); assert.equal(done.step, null);
+    assert.deepEqual(W.orphans.map(o => [o.workflow, o.step?.n, o.step?.status]), [["webinar", 1, "due"]], "a run whose workflow file is gone still shows");
+    assert.equal(B.pillars.entities.rows.find(e => e.name === "Northwind")?.relation, "customer", "a customer's relation to us comes from the customer notes");
+    const p = page(B); p.run('show("workflows")');
+    const w = p.node("#pw-files").innerHTML;
+    assert.match(w, new RegExp(`Step 2 of ${ob.steps}: ${live.step.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} · pending · <b>due 2026-11-20</b>`));
+    assert.match(w, /1 run in progress, 1 ended/); assert.match(w, /Runs whose workflow file is gone.*webinar-2026-11-02-marta/s);
+    const skills = p.node("#pw-skills").innerHTML, own = skills.split("This brain's own")[1] || "";
+    assert.match(own, /Weekly pipeline.*\/gtm-brain-weekly-pipeline.*Go through the open deals every Monday\./s, "the brain's own skill is listed with its one line");
+    assert.doesNotMatch(skills.split("This brain's own")[0], /weekly-pipeline/, "and not among the shipped ones");
+    p.run('show("entities")'); assert.match(p.node("#pe-groups").innerHTML, /Northwind.*class="pl-rel">customer</s);
+  } finally { rmSync(b, { recursive: true, force: true }); }
+});
