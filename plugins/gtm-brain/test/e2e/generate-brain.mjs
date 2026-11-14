@@ -395,8 +395,10 @@ export async function generate({ shape = "small", out, seed = 1, gold: goldPath 
       renamed: { id: canon(traps.renamed.entity.id), before: traps.renamed.before, after: traps.renamed.after }, merged: { survivor: canon(traps.merged.survivor.id), retired: traps.merged.duplicate.id, name: traps.merged.survivor.name, alias: traps.merged.duplicate.name },
       size: traps.size, relative: traps.relative.map(e => e.id) };
   }
-  // one commit, so the folder is an ordinary brain (lib.save commits even with GTM_BRAIN_NO_COMMIT)
+  // one commit, so the folder is an ordinary brain (lib.save honours GTM_BRAIN_NO_COMMIT, so it is lifted for this one save)
+  const noCommit = process.env.GTM_BRAIN_NO_COMMIT; delete process.env.GTM_BRAIN_NO_COMMIT;
   const saved = lib.save(root, `e2e fixture: ${shape} (seed ${seed})`);
+  if (noCommit !== undefined) process.env.GTM_BRAIN_NO_COMMIT = noCommit;
   if (!saved.ok) log(`save: ${saved.note}`);
   gold.generated = { at: "deterministic", seconds: Math.round((Date.now() - started) / 1000), notes: written, ms_per_note: Math.round((Date.now() - t) / Math.max(1, written)) };
   writeFileSync(goldPath, JSON.stringify(gold, null, 1) + "\n");

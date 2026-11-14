@@ -187,7 +187,7 @@ test("handshake and tool list carry titles and the brain parameter", async () =>
   for (const n of ["compile_facts", "compile_apply", "compile_entity"]) assert.ok(!names.includes(n), `${n} is not offered to a chat`);
   const rem = result.tools.find(t => t.name === "remember");
   assert.equal(rem.title, "Remembering"); assert.equal(rem.annotations.readOnlyHint, false);
-  assert.deepEqual(rem.inputSchema.required, ["brain", "by"], "content or memories: a turn's findings go in one call");
+  assert.deepEqual(rem.inputSchema.required, ["brain"], "content or memories: a turn's findings go in one call; by is optional (the person in this chat)");
   assert.deepEqual(rem.inputSchema.properties.memories.items.required, ["content"]);
   // a root anyOf made Codex offer remember with no inputs at all (0.28.2): every root is a plain object
   for (const t of result.tools) assert.deepEqual(["anyOf", "oneOf", "allOf", "not", "enum"].filter(k => k in t.inputSchema), [], `${t.name}: root combinator in its advertised schema`);

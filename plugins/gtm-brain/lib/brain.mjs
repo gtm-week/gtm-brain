@@ -887,7 +887,7 @@ export function largeUnsaved(root, limit = LARGE_FILE_MB * 1024 * 1024) {
 export function savePathsFor(root) { return [...[".", "brain"].filter(p => existsSync(join(root, p))), ...largeUnsaved(root).map(f => `:(exclude,literal)${f.path}`)]; }
 /* Every writer calls this once after writing: everything written is kept at once, one commit per
    change. The message is also the activity line the dashboard shows. GTM_BRAIN_NO_COMMIT (tests,
-   dry runs) turns committing off; `always` lets save ignore it. */
+   dry runs) turns committing off, for save as well. */
 export function commit(root, paths, message, { always = false, push = true, allowEmpty = false } = {}) {
   // Keep identity files and derived evidence views with every brain write.
   if (readAdmin(root) && paths.some(p => /brain(?:\/|$)|context\.md$|memories\.jsonl$/.test(p))) {
@@ -1022,6 +1022,8 @@ export function save(root, message, { covers = false, trailers = [] } = {}) {
   if (!files.length && !trailers.length) { const large = covers ? [] : largeUnsaved(root); return { ok: true, note: covers ? "nothing to save: no cover changed" : large.length ? `nothing else to save\n${largeNote(large, root)}` : "nothing to save: everything is committed", files, large }; }
   // save pushes in the foreground below; a background push from commit would race it for the ref.
   const subject = String(message || (files.length ? "save" : "why: placed files")).split("\n")[0].slice(0, 120);
+  // GTM_BRAIN_NO_COMMIT holds for save too: a test or a dry run never commits or pushes a brain (0.35.0; it used to commit regardless)
+  if (process.env.GTM_BRAIN_NO_COMMIT) return { ok: false, note: `not saved: GTM_BRAIN_NO_COMMIT is set (a test or dry run), so nothing was committed; ${files.length} file(s) stay as they are`, files };
   const r = commit(root, files.length ? paths : [], trailers.length ? `${subject}\n\n${trailers.join("\n")}` : subject, { always: true, push: false, allowEmpty: !files.length });
   if (!r.ok) return { ok: false, note: r.note, files };
   const git = (...a) => execFileSync("git", ["-C", root, ...a], { encoding: "utf8", stdio: "pipe" }).trim();
