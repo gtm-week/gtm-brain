@@ -261,8 +261,10 @@ A project folder holds drafts and deliverables for one piece of work (the websit
 top, and `README.md` says so: a `company/` folder with subfolders is a container nobody reads.
 A strategy is a document plus, once written, its decisions as notes in the Strategy context;
 say `add strategy.md as a document` to register one you wrote by hand. `voice.md` is filled by
-`/gtm-brain-voice` from your website, public posts and, where connected, sent mail and Slack; run
-it again whenever the way you write changes.
+`/gtm-brain-voice`: it asks whose voice it is, reads writing that fits (the company's own pages,
+posts and outbound mail; your own writing for a personal voice), tests the draft on one fresh
+piece you edit, and tells you the sentence to try in a new chat; run it again whenever the way
+you write changes.
 
 Recordings and files over 25 MB never go into git. Drop one in the chat: Codex puts it in your
 Google Drive folder (or the folder outside git that you chose during setup, `big_files` in

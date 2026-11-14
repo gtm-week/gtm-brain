@@ -129,7 +129,7 @@ update by themselves in the background. When you want a specific workflow:
 | Assess a market, its segments and competitors against what you can prove today | `/gtm-brain-market-desk-research` |
 | Define who to target: company fit, buying roles and readiness, kept as one draft | `/gtm-brain-define-icp` |
 | Fill in the strategy the brain starts with (`strategy.md`), in a 10-15 minute conversation | `/gtm-brain-strategy` |
-| Draft your tone of voice (`voice.md`) from your website, public posts and connected mail and Slack; offered at the end of setup, skippable, run again any time | `/gtm-brain-voice` |
+| Draft a tone of voice: first whose it is (the company's, yours or a team's), then from writing that fits, tested on one fresh email or post; `voice.md` for the company; offered at the end of setup, skippable, run again any time | `/gtm-brain-voice` |
 | Add a PDF, image or deck to the brain | drop it in the chat and say what it belongs to; no command |
 | Keep a recording or a file over 25 MB | drop it in the chat; it goes to Google Drive or a folder outside git, and the note keeps the link |
 | Change company info, team or tools | `/gtm-brain-configure` |

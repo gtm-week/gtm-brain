@@ -288,7 +288,7 @@ async function judgeAnswer(scenario, { root, before, after, final, calls, channe
   const registry = lib.readNames(root).map(n => `${n.name}${n.kind !== "person" ? ` (${n.kind})` : ""}${n.aliases.length ? `; also ${n.aliases.join(", ")}` : ""}${n.emails.length ? `; email ${n.emails.join(", ")}` : ""}`).join("\n") || "(empty)";
   const added = after.filter(a => !before.some(b => b.id === a.id)).map(line).join("\n") || "(none)";
   return judge("You judge an assistant's answer against a company's brain: its channels (status, rule, summary), its notes and its names registry. A change between CHANNELS BEFORE and AFTER is evidence of an action taken. Use those, the notes added, and any supplied project state and recorded tool results as truth. faithful=false if the answer states anything the notes do not support or contradicts them; complete=false if the request's outcome is not established.",
-    `CHANNELS BEFORE:\n${channelsBefore}\n\nCHANNELS AFTER THE RUN:\n${channels(root)}\n\nNOTES BEFORE:\n${memories}\n\nNAMES REGISTRY (after the run):\n${registry}\n\nNOTES ADDED BY THE RUN:\n${added}\n\nPROJECT STATE AND TOOL RESULTS:\n${/^(hubspot-)?write-/.test(scenario.crm || "") ? JSON.stringify(records.filter(r => r.kind === "result" && r.tool?.startsWith(`${scenario.provider || "attio"}_`))) : scenario.creation ? JSON.stringify({ projects: lib.readProjects(root).map(p => ({ ...p, pointer: lib.readPointer(p.path), hasBrain: existsSync(join(p.path, "brain")) })), results: records.filter(r => r.kind === "result" && [...QUESTION_TOOLS, "link_project"].includes(r.tool)) }) : scenario.evidence ? scenario.evidence(root, records) : "(not applicable)"}\n\nQUESTIONS ASKED THROUGH THE FORM, WITH THE SIMULATED PERSON'S ANSWERS:\n${records.filter(r => r.kind === "question").map(q => `${q.message} | options: ${(q.options || []).join(" / ") || "(free text)"} | answered: ${JSON.stringify(q.answered)}`).join("\n") || "(none)"}\n\nTOOLS CALLED: ${calls.map(c => c.tool).join(", ") || "none"}\n\nREQUEST:\n${scenario.prompt}\n\nEXPECTED OUTCOME: ${scenario.expect || "(see request)"}\n\nANSWER:\n${final || "(empty)"}`,
+    `CHANNELS BEFORE:\n${channelsBefore}\n\nCHANNELS AFTER THE RUN:\n${channels(root)}\n\nNOTES BEFORE:\n${memories}\n\nNAMES REGISTRY (after the run):\n${registry}\n\nNOTES ADDED BY THE RUN:\n${added}\n\nPROJECT STATE AND TOOL RESULTS:\n${/^(hubspot-)?write-/.test(scenario.crm || "") ? JSON.stringify(records.filter(r => r.kind === "result" && r.tool?.startsWith(`${scenario.provider || "attio"}_`))) : scenario.creation ? JSON.stringify({ projects: lib.readProjects(root).map(p => ({ ...p, pointer: lib.readPointer(p.path), hasBrain: existsSync(join(p.path, "brain")) })), results: records.filter(r => r.kind === "result" && [...QUESTION_TOOLS, "link_project"].includes(r.tool)) }) : scenario.evidence ? scenario.evidence(root, records) : "(not applicable)"}\n\nQUESTIONS ASKED THROUGH THE FORM, WITH THE SIMULATED PERSON'S ANSWERS:\n${records.filter(r => r.kind === "question").map(q => `${q.message} | options: ${(q.options || []).join(" / ") || "(free text)"} | answered: ${JSON.stringify(q.answered)}`).join("\n") || "(none)"}\n\nTOOLS CALLED: ${calls.map(c => c.tool).join(", ") || "none"}\n\nREQUEST:\n${scenario.prompt}${(scenario.followUps || []).map((m, i) => `\n\nTHE PERSON'S REPLY ${i + 1} (a later turn):\n${m}`).join("")}\n\nEXPECTED OUTCOME: ${scenario.expect || "(see request)"}\n\nANSWER:\n${final || "(empty)"}`,
     '{"faithful": true|false, "complete": true|false, "score": 0..1, "issues": ["..."]}');
 }
 
@@ -327,41 +327,57 @@ for (const scenario of selected) {
     const before = allRows(root); const channelsBefore = channels(root);
     writeFileSync(join(artifacts, `${scenario.name}-before.json`), JSON.stringify(before, null, 2));
     const onboardingContext = scenario.onboarding ? `\n\nSession context from GTM Brain:\n${lib.onboardingInstruction(root)}\nOwning workflow: ${join(plugin, "skills/gtm-brain-start/SKILL.md")}` : "";
-    const prompt = `This is a synthetic GTM Brain company brain at ${root}. You work for ${lib.readAdmin(root).team[0].name || "Marta Nowak"}, confirmed handle ${by}${scenario.project ? "; this chat is in a linked project folder" : offerLoaded ? "; offer is loaded" : ""}. Use only this synthetic brain and plugin workflow instructions. Do not read real account data, assistant archives or other company files; report out-of-scope steps instead. Use the available application capabilities to complete the request. The plugin build under test is ${plugin}; use its skills/${scenario.workflow || "gtm-brain-use-brain"}/SKILL.md and its referenced procedures for this evaluation.${onboardingContext}\n\n${scenario.daily ? dailyRefreshPrompt(root, by) : scenario.prompt}`;
-    writeFileSync(join(artifacts, `${scenario.name}-prompt.txt`), prompt);
+    const header = `This is a synthetic GTM Brain company brain at ${root}. You work for ${lib.readAdmin(root).team[0].name || "Marta Nowak"}, confirmed handle ${by}${scenario.project ? "; this chat is in a linked project folder" : offerLoaded ? "; offer is loaded" : ""}. Use only this synthetic brain and plugin workflow instructions. Do not read real account data, assistant archives or other company files; report out-of-scope steps instead. Use the available application capabilities to complete the request. The plugin build under test is ${plugin}; use its skills/${scenario.workflow || "gtm-brain-use-brain"}/SKILL.md and its referenced procedures for this evaluation.${onboardingContext}`;
+    const prompt = `${header}\n\n${scenario.daily ? dailyRefreshPrompt(root, by) : scenario.prompt}`;
     console.log(`Running ${scenario.name} in ${root}`);
-    const args = ["exec", "--ignore-user-config", "--ephemeral", "--json", "--sandbox", "read-only", "-C", cwd, "-m", model, ...(scenario.project ? ["--skip-git-repo-check"] : []),
-      "-c", "features.apps=false", "-c", "approval_policy=\"never\"",
-      "-c", `mcp_servers.gtm_brain_eval.command=${JSON.stringify(process.execPath)}`,
-      "-c", `mcp_servers.gtm_brain_eval.args=${JSON.stringify([fileURLToPath(new URL("./tool-routing-proxy.mjs", import.meta.url)), root, trace, scenario.answer || "", scenario.meetings ? "meetings" : scenario.onboarding ? "onboarding" : scenario.creation ? "projects" : "", scenario.crm || "", plugin])}`,
-      "-c", "mcp_servers.gtm_brain_eval.tool_timeout_sec=60", "-o", final, "-"];
-    if (/^(hubspot-)?write-/.test(scenario.crm || '')) args.splice(args.length - 1, 0,
-      '-c', 'mcp_servers.gtm_brain_eval.required=true', '-c', 'mcp_servers.gtm_brain_eval.startup_timeout_sec=60');
+    // one codex exec per turn; turn n > 0 writes its prompt, final, events and stderr with a -turn<n+1> suffix
+    const exec = (text, n) => {
+      const suffix = n ? `-turn${n + 1}` : "", out = n ? `${final}${suffix}` : final;
+      writeFileSync(join(artifacts, `${scenario.name}${suffix}-prompt.txt`), text);
+      const args = ["exec", "--ignore-user-config", "--ephemeral", "--json", "--sandbox", "read-only", "-C", cwd, "-m", model, ...(scenario.project ? ["--skip-git-repo-check"] : []),
+        "-c", "features.apps=false", "-c", "approval_policy=\"never\"",
+        "-c", `mcp_servers.gtm_brain_eval.command=${JSON.stringify(process.execPath)}`,
+        "-c", `mcp_servers.gtm_brain_eval.args=${JSON.stringify([fileURLToPath(new URL("./tool-routing-proxy.mjs", import.meta.url)), root, trace, scenario.answer || "", scenario.meetings ? "meetings" : scenario.onboarding ? "onboarding" : scenario.creation ? "projects" : "", scenario.crm || "", plugin])}`,
+        "-c", "mcp_servers.gtm_brain_eval.tool_timeout_sec=60", "-o", out, "-"];
+      if (/^(hubspot-)?write-/.test(scenario.crm || '')) args.splice(args.length - 1, 0,
+        '-c', 'mcp_servers.gtm_brain_eval.required=true', '-c', 'mcp_servers.gtm_brain_eval.startup_timeout_sec=60');
+      return new Promise((resolve, reject) => {
+        const agentEnv = { ...env };
+        if (scenario.daily || /^compile/.test(scenario.name)) agentEnv.GTM_BRAIN_RUN = "eval";   // compile tools are offered only to runs (ALL-204)
+        if (process.env.CODEX_HOME) agentEnv.CODEX_HOME = process.env.CODEX_HOME; else delete agentEnv.CODEX_HOME;
+        const child = spawn("codex", args, { cwd, env: agentEnv, stdio: ["pipe", "pipe", "pipe"] });
+        let stdout = "", err = "", timedOut = false;
+        const timer = setTimeout(() => { timedOut = true; child.kill("SIGTERM"); }, scenario.daily ? 360000 : 180000);
+        child.stdout.on("data", data => { stdout += data; }); child.stderr.on("data", data => { err += data; });
+        child.on("error", error => { clearTimeout(timer); reject(error); });
+        child.on("close", code => { clearTimeout(timer); writeFileSync(`${events}${suffix}`, stdout); writeFileSync(join(artifacts, `${scenario.name}${suffix}-stderr.log`), err); resolve({ code, timedOut, final: existsSync(out) ? readFileSync(out, "utf8").trim() : "" }); });
+        child.stdin.end(text);
+      });
+    };
     const agentStarted = Date.now();
-    const result = await new Promise((resolve, reject) => {
-      const agentEnv = { ...env };
-      if (scenario.daily || /^compile/.test(scenario.name)) agentEnv.GTM_BRAIN_RUN = "eval";   // compile tools are offered only to runs (ALL-204)
-      if (process.env.CODEX_HOME) agentEnv.CODEX_HOME = process.env.CODEX_HOME; else delete agentEnv.CODEX_HOME;
-      const child = spawn("codex", args, { cwd, env: agentEnv, stdio: ["pipe", "pipe", "pipe"] });
-      let out = "", err = "", timedOut = false;
-      const timer = setTimeout(() => { timedOut = true; child.kill("SIGTERM"); }, scenario.daily ? 360000 : 180000);
-      child.stdout.on("data", data => { out += data; }); child.stderr.on("data", data => { err += data; });
-      child.on("error", error => { clearTimeout(timer); reject(error); });
-      child.on("close", code => { clearTimeout(timer); writeFileSync(events, out); writeFileSync(join(artifacts, `${scenario.name}-stderr.log`), err); resolve({ code, timedOut }); });
-      child.stdin.end(prompt);
-    });
+    // followUps: the person's later messages, one turn each. --ephemeral keeps no session to resume, so a later
+    // turn is a new exec carrying the conversation so far as text. The trace is shared; turns splits it.
+    const messages = [scenario.prompt, ...(scenario.followUps || [])], turns = [];
+    let result, conversation = "";
+    for (const [n, message] of messages.entries()) {
+      const from = readJSONL(trace).length;
+      result = await exec(n ? `${header}\n\nThe conversation so far in this chat:\n${conversation}\n\nThe person now replies:\n${message}` : prompt, n);
+      turns.push({ calls: readJSONL(trace).slice(from).filter(r => r.kind === "call"), final: result.final });
+      conversation += `${n ? "\n\n" : ""}The person: ${message}\n\nYou: ${result.final}`;
+      if (result.code || result.timedOut) break;
+    }
     const records = readJSONL(trace), calls = records.filter(r => r.kind === "call"), asked = records.filter(r => r.kind === "question");
     const elapsed_ms = Date.now() - agentStarted;
     // codex exec --json reports usage on turn.completed; summed over the turns of the run
-    const tokens = readFileSync(events, "utf8").split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(e => e?.type === "turn.completed" && e.usage)
+    const tokens = turns.map((t, n) => readFileSync(n ? `${events}-turn${n + 1}` : events, "utf8")).join("\n").split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(e => e?.type === "turn.completed" && e.usage)
       .reduce((t, e) => ({ input: t.input + (e.usage.input_tokens || 0), cached: t.cached + (e.usage.cached_input_tokens || 0), output: t.output + (e.usage.output_tokens || 0) }), { input: 0, cached: 0, output: 0 });
     const tool_timings = calls.map(c => { const end = records.find(r => r.kind === "result" && r.id === c.id && r.tool === c.tool); return { tool: c.tool, elapsed_ms: end ? Date.parse(end.at) - Date.parse(c.at) : null }; });
     const after = allRows(root);
     writeFileSync(join(artifacts, `${scenario.name}-after.json`), JSON.stringify(after, null, 2));
-    const finalText = existsSync(final) ? readFileSync(final, "utf8").trim() : "";
-    const checks = { process: result.code === 0 && !result.timedOut, catalog: records.some(r => r.kind === "catalog" && r.tools.some(t => t.name === "computer_use") && r.tools.some(t => t.name === "remember")), route: scenario.calls(calls), state: !!scenario.verify(root, { before, after, trace }), screenOnlyWithApproval: (() => { const idx = records.map((r, i) => ({ r, i })); const asks = idx.filter(x => x.r.kind === "question").map(x => x.i); return idx.filter(x => x.r.kind === "call" && x.r.tool === "computer_use").every(x => asks.some(a => a < x.i)); })(), response: !!finalText, ...(scenario.project ? { noPath: !finalText.includes(cwd) } : {}) };
+    const finalText = turns.at(-1)?.final || "";   // the last turn's answer
+    const checks = { process: result.code === 0 && !result.timedOut, catalog: records.some(r => r.kind === "catalog" && r.tools.some(t => t.name === "computer_use") && r.tools.some(t => t.name === "remember")), route: scenario.calls(calls, { turns }), state: !!scenario.verify(root, { before, after, trace }), screenOnlyWithApproval: (() => { const idx = records.map((r, i) => ({ r, i })); const asks = idx.filter(x => x.r.kind === "question").map(x => x.i); return idx.filter(x => x.r.kind === "call" && x.r.tool === "computer_use").every(x => asks.some(a => a < x.i)); })(), response: !!finalText, ...(scenario.project ? { noPath: !finalText.includes(cwd) } : {}) };
     const verdict = await judgeAnswer(scenario, { root, before, after, final: finalText, calls, channelsBefore, records });
-    if (scenario.responseCheck) checks.wording = scenario.responseCheck(finalText);
+    if (scenario.responseCheck) checks.wording = scenario.responseCheck(finalText, { turns });
     if (scenario.retention) checks.retention = scenario.retention(root, { before, after });
     // a case with judge: "advisory" records the verdict in the report but passes or fails on its deterministic checks
     if (!verdict.skipped && !verdict.error && scenario.judge !== "advisory") checks.judge = !!verdict.faithful && !!verdict.complete;

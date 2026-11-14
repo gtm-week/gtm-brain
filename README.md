@@ -288,7 +288,7 @@ Ask for an outcome in ordinary language, or invoke one of the twenty shipped ski
 | `/gtm-brain-define-icp` | Define company fit, buying roles and readiness with Chris Pawlak's interview; keep one draft ICP. |
 | `/gtm-brain-unit-economics` | Compare CAC, LTV, payback and retention with explicit inputs and gaps. |
 | `/gtm-brain-strategy` | Work through a strategic intake and maintain the strategy document. |
-| `/gtm-brain-voice` | Draft the tone of voice (`voice.md`) from the website, public posts and connected mail and Slack. |
+| `/gtm-brain-voice` | Draft a tone of voice: whose it is first (company, person or team), then from writing that fits, tested on one fresh piece; the company's is `voice.md`. |
 | `/gtm-brain-workflow` | Create a playbook, start a run and advance through its steps and gates. |
 | `/gtm-brain-sync` | Pull relevant updates from connected sources and retain useful findings. |
 | `/gtm-brain-todo` | Review what is waiting on you across the brain and connected tools. |
