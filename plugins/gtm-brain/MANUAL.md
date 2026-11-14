@@ -117,8 +117,9 @@ this brain's chats that changed since the last pass: the chats in the brain fold
 project folders, nothing else, the person's and the assistant's words only. One model run with no tools
 lists the decisions, changes, dated commitments and corrections nobody saved, each with the exact
 sentence it rests on; a sentence that is not in the chat is dropped. The rest are saved like any note
-(tagged `captured`, the chat as source, every saving rule applies) and committed, not pushed: the next
-save shares them. The next chat start lists them in one line; "undo captured" withdraws them together.
+(tagged `captured`, the chat as source, every saving rule applies) and committed. The pass does not push them itself: the next commit in the brain shares them with the
+team like any note, usually the summary run right after the pass. The next chat start lists them in one
+line; "undo captured" withdraws the listed ones together.
 
 A pass reads at most 200,000 tokens (50,000 per chat); what is left waits for the next pass, which
 starts there. Each pass records its tokens in `work/capture-runs.jsonl`. When the last good pass is

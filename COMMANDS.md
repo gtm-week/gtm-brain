@@ -567,7 +567,7 @@ an exact sentence of its chat (see [MANUAL.md](plugins/gtm-brain/MANUAL.md#chat-
 200,000 input tokens per pass and 50,000 per chat; what a cap leaves is read next time.
 
 Tool: `capture_chats` (`mode` run | undo | status | off | on, optional `cap`, `chat_cap`). Writes: notes
-tagged `captured` and `capture:<pass>` with the chat as source (committed, not pushed), retractions on
+tagged `captured` and `capture:<pass>` with the chat as source (committed; shared by the next commit in the brain), retractions on
 undo, `work/capture.json` (settings, heartbeat, cursors), `work/capture-runs.jsonl` (one record per pass,
 with its tokens), `work/hooks.log`.
 `node $PLUGIN_ROOT/scripts/gtm-brain-schedule/capture.mjs /path/to/brain --run | --start | --undo | --status | --off | --on | --cap <tokens> | --chat-cap <tokens>`
