@@ -40,6 +40,13 @@ if [ "$entity_change" = "changed" ]; then
   echo "migrated entity identities and kinds (original files backed up in work/entity-migration)"
   changed=1; paths="$paths brain/entities brain/entities.md brain/names.md"
 fi
+# 0.35.0: entity pages move to a folder per kind (people/max-jendral-3f9a2c.md), files folders with them, in this commit.
+kind_out="$(node --input-type=module -e 'const lib=await import(process.argv[1]); const r=lib.migrateToKindFolders("."); for(const m of r.moves)console.log(`${m.from}\t${m.to}`); if(!r.moves.length&&r.indexes.length)console.log("indexes")' "$PLUGIN/lib/brain.mjs")"
+if [ -n "$kind_out" ]; then
+  kind_n="$(printf '%s\n' "$kind_out" | grep -c "$(printf '\t')" || true)"
+  [ "$kind_n" -gt 0 ] && echo "moved $kind_n entity page$([ "$kind_n" = 1 ] || echo s) into a folder per kind (brain/entities/people/, organizations/, ...), each named with its short id"
+  changed=1; paths="$paths brain/entities"
+fi
 # 0.27.0: guidelines become documents at the root; the root README says what goes where.
 docs_out="$(node --input-type=module -e 'const d=await import(process.argv[1]);const r=d.migrateGuidelines(".");for(const [f,t] of r.moved)console.log(`moved ${f} -> ${t}`);for(const [f,w] of r.kept)console.log(`kept ${f}: ${w}`);' "$PLUGIN/lib/documents.mjs")"
 if [ -n "$docs_out" ]; then

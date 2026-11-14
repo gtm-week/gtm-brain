@@ -8,7 +8,8 @@ import { refreshIndexedPages } from './entity-pages.mjs';
 import { hasMemoryIndex } from './memory-index-store.mjs';
 import { readSchema, fieldsFor, requiredRelations, kindHash, US, brainKinds } from './schema.mjs';
 import { DEFAULT_KINDS, KIND_NAME, NOT_KINDS } from './kinds.mjs';
-import { pagePaths, isPagePath, findPage, linkFrom, layout, kindPagePath, isKindPagePath, assetFolder, ENTITIES_DIR } from './layout.mjs';
+import { pagePaths, isPagePath, linkFrom, layout, kindPagePath, isKindPagePath, assetFolder, ENTITIES_DIR } from './layout.mjs';
+import { writeKindIndexes } from './entity-index.mjs';
 
 export const ENTITY_FORMAT = "gtm-brain-entity-v2";
 // Brains written before the GTM OS -> GTM Brain rename carry the gtm-os names; migration rewrites them.
@@ -180,22 +181,27 @@ function recoverEntityChanges(root) {
   for (const file of pending) {
     const rec = readEntityChange(root, file.slice(0, -8), true);
     for (const c of rec.changes) {
-      const path = join(root, c.path);
-      if (!existsSync(path) || lstatSync(path).isSymbolicLink() || ![c.before, c.after].includes(readFileSync(path, "utf8"))) invalid(c.path, "interrupted change", "file changed after the operation was interrupted", `review ${file} and preserve the new edits before resuming`);
+      const at = c.from && existsSync(join(root, c.from)) ? c.from : c.path, path = join(root, at);
+      if (!existsSync(path) || lstatSync(path).isSymbolicLink() || ![c.before, c.after].includes(readFileSync(path, "utf8"))) invalid(at, "interrupted change", "file changed after the operation was interrupted", `review ${file} and preserve the new edits before resuming`);
     }
-    for (const c of rec.changes) atomic(join(root, c.path), c.after);
+    for (const c of rec.changes) {
+      if (c.from && existsSync(join(root, c.from))) movePage(root, c.from, c.path, c.after);
+      else atomic(join(root, c.path), c.after);
+    }
     renameSync(join(folder, file), join(folder, rec.id + ".json"));
   }
   if (pending.length) console.error("Recovered interrupted entity changes: " + lib.commit(root, lib.ENTITIES_PATHS, "recover interrupted entity changes").note);
 }
+/* A change is {path, before, after}, plus from when the page moves (a rename in a kind folder). */
 export function applyEntityChange(root, record) {
   return withEntityLock(root, () => {
-    const changes = record.changes.filter(c => c.before !== c.after);
+    const changes = record.changes.filter(c => c.before !== c.after || (c.from && c.from !== c.path)).map(c => c.from === c.path ? { path: c.path, before: c.before, after: c.after } : c);
     if (!changes.length) return null;
     for (const c of changes) {
       if (!isPagePath(c.path) || (c.from !== undefined && !isPagePath(c.from))) throw new Error("Invalid entity change path");
-      const path = join(root, c.path);
-      if (lstatSync(path).isSymbolicLink() || readFileSync(path, "utf8") !== c.before) throw new Error(`Entity file changed; read it again: ${c.path}`);
+      const path = join(root, c.from || c.path);
+      if (lstatSync(path).isSymbolicLink() || readFileSync(path, "utf8") !== c.before) throw new Error(`Entity file changed; read it again: ${c.from || c.path}`);
+      if (c.from && existsSync(join(root, c.path))) throw new Error(`Entity filename collision: ${c.path} already exists`);
     }
     const folder = historyFolder(root); mkdirSync(folder, { recursive: true });
     const rec = { ...record, id: record.id || `ec_${randomUUID()}`, at: stamp(), changes };
@@ -205,16 +211,21 @@ export function applyEntityChange(root, record) {
     writeFileSync(pending, JSON.stringify(rec, null, 2) + "\n", { flag: "wx" });
     try {
       for (const c of changes) {
-        if (readFileSync(join(root, c.path), "utf8") !== c.before) throw new Error(`Entity file changed during the operation: ${c.path}`);
-        atomic(join(root, c.path), c.after);
+        if (readFileSync(join(root, c.from || c.path), "utf8") !== c.before) throw new Error(`Entity file changed during the operation: ${c.from || c.path}`);
+        if (c.from) movePage(root, c.from, c.path, c.after);
+        else atomic(join(root, c.path), c.after);
       }
       renameSync(pending, join(folder, rec.id + ".json"));
     } catch (error) {
       // Preserve a racing human edit. Recovery reports it for review on the next read.
       let restored = true;
       for (const c of changes) {
-        const path = join(root, c.path), current = readFileSync(path, "utf8");
-        if (current === c.after) atomic(path, c.before);
+        const path = join(root, c.path), current = existsSync(path) ? readFileSync(path, "utf8") : null;
+        if (c.from) {
+          if (current === c.after && !existsSync(join(root, c.from))) movePage(root, c.path, c.from, c.before);
+          else if (!(current === null && existsSync(join(root, c.from)) && readFileSync(join(root, c.from), "utf8") === c.before)) restored = false;
+        }
+        else if (current === c.after) atomic(path, c.before);
         else if (current !== c.before) restored = false;
       }
       if (restored) rmSync(pending);
@@ -278,11 +289,30 @@ export function identity(e) {
   return { id: e.id || entityId(e.name), name: e.name, ...entityType(e.kind || "person", e.subtype ?? null, "any"), status: e.status || "active", merge_ids: e.merge_ids || [], aliases: e.aliases || [], emails: e.emails || [], not_same: e.not || [], previous_ids: e.previous_ids || [], references: e.references || [], identity_sources: e.identity_sources || [] };
 }
 
-// File locations are permanent. Name changes do not break links; IDs survive explicit merges.
+/* Where a page goes. Flat brains keep their file names for good. In kind folders the name is the readable name
+   plus the short id: a rename or a new kind moves the page (and its own folder) to the new name; the id part
+   never changes, so links by id and old asset paths still resolve (lib/layout.mjs). */
+export function pageTarget(root, e, current = e._path, perKind = layout(root) === "kinds") {
+  if (current && !(perKind && isKindPagePath(current))) return current;
+  return perKind ? kindPagePath(e.kind || "person", e.name, e.id) : current;
+}
+/* Move a page to its new name with its own folder beside it; git sees the rename at the next commit. */
+export function movePage(root, from, to, text) {
+  if (from === to) return atomic(join(root, to), text);
+  if (existsSync(join(root, to))) throw new Error(`Entity filename collision: ${to} already exists`);
+  mkdirSync(dirname(join(root, to)), { recursive: true });
+  atomic(join(root, to), text);
+  rmSync(join(root, from));
+  const assets = join(root, assetFolder(from)), next = join(root, assetFolder(to));
+  if (existsSync(assets) && lstatSync(assets).isDirectory() && !existsSync(next)) renameSync(assets, next);
+  return true;
+}
+// IDs survive explicit merges; in kind folders a rename moves the file, in a flat brain the file name stays.
 export function writeEntityFiles(root, names) {
   const dir = join(root, "brain", "entities");
   if (existsSync(dir) && lstatSync(dir).isSymbolicLink()) throw new Error("brain/entities must not be a symbolic link");
   mkdirSync(dir, { recursive: true });
+  const perKind = layout(root) === "kinds";
   const old = readEntityFiles(root), used = new Set(readdirSync(dir)), changed = [];
   const legacy = old.filter(e => e._fm.format !== ENTITY_FORMAT);
   if (legacy.length) {
@@ -298,14 +328,20 @@ export function writeEntityFiles(root, names) {
     if (!idOK(e.id) || !refsOK(e.references) || !refsOK(e.identity_sources)) throw new Error(`Invalid identity for ${e.name}`);
     const previous = old.find(x => x.id === e.id);
     e._path ||= previous?._path;
-    if (!e._path) {
+    let from = null;
+    if (!e._path && !perKind) {
       const slug = lib.handleFor(e.name) || e.id;
       let file = `${slug}.md`;
       if (used.has(file)) file = `${slug}-${e.id.slice(2)}.md`;
       if (used.has(file)) throw new Error(`Entity filename collision: ${file}`);
       used.add(file); e._path = `brain/entities/${file}`;
+    } else {
+      const target = pageTarget(root, e, e._path, perKind);
+      if (e._path && target !== e._path) from = e._path;
+      if (!e._path && existsSync(join(root, target))) throw new Error(`Entity filename collision: ${target}`);
+      e._path = target;
     }
-    if (!/^brain\/entities\/[a-z0-9-]+\.md$/.test(e._path)) throw new Error("Invalid entity path");
+    if (!isPagePath(e._path)) throw new Error("Invalid entity path");
     const fields = identity(e), before = previous && identity(previous), now = stamp();
     e._fm = { ...(previous?._fm || e._fm || {}), format: ENTITY_FORMAT, ...fields,
       created_at: previous?._fm.created_at || e._fm?.created_at || now,
@@ -314,7 +350,9 @@ export function writeEntityFiles(root, names) {
     if (e._compilation) e._fm.compilation = JSON.stringify(e._compilation);
     const body = previous?._body ?? e._body ?? `\n# ${md(e.name)}\n\nNo compiled brief yet. Facts are kept in context memories.\n`;
     if (!previous && e._body === undefined) e._fm.rendered_body_hash = hash(body);
-    if (atomic(join(root, e._path), entityText(previous, e._fm, body))) changed.push(e._path);
+    const text = entityText(previous, e._fm, body);
+    if (from) { movePage(root, from, e._path, text); changed.push(from, e._path); }
+    else if (atomic(join(root, e._path), text)) changed.push(e._path);
   }
   // Preserve old links and every retired ID after a confirmed merge.
   for (const e of old.filter(x => !names.some(n => n.id === x.id))) {
@@ -643,8 +681,15 @@ export function refreshEntityPages(root) {
   return withEntityLock(root, () => refreshPages(root));
 }
 function refreshPages(root) {
+  const registry = lib.readNames(root), changed = refreshBriefs(root, registry);
+  // the kind indexes follow the pages: same lock, same write path, committed with them
+  changed.push(...writeKindIndexes(root, changed.length ? lib.readNames(root) : registry, kindRelations(root)));
+  return changed;
+}
+/* Relation to us per entity id, for the kind indexes (lib/relation-to-us.mjs fills it in). */
+function kindRelations(root) { return new Map(); }
+function refreshBriefs(root, registry) {
   if (hasMemoryIndex()) {
-    const registry = lib.readNames(root);
     return refreshIndexedPages(root, registry, (e, facts, changed) => {
       const view = entityBrief(root, e.id, { registry, facts });
       const fm = { ...e._fm, evidence_as_of: view.as_of, latest_evidence_at: view.latest_evidence_at, stale: view.stale };
@@ -657,7 +702,7 @@ function refreshPages(root) {
       return text;
     });
   }
-  const registry = lib.readNames(root), contexts = lib.listContexts(root), index = entityEvidenceIndex(registry, contexts), changed = [];
+  const contexts = lib.listContexts(root), index = entityEvidenceIndex(registry, contexts), changed = [];
   for (const e of registry.filter(e => e._path)) {
     const view = entityBrief(root, e.id, { registry, contexts, index });
     const fm = { ...e._fm, evidence_as_of: view.as_of, latest_evidence_at: view.latest_evidence_at, stale: view.stale };
@@ -666,4 +711,34 @@ function refreshPages(root) {
     if (atomic(join(root, e._path), entityText(e, fm, body))) changed.push(e._path);
   }
   return changed;
+}
+
+/* A new brain (setup) starts with a folder and an index per default kind: from then on pages go there. */
+export function startKindLayout(root) {
+  return withEntityLock(root, () => writeKindIndexes(root, readEntityFiles(root), new Map(), { kinds: ENTITY_KINDS }));
+}
+/* upgrade_brain: every flat page moves to its kind folder under its readable name plus short id, its own files
+   folder with it, redirects of merged identities too (they keep their redirect id). Ids, aliases, merge
+   history and memories are untouched; links inside the moved redirects are rewritten. Returns the moves. */
+export function migrateToKindFolders(root) {
+  return withEntityLock(root, () => {
+    const moves = [];
+    for (const rel of pagePaths(root).filter(p => !isKindPagePath(p) && /^brain\/entities\/[a-z0-9-]+\.md$/.test(p))) {
+      const text = readFileSync(join(root, rel), "utf8"), { fm } = parseEntityText(text, rel);
+      if (!idOK(fm.id)) invalid(rel, "id", "expected e_ followed by 16 lowercase hexadecimal characters", "restore this entity's stable ID from file history; do not invent a replacement ID");
+      let kind = "person"; try { kind = entityType(fm.kind || "person", fm.subtype ?? null, "any").kind; } catch {}
+      moves.push({ from: rel, to: kindPagePath(kind, fm.name || fm.id, fm.id), redirect: fm.redirect || null, text });
+    }
+    if (!moves.length) { const made = writeKindIndexes(root, readEntityFiles(root), kindRelations(root), { kinds: ENTITY_KINDS }); return { moves, indexes: made }; }
+    const targets = new Map(moves.map(m => [m.from, m.to]));
+    for (const m of moves) if (existsSync(join(root, m.to))) throw new Error(`Entity filename collision: ${m.to} already exists; nothing was moved for it`);
+    for (const m of moves) {
+      // a redirect's "Merged into" link and any page link inside a moved page now point from the kind folder
+      const text = m.text.replace(/\]\(((?:\.\.\/)?[a-z0-9-]+\.md)\)/g, (all, link) => { const to = targets.get(`brain/entities/${link.replace(/^\.\.\//, "")}`); return to ? `](${linkFrom(m.to, to)})` : all; })
+        .replace(/\]\(\.\.\/contexts\//g, `](${linkFrom(m.to, "brain/contexts")}/`);
+      movePage(root, m.from, m.to, text);
+    }
+    const indexes = writeKindIndexes(root, readEntityFiles(root), kindRelations(root), { kinds: ENTITY_KINDS });
+    return { moves: moves.map(({ from, to, redirect }) => ({ from, to, redirect })), indexes };
+  });
 }

@@ -50,7 +50,7 @@ export function refreshIndexedPages(root, registry, publish, { readOnly = false 
     for (const e of registry.filter(e => readOnly || e._path)) {
       const previous = saved?.pages?.[e.id], revision = version.get(JSON.stringify(e.id))?.version || 0;
       const notes = editedBody(e) ? { path: e._path, markdown: e._body } : null;
-      const signatureFor = (related, scoped) => digest([identity(e), related, scoped, notes, revision, e._fm?.compilation, e._fm?.compiled_as_of, e._fm?.compiled_at, e._fm?.compiled_fields, e._fm?.compiled_schema, schemaRevision]);
+      const signatureFor = (related, scoped) => digest([identity(e), e._path, related, scoped, notes, revision, e._fm?.compilation, e._fm?.compiled_as_of, e._fm?.compiled_at, e._fm?.compiled_fields, e._fm?.compiled_schema, schemaRevision]);
       // Most writes do not change this entity's evidence, its known neighbors or
       // its context covers. Check those recorded dependencies before any history
       // query. The index bumps both old and new owners on every relink/correction.

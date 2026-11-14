@@ -65,7 +65,8 @@ node -e 'const l=await import(process.argv[1]); const [owner,company,strategy,ma
 node -e 'const l=await import(process.argv[1]);l.seedOnboarding(".",process.argv[2])' "$PLUGIN/lib/brain.mjs" "$OWNER_HANDLE"
 
 # 2b. names registry, seeded with the team
-node -e 'const l=await import(process.argv[1]); l.writeNames(".", l.readNames("."))' "$PLUGIN/lib/brain.mjs"
+# Entity pages go in a folder per kind (people/, organizations/, ...), each with its generated index.md.
+node -e 'const l=await import(process.argv[1]); l.startKindLayout("."); l.writeNames(".", l.readNames("."))' "$PLUGIN/lib/brain.mjs"
 
 # 3. AGENTS.md, gitignore, hooks
 sed -e "s|{{COMPANY}}|$(esc "$COMPANY")|g" "$T/AGENTS.md" > AGENTS.md

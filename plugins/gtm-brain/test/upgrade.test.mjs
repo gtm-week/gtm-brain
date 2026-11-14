@@ -339,6 +339,38 @@ test("the session hook refreshes a README a release wrote in a commit of its own
   assert.equal(readFileSync(join(scheduled.root, "README.md"), "utf8"), old);
 });
 
+test("upgrade moves a flat brain's entity pages into a folder per kind in one commit, as renames", t => {
+  const { root, env } = fixture(t);
+  const git = (...a) => spawnSync("git", ["-C", root, ...a], { encoding: "utf8" });
+  // a brain from before 0.35: pages flat in brain/entities, a merge and a company's files folder
+  const acme = lib.addName(root, "Acme", { kind: "organization", subtype: "company" }), chris = lib.addName(root, "Chris"), kp = lib.addName(root, "Krzysztof Pawlak");
+  const preview = lib.mergeEntities(root, { source: chris.id, target: kp.id });
+  lib.mergeEntities(root, { source: chris.id, target: kp.id, by: "ann-lee", as_of: preview.as_of });
+  const flat = {};
+  for (const p of lib.entityPagePaths(root)) flat[p] = `brain/entities/${p.split("/").pop().replace(/-[0-9a-f]{6}\.md$/, "")}.md`;
+  for (const [from, to] of Object.entries(flat)) { writeFileSync(join(root, to), readFileSync(join(root, from), "utf8").replace(/\]\(\.\.\/\.\.\/contexts\//g, "](../contexts/")); rmSync(join(root, from)); }
+  for (const f of ["people", "organizations", "products", "events", "tools", "meetings"]) rmSync(join(root, "brain/entities", f), { recursive: true, force: true });
+  mkdirSync(join(root, "brain/entities/acme")); writeFileSync(join(root, "brain/entities/acme/logo.svg"), "<svg/>");
+  assert.equal(lib.entityLayout(root), "flat");
+  const ids = lib.readNames(root).map(n => [n.id, n.name, n.aliases, n.previous_ids]);
+  git("add", "-A"); git("-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "commit", "-qm", "flat brain");
+  const { GTM_BRAIN_NO_COMMIT, ...committing } = env;
+  const result = spawnSync("bash", [join(plugin, "scripts/gtm-brain-upgrade/upgrade.sh"), root], { cwd: root, env: committing, encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /moved \d+ entity pages into a folder per kind/);
+  assert.equal(lib.entityLayout(root), "kinds");
+  assert.deepEqual(lib.readNames(root).map(n => [n.id, n.name, n.aliases, n.previous_ids]), ids);
+  assert.equal(lib.resolveEntity(lib.readNames(root), chris.id).id, kp.id, "the retired id still resolves");
+  assert.ok(existsSync(join(root, `brain/entities/organizations/acme-${acme.id.slice(2, 8)}/logo.svg`)));
+  assert.ok(existsSync(join(root, "brain/entities/people/index.md")));
+  const status = git("show", "--name-status", "-M", "--format=", "HEAD").stdout;
+  assert.match(status, new RegExp(`^R\\d+\\s+brain/entities/acme\\.md\\s+brain/entities/organizations/acme-${acme.id.slice(2, 8)}\\.md$`, "m"));
+  assert.match(status, /^R\d+\s+brain\/entities\/acme\/logo\.svg\s+brain\/entities\/organizations\/acme-[0-9a-f]{6}\/logo\.svg$/m);
+  assert.equal(git("status", "--porcelain", "brain").stdout.trim(), "", "everything moved is in that commit");
+  const again = spawnSync("bash", [join(plugin, "scripts/gtm-brain-upgrade/upgrade.sh"), root], { cwd: root, env: committing, encoding: "utf8" });
+  assert.doesNotMatch(again.stdout, /entity pages? into a folder per kind/);
+});
+
 test("the README does not call work/ safe to delete", () => {
   const readme = readFileSync(join(plugin, "templates/README.md"), "utf8");
   assert.doesNotMatch(readme, /safe to delete/);

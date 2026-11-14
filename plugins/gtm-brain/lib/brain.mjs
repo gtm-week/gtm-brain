@@ -32,7 +32,8 @@ import { readSchema, checkRelation, brainKinds, US } from "./schema.mjs";
 export { validateRelationEvidence, guardRelationCorrection, relationOverview, relationsText } from "./relations.mjs";
 export { updateEntity, mergeEntities, archiveEntity, undoEntityMerge } from "./entity-lifecycle.mjs";
 export { entityFacts, entityBrief, entityRecords, compileEntity, resolveEntity, refreshEntityPages, staleEntities, entityEvidenceIndex, entityType, ENTITY_FORMAT } from "./entities.mjs";
-export { withEntityLock } from './entities.mjs';
+export { withEntityLock, startKindLayout, migrateToKindFolders } from './entities.mjs';
+export { layout as entityLayout, pagePaths as entityPagePaths, kindFolder, kindPagePath, assetFolder, findPage } from './layout.mjs';
 
 /* The machine-wide GTM Brain preferences file. */
 export const preferencesPath = () => join(process.env.CODEX_HOME || join(homedir(), ".codex"), "gtm-brain", "preferences.json");

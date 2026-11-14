@@ -1,14 +1,14 @@
 // Explicit identity operations. Recovery snapshots live with the entity files;
 // context memories are never rewritten by an identity operation.
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import * as lib from "./brain.mjs";
 import { pointerKey, sourceKind } from "./pointers.mjs";
-import { withEntityLock, entityType, identity, idOK, entityText, parseEntityText, editedBody, applyEntityChange, readEntityChange } from "./entities.mjs";
+import { withEntityLock, entityType, identity, idOK, entityText, parseEntityText, editedBody, applyEntityChange, readEntityChange, pageTarget } from "./entities.mjs";
 import { brainKinds } from "./schema.mjs";
-import { linkFrom } from "./layout.mjs";
+import { linkFrom, findPage } from "./layout.mjs";
 
 const hash = value => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const object = v => v && typeof v === "object" && !Array.isArray(v);
@@ -50,7 +50,8 @@ function finish(root, record, result) {
   }
   return { ...result, changed: true, change_id, note: commit.note };
 }
-const change = (root, e, fm, body = e._body) => ({ path: e._path, before: e._text, after: entityText(e, fm, body) });
+// In a kind folder a new name or kind moves the page (lib/layout.mjs); a flat brain keeps the file name.
+const change = (root, e, fm, body = e._body) => { const path = pageTarget(root, { ...e, ...fm }); return { path, ...(path !== e._path ? { from: e._path } : {}), before: e._text, after: entityText(e, fm, body) }; };
 const updated = (e, fields) => ({ ...e._fm, ...fields, updated_at: new Date().toISOString() });
 
 export function updateEntity(root, { entity, by, set = {}, add = {}, remove = {} }) {
@@ -150,17 +151,21 @@ export function mergeEntities(root, { source, target, by, as_of, resolution = {}
 
 // Compilers can refresh generated text after a merge. Identity changes, unknown
 // metadata and handwritten text must still match before automatic reversal is safe.
+// a link to an entity page is the same link wherever the page sits and whatever it is named (the upgrade moves pages)
+const sameLinks = markdown => markdown.replace(/\]\([^)\s]*\.md\)/g, "](page)");
 function authoredState(text, path) {
   const e = parseEntityText(text, path), fm = { ...e.fm };
   for (const field of ["compiled_at", "compiled_by", "compiled_as_of", "compilation", "rendered_body_hash", "evidence_as_of", "latest_evidence_at", "stale", "updated_at"]) delete fm[field];
-  return { fm, header: entityText({ _header: e.header, _fm: e.fm }, fm, ""), markdown: editedBody({ _fm: e.fm, _body: e.body }) ? e.body : null };
+  return { fm, header: entityText({ _header: e.header, _fm: e.fm }, fm, ""), markdown: editedBody({ _fm: e.fm, _body: e.body }) ? sameLinks(e.body) : null };
 }
 export function undoEntityMerge(root, { merge_id, by, as_of }) {
   return withEntityLock(root, () => {
     const rec = readEntityChange(root, merge_id);
     if (rec.operation !== "merge") throw new Error("Choose a merge operation to undo");
     const registry = lib.readNames(root), survivor = exact(registry, rec.target), contexts = lib.listContexts(root);
-    const current = rec.changes.map(c => ({ ...c, current: readFileSync(join(root, c.path), "utf8") }));
+    // a page renamed or moved to a kind folder since the merge is found by its id
+    const located = c => existsSync(join(root, c.path)) ? c.path : findPage(root, parseEntityText(c.after, c.path).fm.id) || c.path;
+    const current = rec.changes.map(c => { const at = located(c); return { ...c, at, current: readFileSync(join(root, at), "utf8") }; });
     const conflicts = current.filter(c => !isDeepStrictEqual(authoredState(c.current, c.path), authoredState(c.after, c.path))).map(c => ({ path: c.path, problem: "Identity or handwritten metadata changed after this merge. Undo later merges first, or review those edits before splitting." }));
     const beforeMemories = new Set(rec.impact.flatMap(i => i.memories));
     const later = contexts.flatMap(c => lib.effectiveMemories(c.memories)).filter(m => m.entities?.includes(survivor.id) && !beforeMemories.has(m.id)).map(m => ({ id: m.id, context: m.context, content: m.content }));
@@ -172,8 +177,8 @@ export function undoEntityMerge(root, { merge_id, by, as_of }) {
     if (as_of !== revision) throw new Error("Undo preview is stale; preview undo_entity_merge again");
     if (conflicts.length) throw new Error("Cannot undo without reviewing changes made after the merge: " + conflicts.map(c => c.path).join(", "));
     const changes = current.map(c => {
-      const before = parseEntityText(c.before, c.path);
-      return { path: c.path, before: c.current, after: entityText({ _fm: before.fm, _header: before.header }, { ...before.fm, updated_at: new Date().toISOString() }, before.body) };
+      const before = parseEntityText(c.before, c.path), path = pageTarget(root, before.fm, c.at);
+      return { path, ...(path !== c.at ? { from: c.at } : {}), before: c.current, after: entityText({ _fm: before.fm, _header: before.header }, { ...before.fm, updated_at: new Date().toISOString() }, before.body) };
     });
     return finish(root, { operation: "undo_merge", merge_id, source: rec.source, target: rec.target, by: who, changes }, { status: "unmerged", source: rec.source, target: rec.target, memories_kept_with_survivor: later });
   });
