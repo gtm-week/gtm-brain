@@ -150,32 +150,14 @@ if [ -f "$root/work/tools.json" ]; then
 else
   node "$H" text toolsUnchecked
 fi
-# One health line: why meetings may be missing (so a bare count is never read as "no meetings"), the last good
-# summary run and the last error, the last sync per tool, the open meeting gaps (lib/health-line.mjs).
-node -e 'const l=await import(process.argv[1]),h=await import(process.argv[2]);const r=process.argv[3],s=h.healthLine(r,l.meetingOverview(r,{by:l.currentPerson(r)||undefined}));if(s)console.log(s)' "$P/lib/brain.mjs" "$P/lib/health-line.mjs" "$root" 2>/dev/null || true
-# The documents (root Markdown with kind: document): what the work must follow, named every chat so rule 11
-# has something to point at; absolute paths in a linked project, where the landing pages get built.
-node -e 'const d=await import(process.argv[1]);console.log(d.documentsLine(process.argv[2],{absolute:!!process.argv[3]}))' "$P/lib/documents.mjs" "$root" "$project" 2>/dev/null || true
-# The approved files (a person's photo, a company's logo): named every chat, so a graphic never takes an old copy (lib/assets.mjs).
-node -e 'const a=await import(process.argv[1]);const l=a.assetsLine(process.argv[2]);if(l)console.log(l)' "$P/lib/assets.mjs" "$root" 2>/dev/null || true
-# Workflow runs in progress (lib/workflows.mjs): named once, so a due step is mentioned and "next step" follows the skill.
-node -e 'const w=await import(process.argv[1]);const l=w.runsLine(process.argv[2]);if(l)console.log(l)' "$P/lib/workflows.mjs" "$root" 2>/dev/null || true
-# Folders at the top GTM Brain does not use (a migrated brain's company/, assets/): named once per set, never touched.
-[ -z "$project" ] && { node -e 'const d=await import(process.argv[1]);const h=d.strayFoldersHint(process.argv[2]);if(h)console.log(h)' "$P/lib/documents.mjs" "$root" 2>/dev/null || true; }
-# Rules from an older GTM Brain keep naming tools and habits the plugin has moved on from (ALL-204).
-# Unedited ones are refreshed here; edited ones get the offer. Both say why: what the newer rules change.
-node -e 'const u=await import(process.argv[1]);const o=u.autoRefresh(process.argv[2],process.argv[3]);if(o)console.log(o)' "$P/lib/upgrade-files.mjs" "$root" "$P/templates" 2>/dev/null || true
-node -e 'const u=await import(process.argv[1]);u.refreshReadme(process.argv[2],process.argv[3])' "$P/lib/upgrade-files.mjs" "$root" "$P/templates" 2>/dev/null || true
-# Where things go (RULES.md, the person's to edit; an older WHERE.md is merged into it once) and the projects under projects/: a deliverable goes into its project.
-node -e 'const w=await import(process.argv[1]);w.ensureRules(process.argv[2],process.argv[3]);const l=w.whereLine(process.argv[2]);if(l)console.log(l)' "$P/lib/where.mjs" "$root" "$P/templates" 2>/dev/null || true
-# Which questions go to a connected tool instead of a saved note (RULES.md Ask the source, the defaults when it has none): one line, only when such a tool is connected.
-node -e 'const a=await import(process.argv[1]);const l=a.askSourceLine(process.argv[2]);if(l)console.log(l)' "$P/lib/ask-source.mjs" "$root" 2>/dev/null || true
-# What the brain keeps per person, organization and product, and the relationship types (SCHEMA.md, the person's to edit).
-node -e 'const s=await import(process.argv[1]);s.ensureSchema(process.argv[2],process.argv[3]);const l=s.schemaLine(process.argv[2]);if(l)console.log(l)' "$P/lib/schema.mjs" "$root" "$P/templates" 2>/dev/null || true
-# A summary paused by a hand edit never updates by itself: said once per set, so the person hears it in the chat.
-node -e 'const l=await import(process.argv[1]);const h=l.pausedCoversHint(process.argv[2]);if(h)console.log(h)' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
-# New files that arrived with no recorded reason (made by shell, saved by background maintenance): named once per set.
-node -e 'const w=await import(process.argv[1]);const h=w.unplacedHint(process.argv[2]);if(h)console.log(h)' "$P/lib/where.mjs" "$root" 2>/dev/null || true
+# The closing lines, in one node (session/start-lines.mjs): one health line (why meetings may be missing, the
+# last summary run and error, the last sync per tool, the open meeting gaps, a Markdown at the root not used yet;
+# lib/health-line.mjs); the documents (rule 11 points at them; absolute paths in a linked project); the approved
+# files (a graphic never takes an old copy); the workflow runs in progress; folders at the top GTM Brain does not
+# use (named once per set, never touched); rules from an older GTM Brain (ALL-204: unedited ones refreshed, edited
+# ones offered); RULES.md and the projects; Ask the source; SCHEMA.md; summaries paused by a hand edit; new files
+# with no recorded reason.
+node "$P/session/start-lines.mjs" "$root" "$project" "$P/templates" 2>/dev/null || true
 # A newer GTM Brain where this install came from: checked in the background at most once a day (a shallow
 # fetch of one ref, never in the hook's own time); the last result is said here and shown on the page.
 if [ -z "${GTM_BRAIN_NO_VERSION_CHECK:-}" ] && [ -f "$P/scripts/gtm-brain-update-plugin/check-version.mjs" ] && node "$H" can update-check; then
