@@ -14,10 +14,10 @@ import { spawnSync, execFileSync, execFile, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { parseOntology } from "./ontology/ontology.mjs";
 import { validateAsset } from './assets.mjs';
-import { normalizeSource, accountOK, urlOK } from "./pointers.mjs";
+import { normalizeSource, accountOK, urlOK, isRecording } from "./pointers.mjs";
 import { rankEntityCandidates } from './entity-search.mjs';
 export { rankEntityCandidates } from './entity-search.mjs';
-export { normalizeKind, normalizeSource, normalizeSources, pointerKey, parsePointer, urlPointer, lookupKey, sourceMembers, citesPointer, referenceText } from './pointers.mjs';
+export { normalizeKind, normalizeSource, normalizeSources, pointerKey, parsePointer, urlPointer, lookupKey, sourceMembers, citesPointer, referenceText, isRecording, bigFilePointer } from './pointers.mjs';
 import { checkSchema } from "./ontology/validation.mjs";
 import { readEntityFiles, writeEntityFiles, entityId, entityType, ENTITY_FORMAT, refreshEntityPages, staleEntities, withEntityLock } from "./entities.mjs";
 import { appendMemoryBytes } from './memory-journal.mjs';
@@ -872,11 +872,15 @@ export const NOT_COMMITTED_YET = "written to disk, not committed yet: say save t
 export const BRAIN_PATHS = ["brain", "AGENTS.md", "CLAUDE.md", ".githooks", ".gitignore", ".gitattributes", ".agents"];
 /* Everything save keeps: the engine's paths, the root README, and the documents with their files (lib/documents.mjs). */
 /* Files too big for git (videos, recordings, renders; GitHub refuses a file over 100 MB): never committed. They
-   belong on the shared drive, linked from the brain (RULES.md); save and the chat start name them. */
+   belong on the shared drive, linked from the brain (RULES.md); save and the chat start name them. A recording
+   (audio or video, lib/pointers.mjs isRecording) is kept out at any size: RULES.md never puts one in the brain. */
 export const LARGE_FILE_MB = 25;
 export function largeUnsaved(root, limit = LARGE_FILE_MB * 1024 * 1024) {
-  let out = ""; try { out = execFileSync("git", ["--no-optional-locks", "-C", root, "ls-files", "-z", "--others", "--modified", "--exclude-standard"], { encoding: "utf8", stdio: "pipe", maxBuffer: 64 << 20 }); } catch { return []; }
-  return [...new Set(out.split("\0").filter(Boolean))].map(path => { try { return { path, size: statSync(join(root, path)).size }; } catch { return null; } }).filter(f => f && f.size > limit);
+  // -t tags each path: "?" is a file git does not hold yet. A recording git already holds (kept before 0.35.0) stays
+  // saveable under the size limit: leaving its edits out would not take it out of git, only strand them.
+  let out = ""; try { out = execFileSync("git", ["--no-optional-locks", "-C", root, "ls-files", "-z", "-t", "--others", "--modified", "--exclude-standard"], { encoding: "utf8", stdio: "pipe", maxBuffer: 64 << 20 }); } catch { return []; }
+  const seen = new Map(); for (const row of out.split("\0").filter(Boolean)) { const path = row.slice(2); seen.set(path, seen.get(path) || row[0] === "?"); }
+  return [...seen].map(([path, untracked]) => { try { return { path, size: statSync(join(root, path)).size, untracked }; } catch { return null; } }).filter(f => f && (f.size > limit || (f.untracked && isRecording(f.path)))).map(({ path, size }) => ({ path, size }));
 }
 /* Every change in the brain folder: what .gitignore keeps out (work/, .env), a project's local pointer and a file
    too big for git stay out. */
@@ -988,13 +992,26 @@ export function bigFiles(root) {
   const folder = mode === "local" ? (given && isAbsolute(given) && !inside ? resolve(given) : join(homedir(), "gtm-brain-files", basename(resolve(root)))) : null;
   return { mode, folder };
 }
+/* The one Google Drive folder big files go to: `big_files_drive_folder:` in admin.md, else "<company> GTM Brain files". */
+export function bigFilesDriveFolder(root) {
+  const a = root ? readAdmin(root) : null, named = String(a?.big_files_drive_folder || "").trim();
+  return named || `${String(a?.company || "").trim() || "Company"} GTM Brain files`;
+}
+// The walk-through every big file follows, from save, the chat start, add-file and onboarding.
+export const BIG_FILES_GUIDE = "gtm-brain-use-brain/references/big-files.md";
 /* The one instruction for a file too big for git, shared by save, the chat start and add-file. */
 export function bigFileAdvice(root) {
   const { mode, folder } = bigFiles(root);
-  if (mode === "local") return `This brain keeps big files on this computer (big_files: local in brain/admin.md): offer to move each to ${folder}, outside git, and link it from its project's README.md as file:${folder}/<name>; delete the original only after the person says yes and the copy is verified. That folder is not shared: say once that teammates will not get the file.`;
-  return `Offer to move each to the shared drive (Google Drive) and link it from its project's README.md, as RULES.md says; delete the local copy only after the person says yes and the upload is verified. If Google Drive is not connected in this Codex, offer to connect it first (connect my tools); if they decline, the file stays on this computer only, and say once that teammates will not get it.`;
+  if (mode === "local") return `This brain keeps big files on this computer (big_files: local in brain/admin.md): follow the big-files walk-through (${BIG_FILES_GUIDE}): offer to move each to ${folder}, outside git (add-file.mjs --big copies it and checks the copy), and save the pointer file:${folder}/<name> on the note that says what it is; delete the original only after the person says yes and the copy is verified. That folder is not shared: say once that teammates will not get the file.`;
+  return `Follow the big-files walk-through (${BIG_FILES_GUIDE}): offer to move each to the shared drive (Google Drive), in the folder "${bigFilesDriveFolder(root)}", with the Drive connector, and save its pointer {kind: google-drive, account, ref, url} on the note that says what it is; the bytes are never committed. Delete the local copy only after the person says yes and the upload is verified. If Google Drive is not connected in this Codex, say so and ask for the file's Drive link instead (connect my tools connects it); without a link the file stays on this computer only: say once that teammates will not get it.`;
 }
-export const largeNote = (large, root) => `Too big for git, not kept (over ${LARGE_FILE_MB} MB): ${large.map(f => `${f.path} (${Math.round(f.size / 1048576)} MB)`).join(", ")}. ${bigFileAdvice(root)}`;
+export function largeNote(large, root) {
+  const over = large.filter(f => f.size > LARGE_FILE_MB * 1048576), rec = large.filter(f => !over.includes(f));
+  const parts = [];
+  if (over.length) parts.push(`Too big for git, not kept (over ${LARGE_FILE_MB} MB): ${over.map(f => `${f.path} (${Math.round(f.size / 1048576)} MB)`).join(", ")}.`);
+  if (rec.length) parts.push(`Recordings stay out of git, not kept: ${rec.map(f => `${f.path} (${(f.size / 1048576).toFixed(1)} MB)`).join(", ")}.`);
+  return `${parts.join(" ")} ${bigFileAdvice(root)}`;
+}
 /* The person's save: commit what unsavedChanges lists, push when there is a remote. */
 export function save(root, message, { covers = false, trailers = [] } = {}) {
   if (!covers && existsSync(join(root, "work", "admin.proposed.md"))) return { ok: false, note: "a change to brain/admin.md is waiting for APPROVE; ask for APPROVE or a drop, then save" };
@@ -1297,7 +1314,7 @@ export function effectiveMemories(list) {
 }
 /* Timestamps compare as instants, whatever their precision (older records have minutes). */
 export const newer = (a, b) => Date.parse(a) > Date.parse(b);
-export { ONBOARDING_VERSION, readOnboarding, seedOnboarding, onboardingInstruction, closeOnboardingFromOutcomes } from './onboarding.mjs';
+export { ONBOARDING_VERSION, readOnboarding, seedOnboarding, onboardingInstruction, closeOnboardingFromOutcomes, bigFilesChoice, bigFilesAnswer } from './onboarding.mjs';
 /* A snapshot key of a memory list: compile reads the facts under one key and applies under the
    same key, so a memory added, corrected or retracted in between is noticed. */
 export const snapshotKey = list => list.length ? "s_" + createHash("sha256").update(list.map(m => m.id).join("\n")).digest("hex").slice(0, 12) : "none";

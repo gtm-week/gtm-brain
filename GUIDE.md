@@ -203,7 +203,13 @@ A project folder holds drafts and deliverables for one piece of work (the websit
 `brain/` is what Codex remembers: notes by topic, people, companies. Nothing else belongs at the
 top, and `README.md` says so: a `company/` folder with subfolders is a container nobody reads.
 A strategy is a document plus, once written, its decisions as notes in the Strategy context;
-say `add strategy.md as a document` to register one you wrote by hand.
+say `add strategy.md as a document` to register one you wrote by hand. `voice.md` is filled by
+`/gtm-brain-voice` from your website, public posts and, where connected, sent mail and Slack; run
+it again whenever the way you write changes.
+
+Recordings and files over 25 MB never go into git. Drop one in the chat: Codex puts it in your
+Google Drive folder (or the folder outside git that you chose during setup, `big_files` in
+`brain/admin.md`) and the note about it keeps the link.
 
 A context's standing instructions (`rule`) describe its purpose, meaningful boundaries and
 how Codex should work there. The dashboard shows them as Instructions; change them in chat.

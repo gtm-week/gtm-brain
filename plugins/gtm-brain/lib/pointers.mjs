@@ -5,6 +5,7 @@
    normalizeSource give the one spelling on write and on every read that compares sources. Stored notes
    are never rewritten: readers normalize, and a note from 0.35.0 that holds the pointer plus a separate
    url entry for the same link reads as that one record. */
+import { isAbsolute, relative, resolve } from "node:path";
 
 // Short forms people write that are not the connector's name. connect.mjs matches tool names with
 // the same table, so a source kind and a connector agree.
@@ -135,4 +136,41 @@ export function referenceText(pointer, entities = [], notes = []) {
   lines.push(notes.length ? `Notes citing it (${notes.length}):` : "Notes citing it: none.");
   for (const n of notes) lines.push(`- ${n.id} ${n.context} ${n.at} ${n.kind}: ${String(n.content || "").replace(/\s+/g, " ").slice(0, 200)}`);
   return lines.join("\n");
+}
+
+/* Big files: a recording, or any file over the git size limit (lib.LARGE_FILE_MB), never goes into git. The note
+   that says what the file is keeps one pointer to where it lives instead, built here so every writer spells it
+   the same way. google-drive: {kind: "google-drive", account?, ref, url?}: ref is the Drive file id (read from
+   the link when only the link is known), account the Drive account it lives in. local: {kind: "file", ref:
+   <absolute path>}: a path in the big-files folder on this computer, never inside the brain. */
+export const RECORDING = /\.(mp4|mov|m4v|webm|mkv|avi|wmv|mpe?g|3gp|mp3|m4a|wav|aac|ogg|oga|flac|opus|aiff?|wma|caf)$/i;
+export const isRecording = name => RECORDING.test(String(name ?? "").trim());
+const DRIVE_ID = /^[A-Za-z0-9_-]{10,}$/;
+const within = (base, path) => { const r = relative(resolve(base), resolve(path)); return r === "" || (!r.startsWith("..") && !isAbsolute(r)); };
+export function bigFilePointer(mode, { account, ref, url, path } = {}, { root, folder } = {}) {
+  if (mode === "google-drive") {
+    const acct = account !== undefined && account !== null && String(account).trim() ? { account: String(account).trim().toLowerCase() } : {};
+    if (acct.account && !accountOK(acct)) throw new Error("account must be a non-empty string up to 200 characters");
+    let id = String(ref ?? "").trim(), link = String(url ?? "").trim();
+    if (!link && /^https?:\/\//i.test(id)) { link = id; id = ""; }
+    if (link) {
+      const p = linkOK(link) ? urlPointer(link) : null;
+      if (!p || p.kind !== "google-drive") throw new Error("not a Google Drive link: give the file's link (drive.google.com or docs.google.com) or its file id");
+      if (/\/folders\//.test(new URL(link).pathname)) throw new Error("that link is a Drive folder: give the link of the file itself");
+      if (!DRIVE_ID.test(p.ref)) throw new Error("the Drive link carries no file id: give the file's own link");
+      if (id && id !== p.ref) throw new Error(`the Drive link names file ${p.ref}, not ${id}`);
+      return { kind: "google-drive", ...acct, ref: p.ref, url: link };
+    }
+    if (!DRIVE_ID.test(id)) throw new Error("a Google Drive pointer needs the file's Drive link or its file id");
+    return { kind: "google-drive", ...acct, ref: id };
+  }
+  if (mode === "local") {
+    const p = String(path ?? ref ?? "").trim();
+    if (!p || !isAbsolute(p)) throw new Error("a local big-file pointer needs the file's absolute path");
+    const at = resolve(p);
+    if (root && within(root, at)) throw new Error(`${at} is inside the brain, so git would keep it: it belongs in the big-files folder outside the brain`);
+    if (folder && !within(folder, at)) throw new Error(`${at} is not in the big-files folder ${folder}`);
+    return { kind: "file", ref: at };
+  }
+  throw new Error("big files go to google-drive or local");
 }

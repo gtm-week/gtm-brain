@@ -24,6 +24,7 @@ to distinguish these workflows from other installed skills.
 | `gtm-brain-configure` | GTM Brain: Configure GTM Brain | Workplace info, team, tools and settings through APPROVE |
 | `gtm-brain-skill` | GTM Brain: Your skills | Turn a repeated workflow into a Codex skill kept in the brain's `.agents/skills`; install from GitHub, list, remove, share |
 | `gtm-brain-strategy` | GTM Brain: Strategic intake | A 10-15 minute conversation with a founder or a head of sales, growth or GTM that fills `strategy.md`, the document every brain starts with, mapped silently to Playing to Win; files shared on the way land in `strategy/` |
+| `gtm-brain-voice` | GTM Brain: Voice | Reads the website and public posts, plus sent mail and Slack where connected (smallest reads, connectors only), and fills `voice.md` through `document`: tone, sentence habits, words used and avoided, three before and after examples quoted from real text with their sources; saved as a draft on the person's yes, re-run to revise |
 
 Find workflow examples from Overview or Help > Ways to work in Codex.
 Each entry explains the workflow, shows an example and its command, and opens a prepared
@@ -139,12 +140,19 @@ nothing saved, the read's reply ends with one line asking to save what the turn 
 comes back only after five more reads and never in a scheduled or background run. `save_nudge: off`
 turns it off (a brain without the line has it on).
 
-`big_files` in the same front matter says where a file over 25 MB goes, since git never keeps it:
-`google-drive` (new brains, and a brain without the line) moves it to the shared drive and links it
-from the project's `README.md`; `local` keeps it in a folder on this computer outside git
-(`big_files_folder:`, an absolute path, else `~/gtm-brain-files/<brain folder>`), not shared, linked
-as a `file:` path. `save`, the chat start and `add-file.mjs` give the same instruction
-(`lib.bigFileAdvice`). It changes through APPROVE.
+`big_files` in the same front matter says where a recording (audio or video, any size) or a file
+over 25 MB goes, since git never keeps it: `google-drive` (new brains, and a brain without the
+line) places it in one Drive folder (`big_files_drive_folder:`, else "<company> GTM Brain files")
+with the Drive connector; `local` copies it to a folder on this computer outside git
+(`big_files_folder:`, an absolute path, else `~/gtm-brain-files/<brain folder>`), not shared. Either
+way the note that says what it is keeps a pointer (`{kind: "google-drive", account, ref, url}` or
+`{kind: "file", ref: <absolute path>}`, `lib/pointers.mjs` `bigFilePointer`), never the bytes.
+`save`, the chat start and `add-file.mjs` give the same instruction (`lib.bigFileAdvice`) and the
+walk-through is `skills/gtm-brain-use-brain/references/big-files.md`: `add-file.mjs --file <path>
+--big` copies and checks the file (local) or names the Drive folder, `add-file.mjs --drive <link>
+[--account <a>]` prints the Drive pointer. Onboarding asks the choice once and saves the answer as
+the note `Big files: google-drive.` or `Big files: local.` in `company` (`lib.bigFilesChoice`). It
+changes through APPROVE.
 
 ### recall
 *"what do we know about the TCO?"*, *"did we ever talk about Berlin?"*, *"tell me about Pierre Aubert"*

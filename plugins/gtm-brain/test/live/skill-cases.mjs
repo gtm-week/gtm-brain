@@ -21,9 +21,11 @@ const status = calls => calls.some(c => c.tool === "query" && c.arguments?.objec
 const firstIndex = (calls, pred) => calls.findIndex(pred);
 
 import { icpCases } from './icp-cases.mjs';
+import { voiceCases } from './voice-cases.mjs';
 
 export const skillCases = [
   ...icpCases,
+  ...voiceCases,
   {
     judge: "advisory", name: "skill-todo", workflow: "gtm-brain-todo", answer: "later|leave|skip|not now",
     prompt: "/gtm-brain-todo What is waiting on me?",

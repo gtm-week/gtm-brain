@@ -150,5 +150,13 @@
     "title": "Run the strategic intake",
     "description": "A 10-15 minute conversation about where the company is going that fills strategy.md, the document every brain starts with.",
     "example": "Run the strategic intake."
+  },
+  {
+    "id": "gtm-brain-voice",
+    "group": "setup",
+    "featured": false,
+    "title": "Draft our tone of voice",
+    "description": "Read the website, public posts and, where connected, sent mail and Slack, then fill voice.md with tone, habits, words and real before and after examples.",
+    "example": "Draft our tone of voice from our website and posts."
   }
 ]

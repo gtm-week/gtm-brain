@@ -9,6 +9,9 @@ Keep authored brain content in English. Preserve names, source quotes and the ex
 Call the GTM Brain tool `save` with `brain` = this workspace folder and `message` = one line saying
 what changed. No shell command. Only when the person asks; never on your own.
 
+A reply that names a file "Too big for git" or says "Recordings stay out of git" left that file
+unsaved on purpose: follow [big files](big-files.md) for each one.
+
 Report in the person's language, without git words: *"Kept: your edit to the pipeline
 summary."* If it says nothing to save, say so in one line. If it refused because a change to the
 workplace info is waiting for APPROVE, offer the `approve_change` form or a drop first.

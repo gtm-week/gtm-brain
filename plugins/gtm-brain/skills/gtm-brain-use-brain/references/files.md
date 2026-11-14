@@ -34,8 +34,10 @@ It prints one JSON object. `path` is where the file now lives, relative to `base
 already was; `owner` names the document or entity it landed beside; `kind` is image, pdf,
 document or other; `text` is the extracted text file when there is one; `note` explains
 anything unusual (already in the brain, no text extractor). It refuses folders, missing files,
-a file with no owner, an unknown document or entity (register one with `add_name` first) and
-anything over 25 MB, with the reason: pass that reason on in one line and stop.
+a file with no owner, an unknown document or entity (register one with `add_name` first), and a
+recording or anything over 25 MB, with the reason. For those two, follow
+[big files](big-files.md) instead: the file goes to the shared drive or a folder outside git, and
+the note keeps a pointer. Any other refusal: pass the reason on in one line and stop.
 
 ## Step 3: attach it (entity files)
 

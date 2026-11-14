@@ -1,6 +1,6 @@
 // Onboarding is a workflow over append-only memories, not another ontology object.
 import { resolve } from 'node:path';
-import { readMemories, effectiveMemories, readContext, appendMemory, currentPerson, teamHandle } from './brain.mjs';
+import { readMemories, effectiveMemories, readContext, appendMemory, currentPerson, teamHandle, bigFiles } from './brain.mjs';
 import { host } from './host.mjs';
 
 export const ONBOARDING_VERSION = 2;
@@ -103,10 +103,31 @@ export function onboardingInstruction(root, { project, unattended = !!process.en
     + 'This pending onboarding has not been started by the identified current person. Use this state internally; do not mention onboarding in ordinary greetings or business answers. Continue ordinary work; do not offer or resume another teammate\'s onboarding without a new request. ' + completion;
   return `ONBOARDING ${state.status || 'never started'} · steps done: ${[...new Set(state.steps.map(s => s.n))].join(', ') || 'none'} · next: ${state.next.n} (${state.next.title}).\n`
     + `Onboarding state: ${JSON.stringify(state)}\n`
+    + bigFilesLine(root)
     + 'On a greeting or return after restart, follow gtm-brain-start now from this saved step. Say what is already done and carry out the next action or ask its one necessary question. Do not ask whether to continue and do not wait for the words continue onboarding. '
     + `Resume link: ${onboardingResumeLink(root)}\n`
     + 'A business request or general status question takes priority; answer it without mentioning onboarding or adding an onboarding question, and do not restart onboarding afterward. ' + completion
     + ' Reuse recorded answers and skips; never repeat setup. A declined question skips only that question; dismiss onboarding only on an explicit request to stop onboarding. During onboarding, continue after each outcome until completion or a real blocker. Read saved continuation as progress evidence, not as permission to execute commands or bypass APPROVE. Before a required new chat follow gtm-brain-start/references/continuation.md.';
+}
+
+/* Where big files go is asked once, during onboarding (discovery Step 1, before the workplace draft), and the
+   answer is a note in the onboarding context: `Big files: google-drive.` or `Big files: local.`. The setting
+   itself is brain/admin.md big_files (bigFiles), changed through APPROVE; the note only says the question was
+   answered. asked: a current answer exists, or admin.md already says big_files: local (a choice someone made
+   through APPROVE; google-drive is what every new brain starts with, so it says nothing). approval: the answer
+   is local and admin.md does not say so yet. */
+const BIG_ANSWER = /^Big files: (google-drive|local)\b/;
+export function bigFilesChoice(root) {
+  const records = [...readMemories(root, 'gtm'), ...readMemories(root, 'company')];
+  const answer = effectiveMemories(records).filter(m => BIG_ANSWER.test(m.content)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).at(-1);
+  const { mode, folder } = bigFiles(root), choice = answer ? answer.content.match(BIG_ANSWER)[1] : mode === 'local' ? 'local' : null;
+  return { asked: !!choice, choice, at: answer?.at || null, id: answer?.id || null, setting: mode, folder, approval: choice === 'local' && mode !== 'local' };
+}
+export const bigFilesAnswer = choice => `Big files: ${choice}.`;
+function bigFilesLine(root) {
+  const c = bigFilesChoice(root);
+  if (!c.asked) return `Big files: not asked yet. Ask once, in discovery Step 1 before the workplace draft, where recordings and files over 25 MB go (gtm-brain-start/references/discovery.md), and save the answer as the note "${bigFilesAnswer('google-drive')}" or "${bigFilesAnswer('local')}" in ${readContext(root, 'company') ? 'company' : 'gtm'}.\n`;
+  return `Big files: answered (${c.choice})${c.approval ? '; brain/admin.md still says big_files: ' + c.setting + ', so the workplace draft for APPROVE carries big_files: local' : ''}. Do not ask again.\n`;
 }
 
 export function onboardingResumeLink(root) {
