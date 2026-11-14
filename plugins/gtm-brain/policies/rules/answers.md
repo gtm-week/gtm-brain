@@ -1,7 +1,7 @@
 ---
 title: Answering and the next step
 words: answer answers answering question ask recall search find what who where status overview cite citation citations source sources evidence next step offer skill eager todo to-do reply replies
-attach:
+attach: query:memories
 ---
 **Answering a question.** `query` with object memories and `search` = the person's words reads
 the whole brain, loaded or not, and expands known names and aliases; answer from the hits,

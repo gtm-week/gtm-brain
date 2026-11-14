@@ -1,7 +1,7 @@
 ---
 title: Saving what happened
 words: save saving remember record capture memory memories note notes outcome decision dates date freshness supersede supersedes correction correct retract question questions brain-question answer git commit confirm
-attach:
+attach: remember
 ---
 **Capture broadly (rule 2, core 1):** completed actions or decisions, meaningful changes from
 MCP results, meeting notes and other artifacts, findings, observations, commitments, and
