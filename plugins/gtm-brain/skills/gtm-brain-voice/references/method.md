@@ -1,53 +1,58 @@
-# Method: a tone of voice from the company's own writing
+# Method: a tone of voice from real writing
 
-A voice guide is written from what the company already wrote, never from adjectives alone. The
-reader is a writer who has never met the company and must sound like it on the first try. Put in
-what changes the output; leave out what any competent writer already does.
+Write for someone who never met the author. Put in what changes the output, nothing a competent
+writer already does.
 
-## 1. The corpus
+## 1. Whose voice
 
-Public writing first (the site, the blog, public posts), then the person's own outgoing writing
-(sent mail, chat messages in open Slack conversations). Twenty samples across formats is a good corpus; six
-is the least that shows a pattern; under six, say the guide is a guess. Prefer recent text: a page
-or post from the last year over an old one. Leave out what someone else wrote (a guest post, a
-quoted customer, a template) and anything machine-made (an auto-reply, a legal footer).
+A company voice is one standard for what the company publishes and sends, across channels; a
+difference between channels is one line when the texts show it, never a separate persona. A
+person's voice is that person's own writing. Never blend the two: a founder's casual chat is not
+the company's website, and internal chat is never evidence of the company voice.
 
-Private writing is evidence of habits, not content to publish: quote only the person's own
-sentences, short, with names of customers and colleagues replaced by a role in brackets.
+## 2. Kinds of text
 
-## 2. Tone: three words
+Sort every text before drawing a rule from it:
 
-Three words that a reader could check a sentence against ("plain", "specific", "warm"), each with
-one sentence on what it means here and one on what it does not mean. Two words that agree with
-each other are one word; pick the third that adds something.
+- Authored by the person or the company: the evidence.
+- AI-assisted text they approved: less weight; a habit seen only there is not theirs.
+- Automated messages and templates (auto-replies, sequences, notifications, legal footers): out.
+- Quotations (a customer, a forwarded message, a guest post): out.
 
-## 3. Sentence habits
+Prefer the last year. Private writing is evidence of habits, not content to publish: quote only
+the author's own sentences, short, with customer and colleague names replaced by a role in brackets.
 
-Numbers, not impressions: the usual sentence length (count words in ten sentences), the usual
-length of a post, an email and a page section, how pieces open (a problem, a number, a name, a
-question), how they close (a short sentence, an ask, nothing). The constructions the company comes
-back to, each quoted once from its own text. The tells to avoid: what in a draft would give away
-that someone else wrote it (stock openers, exclamation marks, emoji in body copy, long dashes,
-rhetorical questions, three adjectives in a row), each named so it can be checked.
+## 3. Weight
 
-## 4. Words used and avoided
+An explicit correction outweighs any inferred habit: the person edited a draft, or said "we never
+say X". It becomes a rule, quoted in their exact words. An inferred habit needs three or more
+authored texts; one occurrence is a hint, not a rule.
 
-Two lists of the words themselves. Used: the company's own terms for its product, its customer
-and the problem, as they appear in the texts. Avoided: words the texts never use where a generic
-writer would (leverage, seamless, unlock, world-class, excited to announce), and any term the
-person says is wrong. A word goes on a list only when the texts show it, or the person says so.
+## 4. What the guide holds
 
-## 5. Three before and after examples
+Only what the evidence supports, in the structure it suggests: often a few tone words a sentence
+can be checked against, how pieces open and close, constructions the texts return to (each quoted
+once), words used and avoided (the words themselves), the tells that would give away someone else
+wrote it, and a few before and after examples. No fixed number of sections or examples, no length
+rule or register unless the texts show one. Leave out what has no evidence.
 
-Exactly three short pairs, each a sentence or two, from three different texts and, where possible,
-three formats. Each pair shows one rule at work. At least one side of every pair is copied word for
-word from a real text, with its source (the link, or the tool's message pointer); the other side is
-marked as a rewrite. The usual shape: Before is the same message the way the voice rules out,
-After is the company's real sentence. When a real text drifts from the voice, the pair can run the
-other way: Before is the real sentence, After the rewrite.
+Observed and suggested stay apart. An observed rule traces to texts. A suggested improvement
+(what the writing would gain) sits under its own heading, marked as a suggestion, and becomes a
+rule only on the person's yes.
+
+In every example at least one side is copied word for word from a real text, with its source (a
+public link, or "pasted by <name>"); the other side is marked as a rewrite. No message pointer,
+recipient or thread goes in the document.
+
+## 5. The fresh-work test
+
+One short real piece written from the guide alone, then edited by the person. Their edits are
+corrections, the strongest evidence: a stated or repeated edit is a rule; a single edit tied to
+the situation (this recipient, this deal) is asked about or left out. The guide passes when a
+fresh piece needs only situational edits.
 
 ## 6. Revising
 
-A second run revises the guide in place. Keep every rule the new reading still supports, change
-the ones it contradicts and say which, and add what the new texts show. A rule the person wrote
-by hand stays unless they say to drop it.
+A re-run starts from the saved guide. Keep every approved rule, quoted correction and hand-written
+rule; change one only when new texts contradict it, and say why. Show the proposed changes as
+added, changed and dropped before saving.

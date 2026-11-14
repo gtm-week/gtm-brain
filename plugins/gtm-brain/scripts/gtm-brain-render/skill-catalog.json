@@ -156,7 +156,7 @@
     "group": "setup",
     "featured": false,
     "title": "Draft our tone of voice",
-    "description": "Read the website, public posts and, where connected, sent mail and Slack, then fill voice.md with tone, habits, words and real before and after examples.",
+    "description": "Settle whose voice it is, draft it from writing that fits, test it on one fresh email or post, then check a new chat follows it.",
     "example": "Draft our tone of voice from our website and posts."
   }
 ]
