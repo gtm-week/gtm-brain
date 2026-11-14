@@ -411,6 +411,9 @@ without writing; the normal test suite runs that check too.
   The script fills marked blocks in contributor instructions, installation instructions,
   the brain template and the question reference. The chat start reads these sources
   directly for both empty folders and existing brains.
+- The core rules source, [plugins/gtm-brain/policies/core.md](plugins/gtm-brain/policies/core.md), fills
+  only the first section of the brain template; the MCP server reads the same file into its
+  instructions, so a chat that never reads AGENTS.md still gets the core.
 - In [the ontology](plugins/gtm-brain/ontology/gtm-brain.ossie.json), edit the single-memory fields
   under `remember.input_schema.properties`. The script derives `memories.items.properties`
   from them, excluding the call-level `by`, `project` and batch envelope. The static JSON
