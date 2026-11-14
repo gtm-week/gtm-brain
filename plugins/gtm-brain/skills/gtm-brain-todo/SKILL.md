@@ -4,7 +4,7 @@ description: |
   What should I do now: gather everything that waits on the person across the brain (open
   questions, follow-ups named in the summaries, a proposal to approve, tools to connect,
   look-alike names to settle, Slack messages waiting on a reply), order it, and walk through it
-  one item at a time. Never a summary: those update by themselves. Triggers:
+  one item at a time. Never a summary: those are written when a topic is asked about. Triggers:
   "/gtm-brain-todo", "todo", "what should I do now", "what is waiting on me", "my list".
   Also "what's waiting on me in Slack", "Slack replies", "who do I owe a reply" (the Slack part alone).
   Also "what's next in pipeline", "where are we with X", "what is pending" (a context's next

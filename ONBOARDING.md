@@ -117,8 +117,8 @@ what you confirm is filed with its source. Workplace facts still go through APPR
 ## Your first week
 
 Just talk to Codex in plain language: "remember this", "what do we know about Acme?",
-"where are we with the pilot?". It records new information as it appears, and summaries
-update by themselves in the background. When you want a specific workflow:
+"where are we with the pilot?". It records new information as it appears, and a topic's
+summary is written when you ask about it. When you want a specific workflow:
 
 | You want to | Type |
 |---|---|

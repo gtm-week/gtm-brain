@@ -33,7 +33,7 @@ does not copy your data.
 
 Codex opens with one line telling you where you are:
 
-> In Target customers. Two new notes: Pierre asked for a TCO, and Anna confirmed the buying team. The summary is updating in the background.
+> In Target customers. Two new notes: Pierre asked for a TCO, and Anna confirmed the buying team. The summary is written when you ask about the topic.
 
 Then you just talk. The things worth knowing:
 
