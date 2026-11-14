@@ -156,6 +156,31 @@ export function askSourceLines(root, memories, { now = nowMs(), day = at => Stri
   return out;
 }
 
+/* A tool entity's page: the rows of the table about that tool, so the page says where its answers live. A row
+   that names tools matches when one is this tool (its name or an alias); a row that names only a kind matches
+   when this tool is of that kind, by its name (HubSpot is a CRM) or its category field ("CRM"). Rows are not
+   moved or copied: the line points at them. Read-time; the connected tools do not matter here. */
+export function toolRows(root, entity, { category = null, table = null } = {}) {
+  const { rows, defaults } = table || readAskSource(root);
+  const ids = [entity?.name, ...(entity?.aliases || [])].map(flat).filter(x => x.length >= 3);
+  if (!ids.length) return { rows: [], defaults };
+  const kinds = new Set(KINDS.filter(k => ids.some(id => k.tools.test(id)) || (category && k.words.test(String(category)))).map(k => k.kind));
+  const named = r => r.ask.names.some(n => ids.some(id => id.includes(n) || n.includes(id)));
+  return { rows: rows.filter(r => !r.ask.brain && (r.ask.names.length ? named(r) : kinds.has(r.ask.kind))), defaults };
+}
+/* The page's one line, or "" when no row is about this tool. */
+export function toolPageLine(root, entity, options = {}) {
+  const { rows, defaults } = toolRows(root, entity, options);
+  if (!rows.length) return "";
+  const where = r => defaults ? `good for ${goodText(r.good_for)}` : `RULES.md line ${r.line}, good for ${goodText(r.good_for)}`;
+  return `Ask the source (${defaults ? "the built-in rows: RULES.md has no table of its own" : "RULES.md"}): read ${entity.name} for ${rows.map(r => `${r.topic.toLowerCase()} (${where(r)})`).join("; ")}.`;
+}
+/* What the tool pages' line rests on: the readable rows, so a page refreshes when the table changes. */
+export function askSourceRevision(root) {
+  const { rows, defaults } = readAskSource(root);
+  return JSON.stringify([defaults, rows.map(r => [r.line, r.topic, r.ask, r.good_for])]);
+}
+
 /* The chat start's one line: the rows whose tool is connected, so a question with no note yet ("when is the next
    meeting?") still goes to the tool. "" when no row's tool is connected. */
 export function askSourceLine(root) {

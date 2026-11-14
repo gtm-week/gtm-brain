@@ -14,6 +14,7 @@ import { MemoryIndex } from './memory-index.mjs';
 import { meetingAttendees } from './meeting-entities.mjs';
 import { brainRelationsToUs } from './relation-to-us.mjs';
 import { oldFact, daysSince, agoText } from './staleness.mjs';
+import { toolPageLine } from './ask-source.mjs';
 
 export const ENTITY_FORMAT = "gtm-brain-entity-v2";
 // Brains written before the GTM OS -> GTM Brain rename carry the gtm-os names; migration rewrites them.
@@ -555,7 +556,9 @@ export function entityBrief(root, name, options = {}) {
   // one context's view is capped like the whole brief: a big brain's brief ran to megabytes
   const scoped = options.context ? lib.memoryTimeline(evidence) : null;
   const timeline = scoped ? scoped.slice(0, BRIEF_TIMELINE) : facts.timeline;
-  let markdown = renderBrief({ ...facts, timeline, ...(scoped ? { timeline_total: scoped.length } : {}) }, compilation, evidence, registry, options.context, options.now ?? null);
+  // a tool's page points at its rows in RULES.md's Ask the source table (never a copy of them)
+  const ask = facts.entity.kind === "tool" ? toolPageLine(root, facts.entity, { category: (facts.stale ? [] : facts.previous_fields || []).find(f => f.field === "category")?.text }) : "";
+  let markdown = renderBrief({ ...facts, timeline, ...(scoped ? { timeline_total: scoped.length } : {}), ...(ask ? { ask_source: ask } : {}) }, compilation, evidence, registry, options.context, options.now ?? null);
   if (facts.file_notes && !options.context) markdown += `\n## Saved Markdown\n\nThis text was preserved from the editable file. It is not automatically treated as context evidence.\n\n${facts.file_notes.markdown}`;
   if (options.absoluteLinks) markdown = markdown.replace(/\]\(((?:\.\.\/)+contexts\/[^)]+|(?:\.\.\/)?(?:[a-z0-9-]+\/)?[a-z0-9-]+\.md)\)/g,
     (_, path) => `](${dest(resolve(root, dirname(e?._path || `${ENTITIES_DIR}/page.md`), decodeURI(path)))})`);
@@ -653,6 +656,7 @@ function renderBrief(facts, brief, evidence, registry, scope, now = null) {
   if (now !== null && evidence[0]) out.push(`\nLast mentioned: ${day(evidence[0].at)} (${agoText(daysSince(evidence[0].at, now))}).`);
   if (facts.entity.status === "archived") out.push("\nArchived identity. Historical evidence and links remain available.");
   if (facts.entity.emails.length) out.push(`\nContact: ${facts.entity.emails.map(md).join(", ")}`);
+  if (facts.ask_source && !scope) out.push(`\n${md(facts.ask_source)}`);
   if (facts.entity.references.length) out.push(`\nExternal records: ${facts.entity.references.map(source).join(" · ")}`);
   if (facts.entity.identity_sources.length) out.push(`\nIdentity evidence: ${facts.entity.identity_sources.map(source).join(" · ")}`);
   if (facts.entity.not_same.length) out.push(`\nKept separate from: ${facts.entity.not_same.map(md).join(", ")}.`);
