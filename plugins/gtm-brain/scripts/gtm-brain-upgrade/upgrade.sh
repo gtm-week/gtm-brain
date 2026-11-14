@@ -12,14 +12,12 @@ for a in "$@"; do case "$a" in --confirm) CONFIRM=1;; *) ROOT="$a";; esac; done
 cd "$ROOT"
 [ -f brain/admin.md ] || { echo "not a brain: $ROOT"; exit 1; }
 # The layout first, before anything is backed up or replaced: a brain on a newer layout than this plugin
-# understands is never written; a layout change waits for the person's yes.
-layout_out="$(node --input-type=module -e 'const u = await import(process.argv[1]); console.log(u.layoutStep(".", process.argv[2] === "1"))' "$PLUGIN/lib/upgrade-files.mjs" "$CONFIRM")"
-case "$layout_out" in
-  BLOCKED*) echo "${layout_out#BLOCKED$'\t'}"; echo "Nothing was upgraded."; exit 3;;
-  ASK*) echo "not upgraded yet: ${layout_out#ASK$'\t'}"; echo "Nothing was changed."; exit 0;;
-esac
-node --input-type=module - "$PLUGIN/lib/upgrade-files.mjs" "$T" <<'JS'
-const { prepareUpgrade, rulesReasons } = await import(process.argv[2]);
+# understands is never written (exit 3); a layout change waits for the person's yes (exit 0, nothing changed).
+node --input-type=module - "$PLUGIN/lib/upgrade-files.mjs" "$T" "$CONFIRM" <<'JS' || { rc=$?; [ "$rc" = 10 ] && exit 0; exit "$rc"; }
+const { prepareUpgrade, rulesReasons, layoutStep } = await import(process.argv[2]);
+const step = layoutStep(".", process.argv[4] === "1");
+if (step.startsWith("BLOCKED\t")) { console.log(`${step.slice(8)}\nNothing was upgraded.`); process.exit(3); }
+if (step.startsWith("ASK\t")) { console.log(`not upgraded yet: ${step.slice(4)}\nNothing was changed.`); process.exit(10); }
 // Read before anything is replaced: the reasons are counted from the rules this brain has now.
 const { from, reasons } = rulesReasons(".", process.argv[3]);
 const result = prepareUpgrade(".", process.argv[3]);
@@ -93,9 +91,8 @@ for f in $ensured; do
   if { [ "$f" = RULES.md ] && [ "$had_rules" = 0 ]; } || { [ "$f" = SCHEMA.md ] && [ "$had_schema" = 0 ]; }; then echo "added $f"; added_rules="$added_rules${added_rules:+, }$f"; else echo "updated $f (it was a shipped version nobody edited)"; fi
   changed=1; paths="$paths $f"
 done
-if [ "$layout_change" = changed ]; then
-  case "$layout_out" in CHANGE*) echo "changed the brain's file layout to $(printf '%s' "$layout_out" | cut -f3)";; *) echo "recorded the brain's file layout (brain/layout.json)";; esac
-  changed=1; paths="$paths brain/layout.json"
+if [ -n "$layout_change" ]; then
+  echo "$layout_change"; changed=1; paths="$paths brain/layout.json"
 fi
 # workflows/ (0.28.0): a brain from before gets the folder with the two shipped workflows once. A folder that
 # exists is never added to, so a deleted shipped workflow stays deleted; a deleted folder comes back.

@@ -138,7 +138,7 @@ export function addStarters(root, templates, { version = "", date = new Date().t
   return added;
 }
 
-/* upgrade.sh, before anything is backed up or replaced: one line, BLOCKED\t<line> for a brain on a newer layout,
+/* upgrade.sh, before anything is backed up or replaced: BLOCKED\t<line> for a brain on a newer layout,
    ASK\t<question> for a layout change without the person's yes, CHANGE\t<from>\t<to> with it, "" otherwise. */
 export function layoutStep(root, confirmed) {
   const blocked = layoutBlock(root);
@@ -150,9 +150,11 @@ export function layoutStep(root, confirmed) {
 }
 
 /* upgrade.sh: what a brain lacks, as three lines: the starters added, RULES.md and SCHEMA.md written, and
-   "changed" when brain/layout.json was written. The layout is recorded last, after the starters it lists. */
+   the line to print when brain/layout.json was written. The layout is recorded last, after the starters it lists. */
 export function deliverMissing(root, templates, version) {
   const starters = addStarters(root, templates, { version });
   const files = [ensureRules(root, templates) && "RULES.md", ensureSchema(root, templates) && "SCHEMA.md"].filter(Boolean);
-  return [starters.join(" "), files.join(" "), writeLayout(root, { starters: STARTERS }) ? "changed" : ""].join("\n");
+  const before = readLayout(root), written = writeLayout(root, { starters: STARTERS }), after = readLayout(root).layout;
+  const layout = !written ? "" : before.layout !== after ? `changed the brain's file layout to ${after}` : "recorded the brain's file layout (brain/layout.json)";
+  return [starters.join(" "), files.join(" "), layout].join("\n");
 }
