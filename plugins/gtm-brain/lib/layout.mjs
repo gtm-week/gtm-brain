@@ -14,7 +14,7 @@ export const ENTITIES_DIR = "brain/entities";
 export const INDEX_FILE = "index.md";
 /* Entity history records (merges, renames, upgrades): an operation history that travels with git. */
 export const HISTORY_DIR = `${ENTITIES_DIR}/.history`;
-const FOLDERS = { person: "people", organization: "organizations", product: "products", event: "events", tool: "tools", meeting: "meetings" };
+const FOLDERS = { person: "people", organization: "organizations", product: "products", event: "events", tool: "tools", meeting: "meetings", offering: "offerings" };
 /* The folder of a kind: its plural. A kind added in SCHEMA.md takes its lowercase plural (case_study -> case-studies). */
 export function kindFolder(kind) {
   if (FOLDERS[kind]) return FOLDERS[kind];

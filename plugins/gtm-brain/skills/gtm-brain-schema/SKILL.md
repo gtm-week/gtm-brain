@@ -78,8 +78,8 @@ object `rules` (its SCHEMA.md findings).
 
 ## Limits
 
-- Person, organization, product, event and tool always exist. Meeting and project cannot be
-  kinds: meeting notes stay in their context and a project is a tag. Company and team are
+- Person, organization, product, offering, event, tool and meeting always exist. A project
+  cannot be a kind: it is a tag. Company and team are
   organization subtypes. Say so in one line and offer the nearest thing.
 - Do not remove a kind's section while entities of that kind exist: their files stop reading
   until the section is back.

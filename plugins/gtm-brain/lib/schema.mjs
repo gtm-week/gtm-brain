@@ -1,11 +1,11 @@
-// SCHEMA.md: what a brain keeps about each kind of entity (person, organization, product, event, tool and
-// any kind the person adds), and how they relate
+// SCHEMA.md: what a brain keeps about each kind of entity (person, organization, product, event, tool,
+// meeting, offering and any kind the person adds), and how they relate
 // (GTM week sync, 2026-11-13: "schema defines the shape of the universe, rules define how we act in it").
 // The person edits it, by hand or through /gtm-brain-schema; setup writes it, a brain without one gets it at
 // the chat start, an unedited one follows the shipped template, an edited one is never touched. A file that
 // cannot be read is reported with a fix per line and left as it is. Field values are never stored here: they
 // stay cited claims from memories (the entity brief's Fields), and relationships are memories with a
-// `relation` block (lib/relations.mjs). Every "## <Kind>" section with a field table is a kind; the five
+// `relation` block (lib/relations.mjs). Every "## <Kind>" section with a field table is a kind; the seven
 // DEFAULT_KINDS always exist, even when the file leaves their section out. A meeting is a kind (its page collects
 // the notes with its meeting id; the transcript stays in its tool); a project is not, it is a tag.
 import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from "node:fs";
@@ -183,7 +183,7 @@ export function ensureSchema(root, templates) {
     if (current === next || !older.includes(current)) return false;
   }
   writeFileSync(path, next);
-  commit(root, [SCHEMA], had ? "upgrade: SCHEMA.md, what the brain keeps" : "SCHEMA.md: what the brain keeps about people, organizations, products, events and tools");
+  commit(root, [SCHEMA], had ? "upgrade: SCHEMA.md, what the brain keeps" : "SCHEMA.md: what the brain keeps about people, organizations, products, offerings, events, tools and meetings");
   return true;
 }
 

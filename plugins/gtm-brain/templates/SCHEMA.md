@@ -1,12 +1,12 @@
 # Schema
 
-What this brain keeps about each person, organization, product, event, tool and meeting, and how they
-relate. Codex fills these fields from your notes, each value citing the notes it rests on, and
+What this brain keeps about each person, organization, product, offering, event, tool and meeting,
+and how they relate. Codex fills these fields from your notes, each value citing the notes it rests on, and
 lists a required field nobody has said yet as a gap to ask about. Edit freely, or say
 `/gtm-brain-schema` and Codex changes it for you. GTM Brain never overwrites your edits.
 
-Every `## <Kind>` section with a field table is a kind. Person, organization, product, event,
-tool and meeting always exist; add a section to add a kind. Add fields, organization subtypes and
+Every `## <Kind>` section with a field table is a kind. Person, organization, product, offering,
+event, tool and meeting always exist; add a section to add a kind. Add fields, organization subtypes and
 relationship types the same way. A meeting's page collects the notes saved with its meeting id;
 the transcript or recording stays in its tool. Projects are not kinds: a project is a tag.
 
@@ -51,6 +51,14 @@ the transcript or recording stays in its tool. Projects are not kinds: a project
 | category | What kind of product it is | yes |
 | maker | Who makes it, if not us | no |
 | pricing | How it is priced | no |
+
+## Offering
+
+| Field | What it means | Required |
+| --- | --- | --- |
+| what_it_is | What we sell, in a sentence: a service, package or plan | yes |
+| price | What it costs the customer | no |
+| who_it_is_for | Who it is for: the buyer or segment | no |
 
 ## Event
 

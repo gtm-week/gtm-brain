@@ -26,8 +26,8 @@ export function brain(prefix = "gtm-layout-") {
 const page = (id, name, kind = "person") => `---\nformat: gtm-brain-entity-v2\nid: ${id}\nname: ${name}\nkind: ${kind}\naliases: []\nemails: []\nnot_same: []\nprevious_ids: []\nreferences: []\nidentity_sources: []\n---\n\n# ${name}\n`;
 
 test("kind folders are the plural of the kind; a page name is the readable name plus the short id", () => {
-  assert.deepEqual(["person", "organization", "product", "event", "tool", "meeting", "case_study", "campus", "deal"].map(layout.kindFolder),
-    ["people", "organizations", "products", "events", "tools", "meetings", "case-studies", "campuses", "deals"]);
+  assert.deepEqual(["person", "organization", "product", "event", "tool", "meeting", "offering", "case_study", "campus", "deal"].map(layout.kindFolder),
+    ["people", "organizations", "products", "events", "tools", "meetings", "offerings", "case-studies", "campuses", "deals"]);
   const id = entityId("Max Jendral");
   assert.equal(layout.pageName("Max Jendral", id), `max-jendral-${id.slice(2, 8)}`);
   assert.equal(layout.kindPagePath("person", "Max Jendral", id), `brain/entities/people/max-jendral-${id.slice(2, 8)}.md`);
@@ -107,6 +107,15 @@ test("a new brain writes pages into a folder per kind, each page named with its 
   assert.ok(existsSync(join(root, `brain/entities/people/max-jendral-${sid(max.id)}.md`)));
   assert.ok(existsSync(join(root, `brain/entities/organizations/acme-${sid(acme.id)}.md`)));
   assert.deepEqual(readdirSync(join(root, "brain/entities")).filter(f => f.endsWith(".md")), [], "nothing flat");
+});
+
+test("an offering is a default kind with its own folder; a project is still not a kind", () => {
+  const root = kindBrain();
+  assert.ok(existsSync(join(root, "brain/entities/offerings/index.md")));
+  const audit = lib.addName(root, "GTM Audit", { kind: "offering" });
+  assert.equal(lib.readNames(root).find(n => n.id === audit.id)._path, `brain/entities/offerings/gtm-audit-${sid(audit.id)}.md`);
+  assert.match(readFileSync(join(root, "brain/entities/offerings/index.md"), "utf8"), /GTM Audit/);
+  assert.throws(() => lib.addName(root, "Q4 Launch", { kind: "project" }), /kind must be one of/);
 });
 
 test("two people with the same full name get two pages, told apart by the short id", () => {

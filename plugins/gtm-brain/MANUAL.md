@@ -15,7 +15,7 @@ editor opens it.
 | Company profile, team, tools | `brain/admin.md` | Codex, only after you choose APPROVE |
 | Notes (what happened, was decided, is open) | `brain/contexts/<context>/memories.jsonl` | Codex, when you say something worth keeping; never edited |
 | A context's summary and rules | `brain/contexts/<context>/context.md` | the summary: the compile run; the rules: you, through Codex |
-| People, companies, products, events, tools, meetings | `brain/entities/<kind>/<name>-<short id>.md` (`people/`, `organizations/`, ...), files in the folder of the same name; `index.md` per kind | Codex; you may edit a page's Markdown by hand, never an `index.md` |
+| People, companies, products, offerings, events, tools, meetings | `brain/entities/<kind>/<name>-<short id>.md` (`people/`, `organizations/`, ...), files in the folder of the same name; `index.md` per kind | Codex; you may edit a page's Markdown by hand, never an `index.md` |
 | Where files go, your own rules | `RULES.md` | you; Codex follows it |
 | What the brain keeps per person, organization and product, and relationship types | `SCHEMA.md` | you; Codex fills the fields from notes |
 | Your documents (strategy, ICP, tone of voice, design system, pricing) | `<name>.md` at the top (the first four from day one), files in a folder of the same name | you or Codex |
@@ -51,7 +51,8 @@ cannot settle (an unclear name is asked right after the note is saved). It asks 
 - **Your reply first.** A held question waits for your answer; Codex never picks it for you.
 
 Entity pages live in a folder per kind: `brain/entities/people/`, `organizations/`, `products/`,
-`events/`, `tools/`, `meetings/`, and a folder for each kind you add in SCHEMA.md. A page is named
+`offerings/` (what we sell: what it is, its price, who it is for), `events/`, `tools/`,
+`meetings/`, and a folder for each kind you add in SCHEMA.md. A page is named
 by the readable name and the first six characters of its stable id (`people/max-jendral-3f9a2c.md`),
 so two people with one name get two pages. A rename moves the page and its files folder in git and
 keeps the id part, so links by id and attached files still work. Each folder's `index.md` lists
