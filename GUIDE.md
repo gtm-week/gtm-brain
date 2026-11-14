@@ -133,6 +133,52 @@ is saved in the brain. Your reply style is learned from your own Slack replies, 
 before it is saved, and kept as a short description, never as your messages. The procedure is
 [slack-replies.md](plugins/gtm-brain/skills/gtm-brain-todo/references/slack-replies.md).
 
+## Workshop demo: the two loops
+
+Two stories show the brain end to end: an outreach lifecycle and a content loop. Build the demo
+brain with `node plugins/gtm-brain/test/live/demo-loops.mjs --brain-only` (a contributor
+checkout). It holds Reflow Fixture: a filled ICP, strategy and tone of voice, Zynt signals, customer
+words from two calls, and the project folders Outbound and Website. Open it as a Codex project.
+Nothing is sent or published. You tell Codex what Clay, Surfer, Gmail and Vercel returned. The same
+script without `--brain-only` runs both stories through Codex and checks every step.
+
+**Outreach.** Type each line in one chat:
+
+1. *From our ICP and the buying signals in the brain, which two accounts should we contact
+   first, and why?* Fernbrook Outdoor comes first: an ICP fit with a Head of Returns job post.
+   Umber Pharma is left out because the ICP rules out pharmacies.
+2. *I ran Clay on Fernbrook Outdoor: 85 stores in Germany and Austria, Head of Operations Lea
+   Hoffmann, lea.hoffmann@fernbrook-outdoor.example. Save what Clay found.* A note in the brain;
+   Lea Hoffmann appears under Entities.
+3. *Draft the first outreach email to Lea, tied to the Zynt signal, in our tone of voice. Draft
+   only. Put it in the outbound project folder.* A Markdown draft in `projects/outbound/`: short
+   sentences, no exclamation marks, signed Marta. Nothing is sent.
+4. *I sent that email on 11 November. She replied on 13 November: "We are in the middle of an
+   ERP migration until January. Ping me after 10 January." Record both.* Two notes, with the
+   follow-up date.
+5. *Draft the follow-up for 11 January that picks up her reply.* A second draft, about the migration.
+6. *Lea booked a pilot scoping call for 14 January. Fernbrook Outdoor is now a prospect. Record
+   it. Do not touch the CRM.* Fernbrook Outdoor shows as a prospect in the dashboard's customers.
+7. In a **new chat**: *Where do we stand with Fernbrook Outdoor?* The whole thread comes back
+   from the brain: Lea, the migration, the 14 January call, prospect.
+
+**Content.** In another chat:
+
+1. *Plan our blog. Read our strategy, the market notes and what customers said on calls. Surfer
+   gave us: "returns automation for retailers" 1,900 a month, "reduce return rate retail" 880,
+   "store pickup returns" 320. Propose three posts.* Three topics, each with its keyword and a
+   customer's own words ("after Black Friday we drown in return tickets").
+2. *Go with "store pickup returns" first; save that as a decision. Then draft the post: about 600
+   words, SEO title under 60 characters, meta description under 155, one H1, the keyword in the
+   title and first paragraph. Put it in the website project folder.* A decision note and a
+   Markdown post in `projects/website/` that passes those checks.
+3. *The post went live today at https://reflow.example/blog/store-pickup-returns. Remember that it
+   was published.* A note with the URL.
+4. *Two weeks of numbers: 1,240 visits, position 8, 3 demo requests, one from Lumen Outdoor.
+   Record what it produced.* A note linked to Lumen Outdoor.
+5. In a **new chat**: *What has our blog produced so far, and which post should come next?* The
+   results, and the next topic from the plan.
+
 ## Three habits that make it work
 
 1. **Say where you are.** Load the context before you start; Codex keeps you there.

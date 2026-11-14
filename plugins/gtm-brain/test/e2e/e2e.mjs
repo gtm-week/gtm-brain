@@ -127,6 +127,14 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
   await check("corrections.supersede", "corrections", async () => { if (!single) return { pass: false, note: "no note from remember.single" }; const r = await call("remember", { by, context: "offer", supersedes: single, content: "E2E probe: the starter tier includes onboarding only on annual plans (e2eprobetwo).", sources: [`user:${by}`] }); const got = rowIds((await q({ object: "memories", search: "e2eprobetwo" })).text); return { pass: !r.isError && got.length === 1 && got[0] !== single, text: r.text, note: got.join(",") }; });
   await check("corrections.retract", "corrections", async () => { const w = await call("remember", { by, context: "offer", content: "E2E probe: wrong note (e2eprobethree).", sources: [`user:${by}`] }); const id = rowIds((await q({ object: "memories", search: "e2eprobethree" })).text)[0]; if (!id) return { pass: false, text: w.text, note: "probe not written" }; const r = await call("remember", { by, context: "offer", retracts: id, content: "Withdrawn: the e2eprobethree note was wrong.", sources: [`user:${by}`] }); const after = rowIds((await q({ object: "memories", search: "e2eprobethree" })).text); return { pass: !r.isError && !after.includes(id), text: r.text }; });
 
+  /* ---------- the two demo loops, tool path only (the live run is test/live/demo-loops.mjs) ---------- */
+  await check("loops.document_voice", "loops", async () => { const r = await call("document", { action: "show", ref: "voice" }); return { pass: !r.isError && /Tone of voice/.test(r.text), text: r.text }; });
+  await check("loops.workflow_outbound", "loops", async () => { const r = await call("workflow", { action: "list" }); return { pass: !r.isError && /outbound/i.test(r.text), text: r.text }; });
+  await check("loops.sent_recorded", "loops", async () => { const w = await call("remember", { by, context: "icp", content: "E2E loop: sent the first outreach email (e2eloopsent).", actions: ["gmail:send:e2e-draft-1"], sources: [`user:${by}`] }); const s = await q({ object: "memories", search: "e2eloopsent" }); return { pass: !w.isError && rowIds(s.text).length > 0 && /gmail/.test(s.text) && /send/.test(s.text), text: w.isError ? w.text : s.text }; });
+  // the step "update the customer status": a prospect the person confirms as a customer, the overview follows
+  const prospect = gold.customers.find(c => c.status === "prospect");
+  if (prospect) await check("loops.customer_status", "loops", async () => { const w = await call("remember", { by, context: "icp", content: `E2E loop: ${prospect.name} signed the pilot and is now a customer (e2eloopstatus).`, people: [prospect.name], companies: [prospect.name], sources: [`user:${by}`], customer: { entity: prospect.name, status: "customer", basis: "user", observed_at: "2026-11-14T09:00:00Z" } }); const r = await q({ object: "customers" }); let row = null; try { row = JSON.parse(r.text).customers.find(c => c.name === prospect.name); } catch {} return { pass: !w.isError && row?.status === "customer" && row?.basis === "user", text: w.isError ? w.text : r.text, note: `${prospect.name}: ${row?.status || "absent"}` }; });
+
   /* ---------- messy traps ---------- */
   const T = gold.traps || {};
   if (T.maxes) {
@@ -143,7 +151,8 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
   }
 
   server.kill();
-  if (!keep) { rmSync(scratch, { recursive: true, force: true }); rmSync(profile, { recursive: true, force: true }); }
+  // a background writer the last remember started (re-render, index) can still be finishing: retry the cleanup
+  if (!keep) { for (const dir of [scratch, profile]) rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }); }
   const summary = { shape: gold.shape, notes: gold.counts?.notes, total: results.length, pass: results.filter(r => r.pass).length, fail: results.filter(r => !r.pass && !r.known_gap).length, known_gap: results.filter(r => !r.pass && r.known_gap).length, ms: results.reduce((a, r) => a + r.ms, 0) };
   return { summary, results, ...(keep ? { scratch } : {}) };
 }
