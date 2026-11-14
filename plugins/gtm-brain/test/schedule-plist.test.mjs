@@ -22,13 +22,17 @@ test("the launchd example runs scheduled-run.sh of the newest installed version 
   const home = mkdtempSync(join(tmpdir(), "gtm-plist-home-"));
   const cache = join(home, ".codex/plugins/cache/gtm-brain/gtm-brain");
   let t = 1_700_000_000;
-  for (const v of ["0.9.0", "0.34.3"]) {
+  // 0.9.0 is written last and sorts last as text: only the version number may decide.
+  for (const v of ["0.34.10", "0.34.3", "0.9.0"]) {
     const dir = join(cache, v, "scripts/gtm-brain-schedule"); mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, "scheduled-run.sh"), `echo "ran ${v} $1"\n`);
     utimesSync(join(cache, v), t, t); t += 100;
   }
+  mkdirSync(join(cache, "local"));   // a folder that is not a version is never picked
   const r = spawnSync(args[0], [args[1], args[2], "/tmp/brain"], { env: { PATH: process.env.PATH, HOME: home }, encoding: "utf8" });
-  assert.equal(r.status, 0, r.stderr); assert.equal(r.stdout.trim(), "ran 0.34.3 /tmp/brain");
+  assert.equal(r.status, 0, r.stderr); assert.equal(r.stdout.trim(), "ran 0.34.10 /tmp/brain");
+  const other = spawnSync(args[0], [args[1], args[2], "/tmp/brain"], { env: { PATH: process.env.PATH, HOME: "/nonexistent", CODEX_HOME: join(home, ".codex") }, encoding: "utf8" });
+  assert.equal(other.stdout.trim(), "ran 0.34.10 /tmp/brain", "CODEX_HOME is followed, as in lib");
   const none = spawnSync(args[0], [args[1], args[2], "/tmp/brain"], { env: { PATH: process.env.PATH, HOME: mkdtempSync(join(tmpdir(), "gtm-plist-empty-")) }, encoding: "utf8" });
   assert.equal(none.status, 1); assert.match(none.stderr, /plugin not installed/);
 });

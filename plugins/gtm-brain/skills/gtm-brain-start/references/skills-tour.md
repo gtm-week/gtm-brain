@@ -20,7 +20,7 @@ chat text, numbered options, and say the person can pick several numbers:
 6. Later
 
 Leave out a starter that is already filled (the chat line does not show it `[not filled]`); with
-all four filled, skip the question. Fill the chosen ones one at a time, in the order picked, each
+all five filled, skip the question. Fill the chosen ones one at a time, in the order picked, each
 through its own procedure ([documents](../../gtm-brain-use-brain/references/documents.md), Fill a
 starter). Between two, one line on which comes next; the person can stop at any point. On Later,
 or once the chosen ones are done, say in one line that the rest stay as `[not filled]` and that

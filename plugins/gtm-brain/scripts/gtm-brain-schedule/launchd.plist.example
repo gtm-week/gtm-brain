@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- The newest installed GTM Brain runs: no version in the path, so an update never breaks the schedule. Replace YOU and your-brain. -->
+<!-- The newest installed GTM Brain runs: no version in the path, so an update never breaks the schedule. The highest version number wins, not the last one written. Replace YOU and your-brain. -->
 <plist version="1.0">
 <dict>
   <key>Label</key><string>io.gtm-brain.compile</string>
@@ -8,7 +8,7 @@
   <array>
     <string>/bin/bash</string>
     <string>-c</string>
-    <string>p="$(ls -dt "$HOME"/.codex/plugins/cache/gtm-brain/gtm-brain/*/ 2&gt;/dev/null | head -1)"; [ -n "$p" ] || { echo "gtm-brain: plugin not installed" &gt;&amp;2; exit 1; }; exec /bin/bash "${p}scripts/gtm-brain-schedule/scheduled-run.sh" "$0"</string>
+    <string>p="$(ls -d "${CODEX_HOME:-$HOME/.codex}"/plugins/cache/gtm-brain/gtm-brain/[0-9]*/ 2&gt;/dev/null | sort -V | tail -1)"; [ -n "$p" ] || { echo "gtm-brain: plugin not installed" &gt;&amp;2; exit 1; }; exec /bin/bash "${p}scripts/gtm-brain-schedule/scheduled-run.sh" "$0"</string>
     <string>/Users/YOU/your-brain</string>
   </array>
   <key>StartCalendarInterval</key>

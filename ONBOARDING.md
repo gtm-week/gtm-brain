@@ -129,7 +129,7 @@ update by themselves in the background. When you want a specific workflow:
 | Fill in the strategy the brain starts with (`strategy.md`), in a 10-15 minute conversation | `/gtm-brain-strategy` |
 | Add a PDF, image or deck to the brain | drop it in the chat and say what it belongs to; no command |
 | Change company info, team or tools | `/gtm-brain-configure` |
-| Fill in the voice, ICP or design system the brain starts with (`voice.md`, `icp.md`, `design-system.md`) | "fill in our tone of voice" |
+| Fill in the voice, ICP, design system or market the brain starts with (`voice.md`, `icp.md`, `design-system.md`, `market.md`) | "fill in our tone of voice" |
 | Turn something you do repeatedly into a reusable skill | `/gtm-brain-skill` |
 
 The **dashboard** is view-only: what needs you, open questions, contexts, notes, sources,

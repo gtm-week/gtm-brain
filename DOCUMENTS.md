@@ -48,8 +48,8 @@ Read it, then `approve the strategy`.
 
 ## Out of the box
 
-Setup writes four starters at the top of the brain: `strategy.md`, `icp.md`, `voice.md` and
-`design-system.md`. Each holds headings and no guidance yet, and the chat line shows it as
+Setup writes five starters at the top of the brain: `strategy.md`, `icp.md`, `voice.md`,
+`design-system.md` and `market.md`. Each holds headings and no guidance yet, and the chat line shows it as
 `[not filled]` until someone fills it (a hand edit counts). The end of onboarding asks once which
 to fill now; "Later" is a fine answer. Say `fill in our tone of voice` (or the ICP, the strategy,
 the design system) at any time: the strategy runs the strategic intake, the ICP the Define ICP

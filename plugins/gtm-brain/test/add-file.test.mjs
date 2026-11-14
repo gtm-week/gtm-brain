@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, realpathSync, existsSync, openSync, closeSync, ftruncateSync } from 'node:fs';
 import { join } from 'node:path';
-import { tmpdir } from 'node:os';
+import { tmpdir, homedir } from 'node:os';
 import { execFileSync } from 'node:child_process';
 import * as lib from '../lib/brain.mjs';
 import { resolveEntity } from '../lib/entities.mjs';
@@ -89,6 +89,10 @@ test('big_files: google-drive by default and for an unknown value; local falls b
  assert.match(folder, /gtm-brain-files\/gtm-add-file-/);
  writeFileSync(admin, base.replace('dashboard: on-demand', 'dashboard: on-demand\nbig_files: local\nbig_files_folder: relative/path'));
  assert.match(lib.bigFiles(f.root).folder, /gtm-brain-files/, 'a relative folder is ignored');
+ writeFileSync(admin, base.replace('dashboard: on-demand', 'dashboard: on-demand\nbig_files: local\nbig_files_folder: ~/Movies/brain'));
+ assert.equal(lib.bigFiles(f.root).folder, join(homedir(), 'Movies/brain'), '~/ is the home folder');
+ writeFileSync(admin, base.replace('dashboard: on-demand', 'dashboard: on-demand\nbig_files: local\nbig_files_folder: ' + join(f.root, 'big')));
+ assert.ok(!lib.bigFiles(f.root).folder.startsWith(f.root), 'a folder inside the brain would be in git: ignored');
 });
 
 test('text is extracted for the notes when an extractor exists, and its absence is said, not hidden', () => {

@@ -7,7 +7,7 @@
 // No dependencies. Node built-ins only.
 
 import { readFileSync, writeFileSync, appendFileSync, existsSync, readdirSync, statSync, lstatSync, realpathSync, mkdirSync , unlinkSync, rmSync, renameSync, linkSync, chmodSync} from "node:fs";
-import { join, isAbsolute, resolve, basename, dirname } from "node:path";
+import { join, isAbsolute, resolve, relative, basename, dirname } from "node:path";
 import { homedir } from "node:os";
 import { createHash, randomUUID, randomBytes } from "node:crypto";
 import { spawnSync, execFileSync, execFile, spawn } from "node:child_process";
@@ -932,13 +932,15 @@ export const PUSH = ["push", "-q", "-u"];
 export const pushRemote = list => { const r = String(list || "").split("\n").map(x => x.trim()).filter(Boolean); return r.includes("origin") ? "origin" : r[0] || ""; };
 /* Where a file too big for git goes: brain/admin.md `big_files: google-drive | local`, changed through APPROVE like
    any workplace setting. google-drive (the default, and what an unknown value means): the shared drive, linked
-   from the brain. local: a folder on this computer outside git (`big_files_folder:` in admin.md, else
+   from the brain. local: a folder on this computer outside git (`big_files_folder:` in admin.md, absolute or ~/ and never inside the brain, else
    ~/gtm-brain-files/<brain folder>), not shared, linked as a file: pointer. */
 export const BIG_FILES = ["google-drive", "local"];
 export function bigFiles(root) {
   const a = root ? readAdmin(root) : null;
   const mode = a && BIG_FILES.includes(String(a.big_files || "").trim()) ? String(a.big_files).trim() : "google-drive";
-  const folder = mode === "local" ? (a.big_files_folder && isAbsolute(String(a.big_files_folder)) ? String(a.big_files_folder) : join(homedir(), "gtm-brain-files", basename(resolve(root)))) : null;
+  const given = String(a?.big_files_folder || "").trim().replace(/^~(?=\/|$)/, homedir());
+  const inside = given && isAbsolute(given) && !relative(resolve(root), resolve(given)).startsWith("..");   // a folder in the brain would be in git
+  const folder = mode === "local" ? (given && isAbsolute(given) && !inside ? resolve(given) : join(homedir(), "gtm-brain-files", basename(resolve(root)))) : null;
   return { mode, folder };
 }
 /* The one instruction for a file too big for git, shared by save, the chat start and add-file. */

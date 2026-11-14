@@ -66,7 +66,7 @@ bash "${PLUGIN_ROOT}/scripts/gtm-brain-schedule/scheduled-run.sh" /path/to/brain
 ```
 
 macOS `launchd` (weekly, Sunday 20:00): copy [launchd.plist.example](../../../../scripts/gtm-brain-schedule/launchd.plist.example) to
-`~/Library/LaunchAgents/io.gtm-brain.compile.plist`, replace the two paths, then
+`~/Library/LaunchAgents/io.gtm-brain.compile.plist`, replace the brain folder (the newest installed version runs, so an update needs no edit), then
 `launchctl load ~/Library/LaunchAgents/io.gtm-brain.compile.plist`. Linux: a cron line
 `0 20 * * 0 bash <plugin>/scripts/gtm-brain-schedule/scheduled-run.sh /path/to/brain`.
 
