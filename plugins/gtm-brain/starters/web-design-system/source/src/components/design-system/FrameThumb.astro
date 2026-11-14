@@ -1,0 +1,12 @@
+---
+/** A tile's preview of a whole band (a section, the navbar, the footer), framed at desktop width. */
+import DsFrame from "./DsFrame.astro";
+
+interface Props {
+  src: string;
+  title: string;
+}
+const { src, title } = Astro.props;
+---
+
+<DsFrame src={src} title={title} />

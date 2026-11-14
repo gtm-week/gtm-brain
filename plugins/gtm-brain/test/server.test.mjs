@@ -21,6 +21,25 @@ const rpc = (method, params = {}) => new Promise(res => { const id = ++seq; pend
 const call = async (name, args) => { const m = await rpc("tools/call", { name, arguments: args }); return { text: m.result.content.map(c => c.text).join("\n"), isError: !!m.result.isError }; };
 after(() => server.kill());
 
+test("link_project exposes the pinned starter and query discovers the shared website without deployment", async () => {
+  const root = mkdtempSync(join(tmpdir(), "gtm-starter-mcp-")), path = join(root, "website");
+  mkdirSync(join(root, "brain"));
+  writeFileSync(join(root, "brain/admin.md"), lib.renderFrontmatter({ company: "Starter Fixture", team: [] }));
+  const { result: catalog } = await rpc("tools/list");
+  const link = catalog.tools.find(t => t.name === "link_project");
+  assert.deepEqual(link.inputSchema.properties.starter.enum, ["web-design-system"]);
+  const invalid = await call("link_project", { brain: root, path, starter: "web-design-system" });
+  assert.ok(invalid.isError); assert.equal(existsSync(path), false);
+  const created = await call("link_project", { brain: root, path, create: true, starter: "web-design-system" });
+  assert.ok(!created.isError, created.text);
+  assert.match(created.text, /Dependencies and preview: not verified/);
+  const found = await call("query", { brain: root, object: "projects" });
+  assert.match(found.text, /starter: web-design-system.*linked.*compatible/);
+  assert.ok(found.text.includes(path));
+  assert.equal(existsSync(join(path, ".vercel")), false);
+  assert.equal(existsSync(join(path, "node_modules")), false);
+});
+
 test('memory search maintenance is discoverable and reports completion without changing source evidence', async () => {
   const brain = mkdtempSync(join(tmpdir(), 'gtm-index-mcp-'));
   mkdirSync(join(brain, 'brain'));

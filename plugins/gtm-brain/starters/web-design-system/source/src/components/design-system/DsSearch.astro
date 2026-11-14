@@ -1,0 +1,175 @@
+---
+/**
+ * Search across the design system: the field in the bar (an icon on a phone), ⌘K, Ctrl K
+ * or / opens a dialog listing every page by its group, narrowed as you type. Arrows move,
+ * Enter opens, Escape closes. The list is nav.ts, so a new page is found by being written.
+ */
+import Icon from "../ui/Icon.astro";
+import { ArrowRight, Search } from "@lucide/astro";
+import { groups } from "./nav";
+
+const lists = [
+  { label: "Overview", items: [{ name: "Introduction", href: "/design-system" }] },
+  ...groups.map((group) => ({
+    label: group.label,
+    items: [
+      ...(!group.all ? [] : [{ name: `All ${group.label.toLowerCase()}`, href: group.href }]),
+      ...group.items.map((item) => ({ name: item.name, href: item.href })),
+    ],
+  })),
+];
+---
+
+<button
+  type="button"
+  data-search-open
+  aria-haspopup="dialog"
+  aria-label="Search the design system"
+  class="flex size-9 items-center justify-center gap-2 rounded-sm border-line text-small text-ink-3 transition-colors hover:bg-surface-2 hover:text-ink-2 focus-visible:border-line-brand focus-visible:outline-none md:w-64 md:justify-start md:border md:px-3"
+>
+  <Icon icon={Search} size="sm" />
+  <span class="hidden flex-1 text-left md:block">Search</span>
+  <kbd class="hidden rounded-sm border border-line px-1.5 text-small text-ink-3 md:block">⌘K</kbd>
+</button>
+
+<dialog data-search aria-label="Search the design system" class="ds-search rounded-lg border border-line bg-surface-1 p-0 text-ink-1">
+  <div class="flex items-center gap-3 border-b border-line px-4">
+    <Icon icon={Search} size="sm" class="text-ink-3" />
+    <input
+      type="text"
+      data-search-input
+      role="combobox"
+      aria-expanded="true"
+      aria-controls="ds-search-results"
+      aria-autocomplete="list"
+      placeholder="Search…"
+      class="h-14 min-w-0 flex-1 bg-surface-1 text-regular text-ink-1 placeholder:text-ink-3 focus-visible:outline-none"
+    />
+    <kbd class="rounded-sm border border-line px-1.5 text-small text-ink-3">Esc</kbd>
+  </div>
+  <div class="ds-results overflow-y-auto p-2">
+    <div id="ds-search-results" role="listbox" aria-label="Pages">
+      {
+        lists.map((list) => (
+          <div data-search-group role="group" aria-label={list.label} class="pb-2">
+            <p class="px-3 pt-3 pb-1 tagline text-ink-3" aria-hidden="true">
+              {list.label}
+            </p>
+            {list.items.map((item) => (
+              <a
+                href={item.href}
+                role="option"
+                data-search-item
+                data-terms={`${item.name} ${list.label}`.toLowerCase()}
+                class="flex items-center gap-3 rounded-sm px-3 py-2 text-small text-ink-2 data-active:bg-surface-2 data-active:text-ink-1"
+              >
+                <Icon icon={ArrowRight} size="sm" class="text-ink-3" />
+                {item.name}
+              </a>
+            ))}
+          </div>
+        ))
+      }
+    </div>
+    <p data-search-empty hidden class="px-3 py-10 text-center text-small text-ink-2">
+      Nothing matches “<span data-search-query class="text-ink-1"></span>”.
+    </p>
+  </div>
+</dialog>
+
+<style>
+  .ds-search {
+    inset: 5rem 0 auto;
+    margin-inline: auto;
+    width: min(40rem, calc(100% - 2rem));
+    opacity: 0;
+    translate: 0 -0.5rem;
+    transition:
+      opacity 200ms ease,
+      translate 200ms ease,
+      overlay 200ms allow-discrete,
+      display 200ms allow-discrete;
+  }
+  .ds-search[open] {
+    opacity: 1;
+    translate: 0 0;
+  }
+  @starting-style {
+    .ds-search[open] {
+      opacity: 0;
+      translate: 0 -0.5rem;
+    }
+  }
+  .ds-search::backdrop {
+    background: color-mix(in srgb, var(--color-surface-inverted-1) 30%, transparent);
+    backdrop-filter: blur(6px);
+  }
+  .ds-results {
+    max-height: min(28rem, calc(100dvh - 12rem));
+  }
+</style>
+
+<script>
+  const dialog = document.querySelector<HTMLDialogElement>("[data-search]");
+  const input = dialog?.querySelector<HTMLInputElement>("[data-search-input]");
+  if (dialog && input) {
+    const items = [...dialog.querySelectorAll<HTMLAnchorElement>("[data-search-item]")];
+    const groups = [...dialog.querySelectorAll<HTMLElement>("[data-search-group]")];
+    const empty = dialog.querySelector<HTMLElement>("[data-search-empty]");
+    const query = dialog.querySelector<HTMLElement>("[data-search-query]");
+    items.forEach((item, i) => (item.id = `ds-search-${i}`));
+
+    const shown = () => items.filter((item) => !item.hidden);
+    const activate = (item?: HTMLElement) => {
+      for (const other of items) other.toggleAttribute("data-active", other === item);
+      if (item) {
+        input.setAttribute("aria-activedescendant", item.id);
+        item.scrollIntoView({ block: "nearest" });
+      } else input.removeAttribute("aria-activedescendant");
+    };
+
+    /* Every word typed must appear in the page's name or its group's. */
+    const filter = () => {
+      const words = input.value.toLowerCase().trim().split(/\s+/).filter(Boolean);
+      for (const item of items) item.hidden = !words.every((word) => item.dataset.terms?.includes(word));
+      for (const group of groups) group.hidden = !group.querySelector("[data-search-item]:not([hidden])");
+      if (empty) empty.hidden = shown().length > 0;
+      if (query) query.textContent = input.value.trim();
+      activate(shown()[0]);
+    };
+
+    const open = () => {
+      if (dialog.open) return;
+      input.value = "";
+      filter();
+      dialog.showModal();
+      input.focus();
+    };
+
+    document.querySelector("[data-search-open]")?.addEventListener("click", open);
+    document.addEventListener("keydown", (event) => {
+      const typing = (event.target as HTMLElement).closest?.("input, textarea");
+      if ((event.key === "k" && (event.metaKey || event.ctrlKey)) || (event.key === "/" && !typing)) {
+        event.preventDefault();
+        open();
+      }
+    });
+    input.addEventListener("input", filter);
+    input.addEventListener("keydown", (event) => {
+      const list = shown();
+      const at = list.findIndex((item) => item.hasAttribute("data-active"));
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        activate(list[(at + (event.key === "ArrowDown" ? 1 : -1) + list.length) % list.length]);
+      } else if (event.key === "Enter" && list[at]) {
+        event.preventDefault();
+        list[at].click();
+      }
+    });
+    for (const item of items) item.addEventListener("mousemove", () => activate(item));
+    /* A click on the backdrop, outside the panel, closes it. */
+    dialog.addEventListener("click", (event) => {
+      if (event.target === dialog) dialog.close();
+    });
+  }
+</script>

@@ -1,0 +1,65 @@
+---
+/**
+ * The site's footer: one statement, columns of links between full-width hairlines, then
+ * the logo and the © line. Stacked on a phone, two by two on a tablet, a row from lg.
+ * The links live in src/data/navigation.ts; a page can pass others.
+ */
+import Section from "./Section.astro";
+import Container from "./Container.astro";
+import Tagline from "../ui/Tagline.astro";
+import { SITE_NAME } from "../../../site.config.mjs";
+import { footer } from "../../data/navigation";
+
+export interface FooterColumn {
+  title: string;
+  links: { label: string; href: string }[];
+}
+
+interface Props {
+  /** One line about the company, in its own words. */
+  statement?: string;
+  /** Two to four. */
+  columns?: FooterColumn[];
+  /** After the ©; defaults to the year and the site's name. */
+  copyright?: string;
+  tone?: "default" | "muted" | "inverted";
+}
+const {
+  statement = footer.statement,
+  columns = footer.columns,
+  copyright = `${new Date().getFullYear()} ${SITE_NAME}`,
+  tone = "muted",
+} = Astro.props;
+const grids = { 1: "", 2: "md:grid-cols-2", 3: "md:grid-cols-3", 4: "md:grid-cols-2 lg:grid-cols-4" } as const;
+---
+
+<Section as="footer" tone={tone}>
+  <Container class="flex flex-col gap-12">
+    <p class="max-w-measure-md heading-h4 text-ink-1">{statement}</p>
+    <div class:list={["grid gap-8 border-y border-line py-10", grids[Math.min(columns.length, 4) as 1 | 2 | 3 | 4]]}>
+      {
+        columns.map((column) => (
+          <div class="flex flex-col gap-4">
+            <Tagline as="p">{column.title}</Tagline>
+            <ul class="flex flex-col gap-2">
+              {column.links.map((item) => (
+                <li>
+                  <a
+                    href={item.href}
+                    class="text-small text-ink-2 underline decoration-transparent underline-offset-4 transition-colors hover:text-ink-1 focus-visible:decoration-line-brand focus-visible:outline-none"
+                  >
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      }
+    </div>
+    <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <a href="/" class="text-regular font-medium text-ink-1">{SITE_NAME}</a>
+      <p class="text-small text-ink-3">© {copyright}</p>
+    </div>
+  </Container>
+</Section>

@@ -1,0 +1,4 @@
+interface:
+  display_name: "GTM Brain: Publish the website"
+  short_description: "Publish our website on Vercel, preview first"
+  default_prompt: "Use $gtm-brain-publish-website to prepare a hosted preview of our website and keep its access private."

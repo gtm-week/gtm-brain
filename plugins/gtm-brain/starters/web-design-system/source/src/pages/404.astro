@@ -1,0 +1,22 @@
+---
+import Base from "../layouts/Base.astro";
+import Section from "../components/layout/Section.astro";
+import Container from "../components/layout/Container.astro";
+import Heading from "../components/ui/Heading.astro";
+import Button from "../components/ui/Button.astro";
+---
+
+<Base
+  title="Page not found"
+  description="The page you are looking for does not exist or has moved."
+  noindex
+>
+  <main>
+    <Section>
+      <Container class="flex min-h-svh flex-col items-center justify-center gap-6 text-center">
+        <Heading level={1} size="h2">That page doesn’t exist.</Heading>
+        <Button href="/" variant="ghost">Go to the home page</Button>
+      </Container>
+    </Section>
+  </main>
+</Base>

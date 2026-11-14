@@ -1,0 +1,32 @@
+{
+  "name": "gtm-week-design-system",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A workshop starter for the GTM Tech Week community, by Peakout.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro check && astro build",
+    "preview": "astro preview",
+    "shots": "node scripts/shots.mjs",
+    "astro": "astro",
+    "icons": "node scripts/icons.mjs",
+    "postinstall": "node scripts/setup-skills.mjs"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.7.4",
+    "@lucide/astro": "^1.70.0",
+    "@tailwindcss/vite": "^4.3.5",
+    "astro": "^7.4.7",
+    "tailwindcss": "^4.3.5"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.12",
+    "playwright": "^1.65.0",
+    "typescript": "^6.0.3"
+  }
+}

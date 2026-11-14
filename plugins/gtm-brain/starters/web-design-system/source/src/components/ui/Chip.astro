@@ -1,0 +1,34 @@
+---
+/**
+ * A small tag in capitals: a category, a technology, a filter. With `href` it is a link;
+ * `selected` marks the chosen one of a filter row. Write the label in normal case.
+ */
+import type { HTMLAttributes } from "astro/types";
+
+type Props = Omit<HTMLAttributes<"a">, "class"> & {
+  href?: string;
+  selected?: boolean;
+  size?: "sm" | "md";
+  class?: string;
+};
+const { href, selected = false, size = "sm", class: className, ...rest } = Astro.props;
+
+const Tag = href ? "a" : "span";
+const sizes = { sm: "h-7 px-3", md: "h-9 px-4" } as const;
+---
+
+<Tag
+  href={href}
+  aria-current={href && selected ? "page" : undefined}
+  class:list={[
+    "inline-flex items-center rounded-full border tagline whitespace-nowrap transition-colors",
+    sizes[size],
+    selected ? "border-transparent bg-surface-inverted-1 text-ink-inverted" : "border-line bg-surface-1 text-ink-2",
+    href && !selected && "hover:bg-surface-2 hover:text-ink-1",
+    href && "focus-visible:border-line-brand focus-visible:outline-none",
+    className,
+  ]}
+  {...rest}
+>
+  <slot />
+</Tag>

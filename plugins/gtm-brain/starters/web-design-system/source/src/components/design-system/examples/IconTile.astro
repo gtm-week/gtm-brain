@@ -1,0 +1,30 @@
+---
+import DsBlock from "../DsBlock.astro";
+import DsStage from "../DsStage.astro";
+import DsState from "../DsState.astro";
+import DsProps from "../DsProps.astro";
+import IconTile from "../../ui/IconTile.astro";
+import { ChartLine, Sparkles } from "@lucide/astro";
+
+interface Props {
+  /** A small preview for the overview grid. */
+  thumb?: boolean;
+}
+const { thumb = false } = Astro.props;
+---
+
+{
+  thumb ? (
+    <div class="flex gap-3"><IconTile icon={ChartLine} /><IconTile icon={Sparkles} size="lg" /></div>
+  ) : (
+    <>
+      <DsBlock title="Sizes" description="An icon on surface-3, the mark at the top of a card.">
+        <DsStage layout="states">
+          <DsState label="md"><IconTile icon={ChartLine} /></DsState>
+          <DsState label="lg"><IconTile icon={Sparkles} size="lg" /></DsState>
+        </DsStage>
+      </DsBlock>
+      <DsBlock title="Props"><DsProps of="components/ui/IconTile" /></DsBlock>
+    </>
+  )
+}

@@ -1,0 +1,72 @@
+---
+import DesignSystem from "../../../layouts/DesignSystem.astro";
+import DsBlock from "../../../components/design-system/DsBlock.astro";
+import DsStage from "../../../components/design-system/DsStage.astro";
+import Heading from "../../../components/ui/Heading.astro";
+import Tagline from "../../../components/ui/Tagline.astro";
+import { headings, fonts } from "../../../components/design-system/tokens";
+
+const headingClass: Record<string, string> = {
+  "heading-h1": "heading-h1",
+  "heading-h2": "heading-h2",
+  "heading-h3": "heading-h3",
+  "heading-h4": "heading-h4",
+  "heading-h5": "heading-h5",
+  "heading-h6": "heading-h6",
+};
+const body = [
+  { name: "text-large", note: "18 · 20 from 768", cls: "text-large" },
+  { name: "text-medium", note: "16 · 18 from 768", cls: "text-medium" },
+  { name: "text-regular", note: "16, the default", cls: "text-regular" },
+  { name: "text-small", note: "14", cls: "text-small" },
+];
+const row = "flex flex-col gap-2 border-b border-line py-5 last:border-b-0 lg:flex-row lg:items-baseline lg:gap-8";
+---
+
+<DesignSystem
+  title="Typography"
+  lead={`Two families (${fonts.map((f) => `${f.name}: ${f.family}`).join(", ")}) and two weights. A heading's class carries its size at every width; its tag comes from the outline.`}
+>
+  <DsBlock title="Headings" description="Sizes in px at mobile · 768 · 1024, read from global.css.">
+    <DsStage layout="stack" class="gap-0">
+      {
+        headings.map((h) => (
+          <div class={row}>
+            <span class="flex w-48 shrink-0 flex-col">
+              <code class="text-small font-medium text-ink-1">{h.name}</code>
+              <span class="text-small text-ink-3">{h.sizes.join(" · ")}</span>
+            </span>
+            <p class:list={[headingClass[h.name], "text-ink-1"]}>Pages built on a system</p>
+          </div>
+        ))
+      }
+    </DsStage>
+  </DsBlock>
+  <DsBlock title="Body and tagline" description="Size and weight are separate classes; a plain paragraph needs none.">
+    <DsStage layout="stack" class="gap-0">
+      {
+        body.map((b) => (
+          <div class={row}>
+            <span class="flex w-48 shrink-0 flex-col">
+              <code class="text-small font-medium text-ink-1">{b.name}</code>
+              <span class="text-small text-ink-3">{b.note}</span>
+            </span>
+            <p class:list={[b.cls, "max-w-measure-lg text-ink-2"]}>Body copy is ink-2. It explains; the heading states.</p>
+          </div>
+        ))
+      }
+      <div class={row}>
+        <span class="flex w-48 shrink-0 flex-col">
+          <code class="text-small font-medium text-ink-1">tagline</code>
+          <span class="text-small text-ink-3">the label above a heading</span>
+        </span>
+        <Tagline>Written in normal case</Tagline>
+      </div>
+    </DsStage>
+  </DsBlock>
+  <DsBlock title="The two-tone heading" description="The first clause in ink-1, the rest in ink-3: Heading muted.">
+    <DsStage layout="start">
+      <Heading level={2} muted="The rest of the sentence, in grey.">The first clause in ink.</Heading>
+    </DsStage>
+  </DsBlock>
+</DesignSystem>
