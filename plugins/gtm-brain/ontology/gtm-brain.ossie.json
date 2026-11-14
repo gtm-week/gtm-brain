@@ -528,34 +528,11 @@
                               "type": "string"
                             },
                             {
-                              "type": "object",
-                              "properties": {
-                                "kind": {
-                                  "type": "string",
-                                  "minLength": 1
-                                },
-                                "account": {
-                                  "type": "string",
-                                  "minLength": 1
-                                },
-                                "ref": {
-                                  "type": "string",
-                                  "minLength": 1
-                                },
-                                "url": {
-                                  "type": "string",
-                                  "minLength": 1
-                                }
-                              },
-                              "required": [
-                                "kind",
-                                "ref"
-                              ],
-                              "additionalProperties": false
+                              "type": "object"
                             }
                           ]
                         },
-                        "description": "Where it comes from, provider:reference. When a connector returns a direct URL (url, web_url, webUrl, permalink), save that exact URL with its provider. If no direct URL is returned, keep provider:ID. Never invent a link. A record in a named mailbox, workspace or portal: an object {kind, account, ref}. This chat is added automatically."
+                        "description": "Where it comes from, provider:reference. When a connector returns a direct URL (url, web_url, webUrl, permalink), save that exact URL with its provider. If no direct URL is returned, keep provider:ID. Never invent a link. Or an object {kind, account, ref} for a named mailbox or workspace. This chat is added automatically."
                       },
                       "actions": {
                         "type": "array",
@@ -1131,34 +1108,11 @@
                         "type": "string"
                       },
                       {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "account": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "ref": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "url": {
-                            "type": "string",
-                            "minLength": 1
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "ref"
-                        ],
-                        "additionalProperties": false
+                        "type": "object"
                       }
                     ]
                   },
-                  "description": "Where it comes from, provider:reference. When a connector returns a direct URL (url, web_url, webUrl, permalink), save that exact URL with its provider. If no direct URL is returned, keep provider:ID. Never invent a link. A record in a named mailbox, workspace or portal: an object {kind, account, ref}. This chat is added automatically."
+                  "description": "Where it comes from, provider:reference. When a connector returns a direct URL (url, web_url, webUrl, permalink), save that exact URL with its provider. If no direct URL is returned, keep provider:ID. Never invent a link. Or an object {kind, account, ref} for a named mailbox or workspace. This chat is added automatically."
                 },
                 "actions": {
                   "type": "array",
