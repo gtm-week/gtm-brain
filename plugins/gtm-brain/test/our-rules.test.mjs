@@ -223,3 +223,85 @@ test("server: query rules gains the scoped list; a brief and a save carry the ru
     assert.match(r.text, /^Our rules for Northwind \(organization, company; partner_of\) when drafting/, "asked for: always shown");
   } finally { server.stdin.end(); server.kill(); }
 });
+
+/* ---------- review: adversarial cases ---------- */
+const ORG = { kind: "organization", links: [] };
+const CONTRACT = `Never call a company a customer before a signed contract.\n> applies to: organization · when: saving customer status · check\n`;
+const reg = (...es) => es.map(([name, kind, fm]) => ({ id: `e_${name.toLowerCase().replace(/\W/g, "")}`, name, kind, aliases: [], emails: [], _fm: fm || {} }));
+
+test("review: a fact that is denied does not satisfy a status check, in this note or an earlier one", () => {
+  const root = withRules(brain(), CONTRACT);
+  lib.addName(root, "Northwind", { kind: "organization" });
+  const block = { entity: "Northwind", status: "customer", basis: "user", observed_at: NOW };
+  for (const content of ["Northwind is now a customer, though there is no signed contract yet.", "Northwind is a customer now. They have not signed the contract.", "Northwind is our customer without a signed contract.", "Northwind is a customer; the contract is still unsigned."])
+    assert.equal(R.saveRefusals(root, { context: "company", content, companies: ["Northwind"], customer: block }).length, 1, content);
+  assert.equal(remember(root, { context: "company", content: "Northwind has not signed the contract yet.", companies: ["Northwind"], sources: ["gmail:a"] }).status, 0);
+  assert.equal(R.saveRefusals(root, { context: "company", content: "Northwind is our customer.", companies: ["Northwind"], customer: block }).length, 1, "an earlier note that denies the fact");
+  assert.equal(R.saveRefusals(root, { context: "company", content: "Northwind signed the contract and is our customer.", companies: ["Northwind"], customer: block }).length, 0);
+});
+
+test("review: only the company the sentence calls a customer is checked, not every company named in the note", () => {
+  const root = withRules(brain(), CONTRACT);
+  lib.addName(root, "Northwind", { kind: "organization" }); lib.addName(root, "Globex", { kind: "organization" });
+  assert.equal(remember(root, { context: "company", content: "Northwind signed the contract.", companies: ["Northwind"], sources: ["gmail:a"] }).status, 0);
+  const r = R.saveRefusals(root, { context: "company", content: "Northwind is now a customer. Globex introduced them.", companies: ["Northwind", "Globex"] });
+  assert.deepEqual(r, [], "Globex is only mentioned");
+  assert.match(R.saveRefusals(root, { context: "company", content: "Northwind told us Globex is now a customer.", companies: ["Northwind", "Globex"] })[0] || "", /Globex would be saved as a customer/);
+});
+
+test("review: a field check accepts a field the compiled brief already holds", () => {
+  const p = R.parseOurRules("Always include the role when saving a person.\n> applies to: person · when: saving · check\n", VOCAB);
+  const root = brain();
+  const filled = reg(["Lena Fischer", "person", { compiled_fields: JSON.stringify([{ field: "role", value: "Head of events", memories: ["m_000000000001"] }]) }]), empty = reg(["Lena Fischer", "person"]);
+  const note = { context: "company", content: "Lena Fischer moved to Berlin.", people: ["Lena Fischer"] };
+  assert.equal(R.saveRefusals(root, note, { parsed: p, registry: empty }).length, 1);
+  assert.deepEqual(R.saveRefusals(root, note, { parsed: p, registry: filled }), [], "the brief has the role");
+});
+
+test("review: a line that starts work and carries a tag line is the person's rule: shown, and not offered again", () => {
+  const p = R.parseOurRules("Whenever a company becomes a customer, send the welcome pack.\n> applies to: organization · guidance\n\nWhenever a person replies, send a thank-you note.\n", VOCAB);
+  assert.equal(p.rules[0].work, null); assert.ok(p.rules[1].work);
+  assert.deepEqual(R.rulesFor(p, [ORG], "saving").scoped.map(r => r.line), [1]);
+  const root = withRules(brain(), "Whenever a company becomes a customer, send the welcome pack.\n> applies to: organization · guidance\n");
+  assert.doesNotMatch(rulesReport(root), /starts work/);
+  const offer = rulesReport(withRules(brain(), "Whenever a company becomes a customer, send the welcome pack.\n"));
+  assert.match(offer, /b\) Keep it as a rule: write > applies to: organization · guidance on the line under it/, "keeping it is recorded as a tag line, so it is asked once");
+});
+
+test("review: the documented form, one lowercase line per rule, is not merged; headings and quotes under a rule are not rules or tags", () => {
+  const p = R.parseOurRules("always ask before tagging a client\nnotes about pricing go to Our offer\n\n### Pricing\n\nKeep discounts out of notes.\n> for example, a note about Acme's 20% deal\n> when in doubt, ask.\n\n---\n", VOCAB);
+  assert.deepEqual(p.rules.map(r => r.text), ["always ask before tagging a client", "notes about pricing go to Our offer", "Keep discounts out of notes."]);
+  assert.deepEqual(p.problems, []);
+  assert.equal(p.rules[2].tag, null, "a quote is not a tag line");
+  assert.match(p.rules[2].note, /for example.*when in doubt/);
+  // a long line wrapped by an editor still reads as one rule
+  const w = R.parseOurRules("Never promise a delivery date to a customer in writing before the operations team has confirmed it\nin the planning sheet.\n", VOCAB);
+  assert.equal(w.rules.length, 1);
+});
+
+test("review: with many general rules the reply says how to list them, and that call lists them", () => {
+  const root = withRules(brain(), `${CONTRACT}\n${["a", "b", "c", "d"].map(x => `Rule ${x}.\n> applies to: general · guidance`).join("\n\n")}\n`);
+  const text = R.replyRules(root, { scopes: [ORG], verb: "saving" });
+  assert.match(text, /4 general rules: query rules with search general lists them/);
+  const all = R.scopedReport(root, { search: "general" }).text;
+  for (const x of ["a", "b", "c", "d"]) assert.ok(all.includes(`Rule ${x}.`), all);
+});
+
+test("review: the rules check lists at most ten unfiled rules, and says what a proposed check would refuse", () => {
+  const root = withRules(brain(), `${Array.from({ length: 30 }, (_, i) => `Be careful with topic number ${i + 1}.`).join("\n\n")}\n\nNever use "cheap" in a note or a draft.\n`);
+  const report = rulesReport(root);
+  assert.equal((report.match(/is not filed yet/g) || []).length, 10);
+  assert.match(report, /21 more Our rules lines are not filed yet/);
+  const one = rulesReport(withRules(brain(), `Never use "cheap" in a note or a draft.\n\nNever call a company a customer before a signed contract.\n`));
+  assert.match(one, /check \(refuses a note that says "cheap"\)/);
+  assert.match(one, /check \(refuses saving one as a customer until a note about it says "a signed contract"\)/);
+});
+
+test("review: a brain with no Our rules pays nothing: no scope is worked out for a brief or a save", () => {
+  const root = brain(); let called = 0;
+  assert.equal(R.replyRules(root, { scopes: () => { called++; return [ORG]; }, verb: "saving" }), "");
+  assert.equal(called, 0);
+  withRules(root, CONTRACT);
+  assert.match(R.replyRules(root, { scopes: () => { called++; return [ORG]; }, verb: "saving" }), /signed contract/);
+  assert.equal(called, 1);
+});
