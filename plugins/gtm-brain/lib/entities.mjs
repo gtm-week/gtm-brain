@@ -374,7 +374,7 @@ export function writeEntityFiles(root, names) {
     if (!previous && e._body === undefined) e._fm.rendered_body_hash = hash(body);
     const text = entityText(previous, e._fm, body);
     if (from) { movePage(root, from, e._path, text); changed.push(from, e._path); }
-    else if (atomic(join(root, e._path), text)) changed.push(e._path);
+    else { mkdirSync(dirname(join(root, e._path)), { recursive: true }); if (atomic(join(root, e._path), text)) changed.push(e._path); }
   }
   // Preserve old links and every retired ID after a confirmed merge.
   for (const e of old.filter(x => !names.some(n => n.id === x.id))) {

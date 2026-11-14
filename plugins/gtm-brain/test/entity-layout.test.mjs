@@ -203,6 +203,34 @@ test("an older record holding whole files stays readable and undoes", () => {
   assert.equal(readFileSync(join(root, paths[0]), "utf8").split("\n---\n")[1], before[0].split("\n---\n")[1], "the whole-file body is restored");
 });
 
+/* ---------- part 4: a generated index per kind ---------- */
+test("each kind folder has a generated index: name, one line, short id, last mentioned; rewritten with the pages", () => {
+  const root = kindBrain();
+  const acme = lib.addName(root, "Acme", { kind: "organization", subtype: "company" }), max = lib.addName(root, "Max Jendral");
+  const people = () => readFileSync(join(root, "brain/entities/people/index.md"), "utf8");
+  assert.match(people(), /^# People\n/);
+  assert.ok(people().includes(`- [Max Jendral](max-jendral-${sid(max.id)}.md) · ${sid(max.id)} · not mentioned in notes yet`), people());
+  assert.match(readFileSync(join(root, "brain/entities/organizations/index.md"), "utf8"), new RegExp(`\\[Acme\\]\\(acme-${sid(acme.id)}\\.md\\) · company · ${sid(acme.id)}`));
+  assert.match(readFileSync(join(root, "brain/entities/products/index.md"), "utf8"), /No products yet/);
+  lib.appendMemory(root, "sales", { authors: ["ann"], people: ["Max Jendral"], content: "Max Jendral wants a pilot.", at: "2026-11-10T09:00:00.000Z" });
+  lib.refreshEntityPages(root);
+  assert.ok(people().includes(`${sid(max.id)} · last mentioned 2026-11-10`), people());
+  lib.updateEntity(root, { entity: max.id, by: "ann", set: { name: "Max J. Jendral" } });
+  assert.ok(people().includes(`[Max J. Jendral](max-j-jendral-${sid(max.id)}.md)`), "a rename rewrites the index");
+  writeFileSync(join(root, "brain/entities/people/index.md"), "my own notes");
+  lib.refreshEntityPages(root);
+  assert.match(people(), /^# People\n/, "a hand edit is overwritten");
+  assert.ok(!lib.readNames(root).some(n => /index/.test(n._path || "")), "the index is not an entity");
+});
+
+test("a kind added in SCHEMA.md gets its folder and index when its first entity arrives", () => {
+  const root = kindBrain();
+  writeFileSync(join(root, "SCHEMA.md"), readFileSync(new URL("../templates/SCHEMA.md", import.meta.url), "utf8") + "\n## Case_study\n\n| Field | What it means | Required |\n| --- | --- | --- |\n| result | What changed | no |\n");
+  const e = lib.addName(root, "Reflow at Acme", { kind: "case_study" });
+  assert.equal(lib.readNames(root).find(n => n.id === e.id)._path, `brain/entities/case-studies/reflow-at-acme-${sid(e.id)}.md`);
+  assert.match(readFileSync(join(root, "brain/entities/case-studies/index.md"), "utf8"), /^# Case studies\n[\s\S]*Reflow at Acme/);
+});
+
 test("upgrade's move to kind folders keeps ids, aliases, merges, redirects and files", () => {
   const root = brain("gtm-flat-");
   const chris = lib.addName(root, "Chris"), kp = lib.addName(root, "Krzysztof Pawlak", { aliases: ["KP"] }), acme = lib.addName(root, "Acme", { kind: "organization" });

@@ -43,7 +43,8 @@ export function kindFolders(root) {
   if (!dirOK(dir)) return [];
   const entries = readdirSync(dir, { withFileTypes: true });
   const flat = new Set(entries.filter(d => d.isFile() && d.name.endsWith(".md")).map(d => d.name.slice(0, -3)));
-  return entries.filter(d => d.isDirectory() && !d.name.startsWith(".") && !flat.has(d.name) && (KNOWN_FOLDERS.has(d.name) || existsSync(join(dir, d.name, INDEX_FILE)))).map(d => d.name).sort();
+  const kindPages = name => { try { return readdirSync(join(dir, name)).some(f => /-[0-9a-f]{6}\.md$/.test(f)); } catch { return false; } };
+  return entries.filter(d => d.isDirectory() && !d.name.startsWith(".") && !flat.has(d.name) && (KNOWN_FOLDERS.has(d.name) || existsSync(join(dir, d.name, INDEX_FILE)) || kindPages(d.name))).map(d => d.name).sort();
 }
 /* "kinds" when the brain has kind folders (setup and upgrade make them), else "flat". */
 export function layout(root) { return kindFolders(root).length ? "kinds" : "flat"; }
