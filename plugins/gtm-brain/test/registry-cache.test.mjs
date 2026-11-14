@@ -229,3 +229,22 @@ test('rewriting every entity page costs the same per page as the registry grows'
   const small = perPage(100), large = perPage(800);
   assert.ok(large < small * 1.8 + 0.2, `100 entities ${small.toFixed(2)} ms a page, 800 entities ${large.toFixed(2)} ms a page`);
 });
+
+// Every save checks each entity page against what it was built from. That check looked up the
+// page's few neighbors with a pass over the whole registry, once per entity.
+test('checking unchanged entity pages after a save costs the same per page as the registry grows', async () => {
+  const { refreshEntityPages } = await import('../lib/entities.mjs');
+  const perPage = count => {
+    const root = fixture(count), names = lib.readNames(root).map(e => e.name);
+    names.forEach((name, i) => lib.appendMemory(root, 'sales', { authors: ['ann'], content: `${name} met ${names[(i + 1) % count]} and ${names[(i + 7) % count]}.` }));
+    refreshEntityPages(root);
+    const runs = [];
+    for (let k = 0; k < 5; k++) {
+      lib.appendMemory(root, 'sales', { authors: ['ann'], content: `An unrelated note ${k}.` });
+      const started = performance.now(); refreshEntityPages(root); runs.push(performance.now() - started);
+    }
+    return runs.sort((a, b) => a - b)[2] / count;
+  };
+  const small = perPage(200), large = perPage(1600);
+  assert.ok(large < small * 1.6 + 0.03, `200 entities ${small.toFixed(3)} ms a page, 1,600 entities ${large.toFixed(3)} ms a page`);
+});

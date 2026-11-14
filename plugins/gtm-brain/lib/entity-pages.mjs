@@ -46,6 +46,10 @@ export function refreshIndexedPages(root, registry, publish, { readOnly = false 
     const version = db.prepare('SELECT version FROM entity_versions WHERE id=?');
     const covers = new Map(contexts.map(c => [c.slug, { context: c.slug, title: c.title, status: c.status, rule: c.rule, refreshed_at: c.compiledAt }]));
     let refreshed = 0;
+    // Registry positions by ID, so the unchanged-page check below costs its few neighbors, not
+    // a pass over the registry for every entity. Same neighbors in the same (registry) order.
+    const position = new Map(registry.map((n, i) => [n.id, i]));
+    const inRegistry = ids => ids.map(id => position.get(id)).filter(i => i !== undefined).sort((a, b) => a - b).map(i => registry[i]);
     for (const e of registry.filter(e => readOnly || e._path)) {
       const previous = saved?.pages?.[e.id], revision = version.get(JSON.stringify(e.id))?.version || 0;
       const notes = editedBody(e) ? { path: e._path, markdown: e._body } : null;
@@ -54,7 +58,7 @@ export function refreshIndexedPages(root, registry, publish, { readOnly = false 
       // its context covers. Check those recorded dependencies before any history
       // query. The index bumps both old and new owners on every relink/correction.
       if (!readOnly && previous?.contexts && previous?.related) {
-        const related = registry.filter(n => previous.related.includes(n.id)).map(identity);
+        const related = inRegistry([...new Set(previous.related)]).map(identity);
         const scoped = contexts.filter(c => previous.contexts.includes(c.slug)).map(c => covers.get(c.slug));
         if (previous.signature === signatureFor(related, scoped) && previous.text === digest(e._text)) {
           checkpoints[e.id] = previous; continue;
