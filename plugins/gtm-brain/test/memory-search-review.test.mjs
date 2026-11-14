@@ -90,7 +90,7 @@ test('a tag or a source typed as-is is still found when its words also appear in
   const tagged = note(root, 'Kickoff is on the ninth.', { tags: ['project:alpha'] });
   const sourced = note(root, 'Renewal signed.', { source: [{ kind: 'hubspot', ref: 'deal/7731' }] });
   assert.equal(ids(search(root, 'project:alpha'))[0], tagged.id);
-  assert.equal(ids(search(root, 'hubspot:deal/7731'))[0], sourced.id);
+  assert.equal(ids(search(root, 'deal/7731'))[0], sourced.id);
 });
 
 test('Not found under a filter does not say the whole brain holds nothing', () => {

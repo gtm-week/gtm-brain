@@ -8,7 +8,9 @@ import { MAX_RESULT_BYTES, withMemoryIndex } from './memory-index.mjs';
 import { relationOverview } from './relations.mjs';
 import { askSourceLines } from './ask-source.mjs';
 
-export const SEARCH_MAX_BYTES = 12 * 1024;   // one reply; a larger limit raises it, up to MAX_RESULT_BYTES
+// one reply; a larger limit raises it, up to MAX_RESULT_BYTES. A setting: GTM_BRAIN_SEARCH_MAX_BYTES (2 KB to 2 MiB).
+const capSetting = Number(process.env.GTM_BRAIN_SEARCH_MAX_BYTES);
+export const SEARCH_MAX_BYTES = Number.isInteger(capSetting) && capSetting >= 2048 && capSetting <= 2 * 1024 * 1024 ? capSetting : 12 * 1024;
 export const ANSWER_NOTES = 8;               // notes an answer shows when no limit is given
 const PER_NOTE_BYTES = 1536;                  // a larger limit raises the cap by this much per note
 const FULL_NOTE_CHARS = 1800, SHORT_NOTE_CHARS = 700;   // the first three notes nearly whole, the rest shorter
@@ -42,7 +44,7 @@ const cap = s => s[0].toUpperCase() + s.slice(1);
 /* A period named in the question: [from, to) in local time, a label, and, for a calendar word (a month,
    a weekday, a date), the words a note uses to mention it, so a note about an event on that day is
    found as well as one recorded then. The matched text is removed from the question. */
-export function parsePeriod(question, now = nowDate()) {
+export function parsePeriod(question, now = nowDate(), isName = () => false) {
   const today = startOfDay(now);
   const day = (d, label, mention) => ({ from: d, to: addDays(d, 1), label, mention });
   const rules = [
@@ -60,6 +62,7 @@ export function parsePeriod(question, now = nowDate()) {
     [new RegExp(`\\b(?:(in|during|since|of|until|for|from)\\s+)?${MONTH_RE}\\b(?:\\s+(\\d{4}))?`, 'i'), m => {
       const word = m[2].toLowerCase();
       if (['may', 'mar', 'march'].includes(word) && !m[1] && !m[3]) return null;
+      if (!m[1] && !m[3] && isName(m[2])) return null;   // Jan, April, June, August: a person in the registry comes first
       const i = monthIndex(word); let y = m[3] ? +m[3] : today.getFullYear();
       if (!m[3] && i > today.getMonth()) y--;
       return { from: new Date(y, i, 1), to: new Date(y, i + 1, 1), label: `${cap(MONTHS[i])} ${y}`, mention: [MONTHS[i]] };
@@ -80,9 +83,11 @@ export function parsePeriod(question, now = nowDate()) {
     return day(at, `${d} ${cap(MONTHS[i])} ${y}`, [`${d} ${MONTHS[i]}`, `${MONTHS[i]} ${d}`, ymd(at)]);
   }
   for (const [re, make] of rules) {
-    const m = question.match(re); if (!m) continue;
-    const p = make(m); if (!p) continue;
-    return { period: p, rest: (question.slice(0, m.index) + ' ' + question.slice(m.index + m[0].length)).trim() };
+    // a refused match ("may" the verb, Jan the person) does not end the rule: "we may launch in October"
+    for (const m of question.matchAll(new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g'))) {
+      const p = make(m); if (!p) continue;
+      return { period: p, rest: (question.slice(0, m.index) + ' ' + question.slice(m.index + m[0].length)).trim() };
+    }
   }
   return { period: null, rest: question };
 }
@@ -111,7 +116,7 @@ export function parseQuestion(question, names, { now = nowDate() } = {}) {
   let rest = String(question).replace(/"[^"]{2,200}"/g, ' ');
   const tags = [];
   rest = rest.replace(/(?:^|\s)(?:#|tag:)([\p{L}\p{N}][\p{L}\p{N}:_-]*)/gu, (_, t) => { tags.push(t.toLowerCase()); return ' '; });
-  const { period, rest: left } = parsePeriod(rest, now); rest = left;
+  const { period, rest: left } = parsePeriod(rest, now, w => !!lib.canonicalName(names, w)); rest = left;
   const tokens = words(rest), used = new Array(tokens.length).fill(false), entities = [];
   // names: the longest run of words that is a known name, alias, email or id; a single word must be
   // capitalized, an email, an id, or the full name itself (so "sites" is not the alias Sites)
@@ -121,13 +126,13 @@ export function parseQuestion(question, names, { now = nowDate() } = {}) {
       const text = tokens.slice(i, i + n).join(' ');
       if (n === 1 && (STOP.has(text.toLowerCase()) || text.length < 2)) continue;
       const exact = lib.exactName(names, text);
-      let hit = exact ? names.find(e => e.name === exact) : null;
+      let hit = exact ? names.find(e => e.name === exact) : null, inferred = false;
       if (hit && n === 1 && !/^\p{Lu}/u.test(text) && !/[@\d]/.test(text) && hit.name.toLowerCase() !== text.toLowerCase()) hit = null;
-      if (!hit && n === 1 && /^\p{Lu}/u.test(text) && text.length >= 3) { const inferred = lib.inferredName(names, text); if (inferred) hit = names.find(e => e.name === inferred); }
+      if (!hit && n === 1 && /^\p{Lu}/u.test(text) && text.length >= 3) { const first = lib.inferredName(names, text); if (first) { hit = names.find(e => e.name === first); inferred = true; } }
       if (!hit && /^e_[0-9a-f]{16}$/.test(text)) hit = lib.resolveEntity(names, text);
       if (!hit) continue;
       for (let j = i; j < i + n; j++) used[j] = true;
-      if (!entities.some(e => e.id === hit.id)) entities.push({ id: hit.id, name: hit.name, said: text });
+      if (!entities.some(e => e.id === hit.id)) entities.push({ id: hit.id, name: hit.name, said: text, ...(inferred ? { inferred: true } : {}) });
     }
   }
   let kind = null, kindHint = null;
@@ -277,10 +282,26 @@ export function searchIndex(index, question, { filters = {}, project = null, now
     const plain = newest(scope);
     return plain.length ? { rows: plain, note: `None of the notes for ${named.join(', ')} mentions ${q.terms.map(w => `"${w}"`).join(', ')}; ${plain.length === 1 ? 'it follows' : 'they follow, newest first'}.` } : { rows: [] };
   };
-  let got = attempt({}), widened = got.note || null, rows = got.rows;
+  const steps = [{ period: false }, { period: false, kind: false }, { period: false, kind: false, tags: false }, { period: false, kind: false, tags: false, entities: false }]
+    .filter((o, i, all) => narrowing(o).length < narrowing(i ? all[i - 1] : {}).length && (narrowing(o).length || q.terms.length));
+  // A period, a kind or a tag never hides the note that has the question's words: when no narrowed note has
+  // them, they are looked for without the period, then the kind, then the tags, and the reply says what was
+  // dropped. A name stays a hard filter (its notes follow, newest first) unless it was only taken from one
+  // word ("Partner" for Partner Works, a first name): then the notes with the words come instead.
+  let got = { rows: [] }, widened = null, rows = [];
+  if (searchable.length && narrowing({}).length) {
+    for (const opts of [{}, ...steps]) {
+      if (opts.entities === false && q.entities.some(e => !e.inferred && !e.via)) break;
+      const ranked = rank(narrow(opts));
+      if (!ranked.length) continue;
+      rows = ranked;
+      const dropped = narrowing({}).filter(x => !narrowing(opts).includes(x));
+      if (dropped.length) widened = `${newest(narrow({})).length ? `No note for ${narrowing({}).join(', ')} has ${searchable.map(g => `"${g.word}"`).join(', ')}` : `Nothing for ${narrowing({}).join(', ')}`}; without ${dropped.join(', ')}:`;
+      break;
+    }
+  }
+  if (!rows.length) { got = attempt({}); widened = got.note || null; rows = got.rows; }
   if (!rows.length && narrowing({}).length) {
-    const steps = [{ period: false }, { period: false, kind: false }, { period: false, kind: false, tags: false }, { period: false, kind: false, tags: false, entities: false }]
-      .filter((o, i, all) => narrowing(o).length < narrowing(i ? all[i - 1] : {}).length && (narrowing(o).length || q.terms.length));
     for (const opts of steps) {
       got = attempt(opts);
       if (got.rows.length) {
@@ -292,6 +313,16 @@ export function searchIndex(index, question, { filters = {}, project = null, now
   }
   if (missing.length && rows.length) said.push(`No note has ${missing.map(w => `"${w}"`).join(', ')} or a spelling one letter off; ranked by the other words.`);
   let literal = false;
+  const typed = String(question).trim();
+  if (rows.length && /^\S{3,300}$/.test(typed) && /[:\/_#@]/.test(typed)) {
+    const scope = index.filterSql(filters);
+    const exact = db.prepare(`${scope.prefix}SELECT m.rowid AS r, m.time AS time, m.id AS id FROM memories m WHERE ${[...scope.where, 'text_matches(m.projected,?)'].join(' AND ')} ORDER BY m.time DESC, m.id LIMIT 500`).all(...scope.params, JSON.stringify([typed.toLowerCase()]));
+    if (exact.length) {
+      const first = new Set(exact.map(r => r.r));
+      rows = [...exact.map(r => ({ ...r, score: Infinity })), ...rows.filter(r => !first.has(r.r))];
+      said.push(`${exact.length} note${exact.length === 1 ? ' has' : 's have'} "${typed}" as typed (an id, a tag or a source); ${exact.length === 1 ? 'it comes' : 'they come'} first.`);
+    }
+  }
   if (!rows.length && String(question).trim()) {
     // as typed, over every field (ids, tags, sources), the way search matched before 0.35.0
     const scope = index.filterSql(filters), text = String(question).trim().toLowerCase();
@@ -348,7 +379,9 @@ export function answerText(index, root, question, { filters = {}, limit, project
   const words = r.searched.map(g => g.word);
   if (!r.rows.length) {
     out.push(`Not found: no note matches "${question}" (${r.total} notes searched${narrowing ? `; narrowed to ${narrowing}` : ''}${words.length ? `; words: ${words.join(', ')}` : ''}${r.missing.length ? `; no note has ${r.missing.map(w => `"${w}"`).join(', ')} or a spelling one letter off` : ''}).`);
-    out.push('The brain holds nothing on this. Say so plainly; searching again with other words will not find more.');
+    const given = Object.keys(filters || {});
+    out.push(given.length ? `Nothing within the filters given (${given.join(', ')}); the brain was not searched outside them. The same question without filters searches all of it.`
+      : 'The brain holds nothing on this. Say so plainly; searching again with other words will not find more.');
   } else {
     out.push(`Answer for "${question}": ${r.rows.length} note${r.rows.length === 1 ? '' : 's'} match${r.rows.length === 1 ? 'es' : ''} of ${r.total}, best first${narrowing ? `; narrowed to ${narrowing}` : ''}.`);
   }
@@ -370,7 +403,7 @@ export function answerText(index, root, question, { filters = {}, limit, project
     out.push(line); notes.push(m); bytes += size; shown++;
   }
   const more = r.rows.length - shown;
-  if (more > 0) out.push('', `${more} more match${more === 1 ? 'es' : ''}. For them: query object answer with the same search and limit ${Math.min(200, shown + Math.max(more, 8))}${q.entities.length || q.period ? '' : ', or name a person, company or period to narrow'}.`);
+  if (more > 0) out.push('', `${more} more match${more === 1 ? 'es' : ''}. For them: query object answer with the same search and limit ${Math.min(200, shown + Math.min(more, ANSWER_NOTES))} (the next ${Math.min(more, ANSWER_NOTES)}, a larger reply)${q.entities.length || q.period ? '' : ', or name a person, company or period to narrow'}.`);
   if (r.rows.length) {
     const ask = askSourceLines(root, notes, { day: at => lib.localDateTime(at).slice(0, 10) });
     if (ask.length) out.push('', ...ask);
@@ -392,7 +425,7 @@ export function searchRows(index, root, search, { filters = {}, limit, project =
   }
   const tail = [...r.said, ...(r.widened ? [r.widened] : []), ...(r.literal ? ['No word matched; these rows contain the text as typed.'] : [])];
   const more = r.rows.length - lines.length;
-  if (more > 0) tail.push(`${more} more match${more === 1 ? 'es' : ''} (best first above). For more: the same search with limit ${Math.min(501, lines.length + Math.max(more, 10))}, or query object answer for a short form.`);
+  if (more > 0) tail.push(`${more} more match${more === 1 ? 'es' : ''} (best first above). For more: the same search with limit ${Math.min(501, lines.length + Math.min(more, 10))} (a larger reply), or query object answer for a short form.`);
   if (!lines.length) return { text: `no rows (${r.total} notes searched${r.missing.length ? `; no note has ${r.missing.map(w => `"${w}"`).join(', ')} or a spelling one letter off` : ''}).`, rows };
   return { text: [`${lines.length} row${lines.length === 1 ? '' : 's'}:`, ...lines, ...(tail.length ? ['', ...tail] : [])].join('\n'), rows };
 }
