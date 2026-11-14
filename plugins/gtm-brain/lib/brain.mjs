@@ -543,9 +543,9 @@ const fileKey = path => { try { const s = statSync(path, { bigint: true }); retu
 function sharedRegistry(root) {
   const scan = sharedEntityFiles(root), key = [scan.key, ...[join(root, "brain", "entities.md"), join(root, "brain", "names.md"), join(root, "brain", "admin.md")].map(fileKey)].join("|");
   const hit = registries.get(resolve(root));
-  if (hit?.key === key) return hit.names;
+  if (scan.key !== null && hit?.key === key) return hit.names;
   const names = deepFreeze(readRegistry(root, scan.entries.map(e => thaw(e))));
-  registries.set(resolve(root), { key, names });
+  if (scan.key === null) registries.delete(resolve(root)); else registries.set(resolve(root), { key, names });
   return names;
 }
 export function readNames(root) {
@@ -664,7 +664,8 @@ const normalForm = s => { let f = normalForms.get(s); if (f === undefined) { if 
 // below, built once per frozen (shared, cached) registry instead of once per note.
 const mentionTables = new WeakMap();
 function tablesFor(names) {
-  let t = Object.isFrozen(names) ? mentionTables.get(names) : null;
+  if (!Object.isFrozen(names)) return looseTables(names);
+  let t = mentionTables.get(names);
   if (t) return t;
   const exact = new Map(), first = new Map(), owners = new Map(), add = (map, key, value) => { if (!map.has(key)) map.set(key, new Set()); map.get(key).add(value); };
   names.forEach((n, i) => {
@@ -677,8 +678,16 @@ function tablesFor(names) {
   const canonical = mention => { const w = String(mention || "").trim().toLowerCase(); if (!w) return null; return one(exact, w) || (/\s/.test(w) ? null : one(first, w)); };
   const exactCount = mention => { const w = String(mention || "").trim().toLowerCase(); return w ? exact.get(w)?.size || 0 : 0; };
   t = { forms, canonical, exactCount };
-  if (Object.isFrozen(names)) mentionTables.set(names, t);
+  mentionTables.set(names, t);
   return t;
+}
+// A registry the caller may still change (readNames): nothing is kept, and a single call costs
+// no more than the scan it replaces, so a loop over many notes is not slower than before.
+function looseTables(names) {
+  const owners = new Map();
+  for (const n of names) for (const form of [n.name, ...n.aliases].map(normalForm)) { if (!owners.has(form)) owners.set(form, new Set()); owners.get(form).add(n.name); }
+  const forms = names.map(n => [n.name, ...n.aliases].filter(f => !f.includes("@")).map(normalForm).filter(f => f.length >= 3 && owners.get(f).size === 1));
+  return { forms, canonical: mention => canonicalName(names, mention), exactCount: mention => names.filter(n => exactName([n], mention)).length };
 }
 export function mentionsIn(names, memory) {
   const { forms, canonical, exactCount } = tablesFor(names);

@@ -2,6 +2,8 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync, mkdtempSync, copyFileSync, renameSync, lstatSync, rmSync } from "node:fs";
 import { join, basename, resolve } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
+import { getHeapStatistics } from "node:v8";
+import { resourceLimits } from "node:worker_threads";
 import * as lib from "./brain.mjs";
 import { acquireProcessLock, releaseProcessLock } from './process-lock.mjs';
 import { refreshIndexedPages } from './entity-pages.mjs';
@@ -231,7 +233,14 @@ export function applyEntityChange(root, record) {
 // parse validates against). A write through lib, Git or an editor is seen on the next read;
 // an unchanged file is not read or parsed again. Entries are frozen: readEntityFiles hands
 // out copies, sharedEntityFiles the cached objects for read-only callers.
+// Per brain, only the files of its last scan, so a deleted file or another brain is not kept.
+// Kept only while the files are a small part of this thread's heap: the memory reader is a
+// worker with a 64 MB heap, and a brain whose entity files outgrow a quarter of it is parsed on
+// every read there, as before, instead of being held between reads.
 const parsedFiles = new Map();
+// A worker's own limit is in resourceLimits; getHeapStatistics reports the process's there.
+const heapLimit = () => resourceLimits?.maxOldGenerationSizeMb ? resourceLimits.maxOldGenerationSizeMb * 1048576 : getHeapStatistics().heap_size_limit;
+const cacheLimit = () => heapLimit() / 4;
 // A changeable copy of a cached entry. Strings are shared (they cannot change); objects and
 // arrays are new, and one shared inside an entry (aliases in the entry and in its frontmatter)
 // stays shared in the copy, as a fresh parse leaves it. Several times cheaper than structuredClone.
@@ -254,29 +263,31 @@ export function sharedEntityFiles(root) {
   const kinds = root && readSchema(root).error ? "any" : brainKinds(root);
   const kindNames = kinds === "any" ? ENTITY_KINDS : kinds, kindKey = JSON.stringify(kinds);
   const listed = [], keys = [kindKey];
+  let bytes = 0;
   for (const file of readdirSync(dir).filter(f => f.endsWith(".md")).sort()) {
     const path = dir + "/" + file, st = lstatSync(path, { bigint: true });
     if (st.isSymbolicLink()) throw new Error(`Entity file must not be a symbolic link: ${file}`);
     const key = `${st.dev}:${st.ino}:${st.size}:${st.mtimeNs}:${st.ctimeNs}`;
-    listed.push({ file, path, key }); keys.push(file + "@" + key);
+    listed.push({ file, path, key }); keys.push(file + "@" + key); bytes += Number(st.size);
   }
-  const scanKey = keys.join("|"), last = scans.get(resolve(root));
-  if (last?.key === scanKey) return last;
-  const entries = [];
+  const brain = resolve(root), keep = bytes <= cacheLimit();
+  const scanKey = keys.join("|"), last = scans.get(brain);
+  if (keep && last?.key === scanKey) return last;
+  const entries = [], previous = parsedFiles.get(brain) || new Map(), parsed = new Map();
   for (const { file, path, key } of listed) {
-    const memo = parsedFiles.get(path);
-    if (memo && memo.key === key && memo.kinds === kindKey) { if (memo.entry) entries.push(memo.entry); continue; }
-    const entry = parseEntityFile(file, path, kinds, kindNames);
-    parsedFiles.set(path, { key, kinds: kindKey, entry });
-    if (entry) entries.push(entry);
+    let memo = previous.get(path);
+    if (!(memo && memo.key === key && memo.kinds === kindKey)) memo = { key, kinds: kindKey, entry: parseEntityFile(file, path, kinds, kindNames) };
+    parsed.set(path, memo);
+    if (memo.entry) entries.push(memo.entry);
   }
   const owners = new Map();
   for (const e of entries) for (const id of [e.id, ...e.previous_ids]) {
     if (owners.has(id)) invalid(e._path, "id / previous_ids", `${id} is also claimed by ${owners.get(id)}`, "restore the intended IDs from file history or resolve a confirmed merge; do not guess which identity wins");
     owners.set(id, e._path);
   }
-  const scan = { key: scanKey, entries: Object.freeze(entries.sort((a, b) => a.name.localeCompare(b.name))) };
-  scans.set(resolve(root), scan);
+  // key null: not kept, so the registry built from it is not kept either.
+  const scan = { key: keep ? scanKey : null, entries: Object.freeze(entries.sort((a, b) => a.name.localeCompare(b.name))) };
+  if (keep) { scans.set(brain, scan); parsedFiles.set(brain, parsed); } else { scans.delete(brain); parsedFiles.delete(brain); }
   return scan;
 }
 export function readEntityFiles(root) {

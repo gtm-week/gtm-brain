@@ -34,7 +34,7 @@ const count = (arrs) => { const m = new Map(); for (const a of arrs) for (const 
 function facts(slug) {
   const c = lib.readContext(root, slug); if (!c) { console.error(`no context ${slug}`); process.exit(1); }
   const mem = lib.effectiveMemories(c.memories);
-  const reg = lib.readNames(root);   // names as the registry knows them now: "Chris" counts for Krzysztof Pawlak once the alias exists
+  const reg = lib.readNamesShared(root);   // names as the registry knows them now: "Chris" counts for Krzysztof Pawlak once the alias exists
   const people = count(mem.map(m => lib.mentionsIn(reg, m))), tools = count(mem.map(m => m.tools));
   // every name mentioned, with its kind from the registry: these go on the cover
   const kinds = new Map(reg.map(n => [n.name.toLowerCase(), n.kind || "person"]));

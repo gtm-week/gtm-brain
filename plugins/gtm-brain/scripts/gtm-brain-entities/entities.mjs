@@ -33,7 +33,7 @@ if (opt.who !== undefined || opt.candidates !== undefined) {
 /* list: team and contacts apart, emails shown, the handle not repeated as an alias, where each
    person appears in memories, and what is still missing (a surname, an email) */
 const admin = lib.readAdmin(root) || {}; const team = new Map((admin.team || []).map(p => [p.name.toLowerCase(), p]));
-const where = new Map(); const reg = lib.readNames(root);
+const where = new Map(); const reg = lib.readNamesShared(root);
 for (const c of lib.listContexts(root)) for (const m of lib.effectiveMemories(c.memories)) for (const who of lib.mentionsIn(reg, m)) { const k = who.toLowerCase(); if (!where.has(k)) where.set(k, new Map()); const w = where.get(k); w.set(c.slug, (w.get(c.slug) || 0) + 1); }
 const line = n => {
   const p = team.get(n.name.toLowerCase());

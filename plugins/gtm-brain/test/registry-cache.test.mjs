@@ -180,3 +180,35 @@ test('a save sees an entity another process added, and never changes the shared 
   assert.notEqual(lib.readNamesShared(root), before, 'and a new one replaced it');
   void saved;
 });
+
+// Round three review. The memory reader is a worker with a 64 MB heap: a registry whose files
+// are a large part of that heap is not held between reads there (it would leave no room for
+// the read itself), while the main process keeps it.
+test('entity files too large for a small heap are read again each time instead of being kept', async () => {
+  const root = fixture(), pad = '\n' + 'Handwritten account history, kept as the person wrote it. '.repeat(1500) + '\n';
+  for (let i = 0; i < 40; i++) lib.addName(root, `Big${i} Person${i}`);
+  for (const e of lib.readNames(root)) if (e._path) appendFileSync(join(root, e._path), pad);
+  assert.equal(lib.readNamesShared(root), lib.readNamesShared(root), 'the main process keeps the registry');
+  const { Worker } = await import('node:worker_threads');
+  const result = await new Promise((resolve, reject) => {
+    const w = new Worker(`const { workerData, parentPort } = require('node:worker_threads');
+      import(workerData.brainModule).then(lib => { const a = lib.readNamesShared(workerData.root), b = lib.readNamesShared(workerData.root);
+        parentPort.postMessage({ kept: a === b, count: a.length, same: JSON.stringify(a) === JSON.stringify(b) }); }, e => parentPort.postMessage({ error: e.message }));`,
+      { eval: true, workerData: { brainModule, root }, resourceLimits: { maxOldGenerationSizeMb: 12, maxYoungGenerationSizeMb: 4 } });
+    w.once('message', m => { w.terminate(); resolve(m); }); w.once('error', reject);
+  });
+  assert.equal(result.error, undefined, result.error);
+  assert.deepEqual(result, { kept: false, count: lib.readNames(root).length, same: true });
+});
+
+// compile, the entities listing and the meetings view call mentionsIn once per note with a
+// registry they may change: that path keeps nothing, and with the name forms folded once per
+// process it costs clearly less than the plain scan (which folds every name on every note).
+test('mentionsIn on a changeable registry is faster than the plain scan it replaced', () => {
+  const names = lib.readNames(fixture(900));
+  const notes = Array.from({ length: 40 }, (_, i) => ({ people: [names[i * 7].name], content: `${names[i * 11].name} met ${names[i * 13].name} about the pilot.` }));
+  const time = fn => { const runs = []; for (let r = 0; r < 5; r++) { const t = performance.now(); for (const m of notes) fn(names, m); runs.push(performance.now() - t); } return runs.sort((a, b) => a - b)[2]; };
+  for (const m of notes) assert.deepStrictEqual(lib.mentionsIn(names, m), scanMentions(names, m));
+  const plain = time(scanMentions), now = time(lib.mentionsIn);
+  assert.ok(now < plain * 0.8, `plain scan ${plain.toFixed(1)} ms, mentionsIn ${now.toFixed(1)} ms for ${notes.length} notes`);
+});
