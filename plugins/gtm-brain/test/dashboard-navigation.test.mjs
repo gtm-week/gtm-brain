@@ -6,15 +6,18 @@ const memory=(id,content,context='market')=>({id,content,context,at:'2026-09-14T
 const context=(slug,memories=[])=>({slug,title:slug,label:slug,status:'active',summary:'Evidence about '+slug+'.',rule:'Knowledge about '+slug,now:'',whenLoaded:'',people:[],tools:[],related:[],names:[],memories,stored:memories.length,totalMemories:memories.length,loaded:true});
 const fixture=()=>({brain:'/tmp/Company & Team',generatedAt:'2026-09-14T10:00:00Z',contexts:[context('market',[memory('m_aaaaaa','Recent research')])],names:[],recent:[],loaded:['market'],questions:[],decisions:[],tools:[],activity:[],projects:[],admin:{company:'Test Co',owner:'alex',team:[{handle:'alex',name:'Alex Example'}],tools:[],body:'Company profile',dashboard:'on-demand'}});
 const click=(p,selector,button)=>Promise.all(p.listeners.click.map(fn=>fn({target:{closest:sel=>sel===selector?button:null}})));
-test(`navigation has four primary destinations and classifies details consistently`,()=>{
+test(`navigation has four pillar tabs and More, and classifies details consistently`,()=>{
  const D=fixture();const p=page(D);
- assert.equal((p.node('#nav').innerHTML.match(/<button /g)||[]).length,3);
- assert.doesNotMatch(p.node('#nav').innerHTML,/data-v="(?:contexts|projects|people|customers|meetings|questions|admin)"/);
- p.run('show("customers")');assert.match(p.node('#nav').innerHTML,/data-v="explore"[^>]*aria-current="page"/);
- p.run('show("contexts")');assert.match(p.node('#nav').innerHTML,/data-v="explore"[^>]*aria-current="page"/);
+ assert.equal(p.run('view'),'config','the front page opens on the first pillar tab');
+ assert.equal((p.node('#nav').innerHTML.match(/<button /g)||[]).length,5);
+ assert.match(p.node('#nav').innerHTML,/data-v="config"[^>]*aria-current="page"[^>]*><span>Configuration<\/span>.*data-v="entities".*data-v="notes".*data-v="workflows".*data-v="home"[^>]*><span>More<\/span>/);
+ assert.doesNotMatch(p.node('#nav').innerHTML,/data-v="(?:contexts|projects|people|customers|meetings|questions|admin|explore|skills)"/);
+ assert.equal(p.node('#subnav').hidden,true,'More has no second row while a pillar tab is open');
+ p.run('show("customers")');assert.match(p.node('#nav').innerHTML,/data-v="home"[^>]*aria-current="page"/);assert.match(p.node('#subnav').innerHTML,/data-v="explore"[^>]*aria-current="page"/);assert.equal(p.node('#subnav').hidden,false);
+ p.run('show("contexts")');assert.match(p.node('#subnav').innerHTML,/data-v="explore"[^>]*aria-current="page"/);
  assert.match(p.node('#location').innerHTML,/data-v="explore"/);
  assert.match(p.node('#location').innerHTML,/data-v="explore"/);
- p.run('show("projects")');assert.equal(p.node('#workspace-link').getAttribute('aria-current'),'false');assert.match(p.node('#nav').innerHTML,/data-v="home"[^>]*aria-current="page"/);
+ p.run('show("projects")');assert.equal(p.node('#workspace-link').getAttribute('aria-current'),'false');assert.match(p.node('#nav').innerHTML,/data-v="home"[^>]*aria-current="page"/);assert.match(p.node('#subnav').innerHTML,/data-v="home"[^>]*aria-current="page"/);
  assert.match(p.node('#explore-grid').innerHTML,/data-v="contexts"/);assert.match(p.node('#explore-grid').innerHTML,/data-v="people"/);assert.match(p.node('#explore-grid').innerHTML,/data-v="meetings"/);
  assert.equal((p.node('#explore-grid').innerHTML.match(/class="explore-count"/g)||[]).length,4);
  assert.match(p.node('#explore-grid').innerHTML,/data-v="contexts"[^>]*>[^<]*<strong>[^<]*<span class="explore-count">1<\/span>/);
@@ -117,7 +120,7 @@ test('browser history and copied links preserve the context, folder and search s
  const q=page(D,{route:'#view=search&search=research&type=notes'});
  assert.equal(q.run('view'),'search');assert.equal(q.node('#gq').value,'research');assert.equal(q.run('searchFilter'),'notes');
  assert.match(q.node('#s-grid').innerHTML,/Recent <mark>research/);
- assert.equal(page(D,{route:'#view=nonexistent'}).run('view'),'home');
+ assert.equal(page(D,{route:'#view=nonexistent'}).run('view'),'config');
 });
 
 test('a revision restores detailed browsing state instead of replacing it with the shorter URL',()=>{
@@ -208,7 +211,7 @@ test('Explore groups questions and decisions under the Memories type filter',()=
  p.run('show("questions")');assert.equal(p.run('view'),'memories');assert.equal(p.run('memoryKinds.join(",")'),'question');
  p.run('show("decisions")');assert.equal(p.run('view'),'memories');assert.equal(p.run('memoryKinds.join(",")'),'decision');
  assert.match(p.node('#mem-list').innerHTML,/A decision/);assert.doesNotMatch(p.node('#mem-list').innerHTML,/A question|A note/);
- assert.match(p.node('#nav').innerHTML,/data-v="explore"[^>]*aria-current="page"/);
+ assert.match(p.node('#subnav').innerHTML,/data-v="explore"[^>]*aria-current="page"/);
 });
 
 test('memory pills combine multiple types and contexts and toggle independently',async()=>{

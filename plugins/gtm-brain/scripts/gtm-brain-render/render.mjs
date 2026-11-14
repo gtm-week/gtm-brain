@@ -11,6 +11,7 @@ import { contextGraph } from "../../lib/context-graph.mjs";
 import { entityGraph } from "../../lib/entity-graph.mjs";
 import { dashboardData, dashboardSourceRevision } from '../../lib/dashboard-data.mjs';
 import { listRuns } from '../../lib/workflows.mjs';
+import { pillarData, pillarFiles, firstNotes } from '../../lib/dashboard-pillars.mjs';
 import { refreshIndexedPages } from '../../lib/entity-pages.mjs';
 import { hasMemoryIndex, openDatabase } from '../../lib/memory-index-store.mjs';
 import { readJSON, writeJSON, renderQueue } from '../../lib/dashboard-refresh.mjs';
@@ -97,6 +98,22 @@ data.assets = assetRows(root, snapshot?.specialContexts || sourceContexts);
 data.customers = lib.customerOverview(root, { registry: reg, contexts: snapshot?.specialContexts || sourceContexts });
 data.meetings = lib.meetingOverview(root, { by: lib.currentPerson(root) || undefined, registry: reg, contexts: snapshot?.specialContexts || sourceContexts });
 data.meetings.captureStatus = lib.meetingCaptureStatus(root, data.meetings);
+// The front page's four tabs by pillar. The whole note list goes to a side file in the detail folder;
+// the page carries its first page and fetches the rest when a filter or a scroll needs it.
+// The tabs never stop the render: if they cannot be read at all the page says so and More still works.
+try {
+  const pillarsStarted = performance.now();
+  const pillars = pillarData(root, { registry: reg, admin, contexts: snapshot ? lib.listContexts(root) : sourceContexts, meetings: data.meetings, tools: toolRows, plugin: data.plugin, compileMode });
+  const notes = pillars.memories.notes; delete pillars.memories.notes;
+  writeFileSync(join(detailDir, 'notes.json'), JSON.stringify({ notes }));
+  Object.assign(pillars.memories, { first: firstNotes(notes), file: detailFolder + '/notes.json' });
+  pillars.files = pillarFiles(pillars);
+  data.pillars = pillars;
+  if (process.env.GTM_BRAIN_RENDER_PROFILE) console.error(JSON.stringify({ stage: 'pillars', ms: Math.round(performance.now() - pillarsStarted) }));
+} catch (error) {
+  data.pillars = null; data.pillarsUnread = true;
+  console.error(`The front page tabs could not be read: ${error?.message || error}`);
+}
 for (const c of contexts) c.summaryPlaceholder = !c.compiledAt && c.summary === "Nothing here yet.";
 // Prebuilt frontend assets keep installation and rendering independent of npm.
 mkdirSync(join(outDir, 'ui', 'fonts'), {recursive:true});
@@ -123,6 +140,7 @@ if (renderRequest && readJSON(join(root, 'work', 'render-request.json'))?.id ===
 // revision event. Only renderer-owned folders are eligible for retirement.
 const keep = new Set([data, previous].filter(Boolean).flatMap(d => [
   ...(d.names || []).map(n => n.brief?.detail?.split('/')[0]).filter(Boolean),
+  ...(d.pillars?.memories?.file ? [d.pillars.memories.file.split('/')[0]] : []),
   ...(d.contexts || []).flatMap(c => (c.history || []).map(p => p.split('/').slice(0, 2).join('/'))),
   ...Object.values(d.listHistory || {}).flatMap(paths => paths.map(p => p.split('/').slice(0, 2).join('/'))),
 ]));

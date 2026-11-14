@@ -3,7 +3,7 @@
 // --start / --open / --open-chrome / --url / --stop manage the viewer's local server.
 // Chat about this is a codex:// link; this server never runs brain actions or Codex jobs.
 import { createServer } from "node:http";
-import { readFileSync, writeFileSync, existsSync, mkdirSync, openSync, statSync, watch, createReadStream, fstatSync, closeSync, constants } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, openSync, statSync, watch, createReadStream, fstatSync, closeSync, constants, realpathSync } from "node:fs";
 import { join, resolve, normalize, extname } from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -25,6 +25,9 @@ const requestedPort = configuredPort === undefined ? undefined : Number(configur
 const project = args.find(a => a.startsWith("--project="))?.slice(10) || "";
 if (project && !lib.readProjects(root).some(p => p.slug === project)) { console.error(`Unknown dashboard project: ${project}`); process.exit(1); }
 const viewingUrl = url => project ? `${url}#view=home&project=${encodeURIComponent(project)}` : url;
+// The server's protocol: a start replaces a running server of another one. 4 added /file, so a server an
+// older plugin left running (no /file) is retired on the first start after an upgrade.
+const PROTOCOL = 4;
 const work = join(root, "work"), stateFile = join(work, "dash.json"), home = join(work, "home");
 if (!existsSync(join(root, "brain", "admin.md"))) { console.error(`not a brain: ${root}`); process.exit(1); }
 mkdirSync(work, { recursive: true });
@@ -42,7 +45,7 @@ if (flag === "--stop") { lib.stopBrainWatcher(root); const s = readState(); if (
 if (flag === "--start" || flag === "--open" || flag === "--open-chrome") {
   lib.startBrainWatcher(root);
   const s = readState();
-  if (alive(s) && s.protocol === 3 && (requestedPort === undefined || s.port === requestedPort)) { console.log(viewingUrl(s.url)); process.exit(0); }
+  if (alive(s) && s.protocol === PROTOCOL && (requestedPort === undefined || s.port === requestedPort)) { console.log(viewingUrl(s.url)); process.exit(0); }
   if (alive(s)) { try { process.kill(s.pid); } catch {} } // retire older action-capable servers
   const out = openSync(join(work, "dash.log"), "a");
   const childArgs = [fileURLToPath(import.meta.url), root, ...(requestedPort === undefined ? [] : [`--port=${requestedPort}`])];
@@ -92,6 +95,24 @@ function serve() {
     }
     if (req.method === "GET" && url.pathname === "/data.json") lastSeen = Date.now();
     if (req.method !== "GET" && req.method !== "HEAD") return json(res, 405, { ok: false, note: "GET only" });
+    if (url.pathname === '/file') {
+      // Open a brain file the front page links to, as text. Only a path the last render listed
+      // (data.json pillars.files: documents, RULES.md, SCHEMA.md, admin.md, workflows, entity pages).
+      if (req.headers['sec-fetch-site'] === 'cross-site') return json(res, 403, { ok: false, note: 'Open this file from its dashboard.' });
+      let fd;
+      try {
+        const rel = String(url.searchParams.get('path') || '');
+        let listed = []; try { listed = JSON.parse(readFileSync(join(home, 'data.json'), 'utf8')).pillars?.files || []; } catch {}
+        if (!rel || rel.includes('\0') || rel.split('/').includes('..') || rel.startsWith('/') || !listed.includes(rel)) throw new Error('Unknown file');
+        const path = join(root, rel);
+        if (!path.startsWith(root + '/') || !realpathSync(path).startsWith(realpathSync(root) + '/')) throw new Error('Unknown file');
+        fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+        const stat = fstatSync(fd); if (!stat.isFile() || stat.size > 4 * 1024 * 1024) throw new Error('Not a file');
+        const body = readFileSync(fd); closeSync(fd); fd = undefined;
+        res.writeHead(200, { ...HDR, 'content-type': 'text/plain; charset=utf-8', 'content-security-policy': "default-src 'none'; sandbox", 'cross-origin-resource-policy': 'same-origin' });
+        return res.end(req.method === 'HEAD' ? undefined : body);
+      } catch { if (fd !== undefined) closeSync(fd); return json(res, 404, { ok: false, note: 'File unavailable. It may have moved since this dashboard was refreshed.' }); }
+    }
     if (url.pathname.startsWith('/assets/')) {
       if (req.headers['sec-fetch-site'] === 'cross-site') return json(res, 403, { ok: false, note: 'Open this attachment from its dashboard.' });
       // No caller-supplied filesystem paths. Resolve one recorded relationship, then recheck
@@ -129,7 +150,7 @@ function serve() {
   server.on("error", e => { if (e.code === "EADDRINUSE" && requestedPort === undefined && tries++ < 20) { port++; server.listen(port, "127.0.0.1"); } else { console.error(e.message); process.exit(1); } });
   server.on("listening", () => {
     const url = `http://127.0.0.1:${port}/`;
-    writeFileSync(stateFile, JSON.stringify({ port, pid: process.pid, protocol: 3, url, startedAt: new Date().toISOString() }, null, 1));
+    writeFileSync(stateFile, JSON.stringify({ port, pid: process.pid, protocol: PROTOCOL, url, startedAt: new Date().toISOString() }, null, 1));
     log(`serving ${url}`);
     console.log(url);
   });
