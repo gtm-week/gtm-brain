@@ -19,6 +19,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   try {
     const root = resolve(process.argv[2] || '.'), by = lib.currentPerson(root, process.argv[3]);
     if (!lib.readAdmin(root) || !by) throw new Error('Pass a brain folder and its confirmed person handle: daily-run.mjs <brain> <by>');
+    // The nightly chat capture first (lib/capture.mjs), so the compile below includes what it saved; a failed pass records why and the run goes on.
+    const capture = await import('../../lib/capture.mjs');
+    console.log((await capture.runPass(root, { by })).text);
     const run = spawnSync('codex', ['exec', '-s', 'workspace-write', '--skip-git-repo-check', '-'], {
       cwd: root, input: dailyRefreshPrompt(root, by), stdio: ['pipe', 'inherit', 'inherit'],
       env: { ...process.env, GTM_BRAIN_RUN: 'schedule', GTM_BRAIN_NO_COMPILE: '1' },

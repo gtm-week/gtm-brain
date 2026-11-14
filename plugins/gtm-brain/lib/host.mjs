@@ -8,7 +8,7 @@
      node host.mjs can <compile|update-check>    exit 0 when this machine can
      node host.mjs rulebook <dir>                exit 0 when the host loads <dir>/AGENTS.md by itself
    Depends on nothing in lib/, so lib/brain.mjs can import it. */
-import { existsSync, readFileSync, readdirSync, statSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync, realpathSync, openSync, readSync, closeSync } from "node:fs";
 import { delimiter, join } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -47,6 +47,31 @@ function newest(files, now = Date.now()) {
   return best?.f || null;
 }
 
+/* ---------- the nightly capture pass (lib/capture.mjs): each host's chat files, its turns, its model run ----------
+   Only the host's own session folder is read; capture.mjs keeps the chats whose folder is the brain's. */
+// The head of a file without reading all of it: a rollout can be many megabytes.
+function head(file, max = 4 * 1024 * 1024) {
+  let fd; try { fd = openSync(file, "r"); } catch { return ""; }
+  try {
+    const parts = []; let size = 0;
+    for (;;) { const b = Buffer.alloc(256 * 1024), n = readSync(fd, b, 0, b.length, size); if (!n) break; parts.push(b.subarray(0, n)); size += n; if (b.subarray(0, n).includes(10) || size >= max) break; }
+    return Buffer.concat(parts).toString("utf8");
+  } catch { return ""; } finally { closeSync(fd); }
+}
+const jsonLines = file => { let t = ""; try { t = readFileSync(file, "utf8"); } catch { return null; } return t.split("\n").map(l => { if (!l.trim()) return null; try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); };
+const walkFiles = (dir, keep) => { const out = []; try { for (const e of readdirSync(dir, { withFileTypes: true })) { const p = join(dir, e.name); if (e.isDirectory()) out.push(...walkFiles(p, keep)); else if (keep(e.name)) out.push(p); } } catch {} return out; };
+const changedSince = (files, since) => files.map(f => { try { const s = statSync(f); return s.mtimeMs > since ? { file: f, mtime: s.mtimeMs, size: s.size } : null; } catch { return null; } }).filter(Boolean);
+// What the host puts in the person's turn that the person did not type.
+const SCAFFOLD = /^\s*<(environment_context|user_instructions|permissions|turn_aborted|command-name|command-message|command-args|local-command-stdout|local-command-caveat|task-notification|system-reminder|bash-input|bash-stdout|bash-stderr)\b/;
+const unwrap = t => String(t || "").replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, "").trim();
+// The person's model settings, carried over to the capture run when the person uses OpenAI's own provider.
+function codexConfig(home) {
+  let toml = ""; try { toml = readFileSync(join(home, "config.toml"), "utf8"); } catch {}
+  const top = toml.split(/^\s*\[/m)[0], key = k => top.match(new RegExp(`^\\s*${k}\\s*=\\s*(.+?)\\s*$`, "m"))?.[1] || null;
+  const provider = key("model_provider");
+  return { slim: !provider || /^"(openai)?"$/.test(provider), keys: ["model", "model_reasoning_effort", "service_tier"].map(k => [k, key(k)]).filter(([, v]) => v) };
+}
+
 const ADAPTERS = {
   codex: {
     projectSkillsDir: ".agents/skills",
@@ -73,6 +98,59 @@ const ADAPTERS = {
         // an answer picked in the question box is the person's words too ("Florian Kim" picked, not typed; new-brain, 2026-11-12)
         else if (p.type === "function_call_output" && /"answers"/.test(String(p.output).slice(0, 40))) { const a = JSON.parse(p.output).answers || {}; const picked = Object.values(a).flatMap(x => x?.answers || []).join(" "); if (picked) last = `${last} ${picked}`.trim(); } } catch {} } } catch {}
       return last;
+    },
+    capture: {
+      name: "Codex",
+      // Threads whose rollout changed since `since`: the day folders of the last 31 days (a resumed thread keeps
+      // writing to the file of the day it started). GTM Brain's own runs (codex exec), sub-agents and scheduled
+      // automations are nobody's conversation and are left out.
+      chats(since, home = process.env.CODEX_HOME || join(homedir(), ".codex")) {
+        const days = Array.from({ length: 31 }, (_, n) => new Date(Date.now() - n * 864e5)).filter(d => d.getTime() > since - 2 * 864e5)
+          .map(d => join(home, "sessions", String(d.getFullYear()), String(d.getMonth() + 1).padStart(2, "0"), String(d.getDate()).padStart(2, "0")));
+        const files = days.flatMap(dir => { try { return readdirSync(dir).filter(f => f.endsWith(".jsonl")).map(f => join(dir, f)); } catch { return []; } });
+        return changedSince(files, since).map(c => {
+          let p = {}; try { p = JSON.parse(head(c.file).split("\n", 1)[0]).payload || {}; } catch {}
+          const id = /-([0-9a-f-]{36})\.jsonl$/.exec(c.file)?.[1];
+          const own = p.source === "exec" || (p.source && typeof p.source === "object") || ["subagent", "automation"].includes(p.thread_source);
+          return id && typeof p.cwd === "string" && !own ? { ...c, id, kind: "codex", cwd: real(p.cwd) } : null;
+        }).filter(Boolean);
+      },
+      // The person's and the assistant's words, in order; tool calls, their output and the host's scaffolding are left out.
+      turns(file) {
+        const out = [];
+        for (const r of jsonLines(file) || []) {
+          const p = r.payload || {}, at = r.timestamp || null;
+          if (r.type === "response_item" && p.type === "message" && (p.role === "user" || p.role === "assistant")) {
+            const t = (p.content || []).map(c => c?.text || "").join("\n").trim();
+            if (!t || (p.role === "user" && (SCAFFOLD.test(t) || /AGENTS\.md instructions/.test(t.slice(0, 300))))) continue;
+            out.push({ role: p.role === "user" ? "person" : "assistant", text: unwrap(t), at });
+          } else if (r.type === "response_item" && p.type === "function_call_output" && /"answers"/.test(String(p.output).slice(0, 40))) {
+            try { const picked = Object.values(JSON.parse(p.output).answers || {}).flatMap(x => x?.answers || []).join("; "); if (picked) out.push({ role: "person", text: `(picked) ${picked}`, at }); } catch {}
+          }
+        }
+        return out;
+      },
+      // One bounded run with no tools, no plugins and no rulebook: the prompt is the whole input.
+      command(home = process.env.CODEX_HOME || join(homedir(), ".codex")) {
+        const { slim, keys } = codexConfig(home);
+        return { cmd: "codex", args: ["exec", "--json", "--ephemeral", "-s", "read-only", "--skip-git-repo-check", ...(slim ? ["--ignore-user-config", "-c", "project_doc_max_bytes=0", ...keys.flatMap(([k, v]) => ["-c", `${k}=${v}`])] : []), "-"] };
+      },
+      parse(stdout) {
+        const usage = { input: 0, cached: 0, output: 0 }; let text = "", error = "";
+        for (const line of String(stdout).split("\n")) {
+          let e; try { e = JSON.parse(line); } catch { continue; }
+          if (e.type === "error" && e.message) error = e.message;
+          if (e.type === "turn.failed") error = e.error?.message || error || "turn failed";
+          if (e.type === "turn.completed" && e.usage) { usage.input += e.usage.input_tokens || 0; usage.cached += e.usage.cached_input_tokens || 0; usage.output += e.usage.output_tokens || 0; }
+          if (e.type === "item.completed" && e.item?.type === "agent_message" && e.item.text) text = e.item.text;
+        }
+        return { text, usage, error };
+      },
+      // Signed in? Checked before any chat is read, so a signed-out machine costs nothing and says why.
+      preflight() {
+        try { execFileSync("codex", ["login", "status"], { encoding: "utf8", timeout: 15000, stdio: ["ignore", "pipe", "pipe"] }); return null; }
+        catch (e) { return e.code === "ENOENT" ? `codex not found` : `not logged in: ${String(e.stderr || e.stdout || e.message).trim().split("\n")[0]}`; }
+      },
     },
     // Where GTM Brain is installed from and which version is installed, as the host's plugin manager reports it.
     plugin: {
@@ -129,6 +207,40 @@ const ADAPTERS = {
       let last = "";
       try { for (const line of readFileSync(file, "utf8").split("\n")) { try { const r = JSON.parse(line); if (r.type === "user" && typeof r.message?.content === "string") last = r.message.content; } catch {} } } catch {}
       return last;
+    },
+    capture: {
+      name: "Claude Code",
+      // Sessions whose file changed since `since`; the folder name is lossy (every other character is -), so
+      // the cwd recorded inside the file decides. Non-interactive runs (claude -p, the SDK) are left out.
+      chats(since, home = process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude")) {
+        const base = join(home, "projects");
+        let dirs = []; try { dirs = readdirSync(base, { withFileTypes: true }).filter(d => d.isDirectory()).map(d => join(base, d.name)); } catch {}
+        const files = dirs.flatMap(d => { try { return readdirSync(d).filter(f => /^[0-9a-f-]{36}\.jsonl$/.test(f)).map(f => join(d, f)); } catch { return []; } });
+        return changedSince(files, since).map(c => {
+          let cwd = null, entry = null;
+          for (const l of head(c.file, 1024 * 1024).split("\n")) { try { const r = JSON.parse(l); if (typeof r.cwd === "string") { cwd = r.cwd; entry = r.entrypoint || null; break; } } catch {} }
+          return cwd && !/^sdk/.test(entry || "") ? { ...c, id: /([0-9a-f-]{36})\.jsonl$/.exec(c.file)[1], kind: "claude", cwd: real(cwd) } : null;
+        }).filter(Boolean);
+      },
+      turns(file) {
+        const out = [];
+        for (const r of jsonLines(file) || []) {
+          if ((r.type !== "user" && r.type !== "assistant") || r.isMeta || r.isSidechain) continue;
+          const c = r.message?.content;
+          const t = typeof c === "string" ? c : Array.isArray(c) ? c.filter(x => x?.type === "text").map(x => x.text || "").join("\n") : "";
+          if (!t.trim() || (r.type === "user" && SCAFFOLD.test(t))) continue;
+          const text = unwrap(t); if (text) out.push({ role: r.type === "user" ? "person" : "assistant", text, at: r.timestamp || null });
+        }
+        return out;
+      },
+      command: () => ({ cmd: "claude", args: ["-p", "--output-format", "json", "--strict-mcp-config", "--tools", "", "--no-session-persistence"] }),
+      parse(stdout) {
+        try {
+          const r = JSON.parse(String(stdout).trim()), u = r.usage || {};
+          return { text: r.is_error ? "" : String(r.result || ""), usage: { input: (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0), cached: u.cache_read_input_tokens || 0, output: u.output_tokens || 0 }, error: r.is_error ? String(r.result || "the run failed") : "" };
+        } catch { return { text: "", usage: null, error: String(stdout).trim().split("\n").slice(-1)[0] || "" }; }
+      },
+      preflight: () => (onPath("claude") ? null : "claude not found"),
     },
     plugin: {
       home: () => process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude"),

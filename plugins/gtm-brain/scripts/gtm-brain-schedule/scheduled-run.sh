@@ -16,6 +16,12 @@ if due_out="$(node --disable-warning=ExperimentalWarning "$P/scripts/gtm-brain-w
 else
   printf '%s  scheduled-run  workflows: due check failed: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$(printf '%s' "$due_out" | tr '\n' ';')" >> work/hooks.log
 fi
+# The nightly chat capture (lib/capture.mjs): outcomes said in this brain's chats and never saved, before the
+# compile so the summaries include them. Only the scheduled run, never the run a saved note kicks; it logs and
+# records its own result (work/capture.json), and a failed pass never stops the compile.
+if [ "$BY" = "schedule" ]; then
+  node --disable-warning=ExperimentalWarning "$P/scripts/gtm-brain-schedule/capture.mjs" . --run >/dev/null 2>&1 || true
+fi
 PENDING="$(node "$P/scripts/gtm-brain-compile/compile-status.mjs" .)" || { printf '%s  scheduled-run  failed: cannot inspect pending compilation\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log; exit 1; }
 STALE="${PENDING%%|*}"; ENTITIES="${PENDING#*|}"
 # Summaries paused by a hand edit are skipped on purpose; the log names them every run, so "nothing stale" never hides them.

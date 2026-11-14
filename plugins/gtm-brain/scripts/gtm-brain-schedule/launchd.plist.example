@@ -12,7 +12,8 @@
     <string>/Users/YOU/your-brain</string>
   </array>
   <key>StartCalendarInterval</key>
-  <dict><key>Weekday</key><integer>0</integer><key>Hour</key><integer>20</integer><key>Minute</key><integer>0</integer></dict>
+  <!-- Every night at 02:00: the chat capture, then the summaries behind. A closed laptop runs it once on waking (launchd catches up a missed time). -->
+  <dict><key>Hour</key><integer>2</integer><key>Minute</key><integer>0</integer></dict>
   <key>StandardOutPath</key><string>/tmp/gtm-brain-compile.log</string>
   <key>StandardErrorPath</key><string>/tmp/gtm-brain-compile.log</string>
   <key>EnvironmentVariables</key>

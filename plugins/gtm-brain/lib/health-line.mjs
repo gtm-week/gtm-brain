@@ -1,4 +1,4 @@
-// The one health line at chat start: meeting capture (meetingCaptureStatus), the summary runs
+// The one health line at chat start: meeting capture (meetingCaptureStatus), the nightly chat capture, the summary runs
 // (work/runs.jsonl and work/compile.json), the last sync per tool (work/sync.json and meeting
 // coverage, marked when older than its window), the open meeting gaps and, when a number is out of
 // range, the population (lib/population.mjs). Reads only (the population keeps its cache in work/); every part is left out when nothing is recorded.
@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { meetingCaptureStatus, toolKey } from "./brain.mjs";   // through brain.mjs: meetings.mjs imports it back
 import { normalizeKind } from "./pointers.mjs";
 import { populationPart, SYNC_WINDOW_DAYS } from "./population.mjs";
+import { captureHealth } from "./capture.mjs";
 
 const readJson = f => { try { return JSON.parse(readFileSync(f, "utf8")); } catch { return null; } };
 const readRuns = root => { try { return readFileSync(join(root, "work", "runs.jsonl"), "utf8").split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(r => r && r.at); } catch { return []; } };
@@ -82,8 +83,11 @@ export function healthLine(root, overview) {
   if (syncs.length) parts.push(`last sync: ${syncs.map(([t, at]) => `${t} ${when(at)}${late.has(t) ? ` (overdue: older than ${late.get(t).window_days} days)` : ""}`).join(", ")}`);
   const gaps = openGaps(overview);
   if (gaps) parts.push(`open gaps: ${gaps} meeting${gaps === 1 ? "" : "s"} not captured`);
+  // the nightly chat capture's heartbeat (lib/capture.mjs): fine, late, failed with the reason, or off
+  const chats = captureHealth(root);
+  if (chats.state !== "never") parts.push(chats.text);
   const population = populationPart(root);
   if (population) parts.push(population);
   if (!parts.length) return null;
-  return `health: ${parts.join(" | ").replace(/\.$/, "")}. Say this if the person asks about meetings, sync, summaries or how full the brain is, or something is missing; do not raise it otherwise.`;
+  return `health: ${parts.join(" | ").replace(/\.$/, "")}. Say this if the person asks about meetings, sync, summaries, chat capture or how full the brain is, or something is missing; do not raise it otherwise.`;
 }

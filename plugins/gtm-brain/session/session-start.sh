@@ -110,6 +110,8 @@ node -e 'const l=await import(process.argv[1]);const p=l.currentPerson(process.a
 brain_interaction_policy
 node -e 'const d=await import(process.argv[1]);console.log(d.datesLine())' "$P/lib/dots.mjs" 2>/dev/null || true
 node -e 'const s=await import(process.argv[1]);const t=s.scheduleNotice(process.argv[2]);if(t)console.log(t)' "$P/lib/schedule.mjs" "$root" 2>/dev/null || true
+# The nightly chat capture (lib/capture.mjs): the notes it saved, once, and the offer when a pass is late or failed, at most daily.
+node -e 'const c=await import(process.argv[1]);const t=c.captureNotice(process.argv[2]);if(t)console.log(t)' "$P/lib/capture.mjs" "$root" 2>/dev/null || true
 node -e 'const d=await import(process.argv[1]);const l=await import(process.argv[2]);const t=d.rulebookText(process.argv[3]);if(t){console.log(t);d.markRulebookSent(process.argv[3],l.readSession(process.argv[3],process.argv[4]||null)?.session_id)}' "$P/lib/dots.mjs" "$P/lib/brain.mjs" "$root" "$project" 2>/dev/null || true
 echo "Answer the person's request using relevant saved evidence. Never open, inspect or refresh the dashboard before an ordinary answer. Maintenance runs in the background; external source sync runs only when requested or by an approved schedule. An explicit dashboard or sync request follows its normal workflow."
 # A handoff another assistant wrote by following IMPORT.md waits under ~/.gtm-brain until it is imported
