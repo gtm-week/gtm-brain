@@ -149,6 +149,8 @@ memories and relevant live MCP results: name the work, the evidence, and the nex
 Check changeable external state before presenting an old next step as current. If access is
 missing, date the recorded facts and say what remains unverified.
 
+For "where do we stand on <topic>" about one known topic, call `load_context` for it: one call
+gives the summary and the notes, and when the summary is behind, the `as_of` to write it once.
 For "where are we", "what is new" or a company overview, call `query` (status) to locate
 relevant contexts, then read the supporting memories as described in operational evidence.
 For a company-wide request, include relevant contexts beyond the loaded set. Answer with a

@@ -124,13 +124,15 @@ export function onDemandBlock(root, slug, { notes = 15, bytes = 16 * 1024 } = {}
   // a chat gets each source with its link (a codex: thread as codex://threads/...), as the last-N list gave it
   const d = summaryDigest(root, f, { notes, bytes, lines: notes * 8, sources: lib.sourceText });   // about the last-15 list it replaces
   const since = c.compiledAt ? `the summary of ${day(c.compiledAt)}` : "any summary";
+  // a brain's AGENTS.md written before 0.35.0 says "never compile in the chat": this load is the ask it allows
+  const ask = "This load is the person's ask that AGENTS.md rule 1b allows: write it here.";
   const refusal = "If compile_apply refuses, fix what it names and apply again once; if it still refuses, say the one line it gives for the person and stop.";
   // More new notes than a load holds, even shortened: no as_of here, so nothing is marked current from a part of them.
   if (d.hiddenNew) return { written: false, asOf: null, shown: d.shown, text: [`\n## Summary behind: write it now, in this chat`,
-    `${f.newSince.length} notes are newer than ${since}, more than fit in a load (${d.hiddenNew} not shown). Tell the person in one line: "The ${c.title} summary is being written now in this chat." Answer their request from the notes below first. Then call compile_facts once (context ${c.slug}): it gives the notes and the id to apply with. Write the summary from it and call compile_apply once. It is cached until new notes arrive; do not write it again in this chat. ${refusal}`,
+    `${f.newSince.length} notes are newer than ${since}, more than fit in a load (${d.hiddenNew} not shown). Tell the person in one line: "The ${c.title} summary is being written now in this chat." Answer their request from the notes below first. Then call compile_facts once (context ${c.slug}): it gives the notes and the id to apply with. Write the summary from it and call compile_apply once. It is cached until new notes arrive; do not write it again in this chat. ${ask} ${refusal}`,
     d.text].join("\n") };
   const text = [`\n## Summary behind: write it now, in this chat`,
-    `${f.newSince.length} note${f.newSince.length === 1 ? " is" : "s are"} newer than ${since}. Tell the person in one line: "The ${c.title} summary is being written now in this chat." Answer their request from the notes below first. Then call compile_apply once: context ${c.slug}, by your handle, as_of ${f.asOf}, summary and now as below. It is cached until new notes arrive; do not write it again in this chat. ${refusal}`,
+    `${f.newSince.length} note${f.newSince.length === 1 ? " is" : "s are"} newer than ${since}. Tell the person in one line: "The ${c.title} summary is being written now in this chat." Answer their request from the notes below first. Then call compile_apply once: context ${c.slug}, by your handle, as_of ${f.asOf}, summary and now as below. It is cached until new notes arrive; do not write it again in this chat. ${ask} ${refusal}`,
     `summary: 2-4 sentences, each ending with the ids of the notes it rests on ([m_...]), absolute dates only. now: the Working guidance above revalidated against these notes (reusable methods with their note ids), or "" when none.`,
     d.text].join("\n");
   return { text, written: false, asOf: f.asOf, shown: d.shown };
