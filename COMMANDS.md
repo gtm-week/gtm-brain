@@ -71,7 +71,9 @@ completed actions or decisions, meeting artifacts, and open questions. A short b
 descriptive source pointer is enough; duplicate reads add nothing.
 
 Tool: `remember`. Writes: `brain/contexts/<slug>/memories.jsonl` (append), `brain/entities/` (new
-people). Kept at once.
+people). Kept at once. `context` is optional: the single loaded context, else the one active
+context where the note's people or companies already have notes; with no unique answer the entry is
+held with the candidate contexts in one line. Each kept note starts with `saved in <Context title>: ...`.
 `node $PLUGIN_ROOT/scripts/gtm-brain-remember/remember.mjs . --by <handle> --kind note --content "..." [--context <slug>] [--tools "attio"] [--people "Pierre Aubert"] [--source gmail:<id>] [--action "gmail:sent email:<id>"] [--supersedes m_x] [--retracts m_x]`
 
 ### interact
@@ -162,7 +164,7 @@ cap on this guidance. Your standing rule from setup is never changed. Only conte
 one. Runs unattended on the schedule.
 
 Tools: `compile_facts`, `compile_apply`. Writes: `brain/contexts/<slug>/context.md`; kept at once.
-A separate run does it by itself (`background-compile.sh`, state in `work/compile.json`): after each saved change, once no note has been saved for 2 minutes (`GTM_BRAIN_COMPILE_DELAY`), and at chat start; changes during a run get a follow-up pass; the chat only compiles when asked.
+A separate run does it by itself (`background-compile.sh`, state in `work/compile.json`): after each saved change, once no note has been saved for 2 minutes (`GTM_BRAIN_COMPILE_DELAY`), and at chat start; changes during a run get a follow-up pass; the chat only compiles when asked. The chat start carries one `health:` line when there is something to say: why meetings may be missing, the last good summary run and the last error (`work/runs.jsonl`, `work/compile.json`), the last sync per tool (`work/sync.json`, meeting coverage) and the count of held meetings not captured.
 Model passes have a 15-minute timeout (`GTM_BRAIN_COMPILE_TIMEOUT_MS` overrides it in milliseconds).
 Failed scans and timed-out runs enter the three-attempt retry path; completed compilations stay
 saved. Successful passes that reduce the pending context or entity set continue without using
