@@ -129,7 +129,10 @@ event on every machine.
 In one place, `LIMITS` in `lib/workflows.mjs`: 3 active runs per workflow, 5 steps a day moved
 automatically per run, a chain of workflows starting each other stops at depth 3, 3 workflow lines
 at one chat start, events at most 14 days old. A workflow's own notes never trigger it, and
-neither does what was saved about an entity while a run of the workflow about it was going.
+neither does what was saved about an entity while a run of the workflow about it was going. A
+note saved with `remember` about a run's subject while that run is going counts as the run's work:
+it carries the run's depth, so two workflows offering each other the same account's notes stop at
+depth 3 like any other chain.
 `workflows: off` in `brain/admin.md` (a workplace change, through APPROVE) turns them all off:
 nothing is offered, started or moved.
 
@@ -140,7 +143,9 @@ milestone is part of the step text, the gate is still the last `Gate:`; an activ
 workflow shows as a draft. They see no offers, and their saves become events on 0.35 machines once
 pulled. A workflow with an empty "Before starting" does not parse on 0.34. A step waiting for a
 milestone gate shows there as "waiting, due null", and 0.34 does not know a paused run: it can
-still advance one.
+still advance one. Editing an active workflow through the `document` tool on 0.34 saves it as a
+draft (0.34 knows only draft and approved): nothing runs that should not, and `workflow activate`
+switches it back on.
 
 Editing an active or paused workflow through the `document` tool keeps its status; only
 `workflow activate`, `pause` and `resume` change it. An edit is not checked again: run `check`.
