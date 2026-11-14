@@ -55,7 +55,8 @@ export async function generate({ shape = "small", out, seed = 1, gold: goldPath 
   if (existsSync(root) && readdirSync(root).length) throw new Error(`${root} is not empty`);
   mkdirSync(root, { recursive: true });
   Object.assign(process.env, { GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_NO_WATCH: "1", GTM_BRAIN_NO_OPEN: "1" });
-  if (!process.env.CODEX_HOME) process.env.CODEX_HOME = mkdtempSync(join(tmpdir(), "gtm-e2e-profile-"));
+  // a fresh profile per brain: never the real one, and two brains in one process do not share project links
+  process.env.CODEX_HOME = mkdtempSync(join(tmpdir(), "gtm-e2e-profile-"));
   const lib = await import(`${P}/lib/brain.mjs`), schemaLib = await import(`${P}/lib/schema.mjs`), assets = await import(`${P}/lib/assets.mjs`);
   const started = Date.now(), log = (...a) => { if (!quiet) console.error(`[${shape} ${((Date.now() - started) / 1000).toFixed(0)}s]`, ...a); };
   const rnd = mulberry32(seed * 7919 + Object.keys(SHAPES).indexOf(shape) * 104729);
@@ -131,7 +132,7 @@ export async function generate({ shape = "small", out, seed = 1, gold: goldPath 
 
   /* ---------- projects ---------- */
   const projects = PROJECTS.slice(0, cfg.projects);
-  for (const [slug, title] of projects) execFileSync(process.execPath, [join(P, "skills/gtm-brain-project/project.mjs"), ".", "--link", join(root, "projects", slug), "--create", "--slug", slug, "--title", title, "--contexts", "icp,offer", "--by", by], { cwd: root, env, stdio: "ignore", timeout: 60000 });
+  for (const [slug, title] of projects) mkdirSync(join(root, "projects"), { recursive: true }), execFileSync(process.execPath, [join(P, "skills/gtm-brain-project/project.mjs"), ".", "--link", join(root, "projects", slug), "--create", "--slug", slug, "--title", title, "--contexts", "icp,offer", "--by", by], { cwd: root, env, stdio: ["ignore", "ignore", "pipe"], timeout: 60000 });
 
   // an established brain: onboarding finished on the first day (the six outcomes, then the marker setup left is closed)
   const T0 = Date.parse("2026-01-05T08:00:00Z"), SPAN = 300 * 86400000;   // Jan 5 to Nov 1, 2026
