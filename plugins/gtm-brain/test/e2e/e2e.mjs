@@ -107,6 +107,7 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
   await check("rules.check", "rules", async () => { const r = await q({ object: "rules" }); return { pass: !r.isError && r.text.length > 0, text: r.text }; });
   await check("status.view", "status", async () => { const r = await q({ object: "status" }); return { pass: !r.isError && /icp/i.test(r.text), text: r.text }; });
   await check("status.health", "status", async () => { const r = await q({ object: "health" }); return { pass: !r.isError, text: r.text }; });
+  await check("status.population", "status", async () => { const r = await q({ object: "population" }); const n = Number((r.text.match(/(\d+) notes in force/) || [])[1]); const eff = Object.values(gold.contexts).reduce((a, c) => a + c.effective, 0); return { pass: !r.isError && n > 0 && n <= eff && /Capture rate: not measured/.test(r.text) && /Noise rate: not measured/.test(r.text) && /Duplicates: \d+ exact/.test(r.text), text: r.text, note: `${n} in force, effective ${eff}` }; });
   await check("status.list_contexts", "status", async () => { const r = await call("list_contexts", {}); return { pass: !r.isError && Object.keys(gold.contexts).filter(c => c !== "company").slice(0, 3).every(c => r.text.includes(c)), text: r.text }; });
 
   /* ---------- compile ---------- */

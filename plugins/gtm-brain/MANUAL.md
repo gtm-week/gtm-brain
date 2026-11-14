@@ -126,6 +126,16 @@ made there carry the project's tag, and everything stays searchable from the bra
 - "Open the dashboard" shows contexts, notes, entities, questions and search, read-only. To change
   anything, use "Chat about this" on a card, or say it in chat.
 
+"Is the brain too full or too empty?" is `query` (population): counted from the files, with no
+model: notes saved in the last 7 days against the weekly average of the 4 weeks before, exact
+duplicates (same text) and near ones (same source record on the same day), entities no note
+mentions, entities missing a field SCHEMA.md marks required, notes no summary or brief cites, and
+notes without a source. Each number has a range (in `lib/population.mjs`, no setting yet); when one
+is out of range the chat start's `health:` line says so in one part. Capture rate and noise rate
+show as "not measured": they need a capture pass that is not built. The same line marks a tool
+whose last sync is older than its window (7 days, or the `window_days` its checkpoint carries):
+each source keeps its own checkpoint in `work/sync.json`, by kind and account.
+
 ## Changing how it works
 
 | To change | Do this |
