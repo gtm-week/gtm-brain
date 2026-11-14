@@ -373,3 +373,14 @@ test("review: the chat start shows only the general rules once one is filed, and
   assert.match(text, /\n\nBe polite\.\n2 more rules for a kind or link \(organization, link partner_of\): each comes with the reply that needs it/);
   assert.doesNotMatch(text, /signed contract|partner tier|> applies to/, "a rule for a kind is not in every chat");
 });
+
+test("review: a thing not to do, or how a note is kept, is a rule even after a trigger; a schedule starts work", () => {
+  for (const rule of ["When someone unsubscribes, never email them again.", "If a contact asks for pricing, don't send the price list.", "When a company becomes a customer, add the customer tag.", "When we lose a deal, record the reason.", "When in doubt, ask the account owner."]) assert.equal(R.workOffer(rule), null, rule);
+  const weekly = R.workOffer("Every Monday, send the pipeline summary to the team.");
+  assert.equal(weekly.title, "Send the pipeline summary");
+  assert.equal(weekly.trigger, "Every Monday");
+  const parsed = parseWorkflow({ slug: "send-the-pipeline-summary", title: weekly.title, extra: { type: "workflow" }, body: weekly.body });
+  assert.equal(parsed.ok, true, JSON.stringify(parsed.problems));
+  assert.match(weekly.body, /it runs every monday/);
+  assert.equal(R.workOffer("Once a quarter, review the partner list.").title, "Review the partner list");
+});

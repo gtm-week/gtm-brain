@@ -428,26 +428,34 @@ export function proposeTag(text, vocab) {
 
 /* ---------- A rule that starts work is a workflow ---------- */
 const TRIGGER = /\b(whenever|every time|each time|as soon as|once|after|when|if)\b/i;
-const ACTION = /\b(send|email|create|schedule|book|post|notify|invite|add|open|start|run|prepare|ping|message|share|set up|follow up|call|introduce|ship|order|thank|welcome|remind|congratulate)\b/i;
+// a schedule starts work too: "every Monday, send the pipeline summary", "once a quarter, review the partner list"
+const SCHEDULE = /\b(?:(?:every|each)\s+(?:other\s+)?(?:day|morning|evening|week|month|quarter|year|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|once\s+a\s+(?:day|week|month|quarter|year)|daily|weekly|monthly|quarterly)\b/i;
+const ACTION = /\b(send|email|create|schedule|book|post|notify|invite|add|open|start|run|prepare|ping|message|share|set up|follow up|call|introduce|ship|order|thank|welcome|remind|congratulate|review|update|export|report|clean up|summari[sz]e)\b/i;
+// an action that is how a note is kept (a tag, a label, a field) or a thing not to do is a rule, not work
+const SAVING_ACTION = /^(?:never|don'?t|do not|not|no|avoid|stop)\b|\b(?:tags?|labels?|fields?|status)\b|^(?:mark|record|save|log|note)\b/i;
 const OWN_ACTIVITY = /\b(?:when|whenever|while|before|after|if)\s+(?:you\s+|codex\s+|we\s+)?(?:writ|draft|sav|read|repl|answer|tagg|not(?:e|ing)|record|mention|talk|speak)/i;
 const TOOL_OF = [[/\b(send|email|message|ping|introduce|thank|welcome|remind|congratulate)\b/i, "email"], [/\b(schedule|book|invite)\b/i, "calendar"], [/\b(crm|deal|pipeline)\b/i, "crm"], [/\bpost\b/i, "social"]];
-/* {title, body, applies_to, text} for an instruction that starts work, or null for a rule. The body parses as a
-   workflow (lib/workflows.mjs parseWorkflow); creating it is workflow create, on the person's yes. */
+/* {title, body, applies_to, trigger, text} for an instruction that starts work, or null for a rule. The body parses
+   as a workflow (lib/workflows.mjs parseWorkflow); creating it is workflow create, on the person's yes. */
 export function workOffer(text, vocab = null) {
   const t = String(text).trim().replace(/\.$/, "");
   if (/^\s*(never|don'?t|do not|no\b|only|avoid|mention|use|keep|write|say|ask)/i.test(t) || OWN_ACTIVITY.test(t)) return null;
-  const trig = t.match(TRIGGER); if (!trig) return null;
-  // the action: the clause without the trigger ("whenever X, send Y" or "send Y whenever X")
+  const sched = t.match(SCHEDULE), trig = sched || t.match(TRIGGER); if (!trig) return null;
+  // the action: the clause without the trigger ("whenever X, send Y", "send Y whenever X", "every Monday, send Y")
   let action, cond;
   const comma = t.indexOf(",");
-  if (trig.index === 0 || /^(always\s+)?(whenever|every time|each time|as soon as|once|after|when|if)\b/i.test(t)) { if (comma < 0) return null; cond = t.slice(trig.index + trig[0].length, comma).trim(); action = t.slice(comma + 1).trim(); }
+  if (sched) { cond = sched[0]; action = (trig.index === 0 || /^(always\s+)?$/i.test(t.slice(0, trig.index)) ? t.slice(comma >= 0 && comma < trig.index + trig[0].length + 2 ? comma + 1 : trig.index + trig[0].length) : t.slice(0, trig.index)).replace(/^[\s,]+|[\s,]+$/g, "").replace(/^always\s+/i, ""); }
+  else if (trig.index === 0 || /^(always\s+)?(whenever|every time|each time|as soon as|once|after|when|if)\b/i.test(t)) { if (comma < 0) return null; cond = t.slice(trig.index + trig[0].length, comma).trim(); action = t.slice(comma + 1).trim(); }
   else { action = t.slice(0, trig.index).replace(/^always\s+/i, "").trim(); cond = t.slice(trig.index + trig[0].length).trim(); }
-  if (!ACTION.test(action) || !cond) return null;
   action = action.replace(/^(?:always\s+|then\s+|we\s+|codex\s+)/i, "").replace(/^(?:should|must|will)\s+/i, "").trim();
-  const title = (action[0].toUpperCase() + action.slice(1)).split(/\s+/).slice(0, 6).join(" ").replace(/[.,;:]$/, "");
+  if (!action || !ACTION.test(action) || SAVING_ACTION.test(action) || !cond) return null;
+  const cut = (action[0].toUpperCase() + action.slice(1)).replace(/[.,;:]$/, "").split(/\s+/).slice(0, 6);
+  while (cut.length > 1 && STOP.has(cut.at(-1).toLowerCase())) cut.pop();   // never end a title on "to the"
+  const title = cut.join(" ").replace(/[.,;:]$/, "");
   const tool = TOOL_OF.find(([re]) => re.test(action))?.[1] || null;
   const who = KIND_WORDS.find(([re]) => re.test(action))?.[1] || KIND_WORDS.find(([re]) => re.test(cond))?.[1] || "entity", whoWord = { person: "Person", organization: "Company", product: "Product", event: "Event", tool: "Tool", entity: "Who" }[who];
-  const body = `## Before starting\n\n- **${whoWord}**: the one this run is for, by name (it starts when ${cond}).\n\n## Steps\n\n1. **${title}**${tool ? ` (tool: ${tool})` : ""}. ${t}.\n\n## Learn\n\n- What to change in this step next time.\n`;
+  const starts = sched ? `it runs ${cond.toLowerCase()}` : `it starts when ${cond}`;
+  const body = `## Before starting\n\n- **${sched ? "When" : whoWord}**: ${sched ? `this run's date (${starts})` : `the one this run is for, by name (${starts})`}.\n\n## Steps\n\n1. **${title}**${tool ? ` (tool: ${tool})` : ""}. ${t}.\n\n## Learn\n\n- What to change in this step next time.\n`;
   return { title, body, applies_to: [title.toLowerCase().split(/\s+/).filter(w => !STOP.has(w)).slice(-2).join(" ")], trigger: cond,
     text: `"${t}" starts work, and a rule never starts work: offer it as a one-step workflow instead. On yes: workflow create with title "${title}" and the body below, then remove the line from Our rules and save ("RULES.md: ${title} is a workflow now").` };
 }
