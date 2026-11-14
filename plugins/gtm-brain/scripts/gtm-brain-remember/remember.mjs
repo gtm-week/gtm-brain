@@ -122,7 +122,7 @@ const problems = entries.map((e, i) => {
   if (!ctx) {
     const { candidates } = loaded.length > 1 ? { candidates: loaded } : evidenceOf(e);
     const pool = candidates.length ? candidates : lib.listContexts(root, { includeMemories: false }).filter(c => c.status === "active").map(c => c.slug);
-    placeless.set(i, { n, why: `which context is this for: ${pool.map(s => `${titleOf(s)} (${s})`).join(" or ")}? ${candidates.length > 1 ? (loaded.length > 1 ? "Several contexts are loaded" : "The people in it have notes in each") : "Nothing in the note points at one"}; send it again with context: the slug`, mentions: [], ask: true });
+    placeless.set(i, { n, why: `which context is this for: ${pool.map(s => `${titleOf(s)} (${s})`).join(" or ")}? ${candidates.length > 1 ? (loaded.length > 1 ? "Several contexts are loaded" : "The people in it have notes in each") : "Nothing in the note points at one"}; send it again with context: the slug that fits what the person said, and ask them only when two fit equally`, mentions: [], ask: false });
     return null;
   }
   if (!existsSync(join(root, "brain", "contexts", ctx, "context.md"))) return `${at(n)}no such context: ${ctx}`;

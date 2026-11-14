@@ -53,6 +53,10 @@ test("no evidence and nothing loaded: held with the contexts listed, no guess", 
   const r = remember(root, "--content", "The returns market grows in Poland.");
   assert.equal(r.status, 2, r.stdout);
   assert.match(r.stderr, /which context is this for: .*\(market\).*Nothing in the note points at one/);
+  assert.match(r.stderr, /send it again with context: the slug/);
+  assert.doesNotMatch(r.stderr, /wait for the reply/, "naming the context is the model's step, not a question for the person every time");
+  const again = remember(root, "--context", "market", "--content", "The returns market grows in Poland.");
+  assert.equal(again.status, 0, again.stderr + again.stdout);
 });
 
 test("a batch keeps the entries that have a home and holds the one that has none", () => {

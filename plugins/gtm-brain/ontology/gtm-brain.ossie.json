@@ -1070,7 +1070,7 @@
                 },
                 "context": {
                   "type": "string",
-                  "description": "Context slug; omit when exactly one is loaded"
+                  "description": "Context slug; omit when one is loaded or the people in the note already have notes in one context"
                 },
                 "tools": {
                   "type": "array",
