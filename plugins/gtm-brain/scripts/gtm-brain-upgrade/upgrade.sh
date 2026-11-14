@@ -83,26 +83,32 @@ fi
 # The starter documents setup writes (strategy.md since 0.27.0; icp, voice, design-system and market since
 # 0.34.4): a brain gets the ones it lacks once, as the drafts setup writes. A file already there is the person's,
 # and a starter brain/layout.json records as given is never brought back after the person deleted it.
+# RULES.md (where things go, ask the source, the brain's own rules) and SCHEMA.md (what the brain keeps) are the
+# files the person edits: a brain from before them gets them as setup writes them, an edited one stays; each is
+# kept in a commit of its own by lib (where.mjs ensureRules, schema.mjs ensureSchema). brain/layout.json, the file
+# layout every GTM Brain reads before it writes, is recorded last, after the starters it lists as given; a layout
+# change happens only with --confirm. One node process for the three: one line each.
 PLUGIN_VERSION="$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$PLUGIN/.codex-plugin/plugin.json" | head -1)"
-starters="$(node --input-type=module -e 'const u=await import(process.argv[1]);console.log(u.addStarters(".",process.argv[2],{version:process.argv[3]}).join(" "))' "$PLUGIN/lib/upgrade-files.mjs" "$T" "$PLUGIN_VERSION")"
+had_rules=0; [ -f RULES.md ] && had_rules=1; had_schema=0; [ -f SCHEMA.md ] && had_schema=1
+delivered="$(node --input-type=module - "$PLUGIN/lib" "$T" "$PLUGIN_VERSION" <<'JS'
+const [lib, templates, version] = process.argv.slice(2);
+const u = await import(`${lib}/upgrade-files.mjs`), w = await import(`${lib}/where.mjs`), s = await import(`${lib}/schema.mjs`), v = await import(`${lib}/layout-version.mjs`);
+console.log(u.addStarters(".", templates, { version }).join(" "));
+console.log([w.ensureRules(".", templates) && "RULES.md", s.ensureSchema(".", templates) && "SCHEMA.md"].filter(Boolean).join(" "));
+console.log(v.writeLayout(".", { starters: u.STARTERS }) ? "changed" : "");
+JS
+)"
+starters="$(sed -n 1p <<< "$delivered")"; ensured="$(sed -n 2p <<< "$delivered")"; layout_change="$(sed -n 3p <<< "$delivered")"
 added_strategy=0; other_starters=""
 for f in $starters; do
   echo "added $f"; changed=1; paths="$paths $f"
   if [ "$f" = strategy.md ]; then added_strategy=1; else other_starters="$other_starters${other_starters:+, }$f"; fi
 done
-# RULES.md (where things go, ask the source, the brain's own rules) and SCHEMA.md (what the brain keeps): the
-# files the person edits. A brain from before them gets them here, as setup writes them; an edited one stays.
-# Each is kept in a commit of its own by lib (where.mjs ensureRules, schema.mjs ensureSchema).
-had_rules=0; [ -f RULES.md ] && had_rules=1; had_schema=0; [ -f SCHEMA.md ] && had_schema=1
-ensured="$(node --input-type=module -e 'const w=await import(process.argv[1]),s=await import(process.argv[2]);const out=[];if(w.ensureRules(".",process.argv[3]))out.push("RULES.md");if(s.ensureSchema(".",process.argv[3]))out.push("SCHEMA.md");console.log(out.join(" "))' "$PLUGIN/lib/where.mjs" "$PLUGIN/lib/schema.mjs" "$T")"
 added_rules=""
 for f in $ensured; do
   if { [ "$f" = RULES.md ] && [ "$had_rules" = 0 ]; } || { [ "$f" = SCHEMA.md ] && [ "$had_schema" = 0 ]; }; then echo "added $f"; added_rules="$added_rules${added_rules:+, }$f"; else echo "updated $f (it was a shipped version nobody edited)"; fi
   changed=1; paths="$paths $f"
 done
-# brain/layout.json: the file layout this brain uses, read by every GTM Brain before it writes. Written once
-# here for a brain from before it (layout 1, nothing moves); a layout change happens only with --confirm.
-layout_change="$(node --input-type=module -e 'const v=await import(process.argv[1]),u=await import(process.argv[2]);if(v.writeLayout(".",{starters:u.STARTERS}))console.log("changed")' "$PLUGIN/lib/layout-version.mjs" "$PLUGIN/lib/upgrade-files.mjs")"
 if [ "$layout_change" = changed ]; then
   case "$layout_out" in CHANGE*) echo "changed the brain's file layout to $(printf '%s' "$layout_out" | cut -f3)";; *) echo "recorded the brain's file layout (brain/layout.json)";; esac
   changed=1; paths="$paths brain/layout.json"
