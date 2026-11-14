@@ -36,6 +36,7 @@ const posInt = v => Number.isInteger(Number(v)) && Number(v) > 0 ? Number(v) : n
 export const tokens = s => Math.ceil(String(s || "").length / 4);
 const when = at => { const t = Date.parse(at); return Number.isFinite(t) ? new Date(t).toISOString().slice(0, 16).replace("T", " ") + " UTC" : "never"; };
 const fold = s => String(s || "").toLowerCase().replace(/[\u2018\u2019]/g, "'").replace(/[\u201c\u201d]/g, '"').replace(/[\u2013\u2014]/g, "-").replace(/\s+/g, " ").trim();
+const figureOf = x => x.replace(/[.,]$/, "").replace(/[,.](?=\d{3}\b)/g, "").replace(/^0+(?=\d)/, "");   // 40,000 is 40000, 01 is 1
 const thousands = n => Number(n || 0).toLocaleString("en-US");
 
 export function readCapture(root) { try { return JSON.parse(readFileSync(file(root), "utf8")) || {}; } catch { return {}; } }
@@ -210,22 +211,34 @@ export function readCandidates(text, plan, root) {
     // a word or two is in every chat: the quote has to be enough of a sentence to rest a note on
     if (fold(quote).length < MIN_QUOTE || fold(quote).split(" ").length < 3) { dropped.push({ chat: chat.id, why: "the quote is too short to rest a note on", content }); continue; }
     if (!said.includes(fold(quote))) { dropped.push({ chat: chat.id, why: "the quote is not in the chat", content }); continue; }
+    // never an invented name or number: each person and company named, and each figure in the note that is not
+    // a date (dates are rewritten as YYYY-MM-DD), has to be in what the chat said
+    const people = (Array.isArray(n.people) ? n.people : []).map(String).filter(Boolean), companies = (Array.isArray(n.companies) ? n.companies : []).map(String).filter(Boolean);
+    const words = new Set(said.split(/[^\p{L}\p{N}]+/u)), figures = new Set((said.match(/\d[\d.,]*\d|\d/g) || []).map(figureOf));
+    const unsaid = [...people, ...companies].find(x => !fold(x).split(/[^\p{L}\p{N}]+/u).some(w => w.length > 1 && words.has(w)));
+    if (unsaid) { dropped.push({ chat: chat.id, why: `names ${unsaid}, who is not in the chat`, content }); continue; }
+    const figure = (content.replace(/\b\d{4}-\d\d-\d\d\b/g, " ").match(/\d[\d.,]*\d|\d/g) || []).find(x => !figures.has(figureOf(x)));
+    if (figure) { dropped.push({ chat: chat.id, why: `the figure ${figure} is not in the chat`, content }); continue; }
     if (!active.has(n.context)) { dropped.push({ chat: chat.id, why: `no active context ${n.context || "(none)"}`, content }); continue; }
     if (have.has(fold(content))) { dropped.push({ chat: chat.id, why: "already saved", content }); continue; }
     have.add(fold(content));
     kept.push({ chat: chat.id, kind: chat.kind, project: chat.project, context: n.context, type: n.kind === "decision" ? "decision" : "note", content, quote,
-      people: (Array.isArray(n.people) ? n.people : []).map(String).filter(Boolean), companies: (Array.isArray(n.companies) ? n.companies : []).map(String).filter(Boolean) });
+      people, companies });
   }
   return { kept, dropped };
 }
 
 /* ---------- saving and withdrawing: the remember script, as for any note ---------- */
-function remember(root, by, entries) {
+/* The pass saves as the schedule and leaves sharing to the next ordinary commit; the person's undo is their own
+   save from a chat (via codex, pushed at once, the summaries recompiled), so a withdrawal never waits on this
+   laptop while the notes it withdraws are already with the team. */
+function remember(root, by, entries, { person = false } = {}) {
   const dir = mkdtempSync(join(tmpdir(), "gtm-brain-capture-batch-")), batch = join(dir, "batch.json");
   try {
     writeFileSync(batch, JSON.stringify(entries));
-    const r = spawnSync(process.execPath, ["--disable-warning=ExperimentalWarning", REMEMBER, root, "--by", by, "--batch", batch, "--via", "schedule"],
-      { cwd: root, encoding: "utf8", timeout: 120000, env: { ...process.env, GTM_BRAIN_RUN: "schedule", GTM_BRAIN_NO_PUSH: "1" } });
+    const { GTM_BRAIN_NO_PUSH, ...env } = process.env;
+    const r = spawnSync(process.execPath, ["--disable-warning=ExperimentalWarning", REMEMBER, root, "--by", by, "--batch", batch, "--via", person ? "codex" : "schedule"],
+      { cwd: root, encoding: "utf8", timeout: 120000, env: person ? env : { ...env, GTM_BRAIN_RUN: "schedule", GTM_BRAIN_NO_PUSH: "1" } });
     return { ok: r.status === 0, out: `${r.stdout || ""}${r.stderr || ""}`.trim() };
   } finally { rmSync(dir, { recursive: true, force: true }); }
 }
@@ -304,7 +317,7 @@ export function undoCaptured(root, { by, pass } = {}) {
   const ids = pass ? null : new Set(((state.undo?.notes?.length ? state.undo : state.announce)?.notes || []).map(n => n.id));
   const targets = (pass ? tagged(root, `capture:${pass}`) : tagged(root, "captured").filter(m => ids.has(m.id)));
   if (!targets.length) return { withdrawn: 0, text: "no captured notes to withdraw" };
-  const r = remember(root, person, targets.map(m => ({ context: m.context, retracts: m.id, content: `Withdrawn: a note the chat capture saved from a chat; the person said undo captured.` })));
+  const r = remember(root, person, targets.map(m => ({ context: m.context, retracts: m.id, content: `Withdrawn: a note the chat capture saved from a chat; the person said undo captured.` })), { person: true });
   const left = new Set(tagged(root, "captured").map(m => m.id)), gone = targets.filter(m => !left.has(m.id));
   // only what was withdrawn leaves the lists: a later pass's unseen notes are still listed, a failed undo can be said again
   const out = new Set(gone.map(m => m.id)), keep = list => (list || []).filter(x => !out.has(x.id));

@@ -361,3 +361,45 @@ test("capture_chats mode run through the server starts a pass that finishes and 
   for (let i = 0; i < 100 && !capture.readCapture(root).last; i++) await wait(100);
   assert.equal(capture.readCapture(root).last?.result, "ok"); assert.match(prompts(log)[0] || "", /SERVER RUN/);
 });
+
+/* ---------- review, 0.35.0 round three, second pass ---------- */
+test("never an invented name or figure: a person, company or number the chat does not have drops the candidate", t => {
+  const root = brain(), slug = ctx(root);
+  const chat = codexChat(root, [["P", "Final: Acme pays 40,000 EUR a year and Tom runs the kickoff on 2026-12-01."]]);
+  const r = pass(root, { FAKE_REPLY: reply([
+    { chat: chat.id, context: slug, kind: "decision", content: "Acme pays 45000 EUR a year.", quote: "Acme pays 40,000 EUR a year", companies: ["Acme"] },
+    { chat: chat.id, context: slug, kind: "note", content: "Tom runs the kickoff with Globex.", quote: "Tom runs the kickoff on 2026-12-01", companies: ["Globex"] },
+    { chat: chat.id, context: slug, kind: "note", content: "Tomasz Wilk runs the kickoff.", quote: "Tom runs the kickoff on 2026-12-01", people: ["Tomasz Wilk"] },
+    { chat: chat.id, context: slug, kind: "decision", content: "Acme pays 40000 EUR a year from 2026-12-01.", quote: "Acme pays 40,000 EUR a year", companies: ["Acme Inc."] },
+  ]) });
+  assert.equal(r.code, 0, r.out);
+  const saved = lib.readMemories(root, slug).filter(m => (m.tags || []).includes("captured")).map(m => m.content);
+  assert.deepEqual(saved, ["Acme pays 40000 EUR a year from 2026-12-01."], r.out);
+  const run = JSON.parse(readFileSync(join(root, "work/capture-runs.jsonl"), "utf8").trim().split("\n").pop());
+  assert.deepEqual(run.dropped.map(d => d.why).sort(), ["names Globex, who is not in the chat", "names Tomasz Wilk, who is not in the chat", "the figure 45000 is not in the chat"]);
+});
+
+test("the pass leaves sharing to the next commit; the person's undo is shared at once, as their own save", async t => {
+  const root = brain(), slug = ctx(root), remote = join(scratch, `remote-${n}.git`);
+  execFileSync("git", ["init", "-q", "--bare", remote]);
+  execFileSync("git", ["-C", root, "remote", "add", "origin", remote]);
+  execFileSync("git", ["-C", root, "push", "-q", "-u", "origin", "HEAD"], { stdio: "pipe" });
+  const remoteLog = () => execFileSync("git", ["-C", remote, "log", "--all", "--format=%s"], { encoding: "utf8" });
+  const before = remoteLog();
+  const chat = codexChat(root, [["P", "Decision: we drop the Berlin event."]]);
+  const env = { ...process.env, GTM_BRAIN_CAPTURE_MODEL: fake, FAKE_REPLY: reply([{ chat: chat.id, context: slug, kind: "decision", content: "We drop the Berlin event.", quote: "Decision: we drop the Berlin event." }]) };
+  delete env.GTM_BRAIN_NO_COMMIT;
+  const r = spawnSync(process.execPath, [`${P}/scripts/gtm-brain-schedule/capture.mjs`, root, "--run"], { encoding: "utf8", env });
+  assert.equal(r.status, 0, r.stderr);
+  await wait(1500);
+  assert.equal(remoteLog(), before, "the pass itself pushes nothing");
+  assert.match(execFileSync("git", ["-C", root, "status", "--porcelain", "brain"], { encoding: "utf8" }), /^$/, "but it committed its notes");
+  assert.match(capture.captureNotice(root), /Berlin/);
+  const { GTM_BRAIN_NO_COMMIT, ...undoEnv } = process.env;
+  const u = spawnSync(process.execPath, [`${P}/scripts/gtm-brain-schedule/capture.mjs`, root, "--undo"], { encoding: "utf8", env: undoEnv });
+  assert.match(u.stdout, /withdrew 1 captured note/, u.stderr);
+  const withdrawn = lib.readMemories(root, slug).find(m => m.retracts);
+  assert.equal(withdrawn.via, "codex", "the person's own withdrawal, not the schedule's");
+  let shared = ""; for (let i = 0; i < 50 && !/Withdrawn: a note the chat capture/.test(shared = execFileSync("git", ["-C", remote, "log", "--all", "-p", "--format=%s"], { encoding: "utf8" })); i++) await wait(200);
+  assert.match(shared, /Withdrawn: a note the chat capture saved/, "the withdrawal reaches the team without waiting for another save");
+});
