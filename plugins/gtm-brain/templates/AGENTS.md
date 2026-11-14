@@ -42,6 +42,8 @@ chat, so fetch a page only when no tool has. Pages: questions, computer-use, ans
 contexts, entities, files, documents, approve, meetings, customers, interactions, dashboard,
 projects, skills. This brain's own rules are `RULES.md`; its own additions to this file sit at
 the end, under their own heading.
+When `query` rules answers with the brain check instead of a page, the GTM Brain on this machine
+is older than these rules: say so once ("update GTM Brain") and work from the lines here.
 
 ## Questions and identity
 
