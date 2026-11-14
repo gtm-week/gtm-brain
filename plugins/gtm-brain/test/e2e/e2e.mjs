@@ -146,15 +146,18 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
   });
   await check("dashboard.entity_kinds", "dashboard", async () => {
     const kinds = Object.fromEntries((dash?.pillars?.entities?.kinds || []).map(k => [k.kind, k.count]));
-    const bad = Object.entries(gold.counts.entities).filter(([k, n]) => !(kinds[k] >= n));
+    // exactly the gold count per kind (archived and merged entities are not counted), and no kind the generator never wrote
+    const bad = [...Object.entries(gold.counts.entities).filter(([k, n]) => kinds[k] !== n).map(([k]) => k), ...Object.keys(kinds).filter(k => kinds[k] && !(k in gold.counts.entities))].map(k => [k]);
     return { pass: !!dash && !bad.length, text: JSON.stringify(kinds), note: bad.map(b => b[0]).join(",") };
   });
   await check("dashboard.notes_first_page", "dashboard", async () => {
     const m = dash?.pillars?.memories; if (!m) return { pass: false };
-    const all = JSON.parse(readFileSync(join(brain, "work", "home", m.file), "utf8")).notes, eff = Object.values(gold.contexts).reduce((a, c) => a + c.effective, 0);
+    const all = JSON.parse(readFileSync(join(brain, "work", "home", m.file), "utf8")).notes, eff = new Set(Object.values(gold.contexts).flatMap(c => c.ids));
+    // in force is exactly the gold's effective notes, less the retraction records (which are not notes of their own and are not listed)
+    const inForce = all.filter(n => n.state === "in force"), exact = inForce.every(n => eff.has(n.id)) && [...eff].every(id => inForce.some(n => n.id === id) || !all.some(n => n.id === id));
     // the page carries one page of notes in force, plus the corrected ones between them, never more than three pages
     const live = m.first.filter(n => n.state === "in force").length;
-    return { pass: live === Math.min(40, m.in_force) && m.first.length <= 120 && m.first.every((n, i) => n.id === all[i].id) && all.length === m.total && m.in_force > 0 && m.in_force <= eff && all.every((n, i) => !i || all[i - 1].at >= n.at), bytes: Buffer.byteLength(JSON.stringify(all)), note: `${m.in_force} in force of ${m.total}` };
+    return { pass: live === Math.min(40, m.in_force) && m.first.length <= 120 && m.first.every((n, i) => n.id === all[i].id) && all.length === m.total && m.in_force > 0 && m.in_force === inForce.length && exact && all.every((n, i) => !i || all[i - 1].at >= n.at), bytes: Buffer.byteLength(JSON.stringify(all)), note: `${m.in_force} in force of ${m.total}` };
   });
   if (sup) await check("dashboard.notes_replaced", "dashboard", async () => {
     const all = dash?.pillars?.memories ? JSON.parse(readFileSync(join(brain, "work", "home", dash.pillars.memories.file), "utf8")).notes : [];
