@@ -105,9 +105,11 @@ test("onboarding crosses fresh MCP contexts from setup to approved profile, expl
   }
   f.call("setup_brain", { folder: f.root, company: "Synthetic Example", one_liner: "Synthetic workflow testing",
     owner: "Alex Example <alex@example.invalid>", dashboard: "on-demand" });
-  assert.ok(readFileSync(join(f.root, "AGENTS.md"), "utf8")
-    .includes(readFileSync(join(P, "policies/questions.md"), "utf8")),
-    "setup carries the shared question policy into the generated brain instructions");
+  // 0.35.0: the brain's AGENTS.md names the question policy as a rule page; the server returns it whole
+  assert.match(readFileSync(join(f.root, "AGENTS.md"), "utf8"), /Pages: questions, computer-use/,
+    "setup's brain instructions point at the shared question policy");
+  assert.ok(f.call("query", { object: "rules", search: "questions" }).includes(readFileSync(join(P, "policies/questions.md"), "utf8").trim()),
+    "the question policy is served whole as the questions rule page");
   assert.match(f.hook(), /ONBOARDING pending/);
   const pending = readOnboarding(f.root).marker_id;
   assert.ok(pending, "setup saves progress without relying on a later model turn");
