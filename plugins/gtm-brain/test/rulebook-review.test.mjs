@@ -41,7 +41,7 @@ test("a search returns the page the words are about, never a page for a filler w
   // each of these returned another topic's page: "use" is half of computer-use, "the" and "person" sit in a title
   const cases = { "how to use skills": "skills", "use a skill": "skills", "who is this person": "entities", person: "entities", company: "entities",
     "remember a note": "saving", "brain question": "saving", "computer use": "computer-use", "Computer Use": "computer-use", "open the dashboard": "dashboard",
-    "change the team": "approve", "RULES.md": "files", "ask the person": "questions" };
+    "workplace settings": "approve", "RULES.md": "files", "ask the person": "questions" };
   for (const [words, slug] of Object.entries(cases)) assert.equal(findRulePage(words)?.slug, slug, `"${words}"`);
   // words that name no topic get the list of pages, not the first page that happens to contain them
   for (const filler of ["the", "a", "no", "yes", "use", "page", "rule 2a", "how do I", "this and that"]) {

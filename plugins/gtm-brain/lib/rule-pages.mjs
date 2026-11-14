@@ -12,9 +12,9 @@ const RULES = join(POLICIES, "rules");
 // The two shared policies are also generated into other documents, so they carry no frontmatter of their own.
 const SHARED = [
   { slug: "questions", title: "Asking the person", file: "questions.md", attach: [],
-    words: "question questions ask asking options choice choices numbered answer yes no permission request_user_input plan mode slop identity person who" },
+    words: "question questions ask asking options choice choices numbered permission request_user_input plan mode slop identity" },
   { slug: "computer-use", title: "Computer Use and websites", file: "computer-use.md", attach: [],
-    words: "computer use browser website websites chrome screenshot click login sign-in connector mcp ui embedded" },
+    words: "computer browser website websites chrome screenshot click login sign-in connector mcp ui embedded" },
 ];
 
 const words = s => String(s || "").toLowerCase().split(/[^a-z0-9.@-]+/).map(w => w.replace(/^[.-]+|[.-]+$/g, "")).filter(Boolean);
@@ -31,34 +31,43 @@ export function rulePages() {
   return cache = [...shared, ...own];
 }
 
-/* The page a search names: its slug outright, else the one whose slug, title and words match the most search
-   words (a word matches its plural and other endings: "meeting" finds "meetings"). null when nothing matches. */
-export function findRulePage(search) {
+/* The pages a search names. Its slug outright; else the pages whose slug, search words and title match the most
+   of the search (a word matches its plural and other endings: "meeting" finds "meetings"; two words also count
+   joined, "brain question" as brain-question). Filler words ("the", "how", "use", "page") name no topic. Several
+   pages when they fit equally, none when nothing matches: a page is never passed off as the answer on a guess. */
+const FILLER = new Set("a an and or of to in on for with from at by is are be do does did can should i we you it its me my our us this that these those the how what who where why when which go goes use using about page pages rule rules".split(" "));
+export function matchRulePages(search) {
   const pages = rulePages(), q = String(search || "").trim().toLowerCase();
-  if (!q) return null;
-  const exact = pages.find(p => p.slug === q || p.slug === q.replace(/\s+/g, "-")); if (exact) return exact;
+  if (!q) return [];
+  const exact = pages.find(p => p.slug === q || p.slug === q.replace(/\s+/g, "-")); if (exact) return [exact];
   const near = (a, b) => a === b || (a.length >= 4 && b.length >= 4 && (a.startsWith(b) || b.startsWith(a)));
-  let best = null, top = 0;
+  const said = words(q), asked = [...said.filter(w => !FILLER.has(w)), ...said.slice(1).map((w, i) => `${said[i]}-${w}`)];
+  let best = [], top = 0;
   for (const p of pages) {
-    const title = words(p.title), slug = words(p.slug.replace(/-/g, " "));
+    const title = words(p.title);
     let score = 0;
-    for (const w of words(q)) {
-      if (slug.some(s => near(s, w))) score += 3;
-      else if (title.some(t => near(t, w))) score += 2;
-      else if ([...p.words].some(t => near(t, w))) score += 1;
+    for (const w of asked) {
+      if (near(p.slug, w)) score += 4;
+      else if ([...p.words].some(t => near(t, w))) score += 2;
+      else if (!w.includes("-") && title.some(t => near(t, w))) score += 1;
     }
-    if (score > top) { top = score; best = p; }
+    if (score > top) { top = score; best = [p]; } else if (score && score === top) best.push(p);
   }
   return best;
 }
+/* The one page a search names; null when none does or several fit equally. */
+export function findRulePage(search) { const found = matchRulePages(search); return found.length === 1 ? found[0] : null; }
 
 export const rulePageIndex = () => rulePages().map(p => p.slug).join(", ");
 export const rulePageText = page => `--- Rule page: ${page.title} (query rules, search "${page.slug}") ---\n${page.body}\n---`;
 
-/* What query (object rules, search) answers: the page, or the list of pages when none matches. */
+/* What query (object rules, search) answers: the page; the names of the pages that fit equally; or the list of
+   pages when none matches. */
 export function rulePageAnswer(search) {
-  const page = findRulePage(search);
-  return page ? rulePageText(page) : `No rule page matches "${search}". Rule pages: ${rulePageIndex()}. Ask with one of them as search.`;
+  const found = matchRulePages(search);
+  if (found.length === 1) return rulePageText(found[0]);
+  if (found.length > 1) return `Several rule pages match "${search}": ${found.map(p => `${p.slug} (${p.title})`).join(", ")}. Ask with one of these names as search.`;
+  return `No rule page matches "${search}". Rule pages: ${rulePageIndex()}. Ask with one of them as search.`;
 }
 
 /* The page a tool's reply carries the first time it matters in a chat: by tool name, or by "query:<object>". */
@@ -86,10 +95,18 @@ export function ownAdditions(current, shipped, target) {
 }
 /* The new rules with the person's own lines kept at the end, under their own heading. */
 export const HEADING_OWN = "## This brain's own additions";
+const OWN_MARK = `\n\n${HEADING_OWN}\n\n`;
 export function withOwnAdditions(target, current, shipped) {
   const own = ownAdditions(current, shipped, target);
-  return own ? `${target.trimEnd()}\n\n${HEADING_OWN}\n\n${own}\n` : target;
+  return own ? `${target.trimEnd()}${OWN_MARK}${own}\n` : target;
 }
+/* A rulebook is the shipped rules, then, when the person has any, their own additions under that heading. The
+   upgrader compares and replaces the rules part only, and carries the additions over as they are. */
+export function splitOwn(text) {
+  const t = String(text ?? ""), i = t.indexOf(OWN_MARK);
+  return i < 0 ? { rules: t, own: "" } : { rules: `${t.slice(0, i)}\n`, own: t.slice(i + OWN_MARK.length) };
+}
+export const joinOwn = (rules, own) => own ? `${rules.trimEnd()}${OWN_MARK}${own}` : rules;
 
 /* The whole rulebook as one text: the template, then every page. For tests and the size check. */
 export function wholeRulebook(template) {

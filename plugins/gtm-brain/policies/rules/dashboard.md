@@ -1,6 +1,6 @@
 ---
 title: The dashboard and maintenance
-words: dashboard page view open render refresh maintenance sync background onboarding continuation resume greeting browser pane
+words: dashboard page view open render refresh maintenance sync background onboarding continuation resume greeting pane
 attach: open_dashboard render_dashboard
 ---
 **Answer the person's request without waiting for dashboard maintenance (rule 0).** Never open,
