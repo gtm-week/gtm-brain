@@ -26,7 +26,9 @@ const artifacts = mkdtempSync(join(scratchBase, "gtm-tool-routing-"));
 const fixtureProfile = join(artifacts, "fixture-profile");
 mkdirSync(fixtureProfile);
 const env = { ...process.env, CODEX_HOME: fixtureProfile, GTM_BRAIN_EVAL_PROFILE: fixtureProfile, PLUGIN_ROOT: plugin, GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_WATCH: "1" };   // no file watcher on a scratch brain
-const run = (root, operation, args) => execFileSync(process.execPath, [join(plugin, existsSync(join(plugin, "scripts", operation.split("/")[0])) ? "scripts" : "skills", operation), ".", ...args], { cwd: root, env, encoding: "utf8", timeout: 30000 });
+// setup and seeding scripts: 30 s was too short on a loaded machine (setup.sh alone took 28 s)
+const SETUP_TIMEOUT = Number(process.env.GTM_BRAIN_EVAL_SETUP_TIMEOUT_MS || 180000);
+const run = (root, operation, args) => execFileSync(process.execPath, [join(plugin, existsSync(join(plugin, "scripts", operation.split("/")[0])) ? "scripts" : "skills", operation), ".", ...args], { cwd: root, env, encoding: "utf8", timeout: SETUP_TIMEOUT });
 const readJSONL = path => existsSync(path) ? readFileSync(path, "utf8").split("\n").filter(Boolean).map(line => JSON.parse(line)) : [];
 const rows = (root, ctx = "offer") => lib.readMemories(root, ctx);
 const effective = (root, ctx = "offer") => lib.effectiveMemories(rows(root, ctx));
@@ -309,7 +311,7 @@ for (const scenario of selected) {
       if (!existsSync(join(root, ".git"))) execFileSync("git", ["init", "-q", root], { env });
     } else {
     execFileSync("git", ["init", "-q", root], { env });
-    execFileSync("bash", [join(plugin, "scripts/gtm-brain-setup/setup.sh"), "--company", "Routing Fixture", "--one-liner", "Synthetic integration test", "--owner", "Marta Nowak <marta@example.test>", "--dashboard", "on-demand", ...(/^(hubspot-)?write-/.test(scenario.crm || "") ? ["--tools", scenario.provider || "attio"] : [])], { cwd: root, env, encoding: "utf8", timeout: 30000 });
+    execFileSync("bash", [join(plugin, "scripts/gtm-brain-setup/setup.sh"), "--company", "Routing Fixture", "--one-liner", "Synthetic integration test", "--owner", "Marta Nowak <marta@example.test>", "--dashboard", "on-demand", ...(/^(hubspot-)?write-/.test(scenario.crm || "") ? ["--tools", scenario.provider || "attio"] : [])], { cwd: root, env, encoding: "utf8", timeout: SETUP_TIMEOUT });
     }
     const by = lib.readAdmin(root).team[0].handle;
     if (!sourceBrain) seedBrain(root, by);
