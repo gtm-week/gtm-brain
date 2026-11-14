@@ -14,7 +14,7 @@ const lib = await import(`${P}/lib/brain.mjs`);
 // Keep real installation preferences out of synthetic test brains.
 process.env.CODEX_HOME = mkdtempSync(join(tmpdir(), "gtm-brain-test-profile-"));
 
-const server = spawn(process.execPath, [`${P}/server/server.mjs`], { stdio: ["pipe", "pipe", "pipe"], env: { ...process.env, GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_SESSION_START: "1" } });
+const server = spawn(process.execPath, [`${P}/server/server.mjs`], { stdio: ["pipe", "pipe", "pipe"], env: { ...process.env, GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_SESSION_START: "1", GTM_BRAIN_NO_SAVE_NUDGE: "1" } });
 const pending = new Map(); let seq = 0;
 createInterface({ input: server.stdout }).on("line", line => { const m = JSON.parse(line); const r = pending.get(m.id); if (r) { pending.delete(m.id); r(m); } });
 const rpc = (method, params = {}) => new Promise(res => { const id = ++seq; pending.set(id, res); server.stdin.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n"); });

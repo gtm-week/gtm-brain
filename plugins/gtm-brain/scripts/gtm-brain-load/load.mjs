@@ -5,6 +5,7 @@
 //   node load.mjs <root> <slug> [<slug>...] [--last 15] [--only]      node load.mjs <root> --clear
 //   --last 0: cover and what is new only, no memories list (the chat start, so a chat opens light)
 //   node load.mjs <root> --drop <slug> [<slug>...]                     unload these, keep the rest
+import { lastNoteDated } from "../../lib/staleness.mjs";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args.shift() || ".";
 // --project <slug>: this chat runs in a linked folder; its loaded set is its own (lib.readLoaded(root, project))
@@ -25,7 +26,7 @@ for (const slug of args) {
   if (!loaded.includes(slug)) loaded.push(slug);
   const eff = lib.effectiveMemories(c.memories); const mem = last ? eff.slice(-last) : [];
   const fresh = c.compiledAt ? eff.filter(m => lib.newer(m.at, c.compiledAt)) : eff;
-  out.push(`# Context loaded: ${c.title} (${c.slug})   [${lib.summaryState(c, lib.compileBusy(root))}]`);
+  out.push(`# Context loaded: ${c.title} (${c.slug})   [${lib.summaryState(c, lib.compileBusy(root))}${eff.length ? ` · ${lastNoteDated(eff, at => lib.localDateTime(at).slice(0, 10))}` : ""}]`);
   if (c.stale) { out.push(`\n## New since the last compile (${fresh.length}), not yet in the summary`); for (const m of fresh.slice(-6)) out.push(`- ${m.id} · ${lib.memoryTimeText(m)} · ${m.kind} · ${m.content}`); if (fresh.length > 6) out.push(`- ... and ${fresh.length - 6} more`); }
   out.push(`Context refreshed: ${lib.localDateTime(c.compiledAt) || "never"}`);
   out.push(`Summary${c.compiledAt ? ` (as of ${String(c.compiledAt).slice(0, 10)})` : ""}: ${c.summary}`);

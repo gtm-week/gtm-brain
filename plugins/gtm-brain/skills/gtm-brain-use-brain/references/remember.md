@@ -191,6 +191,12 @@ from its result before recording it as completed; a request, failure, or ambiguo
 not proof of success. A failure can itself reveal a finding or unresolved issue worth recording.
 Agent proposals are not user decisions until the user adopts them.
 
+After three reads in a chat with nothing saved (`query`, `load_context`), the read's reply ends with
+one line, "Nothing saved in this chat since <time>: ...": check the turn against the triggers above
+and save what it established, or carry on when it established nothing. The line comes back only
+after five more reads, never in a scheduled or background run, and a brain turns it off with
+`save_nudge: off` in `brain/admin.md`.
+
 Some completed actions are not company knowledge and are not recorded unless the person asks
 to keep them: an unsent draft (record the email once it is sent), an event or reminder on the
 person's own calendar with no one else invited, such as a focus block, and a lookup whose result

@@ -8,6 +8,7 @@ import { refreshIndexedPages } from './entity-pages.mjs';
 import { hasMemoryIndex } from './memory-index-store.mjs';
 import { readSchema, fieldsFor, requiredRelations, kindHash, US, brainKinds } from './schema.mjs';
 import { DEFAULT_KINDS, KIND_NAME, NOT_KINDS } from './kinds.mjs';
+import { oldFact, daysSince, agoText } from './staleness.mjs';
 
 export const ENTITY_FORMAT = "gtm-brain-entity-v2";
 // Brains written before the GTM OS -> GTM Brain rename carry the gtm-os names; migration rewrites them.
@@ -490,7 +491,7 @@ export function entityBrief(root, name, options = {}) {
   // one context's view is capped like the whole brief: a big brain's brief ran to megabytes
   const scoped = options.context ? lib.memoryTimeline(evidence) : null;
   const timeline = scoped ? scoped.slice(0, BRIEF_TIMELINE) : facts.timeline;
-  let markdown = renderBrief({ ...facts, timeline, ...(scoped ? { timeline_total: scoped.length } : {}) }, compilation, evidence, registry, options.context);
+  let markdown = renderBrief({ ...facts, timeline, ...(scoped ? { timeline_total: scoped.length } : {}) }, compilation, evidence, registry, options.context, options.now ?? null);
   if (facts.file_notes && !options.context) markdown += `\n## Saved Markdown\n\nThis text was preserved from the editable file. It is not automatically treated as context evidence.\n\n${facts.file_notes.markdown}`;
   if (options.absoluteLinks) markdown = markdown.replace(/\]\((\.\.\/contexts\/[^)]+|[a-z0-9-]+\.md)\)/g,
     (_, path) => `](${dest(resolve(root, "brain", "entities", decodeURI(path)))})`);
@@ -523,7 +524,7 @@ function nameProvenance(facts, memories, citation, source) {
 const words = s => String(s).replace(/_/g, " ");
 /* SCHEMA.md's fields for this kind: each compiled value with its notes, "not recorded" for the rest, and the
    required ones nobody has said yet as gaps, each with the question to ask. */
-function fieldsSection(facts, all, citation) {
+function fieldsSection(facts, all, citation, aged = () => "") {
   const fields = facts.schema?.fields || [];
   if (facts.schema?.error) return [`\n## Fields\n\nSCHEMA.md cannot be read, so no fields are shown: ${md(facts.schema.error)}`];
   if (!fields.length) return [];
@@ -533,7 +534,7 @@ function fieldsSection(facts, all, citation) {
     out.push(`\nFields fill at the next compile.${fields.some(f => f.required) ? ` Required in SCHEMA.md: ${fields.filter(f => f.required).map(f => words(f.name)).join(", ")}.` : ""}`);
     return out;
   }
-  out.push("\n" + fields.map(f => { const v = filled.get(f.name); return `- ${md(words(f.name))[0].toUpperCase()}${md(words(f.name)).slice(1)}: ${v ? `${v.interpretation ? "Interpretation: " : ""}${md(v.text)} ${v.memories.map(citation).join(" ")}` : "not recorded"}`; }).join("\n"));
+  out.push("\n" + fields.map(f => { const v = filled.get(f.name); return `- ${md(words(f.name))[0].toUpperCase()}${md(words(f.name)).slice(1)}: ${v ? `${v.interpretation ? "Interpretation: " : ""}${md(v.text)}${aged(v.memories)} ${v.memories.map(citation).join(" ")}` : "not recorded"}`; }).join("\n"));
   const current = recordedRelations(facts).filter(r => r.status === "current" && r.from === facts.entity.id).map(r => r.type);
   const gaps = [...fields.filter(f => f.required && !filled.has(f.name)).map(f => ({ what: words(f.name), ask: `What is ${name}'s ${words(f.name)}?` })),
     ...(facts.schema.relations_required || []).filter(r => !current.includes(r.type)).map(r => ({ what: `a current ${words(r.type)}`, ask: `${name} ${words(r.type)} ...?` }))];
@@ -555,28 +556,35 @@ function recordedRelations(facts) {
     return { ...chosen.relation, memory: chosen.id, notes };
   });
 }
-function relationLines(facts, registry, citation, scope) {
+function relationLines(facts, registry, citation, scope, old = () => "") {
   const nameOf = id => id === US ? "us" : registry.find(e => e.id === id || e.previous_ids?.includes(id))?.name || id;
   const rows = recordedRelations(facts).filter(r => !scope || r.notes.some(m => m.context === scope));
-  const line = r => `- ${md(nameOf(r.from))} ${md(words(r.type))} ${md(nameOf(r.to))} (${r.status}, ${r.basis === "user" ? "said by the person" : "from a source"}, observed ${String(r.observed_at).slice(0, 10)}) ${citation(r.memory)}`;
+  const line = r => `- ${md(nameOf(r.from))} ${md(words(r.type))} ${md(nameOf(r.to))} (${r.status}, ${r.basis === "user" ? "said by the person" : "from a source"}, observed ${String(r.observed_at).slice(0, 10)})${r.status === "current" ? old(r.observed_at) : ""} ${citation(r.memory)}`;
   const out = rows.filter(r => r.status === "current").map(line);
   const ended = rows.filter(r => r.status === "ended");
   if (ended.length) out.push("", "Ended:", "", ...ended.map(line));
   const customer = facts.evidence.filter(m => m.customer && !m.retracts && m.customer.entity === facts.entity.id).sort((a, b) => Date.parse(b.customer.observed_at) - Date.parse(a.customer.observed_at));
   const said = customer.find(m => m.customer.basis === "user") || customer[0];
-  if (said) out.unshift(`- Customer status: ${md(words(said.customer.status))} (${said.customer.basis === "user" ? "said by the person" : "from a source"}, observed ${String(said.customer.observed_at).slice(0, 10)}) ${citation(said.id)}`);
+  if (said) out.unshift(`- Customer status: ${md(words(said.customer.status))} (${said.customer.basis === "user" ? "said by the person" : "from a source"}, observed ${String(said.customer.observed_at).slice(0, 10)})${old(said.customer.observed_at)} ${citation(said.id)}`);
   return out;
 }
 
-function renderBrief(facts, brief, evidence, registry, scope) {
+/* now (ms): a read for the chat (recall, query brief) dates what is old, "(as of 2026-09-02, 73 days ago)" on a fact
+   or relation past 30 days and when the entity was last mentioned. Without it (the page kept in brain/entities)
+   the text holds no relative age, so a stored page never changes because a day passed. */
+function renderBrief(facts, brief, evidence, registry, scope, now = null) {
   if (scope && !facts.contexts.some(c => c.context === scope)) throw new Error(`No evidence about ${facts.entity.name} in ${scope}`);
   const all = new Map(facts.contexts.flatMap(c => c.memories).map(m => [m.id, m]));
   const citation = id => { const m = all.get(id); return link(`${m.context}, recorded ${lib.localDateTime(m.at).slice(0, 10)}, ${id}`, `../contexts/${m.context}/memories.jsonl`); };
-  const claims = a => a.map(c => `- ${c.interpretation ? "Interpretation: " : ""}${md(c.text)} ${c.memories.map(citation).join(" ")}`).join("\n");
+  const day = at => lib.localDateTime(at).slice(0, 10), old = at => now === null ? "" : oldFact(at, day, now);
+  // a claim is as old as the newest note it rests on
+  const aged = ids => old(ids.map(id => all.get(id)?.at).filter(Boolean).sort((a, b) => Date.parse(b) - Date.parse(a))[0]);
+  const claims = a => a.map(c => `- ${c.interpretation ? "Interpretation: " : ""}${md(c.text)}${aged(c.memories)} ${c.memories.map(citation).join(" ")}`).join("\n");
   // A source that kept its direct link (url on the entry) links there; older entries link as before.
   const source = s => typeof s.url === "string" && /^https?:\/\//i.test(s.url) && s.url !== s.ref ? link(s.kind === "gmail" ? "Gmail" : `${s.kind}:${s.ref}`, s.url) : /^https?:\/\//.test(s.ref) ? link(s.kind, s.ref) : s.kind === "gmail" ? link("Gmail", `https://mail.google.com/mail/u/0/#all/${encodeURIComponent(s.ref)}`) : s.kind === "codex" ? link("Conversation", `codex://threads/${encodeURIComponent(s.ref)}`) : `\`${md(s.kind + ":" + s.ref)}\``;
   const out = [`\n# ${md(facts.entity.name)}`, `\n${md(facts.entity.kind)}${facts.entity.subtype ? ` (${md(facts.entity.subtype)})` : ""}${facts.entity.aliases.length ? " · Also known as: " + facts.entity.aliases.map(md).join(", ") : ""}`,
     `\nLatest memory recorded: ${lib.localDateTime(facts.latest_evidence_at) || "none"}. Brief compiled: ${lib.localDateTime(facts.compiled_at) || "never"}. ${facts.stale ? "Summary needs updating; current evidence is shown below." : "Recorded knowledge only; linked tools have not been checked live."}`];
+  if (now !== null && evidence[0]) out.push(`\nLast mentioned: ${day(evidence[0].at)} (${agoText(daysSince(evidence[0].at, now))}).`);
   if (facts.entity.status === "archived") out.push("\nArchived identity. Historical evidence and links remain available.");
   if (facts.entity.emails.length) out.push(`\nContact: ${facts.entity.emails.map(md).join(", ")}`);
   if (facts.entity.references.length) out.push(`\nExternal records: ${facts.entity.references.map(source).join(" · ")}`);
@@ -584,7 +592,7 @@ function renderBrief(facts, brief, evidence, registry, scope) {
   if (facts.entity.not_same.length) out.push(`\nKept separate from: ${facts.entity.not_same.map(md).join(", ")}.`);
   if (!scope) out.push(...nameProvenance(facts, [...all.values()], citation, source));
   if (!scope) out.push("\n## Overview", brief?.overview.length ? "\n" + claims(brief.overview) : "\nNo current synthesis yet. The context evidence below preserves what was recorded and where it applies.");
-  if (!scope) out.push(...fieldsSection(facts, all, citation));
+  if (!scope) out.push(...fieldsSection(facts, all, citation, aged));
   out.push("\n## By context");
   const contexts = facts.contexts.filter(c => !scope || c.context === scope);
   if (!contexts.length) out.push("\nNo context evidence recorded yet.");
@@ -597,14 +605,14 @@ function renderBrief(facts, brief, evidence, registry, scope) {
       if (compiled.open_threads.length) out.push("\n**Open threads**\n\n" + claims(compiled.open_threads));
     } else {
       const recent = c.memories.filter(m => !m.retracts).sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 3);
-      out.push("\nLatest recorded evidence (not a verified current status):\n\n" + (recent.map(m => `- ${md(m.content)} (${md(lib.memoryTimeText(m))}) ${citation(m.id)}`).join("\n") || "No remaining current claims."));
+      out.push("\nLatest recorded evidence (not a verified current status):\n\n" + (recent.map(m => `- ${md(m.content)} (${md(lib.memoryTimeText(m))})${old(m.at)} ${citation(m.id)}`).join("\n") || "No remaining current claims."));
     }
     const withdrawals = c.memories.filter(m => m.retracts);
     for (const m of withdrawals.slice(0, BRIEF_WITHDRAWALS)) out.push(`\nWithdrawal: ${md(m.content)} ${citation(m.id)}`);
     if (withdrawals.length > BRIEF_WITHDRAWALS) out.push(`\n${withdrawals.length - BRIEF_WITHDRAWALS} more withdrawals. ${moreLine(withdrawals.length - BRIEF_WITHDRAWALS, facts.entity.id)}.`);
   }
   out.push("\n## Relationships");
-  const recorded = relationLines(facts, registry, citation, scope);
+  const recorded = relationLines(facts, registry, citation, scope, old);
   if (recorded.length) out.push("\n" + recorded.join("\n"));
   const relationships = brief?.relationships.filter(c => !scope || c.memories.every(id => all.get(id).context === scope)) || [];
   if (relationships.length) out.push(recorded.length ? "\nAlso stated in notes:\n\n" + claims(relationships) : "\n" + claims(relationships));
