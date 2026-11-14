@@ -196,7 +196,7 @@ cap on this guidance. Your standing rule from setup is never changed. Only conte
 one. Runs unattended on the schedule.
 
 Tools: `compile_facts`, `compile_apply`. Writes: `brain/contexts/<slug>/context.md`; kept at once.
-A separate run does it by itself (`background-compile.sh`, state in `work/compile.json`): after each saved change, once no note has been saved for 2 minutes (`GTM_BRAIN_COMPILE_DELAY`), and at chat start; changes during a run get a follow-up pass; the chat only compiles when asked. The chat start carries one `health:` line when there is something to say: why meetings may be missing, the last good summary run and the last error (`work/runs.jsonl`, `work/compile.json`), the last sync per tool (`work/sync.json`, meeting coverage) and the count of held meetings not captured.
+A separate run does it by itself (`background-compile.sh`, state in `work/compile.json`): after each saved change, once no note has been saved for 2 minutes (`GTM_BRAIN_COMPILE_DELAY`), and at chat start; changes during a run get a follow-up pass; the chat only compiles when asked. The chat start carries one `health:` line when there is something to say: why meetings may be missing, the last good summary run and the last error (`work/runs.jsonl`, `work/compile.json`), the last sync per tool (`work/sync.json`, meeting coverage; a tool older than its window, 7 days or the checkpoint's `window_days`, is marked overdue), the count of held meetings not captured, and a `population:` part when a population number is out of range.
 Model passes have a 15-minute timeout (`GTM_BRAIN_COMPILE_TIMEOUT_MS` overrides it in milliseconds).
 Failed scans and timed-out runs enter the three-attempt retry path; completed compilations stay
 saved. Successful passes that reduce the pending context or entity set continue without using
@@ -261,6 +261,23 @@ cannot be read. Each finding names its
 rule, the person or path, and two or three fixed choices carried out through the tools above
 (`add_name`, `merge_entities`, `save` with `placed`), so each fix leaves its own reason. It reads
 only and changes nothing; `query` with object `health` counts what it found.
+
+*"Is the brain too full or too empty?"* is `query` with object `population`
+(`scripts/gtm-brain-advisor/population.mjs`, numbers in `lib/population.mjs`). Deterministic, from
+the files, no model: notes saved in the last 7 days and the weekly average of the 4 weeks before;
+exact duplicates (same normalized text) and near duplicates (same source record, same day, same
+context; chat, person and fork pointers do not count); entities no note in force mentions;
+entities missing a field SCHEMA.md marks required (no cited value in the compiled brief); notes no
+context summary or entity brief cites, of those recorded before their context's last summary; the
+share of notes without a source pointer. Our own company and the team are not counted as entities.
+Each number is shown with its range (`POPULATION_RANGES`, no setting yet; shares are judged from 20
+notes and 10 entities, the week from 35 days of notes); capture rate and noise rate read "not measured". `--json` gives the data.
+Reads only. Writes: `work/population.json`, a cache keyed on the files it reads and the hour.
+
+The source sync keeps one checkpoint per source in `work/sync.json`:
+`{"at", "tools", "sources": {"<kind>" | "<kind>:<account>": {"at", "window_days"?}}}`, with the
+kind and account of a note's source pointer. A source without its own entry reads from the
+top-level `at`, which is all a brain from before 0.35.0 has.
 
 Tool: `save`. Writes: a git commit (never `work/`); with only `placed`, a commit that carries the
 reasons and nothing else.
