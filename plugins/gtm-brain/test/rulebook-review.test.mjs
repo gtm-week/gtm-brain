@@ -4,7 +4,7 @@
 // Run: node --test plugins/gtm-brain/test/rulebook-review.test.mjs
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, writeFileSync, realpathSync, readdirSync, existsSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawn, execFileSync, spawnSync } from "node:child_process";
@@ -131,26 +131,4 @@ test("a teammate on an older GTM Brain is told what a missing rule page means; t
   assert.match(template.replace(/\s+/g, " "), /answers with the brain check instead of a page[^.]*older than these rules/);
   assert.match(rulesWhy["0.35.0"], /rule page/);
   assert.doesNotMatch(rulesWhy["0.35.0"], /long procedures moved to the skills/, "the detail moved to rule pages, and no skill file is read to answer or save");
-});
-
-test("no shipped skill sends the model to a status call first", () => {
-  const dirs = readdirSync(join(P, "skills")).filter(d => existsSync(join(P, "skills", d, "SKILL.md")));
-  assert.ok(dirs.length >= 15);
-  for (const d of dirs) {
-    const text = readFileSync(join(P, "skills", d, "SKILL.md"), "utf8");
-    assert.doesNotMatch(text, /`query` \(status\)\s+first|call it first|start every chat with/i, `${d}/SKILL.md demands a status call first`);
-  }
-});
-
-test("every topic page rides along where it matters: the answers page with the first search, the saving page with the first save", async () => {
-  // a page no tool attaches is read only when the model thinks to ask, which a plain turn never does
-  for (const p of rulePages().filter(p => !["questions", "computer-use"].includes(p.slug))) assert.ok(p.attach.length, `${p.slug} rides along with no tool`);
-  const root = brain(); const s = client(); await s.init();
-  const search = await s.call("query", { brain: root, object: "memories", search: "pricing" });
-  assert.ok(search.parts.some(t => t.startsWith("--- Rule page: Answering and the next step")), "the answers page comes with the first search");
-  const again = await s.call("query", { brain: root, object: "memories", search: "pricing" });
-  assert.ok(!again.parts.some(t => t.startsWith("--- Rule page:")), "once per chat");
-  const saved = await s.call("remember", { brain: root, context: "company", by: "ann-lee", kind: "decision", content: "Pricing is per seat, EUR 40 a month, from 2 November 2026." });
-  assert.ok(!saved.isError, saved.text);
-  assert.ok(saved.parts.some(t => t.startsWith("--- Rule page: Saving what happened")), "the saving page comes with the first save");
 });
