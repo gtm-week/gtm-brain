@@ -38,7 +38,8 @@ and runs about 50 checks in sections: search (single and multi-word, stemmed, ty
 SQL), entities (name, id, alias, typo, email), briefs (facts, cited ids, size), relations and their
 history, customers, meetings, deal, rules, status, compile (`--facts` read through a pipe, full
 size, and over MCP), load_context, remember (single, batch over MCP, `--batch` script, a bare first name saved then
-asked, and the answer linked back),
+asked, the answer linked back, a restated fact kept once, and a note that only says a call
+happened refused while its outcomes share one meeting),
 corrections (supersede, retract), the tool path of the two demo loops (the voice document, the
 outbound workflow, a recorded send, a user-confirmed prospect; the live run is
 `test/live/demo-loops.mjs`), and on messy the traps. Each result: `id`, `section`, `pass`,
