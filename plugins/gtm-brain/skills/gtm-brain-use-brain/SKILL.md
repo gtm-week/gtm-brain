@@ -54,6 +54,7 @@ is a note with a `relation` block: follow [relationships](references/relations.m
 
 A file in the chat (a path, a dropped PDF or image, "save this deck", "add this to the design
 system"): follow [files](references/files.md). No skill to invoke; it is part of everyday work.
+A recording or a file over 25 MB never goes into git: follow [big files](references/big-files.md).
 
 When asked to create subprojects or a workspace structure in a linked folder, follow
 [project structure](../gtm-brain-project/references/structure.md): propose separate projects

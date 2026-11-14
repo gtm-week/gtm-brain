@@ -71,7 +71,9 @@ The dashboard opens next to the chat, with a card showing these six steps and wh
    Then it creates the brain in your folder.
 2. **Company profile.** It researches your website and what is already on the machine, and
    drafts your workplace info. You correct what is wrong, then choose **APPROVE** in the form Codex shows.
-   Nothing about your company is saved as fact without that choice from you.
+   Nothing about your company is saved as fact without that choice from you. Just before the
+   draft it asks once where big files go (recordings, anything over 25 MB): Google Drive,
+   shared with the team, or this computer only. Git never keeps them; the brain keeps a link.
 3. **Tools.** It proposes connecting your work email, calendar and CRM first (HubSpot, or
    Attio if that is yours), then the other tools it noticed. You choose; you sign in when
    asked. Each connection gets one read test so you know it works.
@@ -127,7 +129,9 @@ update by themselves in the background. When you want a specific workflow:
 | Assess a market, its segments and competitors against what you can prove today | `/gtm-brain-market-desk-research` |
 | Define who to target: company fit, buying roles and readiness, kept as one draft | `/gtm-brain-define-icp` |
 | Fill in the strategy the brain starts with (`strategy.md`), in a 10-15 minute conversation | `/gtm-brain-strategy` |
+| Draft your tone of voice (`voice.md`) from your website, public posts and connected mail and Slack; offered at the end of setup, skippable, run again any time | `/gtm-brain-voice` |
 | Add a PDF, image or deck to the brain | drop it in the chat and say what it belongs to; no command |
+| Keep a recording or a file over 25 MB | drop it in the chat; it goes to Google Drive or a folder outside git, and the note keeps the link |
 | Change company info, team or tools | `/gtm-brain-configure` |
 | Fill in the voice, ICP, design system or market the brain starts with (`voice.md`, `icp.md`, `design-system.md`, `market.md`) | "fill in our tone of voice" |
 | Turn something you do repeatedly into a reusable skill | `/gtm-brain-skill` |

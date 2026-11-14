@@ -12,7 +12,7 @@ In Codex's question box (Q1), which has no checkboxes, offer the likely combinat
 "Voice and ICP now" (recommended), "All five, one at a time", "Just the voice", "Later". In
 chat text, numbered options, and say the person can pick several numbers:
 
-1. Voice: a draft from the website and texts you like (about 5 minutes)
+1. Voice: a draft from your website, public posts and, where connected, sent mail and Slack (about 5 minutes)
 2. ICP: a short interview about your best customers (about 10 minutes)
 3. Strategy: the strategic intake (10-15 minutes)
 4. Design system: a draft from the website and your brand files (about 5 minutes)
@@ -22,7 +22,8 @@ chat text, numbered options, and say the person can pick several numbers:
 Leave out a starter that is already filled (the chat line does not show it `[not filled]`); with
 all five filled, skip the question. Fill the chosen ones one at a time, in the order picked, each
 through its own procedure ([documents](../../gtm-brain-use-brain/references/documents.md), Fill a
-starter). Between two, one line on which comes next; the person can stop at any point. On Later,
+starter; the voice is [gtm-brain-voice](../../gtm-brain-voice/SKILL.md), skippable like the rest
+and run again any time with `/gtm-brain-voice`). Between two, one line on which comes next; the person can stop at any point. On Later,
 or once the chosen ones are done, say in one line that the rest stay as `[not filled]` and that
 "fill in our tone of voice" (or the ICP, strategy, design system) fills one at any time. Then the
 first task below. Ask the question once: no reminder on later greetings; the chat line and its

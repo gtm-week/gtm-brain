@@ -38,7 +38,7 @@ brain valid and commit every write; the hooks refuse a direct edit of `brain/adm
      in "the person can ask for ... shipped workflows". The test compares a sorted list, so put the id in
      alphabetical order.
    - The skill tables in `README.md`, `COMMANDS.md` and `ONBOARDING.md`: one row each.
-   - The skill count ("fourteen") in `README.md`, `CLAUDE.md`, `CONTRIBUTING.md` and
+   - The skill count ("sixteen") in `README.md`, `CLAUDE.md`, `CONTRIBUTING.md` and
      `USER-SKILLS.md`, plus the skill list in the layout blocks of `README.md` and `CONTRIBUTING.md`.
    - A skill whose work overlaps another: say "Not ..." in both descriptions, as define-icp
      does about market desk research and campaign execution.

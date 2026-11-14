@@ -1,0 +1,4 @@
+interface:
+  display_name: "GTM Brain: Voice"
+  short_description: "Draft our tone of voice from our own writing"
+  default_prompt: "Use $gtm-brain-voice to draft our tone of voice from the website, public posts and connected mail and Slack."
