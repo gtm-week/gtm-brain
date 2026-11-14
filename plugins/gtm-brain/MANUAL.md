@@ -30,12 +30,16 @@ Bergstrom", "open question: who signs for Acme?". You do not need to say "rememb
 outcome, in the context its meaning fits, with the people, companies, tools and project it names.
 
 Before saving, Codex connects the sentence to what the brain knows and asks, once, about what it
-cannot settle. It asks in Codex's question box whenever Codex has it in the chat, otherwise in plain text:
+cannot settle (an unclear name is asked right after the note is saved). It asks in Codex's question box whenever Codex has it in the chat, otherwise in plain text:
 
 - **Names.** Four rules, also in the brain's README:
   - P1: a known name, alias or email is that one.
   - P2: a first name alone ("Max") is a known person only when exactly one known person has it.
-  - P3: a first name alone is never saved as a new person: Codex asks "Max who?".
+    With several, the note is saved without a guess and Codex asks which one.
+  - P3: a first name alone is never saved as a new person. The note is saved with the name as
+    written, then Codex asks "Who is Anna? Full name or company." The question waits on the
+    dashboard with the other open brain questions; the answer attaches the name to the saved note
+    through a new note that replaces it.
   - P4: a name like a known one is never merged on a guess: "same as X?". The same first name with
     a different surname is someone else.
 - **Dates.** "Thursday" said on a Thursday can be today or next week: Codex asks. A date with one

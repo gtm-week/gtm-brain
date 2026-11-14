@@ -37,7 +37,8 @@ Copies the brain to a scratch folder (the write checks append notes), starts `se
 and runs about 50 checks in sections: search (single and multi-word, stemmed, typo, names, aliases,
 SQL), entities (name, id, alias, typo, email), briefs (facts, cited ids, size), relations and their
 history, customers, meetings, deal, rules, status, compile (`--facts` read through a pipe, full
-size, and over MCP), load_context, remember (single, batch over MCP, `--batch` script),
+size, and over MCP), load_context, remember (single, batch over MCP, `--batch` script, a bare first name saved then
+asked, and the answer linked back),
 corrections (supersede, retract), and on messy the traps. Each result: `id`, `section`, `pass`,
 `ms`, `bytes`, `note`. A failure caused by a gap main is known to have carries `known_gap`; the run
 exits 1 only on a plain failure. `E2E_DEBUG=1` adds the reply text to failed checks.
