@@ -76,10 +76,22 @@ completed actions or decisions, meeting artifacts, and open questions. A short b
 descriptive source pointer is enough; duplicate reads add nothing.
 
 Tool: `remember`. Writes: `brain/contexts/<slug>/memories.jsonl` (append), `brain/entities/` (new
-people). Kept at once. `context` is optional: the single loaded context, else the one active
-context where the note's people or companies already have notes; with no unique answer the entry is
-held with the candidate contexts in one line. Each kept note starts with `saved in <Context title>: ...`.
-`node $PLUGIN_ROOT/scripts/gtm-brain-remember/remember.mjs . --by <handle> --kind note --content "..." [--context <slug>] [--tools "attio"] [--people "Pierre Aubert"] [--source gmail:<id>] [--action "gmail:sent email:<id>"] [--supersedes m_x] [--retracts m_x]`
+people). Kept at once. `context` is optional: the single loaded context, else the active context
+where the note's people or companies have their notes (most of them, when it clearly holds most);
+with no unique answer the entry is held with the candidate contexts in one line. Each kept note
+starts with `saved in <Context title>: ...`. `by` is optional too: it defaults to the person
+selected in this brain (`work/person.json`, else the brain's git identity in the team).
+
+Before writing, the note is compared with the notes in force across the whole brain (same project
+only). The same fact again, with no value and no source the kept note lacks, writes nothing and
+replies `already kept in <Context title>, <id>`. The same fact with another date, amount, code or
+count replaces the kept note (`this changes <id> ...`) when that note rests on the person's word,
+and is saved beside it when it comes from a source (`this may change <id> ...`). A note that only
+says a call or meeting happened is held with the reason when the person said what came of it or the
+same call carries outcomes; outcomes of one conversation in one call link to one meeting. The
+speaker's own name is never asked about, and a note held for a name blocks only a resend of that
+note, never an unrelated one in the same message.
+`node $PLUGIN_ROOT/scripts/gtm-brain-remember/remember.mjs . [--by <handle>] --kind note --content "..." [--context <slug>] [--tools "attio"] [--people "Pierre Aubert"] [--source gmail:<id>] [--action "gmail:sent email:<id>"] [--supersedes m_x] [--retracts m_x]`
 
 ### interact
 *"move the Castorama deal to proposal"*, *"send the proposal to Bergstrom"*: whatever this company
