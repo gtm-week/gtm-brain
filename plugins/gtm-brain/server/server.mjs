@@ -24,6 +24,7 @@ import { askSourceLines } from "../lib/ask-source.mjs";
 import { createSaveNudge } from "../lib/save-nudge.mjs";
 import { relativeDates } from "../lib/dots.mjs";
 import { rulePageAnswer, pageForCall, rulePageText, rulePageIndex } from "../lib/rule-pages.mjs";
+import { foldStatus as foldStatusText } from "../lib/opening.mjs";
 
 const P = dirname(dirname(fileURLToPath(import.meta.url)));
 const lib = await import(join(P, "lib", "brain.mjs"));
@@ -509,12 +510,10 @@ function rulePageFor(args, name, res) {
   sent.add(page.slug); return rulePageText(page);
 }
 
-/* The first call of a chat is often still query (status), out of habit or an old rulebook: its opening lines
-   already list the contexts with their rules, so the status reply keeps only the lines the opening lacks. */
+/* A status call as the first call of a chat: its reply keeps only the lines the opening lines lack (lib/opening.mjs). */
 function foldStatus(name, args, r, start) {
   if (!start || name !== "query" || args.object !== "status" || r?.isError || !r?.content?.[0]?.text) return r;
-  const keep = r.content[0].text.split("\n").filter(l => /^(admin:|Loaded in this|Tools:|Summaries:|This company's interactions)/.test(l));
-  return { ...r, content: [{ ...r.content[0], text: `status: the opening lines below carry the contexts, documents and onboarding.\n${keep.join("\n")}` }, ...r.content.slice(1)] };
+  return { ...r, content: [{ ...r.content[0], text: foldStatusText(r.content[0].text, start) }, ...r.content.slice(1)] };
 }
 
 /* ---------- What this chat called ---------- */

@@ -120,7 +120,7 @@ test("a status call as the first call does not repeat the contexts the opening l
   const root = brain(); const s = client(); await s.init();
   const first = await s.call("query", { brain: root, object: "status" });
   assert.equal(first.parts.length, 2);
-  assert.match(first.parts[0], /^status: the opening lines below carry the contexts/);
+  assert.match(first.parts[0], /^status: the opening lines below carry the rest/);
   assert.doesNotMatch(first.parts[0], /• Strategy \(strategy\)/, "the context list is said once, in the opening lines");
   assert.match(first.parts[1], /Strategy \(strategy\)/);
   const second = await s.call("query", { brain: root, object: "status" });

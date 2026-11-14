@@ -15,3 +15,15 @@ export function pendingQuestionsLine(root, { max = 2 } = {}) {
   const shown = open.slice(0, max).map(m => `${m.title}, ${m.id}: "${cut(m.content)}"`).join("; ");
   return `questions waiting for an answer: ${open.length} (${open.length > max ? "newest: " : ""}${shown}). Mention them only when they bear on the request or the person asks what is open; an answer is saved with retracts = the id.`;
 }
+
+/* The first call of a chat is often still query (status), out of habit or an older rulebook. Its opening lines
+   list the contexts with their rules, the documents and the onboarding state, so the status reply keeps only the
+   lines the opening does not carry. Line by line, never by assumption: when the chat start was cut short (its
+   time limit, a broken project pointer) the status keeps everything that did not arrive. */
+export function foldStatus(status, start) {
+  if (!start) return status;
+  const said = new Set(String(start).split("\n").map(l => l.trim()));
+  const lines = String(status).split("\n"), keep = lines.filter(l => l.trim() && !said.has(l.trim()));
+  if (keep.length === lines.filter(l => l.trim()).length) return status;
+  return `status: the opening lines below carry the rest (contexts, documents, onboarding).\n${keep.join("\n")}`;
+}
