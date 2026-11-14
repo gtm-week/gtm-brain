@@ -3,7 +3,7 @@
 // attaches the name through a superseding note, never by editing the old line (capture-decision, live).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync, spawnSync } from "node:child_process";
@@ -61,7 +61,7 @@ test("the answer links back: a superseding note carries the full name, the old l
   const anna = lib.readNames(b.root).find(e => e.name === "Anna Kowalska");
   assert.ok(anna, "the full name is a person now");
   assert.ok(linked.entities.includes(anna.id));
-  assert.deepEqual(linked.entity_mentions.find(x => x.mention === "Anna"), { mention: "Anna", entity: anna.id, resolution: "answered", rule: "P3" });
+  assert.deepEqual(linked.entity_mentions.find(x => x.mention === "Anna"), { mention: "Anna", entity: anna.id, resolution: "confirmed_new", rule: "P3" });
   assert.ok(!b.live().some(m => m.id === note.id), "the first note is replaced, not edited");
 });
 
@@ -80,7 +80,7 @@ test("a first name several known people have: saved, the candidates named, the p
   const linked = b.live().find(m => m.supersedes === note.id);
   assert.deepEqual(linked.people, ["Anna Nowak"]);
   const nowak = lib.readNames(b.root).find(e => e.name === "Anna Nowak");
-  assert.deepEqual(linked.entity_mentions, [{ mention: "Anna", entity: nowak.id, resolution: "answered", rule: "P2" }]);
+  assert.deepEqual(linked.entity_mentions, [{ mention: "Anna", entity: nowak.id, resolution: "confirmed_new", rule: "P2" }]);
   assert.equal(b.pending().length, 0);
 });
 
@@ -126,4 +126,78 @@ test("everything else that held still holds: a look-alike, a relative date, an a
   assert.equal(vague.status, 2);
   assert.match(vague.stderr, /"Bo" is one word and nobody known has it/);
   assert.equal(b.pending().length, 1);
+});
+
+// review, 2026-11-14: what the first tests left open
+test("the same unclear note sent again writes nothing new: one note, the one question still open", () => {
+  const b = brain();
+  assert.equal(b.remember("--content", "Anna signed off.", "--people", "Anna").status, 0);
+  const lines = b.all().length, [q] = b.pending();
+  const again = b.remember("--content", "Anna signed off.", "--people", "Anna");
+  assert.equal(again.status, 0, again.stderr);
+  assert.equal(b.all().length, lines, "no supersede, no closing decision, no second question");
+  assert.deepEqual(b.pending().map(m => m.id), [q.id]);
+  assert.match(again.stdout, new RegExp(`already recorded .*\\(${q.id}\\)`));
+});
+
+test("a correction that does not say who Anna is keeps the question open, now about the new note", () => {
+  const b = brain();
+  assert.equal(b.remember("--content", "Anna signed off on 10 percent.", "--people", "Anna").status, 0);
+  const first = b.live().find(m => /10 percent/.test(m.content) && m.kind === "note");
+  const fixed = b.remember("--content", "Anna signed off on 12 percent.", "--supersedes", first.id);
+  assert.equal(fixed.status, 0, fixed.stderr);
+  const now = b.live().find(m => /12 percent/.test(m.content) && m.kind === "note");
+  const open = b.pending();
+  assert.equal(open.length, 1, "still one pending question");
+  assert.ok(open[0].tags.includes(`about:${now.id}`) && open[0].tags.includes("name:Anna"));
+  assert.doesNotMatch(b.all().map(m => m.content).join("\n"), /Answered by/);
+  // and the answer links the corrected note
+  assert.equal(b.remember("--content", "Anna Kowalska.", "--kind", "decision", "--retracts", open[0].id, "--people", "Anna Kowalska").status, 0);
+  assert.deepEqual(b.live().find(m => /12 percent/.test(m.content) && m.kind === "note").people, ["Anna Kowalska"]);
+  assert.equal(b.pending().length, 0);
+});
+
+test("two unclear names, one answered: that one is linked and the other is still asked", () => {
+  const b = brain();
+  const r = b.remember("--content", "Anna and Bo signed off.", "--people", "Anna,Bo");
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /^Who is Anna\? Who is Bo\? Full name or company\.$/m);
+  const [q] = b.pending();
+  const a = b.remember("--content", "Anna is Anna Kowalska.", "--kind", "decision", "--retracts", q.id, "--people", "Anna Kowalska");
+  assert.equal(a.status, 0, a.stderr);
+  assert.match(a.stdout, /linked "Anna" in /);
+  const linked = b.live().find(m => /signed off/.test(m.content) && m.kind === "note");
+  assert.deepEqual(linked.people, ["Anna Kowalska"]);
+  const open = b.pending();
+  assert.equal(open.length, 1, "Bo is still asked");
+  assert.deepEqual(open[0].tags.filter(t => /^(about|name):/.test(t)), [`about:${linked.id}`, "name:Bo"]);
+  assert.match(a.stdout, /^Who is Bo\? Full name or company\.$/m);
+});
+
+test("an answer that also names someone else attaches only the person asked about", () => {
+  const b = brain();
+  assert.equal(b.remember("--content", "Anna signed off.", "--people", "Anna").status, 0);
+  const [q] = b.pending();
+  const a = b.remember("--content", "Anna is Anna Kowalska, she reports to Piotr Nowak.", "--kind", "decision", "--retracts", q.id, "--people", "Anna Kowalska,Piotr Nowak");
+  assert.equal(a.status, 0, a.stderr);
+  assert.deepEqual(b.live().find(m => m.content === "Anna signed off.").people, ["Anna Kowalska"]);
+});
+
+test("two notes in one call about the same unknown name: the person is asked once", () => {
+  const b = brain();
+  const f = join(b.root, "work", "two.json");
+  writeFileSync(f, JSON.stringify([{ context: "company", content: "Anna signed off.", people: ["Anna"] }, { context: "company", content: "Anna will call the supplier.", people: ["Anna"] }]));
+  const r = b.remember("--batch", f);
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(b.pending().length, 2, "each note keeps its own question");
+  assert.equal(r.stdout.match(/\d\) Who is Anna\?/g).length, 1, "one numbered part, not two");
+});
+
+test("what the feature writes stays readable by the released validator: no new stored values", () => {
+  const b = brain();
+  assert.equal(b.remember("--content", "Anna signed off.", "--people", "Anna").status, 0);
+  const [q] = b.pending();
+  assert.equal(b.remember("--content", "Anna Kowalska.", "--kind", "decision", "--retracts", q.id, "--people", "Anna Kowalska").status, 0);
+  const released = ["exact", "inferred_first_name", "new", "confirmed_new"];   // lib.MENTION_RESOLUTIONS in 0.34.3; an older teammate's index refuses any other
+  for (const m of b.all()) for (const x of m.entity_mentions || []) assert.ok(released.includes(x.resolution), `${m.id}: ${x.resolution}`);
 });

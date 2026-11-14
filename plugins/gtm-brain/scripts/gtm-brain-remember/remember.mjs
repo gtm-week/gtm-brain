@@ -42,6 +42,7 @@ const noteAsked = names => { if (!names.length) return; const m = readAsked(); f
 // note that supersedes the first one with the name attached (the same words, never an edit of the old line).
 const NAME_Q = "name-question";
 const tagValues = (m, key) => (m.tags || []).filter(t => t.startsWith(`${key}:`)).map(t => t.slice(key.length + 1));
+const wordsOf = q => [...tagValues(q, "name"), ...tagValues(q, "pick")];
 const openNameQuestions = ctx => lib.effectiveMemories(lib.readMemories(root, ctx)).filter(m => m.kind === "question" && !m.retracts && (m.tags || []).includes(NAME_Q));
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
 const opt = { source: [], action: [] };
@@ -183,10 +184,11 @@ for (let i = 0; i < entries.length; i++) {
   // the answer to "Who is Anna?": an entry that retracts the name question; the brain links the name to the note after it is written
   const answering = e.retracts ? openNameQuestions(ctx).find(q => q.id === e.retracts) || null : null;
   // the same note sent again word for word while its name question is open is the answer, not a second note
+  // (decided below, once the names are read: a resend that settles nothing writes nothing)
+  let resent = null;
   if (!e.supersedes && !e.retracts) {
     const mine = lib.effectiveMemories(lib.readMemories(root, ctx)), same = String(e.content).trim();
-    const q = openNameQuestions(ctx).find(q => tagValues(q, "about").some(id => mine.find(m => m.id === id)?.content === same));
-    if (q) e.supersedes = tagValues(q, "about")[0];
+    resent = openNameQuestions(ctx).find(q => tagValues(q, "about").some(id => mine.find(m => m.id === id)?.content === same)) || null;
   }
 
   const companies = list(e.companies);
@@ -226,6 +228,12 @@ for (let i = 0; i < entries.length; i++) {
   const heldAnyway = alike.length || loose.length || (!e.retracts && dots.relativeDates(e.content).length);
   const similar = [...alike, ...(heldAnyway ? unclear.filter(u => u.candidates.length).map(u => ({ mention: u.mention, matches: u.candidates.map(name => ({ name, kind: "person" })) })) : [])];
   const unnamed = [...loose, ...(heldAnyway ? unclear.filter(u => !u.candidates.length).map(u => u.mention) : [])];
+  if (resent && !heldAnyway) {
+    const about = tagValues(resent, "about")[0], open = wordsOf(resent).map(fold).sort().join("|");
+    // still the same unclear names: the note and its question are already there, a second copy would only close and reopen it
+    if (unclear.length && unclear.map(u => fold(u.mention)).sort().join("|") === open) { kept.push({ n, id: about, ctx }); lines.push(`${at(n)}already recorded ${about} in ${ctx}; its question is still open (${resent.id}): ${String(resent.content).split(" (about ")[0]} Ask it and wait for the person's answer.`); continue; }
+    e.supersedes = about;
+  }
   // a bare "Thursday" means nothing next week: the note carries the date, or the person is asked which
   const dated = e.retracts ? [] : dots.relativeDates(e.content), sourced = !!e.meeting || lib.parseSources(e.sources).some(s => !isChatSource(s));
   if (similar.length || unnamed.length || dated.length) {
@@ -321,42 +329,60 @@ for (let i = 0; i < entries.length; i++) {
   lines.push(`${at(n)}${lib.commit(root, [`brain/contexts/${ctx}/memories.jsonl`, ...closedPath, ...lib.ENTITIES_PATHS], `remember: ${ctx} ${rec.kind} by ${rec.authors.join(",")}`).note}`);
   kept.push({ n, id: rec.id, ctx });
   const memPaths = [`brain/contexts/${ctx}/memories.jsonl`, ...lib.ENTITIES_PATHS];
+  const sharing = w => { const s = lib.readNames(root).filter(x => x.kind === "person" && [x.name, ...(x.aliases || [])].some(a => fold(a).split(/\s+/)[0] === fold(w))).map(x => x.name); return s.length > 1 ? s : []; };
+  // the question about a saved note, kept in the brain until the person answers it: on the first save, for the
+  // names an answer left out, and for a correction that named nobody
+  const askNames = (about, list) => {
+    const ask = list.map(u => u.candidates.length ? `Which ${u.mention}: ${u.candidates.join(" or ")}?` : `Who is ${u.mention}?`).join(" ") + (list.some(u => !u.candidates.length) ? " Full name or company." : "");
+    const quote = String(about.content).replace(/\s+/g, " ").trim(), several = list.some(u => u.candidates.length);
+    const { rec: q } = lib.appendMemory(root, ctx, { authors, via: e.via || opt.via || "codex", kind: "question", tools: [], people: [], content: `${ask} (about ${about.id}: "${quote.length > 120 ? quote.slice(0, 117) + "..." : quote}")`, source: rec.source, actions: [], supersedes: null, retracts: null,
+      tags: ["brain-question", NAME_Q, `about:${about.id}`, ...list.map(u => `${u.candidates.length ? "pick" : "name"}:${u.mention}`), ...about.tags.filter(t => t.startsWith("project:"))] });
+    lines.push(`${at(n)}${lib.commit(root, memPaths, `remember: ${ctx} question by ${q.authors.join(",")}`).note}`);
+    noteAsked([...list.map(u => u.mention), ...list.flatMap(u => u.candidates.map(c => `pick:${c}`)), ...(personText ? [`reply:${personText}`] : [])]);
+    // the person's line, right under "saved in ...": the question follows the confirmation
+    const savedAt = lines.findIndex(l => l.startsWith(`${at(n)}saved in `));
+    lines.splice(savedAt + 1, 0, `${at(n)}${ask}`);
+    lines.push(`${at(n)}${list.map(u => `"${u.mention}"`).join(", ")} ${several ? "could be several known people" : `${list.length > 1 ? "are each" : "is"} one word and nobody known has it`} (rule ${several ? "P2" : "P3"}): the note is saved with the name as written and no new person; the question is kept as ${q.id} in ${ctx}, a pending brain question. Never answer it yourself. When the person answers: remember one entry with context: ${ctx}, retracts: ${q.id}, kind decision, content: their answer in their words, and the full name in people (someone new: new_names too), or the company in companies; the brain then attaches it to ${about.id} by itself.`);
+    if (!asks.includes(ask)) asks.unshift(ask);   // two notes in one call about the same name: one part of the question
+  };
   // the answer to a name question: the note it was about, again, with the name attached
   if (answering) {
-    const about = tagValues(answering, "about")[0], words = [...tagValues(answering, "name"), ...tagValues(answering, "pick")];
+    const about = tagValues(answering, "about")[0], words = wordsOf(answering), picks = tagValues(answering, "pick");
     const note = lib.effectiveMemories(lib.readMemories(root, ctx)).find(m => m.id === about);
     const reg = lib.readNames(root), named = rec.people.filter(p => !(note?.people || []).includes(p));
-    if (note && named.length && !note.asset && !note.customer && !note.relation && !note.meeting && !note.meeting_id) {
-      const first = p => foldName(p).split(/\s+/)[0];
+    const first = p => foldName(p).split(/\s+/)[0];
+    // each word asked about takes the name that starts with it; one word and one name need no match (a nickname, a company).
+    // Anyone else the answer names ("she reports to Piotr Nowak") stays with the answer, not with the note.
+    const answered = words.map(w => ({ w, name: named.find(p => first(p) === foldName(w)) || (words.length === 1 && named.length === 1 ? named[0] : null) })).filter(x => x.name);
+    const plain = note && !note.asset && !note.customer && !note.relation && !note.meeting && !note.meeting_id;
+    if (plain && answered.length) {
       const kept0 = (note.entity_mentions || []).map(x => ({ mention: x.mention, name: reg.find(r => r.id === x.entity)?.name, resolution: x.resolution, rule: x.rule })).filter(x => x.name);
-      const answered = words.map(w => ({ w, name: named.find(p => first(p) === foldName(w)) || (words.length === 1 && named.length === 1 ? named[0] : null) })).filter(x => x.name)
-        .map(({ w, name }) => ({ mention: w, name, resolution: "answered", rule: tagValues(answering, "pick").includes(w) ? "P2" : "P3" }));
+      const attach = [...new Set(answered.map(x => x.name))];
+      // resolution stays one a released lib reads (confirmed_new: on the person's word); a new value would stop an older teammate's index
+      const said = answered.map(({ w, name }) => ({ mention: w, name, resolution: "confirmed_new", rule: picks.includes(w) ? "P2" : "P3" }));
       try {
-        const { rec: linked } = lib.appendMemory(root, ctx, { authors: note.authors, via: note.via, kind: note.kind, tools: note.tools, people: [...note.people, ...named], mentions: [...kept0, ...answered], content: note.content, source: note.source, actions: note.actions, supersedes: note.id, retracts: null, tags: note.tags });
-        lines.push(`${at(n)}linked ${words.map(w => `"${w}"`).join(", ")} in ${note.id} to ${named.join(", ")}: ${linked.id} replaces it, same words, name attached. Say so in one line.`);
+        const { rec: linked } = lib.appendMemory(root, ctx, { authors: note.authors, via: note.via, kind: note.kind, tools: note.tools, people: [...note.people, ...attach], mentions: [...kept0, ...said], content: note.content, source: note.source, actions: note.actions, supersedes: note.id, retracts: null, tags: note.tags });
+        lines.push(`${at(n)}linked ${answered.map(x => `"${x.w}"`).join(", ")} in ${note.id} to ${attach.join(", ")}: ${linked.id} replaces it, same words, name attached. Say so in one line.`);
         lines.push(`${at(n)}${lib.commit(root, memPaths, `remember: ${ctx} ${linked.kind} by ${linked.authors.join(",")}`).note}`);
+        // a name the answer left out is still asked, now about the note that replaced the first one
+        const rest = words.filter(w => !answered.some(x => x.w === w));
+        if (rest.length) askNames(linked, rest.map(w => ({ mention: w, candidates: picks.includes(w) ? sharing(w) : [] })));
       } catch (err) { lines.push(`${at(n)}the question is closed, but ${note.id} could not be linked (${err.message}): remember it again with supersedes: ${note.id} and the full name in people.`); }
-    } else if (note) lines.push(`${at(n)}the question is closed; ${named.length ? `${note.id} is not a plain note, so` : "no new name came with the answer, so"} attach it by remembering ${note.id} again with supersedes: ${note.id} and the full name in people.`);
+    } else if (note) lines.push(`${at(n)}the question is closed; ${!named.length ? "no new name came with the answer, so" : !plain ? `${note.id} is not a plain note, so` : `the answer does not say which of ${named.join(", ")} is ${words.map(w => `"${w}"`).join(", ")}, so`} attach it by remembering ${note.id} again with supersedes: ${note.id} and the full name in people.`);
   }
-  // a note replaced or withdrawn by hand closes the name question about it; a still unclear name is asked again below
+  // a note replaced or withdrawn by hand closes the name question about it
   if (!answering && (e.supersedes || e.retracts)) for (const q of openNameQuestions(ctx).filter(q => tagValues(q, "about").includes(e.supersedes || e.retracts))) {
-    const { rec: closedQ } = lib.appendMemory(root, ctx, { authors, via: e.via || opt.via || "codex", kind: "decision", tools: [], people: rec.people.filter(p => names.find(x => x.name === p)?.kind === "person"), content: e.retracts ? `Not asked any more: ${e.retracts} was withdrawn (${rec.id}).` : `Answered by ${rec.id}, which replaces ${e.supersedes}${rec.people.length ? ` and names ${rec.people.join(", ")}` : ""}.`, source: rec.source, actions: [], supersedes: null, retracts: q.id, tags: [] });
+    // a correction that still has the word and names nobody new has not said who it is: the question moves to the new note
+    const old = e.supersedes ? lib.readMemories(root, ctx).find(m => m.id === e.supersedes) : null;
+    const carried = !old || rec.people.some(p => !(old.people || []).includes(p)) ? [] : wordsOf(q).filter(w => fold(rec.content).includes(fold(w)));
+    for (const w of carried) if (!unclear.some(u => fold(u.mention) === fold(w))) unclear.push({ mention: w, candidates: tagValues(q, "pick").includes(w) ? sharing(w) : [] });
+    const again = wordsOf(q).some(w => unclear.some(u => fold(u.mention) === fold(w)));
+    const { rec: closedQ } = lib.appendMemory(root, ctx, { authors, via: e.via || opt.via || "codex", kind: "decision", tools: [], people: rec.people.filter(p => names.find(x => x.name === p)?.kind === "person"), content: e.retracts ? `Not asked any more: ${e.retracts} was withdrawn (${rec.id}).` : again ? `Asked again about ${rec.id}, which replaces ${e.supersedes}.` : `Answered by ${rec.id}, which replaces ${e.supersedes}${rec.people.length ? ` and names ${rec.people.join(", ")}` : ""}.`, source: rec.source, actions: [], supersedes: null, retracts: q.id, tags: [] });
     lines.push(`${at(n)}closed the name question ${q.id} (${closedQ.id}).`);
     lines.push(`${at(n)}${lib.commit(root, memPaths, `remember: ${ctx} ${closedQ.kind} by ${closedQ.authors.join(",")}`).note}`);
   }
   // saved with the name as written: the question is kept in the brain until the person answers it
-  if (unclear.length && !heldAnyway) {
-    const ask = unclear.map(u => u.candidates.length ? `Which ${u.mention}: ${u.candidates.join(" or ")}?` : `Who is ${u.mention}?`).join(" ") + (unclear.some(u => !u.candidates.length) ? " Full name or company." : "");
-    const { rec: q } = lib.appendMemory(root, ctx, { authors, via: e.via || opt.via || "codex", kind: "question", tools: [], people: [], content: `${ask} (about ${rec.id}: "${shown.length > 120 ? shown.slice(0, 117) + "..." : shown}")`, source: rec.source, actions: [], supersedes: null, retracts: null,
-      tags: ["brain-question", NAME_Q, `about:${rec.id}`, ...unclear.map(u => `${u.candidates.length ? "pick" : "name"}:${u.mention}`), ...rec.tags.filter(t => t.startsWith("project:"))] });
-    lines.push(`${at(n)}${lib.commit(root, memPaths, `remember: ${ctx} question by ${q.authors.join(",")}`).note}`);
-    noteAsked([...unclear.map(u => u.mention), ...unclear.flatMap(u => u.candidates.map(c => `pick:${c}`)), ...(personText ? [`reply:${personText}`] : [])]);
-    // the person's line, right under "saved in ...": the question follows the confirmation
-    const savedAt = lines.findIndex(l => l.startsWith(`${at(n)}saved in `));
-    lines.splice(savedAt + 1, 0, `${at(n)}${ask}`);
-    lines.push(`${at(n)}${unclear.map(u => `"${u.mention}"`).join(", ")} ${unclear.some(u => u.candidates.length) ? "could be several known people" : "is one word and nobody known has it"} (rule ${unclear.some(u => u.candidates.length) ? "P2" : "P3"}): the note is saved with the name as written and no new person; the question is kept as ${q.id} in ${ctx}, a pending brain question. Never answer it yourself. When the person answers: remember one entry with context: ${ctx}, retracts: ${q.id}, kind decision, content: their answer in their words, and the full name in people (someone new: new_names too), or the company in companies; the brain then attaches it to ${rec.id} by itself.`);
-    asks.unshift(ask);
-  }
+  if (unclear.length && !heldAnyway) askNames(rec, unclear);
 }
 
 /* what the brain cannot settle by itself, for one question with numbered parts */

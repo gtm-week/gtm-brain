@@ -500,7 +500,7 @@ export function entityBrief(root, name, options = {}) {
 
 /* "Who is Max, and why": how each spelling became this entity, by the rule in lib.NAME_RULES, with the
    note's date, source and project. Notes saved before mentions were recorded say so instead of guessing. */
-const RESOLVED = { exact: "matched exactly", inferred_first_name: "taken as", new: "first saved as", confirmed_new: "saved on the person's word as", answered: "named by the person, when asked, as" };
+const RESOLVED = { exact: "matched exactly", inferred_first_name: "taken as", new: "first saved as", confirmed_new: "saved on the person's word as" };
 function nameProvenance(facts, memories, citation, source) {
   const ids = new Set([facts.entity.id, ...facts.entity.previous_ids]), seen = new Set(), rows = [];
   for (const m of [...memories].sort((a, b) => Date.parse(a.at) - Date.parse(b.at))) for (const x of m.entity_mentions || []) {
