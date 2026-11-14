@@ -109,3 +109,14 @@ test("the digest keeps an older note the working guidance cites, and names a cit
   assert.ok(!f.includes("- " + ids[20]));
   assert.match(f, new RegExp("No longer in force [^\\n]*" + ids[20]));
 });
+
+test("a --facts reply well over 64 KiB arrives whole through a pipe", () => {
+  // decisions in force are all listed, so 120 long ones on top of the capped digest pass the pipe buffer
+  const added = [];
+  for (let i = 0; i < 120; i++) added.push(lib.appendMemory(root, slug, { authors: ["ann-lee"], kind: "decision", content: `Castorama decision ${i} ${pad}` }).rec.id);
+  const r = script("gtm-brain-compile", "compile.mjs", "--facts", slug);
+  assert.equal(r.status, 0, r.stderr);
+  assert.ok(Buffer.byteLength(r.stdout) > 70 * 1024, `${Buffer.byteLength(r.stdout)} bytes`);
+  for (const id of added) assert.ok(r.stdout.includes("- " + id + " · "), id);
+  assert.match(r.stdout, /Look one up with query: object memories, filters\.context=\S+ \(add search or filters\.entities=<id>\)\.\n$/, "the closing line arrives whole");
+});
