@@ -688,4 +688,6 @@ test("query object reference finds every note citing a source pointer, whatever 
   assert.match(byUrl.text, /Notes citing it \(2\)/);
   assert.ok((await call("query", { brain: refRoot, object: "reference" })).isError);
   assert.match((await call("query", { brain: refRoot, object: "reference", search: "hubspot:0-1/1" })).text, /Notes citing it: none/);
+  const odd = await call("query", { brain: refRoot, object: "reference", search: "hubspot:it's; DROP x" });
+  assert.ok(!odd.isError, odd.text); assert.match(odd.text, /Notes citing it: none/);
 });

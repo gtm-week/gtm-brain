@@ -11,6 +11,8 @@ test("normalizeKind lowercases and maps connector short forms", () => {
   assert.equal(normalizeKind("mail"), "gmail");
   assert.equal(normalizeKind("granola"), "granola");
   assert.equal(SHORT.drive, "google-drive");
+  for (const k of ["constructor", "toString", "hasOwnProperty", "crm"]) assert.equal(normalizeKind(k), k.toLowerCase());
+  assert.deepEqual(parseSources(["constructor:1"]), [{ kind: "constructor", ref: "1" }]);
 });
 
 test("parseSources keeps the given ref and normalizes the kind", () => {

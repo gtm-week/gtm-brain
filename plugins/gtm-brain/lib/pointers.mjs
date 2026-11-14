@@ -13,9 +13,9 @@ const ALIASES = { "google-mail": "gmail", "google drive": "google-drive", "googl
 export function normalizeKind(kind) {
   const k = String(kind ?? "").trim().toLowerCase().replace(/[\s_]+/g, "-");
   if (!k) return k;
-  if (SHORT[k]) return SHORT[k];
-  const spaced = k.replace(/-/g, " ");
-  return ALIASES[k] || ALIASES[spaced] || k;
+  // Own keys only: "constructor" or "toString" as a kind must stay a string.
+  const own = (table, key) => Object.hasOwn(table, key) ? table[key] : null;
+  return own(SHORT, k) || own(ALIASES, k) || own(ALIASES, k.replace(/-/g, " ")) || k;
 }
 
 // Known record URLs: host -> provider kind and the stable id in the path or fragment.
