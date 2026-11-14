@@ -7,8 +7,12 @@ lists a required field nobody has said yet as a gap to ask about. Edit freely, o
 
 Every `## <Kind>` section with a field table is a kind. Person, organization, product, offering,
 event, tool and meeting always exist; add a section to add a kind. Add fields, organization subtypes and
-relationship types the same way. A meeting's page collects the notes saved with its meeting id;
-the transcript or recording stays in its tool. Projects are not kinds: a project is a tag.
+relationship types the same way. Projects are not kinds: a project is a tag.
+
+A meeting needs no section here: its fields are date (required), title, organizer and source (where
+the transcript or recording is; it stays in its tool), its page collects the notes saved with its
+meeting id, and everyone who attended links to it. Leave a `## Meeting` section out while a teammate
+is still on GTM Brain 0.34: that version cannot read a file with one.
 
 ## Person
 
@@ -79,15 +83,6 @@ the transcript or recording stays in its tool. Projects are not kinds: a project
 | owner | Who on our team owns it | no |
 | cost | What it costs us | no |
 
-## Meeting
-
-| Field | What it means | Required |
-| --- | --- | --- |
-| date | When it took place, as a date | yes |
-| title | What the meeting was called | no |
-| organizer | Who set it up | no |
-| source | Where the transcript or recording is, as a link or tool:id; it stays there | no |
-
 ## Relationships
 
 A relationship is a note with a type, kept over time: when one ends, a new note says so, and the
@@ -102,6 +97,6 @@ side should have a current one.
 | investor_in | person, organization | organization, us | Has invested in | no |
 | uses | person, organization | product | Uses this product, ours or another | no |
 | speaker_at | person | event | Speaks or spoke at this event | no |
-| attended | person | event, meeting | Attends or attended this event or meeting | no |
+| attended | person | event | Attends or attended this event (a meeting too, always) | no |
 | integrates_with | tool | tool | Connected to this other tool | no |
 | customer_of | person, organization | us | Customer status (customer, prospect, former customer), kept by the customer notes | no |

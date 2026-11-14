@@ -21,6 +21,13 @@ export const SCHEMA_KINDS = DEFAULT_KINDS;
 const orList = list => list.length < 2 ? list.join("") : `${list.slice(0, -1).join(", ")} or ${list[list.length - 1]}`;
 export const US = "us";
 // customer_of is the customer block (lib/customers.mjs): always known, whatever the file says
+// A meeting needs no section: without one it keeps these fields, and attended always reaches it. The shipped
+// SCHEMA.md leaves the section out because 0.34 refuses a "## Meeting" heading and a meeting in a To column.
+export const MEETING_FIELDS = [
+  { name: "date", about: "When it took place, as a date", required: true },
+  { name: "title", about: "What the meeting was called", required: false },
+  { name: "organizer", about: "Who set it up", required: false },
+  { name: "source", about: "Where the transcript or recording is, as a link or tool:id; it stays there", required: false }];
 export const BUILT_IN = { customer_of: { from: ["person", "organization"], to: [US], about: "Customer status, kept by the customer notes", required: false, formerly: [], built_in: true } };
 const FIELD = /^[a-z][a-z0-9_]{0,39}$/, SUBTYPE = /^[a-z][a-z0-9-]{0,63}$/, TYPE = /^[a-z][a-z0-9_]{0,40}$/;
 
@@ -119,6 +126,8 @@ export function parseSchema(text) {
     relations[type] = { from: f, to: t, about, required: yes(required), formerly };
   }
   if (problems.length) throw new SchemaFormatError(problems);
+  if (!kinds.meeting.fields.length) kinds.meeting.fields = MEETING_FIELDS.map(f => ({ ...f }));
+  if (relations.attended && !relations.attended.to.includes("meeting")) relations.attended.to.push("meeting");
   for (const [type, def] of Object.entries(BUILT_IN)) relations[type] = { ...def, about: relations[type]?.about || def.about, built_in: true };
   const shape = { kinds, relations };
   return { ...shape, hash: digest(shape) };

@@ -78,8 +78,9 @@ object `rules` (its SCHEMA.md findings).
 
 ## Limits
 
-- Person, organization, product, offering, event, tool and meeting always exist. A project
-  cannot be a kind: it is a tag. Company and team are
+- Person, organization, product, offering, event, tool and meeting always exist. A meeting
+  needs no section (its fields are built in); do not add a `## Meeting` section while a teammate
+  is on 0.34, which cannot read the file then. A project cannot be a kind: it is a tag. Company and team are
   organization subtypes. Say so in one line and offer the nearest thing.
 - Do not remove a kind's section while entities of that kind exist: their files stop reading
   until the section is back.
