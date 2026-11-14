@@ -152,7 +152,7 @@ each source keeps its own checkpoint in `work/sync.json`, by kind and account.
 | What Codex saves and asks | your own rules under "Our rules" in `RULES.md`, one line each; Codex offers to add one when you correct a save, and yours win over the defaults |
 | Where files go | `/gtm-brain-rules`, or edit the rows under "Where things go" in `RULES.md` |
 | Which questions go to a live tool, and how old a note may be | edit the rows under "Ask the source" in `RULES.md` (deal stage: CRM, 1 day; meeting times: calendar, always ask) |
-| What the brain keeps (fields, subtypes, relationship types) | `/gtm-brain-schema`, or edit `SCHEMA.md`; briefs refill in the background |
+| What the brain keeps (fields, subtypes, relationship types) | `/gtm-brain-schema`, or edit `SCHEMA.md`; a brief's fields are rewritten with its overview, when someone asks about it |
 | How Codex works in a context | "change the rule of <context> to ..." |
 | A rule the work must follow (tone of voice, pricing, ICP) | write it as a document: `<name>.md` at the top, then "add <name>.md as a document" |
 | A recurring process with steps | "start the outbound workflow", or describe a new one; see `workflows/` |

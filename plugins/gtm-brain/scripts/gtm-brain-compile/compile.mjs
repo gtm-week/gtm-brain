@@ -39,7 +39,7 @@ function facts(slug) {
 async function refuse(slug, message, code) {
   if (opt.checked) {
     const title = lib.readContext(root, slug)?.title || slug, why = summaries.explainFailure(message, title);
-    summaries.recordSummaryRun(root, { context: slug, by: opt.by, ok: false, error: `${why.what} (${message.split("\n")[0].slice(0, 160)})` });
+    summaries.recordSummaryRun(root, { context: slug, by: opt.by, ok: false, error: `${why.what} (${message.split("\n")[0].slice(0, 160)})`, why });
     message += `\nFor the person, once, if this attempt is the last: The ${title} summary was not saved: ${why.what}. What to do: ${why.todo}.`;
   }
   console.error(message); process.exit(code);

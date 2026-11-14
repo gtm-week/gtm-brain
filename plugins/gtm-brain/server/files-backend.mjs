@@ -61,7 +61,7 @@ const SCRIPTS = {
   fork_context: ({ from, slug, title, filter, project }) => ["gtm-brain-contexts/contexts.mjs", ["--fork", from, slug, title, ...(filter ? ["--filter", filter] : []), ...(project ? ["--project", project] : [])]],
   edit_context: ({ slug, title, rule }) => ["gtm-brain-contexts/contexts.mjs", ["--edit", slug, ...(title ? ["--title", title] : []), ...(rule ? ["--rule", rule] : [])]],
   archive_context: ({ slug, undo, project }) => ["gtm-brain-contexts/contexts.mjs", [undo ? "--unarchive" : "--archive", slug, ...(project ? ["--project", project] : [])]],
-  compile_entity: ({ entity, by, as_of, brief }) => ["gtm-brain-entities/compile-entity.mjs", ["--apply", entity, "--by", by, "--as-of", as_of, "--brief", JSON.stringify(brief)]],
+  compile_entity: ({ entity, by, as_of, brief }) => ["gtm-brain-entities/compile-entity.mjs", ["--checked", "1", "--apply", entity, "--by", by, "--as-of", as_of, "--brief", JSON.stringify(brief)]],
   add_name: ({ name, aliases, email, kind, subtype, not_same, references, sources }) => ["gtm-brain-entities/entities.mjs", ["--add", name, ...(list(aliases).length ? ["--alias", list(aliases).join(", ")] : []), ...(email ? ["--email", email] : []), ...(kind ? ["--kind", kind] : []), ...(subtype !== undefined ? ["--subtype", subtype || ""] : []), ...(list(not_same).length ? ["--not", list(not_same).join(", ")] : []), ...(references ? ["--references", JSON.stringify(references)] : []), ...(sources ? ["--sources", JSON.stringify(sources)] : [])]],
 };
 

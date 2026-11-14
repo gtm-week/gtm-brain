@@ -449,7 +449,7 @@ function validateFields(facts, fields) {
   const allowed = new Set(facts.schema.fields.map(f => f.name)), seen = new Set(), evidence = new Set(facts.evidence.map(m => m.id));
   for (const f of fields) {
     if (!f || typeof f !== "object" || Array.isArray(f) || !Object.keys(f).every(k => ["field", "text", "memories", "interpretation"].includes(k)) || typeof f.field !== "string" || typeof f.text !== "string" || !f.text.trim() || /[\u2013\u2014\u2015\u2212]/.test(f.text) || !strings(f.memories) || !f.memories.length) fail("each field needs field, plain text and supporting memory IDs");
-    if (!allowed.has(f.field)) fail(`${f.field} is not a field of this ${facts.entity.kind} in SCHEMA.md (it lists ${[...allowed].join(", ") || "none"}); SCHEMA.md may have changed: read entity_facts again`);
+    if (!allowed.has(f.field)) fail(`${f.field} is not a field of this ${facts.entity.kind} in SCHEMA.md (it lists ${[...allowed].join(", ") || "none"}); SCHEMA.md may have changed: read the brief again (query, object brief; entity_facts in a run)`);
     if (seen.has(f.field)) fail(`${f.field} is given twice`);
     seen.add(f.field);
     for (const id of f.memories) if (!evidence.has(id)) fail(`${id} is not current evidence about this entity`);
@@ -461,7 +461,8 @@ export function compileEntity(root, name, { as_of, by, brief }) {
 }
 function applyCompilation(root, name, { as_of, by, brief }) {
   const registry = lib.readNames(root), e = resolveEntity(registry, name), facts = entityFacts(root, name, { registry });
-  if (facts.as_of !== as_of) throw new Error("not applied: entity evidence or identity changed; read entity_facts again");
+  // a chat has no entity_facts (0.35.0): its read is the brief, which carries the new as_of
+  if (facts.as_of !== as_of) throw new Error("not applied: entity evidence or identity changed; read the brief again (query, object brief; entity_facts in a run) for the new as_of");
   const author = lib.teamHandle(root, by) || (["schedule", "background"].includes(by) ? by : null);
   if (!author) throw new Error("by must identify a team member, schedule or background");
   // SCHEMA.md fields are kept beside the brief, never inside it: an older plugin reading the brief still sees its three lists.

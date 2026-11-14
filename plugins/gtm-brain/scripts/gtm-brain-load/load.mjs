@@ -45,7 +45,8 @@ for (const slug of args) {
   if (ask.length) out.push(`\n${ask.join("\n")}`);
   if (!last) { out.push(`\n${eff.length} memories; call load_context or recall for them.${c.stale && eff.length ? " The summary is written when this context is loaded in full." : ""}`); out.push(""); continue; }
   const behind = c.stale && eff.length ? onDemandBlock(root, slug, { notes: last }) : null;
-  if (behind) { out.push(behind.text); out.push(""); continue; }
+  // a paused summary is never written here: its block is one line, and the last notes follow it as it says
+  if (behind) { out.push(behind.text); if (!behind.paused) { out.push(""); continue; } }
   out.push(`\n## Last ${mem.length} of ${lib.effectiveMemories(c.memories).length} memories`);
   for (const m of mem) out.push(`- ${m.id} · ${lib.memoryTimeText(m)} · ${m.authors.join(", ")} · ${m.kind}${m.tools.length ? " · tools: " + m.tools.join(", ") : ""}${m.people.length ? " · people: " + m.people.join(", ") : ""}\n  ${m.content}${m.actions.length ? "\n  actions: " + m.actions.map(a => `${a.tool}: ${a.action}${a.ref ? " (" + a.ref + ")" : ""}`).join("; ") : ""}${m.source.length ? "\n  source: " + lib.sourceText(m.source) : ""}`);
   out.push("");

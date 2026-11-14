@@ -14,8 +14,10 @@ Since 0.35.0 no background run starts after a save. A context's summary is writt
 asks about the topic, in that chat, and cached in `context.md` until new notes arrive.
 
 `load_context` of a context whose summary is older than its newest note ends with
-**Summary behind: write it now, in this chat**: the notes since the summary (newest first,
-within the size of the usual last-15 list), the older notes the summary cites, and `as_of`.
+**Summary behind: write it now, in this chat**: the notes since the summary (newest first, the
+15 newest in full and the rest one shortened line each), the older notes the summary cites, and
+`as_of`. When more notes are new than fit even shortened, the load gives no `as_of`: call
+`compile_facts` once and write from that, so no summary is marked current over unread notes.
 Then:
 
 1. Say in one line: "The <title> summary is being written now in this chat."

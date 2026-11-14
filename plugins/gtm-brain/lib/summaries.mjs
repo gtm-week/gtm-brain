@@ -34,6 +34,8 @@ export function contextFacts(root, slug) {
 
 export const noteText = (root, m, sources = s => s.map(s => `${s.kind}:${s.ref}`).join(", ")) => `- ${m.id} · ${lib.memoryTimeText(m)} · ${m.authors.join(",")} · ${m.kind}${m.people.length ? " · " + m.people.join(", ") : ""}${m.tools.length ? " · tools: " + m.tools.join(", ") : ""}\n  ${m.content}${assetSummary(root, m)}${m.actions.length ? "\n  actions: " + m.actions.map(a => `${a.tool}: ${a.action}${a.ref ? " (" + a.ref + ")" : ""}`).join("; ") : ""}${m.source.length ? "\n  sources: " + sources(m.source) : ""}`;
 
+const shortNote = m => { const t = String(m.content || "").replace(/\s+/g, " ").trim(); return `- ${m.id} · ${lib.memoryTimeText(m)} · ${m.kind}: ${t.length > 140 ? t.slice(0, 140) + " ..." : t}`; };
+
 export const COMPILATION_GUIDANCE = "Keep only reusable methods supported by effective memories in working guidance (the now argument). Cite the memory IDs for each method. Write the summary in 2-4 sentences, each ending with the ids of the notes it rests on in brackets ([m_...]), with absolute dates only (never next Tuesday or tomorrow). Put supported immediate actions, owners and dates in the summary; their source memories remain the follow-ups. Previous guidance may mix methods with next steps: reassess both against the evidence. Do not copy standing instructions or invent methods. Pass now as an empty string when no useful methods remain.";
 
 /* The notes a summary is written from: those since the last summary, newest first, then the older notes
@@ -60,14 +62,23 @@ export function summaryDigest(root, f, { lines: maxLines = 300, bytes: maxBytes 
     if (shown.length + cited.length + older.length >= maxNotes || lines + n > maxLines || bytes + b > maxBytes) break;
     older.push(t); lines += n; bytes += b;
   }
-  const hiddenNew = f.newSince.length - shown.length, carried = f.mem.filter(m => !newIds.has(m.id) && !citedSet.has(m.id)).length - older.length;
+  // A load (maxNotes set) also lists the new notes that did not fit in full, one shortened line each within a
+  // budget of their own, and only when all of them fit: a summary marked current must not pass over notes its
+  // writer never saw (the real brain, 2026-11-14: 79 new notes in one context, 15 shown, 64 never read).
+  // When they do not all fit, none is listed and onDemandBlock sends the chat to compile_facts instead.
+  const short = [];
+  if (maxNotes !== Infinity && shown.length < f.newSince.length) {
+    let b = 0;
+    for (const m of fresh.slice(shown.length)) { const t = shortNote(m); b += Buffer.byteLength(t) + 1; if (b > maxBytes) { short.length = 0; break; } short.push(t); }
+  }
+  const lookup = `query: object memories, filters.context=${f.c.slug} (add search or filters.entities=<id>)`;
+  const hiddenNew = f.newSince.length - shown.length - short.length, carried = f.mem.filter(m => !newIds.has(m.id) && !citedSet.has(m.id)).length - older.length;
   const out = [`\n## Effective notes since the last compile, newest first (${shown.length} of ${f.newSince.length} new)`, ...shown];
+  if (short.length) out.push(`\n## The other ${short.length} new note${short.length === 1 ? "" : "s"}, older, one shortened line each (in full: ${lookup})`, ...short);
   if (cited.length || gone.length) out.push(`\n## Older notes the current summary and working guidance cite (${cited.length} still in force)`, ...cited.map(id => noteLine(root, byId.get(id))), ...(gone.length ? [`No longer in force (superseded or withdrawn), do not rest on them: ${gone.join(", ")}`] : []));
   if (older.length) out.push(`\n## Other older notes the current summary carries, newest first (${older.length})`, ...older);
-  const lookup = `query: object memories, filters.context=${f.c.slug} (add search or filters.entities=<id>)`;
   if (hiddenNew) out.push(maxNotes === Infinity ? `\n${hiddenNew} more note${hiddenNew === 1 ? "" : "s"} newer than compiled_at ${hiddenNew === 1 ? "is" : "are"} not shown and ${hiddenNew === 1 ? "is" : "are"} not in the current summary: read them with ${lookup} before writing.`
-    // in a chat the summary is written from what is shown: reading every older new note would cost the turn
-    : `\n${hiddenNew} older new note${hiddenNew === 1 ? " is" : "s are"} not shown. Write from the notes shown and the current summary; look one up with ${lookup} only when the request needs it.`);
+    : `\n${hiddenNew} older new note${hiddenNew === 1 ? " is" : "s are"} not shown here and ${hiddenNew === 1 ? "is" : "are"} not in the current summary; compile_facts lists them.`);
   if (carried) out.push(`\n${carried} older note${carried === 1 ? " is" : "s are"} not shown; the current summary carries them. Look one up with ${lookup}.`);
   return { text: out.join("\n"), shown: shown.length, hiddenNew, carried };
 }
@@ -83,20 +94,24 @@ export function explainFailure(raw, title = "the") {
   if (/read-?only|readonly/i.test(s) && /database|sqlite|state/i.test(s)) return { what: "Codex could not write its own state database (it is read-only)", todo: `quit and reopen Codex; ${t} is then written in the chat the next time you ask about the topic` };
   if (/unknown tool|tool .*not (found|available|offered)|could not be called|no such tool|not offered/i.test(s)) return { what: "the summary tool could not be called", todo: `ask in a chat where we stand on the topic; Codex writes ${t} there` };
   if (/timed out|timeout|interrupted|SIGTERM|SIGKILL|killed|aborted/i.test(s)) return { what: "the run was interrupted before it saved anything", todo: `ask about the topic again; ${t} is written in that chat` };
-  if (/changed since --facts|changed since compile_facts|as_of/i.test(s)) return { what: "new notes arrived while it was being written", todo: "nothing: it is written from the newest notes when you next ask" };
+  // the summary check before the as_of rule: its refusals end "apply again with the same as_of" and are no arrival of notes
+  if (/cites no note|not among this context's notes|relative date|sentences; write|words; keep it under|long dash|Invalid entity brief/i.test(s)) return { what: "the text did not pass the summary check (note ids, dates or length)", todo: `ask again; Codex rewrites ${t}` };
+  if (/changed since --facts|changed since compile_facts|notes changed after as_of|evidence or identity changed/i.test(s)) return { what: "new notes arrived while it was being written", todo: "nothing: it is written from the newest notes when you next ask" };
   if (/manual edits?|edited by hand|paused/i.test(s)) return { what: "it was edited by hand, so it is paused", todo: `say "review the summary edit"; Codex shows the edit and asks before replacing it` };
   if (/invalid Markdown|frontmatter/i.test(s)) return { what: "the context file has a format error", todo: "say \"check the context file\"; Codex shows the line to fix" };
-  if (/not a team member|--by/i.test(s)) return { what: "it was written under a name that is not on the team", todo: "ask again; Codex writes it under your handle" };
+  if (/not a team member|by must identify a team member/i.test(s)) return { what: "it was written under a name that is not on the team", todo: "ask again; Codex writes it under your handle" };
   if (/^failed\b/i.test(s)) return { what: `the background summary run failed${s.slice(6).trim() ? ` ${s.slice(6).trim()}` : ""}`, todo: `ask in a chat where we stand on the topic; Codex writes ${t} there` };
   if (/compiled nothing|did no work|no work/i.test(s)) return { what: "the run finished without writing any summary", todo: `ask in a chat where we stand on the topic; Codex writes ${t} there` };
   return { what: `writing it failed (${s.replace(/\s+/g, " ").trim().slice(0, 100) || "no reason given"})`, todo: "ask again; if it fails again, work/runs.jsonl has the details" };
 }
 
 /* one line per summary written or failed in a chat; the health line (lib/health-line.mjs) reads it with the background runs' lines */
-export function recordSummaryRun(root, { context, by = "chat", ok, error = "", foreground = true }) {
+export function recordSummaryRun(root, { context, by = "chat", ok, error = "", foreground = true, why = null }) {
   try {
     mkdirSync(join(root, "work"), { recursive: true });
-    appendFileSync(join(root, "work", "runs.jsonl"), JSON.stringify({ at: new Date().toISOString(), by: foreground ? "chat" : "compile", handle: by, context, foreground, turns: ok ? 1 : 0, ...(ok ? {} : { error: String(error).replace(/\s+/g, " ").slice(0, 300) }) }) + "\n");
+    // what and todo: the words the person was given, kept so the health line repeats them and never explains an explanation
+    const said = ok ? {} : { error: String(error).replace(/\s+/g, " ").slice(0, 300), ...(why || explainFailure(error)) };
+    appendFileSync(join(root, "work", "runs.jsonl"), JSON.stringify({ at: new Date().toISOString(), by: foreground ? "chat" : "compile", handle: by, context, foreground, turns: ok ? 1 : 0, ...said }) + "\n");
   } catch {}
 }
 
@@ -105,12 +120,17 @@ export function recordSummaryRun(root, { context, by = "chat", ok, error = "", f
 export function onDemandBlock(root, slug, { notes = 15, bytes = 16 * 1024 } = {}) {
   const f = contextFacts(root, slug); if (!f) return null;
   const c = f.c;
-  if (c.manualEdit.blocked) return { text: `\n## Summary paused\nThe ${c.title} summary was edited by hand, so it is not rewritten until the edit is reviewed: say "review the ${c.title} summary edit". The notes below are current.`, written: false };
+  if (c.manualEdit.blocked) return { text: `\n## Summary paused\nThe ${c.title} summary was edited by hand, so it is not rewritten until the edit is reviewed: say "review the ${c.title} summary edit". The notes below are current.`, written: false, paused: true };
   // a chat gets each source with its link (a codex: thread as codex://threads/...), as the last-N list gave it
   const d = summaryDigest(root, f, { notes, bytes, lines: notes * 8, sources: lib.sourceText });   // about the last-15 list it replaces
   const since = c.compiledAt ? `the summary of ${day(c.compiledAt)}` : "any summary";
+  const refusal = "If compile_apply refuses, fix what it names and apply again once; if it still refuses, say the one line it gives for the person and stop.";
+  // More new notes than a load holds, even shortened: no as_of here, so nothing is marked current from a part of them.
+  if (d.hiddenNew) return { written: false, asOf: null, shown: d.shown, text: [`\n## Summary behind: write it now, in this chat`,
+    `${f.newSince.length} notes are newer than ${since}, more than fit in a load (${d.hiddenNew} not shown). Tell the person in one line: "The ${c.title} summary is being written now in this chat." Answer their request from the notes below first. Then call compile_facts once (context ${c.slug}): it gives the notes and the id to apply with. Write the summary from it and call compile_apply once. It is cached until new notes arrive; do not write it again in this chat. ${refusal}`,
+    d.text].join("\n") };
   const text = [`\n## Summary behind: write it now, in this chat`,
-    `${f.newSince.length} note${f.newSince.length === 1 ? " is" : "s are"} newer than ${since}. Tell the person in one line: "The ${c.title} summary is being written now in this chat." Answer their request from the notes below first. Then call compile_apply once: context ${c.slug}, by your handle, as_of ${f.asOf}, summary and now as below. It is cached until new notes arrive; do not write it again in this chat. If compile_apply refuses, fix what it names and apply again once; if it still refuses, say the one line it gives for the person and stop.`,
+    `${f.newSince.length} note${f.newSince.length === 1 ? " is" : "s are"} newer than ${since}. Tell the person in one line: "The ${c.title} summary is being written now in this chat." Answer their request from the notes below first. Then call compile_apply once: context ${c.slug}, by your handle, as_of ${f.asOf}, summary and now as below. It is cached until new notes arrive; do not write it again in this chat. ${refusal}`,
     `summary: 2-4 sentences, each ending with the ids of the notes it rests on ([m_...]), absolute dates only. now: the Working guidance above revalidated against these notes (reusable methods with their note ids), or "" when none.`,
     d.text].join("\n");
   return { text, written: false, asOf: f.asOf, shown: d.shown };

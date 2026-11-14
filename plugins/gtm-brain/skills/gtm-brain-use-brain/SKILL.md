@@ -203,7 +203,7 @@ one already read in this chat is still in context, so reuse it instead of readin
 | How healthy a deal is, what is missing before the next call | [Deal health](references/deal-health.md) | `query` (deal; search = the company) |
 | Resolve, update, merge, archive, restore or split an identity; open its brief | [Entities](references/entities.md) | `query` (entities), `add_name`, `update_entity`, `merge_entities`, `archive_entity`, `undo_entity_merge`; `query` (brief) |
 | Refresh a cited entity brief | [Entity compilation](references/entity-compile.md) | `compile_entity` once, from a brief read that says its overview is behind; `query` (memories by entity) to read more evidence |
-| Update a summary, or release one paused by a manual edit | [Compilation](references/compile.md) | the background worker, queued through the shell; no compile tool in a chat |
+| Update a summary, or release one paused by a manual edit | [Compilation](references/compile.md) | `compile_apply` once, from a `load_context` that says the summary is behind; `compile_facts` first for an explicit rewrite |
 | Open or refresh the dashboard, or trace a wrong sentence to its note | [Dashboard](references/dashboard.md) | `open_dashboard`, `render_dashboard` |
 | Keep edits the person made by hand, when requested | [Saving manual edits](references/save.md) | `save` |
 

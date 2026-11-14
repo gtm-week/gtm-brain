@@ -168,7 +168,14 @@ export function summaryState(c, busy = false, nowMs = process.env.GTM_BRAIN_NOW 
 }
 export function compileBusy(root) { const s = readCompileState(root); return !!s && (s.state === "queued" || s.state === "running"); }
 /* a failed run that will not try again by itself: the last attempt failed and something is still behind */
-export function compileGaveUp(root) { const s = readCompileState(root); return !!s && (s.state === "blocked" || (s.state === "failed" && (s.attempt || 1) >= (s.tries || 1))) && activeContexts(root).some(c => c.stale); }
+export function compileGaveUp(root) { const s = readCompileState(root); return !!s && (s.state === "blocked" || (s.state === "failed" && (s.attempt || 1) >= (s.tries || 1))) && !writtenSince(root, s.at) && activeContexts(root).some(c => c.stale); }
+/* A summary written after that run (work/runs.jsonl, a chat's write included) ends "gave up": since 0.35.0 no
+   later background run resets work/compile.json, and a context behind its notes is normal, so without this an
+   upgraded brain whose last 0.34 run failed would show "Summary update failed" for good. Only a summary's own
+   line counts (context set, recordSummaryRun), never the usage line a run writes about itself. */
+function writtenSince(root, at) {
+  try { return readFileSync(join(root, "work", "runs.jsonl"), "utf8").split("\n").some(l => { if (!l) return false; try { const r = JSON.parse(l); return !!r.context && r.turns > 0 && !r.error && Date.parse(r.at) > Date.parse(at); } catch { return false; } }); } catch { return false; }
+}
 /* Every saved memory makes its context eligible immediately. Concurrent changes are
    drained by one worker; an empty plan starts no model run. */
 export function compilePlan(root) {

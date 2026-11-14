@@ -11,7 +11,8 @@ import {execFileSync,spawn} from 'node:child_process';
 const kick=(root,env)=>spawn('bash',[join(P,'scripts/gtm-brain-compile/background-compile.sh'),root],{detached:true,stdio:'ignore',env}).unref();
 import * as lib from '../lib/brain.mjs';
 const P=new URL('../',import.meta.url).pathname.replace(/\/$/,'');
-const waitFor=async (fn)=>{for(let i=0;i<200;i++){if(fn())return;await new Promise(r=>setTimeout(r,50))}assert.fail('timed out waiting for worker')};
+// 40 s: on a busy shared machine the hand-started worker took over 10 s and three tests here timed out in turn
+const waitFor=async (fn)=>{for(let i=0;i<800;i++){if(fn())return;await new Promise(r=>setTimeout(r,50))}assert.fail('timed out waiting for worker')};
 
 test('a worker started by hand with no batching delay runs at once, and another change during the run gets compiled serially',async()=>{
  const root=mkdtempSync(join(tmpdir(),'gtm-immediate-')),profile=mkdtempSync(join(tmpdir(),'gtm-immediate-profile-'));

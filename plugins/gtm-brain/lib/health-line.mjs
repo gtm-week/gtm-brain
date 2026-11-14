@@ -20,9 +20,9 @@ const newest = list => list.filter(x => x && Number.isFinite(Date.parse(x.at))).
 export function summaryRuns(root) {
   const runs = readRuns(root), state = readJson(join(root, "work", "compile.json"));
   const good = newest([...runs.filter(r => r.turns > 0 && !r.error), ...(state?.state === "done" ? [state] : [])]);
-  const bad = newest([...runs.filter(r => r.error || !r.turns).map(r => ({ at: r.at, why: r.error || "the run did no work", context: r.context || null })),
+  const bad = newest([...runs.filter(r => r.error || !r.turns).map(r => ({ at: r.at, why: r.error || "the run did no work", context: r.context || null, said: r.what && r.todo ? { what: r.what, todo: r.todo } : null })),
     ...(["failed", "blocked"].includes(state?.state) ? [{ at: state.at, why: `${state.state === "blocked" ? "compiled nothing" : "failed"}${state.contexts ? ` (${state.contexts})` : ""}` }] : [])]);
-  const error = bad && (!good || Date.parse(bad.at) > Date.parse(good.at)) ? { ...bad, ...explainFailure(bad.why) } : null;
+  const error = bad && (!good || Date.parse(bad.at) > Date.parse(good.at)) ? { ...bad, ...(bad.said || explainFailure(bad.why)) } : null;   // a chat write's line keeps the words the person was given
   return { good: good?.at || null, error };
 }
 
