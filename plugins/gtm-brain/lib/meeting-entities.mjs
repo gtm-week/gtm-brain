@@ -7,6 +7,7 @@
 // before 0.35 is made at the upgrade (deriveMeetingEntities) or when its meeting is captured again.
 import * as lib from "./brain.mjs";
 import { entityId, withEntityLock } from "./entities.mjs";
+import { layout } from "./layout.mjs";
 
 export const MEETING_REF = "meeting";
 export const meetingEntityId = anchor => entityId(`meeting:${anchor}`);
@@ -20,6 +21,9 @@ export const meetingName = m => `${String(m.meeting.title).replace(/\s+/g, " ").
 
 /* Create the meeting entity of each anchor that has none yet. Returns the entities added. */
 export function ensureMeetingEntities(root, anchors) {
+  // a flat brain (before "upgrade the brain") gets no meeting pages: GTM Brain 0.34 reads flat pages and
+  // stops at a kind it does not know. The upgrade makes them for every meeting saved until then.
+  if (layout(root) !== "kinds") return [];
   const list = anchors.filter(isAnchor).filter(m => !lib.isForkCopy(m));
   if (!list.length) return [];
   return withEntityLock(root, () => {

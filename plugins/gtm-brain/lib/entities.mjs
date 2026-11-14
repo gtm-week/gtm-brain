@@ -8,7 +8,7 @@ import { refreshIndexedPages } from './entity-pages.mjs';
 import { hasMemoryIndex } from './memory-index-store.mjs';
 import { readSchema, fieldsFor, requiredRelations, kindHash, US, brainKinds } from './schema.mjs';
 import { DEFAULT_KINDS, KIND_NAME, NOT_KINDS } from './kinds.mjs';
-import { pagePaths, isPagePath, linkFrom, layout, kindPagePath, isKindPagePath, assetFolder, ENTITIES_DIR, HISTORY_DIR, flatPagePath } from './layout.mjs';
+import { pagePaths, isPagePath, linkFrom, layout, kindPagePath, isKindPagePath, assetFolder, ENTITIES_DIR, HISTORY_DIR, flatPagePath, flatKinds } from './layout.mjs';
 import { writeKindIndexes } from './entity-index.mjs';
 import { MemoryIndex } from './memory-index.mjs';
 import { meetingAttendees } from './meeting-entities.mjs';
@@ -348,6 +348,7 @@ export function writeEntityFiles(root, names) {
   mkdirSync(dir, { recursive: true });
   const perKind = layout(root) === "kinds";
   const old = readEntityFiles(root), used = new Set(readdirSync(dir)), changed = [];
+  let readable = null;
   const legacy = old.filter(e => e._fm.format !== ENTITY_FORMAT);
   if (legacy.length) {
     const backups = join(root, "work", "entity-migration"); mkdirSync(backups, { recursive: true });
@@ -376,6 +377,8 @@ export function writeEntityFiles(root, names) {
       e._path = target;
     }
     if (!isPagePath(e._path)) throw new Error("Invalid entity path");
+    if (!perKind && (!previous || previous.kind !== e.kind) && !(readable ||= flatKinds(root)).has(e.kind))
+      throw new Error(`${/^[aeiou]/.test(e.kind) ? "An" : "A"} ${e.kind} page needs the brain's entity folders: say "upgrade the brain" first (a teammate still on GTM Brain 0.34 cannot read that page in this brain's flat layout). ${e.name} was not saved as an entity.`);
     const fields = identity(e), before = previous && identity(previous), now = stamp();
     e._fm = { ...(previous?._fm || e._fm || {}), format: ENTITY_FORMAT, ...fields,
       created_at: previous?._fm.created_at || e._fm?.created_at || now,
@@ -791,18 +794,33 @@ function foldStrayPages(root) {
   if (layout(root) !== "kinds") return [];
   const flat = pagePaths(root).filter(p => !isKindPagePath(p) && /^brain\/entities\/[a-z0-9-]+\.md$/.test(p));
   if (!flat.length) return [];
-  const kept = readEntityFiles(root), byId = new Map(kept.map(e => [e.id, e])), touched = [];
-  const twins = flat.filter(rel => { try { const { fm } = parseEntityText(readFileSync(join(root, rel), "utf8"), rel); return byId.has(fm.id) && byId.get(fm.id)._path !== rel; } catch { return false; } });
+  const kept = readEntityFiles(root), pages = kept.filter(e => isKindPagePath(e._path)), touched = [];
+  // which kind page holds a flat page: the same id, an id it retired (a merge), else the one page whose name,
+  // alias or email matches (0.34 saw no pages, so it made a new identity for a name this brain already knows)
+  const byId = new Map(pages.flatMap(e => [e.id, ...e.previous_ids].map(id => [id, e])));
+  const key = v => String(v || "").trim().toLowerCase();
+  const holder = fm => {
+    if (byId.has(fm.id)) return byId.get(fm.id);
+    if (fm.redirect && byId.has(fm.redirect)) return byId.get(fm.redirect);
+    const names = new Set([fm.name, ...(fm.aliases || [])].map(key).filter(Boolean)), emails = new Set((fm.emails || []).map(key));
+    const hits = pages.filter(e => [e.name, ...e.aliases].some(n => names.has(key(n))) || e.emails.some(m => emails.has(key(m))));
+    const same = hits.filter(e => !fm.kind || e.kind === fm.kind);
+    return same.length === 1 ? same[0] : hits.length === 1 ? hits[0] : null;
+  };
+  const twins = [];
+  for (const rel of flat) { try { const text = readFileSync(join(root, rel), "utf8"), { fm } = parseEntityText(text, rel), page = idOK(fm.id) && holder(fm); if (page) twins.push({ rel, text, fm, page }); } catch {} }
   if (twins.length) {
     const backup = join(root, "work", "manual-edits", "entities"); mkdirSync(backup, { recursive: true });
-    for (const rel of twins) {
-      const text = readFileSync(join(root, rel), "utf8"), { fm } = parseEntityText(text, rel), page = byId.get(fm.id);
+    for (const { rel, text, fm, page } of twins) {
       for (const field of ["aliases", "emails"]) for (const v of fm[field] || []) if (!page[field].includes(v)) page[field].push(v);
+      if (!fm.redirect && fm.name && key(fm.name) !== key(page.name) && !page.aliases.some(a => key(a) === key(fm.name))) page.aliases.push(fm.name);
       for (const field of ["references", "identity_sources"]) for (const r of fm[field] || []) if (!page[field].some(x => x.kind === r.kind && x.ref === r.ref)) page[field].push(r);
+      if (fm.id !== page.id && !page.previous_ids.includes(fm.id)) page.previous_ids.push(fm.id);
       writeFileSync(join(backup, `${basename(rel, ".md")}-${Date.now()}.md`), text);
       rmSync(join(root, rel)); touched.push(rel, page._path);
     }
-    writeEntityFiles(root, kept);
+    const gone = new Set(twins.map(t => t.rel));
+    writeEntityFiles(root, kept.filter(e => !gone.has(e._path)));
   }
   const moved = moveFlatPages(root);
   return [...touched, ...moved.moves.flatMap(m => [m.from, m.to]), ...moved.indexes];

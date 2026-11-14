@@ -81,3 +81,14 @@ export function movedAsset(root, path) {
   }
   return null;
 }
+
+/* The kinds a flat page may carry: the ones GTM Brain 0.34 reads (it reads only flat pages, and one page of a
+   kind it does not know stops every entity read there). Its five defaults plus each "## <Kind>" section of
+   SCHEMA.md except Meeting, which 0.34 refuses. A meeting or an offering without its section waits for the
+   kind folders ("upgrade the brain"), where 0.34 never looks. */
+export const KINDS_034 = ["person", "organization", "product", "event", "tool"];
+export function flatKinds(root) {
+  let text = ""; try { text = readFileSync(join(root, "SCHEMA.md"), "utf8"); } catch {}
+  const sections = [...text.matchAll(/^##[ \t]+([A-Za-z][A-Za-z0-9_]*)[ \t]*$/gm)].map(m => m[1].toLowerCase()).filter(k => k !== "meeting" && k !== "relationships");
+  return new Set([...KINDS_034, ...sections]);
+}

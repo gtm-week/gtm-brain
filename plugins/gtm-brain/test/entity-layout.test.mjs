@@ -11,6 +11,7 @@ import { entityId, readEntityChange, readEntityFiles, editedBody } from "../lib/
 import { isPagePath } from "../lib/layout.mjs";
 import { prepareAsset, assetRows } from "../lib/assets.mjs";
 import { randomUUID } from "node:crypto";
+import { parseSchema } from "../lib/schema.mjs";
 import { readdirSync } from "node:fs";
 process.env.GTM_BRAIN_NO_COMMIT = "1";
 process.env.GTM_BRAIN_NO_COMPILE = "1";
@@ -294,4 +295,52 @@ test("flat pages a teammate on 0.34 writes into an upgraded brain: reads keep wo
   assert.equal(m._path, maxPath); assert.deepEqual(m.aliases, ["MJ"]); assert.deepEqual(m.emails, ["max@acme.test"], "what only the twin held is kept");
   assert.equal(after.find(n => n.id === lena)._path, `brain/entities/people/lena-ost-${sid(lena)}.md`);
   assert.equal(readdirSync(join(root, "work/manual-edits/entities")).length, 1, "the twin's text is kept");
+});
+
+test("a 0.34 teammate's flat page for a merged, renamed or aliased entity folds into the page that holds it", () => {
+  const root = kindBrain();
+  const chris = lib.addName(root, "Chris"), kp = lib.addName(root, "Krzysztof Pawlak", { aliases: ["KP"] });
+  const preview = lib.mergeEntities(root, { source: chris.id, target: kp.id });
+  lib.mergeEntities(root, { source: chris.id, target: kp.id, by: "ann", as_of: preview.as_of });
+  const max = lib.addName(root, "Max Jendral");
+  // 0.34 sees no pages: it writes Chris again (the merged id), and "KP" as a person of its own (a new id from the alias)
+  writeFileSync(join(root, "brain/entities/chris.md"), page(chris.id, "Chris").replace("emails: []", "emails: [chris@acme.test]"));
+  writeFileSync(join(root, "brain/entities/kp.md"), page(entityId("KP"), "KP"));
+  writeFileSync(join(root, "brain/entities/max-jendral.md"), page(max.id, "Max Jendral"));
+  assert.doesNotThrow(() => lib.readNames(root), "reads keep working");
+  assert.doesNotThrow(() => lib.refreshEntityPages(root), "the next write folds them in");
+  assert.deepEqual(readdirSync(join(root, "brain/entities")).filter(f => f.endsWith(".md")), [], "no flat page left");
+  const after = lib.readNames(root), k = after.find(n => n.id === kp.id);
+  assert.equal(after.filter(n => n.name === "KP" || n.name === "Chris").length, 0, "no duplicate identity");
+  assert.ok(k.emails.includes("chris@acme.test"), "what only the merged twin held reaches the survivor");
+  assert.ok(k.previous_ids.includes(entityId("KP")), "the alias page's id resolves to the survivor");
+  assert.equal(lib.resolveEntity(after, entityId("KP")).id, kp.id);
+  assert.equal(after.filter(n => n.id === max.id).length, 1);
+  assert.doesNotThrow(() => lib.refreshEntityPages(root), "a second write is quiet");
+});
+
+test("a flat brain writes no page a teammate on 0.34 cannot read: a meeting or an offering waits for the kind folders", () => {
+  const root = brain("gtm-flat-kinds-");
+  assert.equal(layout.layout(root), "flat");
+  assert.throws(() => lib.addName(root, "Pilot package", { kind: "offering" }), /upgrade the brain/);
+  assert.ok(!readdirSync(join(root, "brain/entities")).some(f => f.startsWith("pilot-package")), "nothing written for it");
+  // with an Offering section in SCHEMA.md, 0.34 reads the kind too
+  writeFileSync(join(root, "SCHEMA.md"), readFileSync(new URL("../templates/SCHEMA.md", import.meta.url), "utf8"));
+  assert.equal(lib.addName(root, "Pilot package", { kind: "offering" }).kind, "offering");
+  assert.deepEqual(lib.ensureMeetingEntities(root, [{ id: "m_1", meeting: { title: "Kickoff", occurred_at: "2026-11-12" } }]), [], "no meeting page in a flat brain");
+  for (const e of lib.readNames(root)) assert.ok(layout.KINDS_034.includes(e.kind) || e.kind === "offering", e.kind);
+});
+
+test("the shipped SCHEMA.md stays readable by 0.34: no Meeting section, no meeting in a From or To column", () => {
+  const text = readFileSync(new URL("../templates/SCHEMA.md", import.meta.url), "utf8");
+  // 0.34 refused these headings (its NOT_KINDS) and a To or From naming a kind without a section
+  for (const k of ["meeting", "meetings", "company", "team", "us", "project"]) assert.doesNotMatch(text, new RegExp(`^##\\s+${k}\\s*$`, "im"), k);
+  const sections = new Set([...layout.KINDS_034, ...[...text.matchAll(/^##\s+(\w+)\s*$/gm)].map(m => m[1].toLowerCase())]);
+  const rels = text.slice(text.indexOf("## Relationships")).split("\n").filter(l => /^\|\s*[a-z_]+\s*\|/.test(l) && !/^\|\s*type\s*\|/i.test(l));
+  assert.ok(rels.length > 3);
+  for (const row of rels) { const [, from, to] = row.split("|").slice(1).map(c => c.trim()); for (const k of [...from.split(/,\s*/), ...to.split(/,\s*/)]) assert.ok(sections.has(k) || k === "us", `${row}: ${k}`); }
+  // and 0.35 still knows the meeting: its fields and attended reaching it are built in
+  const s = parseSchema(text);
+  assert.deepEqual(s.kinds.meeting.fields.map(f => [f.name, f.required]), [["date", true], ["title", false], ["organizer", false], ["source", false]]);
+  assert.ok(s.relations.attended.to.includes("meeting"));
 });
