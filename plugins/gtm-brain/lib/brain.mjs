@@ -1252,7 +1252,7 @@ export function rerender(root) {
 // retracts); the file is never rewritten. effectiveMemories() resolves them for readers.
 export const MEMORY_FIELDS = ["id", "context", "at", "authors", "via", "kind", "tools", "people", "content", "source", "actions", "supersedes", "retracts", "tags", "asset", "entities", "entity_mentions", "customer", "customer_coverage", "relation", ...MEETING_FIELDS];
 export const KINDS = ["note", "decision", "question"];
-export const MENTION_RESOLUTIONS = ["exact", "inferred_first_name", "new", "confirmed_new", "answered"];
+export const MENTION_RESOLUTIONS = ["exact", "inferred_first_name", "new", "confirmed_new"];
 export const LEGACY_KINDS = ["action"]; // retired; records written before stay valid
 const isList = (v, f) => Array.isArray(v) && v.every(f);
 const isStr = s => typeof s === "string" && s.length > 0;
