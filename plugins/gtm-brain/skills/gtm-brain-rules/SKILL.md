@@ -106,6 +106,7 @@ them against the new row: `query` with object `rules`.
 - Never move, rename or delete files as part of a rule change without asking.
 - What the brain checks by itself (tagged `check`): a quoted word that must not appear in a note
   or a draft (Never use "cheap"), a status only before, without or until a fact ("Never call a
-  company a customer before a signed contract"), a note never without a source, and a SCHEMA.md
-  field always included ("Always include the role when saving a person"). Any other rule tagged
+  company a customer before a signed contract"), a note never without a source (on a topic when
+  the rule names one: "Never record a deal size without a source"), and a SCHEMA.md field always
+  included ("Always include the role when saving a person"). Any other rule tagged
   `check` is shown as guidance, and the rules check says so.

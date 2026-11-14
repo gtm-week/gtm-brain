@@ -186,8 +186,8 @@ function readOurRulesNow(root) {
 export const CHECK_PATTERNS = [
   { kind: "word", example: `Never use "cheap" in a note or a draft.`, about: "a quoted word or phrase (or 'the word X') after never, do not or avoid: refused in a saved note, reported in a draft" },
   { kind: "status", example: "Never call a company a customer before a signed contract.", about: "a status (customer, prospect, former customer, or a relationship such as partner) only before, without or until a fact: a save that sets the status (the customer or relation block, or a note saying it is now one) is refused unless this note or an earlier note about the entity says the fact" },
-  { kind: "source", example: "Never save a company note without a source.", about: "never without a source, link or reference: a save with no source pointer besides the chat is refused" },
-  { kind: "field", example: "Always include the role when saving a person.", about: "always include, record or give a SCHEMA.md field: a save about that kind is refused unless this note or an earlier one about the entity mentions the field" },
+  { kind: "source", example: "Never save a company note without a source.", about: "never without a source, link or reference: a save with no source pointer besides the chat is refused; when the rule names a topic (\"Never record a deal size without a source\"), only a note that says it" },
+  { kind: "field", example: "Always include the role when saving a person.", about: "always include, record or give a SCHEMA.md field: a save about a kind that has the field is refused unless this note, an earlier one about the entity or its compiled brief gives it" },
 ];
 const SAVE_VERB = /^(?:sav(?:e|es|ed|ing)|record(?:s|ed|ing)?|add(?:s|ed|ing)?|writ(?:e|es|ing)|log(?:s|ged|ging)?|stor(?:e|es|ed|ing)|keep(?:s|ing)?|enter(?:s|ed|ing)?|put(?:s|ting)?|mention(?:s|ed|ing)?|captur(?:e|es|ed|ing)|tak(?:e|es|ing))$/i;
 const GENERIC = /^(?:a|an|the|any|anything|something|new|notes?|facts?|information|info|memor(?:y|ies)|about|of|on|for|in|compan(?:y|ies)|people|persons?|organi[sz]ations?|contacts?|records?|entr(?:y|ies)|data)$/i;
