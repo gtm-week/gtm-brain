@@ -87,7 +87,7 @@ starts on something, match it against the contexts (their titles, standing rules
 - fits a loaded context: just work;
 - fits an existing unloaded context better: load it and explain in one line; keep other
 loaded contexts unless the person asks to replace them;
-- fits none: use `gtm-brain-use-brain` (or `gtm-brain-use-brain` to pick one). Check existing and archived matches first.
+- fits none: check existing and archived matches first.
 Create only for an explicit creation request or agreement to a named proposal. Propose
 only when distinct purpose, sustained work and useful separation justify a new context.
 Ordinary customer facts stay in existing contexts with identity and source references;

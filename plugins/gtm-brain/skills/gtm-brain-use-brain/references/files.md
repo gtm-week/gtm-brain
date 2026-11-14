@@ -68,7 +68,7 @@ what it is attached to (entity, role, status) when it is an entity file, what wa
 
 ## From the brain rules: attachments
 
-A file the person hands over goes through gtm-brain-use-brain's references/files.md: it lands beside
+A file the person hands over lands beside
 its owner (a document's files folder, or `brain/entities/<id>/` for a person, company or product;
 a file with no owner is refused, so ask what it belongs to; a project file stays in its project
 folder), an entity file is attached, and its content is noted. Under the hood attachments are

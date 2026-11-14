@@ -60,6 +60,9 @@ test("the brain rules fit what Codex reads: templates/AGENTS.md stays under 32,7
   const rules = readFileSync(join(repo, "plugins/gtm-brain/templates/AGENTS.md"));
   assert.ok(rules.length <= 32768, `templates/AGENTS.md is ${rules.length} bytes; Codex drops everything after 32768`);
   const text = rules.toString("utf8");
+  // setup fills in the company name; a long one must still fit
+  const filled = Buffer.byteLength(text.replaceAll("{{COMPANY}}", "A Rather Long Company Name Holding International Sp. z o.o."));
+  assert.ok(filled <= 32768, `with a long company name the rules are ${filled} bytes`);
   assert.match(text, /## Meeting evidence/, "the last section is still in the file");
   assert.match(text, /\*\*Documents govern the work\.\*\*/);
   assert.match(text, /\*\*Meeting evidence is always captured\.\*\*/);

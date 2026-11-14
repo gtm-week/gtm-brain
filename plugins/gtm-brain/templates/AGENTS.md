@@ -198,7 +198,8 @@ context. Use displayed names in conversation and stable IDs in tools.
    that a name may be someone in the registry ("Pierre Dupont" when Pierre Aubert is known),
    nothing was written yet: ask in one line, *"Is this the Pierre Aubert we know?"* Yes: `add_name`
    with the new spelling as an alias, then `remember` again. No: `remember` again with the name in
-   `new_names`. A first name that belongs to exactly one known entity is taken as that one.
+   `new_names`. Never merge two names or add a near-duplicate without the person's word. A
+   first name that belongs to exactly one known entity is taken as that one.
 2a. **Every company, product, team and person a note names is an entity.** Pass them all in
    `people`, as written; use `add_name` with kind person, organization or product and an optional
    organization subtype (company or team). A tool the team uses (Gmail, HubSpot, Granola) goes in
