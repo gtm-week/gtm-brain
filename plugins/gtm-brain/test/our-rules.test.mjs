@@ -109,7 +109,7 @@ test("checks: the supported patterns are read; anything else tagged check stays 
   assert.deepEqual(R.checkOf("Never call a company a customer before a signed contract.", tag, VOCAB), { kind: "status", status: "customer", fact: ["sign", "contract"], factText: "a signed contract" });
   assert.deepEqual(R.checkOf("Only mark an organization as a partner once the agreement is signed.", tag, VOCAB), { kind: "status", link: "partner_of", fact: ["agreement", "sign"], factText: "the agreement is signed" });
   assert.deepEqual(R.checkOf("Never save a company note without a source.", tag, VOCAB), { kind: "source" });
-  assert.deepEqual(R.checkOf("Always include the role when saving a person.", tag, VOCAB), { kind: "field", field: "role", words: ["role"] });
+  assert.deepEqual(R.checkOf("Always include the role when saving a person.", tag, VOCAB), { kind: "field", field: "role", words: ["role"], kinds: ["person"] });
   assert.equal(R.checkOf("Be kind to partners.", tag, VOCAB), null);
   const root = withRules(brain(), "Be kind to partners.\n> applies to: organization · check\n");
   assert.match(rulesReport(root), /tagged check, but no check can be read from it; it is shown as guidance/);
@@ -297,7 +297,7 @@ test("review: the rules check lists at most ten unfiled rules, and says what a p
   assert.equal((report.match(/is not filed yet/g) || []).length, 10);
   assert.match(report, /21 more Our rules lines are not filed yet/);
   const one = rulesReport(withRules(brain(), `Never use "cheap" in a note or a draft.\n\nNever call a company a customer before a signed contract.\n`));
-  assert.match(one, /check on the line under it; as a check it refuses a note that says "cheap"\n/);
+  assert.match(one, /check on the line under it; as a check it refuses a note and reports a draft that says "cheap"\n/);
   assert.match(one, /as a check it refuses saving one as a customer until a note about it says "a signed contract"/);
 });
 
@@ -308,4 +308,48 @@ test("review: a brain with no Our rules pays nothing: no scope is worked out for
   withRules(root, CONTRACT);
   assert.match(R.replyRules(root, { scopes: () => { called++; return [ORG]; }, verb: "saving" }), /signed contract/);
   assert.equal(called, 1);
+});
+
+/* ---------- review, round three: checks that must not widen, proposals that must reach the save ---------- */
+test("review: a source rule about one topic refuses only notes about that topic", () => {
+  const p = R.parseOurRules("Never record a deal size without a source.\n> applies to: general · when: saving · check\n", VOCAB);
+  assert.deepEqual(p.rules[0].check, { kind: "source", topic: ["deal", "size"], topicText: "a deal size" });
+  const root = brain();
+  assert.deepEqual(R.saveRefusals(root, { context: "company", content: "Northwind moved its office.", companies: ["Northwind"] }, { parsed: p, registry: [] }), [], "not about a deal size");
+  assert.match(R.saveRefusals(root, { context: "company", content: "Northwind's deal size is 40k.", companies: ["Northwind"] }, { parsed: p, registry: [] })[0] || "", /refused by Our rules "Never record a deal size without a source\."/);
+  assert.equal(R.checkOf("Never save a company note without a source.", { applies: [{ kind: "organization" }] }, VOCAB).topic, undefined, "a note of a kind has no topic");
+  assert.match(R.proposeTag("Never record a deal size without a source.", VOCAB).refuses, /refuses a note about a deal size with no source/);
+});
+
+test("review: a field check is only asked of the kinds that have the field", () => {
+  const p = R.parseOurRules("Always include their location.\n> applies to: general · when: saving location · check\n", VOCAB);
+  const root = brain();
+  assert.deepEqual(R.saveRefusals(root, { context: "company", content: "Northwind moved its office.", companies: ["Northwind"] }, { parsed: p, registry: [] }), [], "an organization has no location field");
+  assert.equal(R.saveRefusals(root, { context: "company", content: "Met Lena Fischer.", people: ["Lena Fischer"] }, { parsed: p, registry: [] }).length, 1);
+  assert.equal(R.proposeTag("Always include their location.", VOCAB).line, "> applies to: person · when: saving location · check", "the kind that has the field");
+});
+
+test("review: a customer status rule is proposed for organizations, so the customer block reaches it", () => {
+  const line = R.proposeTag("Don't mark anyone as a prospect without a qualified call.", VOCAB).line;
+  assert.equal(line, "> applies to: organization · when: saving prospect status · check");
+  const p = R.parseOurRules(`Don't mark anyone as a prospect without a qualified call.\n${line}\n`, VOCAB), root = brain();
+  assert.equal(R.saveRefusals(root, { context: "company", content: "Globex looks interesting.", companies: ["Globex"], customer: { entity: "Globex", status: "prospect", basis: "user", observed_at: NOW } }, { parsed: p, registry: [] }).length, 1);
+});
+
+test("review: a drafting word check says it is reported in a draft, not that it refuses a note", () => {
+  const p = R.proposeTag('Never write "guaranteed" in an email to a customer.', VOCAB);
+  assert.match(p.line, /when: drafting · check$/);
+  assert.equal(p.refuses, 'reports a draft that says "guaranteed"');
+  const both = R.proposeTag('Never use "cheap" in a note or a draft.', VOCAB);
+  assert.equal(both.refuses, 'refuses a note and reports a draft that says "cheap"');
+});
+
+test("review: a fact in one clause counts even when another clause of the sentence has a no", () => {
+  const root = withRules(brain(), CONTRACT);
+  lib.addName(root, "Northwind", { kind: "organization" });
+  const block = { entity: "Northwind", status: "customer", basis: "user", observed_at: NOW };
+  for (const content of ["Northwind signed the contract, no changes to the terms, and is our customer.", "Northwind signed the contract yesterday; we will invoice next week and they are a customer."])
+    assert.deepEqual(R.saveRefusals(root, { context: "company", content, companies: ["Northwind"], customer: block }), [], content);
+  for (const content of ["Northwind is our customer, but there is no signed contract.", "Northwind is our customer and we will sign the contract soon."])
+    assert.equal(R.saveRefusals(root, { context: "company", content, companies: ["Northwind"], customer: block }).length, 1, content);
 });

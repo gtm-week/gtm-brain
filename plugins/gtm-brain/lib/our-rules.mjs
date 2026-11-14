@@ -177,6 +177,8 @@ export const CHECK_PATTERNS = [
   { kind: "source", example: "Never save a company note without a source.", about: "never without a source, link or reference: a save with no source pointer besides the chat is refused" },
   { kind: "field", example: "Always include the role when saving a person.", about: "always include, record or give a SCHEMA.md field: a save about that kind is refused unless this note or an earlier one about the entity mentions the field" },
 ];
+const SAVE_VERB = /^(?:sav(?:e|es|ed|ing)|record(?:s|ed|ing)?|add(?:s|ed|ing)?|writ(?:e|es|ing)|log(?:s|ged|ging)?|stor(?:e|es|ed|ing)|keep(?:s|ing)?|enter(?:s|ed|ing)?|put(?:s|ting)?|mention(?:s|ed|ing)?|captur(?:e|es|ed|ing)|tak(?:e|es|ing))$/i;
+const GENERIC = /^(?:a|an|the|any|anything|something|new|notes?|facts?|information|info|memor(?:y|ies)|about|of|on|for|in|compan(?:y|ies)|people|persons?|organi[sz]ations?|contacts?|records?|entr(?:y|ies)|data)$/i;
 const NEG = /\b(?:never|don'?t|do not|avoid|no one should|not)\b/i;
 function statusOf(word, vocab) {
   const w = word.toLowerCase().replace(/s$/, "").replace(/\s+/g, "_");
@@ -192,12 +194,20 @@ export function checkOf(text, tag, vocab) {
   m = t.match(/\b(?:never|don'?t|do not)\s+(?:call|mark|tag|save|record|set|list|label|treat)\s+(?:\w+\s+){0,3}?(?:as\s+)?(?:a|an|our)\s+(former customer|customer|prospect|[a-z]+)\s+(?:before|without|until|unless)\s+(?:there is\s+|we have\s+|they have\s+)?(.+?)\.?$/i)
     || t.match(/\bonly\s+(?:call|mark|tag|save|record|set|list|label|treat)\s+(?:\w+\s+){0,3}?(?:as\s+)?(?:a|an|our)\s+(former customer|customer|prospect|[a-z]+)\s+(?:after|once|when|if)\s+(?:there is\s+|we have\s+|they have\s+)?(.+?)\.?$/i);
   if (m) { const s = statusOf(m[1], vocab), fact = stems(m[2]); if (s && fact.length) return { kind: "status", ...s, fact, factText: m[2].trim() }; }
-  if (/\b(?:never|don'?t|do not)\b.*\bwithout\s+(?:a\s+|an\s+|its\s+|the\s+)?(?:source|link|reference|record)\b/i.test(t) || /\balways\b.*\b(?:give|add|include|attach|cite)\s+(?:a\s+|the\s+|its\s+)?(?:source|link|reference)\b/i.test(t)) return { kind: "source" };
+  m = t.match(/\b(?:never|don'?t|do not)\b(.*?)\bwithout\s+(?:a\s+|an\s+|its\s+|the\s+)?(?:source|link|reference|record)\b/i);
+  if (m || /\balways\b.*\b(?:give|add|include|attach|cite)\s+(?:a\s+|the\s+|its\s+)?(?:source|link|reference)\b/i.test(t)) {
+    // what the note is about, when the rule says ("a deal size"): only a note that says it needs the source
+    const words = m ? m[1].trim().split(/\s+/).filter(Boolean) : [];
+    while (words.length && SAVE_VERB.test(words[0])) words.shift();
+    const kindWord = w => [...vocab.kinds, ...vocab.subtypes].includes(w.toLowerCase().replace(/s$/, ""));
+    const topic = stems(words.filter(w => !SAVE_VERB.test(w) && !GENERIC.test(w) && !kindWord(w)).join(" "));
+    return topic.length ? { kind: "source", topic, topicText: words.join(" ").replace(/[.,;:]$/, "") } : { kind: "source" };
+  }
   m = t.match(/\b(?:always|must|every \w+ needs?|needs?)\b.*?\b(?:include|record|give|have|add|state|capture|note|name)\s+(?:the|their|its|a|an)?\s*(.+)$/i);
   if (m) {
     const kinds = (tag?.applies || []).filter(a => a.kind).map(a => a.subtype || a.kind), pool = kinds.length ? kinds : Object.keys(vocab.fields);
     const after = stems(m[1]);
-    for (const k of pool) for (const f of vocab.fields[k] || []) { const fw = f.split("_").map(stem); if (fw.every(w => after.includes(w))) return { kind: "field", field: f, words: fw }; }
+    for (const k of pool) for (const f of vocab.fields[k] || []) { const fw = f.split("_").map(stem); if (fw.every(w => after.includes(w))) return { kind: "field", field: f, words: fw, kinds: Object.keys(vocab.fields).filter(x => vocab.fields[x].includes(f)) }; }
   }
   return null;
 }
@@ -297,7 +307,8 @@ const CUSTOMER_SAID = /\b(?:is|are|became|becomes|become|now|as|turned into|sign
    expects them ("will sign the contract"). A doubtful sentence refuses: the refusal says what to save first. */
 const DENIED = /\b(?:no|not|never|without|missing|pending|awaiting|waiting|lacks?|will|going to|about to|(?:plan|expect|hope|intend|want|need)(?:s|ed|ing)? to|should|might|may|if|once|unless|until)\b|n['’]t\b/i;
 const sentences = t => String(t || "").split(/(?<=[.;!?])\s+|\n+/);
-const says = (text, words) => sentences(text).some(s => has(s, words) && !DENIED.test(s));
+const clauses = s => s.split(/\s*,\s*|\s+(?:and|but|though|although|while|whereas)\s+/i);
+const says = (text, words) => sentences(text).some(s => clauses(s).some(c => has(c, words) && !DENIED.test(c)));
 /* Who a note calls a customer in plain words: the name nearest before the phrase in its sentence; with no name
    there, the only organization in the note. */
 function saidCustomers(content, scopes) {
@@ -337,8 +348,9 @@ export function saveRefusals(root, entry, { parsed = null, registry = null } = {
       const c = r.check;
       if (c.kind === "word") { if (wordIn(content, c.word)) out.push(`refused by Our rules ${quote(r)}: the note says "${c.word}". Say it without that word, in the person's meaning`); continue; }
       if (c.kind === "source") {
+        if (c.topic && !has(content, c.topic)) continue;   // the rule is about notes on its topic only
         const sources = (() => { try { return lib.parseSources(entry.sources ?? entry.source); } catch { return []; } })();
-        if (!sources.some(s => s && !CHAT_KINDS.includes(s.kind))) out.push(`refused by Our rules ${quote(r)}: the note has no source. Add where it comes from (an email id, a CRM record, a meeting), or ask the person`);
+        if (!sources.some(s => s && !CHAT_KINDS.includes(s.kind))) out.push(`refused by Our rules ${quote(r)}: the note${c.topic ? ` is about ${c.topicText} and` : ""} has no source. Add where it comes from (an email id, a CRM record, a meeting), or ask the person`);
         continue;
       }
       for (const s of general ? scopes : hit) {
@@ -351,6 +363,7 @@ export function saveRefusals(root, entry, { parsed = null, registry = null } = {
           if (says(content, c.fact) || earlier(s).some(m => says(m.content, c.fact))) continue;
           out.push(`refused by Our rules ${quote(r)}: ${s.name} would be saved as ${c.status ? (c.status === "former_customer" ? "a former customer" : `a ${c.status}`) : c.link.replace(/_/g, " ")}, and no note about it says "${c.factText}". Save that first (with its source), or save this without the ${c.status ? "status" : "relationship"}`);
         } else if (c.kind === "field") {
+          if (c.kinds && !c.kinds.includes(s.kind) && !(s.subtype && c.kinds.includes(s.subtype))) continue;   // that kind has no such field
           let filled = []; try { filled = JSON.parse(lib.resolveEntity(registry, s.id || s.name)?._fm?.compiled_fields || "[]"); } catch {}
           if (Array.isArray(filled) && filled.some(f => f?.field === c.field && String(f.text ?? "").trim())) continue;   // the compiled brief already holds it
           if (has(content, c.words) || earlier(s).some(m => has(m.content, c.words))) continue;
@@ -374,9 +387,9 @@ export function draftFindings(parsed, scopes, text) {
 
 /* ---------- Filing: proposals for an untagged rule ---------- */
 /* What a check refuses, in one clause: the person accepts a check knowing what it does. */
-export const checkSays = c => c.kind === "word" ? `refuses a note that says "${c.word}"`
+export const checkSays = (c, when = null) => c.kind === "word" ? `${when === "drafting" ? "reports a draft" : when === "saving" ? "refuses a note" : "refuses a note and reports a draft"} that says "${c.word}"`
   : c.kind === "status" ? `refuses saving one as ${c.status ? (c.status === "former_customer" ? "a former customer" : `a ${c.status}`) : c.link.replace(/_/g, " ")} until a note about it says "${c.factText}"`
-  : c.kind === "source" ? "refuses a note with no source besides the chat" : `refuses a note about one until a note or its brief gives the ${c.field.replace(/_/g, " ")}`;
+  : c.kind === "source" ? `refuses a note ${c.topic ? `about ${c.topicText} ` : ""}with no source besides the chat` : `refuses a note about one until a note or its brief gives the ${c.field.replace(/_/g, " ")}`;
 export const MAX_UNFILED = 10;   // the rules check lists this many unfiled rules, then one line counting the rest
 const KIND_WORDS = [[/\b(person|people|contacts?|leads?|someone|anyone|speakers?|candidates?)\b/i, "person"], [/\b(compan(y|ies)|organi[sz]ations?|accounts?|customers?|clients?|vendors?|firms?)\b/i, "organization"], [/\bproducts?\b/i, "product"], [/\b(events?|webinars?|conferences?|meetups?)\b/i, "event"], [/\btools?\b/i, "tool"]];
 /* A tag line for an untagged rule: what Codex proposes; the person accepts, changes it or keeps the rule general. */
@@ -392,12 +405,13 @@ export function proposeTag(text, vocab) {
     : /\b(read(s|ing)?|briefs?|answer(s|ing)?|summar)/i.test(t) ? "reading" : null;
   const tag = { applies: applies.filter(a => !a.startsWith("link ")).map(k => ({ kind: k })).concat(applies.filter(a => a.startsWith("link ")).map(a => ({ link: a.slice(5) }))) };
   const check = checkOf(t, tag, vocab);
-  if (check?.kind === "status") { when = "saving"; }
+  if (check?.kind === "status") { when = "saving"; if (check.status) applies.splice(0, applies.length, "organization"); }   // a customer status is saved on a company
+  if (check?.kind === "field" && !applies.length) applies.push(...vocab.kinds.filter(k => check.kinds.includes(k)));   // the kinds that have the field
   const on = check?.kind === "status" ? (check.status ? `${check.status.replace(/_/g, " ")} status` : check.link) : check?.kind === "field" ? check.field : "";
   if (check && !when) when = check.kind === "word" ? null : "saving";
   if (check?.kind === "word" && /\b(notes?|sav(e|ing))\b/i.test(t) && /\b(drafts?|writ(e|ing)|emails?|messages?)\b/i.test(t)) when = null;   // both: no when
   const parts = [`applies to: ${applies.length ? applies.join(", ") : "general"}`, ...(when ? [`when: ${when}${on ? ` ${on}` : ""}`] : []), check ? "check" : "guidance"];
-  return { line: `> ${parts.join(" · ")}`, check: !!check, general: !applies.length, refuses: check ? checkSays(check) : "", keep: `> applies to: ${applies.length ? applies.join(", ") : "general"} · guidance` };
+  return { line: `> ${parts.join(" · ")}`, check: !!check, general: !applies.length, refuses: check ? checkSays(check, when) : "", keep: `> applies to: ${applies.length ? applies.join(", ") : "general"} · guidance` };
 }
 
 /* ---------- A rule that starts work is a workflow ---------- */
