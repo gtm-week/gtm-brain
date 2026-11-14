@@ -471,13 +471,17 @@ function applyCompilation(root, name, { as_of, by, brief }) {
   return { path: saved._path, note: lib.commit(root, lib.ENTITIES_PATHS, `compile entity: ${saved.name} by ${author}`).note };
 }
 
+const BRIEF_TIMELINE = 50, BRIEF_WITHDRAWALS = 10, BRIEF_SOURCES = 30;
+const moreLine = (n, id) => `${n} more: query memories with filters.entities=${id}`;
 export function entityBrief(root, name, options = {}) {
   const registry = options.registry || lib.readNames(root), facts = options.facts || entityFacts(root, name, { ...options, registry });
   if (!facts.stale && facts.previous) validateBrief(facts, facts.previous);
   const e = resolveEntity(registry, name), compilation = facts.stale ? null : facts.previous;
   const evidence = lib.hideForkCopies(options.context ? facts.evidence.filter(m => m.context === options.context) : facts.evidence).sort((a, b) => Date.parse(b.at) - Date.parse(a.at) || a.id.localeCompare(b.id));
-  const timeline = options.context ? lib.memoryTimeline(evidence) : facts.timeline;
-  let markdown = renderBrief({ ...facts, timeline }, compilation, evidence, registry, options.context);
+  // one context's view is capped like the whole brief: a big brain's brief ran to megabytes
+  const scoped = options.context ? lib.memoryTimeline(evidence) : null;
+  const timeline = scoped ? scoped.slice(0, BRIEF_TIMELINE) : facts.timeline;
+  let markdown = renderBrief({ ...facts, timeline, ...(scoped ? { timeline_total: scoped.length } : {}) }, compilation, evidence, registry, options.context);
   if (facts.file_notes && !options.context) markdown += `\n## Saved Markdown\n\nThis text was preserved from the editable file. It is not automatically treated as context evidence.\n\n${facts.file_notes.markdown}`;
   if (options.absoluteLinks) markdown = markdown.replace(/\]\((\.\.\/contexts\/[^)]+|[a-z0-9-]+\.md)\)/g,
     (_, path) => `](${dest(resolve(root, "brain", "entities", decodeURI(path)))})`);
@@ -585,7 +589,9 @@ function renderBrief(facts, brief, evidence, registry, scope) {
       const recent = c.memories.filter(m => !m.retracts).sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 3);
       out.push("\nLatest recorded evidence (not a verified current status):\n\n" + (recent.map(m => `- ${md(m.content)} (${md(lib.memoryTimeText(m))}) ${citation(m.id)}`).join("\n") || "No remaining current claims."));
     }
-    for (const m of c.memories.filter(m => m.retracts)) out.push(`\nWithdrawal: ${md(m.content)} ${citation(m.id)}`);
+    const withdrawals = c.memories.filter(m => m.retracts);
+    for (const m of withdrawals.slice(0, BRIEF_WITHDRAWALS)) out.push(`\nWithdrawal: ${md(m.content)} ${citation(m.id)}`);
+    if (withdrawals.length > BRIEF_WITHDRAWALS) out.push(`\n${withdrawals.length - BRIEF_WITHDRAWALS} more withdrawals. ${moreLine(withdrawals.length - BRIEF_WITHDRAWALS, facts.entity.id)}.`);
   }
   out.push("\n## Relationships");
   const recorded = relationLines(facts, registry, citation, scope);
@@ -599,7 +605,7 @@ function renderBrief(facts, brief, evidence, registry, scope) {
   if (peers.size) out.push("\nAlso mentioned with: " + [...peers].map(n => { const e = registry.find(x => x.name === n); return e?._path ? link(n, basename(e._path)) : md(n); }).join(", ") + ".");
   const timeline = facts.timeline;
   out.push("\n## Timeline", "\nNotes in recording order, newest first. Relevant event dates are kept in the note text; the timestamp labels when the memory was recorded.");
-  if (facts.timeline_total > timeline.length) out.push(`\nShowing the latest ${timeline.length} of ${facts.timeline_total} current context records. Follow the full memory histories below for earlier evidence.`);
+  if (facts.timeline_total > timeline.length) out.push(`\nShowing the latest ${timeline.length} of ${facts.timeline_total} current context records. Follow the full memory histories below for earlier evidence. ${moreLine(facts.timeline_total - timeline.length, facts.entity.id)}${scope ? ` and filters.context=${scope}` : ""}.`);
   for (const m of timeline) {
     out.push(`\n- ${md(lib.memoryTimeText(m))}: ${md(m.content)} ${citation(m.id)}`);
   }
@@ -607,7 +613,8 @@ function renderBrief(facts, brief, evidence, registry, scope) {
   out.push("\n## Further information");
   for (const c of contexts) out.push(`\n- ${link(c.title, `../contexts/${c.context}/context.md`)} · ${link("Full memory history", `../contexts/${c.context}/memories.jsonl`)}`);
   const sources = new Map(selected.flatMap(m => m.source.map(s => [JSON.stringify(s), s])));
-  for (const s of sources.values()) out.push(`\n- ${source(s)}`);
+  for (const s of [...sources.values()].slice(0, BRIEF_SOURCES)) out.push(`\n- ${source(s)}`);
+  if (sources.size > BRIEF_SOURCES) out.push(`\n${sources.size - BRIEF_SOURCES} more sources. ${moreLine(sources.size - BRIEF_SOURCES, facts.entity.id)}.`);
   out.push("\nThis brief is compiled from context memories. You can edit this file; keep its frontmatter format. To update the shared factual record, also capture corrections in the originating context.\n");
   return out.join("\n");
 }

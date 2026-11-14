@@ -18,16 +18,17 @@ import { join } from "node:path";
 import * as dots from "../../lib/dots.mjs";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
+// Write all of stdout before exiting: console.log then process.exit cut a piped --facts at 64 KiB.
+const finish = (text, code = 0) => new Promise(r => process.stdout.write(text + "\n", r)).then(() => process.exit(code));
 const opt = {}; for (let i = 0; i < args.length; i++) if (args[i].startsWith("--")) { const v = args[i + 1], hasValue = v !== undefined && !v.startsWith("--"); opt[args[i].slice(2)] = hasValue ? v : true; if (hasValue) i++; }
 
 if (opt.release) {
   const slug = opt.release;
   if (!lib.readContext(root, slug)) { console.error(`no context ${slug}`); process.exit(1); }
   let result; try { result = lib.releaseManualCover(root, slug, opt["reviewed-cover"] || ""); } catch (e) { console.error(e.message); process.exit(5); }
-  if (!result.released) { console.log(`${slug}: ${result.note}`); process.exit(0); }
+  if (!result.released) await finish(`${slug}: ${result.note}`);
   lib.rerender(root);
-  console.log(`${slug}: released; the manual edit is backed up under work/manual-edits/ and the next compile may replace the generated prose. Summaries update by themselves after the next saved change.`);
-  process.exit(0);
+  await finish(`${slug}: released; the manual edit is backed up under work/manual-edits/ and the next compile may replace the generated prose. Summaries update by themselves after the next saved change.`);
 }
 const count = (arrs) => { const m = new Map(); for (const a of arrs) for (const x of a) m.set(x, (m.get(x) || 0) + 1); return [...m.entries()].sort((a, b) => b[1] - a[1]); };
 function facts(slug) {
@@ -49,8 +50,10 @@ function facts(slug) {
 
 if (opt.stale) {
   const cs = lib.activeContexts(root).filter(c => c.stale).map(c => ({ slug: c.slug, manualEdit: c.manualEdit.blocked ? c.manualEdit.status : null, memories: lib.effectiveMemories(c.memories).length, lastMemory: c.lastMemory, compiledAt: c.compiledAt }));
-  console.log(JSON.stringify(cs, null, 1)); process.exit(0);
+  await finish(JSON.stringify(cs, null, 1));
 }
+const FACTS_LINES = Number(process.env.GTM_BRAIN_FACTS_LINES) || 300, FACTS_BYTES = 48 * 1024;
+const noteLines = m => `- ${m.id} · ${lib.memoryTimeText(m)} · ${m.authors.join(",")} · ${m.kind}${m.people.length ? " · " + m.people.join(", ") : ""}${m.tools.length ? " · tools: " + m.tools.join(", ") : ""}\n  ${m.content}${assetSummary(root, m)}${m.actions.length ? "\n  actions: " + m.actions.map(a => `${a.tool}: ${a.action}${a.ref ? " (" + a.ref + ")" : ""}`).join("; ") : ""}${m.source.length ? "\n  sources: " + m.source.map(s => `${s.kind}:${s.ref}`).join(", ") : ""}`;
 if (opt.facts) {
   const f = facts(opt.facts); const rule = f.c.rule;
   const out = [`# ${f.c.title} (${f.c.slug})`, `compiled_at: ${lib.localDateTime(f.c.compiledAt) || "never"} (context refreshed)   memories: ${f.mem.length} effective   new since last compile: ${f.newSince.length}   confidence: ${f.confidence}`, `as_of: ${f.asOf}   (pass this to --apply --as-of)`,
@@ -59,10 +62,20 @@ if (opt.facts) {
     `\n## Previous working guidance (revalidate against effective memories)\n${f.c.now || "none"}`,
     `\n## Compilation guidance\nKeep only reusable methods supported by effective memories in working guidance (the now argument). Cite the memory IDs for each method. Write the summary in 2-4 sentences, each ending with the ids of the notes it rests on in brackets ([m_...]), with absolute dates only (never next Tuesday or tomorrow). Put supported immediate actions, owners and dates in the summary; their source memories remain the follow-ups. Previous guidance may mix methods with next steps: reassess both against the evidence. Do not copy standing instructions or invent methods. Pass now as an empty string when no useful methods remain.`,
     `\n## Names mentioned (kind, mentions)\n${f.names.map(n => `${n.name} (${n.kind}, ${n.mentions})`).join(", ") || "none"}`, `\n## Tools used\n${f.tools.map(([t, n]) => `${t} (${n})`).join(", ") || "none"}`, `\n## Related contexts (share names)\n${f.related.join(", ") || "none"}`,
-    `\n## Open questions (${f.questions.length})`, ...f.questions.map(m => `- ${lib.memoryTimeText(m)} ${m.authors.join(",")}: ${m.content}`),
-    `\n## Decisions (${f.decisions.length})`, ...f.decisions.map(m => `- ${lib.memoryTimeText(m)} ${m.authors.join(",")}: ${m.content}`),
-    `\n## All effective memories, recording order (oldest first)`, ...f.mem.map(m => `- ${m.id} · ${lib.memoryTimeText(m)} · ${m.authors.join(",")} · ${m.kind}${m.people.length ? " · " + m.people.join(", ") : ""}${m.tools.length ? " · tools: " + m.tools.join(", ") : ""}\n  ${m.content}${assetSummary(root, m)}${m.actions.length ? "\n  actions: " + m.actions.map(a => `${a.tool}: ${a.action}${a.ref ? " (" + a.ref + ")" : ""}`).join("; ") : ""}${m.source.length ? "\n  sources: " + m.source.map(s => `${s.kind}:${s.ref}`).join(", ") : ""}`)];
-  console.log(out.join("\n")); process.exit(0);
+    `\n## Open questions in force (${f.questions.length})`, ...f.questions.map(m => `- ${m.id} · ${lib.memoryTimeText(m)} ${m.authors.join(",")}: ${m.content}`),
+    `\n## Decisions in force (${f.decisions.length})`, ...f.decisions.map(m => `- ${m.id} · ${lib.memoryTimeText(m)} ${m.authors.join(",")}: ${m.content}`)];
+  // A digest, not the whole context: the notes since the last compile, newest first, within a budget.
+  // The current summary carries the older ones; the run looks them up with query (memories).
+  const shown = [], fresh = [...f.newSince].reverse(); let lines = 0, bytes = 0;
+  for (const m of fresh) {
+    const t = noteLines(m), n = t.split("\n").length, b = Buffer.byteLength(t);
+    if (shown.length && (lines + n > FACTS_LINES || bytes + b > FACTS_BYTES)) break;
+    shown.push(t); lines += n; bytes += b;
+  }
+  const older = f.mem.length - shown.length;
+  out.push(`\n## Effective notes since the last compile, newest first (${shown.length} of ${f.newSince.length} new)`, ...shown);
+  if (older) out.push(`\n${older} older note${older === 1 ? " is" : "s are"} not shown${f.newSince.length > shown.length ? ` (${f.newSince.length - shown.length} of them newer than compiled_at)` : ""}; the current summary carries them. Look one up with query: object memories, filters.context=${f.c.slug} (add search or filters.entities=<id>).`);
+  await finish(out.join("\n"));
 }
 if (opt.apply) {
   const slug = opt.apply;
@@ -90,6 +103,6 @@ if (opt.apply) {
   const fm = { ...prior, summary: checked.text, ...(checked.sources.length ? { summary_sources: checked.sources } : {}), names: f.names.map(n => ({ name: n.name, kind: n.kind })), people: f.names.filter(n => n.kind === "person").map(n => n.name), tools, related: f.related, last_active: c.lastMemory, confidence: f.confidence, compiled_at: now, compiled_by: `compile@${by}` };
   lib.writeContext(root, slug, { ...fm, rule, now: opt.now }, { expectedCover: c.manualEdit.hash, reviewedCover: opt["reviewed-cover"] });
   const committed = lib.commit(root, [c.path], `compile: ${slug} (${f.mem.length} memories, by ${by})`).note;
-  console.log(`compiled ${slug}: ${f.mem.length} memories, people ${fm.people.length}, names ${fm.names.length}, tools ${fm.tools.length}, related ${fm.related.join(", ") || "none"}, confidence ${f.confidence} · ${committed}`); lib.rerender(root); process.exit(0);
+  lib.rerender(root); await finish(`compiled ${slug}: ${f.mem.length} memories, people ${fm.people.length}, names ${fm.names.length}, tools ${fm.tools.length}, related ${fm.related.join(", ") || "none"}, confidence ${f.confidence} · ${committed}`);
 }
 console.error("usage: --stale | --facts <slug> | --apply <slug> --by <handle> --as-of <id from --facts> --summary ... --now ..."); process.exit(1);

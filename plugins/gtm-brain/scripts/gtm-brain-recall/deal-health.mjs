@@ -27,4 +27,8 @@ if (!memories.length) {
   process.exit(0);
 }
 console.log(`\n${rubric}\n\n## Memories about ${view.entity.name}\n`);
-for (const m of memories) console.log(`[${m.id}] ${day(m.at)} · ${m.context} · ${m.kind} · ${quote(m.content)}`);
+// newest 200 only: one company's evidence ran to megabytes on a big brain
+const CAP = Number(process.env.GTM_BRAIN_DEAL_CAP) || 200;
+const lines = memories.slice(0, CAP).map(m => `[${m.id}] ${day(m.at)} · ${m.context} · ${m.kind} · ${quote(m.content)}`);
+if (memories.length > CAP) lines.push(`\n${memories.length - CAP} more: query memories with filters.entities=${view.entity.id}`);
+await new Promise(r => process.stdout.write(lines.join("\n") + "\n", r));

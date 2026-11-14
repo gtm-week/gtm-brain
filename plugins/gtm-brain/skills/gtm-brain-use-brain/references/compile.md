@@ -65,9 +65,13 @@ that one even if it is current.
 
 Call `compile_facts` with `context` = the slug.
 
-You get the standing rule, the current summary, previous working guidance, names with counts,
-tools with counts, related contexts, open questions, decisions, and every effective memory
-in recording order with its ID, recording timestamp, source references, and action references.
+You get a digest: the standing rule, the current summary, previous working guidance, names with
+counts, tools with counts, related contexts, every open question and decision still in force,
+and the effective memories recorded since the last compile, newest first, each with its ID,
+recording timestamp, source references, and action references. The list is capped (300 lines);
+a closing line says how many older notes are not shown. The current summary carries those. When
+the new notes contradict or refer to an older one, look it up with `query` (object `memories`,
+`filters.context` = the slug, plus `search` or `filters.entities`) rather than guessing.
 Relevant event dates are kept in the memory text. The output includes
 `as_of: s_...`, a key of the memories and exact Markdown these facts include. Keep it for step 3.
 
