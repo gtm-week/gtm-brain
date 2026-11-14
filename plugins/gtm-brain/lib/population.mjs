@@ -24,6 +24,7 @@ export const POPULATION_RANGES = {
   week_low: 0.25,              // this week below a quarter of the four-week average: too empty
   week_high: 3,                // this week above three times the average: too full
   week_min_average: 4,         // an average below four notes a week is too thin to compare with
+  week_min_history_days: 35,   // the week and the four before it must exist: a younger brain has no average yet
   duplicates_max: 0.05,        // exact plus near duplicates above 5% of notes
   entities_without_notes_max: 0.2,
   entities_missing_required_max: 0.5,
@@ -35,7 +36,7 @@ export const POPULATION_RANGES = {
 export const SYNC_WINDOW_DAYS = 7;
 
 const CITE = /\bm_[0-9a-f]{6,12}\b/g;
-export const normalizedContent = s => String(s || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+export const normalizedContent = s => String(s || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 /* Pointers a near duplicate is judged on: a record in a tool. A chat (codex) or the person (user) holds many separate notes and a
    memory pointer is a fork copy's origin, so neither makes two notes the same. */
 const RECORD_KIND = k => k && !["codex", "claude", "memory", "user"].includes(k);
@@ -53,12 +54,14 @@ function entityFiles(root) {
    time, plus the hour of the clock (the week moves). */
 function stamp(root, now) {
   const st = p => { try { const s = statSync(p); return `${s.size}:${s.mtimeMs}`; } catch { return "-"; } };
-  const parts = [String(Math.floor(now / 36e5))];
+  const parts = [CACHE_VERSION, String(Math.floor(now / 36e5))];
   for (const c of contextDirs(root)) parts.push(c, st(join(root, "brain/contexts", c, "memories.jsonl")), st(join(root, "brain/contexts", c, "context.md")));
   parts.push(...entityFiles(root), st(join(root, "SCHEMA.md")), st(join(root, "brain/admin.md")));
   return lib.snapshotKey([{ id: parts.join("|") }]);
 }
 
+/* Bump when the numbers or their shape change: a cache written by other code is never served. */
+const CACHE_VERSION = "2";
 const share = (n, d) => d ? Math.round((n / d) * 1000) / 1000 : 0;
 
 /* The numbers, computed. */
@@ -72,11 +75,11 @@ export function computePopulation(root, { now = nowMs() } = {}) {
   const notes = all.filter(({ m }) => effective.has(m.id) && !m.retracts);
 
   // saved: every record but a retraction, by its recording time
-  let week = 0, before = 0;
+  let week = 0, before = 0, oldest = now;
   for (const { m } of all) {
     if (m.retracts) continue;
     const t = Date.parse(m.at); if (!Number.isFinite(t) || t > now) continue;
-    const age = now - t;
+    const age = now - t; if (t < oldest) oldest = t;
     if (age < 7 * DAY) week++; else if (age < 35 * DAY) before++;
   }
 
@@ -135,7 +138,7 @@ export function computePopulation(root, { now = nowMs() } = {}) {
   return {
     at: new Date(now).toISOString(),
     notes: notes.length,
-    saved: { last_7_days: week, average_4_weeks_before: Math.round((before / 4) * 10) / 10 },
+    saved: { last_7_days: week, average_4_weeks_before: Math.round((before / 4) * 10) / 10, history_days: Math.floor((now - oldest) / DAY) },
     duplicates: { exact, near, share: share(exact + near, notes.length), examples },
     entities: { total: tracked.length, without_notes: without.length, without_notes_share: share(without.length, tracked.length), without_notes_examples: without.slice(0, 5).map(e => e.name),
       missing_required: missing.length, missing_required_share: share(missing.length, tracked.length), missing_required_fields: byField, missing_required_examples: missing.slice(0, 5) },
@@ -149,7 +152,7 @@ export function computePopulation(root, { now = nowMs() } = {}) {
 /* The numbers, from the cache when nothing they rest on has changed this hour. */
 export function population(root, { now = nowMs(), cache = true } = {}) {
   const key = stamp(root, now), file = join(root, "work", "population.json");
-  if (cache) { try { const c = JSON.parse(readFileSync(file, "utf8")); if (c.key === key && c.population) return c.population; } catch {} }
+  if (cache) { try { const c = JSON.parse(readFileSync(file, "utf8")); if (c.key === key && c.population?.saved && c.population.duplicates && c.population.entities && c.population.citations && c.population.sources) return c.population; } catch {} }
   const p = computePopulation(root, { now });
   if (cache && existsSync(join(root, "brain", "admin.md"))) {
     try { mkdirSync(join(root, "work"), { recursive: true }); const tmp = `${file}.${process.pid}.tmp`; writeFileSync(tmp, JSON.stringify({ key, population: p }) + "\n"); renameSync(tmp, file); } catch {}
@@ -162,8 +165,9 @@ const pct = x => `${Math.round(x * 100)}%`;
 export function outOfRange(p, r = POPULATION_RANGES) {
   const out = [];
   const { last_7_days: week, average_4_weeks_before: avg } = p.saved;
-  if (avg >= r.week_min_average && week < avg * r.week_low) out.push(`too empty: ${week} note${week === 1 ? "" : "s"} saved in the last 7 days against ${avg} a week before`);
-  if (avg >= r.week_min_average && week > avg * r.week_high) out.push(`too full: ${week} notes saved in the last 7 days against ${avg} a week before`);
+  const compared = avg >= r.week_min_average && p.saved.history_days >= r.week_min_history_days;
+  if (compared && week < avg * r.week_low) out.push(`too empty: ${week} note${week === 1 ? "" : "s"} saved in the last 7 days against ${avg} a week before`);
+  if (compared && week > avg * r.week_high) out.push(`too full: ${week} notes saved in the last 7 days against ${avg} a week before`);
   if (p.notes >= r.min_notes) {
     if (p.duplicates.share > r.duplicates_max) out.push(`${pct(p.duplicates.share)} duplicates (${p.duplicates.exact} exact, ${p.duplicates.near} near)`);
     if (p.sources.without_share > r.no_source_max) out.push(`${pct(p.sources.without_share)} of notes without a source`);
@@ -189,7 +193,7 @@ export function populationText(p, r = POPULATION_RANGES) {
   const out = outOfRange(p, r), has = s => out.some(o => o.includes(s));
   const lines = [
     `Population of the brain (deterministic, from the files; ${p.at.slice(0, 16).replace("T", " ")} UTC). ${p.notes} notes in force.`,
-    `- Saved: ${p.saved.last_7_days} in the last 7 days; ${p.saved.average_4_weeks_before} a week on average over the 4 weeks before${flag(has("too empty") || has("too full"))}. Range: between ${r.week_low}x and ${r.week_high}x the average, judged when the average is ${r.week_min_average} or more.`,
+    `- Saved: ${p.saved.last_7_days} in the last 7 days; ${p.saved.average_4_weeks_before} a week on average over the 4 weeks before${flag(has("too empty") || has("too full"))}. Range: between ${r.week_low}x and ${r.week_high}x the average, judged when the average is ${r.week_min_average} or more${p.saved.history_days < r.week_min_history_days ? `; not judged yet: the oldest note is ${p.saved.history_days} day${p.saved.history_days === 1 ? "" : "s"} old and ${r.week_min_history_days} are needed` : ""}.`,
     `- Duplicates: ${p.duplicates.exact} exact (same content), ${p.duplicates.near} near (same source record, same day), ${pct(p.duplicates.share)} of notes${flag(has("duplicates"))}. Range: at most ${pct(r.duplicates_max)}.${p.duplicates.examples.length ? ` For example: ${p.duplicates.examples.map(x => `${x.id} = ${x.same_as} (${x.why})`).join("; ")}.` : ""}`,
     `- Entities without notes: ${p.entities.without_notes} of ${p.entities.total}${flag(has("entities without notes"))}. Range: at most ${pct(r.entities_without_notes_max)}.${p.entities.without_notes_examples.length ? ` For example: ${p.entities.without_notes_examples.join(", ")}.` : ""}`,
     `- Entities missing a field SCHEMA.md marks required: ${p.entities.missing_required} of ${p.entities.total}${flag(has("missing a required"))}. Range: at most ${pct(r.entities_missing_required_max)}.${Object.keys(p.entities.missing_required_fields).length ? ` By field: ${Object.entries(p.entities.missing_required_fields).map(([f, n]) => `${f} ${n}`).join(", ")}.` : ""}`,

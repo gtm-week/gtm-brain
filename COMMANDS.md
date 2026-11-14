@@ -250,7 +250,7 @@ entities missing a field SCHEMA.md marks required (no cited value in the compile
 context summary or entity brief cites, of those recorded before their context's last summary; the
 share of notes without a source pointer. Our own company and the team are not counted as entities.
 Each number is shown with its range (`POPULATION_RANGES`, no setting yet; shares are judged from 20
-notes and 10 entities); capture rate and noise rate read "not measured". `--json` gives the data.
+notes and 10 entities, the week from 35 days of notes); capture rate and noise rate read "not measured". `--json` gives the data.
 Reads only. Writes: `work/population.json`, a cache keyed on the files it reads and the hour.
 
 The source sync keeps one checkpoint per source in `work/sync.json`:

@@ -72,7 +72,7 @@ test("every number on a fixture brain with a fixed clock", t => {
   // in force: 20 old + exact + near + 2 chat + bare + second + beta = 27; wrong and first are hidden, the retraction is no note
   assert.equal(p.notes, base + 27);
   // saved this week: chat1, chat2, bare1, wrong, first, second, beta = 7 (the retraction is not a save); the four weeks before: 20 old + exact + near = 22
-  assert.deepEqual(p.saved, { last_7_days: before.saved.last_7_days + 7, average_4_weeks_before: 5.5 });
+  assert.deepEqual(p.saved, { last_7_days: before.saved.last_7_days + 7, average_4_weeks_before: 5.5, history_days: 29 });
   assert.equal(p.duplicates.exact, 1, "same normalized content");
   assert.equal(p.duplicates.near, 1, "same record, same day; two notes of one chat are not duplicates");
   assert.deepEqual(p.duplicates.examples.map(x => x.why), ["same source, same day", "same content"], "oldest first");
@@ -96,12 +96,13 @@ test("every number on a fixture brain with a fixed clock", t => {
 });
 
 test("the ranges: too empty, too full, and nothing judged on a tiny brain", () => {
-  const p = { notes: 100, saved: { last_7_days: 1, average_4_weeks_before: 10 }, duplicates: { exact: 0, near: 0, share: 0 }, sources: { without_share: 0 }, citations: { judged: 0, uncited_share: 0 }, entities: { total: 0 } };
+  const p = { notes: 100, saved: { last_7_days: 1, average_4_weeks_before: 10, history_days: 90 }, duplicates: { exact: 0, near: 0, share: 0 }, sources: { without_share: 0 }, citations: { judged: 0, uncited_share: 0 }, entities: { total: 0 } };
   assert.match(pop.outOfRange(p).join(), /too empty: 1 note saved in the last 7 days against 10 a week before/);
-  assert.match(pop.outOfRange({ ...p, saved: { last_7_days: 31, average_4_weeks_before: 10 } }).join(), /too full: 31 notes/);
-  assert.deepEqual(pop.outOfRange({ ...p, saved: { last_7_days: 0, average_4_weeks_before: 3 } }), [], "an average under 4 a week is not compared");
-  assert.deepEqual(pop.outOfRange({ ...p, notes: 5, duplicates: { exact: 5, near: 0, share: 1 }, sources: { without_share: 1 } , saved: { last_7_days: 5, average_4_weeks_before: 5 } }), [], "under 20 notes no share is judged");
-  assert.match(pop.outOfRange({ ...p, saved: { last_7_days: 10, average_4_weeks_before: 10 }, duplicates: { exact: 4, near: 2, share: 0.06 } }).join(), /6% duplicates \(4 exact, 2 near\)/);
+  assert.match(pop.outOfRange({ ...p, saved: { last_7_days: 31, average_4_weeks_before: 10, history_days: 90 } }).join(), /too full: 31 notes/);
+  assert.deepEqual(pop.outOfRange({ ...p, saved: { last_7_days: 0, average_4_weeks_before: 3, history_days: 90 } }), [], "an average under 4 a week is not compared");
+  assert.deepEqual(pop.outOfRange({ ...p, saved: { last_7_days: 31, average_4_weeks_before: 10, history_days: 34 } }), [], "under 35 days of notes the week is not compared");
+  assert.deepEqual(pop.outOfRange({ ...p, notes: 5, duplicates: { exact: 5, near: 0, share: 1 }, sources: { without_share: 1 } , saved: { last_7_days: 5, average_4_weeks_before: 5, history_days: 90 } }), [], "under 20 notes no share is judged");
+  assert.match(pop.outOfRange({ ...p, saved: { last_7_days: 10, average_4_weeks_before: 10, history_days: 90 }, duplicates: { exact: 4, near: 2, share: 0.06 } }).join(), /6% duplicates \(4 exact, 2 near\)/);
 });
 
 test("the health line carries the population only when a number is out of range, and the view answers over query", async t => {
@@ -188,4 +189,48 @@ test("timing: 50,000 notes", t => {
   t.diagnostic(`50,000 notes, 300 entities: computed in ${ms} ms, from the cache in ${cachedMs} ms`);
   assert.ok(p.notes >= 50000); assert.equal(p.entities.without_notes, 0);
   assert.ok(ms < 30000, `computed in ${ms} ms`); assert.ok(cachedMs < 2000, `cached in ${cachedMs} ms`);
+});
+
+/* Review: the cases the first tests did not try. */
+test("a brain younger than five weeks is not called too full or too empty", t => {
+  const root = brain(t);
+  lib.writeContext(root, "young", { title: "Young", rule: "Young." });
+  // onboarding 9 days ago saved 200 notes at once; 10 more this week. Four weeks of history do not exist yet.
+  const rows = [];
+  for (let i = 0; i < 200; i++) rows.push(rec("young", ago(9), `Imported fact number ${i}.`, { source: [{ kind: "gmail", ref: `i${i}` }] }));
+  for (let i = 0; i < 10; i++) rows.push(rec("young", ago(1), `Fresh fact number ${i}.`, { source: [{ kind: "gmail", ref: `f${i}` }] }));
+  write(root, "young", rows);
+  const p = pop.computePopulation(root, { now });
+  assert.equal(p.saved.history_days, 9);
+  assert.ok(!pop.outOfRange(p).some(o => /too empty|too full/.test(o)), pop.outOfRange(p).join("; "));
+  assert.match(pop.populationText(p), /not judged yet: the oldest note is 9 days old/);
+  // the same counts with five weeks behind them are judged
+  assert.match(pop.outOfRange({ ...p, saved: { ...p.saved, history_days: 35 } }).join(), /too empty: 10 notes/);
+});
+
+test("sync checkpoints: one tool under two spellings is one entry, and a damaged file never throws", t => {
+  const root = brain(t);
+  // the checkpoint names the calendar by its pointer kind, the meeting coverage by the tool's display name
+  writeFileSync(join(root, "work/sync.json"), JSON.stringify({ at: "2026-11-01T06:00:00Z", tools: ["Google Calendar"], sources: { "google-calendar": { at: "2026-11-14T06:00:00Z" } } }));
+  const overview = { coverage: [{ tool: "Google Calendar", status: "complete", checked_at: "2026-11-02T06:00:00Z" }], policies: [], meetings: [] };
+  assert.deepEqual(health.lastSyncs(root, overview), { "google-calendar": "2026-11-14T06:00:00Z" });
+  assert.deepEqual(health.overdueSyncs(root, overview, now), [], "the fresh checkpoint is the tool's last sync; the older coverage read does not mark it overdue");
+  for (const bad of ["[]", "\"x\"", "null", "{\"sources\":[{\"at\":\"2026-11-14T06:00:00Z\"}]}", "{\"sources\":{\"gmail\":null,\"\":{\"at\":\"2026-11-14T06:00:00Z\"},\":x\":{\"at\":\"2026-11-14T06:00:00Z\"}},\"at\":\"never\",\"tools\":\"gmail\"}", "{not json"]) {
+    writeFileSync(join(root, "work/sync.json"), bad);
+    assert.deepEqual(health.syncCheckpoints(root), [], bad);
+    assert.equal(health.syncCheckpoint(root, "gmail"), null, bad);
+    assert.doesNotMatch(health.healthLine(root, { coverage: [], policies: [], meetings: [] }) || "", /last sync/, bad);
+  }
+});
+
+test("the cache does not outlive the code that wrote it, and the view never writes under brain/", t => {
+  const { root } = fixture(t);
+  const tree = () => execFileSync("git", ["status", "--porcelain", "--", "brain", "SCHEMA.md"], { cwd: root, encoding: "utf8" });
+  const beforeGit = tree();
+  pop.population(root, { now });
+  const file = join(root, "work/population.json"), c = JSON.parse(readFileSync(file, "utf8"));
+  writeFileSync(file, JSON.stringify({ key: c.key, population: { notes: -1 } }));   // right key, wrong shape (an older version's cache): recomputed, never a crash in the health line
+  assert.ok(pop.population(root, { now }).notes > 0);
+  assert.match(health.healthLine(root, { coverage: [], policies: [], meetings: [] }), /population:/);
+  assert.equal(tree(), beforeGit, "nothing under brain/ changed");
 });

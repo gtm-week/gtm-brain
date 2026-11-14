@@ -29,10 +29,10 @@ export function summaryRuns(root) {
 export function syncCheckpoints(root) {
   const sync = readJson(join(root, "work", "sync.json")); if (!sync || typeof sync !== "object") return [];
   const out = [], seen = new Set();
-  for (const [key, v] of Object.entries(sync.sources && typeof sync.sources === "object" ? sync.sources : {})) {
+  for (const [key, v] of Object.entries(sync.sources && typeof sync.sources === "object" && !Array.isArray(sync.sources) ? sync.sources : {})) {
     const at = typeof v === "string" ? v : v?.at; if (!Number.isFinite(Date.parse(at))) continue;
     const colon = key.indexOf(":"), kind = normalizeKind(colon > 0 ? key.slice(0, colon) : key), account = colon > 0 ? key.slice(colon + 1).trim().toLowerCase() || null : null;
-    if (!kind) continue;
+    if (!kind || colon === 0) continue;
     const window = Number(v?.window_days);
     out.push({ kind, account, at, ...(window > 0 ? { window_days: window } : {}) }); seen.add(kind);
   }
@@ -59,7 +59,8 @@ export function lastSyncs(root, overview) {
 function syncTimes(root, overview) {
   const at = {}, put = (tool, t, window) => { if (!tool || !Number.isFinite(Date.parse(t))) return; const k = String(tool).toLowerCase(); if (!at[k] || Date.parse(t) > Date.parse(at[k].at)) at[k] = { at: t, ...(window ? { window_days: window } : {}) }; };
   for (const c of syncCheckpoints(root)) put(c.account ? `${c.kind} (${c.account})` : c.kind, c.at, c.window_days);
-  for (const c of overview?.coverage || []) if (c.status !== "unavailable") put(c.tool, c.checked_at);
+  // the coverage names a tool as the person does ("Google Calendar"); spelled as the checkpoint's kind it is one entry
+  for (const c of overview?.coverage || []) if (c.status !== "unavailable") put(normalizeKind(toolKey(c.tool)), c.checked_at);
   return at;
 }
 /* Tools whose last sync is older than their window (a checkpoint's window_days, else SYNC_WINDOW_DAYS). */

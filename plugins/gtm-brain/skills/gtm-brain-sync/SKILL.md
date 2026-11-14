@@ -48,7 +48,7 @@ Transcription records and direct notes drive capture; historical calendar recons
 a prerequisite. Use the full requested source scope without the 20-item activity cap. Match
 calendar references only when supported. A daily run refreshes selected calendars and continues
 with other sources and compilation if that refresh fails. Keep saved per-source coverage as
-the retry checkpoint; the activity checkpoints below never overrides incomplete meeting scopes.
+the retry checkpoint; the activity checkpoints below never override incomplete meeting scopes.
 
 ## Step 1: one subagent per tool, in parallel
 
