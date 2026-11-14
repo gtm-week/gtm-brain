@@ -6,11 +6,12 @@ import { createHash, randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import * as lib from "./brain.mjs";
 import { pointerKey, sourceKind } from "./pointers.mjs";
-import { withEntityLock, entityType, identity, idOK, entityText, parseEntityText, editedBody, applyEntityChange, readEntityChange, pageTarget } from "./entities.mjs";
+import { withEntityLock, entityType, identity, idOK, entityText, parseEntityText, editedBody, applyEntityChange, readEntityChange, pageTarget, changeText, keptBody } from "./entities.mjs";
 import { brainKinds } from "./schema.mjs";
 import { linkFrom, findPage } from "./layout.mjs";
 
 const hash = value => createHash("sha256").update(JSON.stringify(value)).digest("hex");
+const bodyHash = body => hash(body).slice(0, 16);   // a page's rendered_body_hash, as entities.mjs writes it
 const object = v => v && typeof v === "object" && !Array.isArray(v);
 const listFields = ["aliases", "emails", "not_same", "references", "identity_sources"];
 const listKey = field => field === "not_same" ? "not" : field;
@@ -165,8 +166,12 @@ export function undoEntityMerge(root, { merge_id, by, as_of }) {
     const registry = lib.readNames(root), survivor = exact(registry, rec.target), contexts = lib.listContexts(root);
     // a page renamed or moved to a kind folder since the merge is found by its id
     const located = c => existsSync(join(root, c.path)) ? c.path : findPage(root, parseEntityText(c.after, c.path).fm.id) || c.path;
-    const current = rec.changes.map(c => { const at = located(c); return { ...c, at, current: readFileSync(join(root, at), "utf8") }; });
-    const conflicts = current.filter(c => !isDeepStrictEqual(authoredState(c.current, c.path), authoredState(c.after, c.path))).map(c => ({ path: c.path, problem: "Identity or handwritten metadata changed after this merge. Undo later merges first, or review those edits before splitting." }));
+    const current = rec.changes.map(c => { const at = located(c), text = readFileSync(join(root, at), "utf8");
+      return { ...c, at, current: text, after: changeText(rec, c, "after", parseEntityText(text, at).body), before: changeText(rec, c, "before"), keptAfter: keptBody(rec, c, "after"), keptBefore: keptBody(rec, c, "before") }; });
+    // a frontmatter-only record compares the identity, and the body only where it kept a handwritten one
+    const same = c => { const now = authoredState(c.current, c.path), then = authoredState(c.after, c.path);
+      return isDeepStrictEqual(now.fm, then.fm) && now.header === then.header && (c.keptAfter ? now.markdown === then.markdown : now.markdown === null); };
+    const conflicts = current.filter(c => !same(c)).map(c => ({ path: c.path, problem: "Identity or handwritten metadata changed after this merge. Undo later merges first, or review those edits before splitting." }));
     const beforeMemories = new Set(rec.impact.flatMap(i => i.memories));
     const later = contexts.flatMap(c => lib.effectiveMemories(c.memories)).filter(m => m.entities?.includes(survivor.id) && !beforeMemories.has(m.id)).map(m => ({ id: m.id, context: m.context, content: m.content }));
     const revision = "ecv_" + hash({ merge_id, current, registry: registry.map(identity), memories: contexts.map(c => c.memories) });
@@ -177,8 +182,11 @@ export function undoEntityMerge(root, { merge_id, by, as_of }) {
     if (as_of !== revision) throw new Error("Undo preview is stale; preview undo_entity_merge again");
     if (conflicts.length) throw new Error("Cannot undo without reviewing changes made after the merge: " + conflicts.map(c => c.path).join(", "));
     const changes = current.map(c => {
+      // without a kept body the page restarts from its frontmatter: the brief is rebuilt at the next refresh
       const before = parseEntityText(c.before, c.path), path = pageTarget(root, before.fm, c.at);
-      return { path, ...(path !== c.at ? { from: c.at } : {}), before: c.current, after: entityText({ _fm: before.fm, _header: before.header }, { ...before.fm, updated_at: new Date().toISOString() }, before.body) };
+      const body = c.keptBefore ? before.body : `\n# ${before.fm.name}\n\nNo compiled brief yet. Facts are kept in context memories.\n`;
+      const fm = { ...before.fm, updated_at: new Date().toISOString(), ...(c.keptBefore ? {} : { rendered_body_hash: bodyHash(body) }) };
+      return { path, ...(path !== c.at ? { from: c.at } : {}), before: c.current, after: entityText({ _fm: before.fm, _header: before.header }, fm, body) };
     });
     return finish(root, { operation: "undo_merge", merge_id, source: rec.source, target: rec.target, by: who, changes }, { status: "unmerged", source: rec.source, target: rec.target, memories_kept_with_survivor: later });
   });

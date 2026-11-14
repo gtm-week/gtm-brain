@@ -156,6 +156,24 @@ const atomic = (path, text) => {
   writeFileSync(tmp, text); renameSync(tmp, path); return true;
 };
 
+/* What a history record keeps of a page: its frontmatter (the identity fields), never the generated brief;
+   a handwritten body (a redirect's note, the person's own Markdown) is kept beside it. Older records hold
+   whole files and stay readable (frontmatter_only absent). */
+const headerOf = text => (String(text).match(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/) || [""])[0];
+const handwritten = (text, path) => { try { const { fm, body } = parseEntityText(text, path); return editedBody({ _fm: fm, _body: body }) ? body : undefined; } catch { return String(text).slice(headerOf(text).length); } };
+function storedChange(c) {
+  const before_body = handwritten(c.before, c.path), after_body = handwritten(c.after, c.path);
+  return { path: c.path, ...(c.from ? { from: c.from } : {}), before: headerOf(c.before), after: headerOf(c.after), ...(before_body !== undefined ? { before_body } : {}), ...(after_body !== undefined ? { after_body } : {}) };
+}
+/* A stored change as whole text again: the kept body, else the given body (the page's current one; a
+   generated brief is rebuilt from the frontmatter at the next refresh). */
+export function changeText(rec, c, side, currentBody = "") {
+  if (!rec.frontmatter_only) return c[side];
+  const body = c[`${side}_body`];
+  return c[side] + (body !== undefined ? body : currentBody);
+}
+/* Whether the record holds that side's body (old records hold whole files). */
+export const keptBody = (rec, c, side) => !rec.frontmatter_only || c[`${side}_body`] !== undefined;
 // Recovery records belong to the identity folder and travel with Git. They are an
 // operation history, not another registry. A pending record makes interrupted writes recoverable.
 function historyFolder(root) {
@@ -180,13 +198,17 @@ function recoverEntityChanges(root) {
   const pending = readdirSync(folder).filter(f => f.endsWith(".pending")).sort();
   for (const file of pending) {
     const rec = readEntityChange(root, file.slice(0, -8), true);
-    for (const c of rec.changes) {
+    const plan = rec.changes.map(c => {
       const at = c.from && existsSync(join(root, c.from)) ? c.from : c.path, path = join(root, at);
-      if (!existsSync(path) || lstatSync(path).isSymbolicLink() || ![c.before, c.after].includes(readFileSync(path, "utf8"))) invalid(at, "interrupted change", "file changed after the operation was interrupted", `review ${file} and preserve the new edits before resuming`);
-    }
-    for (const c of rec.changes) {
-      if (c.from && existsSync(join(root, c.from))) movePage(root, c.from, c.path, c.after);
-      else atomic(join(root, c.path), c.after);
+      const current = existsSync(path) && !lstatSync(path).isSymbolicLink() ? readFileSync(path, "utf8") : null;
+      // a frontmatter-only record is compared on the frontmatter; the page keeps its body unless the record kept one
+      const side = current === null ? null : rec.frontmatter_only ? ["before", "after"].find(k => headerOf(current) === c[k] && handwritten(current, at) === c[`${k}_body`]) : ["before", "after"].find(k => current === c[k]);
+      if (!side) invalid(at, "interrupted change", "file changed after the operation was interrupted", `review ${file} and preserve the new edits before resuming`);
+      return { c, at, after: changeText(rec, c, "after", current.slice(headerOf(current).length)) };
+    });
+    for (const { c, at, after } of plan) {
+      if (c.from && at === c.from) movePage(root, c.from, c.path, after);
+      else atomic(join(root, c.path), after);
     }
     renameSync(join(folder, file), join(folder, rec.id + ".json"));
   }
@@ -204,7 +226,7 @@ export function applyEntityChange(root, record) {
       if (c.from && existsSync(join(root, c.path))) throw new Error(`Entity filename collision: ${c.path} already exists`);
     }
     const folder = historyFolder(root); mkdirSync(folder, { recursive: true });
-    const rec = { ...record, id: record.id || `ec_${randomUUID()}`, at: stamp(), changes };
+    const rec = { ...record, id: record.id || `ec_${randomUUID()}`, at: stamp(), frontmatter_only: true, changes: changes.map(storedChange) };
     if (!/^ec_[a-f0-9-]{36}$/.test(rec.id)) throw new Error("Invalid entity change ID");
     if (existsSync(join(folder, rec.id + ".json"))) throw new Error("Entity change ID already exists");
     const pending = join(folder, rec.id + ".pending");

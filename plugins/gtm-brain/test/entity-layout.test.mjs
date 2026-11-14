@@ -7,7 +7,8 @@ import { tmpdir } from "node:os";
 import * as lib from "../lib/brain.mjs";
 import * as layout from "../lib/layout.mjs";
 import { entityStamp } from "../lib/entity-stamp.mjs";
-import { entityId } from "../lib/entities.mjs";
+import { entityId, readEntityChange } from "../lib/entities.mjs";
+import { isPagePath } from "../lib/layout.mjs";
 import { prepareAsset, assetRows } from "../lib/assets.mjs";
 import { randomUUID } from "node:crypto";
 import { readdirSync } from "node:fs";
@@ -160,6 +161,46 @@ test("merge and undo work in kind folders, also after the survivor was renamed",
   const done = lib.undoEntityMerge(root, { merge_id: merged.merge_id, by: "ann", as_of: undo.as_of });
   assert.equal(done.status, "unmerged");
   assert.deepEqual(lib.readNames(root).filter(n => [chris.id, kp.id].includes(n.id)).map(n => n.name).sort(), ["Chris", "Krzysztof Pawlak"]);
+});
+
+/* ---------- part 3: history records keep the frontmatter only ---------- */
+test("a merge record keeps the frontmatter and the redirect note, never the generated brief; it still undoes", () => {
+  const root = kindBrain();
+  const chris = lib.addName(root, "Chris"), kp = lib.addName(root, "Krzysztof Pawlak");
+  lib.appendMemory(root, "sales", { authors: ["ann"], people: ["Chris"], content: "Chris asked for the security review." });
+  lib.refreshEntityPages(root);
+  const preview = lib.mergeEntities(root, { source: chris.id, target: kp.id });
+  const merged = lib.mergeEntities(root, { source: chris.id, target: kp.id, by: "ann", as_of: preview.as_of });
+  const rec = readEntityChange(root, merged.merge_id);
+  assert.equal(rec.frontmatter_only, true);
+  for (const c of rec.changes) {
+    for (const side of [c.before, c.after]) { assert.match(side, /^---\n[\s\S]*\n---\n$/); assert.doesNotMatch(side, /## Timeline|security review/); }
+    assert.equal(c.before_body, undefined, "the generated brief is not stored");
+  }
+  assert.match(rec.changes.find(c => c.path.includes("/chris-")).after_body, /Merged into/);
+  assert.ok(rec.changes.every(c => isPagePath(c.path) && c.path.startsWith("brain/entities/people/")), "the validator accepts kind folders");
+  const undo = lib.undoEntityMerge(root, { merge_id: merged.merge_id });
+  assert.deepEqual(undo.conflicts, []);
+  assert.equal(lib.undoEntityMerge(root, { merge_id: merged.merge_id, by: "ann", as_of: undo.as_of }).status, "unmerged");
+  lib.refreshEntityPages(root);
+  const page = readFileSync(join(root, lib.readNames(root).find(n => n.id === chris.id)._path), "utf8");
+  assert.match(page, /security review/, "the restored page's brief is rebuilt from the notes");
+});
+
+test("an older record holding whole files stays readable and undoes", () => {
+  const root = kindBrain();
+  const chris = lib.addName(root, "Chris"), kp = lib.addName(root, "Krzysztof Pawlak");
+  const paths = [chris, kp].map(e => lib.readNames(root).find(n => n.id === e.id)._path), before = paths.map(p => readFileSync(join(root, p), "utf8"));
+  const preview = lib.mergeEntities(root, { source: chris.id, target: kp.id });
+  const merged = lib.mergeEntities(root, { source: chris.id, target: kp.id, by: "ann", as_of: preview.as_of });
+  const file = join(root, "brain/entities/.history", merged.merge_id + ".json"), rec = JSON.parse(readFileSync(file, "utf8"));
+  const whole = { ...rec, changes: rec.changes.map(c => ({ path: c.path, before: before[paths.indexOf(c.path)], after: readFileSync(join(root, c.path), "utf8") })) };
+  delete whole.frontmatter_only;
+  writeFileSync(file, JSON.stringify(whole, null, 2) + "\n");
+  assert.equal(readEntityChange(root, merged.merge_id).changes[0].before, whole.changes[0].before);
+  const undo = lib.undoEntityMerge(root, { merge_id: merged.merge_id });
+  assert.equal(lib.undoEntityMerge(root, { merge_id: merged.merge_id, by: "ann", as_of: undo.as_of }).status, "unmerged");
+  assert.equal(readFileSync(join(root, paths[0]), "utf8").split("\n---\n")[1], before[0].split("\n---\n")[1], "the whole-file body is restored");
 });
 
 test("upgrade's move to kind folders keeps ids, aliases, merges, redirects and files", () => {
