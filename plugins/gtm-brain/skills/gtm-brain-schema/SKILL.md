@@ -48,8 +48,10 @@ renamed or removed. Nothing else.
   always, every; no otherwise.
 - A subtype ("investors are a subtype"): a row under `### Subtypes`; fields of its own go in a
   `### <subtype>` table.
-- A relationship type ("track who introduced whom"): a row with from and to kinds (person,
-  organization, product; `us` as a target), what it means, required.
+- A relationship type ("track who introduced whom"): a row with from and to kinds (any kind in
+  the file; `us` as a target), what it means, required.
+- A kind ("track venues"): a `## <Kind>` section with a field table, one lowercase word or words
+  joined by `_`. Add it only when no existing kind or organization subtype fits.
 - Look first: never two rows for one thing. When it is unclear which kind, subtype or whether it
   is a field or a relationship, ask once (Q1, Q2), the exact row you would write as the first
   option.
@@ -76,9 +78,11 @@ object `rules` (its SCHEMA.md findings).
 
 ## Limits
 
-- The kinds are fixed: person, organization, product. A new kind ("event", "deal") is not
-  possible yet: say so in one line and offer the nearest thing, an organization subtype, or a
-  project folder for work like an event.
+- Person, organization, product, event and tool always exist. Meeting and project cannot be
+  kinds: meeting notes stay in their context and a project is a tag. Company and team are
+  organization subtypes. Say so in one line and offer the nearest thing.
+- Do not remove a kind's section while entities of that kind exist: their files stop reading
+  until the section is back.
 - Subtypes exist only on organizations.
 - `customer_of` stays: it is the customer status (the customer notes). It can be described, not
   removed or renamed.

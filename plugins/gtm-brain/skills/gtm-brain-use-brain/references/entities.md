@@ -50,7 +50,7 @@ memories, and what is still missing); show that list as returned, then one line 
 ["Chris", "Pawlak"] and `email` adds or extends a person; `add_name` with `name` "Telli",
 `kind` "organization" and `subtype` "company" registers a company.
 
-Use `kind` person, organization or product. Organizations can have `subtype` company,
+Use `kind` person, organization, product, event, tool or another kind in SCHEMA.md. Organizations can have `subtype` company,
 team, nonprofit or another supported identity category. Subtype is optional: omit it unless
 the distinction is useful for the current work, and do not ask just to fill it in. Preserve
 existing subtype values; the dashboard displays the organization kind without subtype badges. Team is an

@@ -29,7 +29,7 @@ export function ruleFindings(root) {
     add("P3", "person", e.name, `"${e.name}" is a person known by a first name only, in ${notes.length} note${notes.length === 1 ? "" : "s"}${since ? ` since ${since.slice(0, 10)}` : ""}.`, [
       `Give the full name: say "${e.name} is <Full Name>" (add_name with the full name and alias ${e.name})`,
       ...alike.slice(0, 2).map(o => `Same as ${o.name}: merge_entities ${e.name} into ${o.name}`),
-      `Not a person: say what it is (add_name with kind organization or product)`,
+      `Not a person: say what it is (add_name with kind organization, product, event or tool)`,
     ]);
   }
   // P4: two names that look alike and were never said to be different

@@ -48,7 +48,7 @@ Each entry takes:
 - `people`: every entity the text names, as written in the source: people, and just as much
   companies, products and teams (Castorama, ByteDance, Wispr Flow). A name left out here is not
   an entity anywhere. A new name lands in the registry as a person; if it is not one, follow
-  with `add_name` and its `kind` (organization, product; company/team are organization subtypes), without asking when the note makes
+  with `add_name` and its `kind` (organization, product, event, tool; company/team are organization subtypes), without asking when the note makes
   it plain. If the tool answers *possibly entities, not recorded as such: "Castorama"*, do that
   now for each one that is an entity. Compile collects these names, with their kinds, into the
   context's cover, and the dashboard counts them from the text as well once they are known.

@@ -46,7 +46,7 @@ if (wantDoc !== undefined) {
 }
 if (wantEntity !== undefined) {
   const e = resolveEntity(lib.readNames(root), wantEntity);
-  if (!e || !e._path) fail(`${wantEntity} is not a known person, organization or product; register it with add_name first`);
+  if (!e || !e._path) fail(`${wantEntity} is not a known entity; register it with add_name first`);
   owner = { kind: "entity", ref: e._path, dir: e._path.replace(/\.md$/, "") };
 }
 
