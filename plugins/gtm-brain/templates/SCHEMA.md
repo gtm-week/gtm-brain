@@ -1,14 +1,18 @@
 # Schema
 
-What this brain keeps about each person, organization, product, event and tool, and how they
-relate. Codex fills these fields from your notes, each value citing the notes it rests on, and
+What this brain keeps about each person, organization, product, offering, event, tool and meeting,
+and how they relate. Codex fills these fields from your notes, each value citing the notes it rests on, and
 lists a required field nobody has said yet as a gap to ask about. Edit freely, or say
 `/gtm-brain-schema` and Codex changes it for you. GTM Brain never overwrites your edits.
 
-Every `## <Kind>` section with a field table is a kind. Person, organization, product, event
-and tool always exist; add a section to add a kind. Add fields, organization subtypes and
-relationship types the same way. Meetings and projects are not kinds: meeting notes stay in
-their context, and a project is a tag.
+Every `## <Kind>` section with a field table is a kind. Person, organization, product, offering,
+event, tool and meeting always exist; add a section to add a kind. Add fields, organization subtypes and
+relationship types the same way. Projects are not kinds: a project is a tag.
+
+A meeting needs no section here: its fields are date (required), title, organizer and source (where
+the transcript or recording is; it stays in its tool), its page collects the notes saved with its
+meeting id, and everyone who attended links to it. Leave a `## Meeting` section out while a teammate
+is still on GTM Brain 0.34: that version cannot read a file with one.
 
 ## Person
 
@@ -52,6 +56,14 @@ their context, and a project is a tag.
 | maker | Who makes it, if not us | no |
 | pricing | How it is priced | no |
 
+## Offering
+
+| Field | What it means | Required |
+| --- | --- | --- |
+| what_it_is | What we sell, in a sentence: a service, package or plan | yes |
+| price | What it costs the customer | no |
+| who_it_is_for | Who it is for: the buyer or segment | no |
+
 ## Event
 
 | Field | What it means | Required |
@@ -85,6 +97,6 @@ side should have a current one.
 | investor_in | person, organization | organization, us | Has invested in | no |
 | uses | person, organization | product | Uses this product, ours or another | no |
 | speaker_at | person | event | Speaks or spoke at this event | no |
-| attended | person | event | Attends or attended this event | no |
+| attended | person | event | Attends or attended this event (a meeting too, always) | no |
 | integrates_with | tool | tool | Connected to this other tool | no |
 | customer_of | person, organization | us | Customer status (customer, prospect, former customer), kept by the customer notes | no |

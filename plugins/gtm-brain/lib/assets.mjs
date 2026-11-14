@@ -6,6 +6,7 @@ import { readFileSync, writeFileSync, mkdirSync, realpathSync, statSync, existsS
 import { resolve, relative, isAbsolute, join, extname, basename, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import * as lib from './brain.mjs';
+import { assetFolder, movedAsset, kindFolders, ENTITIES_DIR } from './layout.mjs';
 
 const text = v => typeof v === 'string' && v.trim().length > 0 && !/[\x00-\x1f]/.test(v);
 const within = (base, path) => { const r = relative(base, path); return r !== '' && !isAbsolute(r) && r !== '..' && !r.startsWith('../'); };
@@ -41,13 +42,28 @@ export function resolveAssetFile(root, asset) {
   const f = asset.file;
   if (f.base === 'local' && f.machine !== machine(root)) throw new Error('This file is local to another computer. Attach a local copy in Codex.');
   const base = f.base === 'project' ? projectRoot(root, f.project) : realpathSync(root);
-  const path = realpathSync(f.base === 'local' ? f.path : resolve(base, f.path));
+  const path = realpathSync(f.base === 'local' ? f.path : resolve(base, f.base === 'brain' ? relocated(root, asset) : f.path));
   if (f.base !== 'local' && !within(base, path)) throw new Error('File points outside its linked folder. Reattach it in Codex.');
   // An absolute reference was canonicalized at attachment time. Do not follow a later redirect.
   if (f.base === 'local' && path !== f.path) throw new Error('File location changed. Reattach it in Codex.');
   if (!statSync(path).isFile()) throw new Error('Attachment is not a regular file.');
   return path;
 }
+/* An approved file recorded in an owner's folder that a rename or the upgrade to kind folders moved: the
+   memory keeps the path it was saved with (memories are never edited), the file is found where its owner's
+   folder is now. By the short id in the path, else by the owner named on the attachment. */
+function relocated(root, asset) {
+  const p = asset.file.path;
+  if (!p.startsWith(`${ENTITIES_DIR}/`) || existsSync(join(root, p))) return p;
+  const byId = movedAsset(root, p);
+  if (byId) return byId;
+  const e = lib.resolveEntity(lib.readNames(root), asset.entity);
+  const m = p.match(/^brain\/entities\/([a-z0-9-]+)\/(?:[a-z0-9-]+-[0-9a-f]{6}\/)?(.+)$/);
+  if (e?._path && m) { for (const rest of [m[2], basename(p)]) { const next = `${assetFolder(e._path)}/${rest}`; if (existsSync(join(root, next))) return next; } }
+  return p;
+}
+/* A file sitting loose among the pages (brain/entities/ or a kind folder), not in anyone's own folder. */
+const loosePage = (root, path) => { const real = realpathSync(root), dir = dirname(path); return dir === join(real, ENTITIES_DIR) || kindFolders(root).some(k => dir === join(real, ENTITIES_DIR, k)); };
 export function prepareAsset(root, input, project = null, previous = null) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('asset must be an object');
   if (Object.keys(input).some(k => !['entity', 'label', 'role', 'status', 'path'].includes(k))) throw new Error('unknown asset input field');
@@ -64,7 +80,7 @@ export function prepareAsset(root, input, project = null, previous = null) {
     if (!isAbsolute(input.path) && !within(base, path)) throw new Error('Relative attachment escapes its folder. Use its explicit absolute path.');
     if (within(join(realpathSync(root), 'work'), path)) path = toOwnerFolder(root, entity, path);
     // A file dropped loose in brain/entities/ (beside the pages) moves into its owner's folder.
-    else if (dirname(path) === join(realpathSync(root), 'brain', 'entities')) path = toOwnerFolder(root, entity, path, { move: true });
+    else if (loosePage(root, path)) path = toOwnerFolder(root, entity, path, { move: true });
     file = within(base, path) ? { base: project ? 'project' : 'brain', path: relative(base, path), ...(project ? { project } : {}) }
       : within(realpathSync(root), path) ? { base: 'brain', path: relative(realpathSync(root), path) }
       : { base: 'local', path, machine: machine(root, true) };
@@ -75,12 +91,12 @@ export function prepareAsset(root, input, project = null, previous = null) {
   if (asset.status !== 'retired') resolveAssetFile(root, asset);
   return asset;
 }
-/* A file under work/ lands in brain/entities/<id>/ beside the entity's file, committed, under a free name.
+/* A file under work/ lands in the owner's folder (brain/entities/people/max-jendral-3f9a2c/, lib/layout.mjs) beside the entity's file, committed, under a free name.
    One loose in brain/entities/ itself is moved there, so a person's or company's files are always in their folder. */
 function toOwnerFolder(root, entity, path, { move = false } = {}) {
   const e = lib.resolveEntity(lib.readNames(root), entity);
   if (!e?._path) throw new Error('Name the existing entity for this attachment; use add_name first if it is new.');
-  const real = realpathSync(root), dir = join(real, e._path.replace(/\.md$/, '')); mkdirSync(dir, { recursive: true });
+  const real = realpathSync(root), dir = join(real, assetFolder(e._path)); mkdirSync(dir, { recursive: true });
   const ext = extname(path), stem = basename(path, ext), bytes = readFileSync(path), same = p => existsSync(p) && readFileSync(p).equals(bytes);
   let name = `${stem}${ext}`, n = 1;
   while (existsSync(join(dir, name)) && !same(join(dir, name))) name = `${stem}-${++n}${ext}`;
@@ -97,7 +113,7 @@ export function ownerCopy(root, entity, input) {
   const real = realpathSync(root);
   let path; try { path = realpathSync(isAbsolute(input) ? input : join(real, input)); } catch { throw new Error(`no file at ${input}`); }
   if (!statSync(path).isFile()) throw new Error('Keep a file, not a folder.');
-  const loose = dirname(path) === join(real, 'brain', 'entities');
+  const loose = loosePage(root, path);
   if (within(real, path) && !within(join(real, 'work'), path) && !loose) return relative(real, path);
   return relative(real, toOwnerFolder(root, entity, path, { move: loose }));
 }

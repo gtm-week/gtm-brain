@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // The entity folder: identity metadata and compiled views. Source facts remain context memories.
 //   node entities.mjs <root>                                           list, grouped by kind
-//   node entities.mjs <root> --add "Krzysztof Pawlak" [--alias "Chris, Pawlak"] [--email "a@b.io"] [--kind person|organization|product|event|tool|<SCHEMA.md kind>] [--subtype company|team]
+//   node entities.mjs <root> --add "Krzysztof Pawlak" [--alias "Chris, Pawlak"] [--email "a@b.io"] [--kind person|organization|product|offering|event|tool|meeting|<SCHEMA.md kind>] [--subtype company|team]
 //   node entities.mjs <root> --who "Chris"                             resolve a mention
 //   node entities.mjs <root> --add "Nestle Poland" --not "Nestle"       these two are different; never suggest merging them
 import { existsSync } from "node:fs"; import { join } from "node:path";

@@ -8,6 +8,8 @@ import * as lib from "./brain.mjs";
 import { CHAT_KINDS } from "./host.mjs";
 import { readSchema, relationType, US } from "./schema.mjs";
 import { customerOverview } from "./customers.mjs";
+import { meetingOverview } from "./meetings.mjs";
+import { meetingAnchors } from "./meeting-entities.mjs";
 
 export const RELATION_STATUSES = ["current", "ended"];
 const object = (v, keys) => v && typeof v === "object" && !Array.isArray(v) && Object.keys(v).every(k => keys.includes(k));
@@ -75,6 +77,17 @@ export function relationOverview(root, { registry = lib.readNames(root), context
     if (!["customer", "prospect", "former_customer"].includes(c.status)) continue;
     relations.push({ from: { id: c.id, name: c.name, kind: c.kind }, type: "customer_of", to: { id: null, name: US, kind: US }, status: c.status === "former_customer" ? "ended" : "current", customer_status: c.status,
       basis: c.basis, observed_at: c.observed_at, recorded_at: c.recorded_at, context: c.context, memory: c.memory, summary: c.summary, in_schema: true, conflicts: c.conflicts, history: c.history });
+  }
+  // attended, read-only from the meeting records: each participant who attended links to the meeting's entity
+  const meetingOf = new Map(registry.flatMap(e => meetingAnchors(e).map(a => [a, e])));
+  if (meetingOf.size) for (const m of meetingOverview(root, { registry, contexts }).meetings) {
+    const meeting = meetingOf.get(m.id), record = m.evidence.find(x => x.meeting) || null;
+    if (!meeting || m.occurrence !== "happened") continue;
+    for (const p of m.participants.filter(p => p.role === "attended")) {
+      const person = lib.resolveEntity(registry, p.name); if (!person || person.kind !== "person") continue;
+      relations.push({ from: { id: person.id, name: person.name, kind: person.kind }, type: "attended", to: { id: meeting.id, name: meeting.name, kind: "meeting" }, status: "current",
+        basis: record?.meeting?.basis || "source", observed_at: m.occurred_at || record?.meeting?.observed_at || m.recorded_at, recorded_at: m.recorded_at, context: m.context, memory: record?.id || m.id, summary: m.title, in_schema: true, from_meeting: true, conflicts: [], history: [] });
+    }
   }
   if (focus) relations = relations.filter(r => r.from.id === focus.id || r.to.id === focus.id);
   if (type) { const t = schema ? relationType(schema, type)?.type || type : type; relations = relations.filter(r => r.type === t); }

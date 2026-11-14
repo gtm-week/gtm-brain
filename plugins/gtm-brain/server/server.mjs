@@ -21,6 +21,7 @@ import { validateValue } from "../lib/ontology/validation.mjs";
 import { placementTrailers, whyHere, WHY_TRAILER } from "../lib/where.mjs";
 import { rulesReport } from "../lib/rules-check.mjs";
 import { askSourceLines } from "../lib/ask-source.mjs";
+import { readSchema, fieldsFor } from "../lib/schema.mjs";
 import { createSaveNudge } from "../lib/save-nudge.mjs";
 import { relativeDates } from "../lib/dots.mjs";
 
@@ -306,7 +307,7 @@ const TOOLS = [
       return text(`proposed: ${interaction.name} (${interaction.external === false ? "no tool step, recorded at once" : interaction.tool}); then call approve_change with kind interaction: its form asks the person for APPROVE. It records in ${interaction.record.context}: ${interaction.record.content}`);
     } },
   { name: "keep_approved_file", title: "Keeping the approved file", readOnly: false,
-    description: "The person approves a file for a person, company or product: \"this is my photo, use it from now on\", \"this is our logo\", \"use this one instead\". Keeps the file in the owner's folder in the brain (brain/entities/<name>/), records it as the approved file for that role and replaces the previous one; every later chat starts with it. Call it in the same turn; never only say it is saved.",
+    description: "The person approves a file for a person, company or product: \"this is my photo, use it from now on\", \"this is our logo\", \"use this one instead\". Keeps the file in the owner's folder in the brain (brain/entities/<kind folder>/<name>-<short id>/, beside their page), records it as the approved file for that role and replaces the previous one; every later chat starts with it. Call it in the same turn; never only say it is saved.",
     inputSchema: schema({ by: str("The current person's handle"), entity: str("Whose file: the person, company or product, as named in the brain"), role: str("portrait for a person's photo, primary-logo for a logo, or another short role"), path: str("The file: the attachment's absolute path, or a path in the brain"), label: str("A few words on this file, e.g. Portrait, smiling"), context: str("The context for the note; default company") }, ["brain", "by", "entity", "role", "path"]),
     async call({ brain, by, entity, role, path, label, context }) {
       let kept; try { kept = (await import("../lib/assets.mjs")).ownerCopy(brain, entity, path); } catch (e) { return text(`not kept: ${e.message}`, true); }
@@ -371,7 +372,9 @@ const companyCatalog = ctx => {
 };
 const companyLine = brain => { if (!isBrain(brain)) return ""; const { actions } = lib.readInteractions(brain); return actions.length ? `\nThis company's interactions: ${actions.map(a => `${a.name} (${a.tool})`).join(", ")}; list_objects shows them, interact runs them.` : ""; };
 const withCompanyLine = (brain, t) => { if (!t.isError && t.content?.[0]) t.content[0].text += companyLine(brain); return t; };
-const generated = buildTools(ontology, createFilesBackend({ run, memoryRead: memoryReader.read }), { scope: { name: "brain", schema: BRAIN }, extraCatalog: companyCatalog });
+// entities filter on the SCHEMA.md fields of the brain (role: VP Sales) as well as the ontology's own fields
+const schemaFilters = (object, ctx) => { if (object !== "entities" || !ctx.brain) return []; const s = readSchema(ctx.brain).schema; return s ? [...new Set(Object.keys(s.kinds).flatMap(k => fieldsFor(s, k).map(f => f.name)))] : []; };
+const generated = buildTools(ontology, createFilesBackend({ run, memoryRead: memoryReader.read }), { scope: { name: "brain", schema: BRAIN }, extraCatalog: companyCatalog, extraFilters: schemaFilters });
 for (const tool of generated) {
   if (TOOLS.some(t => t.name === tool.name)) throw new Error(`duplicate tool: ${tool.name}`);
   TOOLS.push({ ...tool, title: tool.title || tool.annotations.title, readOnly: tool.annotations.readOnlyHint, call: args => tool.call(args, {}) });
@@ -385,7 +388,7 @@ const SQL_SCHEMA = {
   memories: "rowid, id, context, kind, at, via, content, authors, people, tools, tags, entities, sources (json), supersedes, time. Only visible records: effective, not retracted, not superseded by a fork, and not a retraction note.",
   members: "memory_id, field (people | tools | tags | entities | authors), value. One row per member of a visible memory; join on memories.id.",
   contexts: "slug, title, status, summary, rule, loaded (1 when loaded in this chat).",
-  entities: "id, name, kind, subtype, aliases (json), emails (json). The identity registry.",
+  entities: "id, name, kind, subtype, aliases (json), emails (json), status, relation_to_us (team | customer | partner | investor | prospect | other, people and organizations), short_id, path, last_mentioned, fields (json: the SCHEMA.md fields compiled on the page). The identity registry.",
   keywords: "the full-text index: JOIN keywords k ON k.rowid = m.rowid WHERE keywords MATCH 'word'.",
 };
 const byName = name => TOOLS.find(t => t.name === name);
@@ -396,7 +399,7 @@ const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [colu
   const query = byName("query"), describe = byName("describe_object"), objects = byName("list_objects");
   const datasets = [...query.inputSchema.properties.object.enum];
   const base = query.call, describeBase = describe.call, objectsBase = objects.call;
-  query.description = "The one read: rows of one object, newest first (exact filters, free-text search with alias expansion, limit), or one read-only SQL SELECT over the memory index (memories, members, contexts, entities, keywords; describe_object shows the columns) for counts, joins and dates. Derived reads by object: status (where we are: contexts, loaded set, tools, onboarding; call it first), brief (an entity's cited one-page view; search = the name; also the answer to who is X and why did you add X: when and from which note it was first saved, and the rule each spelling matched), deal (one deal's MEDDPICC rubric and every memory about it, to score with cited IDs; search = the company), relations (relationships from SCHEMA.md with their history; search = an entity, filters.type = one type), why (why a file or folder is where it is: the RULES.md row, reason, who and when; search = the path), rules (the brain checked against its naming and RULES.md rules, each finding with fixed choices; for: check the brain), projects, brains, customers, meetings, health (how the brain is doing), population (is the brain too full or too empty: notes per week, duplicates, entities without notes, uncited and unsourced notes, with ranges). An entities search resolves a name, alias, email or typo to ranked candidates. Answer from the rows; no rows means say so.";
+  query.description = "The one read: rows of one object, newest first (exact filters, free-text search with alias expansion, limit), or one read-only SQL SELECT over the memory index (memories, members, contexts, entities, keywords; describe_object shows the columns) for counts, joins and dates. Derived reads by object: status (where we are: contexts, loaded set, tools, onboarding; call it first), brief (an entity's cited one-page view; search = the name; also the answer to who is X and why did you add X: when and from which note it was first saved, and the rule each spelling matched), deal (one deal's MEDDPICC rubric and every memory about it, to score with cited IDs; search = the company), relations (relationships from SCHEMA.md with their history; search = an entity, filters.type = one type), why (why a file or folder is where it is: the RULES.md row, reason, who and when; search = the path), rules (the brain checked against its naming and RULES.md rules, each finding with fixed choices; for: check the brain), projects, brains, customers, meetings, health (how the brain is doing), population (is the brain too full or too empty: notes per week, duplicates, entities without notes, uncited and unsourced notes, with ranges). An entities search resolves a name, alias, email or typo to ranked candidates; entities filters on kind, subtype, relation_to_us (team, customer, partner, investor, prospect, other) and any SCHEMA.md field (role: VP Sales) come from the index, without reading pages. Answer from the rows; no rows means say so.";
   query.inputSchema = { ...query.inputSchema, required: [], properties: { ...query.inputSchema.properties,
     object: { ...query.inputSchema.properties.object, enum: [...datasets, ...Object.keys(VIEWS), "deal", "why", "rules", "relations", "reference", "population"] },
     sql: { type: "string", description: "One SELECT (or WITH ... SELECT) over memories, members, contexts, entities and keywords. Read-only; at most limit rows (default 200)." },

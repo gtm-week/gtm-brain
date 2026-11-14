@@ -7,7 +7,7 @@
 // Each check: id, section, pass or fail, ms, bytes. A check that fails because of a gap main is
 // known to have is marked known_gap, so a fix shows up as a check that turns to pass.
 import { spawn, spawnSync } from "node:child_process";
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createInterface } from "node:readline";
@@ -86,6 +86,18 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
   await check("entities.typo", "entities", async () => { const n = gold.busiest.name, typo = n.slice(0, 2) + n[3] + n[2] + n.slice(4); const { r } = await whoIs(typo); return { pass: r.text.includes(gold.busiest.id), text: r.text, note: typo }; });
   const person = gold.entities.find(e => e.kind === "person" && e.emails?.length && e.handle !== by && /@mail\.example$/.test(e.emails[0]));
   if (person) await check("entities.by_email", "entities", () => resolvesTo(person.emails[0], person.id));
+
+  /* ---------- entity pages by kind, filters, meetings (0.35) ---------- */
+  const entityIds = s => [...new Set([...String(s).matchAll(/"id":"(e_[0-9a-f]{16})"/g)].map(m => m[1]))];
+  if (gold.layout) await check("entities.kind_indexes", "entities", async () => { const miss = gold.layout.indexes.filter(f => !existsSync(join(brain, f))); const flat = readdirSync(join(brain, "brain/entities")).filter(f => f.endsWith(".md")); return { pass: !miss.length && !flat.length, note: [...miss, ...flat.map(f => `flat ${f}`)].join(", ") }; });
+  if (gold.filters?.customers?.length) await check("entities.filter_relation", "entities", async () => { const r = await q({ object: "entities", filters: { kind: "organization", relation_to_us: "customer" }, limit: 200 }); const got = entityIds(r.text), want = gold.filters.customers.slice(0, 20), miss = want.filter(x => !got.includes(x)), wrong = gold.filters.not_customers.filter(x => got.includes(x)); return { pass: !r.isError && !miss.length && !wrong.length, text: r.text, note: `${got.length} rows${miss.length ? `, missing ${miss.length}` : ""}${wrong.length ? `, ${wrong.length} not customers` : ""}` }; });
+  if (gold.filters?.staffer) await check("entities.filter_person_at_customer", "entities", async () => { const r = await q({ object: "entities", filters: { kind: "person", relation_to_us: "customer" }, limit: 200 }); return { pass: !r.isError && entityIds(r.text).includes(gold.filters.staffer.id), text: r.text, note: gold.filters.staffer.name }; });
+  if (gold.meeting_entities) await check("entities.meetings", "entities", async () => { const r = await q({ object: "entities", filters: { kind: "meeting" }, limit: 200 }); const n = entityIds(r.text).length; return { pass: !r.isError && n === Math.min(200, gold.meeting_entities.count), text: r.text, note: `${n} of ${gold.meeting_entities.count}` }; });
+  if (gold.meeting_entities?.first) await check("entities.meeting_page", "entities", async () => { const m = gold.meeting_entities.first; const b = await q({ object: "brief", search: m.id }); const rel = await q({ object: "relations", search: m.id }); return { pass: !b.isError && b.text.includes(m.title) && b.text.includes(m.attendee) && ids(b.text).includes(m.outcome) && rel.text.includes(`${m.attendee} attended`), text: b.text + "\n" + rel.text }; });
+
+  const offerings = gold.entities.filter(e => e.kind === "offering");
+  if (offerings.length) await check("entities.offering", "entities", async () => { const r = await q({ object: "entities", filters: { kind: "offering" }, limit: 200 }); const got = entityIds(r.text), miss = offerings.map(e => e.id).filter(x => !got.includes(x)); const pages = existsSync(join(brain, "brain/entities/offerings")) ? readdirSync(join(brain, "brain/entities/offerings")).filter(f => /-[0-9a-f]{6}\.md$/.test(f)).length : 0; return { pass: !r.isError && !miss.length && pages >= offerings.length, text: r.text, note: `${got.length} rows, ${pages} pages` }; });
+  if (gold.filters?.customers?.length) await check("entities.index_relation", "entities", async () => { const text = readFileSync(join(brain, "brain/entities/organizations/index.md"), "utf8"), c = gold.entities.find(e => e.id === gold.filters.customers[0]); const line = text.split("\n").find(l => l.includes(c.id.slice(2, 8))) || ""; return { pass: line.includes(` · customer · ${c.id.slice(2, 8)} · `), note: line.slice(0, 120) }; });
 
   /* ---------- briefs ---------- */
   await check("brief.facts", "brief", async () => { const r = await q({ object: "brief", search: gold.busiest.name }); return { pass: !r.isError && r.text.includes(gold.busiest.name), text: r.text }; });

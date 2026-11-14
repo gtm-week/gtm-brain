@@ -15,7 +15,7 @@ editor opens it.
 | Company profile, team, tools | `brain/admin.md` | Codex, only after you choose APPROVE |
 | Notes (what happened, was decided, is open) | `brain/contexts/<context>/memories.jsonl` | Codex, when you say something worth keeping; never edited |
 | A context's summary and rules | `brain/contexts/<context>/context.md` | the summary: the compile run; the rules: you, through Codex |
-| People, companies, products | `brain/entities/*.md` | Codex; you may edit the Markdown by hand |
+| People, companies, products, offerings, events, tools, meetings | `brain/entities/<kind>/<name>-<short id>.md` (`people/`, `organizations/`, ...), files in the folder of the same name; `index.md` per kind | Codex; you may edit a page's Markdown by hand, never an `index.md` |
 | Where files go, your own rules | `RULES.md` | you; Codex follows it |
 | What the brain keeps per person, organization and product, and relationship types | `SCHEMA.md` | you; Codex fills the fields from notes |
 | Your documents (strategy, ICP, tone of voice, design system, pricing) | `<name>.md` at the top (the first four from day one), files in a folder of the same name | you or Codex |
@@ -49,6 +49,27 @@ cannot settle (an unclear name is asked right after the note is saved). It asks 
 - **Projects.** A note about someone whose notes all sit in one project is tagged with it; when
   they are in several, Codex asks which.
 - **Your reply first.** A held question waits for your answer; Codex never picks it for you.
+
+Entity pages live in a folder per kind: `brain/entities/people/`, `organizations/`, `products/`,
+`offerings/` (what we sell: what it is, its price, who it is for), `events/`, `tools/`,
+`meetings/`, and a folder for each kind you add in SCHEMA.md. A page is named
+by the readable name and the first six characters of its stable id (`people/max-jendral-3f9a2c.md`),
+so two people with one name get two pages. A rename moves the page and its files folder in git and
+keeps the id part, so links by id and attached files still work. Each folder's `index.md` lists
+every entity of that kind on one line (name, what they are, relation to us, short id, last
+mentioned); GTM Brain rewrites it with the pages. Relation to us (team, customer, partner, investor,
+prospect, other) is derived from the notes: the team in admin.md, customer status, partner_of,
+investor_in, and a person's employer. "Show the customers' VPs of Sales" filters on it and on the
+SCHEMA.md fields without opening pages. A captured meeting becomes a page in `meetings/` that
+collects the notes saved with its meeting id and lists who attended; the transcript stays in its
+tool. A brain from before 0.35 keeps its flat `brain/entities/*.md` until "upgrade the brain"
+moves the pages into the kind folders in one commit; meeting pages, and offerings when SCHEMA.md
+has no Offering section, wait for that move, so a flat brain never holds a page 0.34 cannot read.
+Update every teammate first: GTM Brain 0.34 reads only the flat pages, so after the move it sees no
+people or companies (its saves still work) and writes its own flat pages for the names it adds.
+At the next write on 0.35 each one folds into the page that holds the same id, a merged id, or the
+same name, alias or email (its text is kept in `work/manual-edits/entities/`); one that matches
+nothing moves into its kind folder as a new entity.
 
 A chat that keeps reading the brain and saves nothing is reminded once, with the third read, to save
 what the turn established; `save_nudge: off` in `brain/admin.md` turns the reminder off.

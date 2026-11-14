@@ -166,3 +166,20 @@ test("query (memories) through the MCP server carries the same line, after the r
     assert.doesNotMatch(await call("query", { brain: root, object: "memories", search: "onboarding plan" }), /RULES\.md says/, "a note with no CRM source adds nothing");
   } finally { server.kill(); }
 });
+
+test("a tool's page points at its rows of the table, by name or kind of tool; the rows stay in RULES.md", () => {
+  const root = brain();
+  const hub = lib.addName(root, "HubSpot", { kind: "tool" }), luma = lib.addName(root, "Luma", { kind: "tool" }), figma = lib.addName(root, "Figma", { kind: "tool" });
+  const page = e => { lib.refreshEntityPages(root); return readFileSync(join(root, lib.readNames(root).find(n => n.id === e.id)._path), "utf8"); };
+  const rules = readFileSync(join(root, "RULES.md"), "utf8"), lineOf = text => rules.split("\n").findIndex(l => l.startsWith(text)) + 1;
+  assert.match(page(hub), new RegExp(`\\nAsk the source \\(RULES\\.md\\): read HubSpot for deal stage and amount \\(RULES\\.md line ${lineOf("| Deal stage and amount |")}, good for 1 day\\)`));
+  assert.match(page(luma), /Ask the source \(RULES\.md\): read Luma for who registered for an event \(RULES\.md line \d+, good for 1 day\)/);
+  assert.doesNotMatch(page(figma), /Ask the source/, "no row is about a design tool");
+  assert.equal(readFileSync(join(root, "RULES.md"), "utf8"), rules, "nothing is moved out of RULES.md");
+  // a row narrowed to another CRM is no longer about HubSpot; the page follows the table
+  writeFileSync(join(root, "RULES.md"), rules.replace("| Deal stage and amount | CRM | 1 day |", "| Deal stage and amount | Attio | 1 day |"));
+  assert.doesNotMatch(page(hub), /Ask the source/);
+  // a row naming the tool itself
+  writeFileSync(join(root, "RULES.md"), rules.replace("| Deal stage and amount | CRM | 1 day |", "| Deal stage and amount | HubSpot | 3 days |"));
+  assert.match(page(hub), /read HubSpot for deal stage and amount \(RULES\.md line \d+, good for 3 days\)/);
+});

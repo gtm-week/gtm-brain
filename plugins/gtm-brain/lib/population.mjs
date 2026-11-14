@@ -12,6 +12,7 @@ import { join } from "node:path";
 import * as lib from "./brain.mjs";
 import { readSchema, fieldsFor } from "./schema.mjs";
 import { normalizeSource } from "./pointers.mjs";
+import { ENTITIES_DIR } from "./layout.mjs";
 
 const DAY = 864e5;
 const nowMs = () => process.env.GTM_BRAIN_NOW ? Date.parse(process.env.GTM_BRAIN_NOW) : Date.now();
@@ -46,7 +47,7 @@ function contextDirs(root) {
   return readdirSync(d).filter(n => { try { return statSync(join(d, n)).isDirectory(); } catch { return false; } }).sort();
 }
 function entityFiles(root) {
-  const d = join(root, "brain", "entities"); if (!existsSync(d)) return [];
+  const d = join(root, ENTITIES_DIR); if (!existsSync(d)) return [];
   const out = [], walk = dir => { for (const n of readdirSync(dir).sort()) { const p = join(dir, n); let s; try { s = statSync(p); } catch { continue; } if (s.isDirectory()) walk(p); else if (n.endsWith(".md")) out.push(`${p}:${s.size}:${s.mtimeMs}`); } };
   walk(d); return out;
 }
