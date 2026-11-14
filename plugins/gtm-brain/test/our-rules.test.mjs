@@ -196,6 +196,10 @@ test("server: query rules gains the scoped list; a brief and a save carry the ru
   const call = async (name, args) => { const m = await rpc("tools/call", { name, arguments: { brain: root, ...args } }); return { text: (m.result?.content || []).map(c => c.text).join("\n"), isError: !!m.result?.isError }; };
   try {
     await rpc("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "t", version: "0" } });
+    // Claude Code keeps 2048 characters of a tool description: the scoped read must be said before the cut
+    const q = (await rpc("tools/list")).result.tools.find(t => t.name === "query");
+    assert.match(q.description.slice(0, 2048), /the Our rules that apply to it, filters\.when = saving, drafting or reading, filters\.text = a draft to check/);
+    assert.ok(q.description.length <= 2048, `query's description is ${q.description.length} characters; a host keeps 2048`);
     let r = await call("query", { object: "rules", search: "organization" });
     assert.match(r.text, /^Our rules for organization \(RULES.md[^\n]*\n- Never call a company a customer before a signed contract\. \[check\]/);
     assert.doesNotMatch(r.text, /partner tier|pricing/);
