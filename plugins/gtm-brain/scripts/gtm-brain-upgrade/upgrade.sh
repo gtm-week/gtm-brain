@@ -1,12 +1,32 @@
 #!/usr/bin/env bash
 # gtm-brain upgrade: refresh plugin-owned files and migrate legacy identity registries.
 # Original registries are backed up; context memories are never rewritten.
-#   bash upgrade.sh /path/to/brain
+#   bash upgrade.sh [/path/to/brain] [--confirm]
+# --confirm: the person said yes to a change of the brain's file layout (brain/layout.json), which the run
+# without it described: how many teammates saved in the last 14 days and that they will need to update.
 set -euo pipefail
 # Resolve the plugin before entering the brain: a relative script path is relative to the caller's cwd.
 HERE="$(cd "$(dirname "$0")" && pwd)"; PLUGIN="$(cd "$HERE/../.." && pwd)"; T="$PLUGIN/templates"
-ROOT="${1:-.}"; cd "$ROOT"
+ROOT="."; CONFIRM=0
+for a in "$@"; do case "$a" in --confirm) CONFIRM=1;; *) ROOT="$a";; esac; done
+cd "$ROOT"
 [ -f brain/admin.md ] || { echo "not a brain: $ROOT"; exit 1; }
+# The layout first, before anything is backed up or replaced: a brain on a newer layout than this plugin
+# understands is never written; a layout change waits for the person's yes.
+layout_out="$(node --input-type=module - "$PLUGIN/lib/layout-version.mjs" "$PLUGIN/lib/brain.mjs" "$CONFIRM" <<'JS'
+const v = await import(process.argv[2]), lib = await import(process.argv[3]);
+const blocked = v.layoutBlock(".");
+if (blocked) { console.log(`BLOCKED\t${blocked}`); process.exit(0); }
+const names = Object.fromEntries((lib.readAdmin(".")?.team || []).map(p => [p.handle, p.name]));
+const plan = v.layoutPlan(".", { me: lib.currentPerson("."), names });
+if (plan.changes && process.argv[4] !== "1") console.log(`ASK\t${plan.line}`);
+else if (plan.changes) console.log(`CHANGE\t${plan.from}\t${plan.to}`);
+JS
+)"
+case "$layout_out" in
+  BLOCKED*) echo "${layout_out#BLOCKED$'\t'}"; echo "Nothing was upgraded."; exit 3;;
+  ASK*) echo "not upgraded yet: ${layout_out#ASK$'\t'}"; echo "Nothing was changed."; exit 0;;
+esac
 node --input-type=module - "$PLUGIN/lib/upgrade-files.mjs" "$T" <<'JS'
 const { prepareUpgrade, rulesReasons } = await import(process.argv[2]);
 // Read before anything is replaced: the reasons are counted from the rules this brain has now.
@@ -60,12 +80,32 @@ if [ -n "$cons_out" ]; then
   while IFS="$(printf '\t')" read -r from to; do echo "moved $from into ${to%/*}/"; paths="$paths $from $to"; done <<< "$cons_out"
   changed=1
 fi
-# Every brain has strategy.md (0.27.0): a pre-0.27 brain gets the same placeholder setup writes, waiting for the intake.
-added_strategy=0
-if [ ! -f strategy.md ]; then
-  PLUGIN_VERSION="$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$PLUGIN/.codex-plugin/plugin.json" | head -1)"
-  sed -e "s|{{COMPANY}}|$(printf '%s' "$COMPANY" | sed -e 's/[&|]/\\&/g')|g" -e "s|{{DATE}}|$(date +%F)|g" -e "s|{{VERSION}}|$PLUGIN_VERSION|g" "$T/strategy.md" > strategy.md
-  echo "added strategy.md"; changed=1; paths="$paths strategy.md"; added_strategy=1
+# The starter documents setup writes (strategy.md since 0.27.0; icp, voice, design-system and market since
+# 0.34.4): a brain gets the ones it lacks once, as the drafts setup writes. A file already there is the person's,
+# and a starter brain/layout.json records as given is never brought back after the person deleted it.
+PLUGIN_VERSION="$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$PLUGIN/.codex-plugin/plugin.json" | head -1)"
+starters="$(node --input-type=module -e 'const u=await import(process.argv[1]);console.log(u.addStarters(".",process.argv[2],{version:process.argv[3]}).join(" "))' "$PLUGIN/lib/upgrade-files.mjs" "$T" "$PLUGIN_VERSION")"
+added_strategy=0; other_starters=""
+for f in $starters; do
+  echo "added $f"; changed=1; paths="$paths $f"
+  if [ "$f" = strategy.md ]; then added_strategy=1; else other_starters="$other_starters${other_starters:+, }$f"; fi
+done
+# RULES.md (where things go, ask the source, the brain's own rules) and SCHEMA.md (what the brain keeps): the
+# files the person edits. A brain from before them gets them here, as setup writes them; an edited one stays.
+# Each is kept in a commit of its own by lib (where.mjs ensureRules, schema.mjs ensureSchema).
+had_rules=0; [ -f RULES.md ] && had_rules=1; had_schema=0; [ -f SCHEMA.md ] && had_schema=1
+ensured="$(node --input-type=module -e 'const w=await import(process.argv[1]),s=await import(process.argv[2]);const out=[];if(w.ensureRules(".",process.argv[3]))out.push("RULES.md");if(s.ensureSchema(".",process.argv[3]))out.push("SCHEMA.md");console.log(out.join(" "))' "$PLUGIN/lib/where.mjs" "$PLUGIN/lib/schema.mjs" "$T")"
+added_rules=""
+for f in $ensured; do
+  if { [ "$f" = RULES.md ] && [ "$had_rules" = 0 ]; } || { [ "$f" = SCHEMA.md ] && [ "$had_schema" = 0 ]; }; then echo "added $f"; added_rules="$added_rules${added_rules:+, }$f"; else echo "updated $f (it was a shipped version nobody edited)"; fi
+  changed=1; paths="$paths $f"
+done
+# brain/layout.json: the file layout this brain uses, read by every GTM Brain before it writes. Written once
+# here for a brain from before it (layout 1, nothing moves); a layout change happens only with --confirm.
+layout_change="$(node --input-type=module -e 'const v=await import(process.argv[1]),u=await import(process.argv[2]);if(v.writeLayout(".",{starters:u.STARTERS}))console.log("changed")' "$PLUGIN/lib/layout-version.mjs" "$PLUGIN/lib/upgrade-files.mjs")"
+if [ "$layout_change" = changed ]; then
+  case "$layout_out" in CHANGE*) echo "changed the brain's file layout to $(printf '%s' "$layout_out" | cut -f3)";; *) echo "recorded the brain's file layout (brain/layout.json)";; esac
+  changed=1; paths="$paths brain/layout.json"
 fi
 # workflows/ (0.28.0): a brain from before gets the folder with the two shipped workflows once. A folder that
 # exists is never added to, so a deleted shipped workflow stays deleted; a deleted folder comes back.
@@ -84,10 +124,12 @@ echo "upgrade report:"
 [ "$moved_n" -gt 0 ] && echo "  moved $moved_n guideline$([ "$moved_n" = 1 ] || echo s) to the root as a document (say: list the documents)"
 [ "$kept_n" -gt 0 ] && echo "  kept $kept_n guideline$([ "$kept_n" = 1 ] || echo s) in brain/guidelines: a file of that name already sits at the root; adopt or merge by hand"
 [ "$added_strategy" = 1 ] && echo "  added strategy.md, waiting for the strategic intake (say: run the strategic intake)"
+[ -n "$other_starters" ] && echo "  added the starter documents $other_starters, as drafts to fill when it suits (say: list the documents)"
+[ -n "$added_rules" ] && echo "  added $added_rules: the brain's rules and what it keeps, yours to edit (say: show me the rules)"
 [ "$added_workflows" = 1 ] && echo "  added workflows/: outbound and ads-then-outbound, as drafts (say: start the outbound workflow)"
 [ "$old_files" -gt 0 ] && echo "  $old_files files in files/ from before 0.27 stay where they are; their links keep working. New files land beside a document or a company."
 [ -n "$stray" ] && echo "  folders at the top GTM Brain does not use: $stray. A Markdown in them can become a document where it lies (adopt the documents in <folder>/); the rest is yours to move or delete."
-[ "$moved_n" = 0 ] && [ "$kept_n" = 0 ] && [ "$added_strategy" = 0 ] && [ "$added_workflows" = 0 ] && [ "$old_files" = 0 ] && [ -z "$stray" ] && echo "  nothing to migrate"
+[ "$moved_n" = 0 ] && [ "$kept_n" = 0 ] && [ "$added_strategy" = 0 ] && [ -z "$other_starters" ] && [ -z "$added_rules" ] && [ "$added_workflows" = 0 ] && [ "$old_files" = 0 ] && [ -z "$stray" ] && echo "  nothing to migrate"
 git config core.hooksPath .githooks 2>/dev/null || true
 git config gtm-brain.lib "$PLUGIN/lib/brain.mjs" 2>/dev/null || true
 # Team handles: the rule is the full name, lowercase, hyphenated. A brain set up before that rule

@@ -2,6 +2,7 @@
 import { existsSync, readFileSync, readdirSync, mkdirSync, copyFileSync, writeFileSync, mkdtempSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { readAdmin, readNames, commit } from "./brain.mjs";
+import { readLayout } from "./layout-version.mjs";
 
 // Shared with the upgrade matrix tests. Aliases point to the same immutable snapshot.
 export const legacyTemplates = JSON.parse(readFileSync(new URL("../templates/legacy/manifest.json", import.meta.url), "utf8"));
@@ -118,4 +119,19 @@ export function prepareUpgrade(root, templates) {
     return { ready: false, backup, proposal };
   }
   return { ready: true, backup };
+}
+
+/* The starter documents setup writes (GTM week sync, 2026-11-13). An upgrade adds the ones a brain lacks, at
+   the root or in a folder of their own name, and brain/layout.json records every starter as given, so one
+   the person deleted afterwards is never brought back. A file already there is the person's. */
+export const STARTERS = ["strategy", "icp", "voice", "design-system", "market"];
+export function addStarters(root, templates, { version = "", date = new Date().toISOString().slice(0, 10) } = {}) {
+  const company = readAdmin(root)?.company || "", given = new Set(readLayout(root).starters || []), added = [];
+  for (const doc of STARTERS) {
+    const template = join(templates, `${doc}.md`);
+    if (given.has(doc) || !existsSync(template) || existsSync(join(root, `${doc}.md`)) || existsSync(join(root, doc, `${doc}.md`))) continue;
+    writeFileSync(join(root, `${doc}.md`), readFileSync(template, "utf8").replaceAll("{{COMPANY}}", company).replaceAll("{{DATE}}", date).replaceAll("{{VERSION}}", version));
+    added.push(`${doc}.md`);
+  }
+  return added;
 }
