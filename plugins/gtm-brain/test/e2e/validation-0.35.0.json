@@ -1,0 +1,247 @@
+{
+ "release": "0.35.0",
+ "branch": "validate/0.35.0",
+ "base": "main 7890c69 (plugin 0.34.3)",
+ "node": "v25.2.1",
+ "note": "Validation of release/0.35.0 (6df7b9e) against main 7890c69 on 2026-11-14 from 14:55. One heavy job at a time. Main code ran from a second worktree at 7890c69 with the harness files (test/e2e/, test/live/mentor-shapes.mjs, capture-cases.mjs, tool-routing.mjs) copied in uncommitted. Each shape was generated once per code version with seed 1, because the brain format differs (templates SCHEMA.md, AGENTS.md, admin.md and market.md changed). Compare pass, fail and known_gap; ms is only indicative: other agents ran test suites on the same machine at times (load average reached 237 at 15:12 during the release medium generation).",
+ "shapes": {
+  "medium": {
+   "generation": {
+    "main": "446 s for 4,990 notes on a quiet machine (about 85 ms per note)",
+    "release": "about 1,250 s, slowed by the load spike at 15:12 (610 ms per note at the worst, about 100 ms when quiet)"
+   },
+   "main": {
+    "summary": {
+     "shape": "medium",
+     "notes": 5000,
+     "total": 51,
+     "pass": 41,
+     "fail": 0,
+     "known_gap": 10,
+     "ms": 37824
+    },
+    "not_passing": [
+     {
+      "id": "search.stemmed",
+      "status": "known_gap",
+      "note": "missing 2/3",
+      "known_gap": "unstemmed search: invoice does not find invoicing or invoiced",
+      "bytes": 362,
+      "ms": 141
+     },
+     {
+      "id": "search.typo",
+      "status": "known_gap",
+      "note": "missing 3/3",
+      "known_gap": "memory search has no typo tolerance",
+      "bytes": 7,
+      "ms": 144
+     },
+     {
+      "id": "search.note_ids_on_lines",
+      "status": "known_gap",
+      "note": "missing 3/3",
+      "known_gap": "recall read lines carry no note id",
+      "bytes": 617,
+      "ms": 105
+     },
+     {
+      "id": "brief.size_bounded",
+      "status": "known_gap",
+      "note": "33389 bytes for 49 notes",
+      "known_gap": "entity briefs grow without bound",
+      "bytes": 33389,
+      "ms": 443
+     },
+     {
+      "id": "relations.history_ids",
+      "status": "known_gap",
+      "note": "missing 1/2",
+      "known_gap": "relation history lists dates without the note ids",
+      "bytes": 9009,
+      "ms": 249
+     },
+     {
+      "id": "relations.all",
+      "status": "known_gap",
+      "note": "6 of 20 sampled missing, 65536 bytes",
+      "known_gap": "query relations and query customers are cut at 64 KiB through the server pipe (entities.mjs prints, then process.exit); same on main",
+      "bytes": 65536,
+      "ms": 263
+     },
+     {
+      "id": "customers.listed",
+      "status": "known_gap",
+      "note": "9 of 10 missing, 65536 bytes",
+      "known_gap": "query relations and query customers are cut at 64 KiB through the server pipe (entities.mjs prints, then process.exit); same on main",
+      "bytes": 65536,
+      "ms": 203
+     },
+     {
+      "id": "compile.facts_full",
+      "status": "known_gap",
+      "note": "digest: 0 shown + 0 counted of 2560, 65379 chars",
+      "known_gap": "compile --facts is cut at 64 KiB",
+      "bytes": 65536,
+      "ms": 5896
+     },
+     {
+      "id": "compile.facts_mcp",
+      "status": "known_gap",
+      "note": "digest: 0 shown + 0 counted of 989",
+      "known_gap": "compile --facts is cut at 64 KiB",
+      "bytes": 65536,
+      "ms": 2827
+     },
+     {
+      "id": "load_context.icp",
+      "status": "known_gap",
+      "known_gap": "load_context read lines carry no note id",
+      "bytes": 4733,
+      "ms": 92
+     }
+    ]
+   },
+   "release": {
+    "summary": {
+     "shape": "medium",
+     "notes": 5000,
+     "total": 51,
+     "pass": 46,
+     "fail": 0,
+     "known_gap": 5,
+     "ms": 38349
+    },
+    "not_passing": [
+     {
+      "id": "search.stemmed",
+      "status": "known_gap",
+      "note": "missing 2/3",
+      "known_gap": "unstemmed search: invoice does not find invoicing or invoiced",
+      "bytes": 362,
+      "ms": 123
+     },
+     {
+      "id": "search.typo",
+      "status": "known_gap",
+      "note": "missing 3/3",
+      "known_gap": "memory search has no typo tolerance",
+      "bytes": 7,
+      "ms": 116
+     },
+     {
+      "id": "relations.history_ids",
+      "status": "known_gap",
+      "note": "missing 1/2",
+      "known_gap": "relation history lists dates without the note ids",
+      "bytes": 9009,
+      "ms": 313
+     },
+     {
+      "id": "relations.all",
+      "status": "known_gap",
+      "note": "6 of 20 sampled missing, 65535 bytes",
+      "known_gap": "query relations and query customers are cut at 64 KiB through the server pipe (entities.mjs prints, then process.exit); same on main",
+      "bytes": 65535,
+      "ms": 347
+     },
+     {
+      "id": "customers.listed",
+      "status": "known_gap",
+      "note": "9 of 10 missing, 65536 bytes",
+      "known_gap": "query relations and query customers are cut at 64 KiB through the server pipe (entities.mjs prints, then process.exit); same on main",
+      "bytes": 65536,
+      "ms": 263
+     }
+    ]
+   },
+   "differs": [
+    {
+     "id": "search.note_ids_on_lines",
+     "main": "known_gap",
+     "release": "pass"
+    },
+    {
+     "id": "brief.size_bounded",
+     "main": "known_gap",
+     "release": "pass"
+    },
+    {
+     "id": "compile.facts_full",
+     "main": "known_gap",
+     "release": "pass"
+    },
+    {
+     "id": "compile.facts_mcp",
+     "main": "known_gap",
+     "release": "pass"
+    },
+    {
+     "id": "load_context.icp",
+     "main": "known_gap",
+     "release": "pass"
+    }
+   ]
+  },
+  "messy": {
+   "main": "not run",
+   "release": "not run",
+   "differs": []
+  },
+  "large": {
+   "main": "not run",
+   "release": "not run",
+   "differs": []
+  }
+ },
+ "findings": [
+  {
+   "check": "relations.all",
+   "shapes": [
+    "medium"
+   ],
+   "on_main": "fails the same way (6 of 20 sampled, reply exactly 65,536 bytes)",
+   "on_release": "fails the same way",
+   "verdict": "existing limit on main, not a regression",
+   "root_cause": "scripts/gtm-brain-entities/entities.mjs prints --relations with console.log and then calls process.exit(0). The MCP server reads the script through a pipe (server.mjs run, execFile), and on macOS the exit drops everything after the first 64 KiB of pipe buffer. Run with stdout to a file the script writes all 179 KiB and nothing is missing. The lines in entities.mjs are unchanged between main and the release. It is the same defect lane A fixed for compile --facts (the finish helper in compile.mjs); entities.mjs was not in that lane.",
+   "action": "marked known_gap in e2e.mjs (PIPE_CUT) with the byte count in the note. Not fixed here: the instruction for an existing limit was to mark it. The fix is the compile.mjs finish helper (await the stdout write, then exit), plus a decision on how much of a 180 KiB list a model should get."
+  },
+  {
+   "check": "customers.listed",
+   "shapes": [
+    "medium"
+   ],
+   "on_main": "fails the same way (9 of 10, reply exactly 65,536 bytes)",
+   "on_release": "fails the same way",
+   "verdict": "existing limit on main, not a regression",
+   "root_cause": "The same pipe cut: entities.mjs --customers prints JSON (339 KiB for the medium brain) with console.log, then process.exit(0). The reply the model gets is the first 64 KiB of a JSON document, so it is also invalid JSON.",
+   "action": "marked known_gap in e2e.mjs (PIPE_CUT)."
+  },
+  {
+   "check": "remember.batch_mcp",
+   "shapes": [
+    "medium"
+   ],
+   "on_main": "passes",
+   "on_release": "passes on a quiet machine: the e2e run twice, and a separate probe (one batch of three over MCP, each note queried at once) four times, every note found",
+   "verdict": "not reproduced; the earlier failure came from the overloaded machine, the exact path is not proven",
+   "root_cause": "Not a lost write: remember.mjs --batch writes the three notes before it prints, and the earlier run reported no remember error. The read after it goes through the memory index, which refuses to answer rather than return partial rows when its refresh does not finish (sync budget 20 s, reader limit 60 s including queue wait, 'refresh is in progress'). The check counted any reply without rows as missing, so a refused or late read under load average 20 to 120 looked like a missing note. The earlier reply text was not kept (that run's debug file is empty: the harness crashed in cleanup).",
+   "action": "harness: on a miss the check now records whether the read failed or came back empty and whether the note is there 2 s later. Pass still needs all three at once."
+  },
+  {
+   "check": "(harness) e2e.mjs cleanup",
+   "shapes": [
+    "medium"
+   ],
+   "verdict": "harness mistake, fixed",
+   "root_cause": "runChecks killed the server and removed the scratch brain in the same tick; a child of the server was still writing into work/, rmSync threw ENOTEMPTY and the whole run's results were lost (first main medium run here, and the empty medium-debug.json of the earlier run).",
+   "action": "e2e.mjs waits for the server to exit and treats cleanup as best effort."
+  }
+ ],
+ "suite": "not run yet",
+ "live": "not run yet",
+ "commits": [],
+ "unverified": [
+  "messy, large, the suite and the live cases: in progress"
+ ]
+}

@@ -44,7 +44,9 @@ exits 1 only on a plain failure. `E2E_DEBUG=1` adds the reply text to failed che
 
 Known gaps marked today: unstemmed search, no typo tolerance in memory search, note ids missing on
 `recall` and `load_context` read lines and in relation history, unbounded entity briefs, the
-64 KiB cut on `compile --facts`, and `remember` refusing without a loaded context. Some only show
-on the bigger shapes.
+64 KiB cut on `compile --facts`, `remember` refusing without a loaded context, and the 64 KiB cut
+on `query relations` and `query customers` (`entities.mjs` prints, then exits, and the server reads
+it through a pipe; from medium up most of the list is missing). Some only show on the bigger shapes.
 
-`baseline.json` is the run on unchanged main.
+`baseline.json` is the run on unchanged main. `validation-0.35.0.json` is the validation of
+release 0.35.0 against main on medium, messy and large, with the root cause of every failure.
