@@ -1,12 +1,14 @@
 // The one health line at chat start: meeting capture (meetingCaptureStatus), the summary runs
 // (work/runs.jsonl and work/compile.json), the last sync per tool (work/sync.json and meeting
-// coverage, marked when older than its window), the open meeting gaps and, when a number is out of
-// range, the population (lib/population.mjs). Reads only (the population keeps its cache in work/); every part is left out when nothing is recorded.
+// coverage, marked when older than its window), the open meeting gaps, when a number is out of range the
+// population (lib/population.mjs), and a Markdown dropped at the root that is not a base file yet, once per new file
+// (lib/documents.mjs unadoptedPart). Reads only (the population and the base files keep their memo in work/); every part is left out when nothing is recorded.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { meetingCaptureStatus, toolKey } from "./brain.mjs";   // through brain.mjs: meetings.mjs imports it back
 import { normalizeKind } from "./pointers.mjs";
 import { populationPart, SYNC_WINDOW_DAYS } from "./population.mjs";
+import { unadoptedPart } from "./documents.mjs";
 
 const readJson = f => { try { return JSON.parse(readFileSync(f, "utf8")); } catch { return null; } };
 const readRuns = root => { try { return readFileSync(join(root, "work", "runs.jsonl"), "utf8").split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(r => r && r.at); } catch { return []; } };
@@ -84,6 +86,8 @@ export function healthLine(root, overview) {
   if (gaps) parts.push(`open gaps: ${gaps} meeting${gaps === 1 ? "" : "s"} not captured`);
   const population = populationPart(root);
   if (population) parts.push(population);
+  const loose = unadoptedPart(root);
+  if (loose) parts.push(loose);
   if (!parts.length) return null;
-  return `health: ${parts.join(" | ").replace(/\.$/, "")}. Say this if the person asks about meetings, sync, summaries or how full the brain is, or something is missing; do not raise it otherwise.`;
+  return `health: ${parts.join(" | ").replace(/\.$/, "")}. Say this if the person asks about meetings, sync, summaries or how full the brain is, or something is missing; do not raise it otherwise.${loose ? " The base files part is the exception: say it once now, in one line, and offer to adopt it by asking what work it governs (document prepare with file)." : ""}`;
 }

@@ -17,6 +17,7 @@ import { contextRoutingCases } from './context-routing-cases.mjs';
 import { skillCases } from './skill-cases.mjs';
 import { icpRoutingCases } from './icp-cases.mjs';
 import { captureCases } from './capture-cases.mjs';
+import { baseFileCases } from './base-file-cases.mjs';
 
 // GTM_BRAIN_PLUGIN points the same cases at another build of the plugin: the baseline a before/after claim needs
 const plugin = process.env.GTM_BRAIN_PLUGIN ? process.env.GTM_BRAIN_PLUGIN.replace(/\/?$/, "/") : fileURLToPath(new URL("../../", import.meta.url));
@@ -71,6 +72,7 @@ const cases = [
   ...skillCases,
   ...icpRoutingCases(),
   ...captureCases,
+  ...baseFileCases,
   // mentor-shapes.mjs adds its own cases (a module exporting `cases`) and may hand in a brain to copy
   ...(process.env.GTM_BRAIN_EVAL_CASES ? (await import(resolve(process.env.GTM_BRAIN_EVAL_CASES))).cases : []),
   { name: 'dashboard-chrome', workflow: 'gtm-brain-use-brain',
@@ -360,9 +362,9 @@ for (const scenario of selected) {
     const messages = [scenario.prompt, ...(scenario.followUps || [])], turns = [];
     let result, conversation = "";
     for (const [n, message] of messages.entries()) {
-      const from = readJSONL(trace).length;
+      const from = readJSONL(trace).length, turnStarted = Date.now();
       result = await exec(n ? `${header}\n\nThe conversation so far in this chat:\n${conversation}\n\nThe person now replies:\n${message}` : prompt, n);
-      turns.push({ calls: readJSONL(trace).slice(from).filter(r => r.kind === "call"), final: result.final });
+      turns.push({ calls: readJSONL(trace).slice(from).filter(r => r.kind === "call"), final: result.final, elapsed_ms: Date.now() - turnStarted });
       conversation += `${n ? "\n\n" : ""}The person: ${message}\n\nYou: ${result.final}`;
       if (result.code || result.timedOut) break;
     }
@@ -384,7 +386,7 @@ for (const scenario of selected) {
     if (/^(hubspot-)?write-/.test(scenario.crm || '') && verdict.error) checks.judge = false;
     checks.build = records.some(r => r.kind === 'build' && r.server === join(plugin, 'server/server.mjs'));
     const status = Object.values(checks).every(Boolean) ? "pass" : "fail";
-    report.cases.push({ name: scenario.name, status, checks, exit: result.code, timedOut: result.timedOut, elapsed_ms, tokens, tool_timings, ...(/^(hubspot-)?write-/.test(scenario.crm || "") ? { [scenario.provider || "attio"]: scenario.provider === "hubspot" ? hubspotMetrics(calls) : attioMetrics(calls), fixture_errors: records.filter(r => r.kind === "result" && r.tool?.startsWith(`${scenario.provider || "attio"}_`) && r.result?.error).length } : {}), judge: verdict, tools: calls.map(c => c.tool), asked: asked.map(q => ({ question: q.message, options: q.options, answered: q.answered })), brain: root, trace, events, final });
+    report.cases.push({ name: scenario.name, status, checks, exit: result.code, timedOut: result.timedOut, elapsed_ms, turn_ms: turns.map(t => t.elapsed_ms), turn_tools: turns.map(t => t.calls.map(c => `${c.tool}${c.arguments?.action ? `:${c.arguments.action}` : c.arguments?.object ? `:${c.arguments.object}` : ""}`)), tokens, tool_timings, ...(/^(hubspot-)?write-/.test(scenario.crm || "") ? { [scenario.provider || "attio"]: scenario.provider === "hubspot" ? hubspotMetrics(calls) : attioMetrics(calls), fixture_errors: records.filter(r => r.kind === "result" && r.tool?.startsWith(`${scenario.provider || "attio"}_`) && r.result?.error).length } : {}), judge: verdict, tools: calls.map(c => c.tool), asked: asked.map(q => ({ question: q.message, options: q.options, answered: q.answered })), brain: root, trace, events, final });
     for (const q of asked) console.log(`  asked: "${q.message}" ${JSON.stringify(q.options)} -> ${JSON.stringify(q.answered)}`);
     console.log(`${scenario.name}: ${status} ${JSON.stringify(checks)}${result.timedOut ? "  TIMED OUT" : result.code ? `  exit ${result.code}` : ""}  tools: ${calls.map(c => c.tool).join(" > ") || "none"}${verdict.skipped ? `  judge: skipped (${verdict.skipped})` : verdict.error ? `  judge: ${verdict.error}` : `  judge: ${verdict.score} ${(verdict.issues || []).join("; ")}`}`);
   } catch (error) { report.cases.push({ name: scenario.name, status: "fail", error: error.message, brain: root }); console.error(`${scenario.name}: ${error.message}`); }

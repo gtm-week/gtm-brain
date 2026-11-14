@@ -387,12 +387,21 @@ Codex read the matching one in full before that kind of work and say which it fo
 compiles or summarizes a document. Hand edits in an editor are kept by `save`; a hand-written
 Markdown without the marker is not a document until adopted. See [DOCUMENTS.md](DOCUMENTS.md).
 
-Tool: `document` (`action` create | list | show | files | update | remove; `ref` is a slug or a path,
+Tool: `document` (`action` prepare | create | list | show | files | update | remove; `ref` is a slug or a path,
 `folder` places a new one). Writes: the document file, one commit each. `guideline` is the retired
 name, hidden from the tool list, answering with the same result for one more version.
 `node $PLUGIN_ROOT/scripts/gtm-brain-documents/document.mjs . --create --title "Tone of voice" --applies-to "copy, outreach, posts" --body "..." [--folder brand] [--status approved] [--by handle]`
 `... --create --title "Strategy" --applies-to "strategy, planning" --file strategy.md` (a Markdown already at the root is adopted in place; one from outside is copied in)
 `... --list [--json]`, `... --show tone-of-voice`, `... --files design-system`, `... --update brand/tone-of-voice --status approved`, `... --remove tone-of-voice`
+
+A base file the team adds (*"add pricing as a base file"*, *"make a competitors file"*): `action: prepare`
+(`... --prepare --title Pricing`, or `--file pricing.md` for a Markdown dropped at the root) writes nothing and
+returns the base file that already covers the subject, the starter from `templates/base-files/` (pricing,
+positioning, competitors, objections), the brain's notes on it and the one question with its choices. `append`
+(`--append "## Section"`) adds a section to an existing one and keeps the rest; `preview` (`--preview`) shows a
+write without making it. Adopting in place and a fields-only update keep the text byte for byte. The list shows
+each one's state (not filled, draft, approved) and the day it last changed (`changed` in `--json`), then the
+root Markdown not used yet; the health line names such a file once.
 
 ### A file for a document or an entity
 *a path or a dropped file with "add this to the design system"*, *"this is the Acme logo"*

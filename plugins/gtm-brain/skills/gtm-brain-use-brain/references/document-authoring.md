@@ -26,6 +26,12 @@ output; leave out what Codex already knows.
 - **Target customer definition.** Who we sell to (segment, size, roles), the trigger that
   makes them buy, what disqualifies, and three named examples. Evidence for it lives in the
   Target customers context; the document is the approved statement, not the evidence.
+- **A base file the team adds** (pricing, positioning, competitors, objections). Start from the
+  starter `prepare` returns and keep its headings; each guidance line is replaced by what the
+  notes say, in the team's words, or left empty. Real numbers and names only from a note or the
+  person: a price, a competitor, an objection quoted as the buyer said it. Close with "Drawn
+  from:" and the note ids used, so a reader can check every line. Under 2 KB is usual; a base
+  file that grows past a page is two files.
 - `applies_to` is what rule 11 matches the current work against. Name kinds of work, not
   places where it is published: copy, outreach, posts, landing pages, creatives, proposals, design, targeting.
   Twelve at most, lowercase.

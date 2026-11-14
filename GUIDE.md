@@ -266,6 +266,13 @@ posts and outbound mail; your own writing for a personal voice), tests the draft
 piece you edit, and tells you the sentence to try in a new chat; run it again whenever the way
 you write changes.
 
+Your own base files: say `add pricing as a base file` (or positioning, competitors, objections,
+anything). Codex checks whether an existing file already covers it and offers a section there
+first, drafts from what the brain already knows with the notes it used listed (or asks you for
+two or three facts when it knows nothing), shows the draft in full and asks one thing: what work
+should follow it. Your yes saves it as a draft. A Markdown you drop at the top by hand is noticed
+("pricing.md is here but the brain does not use it yet") and adopted with only frontmatter added.
+
 Recordings and files over 25 MB never go into git. Drop one in the chat: Codex puts it in your
 Google Drive folder (or the folder outside git that you chose during setup, `big_files` in
 `brain/admin.md`) and the note about it keeps the link.

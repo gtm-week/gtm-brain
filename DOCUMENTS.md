@@ -67,6 +67,20 @@ approved", "Add it as a draft", or "Change something". Nothing is written before
 An approved document is a rule; a draft one is followed as the best available guidance and
 Codex says so.
 
+### Your own base files
+
+`add pricing as a base file`, `we need a positioning document`, `make a competitors file`. Codex
+first checks whether a file you have already covers the subject (by title, what it applies to,
+its headings and its text) and then offers a section there before a new file. It drafts from
+your notes and the people and companies the brain knows, under the headings of a ready starter
+for pricing, positioning, competitors and objections, and lists the notes it drew on. When the
+brain knows nothing about it, it says so and asks for the two or three facts it needs. It shows
+the draft in full and asks one thing: what work should follow it. Your yes saves it as a draft.
+
+A Markdown you drop at the top of the folder by hand shows in `list the documents` and once in
+the health line as "pricing.md is here but the brain does not use it yet". Adopting it asks what
+work it governs and adds only the frontmatter, shown to you first; your text stays as it is.
+
 Files: `add this to the design system` with a path or a dropped file lands it in
 `brand/design-system/`. A logo or a deck about one company goes with that company:
 `brain/entities/<company>/`, linked from its brief. Nothing to invoke; dropping the file is
@@ -94,7 +108,8 @@ are opened only when the work needs them.
 
 ## Managing
 
-- `list the documents`: one line per document with status, what it applies to, path, files.
+- `list the documents`: one line per document with its state (not filled, draft, approved),
+  what it applies to, path and the day it last changed.
 - `show the strategy`: the file as it is. `what files does the design system have`: its files.
 - `update the voice: ...`: Codex quotes the line that changes, confirms, rewrites only that.
   `approve the design system` sets the status; only your word does.
