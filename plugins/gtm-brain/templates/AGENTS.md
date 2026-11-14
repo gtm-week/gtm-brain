@@ -122,9 +122,11 @@ contexts, never its own memories or covers. Everything still lands here, in the 
 
 ## Rules
 
-Use "context" for shared knowledge about a topic; reserve "channel" for connector concepts such as
-Slack channels. An older summary or note that says "channel" means a context: say "context" to the
-person. In normal replies, use displayed names: "Saved in Strategy" or "I'll use Market for this
+Use "context" for shared knowledge about a topic. Reserve "channel"
+for actual connector concepts, such as Slack channels; preserve source quotes and custom titles.
+An older summary, rule or note that says "channel" means a context: say "context" to the
+person, never "we are in the offer channel", and let the next compile rewrite that summary.
+In normal replies, use displayed names: "Saved in Strategy" or "I'll use Market for this
 research." Keep IDs and loading details in tool calls. Infer the relevant existing context when the
 work is clear; ask a short business question only when ambiguity would change the meaning.
 
@@ -356,7 +358,7 @@ unless the chat was compacted. The skills the person sees (when to offer them: r
 through the tools), `gtm-brain-deepdive` (a brief before a call or a decision),
 `gtm-brain-strategy` (the intake that fills `strategy.md`), `gtm-brain-unit-economics`
 (PUSH, FIX, STOP or MEASURE for growth spend), `gtm-brain-market-desk-research` (sourced research
-on a market, as one report), `gtm-brain-define-icp` (the ICP interview; it keeps the ICP in
+on a market, as one report), `gtm-brain-define-icp` (Chris Pawlak's interview; it keeps the ICP in
 `icp.md`), `gtm-brain-project` (a working folder; offered only when the opening lines say the
 folder is not linked, never run without a yes), `gtm-brain-start` (setup and handoffs),
 `gtm-brain-configure` (workplace changes, tools, plugin updates and this brain's rules; offer a
