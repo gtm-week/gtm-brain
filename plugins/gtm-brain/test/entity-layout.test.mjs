@@ -209,8 +209,8 @@ test("each kind folder has a generated index: name, one line, short id, last men
   const acme = lib.addName(root, "Acme", { kind: "organization", subtype: "company" }), max = lib.addName(root, "Max Jendral");
   const people = () => readFileSync(join(root, "brain/entities/people/index.md"), "utf8");
   assert.match(people(), /^# People\n/);
-  assert.ok(people().includes(`- [Max Jendral](max-jendral-${sid(max.id)}.md) · ${sid(max.id)} · not mentioned in notes yet`), people());
-  assert.match(readFileSync(join(root, "brain/entities/organizations/index.md"), "utf8"), new RegExp(`\\[Acme\\]\\(acme-${sid(acme.id)}\\.md\\) · company · ${sid(acme.id)}`));
+  assert.ok(people().includes(`- [Max Jendral](max-jendral-${sid(max.id)}.md) · other · ${sid(max.id)} · not mentioned in notes yet`), people());
+  assert.match(readFileSync(join(root, "brain/entities/organizations/index.md"), "utf8"), new RegExp(`\\[Acme\\]\\(acme-${sid(acme.id)}\\.md\\) · company · other · ${sid(acme.id)}`));
   assert.match(readFileSync(join(root, "brain/entities/products/index.md"), "utf8"), /No products yet/);
   lib.appendMemory(root, "sales", { authors: ["ann"], people: ["Max Jendral"], content: "Max Jendral wants a pilot.", at: "2026-11-10T09:00:00.000Z" });
   lib.refreshEntityPages(root);

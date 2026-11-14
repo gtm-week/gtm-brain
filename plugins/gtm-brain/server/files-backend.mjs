@@ -6,6 +6,7 @@ import { randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import * as lib from "../lib/brain.mjs";
 import { hasMemoryIndex, withMemoryIndex } from "../lib/memory-index.mjs";
+import { brainRelationsToUs } from "../lib/relation-to-us.mjs";
 
 const brainRoot = ctx => {
   const root = ctx?.brain;
@@ -14,7 +15,11 @@ const brainRoot = ctx => {
 };
 
 function rows(root, object) {
-  if (object === "entities") return lib.entityRecords(root);
+  if (object === "entities") {
+    // the same relation to us and SCHEMA.md fields the index filters on, for a host without node:sqlite
+    const relation = brainRelationsToUs(root, lib), fields = new Map(lib.readNames(root).map(e => { let f = []; try { f = JSON.parse(e._fm?.compiled_fields || "[]"); } catch {} return [e.id, Object.fromEntries((Array.isArray(f) ? f : []).filter(x => x?.field).map(x => [x.field, x.text]))]; }));
+    return lib.entityRecords(root).map(e => ({ ...fields.get(e.id), ...e, relation_to_us: relation.get(e.id) || null, fields: fields.get(e.id) || {} }));
+  }
   const contexts = lib.listContexts(root);
   if (object === "memories") {
     const registry = lib.readNames(root);
@@ -65,6 +70,10 @@ const SCRIPTS = {
   add_name: ({ name, aliases, email, kind, subtype, not_same, references, sources }) => ["gtm-brain-entities/entities.mjs", ["--add", name, ...(list(aliases).length ? ["--alias", list(aliases).join(", ")] : []), ...(email ? ["--email", email] : []), ...(kind ? ["--kind", kind] : []), ...(subtype !== undefined ? ["--subtype", subtype || ""] : []), ...(list(not_same).length ? ["--not", list(not_same).join(", ")] : []), ...(references ? ["--references", JSON.stringify(references)] : []), ...(sources ? ["--sources", JSON.stringify(sources)] : [])]],
 };
 
+// a lookup by id or name keeps the full row (contexts, memories); a filter on anything else is indexed
+const IDENTITY_ONLY = new Set(["id", "name", "status", "aliases", "emails"]);
+// keys only the full entity rows carry (they need each entity's evidence); any other filter is indexed
+const RECORD_ONLY = new Set(["contexts", "memories", "stale", "compiled_at", "latest_evidence_at", "created_at", "updated_at", "references", "identity_sources", "not_same", "merge_ids", "previous_ids", "path"]);
 export function createFilesBackend({ run, memoryRead }) {
   return {
     count(object, ctx) {
@@ -78,6 +87,8 @@ export function createFilesBackend({ run, memoryRead }) {
     list(object, { filters = {}, search = "", limit = 50 }, ctx) {
       const root = brainRoot(ctx);
       if (object === "memories" && hasMemoryIndex()) return memoryRead ? memoryRead(root, "query", { filters, search, limit }) : withMemoryIndex(root, index => index.query({ filters, search, limit }));
+      // entity filters (kind, subtype, relation_to_us, a SCHEMA.md field such as role) are answered by the index, no page read
+      if (object === "entities" && hasMemoryIndex() && !search.trim() && Object.keys(filters).some(k => !IDENTITY_ONLY.has(k)) && Object.keys(filters).every(k => !RECORD_ONLY.has(k))) return memoryRead ? memoryRead(root, "entities", { filters, limit }) : withMemoryIndex(root, index => index.entities({ filters, limit }));
       filters = { ...filters };
       // Old stable IDs still name the surviving identity after a confirmed merge.
       const idField = object === "entities" ? "id" : object === "memories" ? "entities" : null;

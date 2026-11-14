@@ -8,11 +8,14 @@ import * as lib from './brain.mjs';
 import { validateAsset } from './assets.mjs';
 import { memoryStamp as stamp, trustedMemoryAppend, recordMemoryCheckpoint } from './memory-journal.mjs';
 import { entityStamp } from './entity-stamp.mjs';
+import { relationsToUs } from './relation-to-us.mjs';
+import { readSchema } from './schema.mjs';
+import { shortId } from './layout.mjs';
 import { hasMemoryIndex, indexPath, openDatabase, cacheLock, retireCache, cacheResetPending } from './memory-index-store.mjs';
 export { hasMemoryIndex };
 export const MAX_RECORD_BYTES = 4 * 1024 * 1024;
 export const MAX_RESULT_BYTES = 2 * 1024 * 1024;
-export const MEMORY_INDEX_VERSION = 5;   // 5: source pointers as members (field source)
+export const MEMORY_INDEX_VERSION = 6;   // 5: source pointers as members (field source); 6: entity rows with relation to us and SCHEMA.md fields
 const VERSION = MEMORY_INDEX_VERSION;
 const normalizeMention = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 function hashFile(path, size) {
@@ -55,6 +58,7 @@ const matches = (row, filters) => Object.entries(filters).every(([key, expected]
   const actual = Array.isArray(row[key]) ? row[key] : [row[key]];
   return actual.some(v => (Array.isArray(expected) ? expected : [expected]).some(w => isDeepStrictEqual(v, w)));
 });
+export const ENTITY_COLUMNS = ['id', 'name', 'kind', 'subtype', 'status', 'relation_to_us', 'short_id'];
 const visible = alias => `${alias}.effective=1 AND NOT EXISTS (SELECT 1 FROM forks f JOIN memories c ON c.rowid=f.memory WHERE f.target=${alias}.id AND c.effective=1)`;
 const SCHEMA = `
  CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT);
@@ -79,6 +83,10 @@ const SCHEMA = `
  CREATE VIRTUAL TABLE IF NOT EXISTS identity_text USING fts5(mention_text,content='memories',content_rowid='rowid');
  CREATE TABLE IF NOT EXISTS relinks(memory INTEGER PRIMARY KEY REFERENCES memories(rowid) ON DELETE CASCADE);
  CREATE TABLE IF NOT EXISTS entity_versions(id TEXT PRIMARY KEY,version INTEGER NOT NULL);
+ CREATE TABLE IF NOT EXISTS entity_rows(id TEXT PRIMARY KEY,name TEXT,kind TEXT,subtype TEXT,status TEXT,relation_to_us TEXT,short_id TEXT,path TEXT,last_mentioned TEXT,raw TEXT);
+ CREATE INDEX IF NOT EXISTS entity_row_kind ON entity_rows(kind,relation_to_us);
+ CREATE TABLE IF NOT EXISTS entity_fields(id TEXT,field TEXT,value TEXT);
+ CREATE INDEX IF NOT EXISTS entity_field_value ON entity_fields(field,value,id);
  CREATE TRIGGER IF NOT EXISTS entity_member_insert AFTER INSERT ON members WHEN new.field='entities' BEGIN
    INSERT INTO entity_versions VALUES (new.value,1) ON CONFLICT(id) DO UPDATE SET version=version+1;
  END;
@@ -99,7 +107,12 @@ export class MemoryIndex {
     // index while holding their own lock without an inverse lock order in readers.
     lib.withEntityLock(this.root, () => {
       this.identityRevision = entityStamp(this.root);
-      this.identitySnapshot = lib.readNames(this.root).map(({ id, name, aliases, emails, previous_ids }) => ({ id, name, aliases, emails, previous_ids }));
+      const names = lib.readNames(this.root);
+      this.identitySnapshot = names.map(({ id, name, aliases, emails, previous_ids }) => ({ id, name, aliases, emails, previous_ids }));
+      // what query entities filters on: identity, the SCHEMA.md fields compiled on the page, and the page's dates
+      const compiled = e => { try { const f = JSON.parse(e._fm?.compiled_fields || '[]'); return Array.isArray(f) ? f.filter(x => x && typeof x.field === 'string' && typeof x.text === 'string') : []; } catch { return []; } };
+      this.entitySnapshot = names.map(e => ({ id: e.id, name: e.name, kind: e.kind || 'person', subtype: e.subtype ?? null, status: e.status || 'active', aliases: e.aliases || [], emails: e.emails || [], previous_ids: e.previous_ids || [],
+        path: e._path || null, last_mentioned: e._fm?.latest_evidence_at || null, fields: Object.fromEntries(compiled(e).map(f => [f.field, f.text])) }));
     });
     this.release = cacheLock(this.root, lockTimeoutMs);
     this.path = indexPath(this.root);
@@ -194,7 +207,7 @@ export class MemoryIndex {
     const asset = r => r.asset && !validateAsset(r.asset).length ? [lib.canonicalName(this.names, r.asset.entity) || r.asset.entity, r.asset.role, r.asset.status] : [null, null, null];
     const before = this.sourceState();
     const unchanged = this.meta('registry') === registry && this.meta('ready') === '1' && before.length === db.prepare('SELECT count(*) AS n FROM files').get().n && before.every(f => db.prepare('SELECT stamp FROM files WHERE file=?').get(f.file)?.stamp === (f.state?.key || 'missing'));
-    if (unchanged) { this.ready = true; return this; }
+    if (unchanged) { this.refreshEntities(before); this.ready = true; return this; }
     const exhausted = () => Date.now() - started >= budgetMs || this.stats.recordsRead + this.stats.relinkedRecords >= maxRecords;
     let transaction = false;
     const savedFiles = new Map();
@@ -276,8 +289,53 @@ export class MemoryIndex {
       }
       for (const f of before) ensureStable(f);
       if (JSON.stringify(this.registry()) !== registry) throw new Error('Entity registry changed while indexing. Retry the read.');
-      this.setMeta('ready', '1'); this.setMeta('rebuilding', '0'); checkpoint(); this.ready = true; return this;
+      this.setMeta('ready', '1'); this.setMeta('rebuilding', '0'); checkpoint(); this.refreshEntities(before); this.ready = true; return this;
     } catch (e) { if (transaction) db.exec('ROLLBACK'); throw e; }
+  }
+  /* The entity rows query entities filters on, rebuilt when an identity or a memory file changed: relation to
+     us (lib/relation-to-us.mjs) from the visible relation and customer notes, and each compiled SCHEMA.md field. */
+  refreshEntities(before) {
+    const db = this.db, key = JSON.stringify([this.identityRevision, before.map(f => f.state?.key || 'missing'), readSchema(this.root).schema?.hash || null]);
+    if (this.meta('entity_rows') === key) return;
+    const notes = db.prepare(`SELECT m.raw FROM memories m WHERE ${visible('m')} AND (json_extract(m.raw,'$.relation') IS NOT NULL OR json_extract(m.raw,'$.customer') IS NOT NULL)`).all().map(r => JSON.parse(r.raw));
+    const relation = relationsToUs({ registry: this.entitySnapshot, memories: notes, admin: lib.readAdmin(this.root), schema: readSchema(this.root).schema || null });
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      db.exec('DELETE FROM entity_rows; DELETE FROM entity_fields;');
+      const row = db.prepare('INSERT INTO entity_rows VALUES (?,?,?,?,?,?,?,?,?,?)'), field = db.prepare('INSERT INTO entity_fields VALUES (?,?,?)');
+      for (const e of this.entitySnapshot) {
+        const out = { id: e.id, name: e.name, kind: e.kind, subtype: e.subtype, status: e.status, relation_to_us: relation.get(e.id) || null, aliases: e.aliases, emails: e.emails, previous_ids: e.previous_ids, short_id: shortId(e.id), path: e.path, last_mentioned: e.last_mentioned, fields: e.fields };
+        row.run(e.id, e.name, e.kind, e.subtype, e.status, out.relation_to_us, out.short_id, e.path, e.last_mentioned, JSON.stringify(out));
+        for (const [k, v] of Object.entries(e.fields)) field.run(e.id, k, String(v).toLowerCase());
+      }
+      this.setMeta('entity_rows', key); db.exec('COMMIT');
+    } catch (e) { db.exec('ROLLBACK'); throw e; }
+  }
+  relationsToUs() { return new Map(this.db.prepare('SELECT id, relation_to_us FROM entity_rows WHERE relation_to_us IS NOT NULL').all().map(r => [r.id, r.relation_to_us])); }
+  /* query entities with filters, without reading a page: kind, subtype, status, relation_to_us, id, name, short_id
+     match exactly (a list means any of them; a retired id names its survivor); aliases and emails match a member;
+     any other key is a SCHEMA.md field compiled on the page, matched case-insensitively as a part of its value
+     ({ role: "VP Sales" } finds "VP Sales EMEA"). Active entities only unless status or id is given. */
+  entities({ filters = {}, limit = 50 } = {}) {
+    this.requireReady();
+    filters = { ...filters };
+    if (Object.hasOwn(filters, 'id')) { const canonical = id => this.entitySnapshot.find(e => e.id === id || e.previous_ids.includes(id))?.id || id; filters.id = Array.isArray(filters.id) ? filters.id.map(canonical) : canonical(filters.id); }
+    if (!Object.hasOwn(filters, 'id') && !Object.hasOwn(filters, 'status')) filters.status = 'active';
+    const clauses = [], params = [];
+    for (const [key, expected] of Object.entries(filters)) {
+      const choices = (Array.isArray(expected) ? expected : [expected]).map(v => v === null ? null : String(v));
+      if (!choices.length) { clauses.push('0'); continue; }
+      if (ENTITY_COLUMNS.includes(key)) {
+        const nulls = choices.includes(null), values = choices.filter(v => v !== null);
+        clauses.push(`(${[...(values.length ? [`e.${key} IN (${values.map(() => '?').join(',')})`] : []), ...(nulls ? [`e.${key} IS NULL`] : [])].join(' OR ')})`); params.push(...values);
+      } else if (key === 'aliases' || key === 'emails') {
+        clauses.push(`EXISTS(SELECT 1 FROM json_each(json_extract(e.raw,'$.${key}')) j WHERE lower(j.value) IN (${choices.map(() => '?').join(',')}))`); params.push(...choices.map(v => String(v).toLowerCase()));
+      } else {
+        clauses.push(`EXISTS(SELECT 1 FROM entity_fields f WHERE f.id=e.id AND f.field=? AND (${choices.map(() => "instr(f.value, ?) > 0").join(' OR ')}))`); params.push(key, ...choices.map(v => String(v).toLowerCase()));
+      }
+    }
+    params.push(Math.max(1, Math.min(500, Number(limit) || 50)));
+    return this.db.prepare(`SELECT e.raw FROM entity_rows e${clauses.length ? ' WHERE ' + clauses.join(' AND ') : ''} ORDER BY e.last_mentioned IS NULL, e.last_mentioned DESC, e.name, e.id LIMIT ?`).all(...params).map(r => JSON.parse(r.raw));
   }
   requireReady() { if (!this.ready) throw new Error('Memory index refresh is in progress. Call memory_index with mode refresh until status is ready, then retry the query. No partial search results were returned.'); }
   count() { this.requireReady(); return this.db.prepare(`SELECT count(*) AS n FROM memories m WHERE ${visible('m')}`).get().n; }
@@ -353,12 +411,10 @@ export class MemoryIndex {
       this.db.exec(`CREATE TEMP VIEW memories AS SELECT m.rowid AS rowid, m.id AS id, m.context AS context, m.kind AS kind, m.at AS at, m.via AS via, ${field('content')} AS content, ${field('authors')} AS authors, ${field('people')} AS people, ${field('tools')} AS tools, ${field('tags')} AS tags, ${field('entities')} AS entities, ${field('source')} AS sources, ${field('supersedes')} AS supersedes, m.time AS time FROM main.memories m WHERE ${visible};
         CREATE TEMP VIEW members AS SELECT m.id AS memory_id, v.field AS field, json_extract(v.value,'$') AS value FROM main.members v JOIN memories m ON m.rowid=v.memory;
         CREATE TEMP TABLE contexts(slug TEXT PRIMARY KEY, title TEXT, status TEXT, summary TEXT, rule TEXT, loaded INTEGER);
-        CREATE TEMP TABLE entities(id TEXT PRIMARY KEY, name TEXT, kind TEXT, subtype TEXT, aliases TEXT, emails TEXT);`);
+        CREATE TEMP VIEW entities AS SELECT e.id AS id, e.name AS name, e.kind AS kind, e.subtype AS subtype, json_extract(e.raw,'$.aliases') AS aliases, json_extract(e.raw,'$.emails') AS emails, e.status AS status, e.relation_to_us AS relation_to_us, e.short_id AS short_id, e.path AS path, e.last_mentioned AS last_mentioned, json_extract(e.raw,'$.fields') AS fields FROM main.entity_rows e;`);
       const loaded = new Set(lib.readLoaded(this.root));
       const putContext = this.db.prepare('INSERT INTO contexts VALUES (?,?,?,?,?,?)');
       for (const c of lib.listContexts(this.root, { includeMemories: false })) putContext.run(c.slug, c.title || c.slug, c.status || 'active', c.summary || '', c.rule || '', loaded.has(c.slug) ? 1 : 0);
-      const putEntity = this.db.prepare('INSERT INTO entities VALUES (?,?,?,?,?,?)');
-      for (const n of lib.readNames(this.root)) putEntity.run(n.id, n.name, n.kind || 'person', n.subtype || null, JSON.stringify(n.aliases || []), JSON.stringify(n.emails || []));
       this.viewsReady = true;
     }
     this.db.exec('PRAGMA query_only=1');

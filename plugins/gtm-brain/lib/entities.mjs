@@ -10,6 +10,8 @@ import { readSchema, fieldsFor, requiredRelations, kindHash, US, brainKinds } fr
 import { DEFAULT_KINDS, KIND_NAME, NOT_KINDS } from './kinds.mjs';
 import { pagePaths, isPagePath, linkFrom, layout, kindPagePath, isKindPagePath, assetFolder, ENTITIES_DIR } from './layout.mjs';
 import { writeKindIndexes } from './entity-index.mjs';
+import { MemoryIndex } from './memory-index.mjs';
+import { brainRelationsToUs } from './relation-to-us.mjs';
 
 export const ENTITY_FORMAT = "gtm-brain-entity-v2";
 // Brains written before the GTM OS -> GTM Brain rename carry the gtm-os names; migration rewrites them.
@@ -709,7 +711,16 @@ function refreshPages(root) {
   return changed;
 }
 /* Relation to us per entity id, for the kind indexes (lib/relation-to-us.mjs fills it in). */
-function kindRelations(root) { return new Map(); }
+function kindRelations(root) {
+  if (layout(root) !== "kinds") return new Map();
+  if (hasMemoryIndex()) {
+    try {
+      const index = new MemoryIndex(root, { lockTimeoutMs: 30000 });
+      try { index.sync(); index.requireReady(); return index.relationsToUs(); } finally { index.close(); }
+    } catch {}   // an index still building: read the notes instead
+  }
+  return brainRelationsToUs(root, lib);
+}
 function refreshBriefs(root, registry) {
   if (hasMemoryIndex()) {
     return refreshIndexedPages(root, registry, (e, facts, changed) => {
