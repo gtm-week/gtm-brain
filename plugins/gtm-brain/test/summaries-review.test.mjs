@@ -76,7 +76,7 @@ test("a refusal is explained by its real cause: a summary without note ids is no
   const person = r.stderr.split("\n").find(l => /^For the person/.test(l));
   assert.doesNotMatch(person, /new notes arrived/); assert.match(person, /did not pass the summary check/);
   assert.doesNotMatch(health(root), /new notes arrived|what to do: nothing/);
-  const dash = apply(root, asOf, "Acme wants a pilot — in December 2026 [m_000000].");
+  const dash = apply(root, asOf, "Acme wants a pilot \u2014 in December 2026 [m_000000].");
   assert.doesNotMatch(dash.stderr.split("\n").find(l => /^For the person/.test(l)), /new notes arrived/);
   // each cause keeps its own words, and a failure with no known cause is not nested when the health line reads it back
   assert.match(summaries.explainFailure("not applied: icp changed since --facts (as_of s_1, now s_2)").what, /new notes arrived/);
