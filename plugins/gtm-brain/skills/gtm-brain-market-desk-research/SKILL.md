@@ -7,6 +7,8 @@ description: |
   to win, in one report with charts. A diagnosis only, never a product or offering design.
   Triggers: "/gtm-brain-market-desk-research", "research this market", "assess the market for",
   "is this segment worth it", "market sizing", "who competes in", "desk research on".
+metadata:
+  needs: "kind:organization, kind:product"
 allowed-tools: [Bash, Read, WebFetch, WebSearch]
 ---
 

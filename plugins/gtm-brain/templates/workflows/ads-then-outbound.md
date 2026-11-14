@@ -4,6 +4,9 @@ type: workflow
 title: Ads, then outbound
 applies_to: [outbound campaign, linkedin ads]
 status: draft
+trigger: manual
+reads: ["kind:organization", "tool:crm", "tool:ads", "tool:sequencer"]
+writes: ["tool:ads", "tool:sequencer"]
 by: ""
 updated: {{DATE}}
 gtm-brain: {{VERSION}}
@@ -26,12 +29,13 @@ engaged. Shipped with GTM Brain as a draft; edit it to the way this company work
 ## Steps
 
 1. **Build the target list** (tool: crm). Pull the accounts that match the ICP; save the list
-   as a file of this run.
+   as a file of this run. Milestone: a note tagged target-list.
 2. **Launch the ads** (tool: ads). Brief, creatives, audience from the list.
+   Milestone: a note tagged ads-launched.
 3. **Read engagement** (tool: ads). Which accounts engaged most; save the engaged list as a
-   file of this run. Gate: after 14 days.
+   file of this run. Milestone: a note tagged engaged-accounts. Gate: after 14 days.
 4. **Outreach to the engaged accounts** (tool: sequencer). Only those; never the accounts
-   that clicked nothing. Gate: when the engaged accounts are known.
+   that clicked nothing. Milestone: a note tagged outreach-sent. Gate: when a note tagged engaged-accounts.
 
 ## Learn
 
