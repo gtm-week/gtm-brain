@@ -77,9 +77,18 @@ if (opt.facts) {
   const listed = new Set(fresh.slice(0, shown.length).map(m => m.id)), byId = new Map(f.mem.map(m => [m.id, m]));
   const citedIds = [...new Set([...[f.c.fm?.summary_sources || []].flat().map(String), ...String(f.c.summary || "").match(/\bm_[0-9a-z]+\b/g) || [], ...String(f.c.now || "").match(/\bm_[0-9a-z]+\b/g) || []])];
   const cited = citedIds.filter(id => byId.has(id) && !listed.has(id)).slice(0, 40), gone = citedIds.filter(id => !byId.has(id));
-  const hiddenNew = f.newSince.length - shown.length, carried = f.mem.length - f.newSince.length;
+  // Room left in the budget goes to the other older notes, newest first, so a small context is shown whole.
+  const newIds = new Set(f.newSince.map(m => m.id)), citedSet = new Set(cited); const older = [];
+  for (const id of cited) { const t = noteLines(byId.get(id)); lines += t.split("\n").length; bytes += Buffer.byteLength(t); }
+  if (shown.length === f.newSince.length) for (const m of [...f.mem].filter(m => !newIds.has(m.id) && !citedSet.has(m.id)).sort((a, b) => Date.parse(b.at) - Date.parse(a.at))) {
+    const t = noteLines(m), n = t.split("\n").length, b = Buffer.byteLength(t);
+    if (lines + n > FACTS_LINES || bytes + b > FACTS_BYTES) break;
+    older.push(t); lines += n; bytes += b;
+  }
+  const hiddenNew = f.newSince.length - shown.length, carried = f.mem.filter(m => !newIds.has(m.id) && !citedSet.has(m.id)).length - older.length;
   out.push(`\n## Effective notes since the last compile, newest first (${shown.length} of ${f.newSince.length} new)`, ...shown);
   if (cited.length || gone.length) out.push(`\n## Older notes the current summary and working guidance cite (${cited.length} still in force)`, ...cited.map(id => noteLines(byId.get(id))), ...(gone.length ? [`No longer in force (superseded or withdrawn), do not rest on them: ${gone.join(", ")}`] : []));
+  if (older.length) out.push(`\n## Other older notes the current summary carries, newest first (${older.length})`, ...older);
   const lookup = `query: object memories, filters.context=${f.c.slug} (add search or filters.entities=<id>)`;
   if (hiddenNew) out.push(`\n${hiddenNew} more note${hiddenNew === 1 ? "" : "s"} newer than compiled_at ${hiddenNew === 1 ? "is" : "are"} not shown and ${hiddenNew === 1 ? "is" : "are"} not in the current summary: read them with ${lookup} before writing.`);
   if (carried) out.push(`\n${carried} older note${carried === 1 ? " is" : "s are"} not shown; the current summary carries them. Look one up with ${lookup}.`);

@@ -551,7 +551,8 @@ test("MCP capture preserves direct links through memory storage and the rendered
   const r=await call("remember",{brain:root,by:"marta",context:"icp",content:"Direct source capture verified.",sources:[`gmail:${gmail}`,`attio:${attio}`,"https://example.com/original?part=a,b#section"]});
   assert.ok(!r.isError,r.text);
   const memory=lib.readMemories(root,"icp").find(m=>m.content==="Direct source capture verified.");
-  const expected=[{kind:"gmail",ref:gmail},{kind:"attio",ref:attio},{kind:"url",ref:"https://example.com/original?part=a,b#section"}];
+  // An Attio record URL is kept as a link and also yields the record pointer (0.35.0 pointers).
+  const expected=[{kind:"gmail",ref:gmail},{kind:"attio",ref:"record/returned-id"},{kind:"url",ref:attio},{kind:"url",ref:"https://example.com/original?part=a,b#section"}];
   assert.deepEqual(memory.source.filter(s=>s.kind!=="codex"),expected);
   await call("render_dashboard", { brain: root });
   const data=JSON.parse(readFileSync(join(root,"work/home/data.json"),"utf8"));
