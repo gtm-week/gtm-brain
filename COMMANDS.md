@@ -173,6 +173,26 @@ error asking for a narrower query if that bound would be exceeded. No partial re
 as complete. There are at most 32 pending indexed reads per server, with 64 KiB per query input.
 `node $PLUGIN_ROOT/scripts/gtm-brain-recall/recall.mjs . "<query>"`, `... --person "<name>"`
 
+### answer
+*"what did Zak want?"*, *"how many sign-ups did the Merantix opening have?"*, *"what did we decide last week?"*
+
+One call for a question: `query` with object `answer` and `search` set to the question as asked
+(`lib/memory-search.mjs`, run in the memory worker). Names, aliases, first names and emails resolve
+through the entity registry and narrow to that entity's notes; a product also brings the
+organization it currently belongs to. A period (today, yesterday, last week, this month, in
+October, 3 November, a date, a weekday; a calendar word also finds notes that mention it, and
+"night" or "morning" after a weekday ranks notes with such a time first), a kind (decisions,
+questions) and `#tag` narrow too. When nothing is left, the reply says so and widens one step.
+The words then rank what is left: stemmed (porter, so invoice finds invoicing and sign-ups finds
+signups), a word no note has (five letters or more) tried as the spellings one letter off in the
+brain's word list, ranked below exact matches and named in one line; more of the words, the
+question's own phrases, words near each other, then newer first. Superseded and retracted notes
+never appear. The reply carries each note's text, date, age, id and source, the card of each named
+entity (kind, aliases, compiled overview, fields, current relationships, note count and age), and
+`Not found:` plainly when nothing matches. It stays under 12 KB (`SEARCH_MAX_BYTES`) and ends with
+how many more matched and the limit that shows them. `query` with object `memories` and `search`
+uses the same engine and cap, as JSON rows. Reads only.
+
 ### memory_index
 *"is search up to date?"*, *"finish indexing this import"*, *"rebuild the search index"*
 

@@ -12,7 +12,7 @@ import { hasMemoryIndex, indexPath, openDatabase, cacheLock, retireCache, cacheR
 export { hasMemoryIndex };
 export const MAX_RECORD_BYTES = 4 * 1024 * 1024;
 export const MAX_RESULT_BYTES = 2 * 1024 * 1024;
-export const MEMORY_INDEX_VERSION = 5;   // 5: source pointers as members (field source)
+export const MEMORY_INDEX_VERSION = 6;   // 5: source pointers as members (field source); 6: stemmed keywords, word list for typos
 const VERSION = MEMORY_INDEX_VERSION;
 const normalizeMention = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 function hashFile(path, size) {
@@ -74,9 +74,10 @@ const SCHEMA = `
  CREATE TABLE IF NOT EXISTS forks(memory INTEGER REFERENCES memories(rowid) ON DELETE CASCADE,target TEXT);
  CREATE INDEX IF NOT EXISTS fork_target ON forks(target,memory);
  CREATE INDEX IF NOT EXISTS fork_memory ON forks(memory);
- CREATE VIRTUAL TABLE IF NOT EXISTS keywords USING fts5(authors,people,tools,content,content='memories',content_rowid='rowid');
+ CREATE VIRTUAL TABLE IF NOT EXISTS keywords USING fts5(authors,people,tools,content,content='memories',content_rowid='rowid',tokenize='porter unicode61 remove_diacritics 2');
  CREATE TABLE IF NOT EXISTS keyword_rows(memory INTEGER PRIMARY KEY REFERENCES memories(rowid) ON DELETE CASCADE);
  CREATE VIRTUAL TABLE IF NOT EXISTS identity_text USING fts5(mention_text,content='memories',content_rowid='rowid');
+ CREATE VIRTUAL TABLE IF NOT EXISTS identity_vocab USING fts5vocab(identity_text,'row');
  CREATE TABLE IF NOT EXISTS relinks(memory INTEGER PRIMARY KEY REFERENCES memories(rowid) ON DELETE CASCADE);
  CREATE TABLE IF NOT EXISTS entity_versions(id TEXT PRIMARY KEY,version INTEGER NOT NULL);
  CREATE TRIGGER IF NOT EXISTS entity_member_insert AFTER INSERT ON members WHEN new.field='entities' BEGIN
@@ -99,7 +100,8 @@ export class MemoryIndex {
     // index while holding their own lock without an inverse lock order in readers.
     lib.withEntityLock(this.root, () => {
       this.identityRevision = entityStamp(this.root);
-      this.identitySnapshot = lib.readNames(this.root).map(({ id, name, aliases, emails, previous_ids }) => ({ id, name, aliases, emails, previous_ids }));
+      this.entries = lib.readNames(this.root);   // the full entries, for an answer's entity card (lib/memory-search.mjs)
+      this.identitySnapshot = this.entries.map(({ id, name, aliases, emails, previous_ids }) => ({ id, name, aliases, emails, previous_ids }));
     });
     this.release = cacheLock(this.root, lockTimeoutMs);
     this.path = indexPath(this.root);
@@ -283,6 +285,22 @@ export class MemoryIndex {
   count() { this.requireReady(); return this.db.prepare(`SELECT count(*) AS n FROM memories m WHERE ${visible('m')}`).get().n; }
   query({ filters = {}, search = '', limit = 50 } = {}) {
     this.requireReady();
+    let { prefix, where, params } = this.filterSql(filters);
+    if (search.trim()) {
+      const query = search.trim(), terms = new Set([query.toLowerCase()]);
+      for (const term of [query, ...query.split(/\s+/)]) {
+        const canonical = lib.canonicalName(this.names, term);
+        if (canonical) { terms.add(canonical.toLowerCase()); for (const alias of this.names.find(n => n.name === canonical)?.aliases || []) terms.add(alias.toLowerCase()); }
+      }
+      where.push('text_matches(m.projected,?)'); params.push(JSON.stringify([...terms]));
+    }
+    params.push(Math.max(1, Math.min(501, Number(limit) || 50)));
+    return this.bounded(this.db.prepare(`${prefix}SELECT m.projected FROM memories m WHERE ${where.join(' AND ')} ORDER BY m.time DESC,m.id LIMIT ?`), params);
+  }
+  // The exact filters of query as SQL over memories m: a prefix (a WITH clause or ''), the WHERE
+  // terms and their parameters, with the same fork and correction handling. lib/memory-search.mjs
+  // adds its narrowing and full-text terms after these.
+  filterSql(filters = {}) {
     filters = { ...filters };
     if (Object.hasOwn(filters, 'entities')) {
       const canonical = id => lib.resolveEntity(this.names, id)?.id || id;
@@ -307,16 +325,7 @@ export class MemoryIndex {
       prefix = `WITH candidates AS MATERIALIZED(SELECT m.rowid,m.id FROM memories m WHERE ${clauses.join(' AND ')}) `;
       where = ['m.rowid IN (SELECT rowid FROM candidates)', 'NOT EXISTS(SELECT 1 FROM forks f JOIN candidates c ON c.rowid=f.memory WHERE f.target=m.id)'];
     } else if (!scoped) where.push(visible('m'));
-    if (search.trim()) {
-      const query = search.trim(), terms = new Set([query.toLowerCase()]);
-      for (const term of [query, ...query.split(/\s+/)]) {
-        const canonical = lib.canonicalName(this.names, term);
-        if (canonical) { terms.add(canonical.toLowerCase()); for (const alias of this.names.find(n => n.name === canonical)?.aliases || []) terms.add(alias.toLowerCase()); }
-      }
-      where.push('text_matches(m.projected,?)'); params.push(JSON.stringify([...terms]));
-    }
-    params.push(Math.max(1, Math.min(501, Number(limit) || 50)));
-    return this.bounded(this.db.prepare(`${prefix}SELECT m.projected FROM memories m WHERE ${where.join(' AND ')} ORDER BY m.time DESC,m.id LIMIT ?`), params);
+    return { prefix, where, params };
   }
   keywords(terms, project = null) {
     this.requireReady();

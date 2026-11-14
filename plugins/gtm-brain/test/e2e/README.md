@@ -35,7 +35,7 @@ and messy take well over ten minutes and large is impractical; see `baseline.jso
 
 Copies the brain to a scratch folder (the write checks append notes), starts `server/server.mjs`
 and runs about 50 checks in sections: search (single and multi-word, stemmed, typo, names, aliases,
-SQL), entities (name, id, alias, typo, email), briefs (facts, cited ids, size), relations and their
+SQL, and the one-call answer: a question, its entity card, Not found, the size cap), entities (name, id, alias, typo, email), briefs (facts, cited ids, size), relations and their
 history, customers, meetings, deal, rules, status, compile (`--facts` read through a pipe, full
 size, and over MCP), load_context, remember (single, batch over MCP, `--batch` script, a bare first name saved then
 asked, and the answer linked back),
@@ -45,7 +45,7 @@ outbound workflow, a recorded send, a user-confirmed prospect; the live run is
 `ms`, `bytes`, `note`. A failure caused by a gap main is known to have carries `known_gap`; the run
 exits 1 only on a plain failure. `E2E_DEBUG=1` adds the reply text to failed checks.
 
-Known gaps marked today: unstemmed search, no typo tolerance in memory search, note ids missing on
+Known gaps marked today: note ids missing on
 `recall` and `load_context` read lines and in relation history, unbounded entity briefs, the
 64 KiB cut on `compile --facts`, `remember` refusing without a loaded context, and the 64 KiB cut
 on `query relations` and `query customers` (`entities.mjs` prints, then exits, and the server reads
