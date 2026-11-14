@@ -670,8 +670,9 @@ function renderBrief(facts, brief, evidence, registry, scope, now = null) {
   if (relationships.length) out.push(recorded.length ? "\nAlso stated in notes:\n\n" + claims(relationships) : "\n" + claims(relationships));
   if (!recorded.length && !relationships.length) out.push("\nNo recorded or compiled relationships. Shared mentions alone do not establish a relationship.");
   const selected = scope ? facts.evidence.filter(m => m.context === scope).sort((a, b) => Date.parse(b.at) - Date.parse(a.at)) : evidence;
-  const mentions = lib.createMentionMatcher(registry);
-  const peers = new Set(scope ? selected.flatMap(mentions).filter(n => n !== facts.entity.name) : facts.related_identities.map(n => n.name));
+  // The matcher reads the whole registry: built only for a one-context view, never for each page
+  // a save refreshes (on 1,750 entities that was most of a 20 s save).
+  const peers = new Set(scope ? selected.flatMap(lib.createMentionMatcher(registry)).filter(n => n !== facts.entity.name) : facts.related_identities.map(n => n.name));
   if (peers.size) out.push("\nAlso mentioned with: " + [...peers].map(n => { const e = registry.find(x => x.name === n); return e?._path ? link(n, basename(e._path)) : md(n); }).join(", ") + ".");
   const timeline = facts.timeline;
   out.push("\n## Timeline", "\nNotes in recording order, newest first. Relevant event dates are kept in the note text; the timestamp labels when the memory was recorded.");

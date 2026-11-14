@@ -212,3 +212,20 @@ test('mentionsIn on a changeable registry is faster than the plain scan it repla
   const plain = time(scanMentions), now = time(lib.mentionsIn);
   assert.ok(now < plain * 0.8, `plain scan ${plain.toFixed(1)} ms, mentionsIn ${now.toFixed(1)} ms for ${notes.length} notes`);
 });
+
+// The first save after an index rebuild (an upgrade that changes the index version does one)
+// rewrites every entity page inside that save. Each page built a name matcher over the whole
+// registry it never used, so that save grew with the square of the entities: 20 s at 1,750.
+test('rewriting every entity page costs the same per page as the registry grows', async () => {
+  const { refreshEntityPages } = await import('../lib/entities.mjs');
+  const perPage = count => {
+    const root = fixture(count);
+    for (const e of lib.readNames(root).slice(0, count)) lib.appendMemory(root, 'sales', { authors: ['ann'], content: `${e.name} asked about the pilot.` });
+    refreshEntityPages(root);
+    unlinkSync(join(root, 'work', 'entity-pages.json'));   // as after a rebuild: no page is known to be current
+    const started = performance.now(); refreshEntityPages(root);
+    return (performance.now() - started) / count;
+  };
+  const small = perPage(100), large = perPage(800);
+  assert.ok(large < small * 1.8 + 0.2, `100 entities ${small.toFixed(2)} ms a page, 800 entities ${large.toFixed(2)} ms a page`);
+});
