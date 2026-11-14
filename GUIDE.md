@@ -140,44 +140,54 @@ brain with `node plugins/gtm-brain/test/live/demo-loops.mjs --brain-only` (a con
 checkout). It holds Reflow Fixture: a filled ICP, strategy and tone of voice, Zynt signals, customer
 words from two calls, and the project folders Outbound and Website. Open it as a Codex project.
 Nothing is sent or published. You tell Codex what Clay, Surfer, Gmail and Vercel returned. The same
-script without `--brain-only` runs both stories through Codex and checks every step.
+script without `--brain-only` types these sentences into Codex and checks every step.
 
 **Outreach.** Type each line in one chat:
 
-1. *From our ICP and the buying signals in the brain, which two accounts should we contact
-   first, and why?* Fernbrook Outdoor comes first: an ICP fit with a Head of Returns job post.
-   Umber Pharma is left out because the ICP rules out pharmacies.
-2. *I ran Clay on Fernbrook Outdoor: 85 stores in Germany and Austria, Head of Operations Lea
-   Hoffmann, lea.hoffmann@fernbrook-outdoor.example. Save what Clay found.* A note in the brain;
-   Lea Hoffmann appears under Entities.
+1. *We want to start outreach this week. From our ICP and the buying signals in the brain, which
+   two accounts should we contact first, and why? Name the person to write to if we know one. Do
+   not save anything yet.* Fernbrook Outdoor comes first: an ICP fit with a Head of Returns job
+   post. Umber Pharma is left out: the ICP rules out pharmacy chains.
+2. *I ran Clay on Fernbrook Outdoor. It returned: 85 stores in Germany and Austria, about 1,400
+   employees, returns handled by hand in each store. Their Head of Operations is Lea Hoffmann,
+   lea.hoffmann@fernbrook-outdoor.example, based in Munich. Save what Clay found.* A note in the
+   brain; Lea Hoffmann appears under Entities.
 3. *Draft the first outreach email to Lea, tied to the Zynt signal, in our tone of voice. Draft
-   only. Put it in the outbound project folder.* A Markdown draft in `projects/outbound/`: short
-   sentences, no exclamation marks, signed Marta. Nothing is sent.
-4. *I sent that email on 11 November. She replied on 13 November: "We are in the middle of an
-   ERP migration until January. Ping me after 10 January." Record both.* Two notes, with the
-   follow-up date.
-5. *Draft the follow-up for 11 January that picks up her reply.* A second draft, about the migration.
-6. *Lea booked a pilot scoping call for 14 January. Fernbrook Outdoor is now a prospect. Record
-   it. Do not touch the CRM.* Fernbrook Outdoor shows as a prospect in the dashboard's customers.
-7. In a **new chat**: *Where do we stand with Fernbrook Outdoor?* The whole thread comes back
-   from the brain: Lea, the migration, the 14 January call, prospect.
+   only: do not send anything. Put the draft as a Markdown file in the outbound project folder.* A
+   Markdown draft in `projects/outbound/`: short sentences, no exclamation marks, signed Marta.
+   Nothing is sent.
+4. *I sent that email to Lea from Gmail on 11 November. She replied on 13 November: "Interesting
+   timing. We are in the middle of an ERP migration until January. Ping me after 10 January."
+   Record both.* Two notes, with the follow-up date.
+5. *Draft the follow-up for 11 January that picks up her reply. Draft only, same folder.* A second
+   draft, about the migration.
+6. *Lea booked a pilot scoping call for 14 January. Fernbrook Outdoor is now a prospect for us.
+   Record the call and their status in the brain. Do not touch the CRM.* Fernbrook Outdoor shows as
+   a prospect in the dashboard's customers.
+7. In a **new chat**: *Where do we stand with Fernbrook Outdoor? Who is our contact, what happened
+   so far, and what is next? Do not save anything.* The whole thread comes back from the brain:
+   Lea, the migration, the 14 January call, prospect.
 
 **Content.** In another chat:
 
 1. *Plan our blog. Read our strategy, the market notes and what customers said on calls. Surfer
-   gave us: "returns automation for retailers" 1,900 a month, "reduce return rate retail" 880,
-   "store pickup returns" 320. Propose three posts.* Three topics, each with its keyword and a
-   customer's own words ("after Black Friday we drown in return tickets").
-2. *Go with "store pickup returns" first; save that as a decision. Then draft the post: about 600
-   words, SEO title under 60 characters, meta description under 155, one H1, the keyword in the
-   title and first paragraph. Put it in the website project folder.* A decision note and a
-   Markdown post in `projects/website/` that passes those checks.
-3. *The post went live today at https://reflow.example/blog/store-pickup-returns. Remember that it
-   was published.* A note with the URL.
-4. *Two weeks of numbers: 1,240 visits, position 8, 3 demo requests, one from Lumen Outdoor.
-   Record what it produced.* A note linked to Lumen Outdoor.
-5. In a **new chat**: *What has our blog produced so far, and which post should come next?* The
-   results, and the next topic from the plan.
+   gave us these keywords (monthly searches, difficulty): 'returns automation for retailers' 1,900
+   / 34; 'reduce return rate retail' 880 / 22; 'store pickup returns' 320 / 12. Propose three posts
+   for the landing page blog, each with its keyword and the customer words it uses. Do not save
+   anything yet.* Three topics, each with its keyword and a customer's own words ("after Black
+   Friday we drown in return tickets").
+2. *Go with 'store pickup returns' first; save that as a decision. Then draft the post in our tone
+   of voice: about 600 words, an SEO title under 60 characters, a meta description under 155
+   characters, one H1, the keyword in the title and in the first paragraph. Put the draft in the
+   website project folder as Markdown, with title and description in its front matter.* A decision
+   note and a Markdown post in `projects/website/` that passes those checks.
+3. *The post went live today at https://reflow.example/blog/store-pickup-returns, deployed with the
+   landing page on Vercel. Remember that it was published.* A note with the URL.
+4. *Two weeks of numbers for that post: 1,240 visits, position 8 for 'store pickup returns', 3 demo
+   requests, one of them from Lumen Outdoor. Record what it produced.* A note linked to Lumen
+   Outdoor.
+5. In a **new chat**: *What has our blog produced so far, and which post should come next? Do not
+   save anything.* The results, and a post from a pillar still open: returns cost or peak season.
 
 ## Three habits that make it work
 
