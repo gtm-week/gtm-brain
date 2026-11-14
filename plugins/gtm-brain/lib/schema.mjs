@@ -74,6 +74,9 @@ export function parseSchema(text) {
       if (!h2) { add(start, "a field table needs a \"## <Kind>\" heading above it", "add a heading such as ## Event above the table, or remove the table"); continue; }
       const reserved = NOT_KINDS[h2] || NOT_KINDS[h2.replace(/s$/, "")];
       if (reserved) { add(h2Line, `"## ${h2Raw}" is not a kind`, reserved); continue; }
+      // "## Products" or "## People" would make a second kind beside the one it means
+      const twin = { people: "person", persons: "person", organisation: "organization", organisations: "organization", companies: "company" }[h2] || (kinds[h2.replace(/s$/, "")] ? h2.replace(/s$/, "") : null);
+      if (twin) { add(h2Line, `"## ${h2Raw}" is not a kind`, NOT_KINDS[twin] || `the kind is ${twin}: name the section ## ${twin[0].toUpperCase() + twin.slice(1)}`); continue; }
       if (!KIND_NAME.test(h2)) { add(h2Line, `kind "${h2Raw}" must be one lowercase word, or words joined by _`, `## ${snake(h2Raw)}`); continue; }
       if (h3) { add(h3Line, `a subtype under ${h2} is not possible: only organizations have subtypes`, `move "${h3Raw}" under ## Organization, or remove the ### heading`); continue; }
       kinds[h2] = { fields: [] };

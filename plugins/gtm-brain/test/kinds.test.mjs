@@ -46,6 +46,10 @@ test("reserved and malformed kind names are refused with a fix; meetings and pro
     const p = problems(section(name));
     assert.equal(p.length, 1, name); assert.equal(p[0].line, 3); assert.match(p[0].problem, new RegExp(`"## ${name}" is not a kind`)); assert.match(p[0].proposal, fix);
   }
+  for (const [name, fix] of [["Products", /the kind is product: name the section ## Product/], ["People", /## Person/], ["Tools", /## Tool/], ["Companies", /organization subtype/]]) {
+    const q = problems(section(name));
+    assert.equal(q.length, 1, name); assert.match(q[0].problem, new RegExp(`"## ${name}" is not a kind`)); assert.match(q[0].proposal, fix);
+  }
   const p = problems(section("Trade Show"));
   assert.match(p[0].problem, /kind "Trade Show" must be one lowercase word/); assert.equal(p[0].proposal, "## trade_show");
   assert.match(problems(section("Tool") + "\n### saas\n\n| Field | What it means | Required |\n| --- | --- | --- |\n| seats | x | no |\n")[0].problem, /a subtype under tool is not possible/);
