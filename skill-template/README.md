@@ -17,9 +17,9 @@ agents/openai.yaml    the name, one line and the default prompt Codex shows
 ```
 
 The skill never touches brain files directly. It reads with `query`, `load_context` and
-`document`, asks with `question`, and writes with `remember` or `document`. Those tools keep the
-brain valid and commit every write; the hooks refuse a direct edit of `brain/admin.md` or a
-`memories.jsonl`.
+`document`, asks in Codex's question box or plain chat text, and writes with `remember` or
+`document`. Those tools keep the brain valid and commit every write; a direct edit of
+`brain/admin.md` or a `memories.jsonl` is put back at the next chat start or save.
 
 ## Steps
 
@@ -63,18 +63,44 @@ brain valid and commit every write; the hooks refuse a direct edit of `brain/adm
 For a vendor such as Zynt, the contract between your tool and the brain:
 
 - **The connector is yours, the sign-in is the person's.** They add your MCP server in Codex and
-  sign in there. The brain never holds a key or a token.
+  sign in there, or paste a key your app gives them. The brain never holds a key or a token: a
+  pasted key is used in that chat only, never written to a file, note, commit or the dashboard.
+- **MCP first, HTTP API second, never the browser.** When your MCP tools are listed in the
+  chat, use them. Otherwise your HTTP API with the pasted key, called with curl, one request per
+  step, no code written. Name both paths in `SKILL.md` step 2 with your own URLs.
 - **GTM Brain sees your connector, but cannot install it.** A remote MCP server in the person's
   Codex `config.toml` shows on the dashboard as installed, untested, and as connected after a
-  successful call. `gtm-brain-configure` cannot add it for them, so put your own connect steps
-  in the skill, check your tools are callable first, and when they are not, say so and show
-  those steps. After connecting, the person opens a new chat: Codex lists tools at chat start.
+  successful call. A tool used only through its HTTP API shows as "no official plugin" (export
+  or paste). `gtm-brain-configure` cannot add your server for them, so put your own connect
+  steps in the skill, check your tools are callable first, and when they are not, say so and
+  show those steps. After connecting, the person opens a new chat: Codex lists tools at chat start.
 - **The brain keeps pointers, not your data.** A signal or a news item becomes one short note in
-  the right context, with `sources` set to `yourtool:<url or id>`. Raw lists, exports and payloads
-  stay with you.
+  the context named in your `SKILL.md`, about the companies it names, with `sources` set to
+  `yourtool:<url or id>`. Raw lists, exports and payloads stay with you. Never one context per
+  account: the company is on the note, so its page collects every note about it.
 - **The skill asks before acting in your tool.** Sending, enrolling or moving a record needs a
   yes from the person in that chat.
 - **Runs happen in a chat or a scheduled run.** GTM Brain has no endpoint for webhooks; data your
   tool pushes is read the next time the skill runs.
 - **Say what the brain must give you.** List the brain facts your skill reads (ICP, positioning,
   target accounts) in `SKILL.md` step 1, and what it does when one is missing: ask, or stop.
+
+## A skill that sets up your tool from the brain
+
+Many vendors start with setup: the person signs up, your app hands them a short prompt with a
+key, and the agent fills your onboarding from what the brain knows. Ship that as its own skill
+(`gtm-brain-<tool>-setup`), separate from the skill that reads your tool every day, so the setup
+runs once and the daily skill stays short. The setup skill:
+
+1. **Starts from your prompt.** Its triggers include the first line your app's "copy for my
+   agent" text begins with, so a pasted prompt reaches the skill without a slash command.
+2. **Reads before it asks.** Strategy, ICP, market, voice and the target companies come from
+   the brain (`document`, `query`). It asks the person only for what the brain does not say, one
+   question at a time, and says which brain file each answer came from.
+3. **Marks guesses as guesses.** A brain line that is a hypothesis, a draft or a
+   `[not filled]` starter is sent to your tool as a draft, never as a confirmed fact.
+4. **Lets the person confirm in your tool.** The skill ends by naming the screen where the person
+   checks the summary ("click Looks right in Zynt"); it never confirms on their behalf.
+5. **Keeps one note.** When setup is done: one note with what was set up, which segment or
+   list, and the date, sourced to your tool. Not the answers it sent.
+6. **Offers the daily skill next**, in one line: the first question the person can ask now.
