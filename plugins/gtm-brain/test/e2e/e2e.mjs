@@ -26,12 +26,10 @@ const hasAll = (s, list) => list.every(x => s.includes(x));
 // taken as the value of --relations and lost: search alone returns every relationship, search with filters.type only
 // filters by type. The other relation checks pass because the entity is somewhere in the full list; on messy the
 // works_at list is over 64 KiB and the job change falls behind the cut.
-const ENTITY_DROPPED = "query relations ignores search: entities.mjs --relations swallows the option after it, so every relationship (or every one of the type) comes back; same on main";
 // remember ends with lib.rerender, which starts a dashboard render in the background; the render reads through the memory
 // index and holds its coordination lock (memory-index-lock.sqlite) while it refreshes. A query in that window waits
 // 1,000 ms for the lock and is then refused. Intermittent, from about 5,000 notes up.
 const READ_AFTER_WRITE = "a read right after a write can be refused: Memory index is busy (the index lock waits 1 s while the dashboard render started by the write refreshes the index); the note is there on retry; same on main";
-const PIPE_CUT = "query relations and query customers are cut at 64 KiB through the server pipe (entities.mjs prints, then process.exit); same on main";
 
 export async function runChecks({ brain: source, gold: goldPath, keep = false }) {
   const gold = JSON.parse(readFileSync(goldPath, "utf8"));
@@ -97,18 +95,18 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
 
   /* ---------- relations ---------- */
   if (gold.hub) {
-    await check("relations.entity_scope", "relations", async () => { const r = await q({ object: "relations", search: gold.hub.name }); const lines = r.text.split("\n").filter(l => /^  \S/.test(l)), other = lines.filter(l => !l.includes(gold.hub.name)); return { pass: !r.isError && lines.length > 0 && !other.length, text: r.text, note: `${other.length} of ${lines.length} lines are not about ${gold.hub.name}` }; }, { known_gap: ENTITY_DROPPED });
+    await check("relations.entity_scope", "relations", async () => { const r = await q({ object: "relations", search: gold.hub.name }); const lines = r.text.split("\n").filter(l => /^  \S/.test(l)), other = lines.filter(l => !l.includes(gold.hub.name)); return { pass: !r.isError && lines.length > 0 && !other.length, text: r.text, note: `${other.length} of ${lines.length} lines are not about ${gold.hub.name}` }; });
     await check("relations.hub", "relations", async () => { const r = await q({ object: "relations", search: gold.hub.name }); return { pass: !r.isError && r.text.includes(gold.hub.name) && /partner_of/.test(r.text), text: r.text }; });
     await check("relations.ended_partnership", "relations", async () => { const r = await q({ object: "relations", search: gold.hub.name, filters: { type: "partner_of" } }); return { pass: /ended/.test(r.text), text: r.text }; });
     await check("relations.history_dates", "relations", async () => { const r = await q({ object: "relations", search: gold.hub.name, filters: { type: "partner_of" } }); return { pass: hasAll(r.text, gold.hub.partnership.history.map(h => `${h.status} ${h.observed_at.slice(0, 10)}`)), text: r.text }; });
     await check("relations.history_ids", "relations", async () => { const r = await q({ object: "relations", search: gold.hub.name, filters: { type: "partner_of" } }); return found(r.text, gold.hub.partnership.history.map(h => h.memory), ids); }, { known_gap: "relation history lists dates without the note ids" });
   }
   const job = gold.changes.find(c => c.what === "works_at");
-  if (job) await check("relations.job_change", "relations", async () => { const r = await q({ object: "relations", search: job.entity, filters: { type: "works_at" } }); const names = [job.from, job.to].map(id => gold.entities.find(e => e.id === id)?.name); return { pass: hasAll(r.text, names) && /ended/.test(r.text) && /current/.test(r.text), text: r.text, note: `${Buffer.byteLength(r.text)} bytes` }; }, { known_gap: ENTITY_DROPPED });
-  await check("relations.all", "relations", async () => { const r = await q({ object: "relations" }); const sample = gold.relations.slice(0, 20).filter(x => x.from_name); const miss = sample.filter(x => !r.text.includes(x.from_name)); return { pass: !r.isError && !miss.length, text: r.text, note: `${miss.length} of ${sample.length} sampled missing, ${Buffer.byteLength(r.text)} bytes` }; }, { known_gap: PIPE_CUT });
+  if (job) await check("relations.job_change", "relations", async () => { const r = await q({ object: "relations", search: job.entity, filters: { type: "works_at" } }); const names = [job.from, job.to].map(id => gold.entities.find(e => e.id === id)?.name); return { pass: hasAll(r.text, names) && /ended/.test(r.text) && /current/.test(r.text), text: r.text, note: `${Buffer.byteLength(r.text)} bytes` }; });
+  await check("relations.all", "relations", async () => { const r = await q({ object: "relations" }); const sample = gold.relations.slice(0, 20).filter(x => x.from_name); const miss = sample.filter(x => !r.text.includes(x.from_name)); return { pass: !r.isError && !miss.length, text: r.text, note: `${miss.length} of ${sample.length} sampled missing, ${Buffer.byteLength(r.text)} bytes` }; });
 
   /* ---------- customers ---------- */
-  await check("customers.listed", "customers", async () => { const r = await q({ object: "customers" }); const sample = gold.customers.filter(c => c.status === "customer").slice(0, 10); const miss = sample.filter(c => !r.text.includes(c.name)); return { pass: !r.isError && sample.length > 0 && !miss.length, text: r.text, note: `${miss.length} of ${sample.length} missing, ${Buffer.byteLength(r.text)} bytes` }; }, { known_gap: PIPE_CUT });
+  await check("customers.listed", "customers", async () => { const r = await q({ object: "customers" }); const sample = gold.customers.filter(c => c.status === "customer").slice(0, 10); const miss = sample.filter(c => !r.text.includes(c.name)); return { pass: !r.isError && sample.length > 0 && !miss.length, text: r.text, note: `${miss.length} of ${sample.length} missing, ${Buffer.byteLength(r.text)} bytes` }; });
   await check("customers.former", "customers", async () => { const r = await q({ object: "customers" }); const want = gold.customers.filter(c => c.status === "former_customer"); return { pass: !want.length || /former/i.test(r.text), text: r.text, note: `${want.length} former` }; });
   const demo = gold.drafts.find(d => d.why === "demo-tagged customer evidence");
   if (demo) await check("customers.demo_excluded", "customers", async () => { const r = await q({ object: "customers" }); const name = gold.entities.find(e => e.id === demo.entity)?.name; return { pass: !!name && !r.text.includes(name), text: r.text, note: name }; });
