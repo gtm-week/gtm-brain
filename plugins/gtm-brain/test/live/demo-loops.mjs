@@ -116,6 +116,7 @@ const all = (...checks) => { for (const c of checks) if (c !== true) return c; r
 const need = (ok, why) => ok ? true : why;
 const has = (text, re) => re.test(String(text || ""));
 const fileText = f => f.text.replace(/^---\n[\s\S]*?\n---\n/, "");
+const shouts = text => text.replace(/<!--[\s\S]*?-->/g, "").replace(/!\[/g, "[").includes("!");   // a source comment or an image is not an exclamation
 const frontmatter = f => Object.fromEntries((f.text.match(/^---\n([\s\S]*?)\n---\n/)?.[1] || "").split("\n").map(l => l.match(/^([\w-]+):\s*(.*)$/)).filter(Boolean).map(m => [m[1], m[2].replace(/^["']|["']$/g, "")]));
 const drafts = (x, dir) => x.files.filter(f => f.path.startsWith(`projects/${dir}/`) && /\.(md|txt)$/.test(f.path) && !/(^|\/)(AGENTS|CLAUDE)\.md$/.test(f.path));
 const noSaves = x => need(!x.added.length, `saved ${x.added.length} note(s) on a turn that saves nothing`);
@@ -138,13 +139,13 @@ export const STEPS = [
       need(x.names.some(n => n.name === "Lea Hoffmann" && n.emails.includes("lea.hoffmann@fernbrook-outdoor.example")) || x.added.some(m => m.content.includes("lea.hoffmann@fernbrook-outdoor.example")), "her email is kept nowhere")) },
   { loop: "outreach", id: "o3-draft", shows: "first email drafted in the company voice, nothing sent",
     say: "Draft the first outreach email to Lea, tied to the Zynt signal, in our tone of voice. Draft only: do not send anything. Put the draft as a Markdown file in the outbound project folder.",
-    check: x => { const d = drafts(x, "outbound").find(f => /Lea/.test(f.text)); return all(saw(x, SEEN.voice, "did not read the tone of voice"), need(!!d, "no draft to Lea in projects/outbound/"), d ? need(!fileText(d).includes("!"), `exclamation mark in ${d.path} (voice: none)`) : true, d ? need(/Head of Returns|returns/i.test(d.text), "the draft does not use the signal") : true, d ? need(/Marta/.test(d.text), "not signed Marta (voice)") : true, noSend(x)); } },
+    check: x => { const d = drafts(x, "outbound").find(f => /Lea/.test(f.text)); return all(saw(x, SEEN.voice, "did not read the tone of voice"), need(!!d, "no draft to Lea in projects/outbound/"), d ? need(!shouts(fileText(d)), `exclamation mark in ${d.path} (voice: none)`) : true, d ? need(/Head of Returns|returns/i.test(d.text), "the draft does not use the signal") : true, d ? need(/Marta/.test(d.text), "not signed Marta (voice)") : true, noSend(x)); } },
   { loop: "outreach", id: "o4-sent-reply", shows: "what was sent and the reply recorded, follow-up date kept",
     say: "I sent that email to Lea from Gmail on 11 November. She replied on 13 November: \"Interesting timing. We are in the middle of an ERP migration until January. Ping me after 10 January.\" Record both.",
     check: x => all(saved(x, /\bsent\b|\bsend/i, "the send is not recorded"), saved(x, /migration/i, "the reply is not recorded"), saved(x, /10 Jan|January 10|10 January|2027-01-10|Jan(uary)? 10/i, "the follow-up date is not kept"), need(x.added.some(m => JSON.stringify(m).includes("Lea Hoffmann") || JSON.stringify(m).includes(x.idOf("Lea Hoffmann"))), "the notes are not linked to Lea")) },
   { loop: "outreach", id: "o5-followup", shows: "follow-up drafted from her reply",
     say: "Draft the follow-up for 11 January that picks up her reply. Draft only, same folder.",
-    check: x => { const d = drafts(x, "outbound").find(f => /migration|ERP/i.test(f.text) && /Lea/.test(f.text)); return all(need(!!d, "no follow-up in projects/outbound/ that picks up the ERP migration"), d ? need(!fileText(d).includes("!"), `exclamation mark in ${d.path}`) : true, noSend(x)); } },
+    check: x => { const d = drafts(x, "outbound").find(f => /migration|ERP/i.test(f.text) && /Lea/.test(f.text)); return all(need(!!d, "no follow-up in projects/outbound/ that picks up the ERP migration"), d ? need(!shouts(fileText(d)), `exclamation mark in ${d.path}`) : true, noSend(x)); } },
   { loop: "outreach", id: "o6-status", shows: "the call booked and the customer status updated in the brain",
     say: "Lea booked a pilot scoping call for 14 January. Fernbrook Outdoor is now a prospect for us. Record the call and their status in the brain. Do not touch the CRM.",
     check: x => all(need(x.customers.some(c => c.name === "Fernbrook Outdoor" && c.status === "prospect"), `customer overview: Fernbrook Outdoor is ${x.customers.find(c => c.name === "Fernbrook Outdoor")?.status || "absent"}, not prospect`), saved(x, /14 Jan|January 14|14 January|2027-01-14/i, "the 14 January call is not recorded"), need(!x.calls.some(c => /^(attio|hubspot)_/.test(c.tool)), "touched the CRM")) },
@@ -164,7 +165,7 @@ export const STEPS = [
         d ? need(fm.title && fm.title.length <= 60 && /store pickup returns?/i.test(fm.title), `SEO title "${fm.title || ""}" (${(fm.title || "").length} chars) misses the rule`) : true,
         d ? need(fm.description && fm.description.length <= 155, `meta description is ${(fm.description || "").length} chars`) : true,
         d ? need(h1 === 1, `${h1} H1 headings`) : true, d ? need(/store pickup return/i.test(first), "keyword not in the first paragraph") : true,
-        d ? need(words(body) >= 400 && words(body) <= 900, `${words(body)} words`) : true, d ? need(!body.includes("!"), "exclamation mark in the post (voice: none)") : true);
+        d ? need(words(body) >= 400 && words(body) <= 900, `${words(body)} words`) : true, d ? need(!shouts(body), "exclamation mark in the post (voice: none)") : true);
     } },
   { loop: "content", id: "c3-published", shows: "publication recorded with its URL",
     say: "The post went live today at https://reflow.example/blog/store-pickup-returns, deployed with the landing page on Vercel. Remember that it was published.",

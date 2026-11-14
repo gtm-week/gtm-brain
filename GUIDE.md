@@ -140,14 +140,15 @@ brain with `node plugins/gtm-brain/test/live/demo-loops.mjs --brain-only` (a con
 checkout). It holds Reflow Fixture: a filled ICP, strategy and tone of voice, Zynt signals, customer
 words from two calls, and the project folders Outbound and Website. Open it as a Codex project.
 Nothing is sent or published. You tell Codex what Clay, Surfer, Gmail and Vercel returned. The same
-script without `--brain-only` types these sentences into Codex and checks every step.
+script without `--brain-only` types these sentences into Codex and checks every step. The summaries
+in this brain were never compiled, so Codex may end its first answer by offering to compile them.
 
 **Outreach.** Type each line in one chat:
 
 1. *We want to start outreach this week. From our ICP and the buying signals in the brain, which
    two accounts should we contact first, and why? Name the person to write to if we know one. Do
    not save anything yet.* Fernbrook Outdoor comes first: an ICP fit with a Head of Returns job
-   post. Umber Pharma is left out: the ICP rules out pharmacy chains.
+   post. Umber Pharma, a pharmacy chain the ICP rules out, is not picked.
 2. *I ran Clay on Fernbrook Outdoor. It returned: 85 stores in Germany and Austria, about 1,400
    employees, returns handled by hand in each store. Their Head of Operations is Lea Hoffmann,
    lea.hoffmann@fernbrook-outdoor.example, based in Munich. Save what Clay found.* A note in the

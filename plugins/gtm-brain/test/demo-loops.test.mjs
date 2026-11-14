@@ -48,6 +48,7 @@ test("demo checks: the outreach draft must follow the voice and stay unsent", ()
   const good = evidence({ saw: voice, files: [draft("Subject: Head of Returns\n\nLea, your Head of Returns post says returns are handled by hand.\n\nMarta")] });
   assert.equal(step("o3-draft").check(good), true);
   assert.match(step("o3-draft").check({ ...good, files: [draft("Hi Lea! Head of Returns. Marta")] }), /exclamation/);
+  assert.equal(step("o3-draft").check({ ...good, files: [draft("Lea, your Head of Returns post says returns are handled by hand.\n\nMarta\n\n<!-- Source: Zynt signal -->")] }), true, "a source comment is not an exclamation");
   assert.match(step("o3-draft").check({ ...good, added: [{ content: "Sent to Lea.", actions: [{ tool: "gmail", action: "send" }] }] }), /send/);
   assert.match(step("o3-draft").check({ ...good, files: [] }), /no draft/);
   // naming the document is not reading it: a failed lookup of voice.md leaves no voice text in the chat
