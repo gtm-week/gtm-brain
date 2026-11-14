@@ -699,6 +699,28 @@ words, then calls `save`. A relationship rename keeps the old name in `Was calle
 and adds, changes or removes one row or one line in the person's words, then calls `save`. A rule
 cannot switch off APPROVE, the protected files or W1.
 
+A rule under "Our rules" can carry a tag line directly under it (0.35.0, `lib/our-rules.mjs`):
+
+```
+Never call a company a customer before a signed contract.
+> applies to: organization · when: saving customer status · check
+```
+
+`applies to` is a kind or subtype from SCHEMA.md, `link <type>` or `general`; `when` is saving,
+drafting or reading, optionally with a field or status; then `check` or `guidance`. The rules check
+lists an untagged rule as "not filed yet" with the tag line Codex proposes, a tag line it cannot read
+with its line and a fix, and an instruction that starts work ("whenever a company becomes a
+customer, send the welcome pack") with a one-step workflow to create instead; `/gtm-brain-rules`
+writes the line, or creates the workflow, only on the person's yes. A filed rule rides along with the
+reply that needs it, once per chat: `remember` (saving, for the people and companies in the note),
+`query` object `brief` (reading and drafting, by the entity's kind and current relationships), and
+`query` object `rules` with search (a kind, `link <type>`, `general` or a name), filters.when and
+filters.text (a draft to check). A `check` rule the brain can read refuses the save that breaks it,
+quoting the rule: a quoted word in a note or a draft, a status before, without or until a fact
+(the customer or relation block, or a note saying it is now a customer), a note without a source,
+a SCHEMA.md field always included. Any other `check` rule is shown as guidance. An older GTM Brain
+reads the tag line as a quote line and checks nothing.
+
 `RULES.md` at the brain root is the brain's own rules, in three sections. "Our rules" holds its people's
 rules for what Codex saves and asks, one line each; the chat start prints them after the shared saving
 rules (R1, R2). "Where things go" is the table of where every file goes: rules at the root, brand in

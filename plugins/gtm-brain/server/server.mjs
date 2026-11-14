@@ -20,6 +20,7 @@ import { host } from "../lib/host.mjs";
 import { validateValue } from "../lib/ontology/validation.mjs";
 import { placementTrailers, whyHere, WHY_TRAILER } from "../lib/where.mjs";
 import { rulesReport } from "../lib/rules-check.mjs";
+import { scopedReport, replyRules, entryScopes, entityScope, createShownOnce } from "../lib/our-rules.mjs";
 import { askSourceLines } from "../lib/ask-source.mjs";
 import { createSaveNudge } from "../lib/save-nudge.mjs";
 import { relativeDates } from "../lib/dots.mjs";
@@ -387,6 +388,7 @@ const SQL_SCHEMA = {
   keywords: "the full-text index: JOIN keywords k ON k.rowid = m.rowid WHERE keywords MATCH 'word'.",
 };
 const byName = name => TOOLS.find(t => t.name === name);
+const rulesShown = createShownOnce({ quietMs: Number(process.env.GTM_BRAIN_OPEN_AGAIN_MS) || 30 * 60 * 1000 });
 const original = new Map(Object.keys(RETIRED_READS).map(name => [name, byName(name).call]));
 for (const [name, hint] of Object.entries(RETIRED_READS)) byName(name).call = async args => { const r = await original.get(name)(args); if (r?.content?.[0] && !r.isError) r.content[0].text = `deprecated: use ${hint}.\n${r.content[0].text}`; return r; };
 const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [columns.join(" | "), ...rows.map(r => columns.map(c => r[c] == null ? "" : typeof r[c] === "object" ? JSON.stringify(r[c]) : String(r[c])).join(" | ")), `(${rows.length} row${rows.length === 1 ? "" : "s"}${truncated ? ", truncated at the limit" : ""})`].join("\n");
@@ -394,7 +396,7 @@ const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [colu
   const query = byName("query"), describe = byName("describe_object"), objects = byName("list_objects");
   const datasets = [...query.inputSchema.properties.object.enum];
   const base = query.call, describeBase = describe.call, objectsBase = objects.call;
-  query.description = "The one read: rows of one object, newest first (exact filters, free-text search with alias expansion, limit), or one read-only SQL SELECT over the memory index (memories, members, contexts, entities, keywords; describe_object shows the columns) for counts, joins and dates. Derived reads by object: status (where we are: contexts, loaded set, tools, onboarding; call it first), brief (an entity's cited one-page view; search = the name; also the answer to who is X and why did you add X: when and from which note it was first saved, and the rule each spelling matched), deal (one deal's MEDDPICC rubric and every memory about it, to score with cited IDs; search = the company), relations (relationships from SCHEMA.md with their history; search = an entity, filters.type = one type), why (why a file or folder is where it is: the RULES.md row, reason, who and when; search = the path), rules (the brain checked against its naming and RULES.md rules, each finding with fixed choices; for: check the brain), projects, brains, customers, meetings, health (how the brain is doing), population (is the brain too full or too empty: notes per week, duplicates, entities without notes, uncited and unsourced notes, with ranges). An entities search resolves a name, alias, email or typo to ranked candidates. Answer from the rows; no rows means say so.";
+  query.description = "The one read: rows of one object, newest first (exact filters, free-text search with alias expansion, limit), or one read-only SQL SELECT over the memory index (memories, members, contexts, entities, keywords; describe_object shows the columns) for counts, joins and dates. Derived reads by object: status (where we are: contexts, loaded set, tools, onboarding; call it first), brief (an entity's cited one-page view; search = the name; also the answer to who is X and why did you add X: when and from which note it was first saved, and the rule each spelling matched), deal (one deal's MEDDPICC rubric and every memory about it, to score with cited IDs; search = the company), relations (relationships from SCHEMA.md with their history; search = an entity, filters.type = one type), why (why a file or folder is where it is: the RULES.md row, reason, who and when; search = the path), rules (the brain checked against its naming and RULES.md rules, each finding with fixed choices, for: check the brain; with search = a kind, link <type> or a name, the Our rules that apply to it, filters.when = saving, drafting or reading, filters.text = a draft to check: before writing to someone, when no brief was read), projects, brains, customers, meetings, health (how the brain is doing), population (is the brain too full or too empty: notes per week, duplicates, entities without notes, uncited and unsourced notes, with ranges). An entities search resolves a name, alias, email or typo to ranked candidates. Answer from the rows; no rows means say so.";
   query.inputSchema = { ...query.inputSchema, required: [], properties: { ...query.inputSchema.properties,
     object: { ...query.inputSchema.properties.object, enum: [...datasets, ...Object.keys(VIEWS), "deal", "why", "rules", "relations", "reference", "population"] },
     sql: { type: "string", description: "One SELECT (or WITH ... SELECT) over memories, members, contexts, entities and keywords. Read-only; at most limit rows (default 200)." },
@@ -403,8 +405,12 @@ const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [colu
   query.call = async ({ brain, object, sql, search, filters, limit, project, candidates }) => {
     if (sql) { try { return text(table(await memoryReader.read(brain, "sql", { sql, limit }))); } catch (e) { return text(e.message, true); } }
     if (!object) return text("Pass object or sql: query needs one of them.", true);
-    if (object === "brief") return search ? original.get("recall")({ brain, entity: search, ...(filters?.context ? { context: filters.context } : {}), ...(project ? { project } : {}) }) : text("brief needs search: the entity name, alias, email or id.", true);
-    if (object === "rules") return original.get("check_rules")({ brain });
+    if (object === "brief") return search ? Promise.resolve(original.get("recall")({ brain, entity: search, ...(filters?.context ? { context: filters.context } : {}), ...(project ? { project } : {}) })).then(r => withRules(r, brain, project, () => [entityScope(brain, search)].filter(Boolean), ["reading", "drafting"])) : text("brief needs search: the entity name, alias, email or id.", true);
+    if (object === "rules") {   // with search or filters.when/text: the Our rules that apply (lib/our-rules.mjs); without: the check
+      if (!search && !filters?.when && !filters?.text) return original.get("check_rules")({ brain });
+      const r = scopedReport(brain, { search, when: filters?.when || null, text: filters?.text || null });
+      return text(r.text, r.error);
+    }
     if (object === "why") return search ? original.get("why_here")({ brain, path: search }) : text("why needs search: the file or folder path.", true);
     if (object === "relations") return run(brain, "gtm-brain-entities/entities.mjs", ["--relations", ...(search ? ["--entity", search] : []), ...(filters?.type ? ["--type", String(filters.type)] : [])]).then(result);
     if (object === "reference") {   // a source pointer (kind:ref or a record URL): the entity that holds it and every note citing it
@@ -423,6 +429,17 @@ const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [colu
     const r = await base({ brain, object, ...(search !== undefined ? { search } : {}), ...(filters !== undefined ? { filters } : {}), ...(limit !== undefined ? { limit } : {}) });
     return object === "memories" && !r.isError ? withAskSource(brain, r) : r;
   };
+  // RULES.md Our rules: the rules for the entity in hand ride along with the reply, once per chat per rule and action
+  const withRules = (r, brain, project, scopes, verb) => {
+    if (r?.isError || !r?.content?.[0] || process.env.GTM_BRAIN_RUN) return r;
+    let s = []; try { s = scopes(); } catch {}
+    const lines = replyRules(brain, { scopes: s, verb, shown: rulesShown, chatKey: `${resolve(brain)}\t${typeof project === "string" ? project : ""}` });
+    return lines ? { ...r, content: [{ ...r.content[0], text: `${r.content[0].text}\n\n${lines}` }, ...r.content.slice(1)] } : r;
+  };
+  {
+    const remember = byName("remember"), rememberBase = remember.call;
+    remember.call = async args => withRules(await rememberBase(args), args.brain, args.project, () => entryScopes(args.brain, Array.isArray(args.memories) ? args.memories : [args]), "saving");
+  }
   // RULES.md Ask the source: memory rows from a connected tool, older than their row allows, get one line per row
   const withAskSource = (brain, r) => {
     try {
@@ -433,7 +450,7 @@ const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [colu
   };
   describe.inputSchema = { ...describe.inputSchema, properties: { ...describe.inputSchema.properties, name: { ...describe.inputSchema.properties.name, enum: [...datasets, ...Object.keys(VIEWS), "deal", "why", "rules", "relations", "reference", "population"] } } };
   describe.call = async args => {
-    if (args.name === "rules") return text("rules: a derived read (query with object rules). Checks the brain against its own rules: people known by a first name only (P3), look-alike names nobody confirmed (P4), top-level folders no RULES.md row names, files with no recorded reason (by folder), names with capitals or spaces. Each finding: the rule, the person or path, two or three fixed choices through existing tools. Reads only.");
+    if (args.name === "rules") return text("rules: a derived read (query with object rules). Checks the brain against its own rules: people known by a first name only (P3), look-alike names nobody confirmed (P4), top-level folders no RULES.md row names, files with no recorded reason (by folder), names with capitals or spaces. Each finding: the rule, the person or path, two or three fixed choices through existing tools; Our rules lines not filed yet come with a proposed tag line, an instruction that starts work with a workflow to create. With search (a kind, link <type>, general or an entity name) and optional filters.when (saving, drafting, reading) and filters.text (a draft): the Our rules that apply, and the check rules the draft breaks. Reads only.");
     if (args.name === "why") return text("why: a derived read (query with object why, search = a path inside the brain). Returns the RULES.md row and reason recorded when the file or folder was saved (save's placed), who put it there and when; for a folder, the reasons for what is inside; with no reason recorded, when it arrived and that the person should be asked. Reads only.");
     if (args.name === "reference") return text("reference: a derived read (query with object reference; search = a source pointer as kind:ref, kind:account/ref or a record URL). Kinds are normalized (HubSpot, hubspot and an app.hubspot.com link are one pointer). Returns the entity whose references include it and every note whose sources cite it, newest first. Reads only.");
     if (args.name === "relations") return text("relations: a derived read (query with object relations; search = an entity for its relationships only; filters.type = one type). Every relationship recorded with remember's relation block, typed by SCHEMA.md: from, type, to (an entity or us), current or ended, said by the person or from a source, the observed date, the note it rests on, the history (oldest notes stay) and source records that disagree. Customer status is included read-only as customer_of. A type removed from SCHEMA.md is kept and marked. Reads only.");

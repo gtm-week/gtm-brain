@@ -10,6 +10,7 @@ import { whereRows, recordedReasons, MANAGED, WHERE } from "./where.mjs";
 import { strayFolders, listDocuments, filesDir } from "./documents.mjs";
 import { readSchema } from "./schema.mjs";
 import { readAskSource } from "./ask-source.mjs";
+import { ourRulesFindings } from "./our-rules.mjs";
 
 const git = (root, ...a) => { try { return execFileSync("git", ["--no-optional-locks", "-C", root, ...a], { encoding: "utf8", stdio: "pipe" }); } catch { return ""; } };
 const BAD_NAME = /[A-Z\s]/;
@@ -94,11 +95,15 @@ export function ruleFindings(root) {
   return out;
 }
 
+/* ruleFindings stays the brain against its rules (the advisor counts it as files and names); the report adds the
+   Our rules lines themselves (lib/our-rules.mjs): unfiled rules with a proposed tag line, tag lines that cannot be
+   read, instructions that start work, check tags nothing can evaluate. */
 export function rulesReport(root) {
-  const f = ruleFindings(root);
-  if (!f.length) return "Rules check: nothing to fix. Every person has a full name or was confirmed, no look-alike pair is open, and every file has a recorded reason and a RULES.md-style name, and no compiled brief misses a field SCHEMA.md requires.";
-  const count = k => f.filter(x => k.includes(x.kind)).length;
-  const head = `Rules check: ${f.length} thing${f.length === 1 ? "" : "s"} to look at (${count(["person", "organization", "product"])} names, ${count(["folder", "files", "name"])} files and folders, ${count(["gap", "schema"])} SCHEMA.md gaps${count(["ask"]) ? `, ${count(["ask"])} Ask the source rows` : ""}). Reads only; nothing was changed.`;
-  const body = f.map((x, i) => `${i + 1}. [${x.rule}] ${x.what}\n${x.choices.map((c, j) => `   ${String.fromCharCode(97 + j)}) ${c}`).join("\n")}`).join("\n");
-  return `${head}\n${body}\nAsk the person about one at a time, choices as numbered options, the first recommended; carry out the answer through the tool named. The rules: P1-P4 in the brain's README (How we name people), the rows, naming and Ask the source table in RULES.md, the required fields and relationships in SCHEMA.md.`;
+  let own = []; try { own = ourRulesFindings(root); } catch {}
+  const f = [...ruleFindings(root), ...own];
+  if (!f.length) return "Rules check: nothing to fix. Every person has a full name or was confirmed, no look-alike pair is open, and every file has a recorded reason and a RULES.md-style name, and no compiled brief misses a field SCHEMA.md requires, and every Our rules line is filed.";
+  const count = k => f.filter(x => k.includes(x.kind)).length, ours = count(["rule-problem", "rule-work", "rule-unfiled", "rule-guidance"]);
+  const head = `Rules check: ${f.length} thing${f.length === 1 ? "" : "s"} to look at (${count(["person", "organization", "product"])} names, ${count(["folder", "files", "name"])} files and folders, ${count(["gap", "schema"])} SCHEMA.md gaps${count(["ask"]) ? `, ${count(["ask"])} Ask the source rows` : ""}${ours ? `, ${ours} Our rules lines` : ""}). Reads only; nothing was changed.`;
+  const body = f.map((x, i) => `${i + 1}. [${x.rule}] ${x.what}\n${x.choices.map((c, j) => `   ${String.fromCharCode(97 + j)}) ${c}`).join("\n")}${x.detail ? `\n${x.detail.trimEnd().split("\n").map(l => l ? `      ${l}` : "").join("\n")}` : ""}`).join("\n");
+  return `${head}\n${body}\nAsk the person about one at a time, choices as numbered options, the first recommended; carry out the answer through the tool named. Nothing in RULES.md is rewritten without their yes. The rules: P1-P4 in the brain's README (How we name people), the rows, naming, Ask the source table and Our rules in RULES.md, the required fields and relationships in SCHEMA.md.`;
 }

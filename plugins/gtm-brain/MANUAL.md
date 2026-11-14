@@ -149,7 +149,7 @@ each source keeps its own checkpoint in `work/sync.json`, by kind and account.
 | To change | Do this |
 |---|---|
 | Company profile, team, tools, settings | say it in chat; Codex shows the change and applies it only when you choose APPROVE |
-| What Codex saves and asks | your own rules under "Our rules" in `RULES.md`, one line each; Codex offers to add one when you correct a save, and yours win over the defaults |
+| What Codex saves and asks | your own rules under "Our rules" in `RULES.md`, one line each; Codex offers to add one when you correct a save, and yours win over the defaults. Under a rule, Codex proposes a tag line (`> applies to: organization · when: saving customer status · check`) and writes it on your yes: then the rule is shown only for that kind, and a `check` rule refuses a save that breaks it |
 | Where files go | `/gtm-brain-rules`, or edit the rows under "Where things go" in `RULES.md` |
 | Which questions go to a live tool, and how old a note may be | edit the rows under "Ask the source" in `RULES.md` (deal stage: CRM, 1 day; meeting times: calendar, always ask) |
 | What the brain keeps (fields, subtypes, relationship types) | `/gtm-brain-schema`, or edit `SCHEMA.md`; briefs refill in the background |
