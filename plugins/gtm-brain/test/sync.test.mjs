@@ -70,6 +70,10 @@ test("a background push that succeeds records it, and the chat-start notice is e
   assert.ok(state, "the push recorded success for this commit");
   assert.equal(git(bare, "rev-parse", "HEAD"), git(a, "rev-parse", "HEAD"));
   assert.equal(lib.syncNotice(a), "");
+  // a slower overlapping push that lost the race writes its failure last: nothing is ahead, so nothing is reported
+  lib.recordPush(a, { ok: false, remote: "origin", error: "cannot lock ref" });
+  assert.equal(lib.pushFailure(a), null);
+  assert.equal(lib.syncNotice(a), "");
 });
 
 test("save records its own push result", () => {
