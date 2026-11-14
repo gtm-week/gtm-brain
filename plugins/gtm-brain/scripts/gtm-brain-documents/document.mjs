@@ -64,7 +64,10 @@ if (opt.update) {
   const current = find(String(opt.update)); if (!current) refuse(`no such document ${opt.update}; yours: ${yours()}`);
   if (!["title", "applies-to", "body", "status"].some(k => opt[k] !== undefined)) refuse("nothing to change: pass --title, --applies-to, --body, --file or --status");
   const next = { path: current.path, title: opt.title !== undefined ? String(opt.title).trim() : current.title, applies_to: opt["applies-to"] !== undefined ? opt["applies-to"] : current.applies_to, body: opt.body !== undefined ? String(opt.body) : current.body, status: opt.status !== undefined ? String(opt.status) : current.status, by: by || current.by, version: VERSION, extra: { ...current.extra, ...extra } };
-  const why = docs.validateDocument(next); if (why) refuse(why);   // content only: the name and folder are already the person's
+  // a workflow that is active or paused keeps that through an edit of its text; only workflow activate, pause and
+  // resume change it (activate runs the check), so --status never sets it here
+  const switched = current.extra?.type === "workflow" && ["active", "paused"].includes(current.status) && opt.status === undefined;
+  const why = docs.validateDocument(switched ? { ...next, status: "draft" } : next); if (why) refuse(why);   // content only: the name and folder are already the person's
   docs.writeDocument(root, next);
   finish(docs.parseDocument(root, current.path), "updated", `Updated document ${current.path}`); process.exit(0);
 }
