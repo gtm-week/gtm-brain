@@ -1,0 +1,32 @@
+---
+import DsBlock from "../DsBlock.astro";
+import DsStage from "../DsStage.astro";
+import DsState from "../DsState.astro";
+import DsProps from "../DsProps.astro";
+import Icon from "../../ui/Icon.astro";
+import { CreditCard, Mail, Calendar, ChartLine, Receipt, Plane } from "@lucide/astro";
+
+interface Props {
+  /** A small preview for the overview grid. */
+  thumb?: boolean;
+}
+const { thumb = false } = Astro.props;
+---
+
+{
+  thumb ? (
+    <div class="flex gap-4 text-ink-1"><Icon icon={CreditCard} size="lg" /><Icon icon={Mail} size="lg" /><Icon icon={Calendar} size="lg" /></div>
+  ) : (
+    <>
+      <DsBlock title="Sizes" description="sm 16 · md 20 · lg 24, one stroke width, in the colour of the text around it. Pass the Lucide icon itself.">
+        <DsStage layout="states">
+          <DsState label="sm"><Icon icon={CreditCard} size="sm" /></DsState>
+          <DsState label="md"><Icon icon={CreditCard} /></DsState>
+          <DsState label="lg"><Icon icon={CreditCard} size="lg" /></DsState>
+          <DsState label="in ink-3"><span class="flex gap-3 text-ink-3"><Icon icon={ChartLine} /><Icon icon={Receipt} /><Icon icon={Plane} /></span></DsState>
+        </DsStage>
+      </DsBlock>
+      <DsBlock title="Props"><DsProps of="components/ui/Icon" /></DsBlock>
+    </>
+  )
+}

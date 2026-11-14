@@ -131,6 +131,10 @@ update by themselves in the background. When you want a specific workflow:
 | Change company info, team or tools | `/gtm-brain-configure` |
 | Fill in the voice, ICP, design system or market the brain starts with (`voice.md`, `icp.md`, `design-system.md`, `market.md`) | "fill in our tone of voice" |
 | Turn something you do repeatedly into a reusable skill | `/gtm-brain-skill` |
+| Build a website design system from your existing brand (Brian Woloszczak and Peakout's starter) | `/gtm-brain-design-system` |
+| Add a reusable section to that website | `/gtm-brain-add-section` |
+| Build a campaign or event page on it | `/gtm-brain-build-landing-page` |
+| Publish it on Vercel, preview first | `/gtm-brain-publish-website` |
 
 The **dashboard** is view-only: what needs you, open questions, contexts, notes, sources,
 customers and companies. "Chat about this" opens a prepared Codex conversation; press Send

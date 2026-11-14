@@ -1,0 +1,29 @@
+---
+import DsBlock from "../DsBlock.astro";
+import DsStage from "../DsStage.astro";
+import DsState from "../DsState.astro";
+import DsProps from "../DsProps.astro";
+import EmailCapture from "../../ui/EmailCapture.astro";
+
+interface Props {
+  /** A small preview for the overview grid. */
+  thumb?: boolean;
+}
+const { thumb = false } = Astro.props;
+---
+
+{
+  thumb ? (
+    <div class="w-72"><EmailCapture button="Get started" /></div>
+  ) : (
+    <>
+      <DsBlock title="States" description="An email field joined to a button. It posts to action once a form tool is connected.">
+        <DsStage layout="stack">
+          <DsState label="default" class="w-full"><EmailCapture button="Get started" /></DsState>
+          <DsState label="error" class="w-full"><EmailCapture button="Get started" error="Enter a work email address." /></DsState>
+        </DsStage>
+      </DsBlock>
+      <DsBlock title="Props"><DsProps of="components/ui/EmailCapture" /></DsBlock>
+    </>
+  )
+}

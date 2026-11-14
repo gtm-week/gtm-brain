@@ -1,0 +1,48 @@
+---
+/**
+ * The first band of a page: the page's H1 with its muted tail, a lead and up to two
+ * buttons, aligned left or centred.
+ */
+import Section from "../components/layout/Section.astro";
+import Container from "../components/layout/Container.astro";
+import Tagline from "../components/ui/Tagline.astro";
+import Heading from "../components/ui/Heading.astro";
+import Button from "../components/ui/Button.astro";
+import type { Action } from "../components/ui/SectionHeader.astro";
+
+interface Props {
+  tagline?: string;
+  /** The page's one H1. */
+  heading: string;
+  /** The two-tone tail, in ink-3. */
+  muted?: string;
+  lead?: string;
+  /** Up to two buttons: the first primary, the second ghost. */
+  actions?: Action[];
+  align?: "left" | "center";
+  tone?: "default" | "muted" | "inverted";
+}
+const { tagline, heading, muted, lead, actions = [], align = "left", tone = "default" } = Astro.props;
+const center = align === "center";
+---
+
+<Section tone={tone}>
+  <Container class:list={["flex flex-col gap-8", center && "items-center text-center"]}>
+    <div class:list={["flex max-w-measure-lg flex-col gap-4 md:gap-6", center && "items-center"]}>
+      {tagline && <Tagline>{tagline}</Tagline>}
+      <Heading level={1} muted={muted}>{heading}</Heading>
+      {lead && <p class="max-w-measure-md text-large text-ink-2">{lead}</p>}
+    </div>
+    {
+      actions.length > 0 && (
+        <div class:list={["flex flex-wrap gap-3", center && "justify-center"]}>
+          {actions.slice(0, 2).map((action, i) => (
+            <Button href={action.href} variant={action.variant ?? (i === 0 ? "primary" : "ghost")} size="lg">
+              {action.label}
+            </Button>
+          ))}
+        </div>
+      )
+    }
+  </Container>
+</Section>

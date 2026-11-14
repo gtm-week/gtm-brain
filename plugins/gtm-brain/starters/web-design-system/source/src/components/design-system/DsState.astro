@@ -1,0 +1,19 @@
+---
+/**
+ * One example in a card, its name underneath: a state, a size, a variant. In a row of
+ * cards the name lines sit level: each card takes two rows of the stage's grid (subgrid).
+ */
+interface Props {
+  label: string;
+  /** On the area that holds the example: `justify-start` for text, `items-stretch` for a card. */
+  class?: string;
+}
+const { label, class: className } = Astro.props;
+---
+
+<div data-ds-state={label} class="row-span-2 grid min-w-0 grid-rows-subgrid gap-0 overflow-hidden rounded-sm border border-line bg-surface-1">
+  <div class:list={["flex min-h-28 items-center justify-center p-6", className]}>
+    <slot />
+  </div>
+  <p class="border-t border-line px-4 py-2.5 text-small text-ink-3">{label}</p>
+</div>

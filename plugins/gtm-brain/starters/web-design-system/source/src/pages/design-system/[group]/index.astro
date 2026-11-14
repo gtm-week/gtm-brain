@@ -1,0 +1,21 @@
+---
+/** A group's own page: its tiles. Sections has a page of its own (sections/index.astro). */
+import DesignSystem from "../../../layouts/DesignSystem.astro";
+import DsGrid from "../../../components/design-system/DsGrid.astro";
+import { groups } from "../../../components/design-system/nav";
+
+const leads: Record<string, string> = {
+  foundations: "The values everything else is built from, read straight from src/styles/global.css.",
+  chrome: "The navbar and the footer: on every page, around the sections.",
+  components: "Every part a section is built from, each in every state: default, hover, focus, disabled, and error for fields.",
+};
+
+export const getStaticPaths = () =>
+  groups.filter((g) => g.key !== "sections").map((group) => ({ params: { group: group.key }, props: { group } }));
+
+const { group } = Astro.props;
+---
+
+<DesignSystem title={group.label} lead={leads[group.key]}>
+  <DsGrid title={`All ${group.label.toLowerCase()}`} count={`${group.items.length} ${group.unit}`} items={group.items} />
+</DesignSystem>

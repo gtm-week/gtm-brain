@@ -1,0 +1,24 @@
+---
+/** An icon on a square tile, the mark at the top of a card. */
+import type { AstroComponent } from "@lucide/astro";
+import Icon from "./Icon.astro";
+
+interface Props {
+  icon: AstroComponent;
+  size?: "md" | "lg";
+  class?: string;
+}
+const { icon, size = "md", class: className } = Astro.props;
+
+const sizes = { md: "size-10", lg: "size-12" } as const;
+---
+
+<span
+  class:list={[
+    "inline-grid shrink-0 place-items-center rounded-sm bg-surface-3 text-ink-1",
+    sizes[size],
+    className,
+  ]}
+>
+  <Icon icon={icon} size={size === "lg" ? "lg" : "md"} />
+</span>

@@ -1,0 +1,4 @@
+interface:
+  display_name: "GTM Brain: Build our design system"
+  short_description: "Build a website design system from our existing brand"
+  default_prompt: "Use $gtm-brain-design-system to build our web design system from our company website and brand files."

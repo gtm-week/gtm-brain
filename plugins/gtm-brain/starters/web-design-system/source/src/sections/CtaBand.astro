@@ -1,0 +1,22 @@
+---
+/** The closing band: a centred heading, a line and up to two buttons. Dark by default. */
+import Section from "../components/layout/Section.astro";
+import Container from "../components/layout/Container.astro";
+import SectionHeader, { type Action } from "../components/ui/SectionHeader.astro";
+
+interface Props {
+  heading: string;
+  muted?: string;
+  lead?: string;
+  /** Up to two buttons: the first primary, the second ghost. */
+  actions: Action[];
+  tone?: "default" | "muted" | "inverted";
+}
+const { heading, muted, lead, actions, tone = "inverted" } = Astro.props;
+---
+
+<Section tone={tone}>
+  <Container>
+    <SectionHeader align="center" heading={heading} muted={muted} lead={lead} actions={actions.slice(0, 2)} />
+  </Container>
+</Section>

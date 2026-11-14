@@ -73,8 +73,8 @@ test('copy prompt copies the exact command and example without navigating',async
  assert.match(p.node('#copy-status-'+s.id).textContent,/Copied/);assert.equal(p.run('view'),'home');
 });
 
-test('the person can ask for fifteen shipped workflows; internal procedures remain references',()=>{
- assert.deepEqual(skillCatalog().map(s=>s.id).sort(),['gtm-brain-configure','gtm-brain-deepdive','gtm-brain-define-icp','gtm-brain-market-desk-research','gtm-brain-project','gtm-brain-rules','gtm-brain-schema','gtm-brain-skill','gtm-brain-start','gtm-brain-strategy','gtm-brain-sync','gtm-brain-todo','gtm-brain-unit-economics','gtm-brain-use-brain','gtm-brain-workflow']);
+test('the person can ask for nineteen shipped workflows; internal procedures remain references',()=>{
+ assert.deepEqual(skillCatalog().map(s=>s.id).sort(),['gtm-brain-add-section','gtm-brain-build-landing-page','gtm-brain-configure','gtm-brain-deepdive','gtm-brain-define-icp','gtm-brain-design-system','gtm-brain-market-desk-research','gtm-brain-project','gtm-brain-publish-website','gtm-brain-rules','gtm-brain-schema','gtm-brain-skill','gtm-brain-start','gtm-brain-strategy','gtm-brain-sync','gtm-brain-todo','gtm-brain-unit-economics','gtm-brain-use-brain','gtm-brain-workflow']);
 });
 
 test('a brain with a skill of its own gets a "yours" group after the shipped ones; the shipped set is unchanged',()=>{

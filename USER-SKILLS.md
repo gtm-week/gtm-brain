@@ -8,7 +8,7 @@ plugin, is a pull request: see [skill-template/](skill-template/README.md).
 
 A skill is a folder with a `SKILL.md` file that tells Codex how to do one kind of work the same
 way every time (draft the weekly account update, prepare a Circle event, run the sales review).
-GTM Brain ships fourteen of them (`/gtm-brain-todo`, `/gtm-brain-sync`, `/gtm-brain-deepdive`, ...). From
+GTM Brain ships nineteen of them (`/gtm-brain-todo`, `/gtm-brain-sync`, `/gtm-brain-deepdive`, ...). From
 0.22.0 you can add your own. They live inside your company brain folder, they show in Codex
 next to the shipped ones as `/gtm-brain-<name>`, they reach everyone who shares the brain, and
 no GTM Brain update ever touches them.

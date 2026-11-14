@@ -1,0 +1,53 @@
+---
+/**
+ * The props, read from the component's source (props.ts). Columns from md, one prop per
+ * block on a phone; nothing scrolls sideways. A long default is shortened, in full on hover.
+ */
+import { readProps } from "./props";
+
+interface Props {
+  /** A path under src without the extension: "components/ui/Button". */
+  of: string;
+}
+const { of } = Astro.props;
+const { rows, extends: unresolved } = readProps(of);
+/* `Omit<HTMLAttributes<"button">, "class">` reads as `<button>`. */
+const rest = unresolved.map((type) => type.match(/HTMLAttributes<"(\w+)">/)?.[1] ?? type);
+const short = (value?: string) => (value && value.length > 40 ? `${value.slice(0, 38)}…` : value);
+const label = "tagline text-ink-3 md:hidden";
+---
+
+<div class="overflow-hidden rounded-sm border border-line text-small">
+  <div class="hidden grid-cols-12 gap-4 bg-surface-2 px-4 py-3 font-medium text-ink-1 md:grid">
+    <span class="col-span-3">Prop</span>
+    <span class="col-span-3">Type</span>
+    <span class="col-span-2">Default</span>
+    <span class="col-span-4">What it does</span>
+  </div>
+  <ul class="divide-y divide-line">
+    {
+      rows.map((row) => (
+        <li class="grid gap-2 px-4 py-3 wrap-anywhere md:grid-cols-12 md:gap-4">
+          <span class="md:col-span-3">
+            <code class="font-medium text-ink-1">{row.name}</code>
+            {row.required && <span class="text-ink-3"> required</span>}
+          </span>
+          <span class="flex flex-col gap-0.5 md:col-span-3">
+            <span class={label}>Type</span>
+            <code class="text-ink-2">{row.type}</code>
+          </span>
+          <span class="flex flex-col gap-0.5 md:col-span-2">
+            <span class={label}>Default</span>
+            <code class="text-ink-3" title={row.fallback}>{short(row.fallback) ?? "—"}</code>
+          </span>
+          <span class:list={["text-ink-2 md:col-span-4", !row.description && "hidden md:block"]}>
+            {row.description ?? ""}
+          </span>
+        </li>
+      ))
+    }
+  </ul>
+</div>
+<p class="text-small text-ink-3">
+  Read from <code>src/{of}.astro</code>.{rest.length > 0 && <> Also takes any {rest.map((tag) => `<${tag}>`).join(", ")} attribute.</>}
+</p>

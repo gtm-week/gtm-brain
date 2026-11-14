@@ -1,0 +1,36 @@
+---
+import DsBlock from "../DsBlock.astro";
+import DsStage from "../DsStage.astro";
+import DsState from "../DsState.astro";
+import DsProps from "../DsProps.astro";
+import Heading from "../../ui/Heading.astro";
+
+interface Props {
+  /** A small preview for the overview grid. */
+  thumb?: boolean;
+}
+const { thumb = false } = Astro.props;
+const sizes = ["h1", "h2", "h3", "h4", "h5", "h6"] as const;
+---
+
+{
+  thumb ? (
+    <Heading level={3} size="h4" muted="Then the rest.">The first clause.</Heading>
+  ) : (
+    <>
+      <DsBlock title="The two-tone heading" description="muted adds the rest of the sentence in ink-3.">
+        <DsStage layout="start">
+          <Heading level={2} muted="Then the rest, in grey.">The first clause in ink.</Heading>
+        </DsStage>
+      </DsBlock>
+      <DsBlock title="Sizes" description="level is the tag (the outline), size is how loud it looks: they often differ.">
+        <DsStage layout="stack">
+          {sizes.map((size) => (
+            <DsState label={size} class="justify-start"><Heading level={2} size={size}>Pages built on a system</Heading></DsState>
+          ))}
+        </DsStage>
+      </DsBlock>
+      <DsBlock title="Props"><DsProps of="components/ui/Heading" /></DsBlock>
+    </>
+  )
+}

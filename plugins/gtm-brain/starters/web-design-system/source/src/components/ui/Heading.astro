@@ -1,0 +1,28 @@
+---
+/**
+ * A heading. `level` is the tag (the outline), `size` is how loud it looks: they differ
+ * often (`level={2} size="h3"`). `muted` is the two-tone tail, the rest of the sentence in ink-3.
+ */
+interface Props {
+  level?: 1 | 2 | 3 | 4 | 5 | 6;
+  size?: "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+  muted?: string;
+  id?: string;
+  class?: string;
+}
+const { level = 2, size, muted, id, class: className } = Astro.props;
+
+const Tag = `h${level}` as const;
+const sizes = {
+  h1: "heading-h1",
+  h2: "heading-h2",
+  h3: "heading-h3",
+  h4: "heading-h4",
+  h5: "heading-h5",
+  h6: "heading-h6",
+} as const;
+---
+
+<Tag id={id} class:list={[sizes[size ?? `h${level}`], "text-ink-1", className]}>
+  <slot />{muted && <span class="text-ink-3"> {muted}</span>}
+</Tag>
