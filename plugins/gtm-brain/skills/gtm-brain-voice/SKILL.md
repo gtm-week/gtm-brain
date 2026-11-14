@@ -27,7 +27,7 @@ A filled document says on its first line whose voice it is and what it governs: 
 answer already in the request ("our voice" is not one), and never ask again. Otherwise this
 question comes first, before reading or asking for texts, with one line on why: a company standard is read from what the company publishes and
 sends, a person's from their own writing, and a blend fits neither. Choices: "The company's voice"
-(recommended; one standard for everything we publish and send, no persona per channel), "My own
+(recommended; one standard for everything we publish and send, no persona per medium), "My own
 voice", "A team's voice" (then ask which team). The company's governs the starter's kinds of work
 (copy, outreach, emails, posts, landing pages); a person's or team's, the kinds they name.
 
