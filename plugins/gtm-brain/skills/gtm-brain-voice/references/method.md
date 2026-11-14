@@ -5,8 +5,8 @@ writer already does.
 
 ## 1. Whose voice
 
-A company voice is one standard for what the company publishes and sends, across channels; a
-difference between channels is one line when the texts show it, never a separate persona. A
+A company voice is one standard for what the company publishes and sends, across media; a
+difference between media is one line when the texts show it, never a separate persona. A
 person's voice is that person's own writing. Never blend the two: a founder's casual chat is not
 the company's website, and internal chat is never evidence of the company voice.
 
