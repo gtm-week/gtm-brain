@@ -63,7 +63,10 @@ investor_in, and a person's employer. "Show the customers' VPs of Sales" filters
 SCHEMA.md fields without opening pages. A captured meeting becomes a page in `meetings/` that
 collects the notes saved with its meeting id and lists who attended; the transcript stays in its
 tool. A brain from before 0.35 keeps its flat `brain/entities/*.md` until "upgrade the brain"
-moves the pages into the kind folders in one commit.
+moves the pages into the kind folders in one commit. Update every teammate first: GTM Brain 0.34
+reads only the flat pages, so after the move it sees no people or companies and writes its own
+flat pages for the names it saves. Those are folded back into the kind folders at the next save
+on 0.35 (a duplicate's text is kept in `work/manual-edits/entities/`).
 
 A chat that keeps reading the brain and saves nothing is reminded once, with the third read, to save
 what the turn established; `save_nudge: off` in `brain/admin.md` turns the reminder off.
