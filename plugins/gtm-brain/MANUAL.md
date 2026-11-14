@@ -116,16 +116,18 @@ Some outcomes are said in a chat and never saved. Once a night the scheduled run
 this brain's chats that changed since the last pass: the chats in the brain folder and in its linked
 project folders, nothing else, the person's and the assistant's words only. One model run with no tools
 lists the decisions, changes, dated commitments and corrections nobody saved, each with the exact
-sentence it rests on; a sentence that is not in the chat is dropped. The rest are saved like any note
+sentence it rests on; a sentence that is not in the chat is dropped, and so is a note naming a person,
+a company or a figure the chat does not have. The rest are saved like any note
 (tagged `captured`, the chat as source, every saving rule applies) and committed. The pass does not push them itself: the next commit in the brain shares them with the
 team like any note, usually the summary run right after the pass. The next chat start lists them in one
-line; "undo captured" withdraws the listed ones together.
+line; "undo captured" withdraws the listed ones together, as the person's own save, pushed at once.
 
 A pass reads at most 200,000 tokens (50,000 per chat); what is left waits for the next pass, which
 starts there. Each pass records its tokens in `work/capture-runs.jsonl`. When the last good pass is
 older than 36 hours, or the last one failed (not signed in, the host's state database read-only, the
 model tool missing), the health line says why and the chat start offers to run it now, at most once a
-day. Turn it off, or change the caps, with `capture_chats` (`mode: off`, `cap`, `chat_cap`), for this
+day. A machine where no pass has run yet is offered one after 36 hours, so a new brain's first chats
+are not asked. Turn it off, or change the caps, with `capture_chats` (`mode: off`, `cap`, `chat_cap`), for this
 machine only.
 
 ## Files and projects
