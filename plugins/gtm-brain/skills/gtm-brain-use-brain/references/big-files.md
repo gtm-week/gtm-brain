@@ -11,6 +11,11 @@ Keep authored brain content in English. Preserve names, source quotes and the ex
 
 ## Step 1: read the setting
 
+With `big_files: local` the command below copies the file at once. When the person did not ask
+for this file to be kept (it was named by `save` or the chat start, whose line says when the brain
+keeps big files on this computer), offer first, naming the file and its size: Yes, move it / No,
+leave it. On no, stop; the file stays where it is, unsaved.
+
 ```
 node "$PLUGIN_ROOT/skills/gtm-brain-add-file/add-file.mjs" <brain> --file "<path>" --big
 ```
@@ -23,9 +28,10 @@ ask the onboarding question once now, as [questions](../../gtm-brain-start/refer
 says, with its one line of why: "Git cannot keep recordings or files over 25 MB, so they need one
 home and the brain keeps a link to it." Choices, recommended first: "Google Drive, shared with the
 team", "This computer only". Save the answer as the note `Big files: google-drive.` or
-`Big files: local.` in `company` (tag `big-files`, source `user:<handle>`), then never ask again.
-Local needs `big_files: local` in the workplace info: propose that change through `approve_change`
-and carry on with the current setting until the person's APPROVE applies it.
+`Big files: local.` in `company` (`gtm` in a brain without it; tag `big-files`, source
+`user:<handle>`), then never ask again. Local needs `big_files: local` in the workplace info:
+propose that change through `approve_change` now and, once the person's APPROVE applied it, run
+this step again; until it is applied, leave the file where it is and never place it on Drive.
 
 ## Step 2a: google-drive
 

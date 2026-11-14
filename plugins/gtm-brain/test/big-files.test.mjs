@@ -6,7 +6,7 @@ process.env.GTM_BRAIN_NO_COMMIT = '1';
 // asks the setting once and the answer is a note read by bigFilesChoice.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, realpathSync, existsSync, readdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, realpathSync, existsSync, readdirSync, rmSync, symlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { execFileSync } from 'node:child_process';
@@ -159,4 +159,59 @@ test('the walk-through is one reference the start skill, discovery and the savin
   assert.match(discovery, /"Google Drive, shared with the team", "This computer only"/, 'recommended option first');
   assert.match(discovery, /`Big files: google-drive\.` or `Big files: local\.`/);
   assert.match(read('skills/gtm-brain-start/references/questions.md'), /Where big files go.*Google Drive, shared with the team \(Recommended\); This computer only/);
+});
+
+// Review round (lane M): the cases the first tests could not fail on.
+test('save itself leaves a new recording uncommitted, keeps the rest, and still saves a recording git already holds', t => {
+  const f = fixture(t), git = (...a) => execFileSync('git', ['-C', f.root, ...a], { encoding: 'utf8' });
+  execFileSync('git', ['init', '-q', f.root]); git('config', 'user.email', 'alex@reflow.invalid'); git('config', 'user.name', 'Alex');
+  writeFileSync(join(f.root, '.gitignore'), 'work/\n');
+  mkdirSync(join(f.root, 'projects/acme'), { recursive: true });
+  writeFileSync(join(f.root, 'projects/acme/jingle.mp3'), 'kept before 0.35.0'); git('add', '-A'); git('commit', '-qm', 'before the rule');
+  writeFileSync(join(f.root, 'projects/acme/jingle.mp3'), 'a new cut of the jingle');
+  writeFileSync(join(f.root, 'projects/acme/discovery.m4a'), 'audio');
+  writeFileSync(join(f.root, 'projects/acme/notes.md'), '# Notes\n');
+  assert.deepEqual(lib.largeUnsaved(f.root), [{ path: 'projects/acme/discovery.m4a', size: 5 }], 'only the recording git does not hold yet');
+  const r = lib.save(f.root, 'notes and the new cut');
+  assert.ok(r.ok, r.note);
+  assert.match(r.note, /Recordings stay out of git, not kept: projects\/acme\/discovery\.m4a/);
+  assert.doesNotMatch(r.note.split('Recordings stay out of git')[1], /jingle/);
+  assert.deepEqual(git('ls-files', 'projects').trim().split('\n'), ['projects/acme/jingle.mp3', 'projects/acme/notes.md']);
+  assert.equal(git('status', '--short').trim(), '?? projects/acme/discovery.m4a', 'the edit to the tracked recording is committed, the new recording is not');
+  assert.equal(git('show', 'HEAD:projects/acme/jingle.mp3'), 'a new cut of the jingle');
+});
+
+test('local: a big-files folder that resolves into the brain is refused before a byte is copied', t => {
+  const f = fixture(t); mkdirSync(join(f.root, 'projects'), { recursive: true });
+  const link = join(f.scratch, 'media'); symlinkSync(join(f.root, 'projects'), link);
+  f.admin({ big_files: 'local', big_files_folder: link });
+  writeFileSync(join(f.outside, 'call.mp4'), 'video');
+  assert.match(f.fail('--file', join(f.outside, 'call.mp4'), '--big'), /is inside the brain, so git would keep the file/);
+  assert.deepEqual(readdirSync(join(f.root, 'projects')), [], 'nothing was copied into the brain');
+});
+
+test('a Drive pointer names a file: a folder link and a link without a file id are refused', () => {
+  assert.throws(() => bigFilePointer('google-drive', { url: 'https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQ' }), /is a Drive folder/);
+  assert.throws(() => bigFilePointer('google-drive', { ref: 'https://drive.google.com/open?id=abc' }), /no file id/);
+  assert.equal(bigFilePointer('google-drive', { ref: 'https://drive.google.com/open?id=1AbCdEfGhIjKlMnOpQ' }).ref, '1AbCdEfGhIjKlMnOpQ');
+  assert.throws(() => bigFilePointer('google-drive', { url: 'https://drive.google.com.example.com/file/d/1AbCdEfGhIjKlMnOpQ/view' }), /not a Google Drive link/);
+});
+
+test('the question state reads only a current answer note, and a finished onboarding carries no big-files line', t => {
+  const f = fixture(t);
+  lib.appendMemory(f.root, 'company', { authors: ['alex'], content: 'Big files: locally hosted on the NAS, says Bo.', tags: [] });
+  assert.equal(lib.bigFilesChoice(f.root).asked, false, 'a sentence that only starts alike is not the answer');
+  const { rec } = lib.appendMemory(f.root, 'company', { authors: ['alex'], content: lib.bigFilesAnswer('local'), tags: ['big-files'] });
+  assert.equal(lib.bigFilesChoice(f.root).asked, true);
+  assert.equal(lib.bigFiles(f.root).mode, 'google-drive', 'a note never changes the setting: only APPROVE writes admin.md');
+  lib.appendMemory(f.root, 'company', { authors: ['alex'], content: 'Withdrawn: asked by mistake.', retracts: rec.id });
+  assert.equal(lib.bigFilesChoice(f.root).asked, false, 'a retracted answer is no answer');
+  assert.doesNotMatch(lib.onboardingInstruction(f.root, { unattended: false }), /Big files:/, 'no onboarding pending: nothing is added to what the model reads');
+});
+
+test('the walk-through offers before it copies and never sends a "this computer" answer to Drive', () => {
+  const guide = readFileSync(join(P, 'skills/gtm-brain-use-brain/references/big-files.md'), 'utf8');
+  assert.match(guide, /Yes, move it \/ No,\s+leave it/);
+  assert.match(guide, /until it is applied, leave the file where it is/);
+  assert.doesNotMatch(guide, /carry on with the current setting/);
 });

@@ -138,7 +138,9 @@ export function placeBigFile(root, source) {
   let real; try { real = realpathSync(source); } catch { throw new Error(`no file at ${source}`); }
   if (!statSync(real).isFile()) throw new Error('Place a file, not a folder.');
   mkdirSync(folder, { recursive: true });
-  const dir = realpathSync(folder);
+  const dir = realpathSync(folder), home = realpathSync(root);
+  // Checked before any byte is copied: a folder that resolves into the brain (a link, another spelling of the path) would put the file in git's reach.
+  if (dir === home || within(home, dir)) throw new Error(`the big-files folder ${folder} is inside the brain, so git would keep the file: name a folder outside it (big_files_folder in brain/admin.md)`);
   if (within(dir, real)) return { path: real, copied: false, pointer: lib.bigFilePointer('local', { path: real }, { root: realpathSync(root), folder: dir }) };
   const ext = extname(real), stem = basename(real, ext), size = statSync(real).size;
   const same = p => existsSync(p) && statSync(p).size === size && sameBytes(p, real);

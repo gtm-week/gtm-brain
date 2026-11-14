@@ -156,6 +156,8 @@ export function bigFilePointer(mode, { account, ref, url, path } = {}, { root, f
     if (link) {
       const p = linkOK(link) ? urlPointer(link) : null;
       if (!p || p.kind !== "google-drive") throw new Error("not a Google Drive link: give the file's link (drive.google.com or docs.google.com) or its file id");
+      if (/\/folders\//.test(new URL(link).pathname)) throw new Error("that link is a Drive folder: give the link of the file itself");
+      if (!DRIVE_ID.test(p.ref)) throw new Error("the Drive link carries no file id: give the file's own link");
       if (id && id !== p.ref) throw new Error(`the Drive link names file ${p.ref}, not ${id}`);
       return { kind: "google-drive", ...acct, ref: p.ref, url: link };
     }

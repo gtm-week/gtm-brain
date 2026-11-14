@@ -869,8 +869,11 @@ export const BRAIN_PATHS = ["brain", "AGENTS.md", "CLAUDE.md", ".githooks", ".gi
    (audio or video, lib/pointers.mjs isRecording) is kept out at any size: RULES.md never puts one in the brain. */
 export const LARGE_FILE_MB = 25;
 export function largeUnsaved(root, limit = LARGE_FILE_MB * 1024 * 1024) {
-  let out = ""; try { out = execFileSync("git", ["--no-optional-locks", "-C", root, "ls-files", "-z", "--others", "--modified", "--exclude-standard"], { encoding: "utf8", stdio: "pipe", maxBuffer: 64 << 20 }); } catch { return []; }
-  return [...new Set(out.split("\0").filter(Boolean))].map(path => { try { return { path, size: statSync(join(root, path)).size }; } catch { return null; } }).filter(f => f && (f.size > limit || isRecording(f.path)));
+  // -t tags each path: "?" is a file git does not hold yet. A recording git already holds (kept before 0.35.0) stays
+  // saveable under the size limit: leaving its edits out would not take it out of git, only strand them.
+  let out = ""; try { out = execFileSync("git", ["--no-optional-locks", "-C", root, "ls-files", "-z", "-t", "--others", "--modified", "--exclude-standard"], { encoding: "utf8", stdio: "pipe", maxBuffer: 64 << 20 }); } catch { return []; }
+  const seen = new Map(); for (const row of out.split("\0").filter(Boolean)) { const path = row.slice(2); seen.set(path, seen.get(path) || row[0] === "?"); }
+  return [...seen].map(([path, untracked]) => { try { return { path, size: statSync(join(root, path)).size, untracked }; } catch { return null; } }).filter(f => f && (f.size > limit || (f.untracked && isRecording(f.path)))).map(({ path, size }) => ({ path, size }));
 }
 /* Every change in the brain folder: what .gitignore keeps out (work/, .env), a project's local pointer and a file
    too big for git stay out. */
