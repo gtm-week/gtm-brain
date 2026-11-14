@@ -133,3 +133,62 @@ test('the query description fits what Claude Code keeps of a tool description (2
     } finally { server.kill(); }
   }
 });
+
+// Round three review: what a question meets that the earlier tests did not.
+test('one long note never takes a memories search past the cap; the row says where the full text is', () => {
+  const root = fixture();
+  const big = note(root, 'Transcript: ' + 'the customer talked about onboarding and pricing at length. '.repeat(400));
+  const small = note(root, 'Short note on onboarding.');
+  const s = search(root, 'onboarding');
+  assert.ok(Buffer.byteLength(s) <= SEARCH_MAX_BYTES + 300, `${Buffer.byteLength(s)} bytes`);
+  assert.deepEqual(new Set(ids(s)), new Set([big.id, small.id]), s);
+  const row = JSON.parse(s.split('\n').find(l => l.includes(big.id)));
+  assert.ok(row.content.length < 12000 && row.content_cut > 0, 'the content is cut and says by how much');
+  assert.match(s, new RegExp(`${big.id}: content cut .*sql`));
+});
+
+test('periods ahead and open-ended: next Thursday, tomorrow, next week, since October, a quarter', () => {
+  const p = s => parsePeriod(s, now).period;   // now is Saturday 2026-11-14
+  assert.equal(p('what is on next Thursday').label, 'Thursday 2026-11-19');
+  assert.equal(p('what is on tomorrow').label, 'tomorrow');
+  assert.equal(ymdOf(p('what is on tomorrow').from), '2026-11-15');
+  assert.equal(p('plans for next week').label, 'next week');
+  assert.equal(ymdOf(p('plans for next week').from), '2026-11-16');
+  const since = p('everything since October');
+  assert.equal(ymdOf(since.from), '2026-10-01'); assert.equal(ymdOf(since.to), '2026-11-15');
+  assert.equal(p('pipeline in Q3').label, 'Q3 2026');
+  assert.equal(ymdOf(p('pipeline in Q3').from), '2026-07-01'); assert.equal(ymdOf(p('pipeline in Q3').to), '2026-10-01');
+  assert.equal(p('last quarter numbers').label, 'Q3 2026');
+  assert.equal(p('this quarter numbers').label, 'Q4 2026');
+  // a note about an event next week is found, though nothing was recorded then
+  const root = fixture();
+  const ev = note(root, 'The partner dinner is on 18 November at 19:00.', { at: '2026-11-02T10:00:00Z' });
+  note(root, 'Unrelated note about the venue.', { at: '2026-11-03T10:00:00Z' });
+  const r = answer(root, 'What is on next week?');
+  assert.deepEqual(ids(r), [ev.id], r);
+});
+const ymdOf = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+test('an answer that cuts a long note says how to read the rest', () => {
+  const root = fixture();
+  const big = note(root, 'Transcript: ' + 'the customer talked about onboarding and pricing at length. '.repeat(100));
+  const a = answer(root, 'onboarding');
+  assert.ok(Buffer.byteLength(a) < 4096, `${Buffer.byteLength(a)} bytes`);
+  assert.match(a, /more characters\)/);
+  assert.match(a, new RegExp(`query sql SELECT content FROM memories WHERE id='${big.id}'`));
+  assert.doesNotMatch(answer(root, 'nothing like zqxjvbnonsenseword'), /query sql/);
+});
+
+test('a first name two people share is said in the reply, not guessed and not searched again', () => {
+  const root = fixture();
+  lib.addName(root, 'Max Weber', { kind: 'person' });
+  lib.addName(root, 'Max Planck', { kind: 'person' });
+  const w = note(root, 'Max Weber signed the order form.', { people: ['Max Weber'] });
+  const p = note(root, 'Max Planck asked for a demo.', { people: ['Max Planck'] });
+  const r = answer(root, 'What did Max sign?');
+  assert.match(r, /"Max" could be Max (Weber|Planck) or Max (Weber|Planck); the notes below match the word/);
+  assert.equal(ids(r)[0], w.id, r);
+  assert.doesNotMatch(r, /narrowed to/);
+  assert.doesNotMatch(answer(root, 'What did Max Weber sign?'), /could be/);
+  void p;
+});

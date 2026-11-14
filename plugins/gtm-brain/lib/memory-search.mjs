@@ -55,8 +55,16 @@ export function parsePeriod(question, now = nowDate(), isName = () => false) {
     [/\byesterday\b/i, () => ({ from: addDays(today, -1), to: today, label: 'yesterday' })],
     [/\b(?:in\s+the\s+)?(?:last|past)\s+(\d{1,3})\s+days\b/i, m => ({ from: addDays(today, -Number(m[1])), to: addDays(today, 1), label: `the last ${m[1]} days` })],
     [/\b(\d{1,3})\s+days\s+ago\b/i, m => day(addDays(today, -Number(m[1])), ymd(addDays(today, -Number(m[1]))))],
-    [/\b(this|last|past)\s+week\b/i, m => { const monday = addDays(today, -((today.getDay() + 6) % 7)); return m[1].toLowerCase() === 'this' ? { from: monday, to: addDays(monday, 7), label: 'this week' } : { from: addDays(monday, -7), to: monday, label: 'last week' }; }],
-    [/\b(this|last|past)\s+month\b/i, m => { const first = new Date(today.getFullYear(), today.getMonth(), 1); return m[1].toLowerCase() === 'this' ? { from: first, to: new Date(today.getFullYear(), today.getMonth() + 1, 1), label: 'this month' } : { from: new Date(today.getFullYear(), today.getMonth() - 1, 1), to: first, label: 'last month' }; }],
+    // ahead: nothing is recorded then, so the notes that mention its dates are what is found
+    [/\btomorrow\b/i, () => { const d = addDays(today, 1); return day(d, 'tomorrow', dateWords(d)); }],
+    [/\b(this|last|past|next)\s+week\b/i, m => { const monday = addDays(today, -((today.getDay() + 6) % 7)), w = m[1].toLowerCase();
+      if (w === 'next') { const from = addDays(monday, 7); return { from, to: addDays(from, 7), label: 'next week', mention: [...[0, 1, 2, 3, 4, 5, 6].flatMap(i => dateWords(addDays(from, i)))] }; }
+      return w === 'this' ? { from: monday, to: addDays(monday, 7), label: 'this week' } : { from: addDays(monday, -7), to: monday, label: 'last week' }; }],
+    [/\b(this|last|past|next)\s+month\b/i, m => { const first = new Date(today.getFullYear(), today.getMonth(), 1), w = m[1].toLowerCase();
+      if (w === 'next') { const from = new Date(today.getFullYear(), today.getMonth() + 1, 1); return { from, to: new Date(from.getFullYear(), from.getMonth() + 1, 1), label: 'next month', mention: [MONTHS[from.getMonth()]] }; }
+      return w === 'this' ? { from: first, to: new Date(today.getFullYear(), today.getMonth() + 1, 1), label: 'this month' } : { from: new Date(today.getFullYear(), today.getMonth() - 1, 1), to: first, label: 'last month' }; }],
+    [/\b(this|last|past|next)\s+quarter\b/i, m => { const w = m[1].toLowerCase(), k = Math.floor(today.getMonth() / 3) + (w === 'this' ? 0 : w === 'next' ? 1 : -1); return quarter(today.getFullYear() + Math.floor(k / 4), ((k % 4) + 4) % 4); }],
+    [/\bQ([1-4])(?:\s+(\d{4}))?\b/, m => quarter(m[2] ? +m[2] : today.getFullYear(), +m[1] - 1)],
     [/\b(this|last|past)\s+year\b/i, m => m[1].toLowerCase() === 'this' ? { from: new Date(today.getFullYear(), 0, 1), to: new Date(today.getFullYear() + 1, 0, 1), label: 'this year' } : { from: new Date(today.getFullYear() - 1, 0, 1), to: new Date(today.getFullYear(), 0, 1), label: 'last year' }],
     // "may" and "march" are verbs too: a month only after in/during/since/of/until, or before a year
     [new RegExp(`\\b(?:(in|during|since|of|until|for|from)\\s+)?${MONTH_RE}\\b(?:\\s+(\\d{4}))?`, 'i'), m => {
@@ -65,16 +73,19 @@ export function parsePeriod(question, now = nowDate(), isName = () => false) {
       if (!m[1] && !m[3] && isName(m[2])) return null;   // Jan, April, June, August: a person in the registry comes first
       const i = monthIndex(word); let y = m[3] ? +m[3] : today.getFullYear();
       if (!m[3] && i > today.getMonth()) y--;
+      if (m[1]?.toLowerCase() === 'since') return { from: new Date(y, i, 1), to: addDays(today, 1), label: `since ${cap(MONTHS[i])} ${y}` };
       return { from: new Date(y, i, 1), to: new Date(y, i + 1, 1), label: `${cap(MONTHS[i])} ${y}`, mention: [MONTHS[i]] };
     }],
     [/\b(?:(last|this|on|next)\s+)?(sunday|monday|tuesday|wednesday|thursday|friday|saturday)(?:\s+(night|evening|morning|afternoon))?\b/i, m => {
       const i = WEEKDAYS.indexOf(m[2].toLowerCase());
       const back = (today.getDay() - i + 7) % 7 || (m[1]?.toLowerCase() === 'last' ? 7 : 0);
-      const d = addDays(today, -back);
+      const d = m[1]?.toLowerCase() === 'next' ? addDays(today, (i - today.getDay() + 7) % 7 || 7) : addDays(today, -back);
       return { ...day(d, `${cap(WEEKDAYS[i])} ${ymd(d)}`, [WEEKDAYS[i]]), part: m[3]?.toLowerCase() || null };
     }],
     [/\b(?:in|during)\s+(\d{4})\b/, m => ({ from: new Date(+m[1], 0, 1), to: new Date(+m[1] + 1, 0, 1), label: m[1] })],
   ];
+  function dateWords(d) { return [`${d.getDate()} ${MONTHS[d.getMonth()]}`, `${MONTHS[d.getMonth()]} ${d.getDate()}`, ymd(d)]; }
+  function quarter(y, k) { return { from: new Date(y, k * 3, 1), to: new Date(y, k * 3 + 3, 1), label: `Q${k + 1} ${y}` }; }
   function dated(d, month, year) {
     const i = monthIndex(month); if (i < 0 || d < 1 || d > 31) return null;
     let y = year ? +year : today.getFullYear();
@@ -117,7 +128,7 @@ export function parseQuestion(question, names, { now = nowDate() } = {}) {
   const tags = [];
   rest = rest.replace(/(?:^|\s)(?:#|tag:)([\p{L}\p{N}][\p{L}\p{N}:_-]*)/gu, (_, t) => { tags.push(t.toLowerCase()); return ' '; });
   const { period, rest: left } = parsePeriod(rest, now, w => !!lib.canonicalName(names, w)); rest = left;
-  const tokens = words(rest), used = new Array(tokens.length).fill(false), entities = [];
+  const tokens = words(rest), used = new Array(tokens.length).fill(false), entities = [], ambiguous = [];
   // names: the longest run of words that is a known name, alias, email or id; a single word must be
   // capitalized, an email, an id, or the full name itself (so "sites" is not the alias Sites)
   for (let n = Math.min(5, tokens.length); n >= 1; n--) {
@@ -130,6 +141,10 @@ export function parseQuestion(question, names, { now = nowDate() } = {}) {
       if (hit && n === 1 && !/^\p{Lu}/u.test(text) && !/[@\d]/.test(text) && hit.name.toLowerCase() !== text.toLowerCase()) hit = null;
       if (!hit && n === 1 && /^\p{Lu}/u.test(text) && text.length >= 3) { const first = lib.inferredName(names, text); if (first) { hit = names.find(e => e.name === first); inferred = true; } }
       if (!hit && /^e_[0-9a-f]{16}$/.test(text)) hit = lib.resolveEntity(names, text);
+      if (!hit && n === 1 && /^\p{Lu}/u.test(text) && text.length >= 3) {   // a first name two or more entities share: said, not guessed
+        const w = text.toLowerCase(), same = names.filter(e => e.name.toLowerCase().split(/\s+/)[0] === w || (e.aliases || []).some(a => a.toLowerCase().split(/\s+/)[0] === w));
+        if (same.length > 1 && !ambiguous.some(a => a.said === text)) ambiguous.push({ said: text, names: same.slice(0, 4).map(e => e.name), more: Math.max(0, same.length - 4) });
+      }
       if (!hit) continue;
       for (let j = i; j < i + n; j++) used[j] = true;
       if (!entities.some(e => e.id === hit.id)) entities.push({ id: hit.id, name: hit.name, said: text, ...(inferred ? { inferred: true } : {}) });
@@ -148,7 +163,7 @@ export function parseQuestion(question, names, { now = nowDate() } = {}) {
     terms.push(w);
   });
   for (const q of quoted) terms.push(fold(q));
-  return { entities, kind, kindHint, tags, period, terms: [...new Set(terms)], quoted: quoted.map(fold), sequence };
+  return { entities, ambiguous, kind, kindHint, tags, period, terms: [...new Set(terms)], quoted: quoted.map(fold), sequence };
 }
 
 const parts = w => w.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
@@ -388,6 +403,7 @@ export function answerText(index, root, question, { filters = {}, limit, project
     out.push(`Answer for "${question}": ${r.rows.length} note${r.rows.length === 1 ? '' : 's'} match${r.rows.length === 1 ? 'es' : ''} of ${r.total}, best first${narrowing ? `; narrowed to ${narrowing}` : ''}.`);
   }
   out.push(...r.said);
+  for (const a of q.ambiguous || []) out.push(`"${a.said}" could be ${a.names.join(' or ')}${a.more ? ` (and ${a.more} more)` : ''}; the notes below match the word, not one of them. If it matters, ask which one.`);
   if (r.widened) out.push(r.widened);
   if (r.literal) out.push('No word matched; these notes contain the text as typed (an id, a tag or a source).');
   if (q.entities.length) {
@@ -404,6 +420,8 @@ export function answerText(index, root, question, { filters = {}, limit, project
     if (!shown) out.push('');
     out.push(line); notes.push(m); bytes += size; shown++;
   }
+  const cutNote = notes.find((m, i) => String(m.content).replace(/\s*\n\s*/g, ' ').length > (i < 3 ? FULL_NOTE_CHARS : SHORT_NOTE_CHARS));
+  if (cutNote) out.push('', `A note's text is cut where it says "more characters"; its full text, only if the answer needs it: query sql SELECT content FROM memories WHERE id='${cutNote.id}'.`);
   const more = r.rows.length - shown;
   if (more > 0) out.push('', `${more} more match${more === 1 ? 'es' : ''}. For them: query object answer with the same search and limit ${Math.min(200, shown + Math.min(more, ANSWER_NOTES))} (the next ${Math.min(more, ANSWER_NOTES)}, a larger reply)${q.entities.length || q.period ? '' : ', or name a person, company or period to narrow'}.`);
   if (r.rows.length) {
@@ -419,13 +437,18 @@ export function searchRows(index, root, search, { filters = {}, limit, project =
   const r = searchIndex(index, search, { filters, project, now, relationsFor, everyWord: true });
   const n = Math.max(1, Math.min(501, Number(limit) || 50));
   const maxBytes = limit ? Math.min(MAX_RESULT_BYTES, Math.max(SEARCH_MAX_BYTES, n * PER_NOTE_BYTES)) : SEARCH_MAX_BYTES;
-  const lines = [], rows = []; let bytes = 0;
+  const lines = [], rows = [], cut = []; let bytes = 0;
   for (const row of r.rows.slice(0, n)) {
-    const m = fetchRow(index, row.r), line = JSON.stringify(m), size = Buffer.byteLength(line) + 1;
+    const m = fetchRow(index, row.r); let line = JSON.stringify(m), size = Buffer.byteLength(line) + 1;
     if (lines.length && bytes + size > maxBytes) break;
+    if (size > maxBytes - 600 && typeof m.content === 'string') {   // one long note (a transcript) alone: its text is cut to fit
+      const keep = Math.max(500, maxBytes - 600 - (size - Buffer.byteLength(m.content))), content = Buffer.from(m.content).subarray(0, keep).toString().replace(/\uFFFD+$/, '');
+      line = JSON.stringify({ ...m, content, content_cut: m.content.length - content.length }); size = Buffer.byteLength(line) + 1;
+      cut.push(`${m.id}: content cut after ${content.length} of ${m.content.length} characters; the full text: query sql SELECT content FROM memories WHERE id='${m.id}'.`);
+    }
     lines.push(line); rows.push(m); bytes += size;
   }
-  const tail = [...r.said, ...(r.widened ? [r.widened] : []), ...(r.literal ? ['No word matched; these rows contain the text as typed.'] : [])];
+  const tail = [...cut, ...r.said, ...(r.widened ? [r.widened] : []), ...(r.literal ? ['No word matched; these rows contain the text as typed.'] : [])];
   const more = r.rows.length - lines.length;
   if (more > 0) tail.push(`${more} more match${more === 1 ? 'es' : ''} (best first above). For more: the same search with limit ${Math.min(501, lines.length + Math.min(more, 10))} (a larger reply), or query object answer for a short form.`);
   if (!lines.length) return { text: `no rows (${r.total} notes searched${r.missing.length ? `; no note has ${r.missing.map(w => `"${w}"`).join(', ')} or a spelling one letter off` : ''}).`, rows };
