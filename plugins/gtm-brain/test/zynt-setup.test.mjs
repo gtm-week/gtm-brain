@@ -32,7 +32,9 @@ test('the key is used in the chat only and never kept', () => {
 
 test('ZYNT ends up in the brain tools: the MCP connection, check_tools, then a read test with mark_tool', () => {
   assert.match(skill, /codex mcp add zynt --url https:\/\/app\.getzynt\.com\/mcp/);
-  assert.match(skill, /codex mcp login zynt/);
+  assert.match(skill, /On yes, run it yourself/);
+  assert.match(skill, /ask them to run `codex mcp login zynt`/);
+  assert.match(skill, /Never run the login yourself\./);
   assert.match(skill, /call `check_tools`/);
   assert.match(skill, /call `mark_tool` with tool `zynt`/);
 });

@@ -54,12 +54,16 @@ the dashboard, and never repeat it back in full. ZYNT shows the key once and hid
 
 So that ZYNT shows in the brain's tools, offer the MCP connection once, after the setup answers
 are sent: "Connect ZYNT to Codex so the brain lists it and every chat can read it?" with Yes,
-connect ZYNT and No, keep using the key. On yes, the person runs in a terminal:
+connect ZYNT and No, keep using the key. On yes, run it yourself (it writes Codex's own
+config, so Codex asks the person to approve the command):
 
 ```
 codex mcp add zynt --url https://app.getzynt.com/mcp
-codex mcp login zynt
 ```
+
+The sign-in is the person's: ask them to run `codex mcp login zynt` in a terminal and finish
+the sign-in in the browser, then wait for their reply. Never run the login yourself. If the
+add fails or is not approved, show both commands for the person to run and go on.
 
 Then call `check_tools`: ZYNT is listed as installed, untested. In a new chat (Codex lists tools
 at chat start), make one small read with ZYNT's tools and call `mark_tool` with tool `zynt`,
