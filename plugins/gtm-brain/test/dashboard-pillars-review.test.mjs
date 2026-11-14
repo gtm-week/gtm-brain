@@ -117,8 +117,17 @@ test("Memories: the first page holds a full page of notes in force, so opening t
   await new Promise(r => setTimeout(r, 20));
   assert.equal(fetched, 0, "the whole list is not fetched on every page load");
   assert.equal((live.node("#pm-list").innerHTML.match(/class="pl-row pl-note/g) || []).length, 40);
+  // the page is not the end of the list: Show more is there, and it brings the rest
+  assert.match(live.node("#pm-list").innerHTML, /data-pm-more/, "the person can go past the first page");
+  assert.match(live.node("#pm-status").textContent, new RegExp(`Showing the 40 newest\\. ${M.total} notes in all`));
+  assert.doesNotMatch(page(D).node("#pm-list").innerHTML, /data-pm-more/, "a saved copy has nothing more to bring");
+  live.listeners.click.forEach(fn => fn({ target: { closest: s => s.includes("data-pm-more") ? { hasAttribute: a => a === "data-pm-more", dataset: {} } : null } }));
+  await new Promise(r => setTimeout(r, 20));
+  assert.equal(fetched, 1, "Show more fetches the whole list once");
+  assert.equal((live.node("#pm-list").innerHTML.match(/class="pl-row pl-note/g) || []).length, M.in_force, "every note in force is now shown");
+  assert.match(live.node("#pm-status").textContent, new RegExp(`Showing ${M.in_force} of ${M.in_force} notes`));
   live.run('pmF.state="replaced";renderNotesTab()'); await new Promise(r => setTimeout(r, 20));
-  assert.equal(fetched, 1, "a filter that needs more fetches it once");
+  assert.equal(fetched, 1, "a filter afterwards fetches nothing again");
   assert.equal((live.node("#pm-list").innerHTML.match(/class="pl-row pl-note/g) || []).length, 2);
   // a long run of corrections cannot grow the page without limit
   const many = Array.from({ length: 500 }, (_, i) => ({ id: "m" + i, state: i < 400 ? "replaced" : "in force" }));
