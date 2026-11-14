@@ -2,6 +2,7 @@
 import { existsSync, readFileSync, readdirSync, mkdirSync, copyFileSync, writeFileSync, mkdtempSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { readAdmin, readNames, commit } from "./brain.mjs";
+import { withOwnAdditions } from "./rule-pages.mjs";
 
 // Shared with the upgrade matrix tests. Aliases point to the same immutable snapshot.
 export const legacyTemplates = JSON.parse(readFileSync(new URL("../templates/legacy/manifest.json", import.meta.url), "utf8"));
@@ -114,7 +115,7 @@ export function prepareUpgrade(root, templates) {
   }
   if (current !== null && current !== target && !previous.includes(current)) {
     const proposal = join(backup, "AGENTS.proposed.md");
-    writeFileSync(proposal, target);
+    writeFileSync(proposal, withOwnAdditions(target, current, previous));   // the person's own lines stay, under their own heading
     return { ready: false, backup, proposal };
   }
   return { ready: true, backup };

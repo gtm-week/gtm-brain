@@ -55,7 +55,8 @@ test("the first GTM Brain call of a chat brings the opening lines after its resu
   const root = brain(); codexThread(root, "0199aaaa-bbbb-7ccc-8ddd-eeeeffff0001");
   const s = client(null); await s.init();
   const { result } = await s.rpc("initialize", { capabilities: {} });
-  assert.match(result.instructions, /start every chat with query \(object status\)/);
+  assert.match(result.instructions, /first GTM Brain call, whatever it is, refreshes the brain and returns the chat's opening lines/);
+  assert.doesNotMatch(result.instructions, /start every chat with query \(object status\)/);
   const first = await s.call("query", { brain: root, object: "status" });
   assert.ok(!first.isError, first.text);
   assert.equal(first.parts.length, 2, "the call's own result, then the opening lines");

@@ -1,7 +1,7 @@
 1. Record each outcome with `remember` the moment it is established: one memory per distinct
    outcome, a brief with a source pointer. Write first, confirm after in one short line.
-2. Read the brain before answering about the company, a customer or a deal: `query` (status)
-   first in a chat, then the loaded context.
+2. Read the brain before answering about the company, a customer or a deal: search it with
+   `query`. The chat's first GTM Brain call returns its opening lines; no status call first.
 3. When a stored fact carries its age ("as of 2026-09-02, 73 days ago"), say it. Check the
    connected tool when a next action depends on changeable state; unconfirmed means unknown.
 4. Workplace (`brain/admin.md`) and interaction changes go only through `approve_change`: its

@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync, spawnSync } from "node:child_process";
 import { trackBrain } from "./helpers/dash-cleanup.mjs";
+import { wholeRulebook } from "../lib/rule-pages.mjs";
 const P = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 process.env.CODEX_HOME = mkdtempSync(join(tmpdir(), "gtm-brain-wf-home-"));
 const lib = await import(`${P}/lib/brain.mjs`);
@@ -386,5 +387,5 @@ test("a playbook is a workflow: create writes a new draft that parses, refuses a
   assert.ok(!existsSync(join(root, "workflows", "broken-one.md")));
   // the words people use route here, and the rulebook no longer files a playbook as a document
   assert.match(readFileSync(`${P}/skills/gtm-brain-workflow/SKILL.md`, "utf8"), /"I need a playbook"/);
-  assert.match(readFileSync(`${P}/templates/AGENTS.md`, "utf8"), /A playbook\nis a workflow \(gtm-brain-workflow\)/);
+  assert.match(wholeRulebook(readFileSync(`${P}/templates/AGENTS.md`, "utf8")), /A playbook\s+is a workflow \(gtm-brain-workflow\)/);
 });

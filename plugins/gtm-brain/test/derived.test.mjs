@@ -10,7 +10,8 @@ const repo = fileURLToPath(new URL("../../../", import.meta.url));
 const script = "scripts/sync-derived.mjs";
 const ontology = "plugins/gtm-brain/ontology/gtm-brain.ossie.json";
 const policy = "plugins/gtm-brain/policies/questions.md";
-const documents = ["AGENTS.md", "INSTALL.md", "plugins/gtm-brain/templates/AGENTS.md"];
+// the brain's rulebook carries only the core block; its question and Computer Use text are rule pages
+const documents = ["AGENTS.md", "INSTALL.md"];
 const run = (root, ...args) => spawnSync(process.execPath, [join(root, script), ...args], { encoding: "utf8" });
 const memoryProperties = model => model.custom_extensions.find(e => e.vendor_name === "ALLETHIC")
   .data.actions.find(action => action.tool_name === "remember").input_schema.properties;
@@ -23,7 +24,7 @@ test("shared policies and memory fields are current in every generated surface",
 test("source edits flag drift without writing, then update every copy and remove stale batch fields", t => {
   const root = mkdtempSync(join(tmpdir(), "gtm-derived-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
-  const files = [script, ontology, policy, "plugins/gtm-brain/policies/computer-use.md", "plugins/gtm-brain/policies/core.md", ...documents,
+  const files = [script, ontology, policy, "plugins/gtm-brain/policies/computer-use.md", "plugins/gtm-brain/policies/core.md", ...documents, "plugins/gtm-brain/templates/AGENTS.md",
     "plugins/gtm-brain/lib/host.mjs", "plugins/gtm-brain/.codex-plugin/plugin.json"];
   for (const file of files) {
     mkdirSync(dirname(join(root, file)), { recursive: true });
@@ -55,15 +56,17 @@ test("source edits flag drift without writing, then update every copy and remove
   for (const file of files) assert.equal(read(file), after[file], "generation must be idempotent");
 });
 
-test("the brain rules fit what Codex reads: templates/AGENTS.md stays under 32,768 bytes", () => {
-  // Codex reads only the first 32 KiB of a project doc (project_doc_max_bytes); anything after it never reaches the model.
+test("the brain rules are slim: templates/AGENTS.md stays at 16 KB or less, the detail in the rule pages", () => {
+  // Codex reads only the first 32 KiB of a project doc (project_doc_max_bytes) and every byte rides in every request:
+  // the rulebook keeps the core and one line per rule; each topic's detail is a rule page (lib/rule-pages.mjs).
   const rules = readFileSync(join(repo, "plugins/gtm-brain/templates/AGENTS.md"));
-  assert.ok(rules.length <= 32768, `templates/AGENTS.md is ${rules.length} bytes; Codex drops everything after 32768`);
+  assert.ok(rules.length <= 16384, `templates/AGENTS.md is ${rules.length} bytes; the slim rulebook allows 16384`);
   const text = rules.toString("utf8");
   // setup fills in the company name; a long one must still fit
   const filled = Buffer.byteLength(text.replaceAll("{{COMPANY}}", "A Rather Long Company Name Holding International Sp. z o.o."));
-  assert.ok(filled <= 32768, `with a long company name the rules are ${filled} bytes`);
-  assert.match(text, /## Meeting evidence/, "the last section is still in the file");
+  assert.ok(filled <= 16384, `with a long company name the rules are ${filled} bytes`);
+  assert.match(text, /## Skills and tools/, "the last section is still in the file");
   assert.match(text, /\*\*Documents govern the work\.\*\*/);
-  assert.match(text, /\*\*Meeting evidence is always captured\.\*\*/);
+  assert.match(text, /\*\*Meeting evidence is always captured\*\*/);
+  assert.doesNotMatch(text, /<!-- generated: (questions|computer-use)/, "the two shared policies are rule pages, not copies");
 });

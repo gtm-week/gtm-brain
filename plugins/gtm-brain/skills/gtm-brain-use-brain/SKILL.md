@@ -1,18 +1,16 @@
 ---
 name: gtm-brain-use-brain
 description: |
-  Work with an existing GTM Brain company brain: resume a context, answer questions from its
-  memories, and keep new findings while working. Use during company work in a brain, including
-  MCP results, decisions, meeting notes, and open questions; also for "where are we",
-  "remember this", "forget that", "what do we know about", "update the summaries", or
-  "show the dashboard". Context creation and organization belong to gtm-brain-use-brain;
-  workplace settings and personal language belong to gtm-brain-configure.
-  Also "load pipeline", "which contexts are there", "switch to marketing" (loading), "new context
-  NAME", "fork X out of Y", "archive NAME" (creating), "rename pipeline", "change the rule for
-  gtm" (editing), and "open the dashboard", "refresh the dashboard", "where does this number
-  come from" (the page). Also the documents the work must follow: "add our tone of voice",
-  "fill in our design system", "approve the strategy", "list the documents", "check this against
-  our documents" (references/documents.md).
+  The procedures behind GTM Brain's tools, read only for the piece of work that needs one:
+  "new context NAME", "fork X out of Y", "archive NAME", "rename pipeline", "change the rule
+  for gtm" (contexts), "update the summaries" (compile), "open the dashboard", "refresh the
+  dashboard", "where does this number come from" (the page), a file to add, an import, a merge
+  of two names, and the documents the work must follow: "add our tone of voice", "fill in our
+  design system", "approve the strategy", "check this against our documents". An ordinary
+  question ("what do we know about", "where are we") or save ("remember this", "forget that")
+  needs no skill file: call query and remember directly; their descriptions and the chat's
+  opening lines carry what recall and saving need. Workplace settings belong to
+  gtm-brain-configure.
 allowed-tools: [Bash, Read]
 ---
 

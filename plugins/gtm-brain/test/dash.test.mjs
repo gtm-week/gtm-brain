@@ -37,10 +37,10 @@ test("the session hook keeps edits made by hand outside Codex", () => {
   const out = execFileSync("bash", [`${P}/session/session-start.sh`], { cwd: root, encoding: "utf8", env, input: JSON.stringify({ session_id: "thread-123", cwd: root }) });
   for (const name of ["questions", "computer-use"]) {
     const policy = readFileSync(join(P, `policies/${name}.md`), "utf8");
-    assert.ok(readFileSync(join(root, "AGENTS.md"), "utf8").includes(policy), `the brain's AGENTS.md carries the shared ${name} policy`);
-    assert.ok(!out.includes(policy), `the brain hook does not repeat the ${name} policy the chat already has`);
+    assert.ok(!readFileSync(join(root, "AGENTS.md"), "utf8").includes(policy), `the brain's slim AGENTS.md leaves the ${name} policy to its rule page`);
+    assert.ok(!out.includes(policy), `the brain hook does not print the ${name} policy: it is a rule page`);
   }
-  assert.match(out, /references\/questions\.md once/);
+  assert.match(out, /questions rule page once \(query, object rules, search questions\)/);
   assert.match(out, /maintenance requested in the background/);
   execFileSync(process.execPath, [`${P}/session/session-maintenance.mjs`, root, '--run'], { env });
   assert.equal(execFileSync("git", ["-C", root, "status", "--short", "--", "brain"], { encoding: "utf8" }).trim(), "", "nothing left unkept");

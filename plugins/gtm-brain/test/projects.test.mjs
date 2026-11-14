@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { tmpdir, homedir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { trackBrain } from "./helpers/dash-cleanup.mjs";
+import { wholeRulebook } from "../lib/rule-pages.mjs";
 const P = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 // Existing manual demos may legitimately live in temporary folders. Detect new leaks from
 // this run without rejecting or modifying the person's pre-existing registered brains.
@@ -411,14 +412,14 @@ test("the session hook in the brain leaves out what the chat already has: the po
   script(root, "gtm-brain-load/load.mjs", "icp", "--only");
   const brainOut = hook(root, "session-start.sh", {});
   for (const policy of policies) assert.ok(!brainOut.includes(policy), "the brain's AGENTS.md already carries the generated policy");
-  assert.match(brainOut, /references\/questions\.md once/, "the pointer to the question procedure stays");
+  assert.match(brainOut, /questions rule page once/, "the pointer to the question procedure stays");
   const rule = lib.readContext(root, "icp").rule;
   assert.equal(brainOut.split(rule).length - 1, 1, "a re-loaded context's standing rule reaches the chat once, from the load");
   assert.match(brainOut, /Target customers \(icp\) · [^\n]*loaded in this chat\n/, "the list still names it on one line");
   assert.ok(brainOut.includes(lib.readContext(root, "market").rule), "a context that is not loaded keeps its rule in the list for routing");
   const projectOut = hook(ext, "session-start.sh", {});
   for (const policy of policies) assert.ok(projectOut.includes(policy), "a linked folder's AGENTS.md is only a pointer, so the hook supplies the policy");
-  const agents = join(root, "AGENTS.md"); writeFileSync(agents, readFileSync(agents, "utf8").replace(/<!-- generated: computer-use[\s\S]*?<!-- \/generated: computer-use -->\n?/, ""));
+  const agents = join(root, "AGENTS.md"); writeFileSync(agents, readFileSync(agents, "utf8").replace(/<!-- generated: computer-use[\s\S]*?<!-- \/generated: computer-use -->\n?/, "").replace("## Rule pages", "## Pages"));   // an older rulebook: neither the blocks nor the rule pages
   const olderOut = hook(root, "session-start.sh", {});
   for (const policy of policies) assert.ok(olderOut.includes(policy), "rules without the generated blocks still get the policies");
   execFileSync(process.execPath, [`${P}/server/dash.mjs`, root, "--stop"], { cwd: root, stdio: "ignore", env });
@@ -486,10 +487,10 @@ test("the skill exists, is listed, and asks before it writes", () => {
 });
 
 test("the model, the contributors and the participants are told", () => {
-  const tpl = readFileSync(`${P}/templates/AGENTS.md`, "utf8");
+  const tpl = readFileSync(`${P}/templates/AGENTS.md`, "utf8"), book = wholeRulebook(tpl);
   assert.match(tpl, /^1c\. \*\*A chat in a project works in that project\.\*\*/m);
-  assert.match(tpl, /pass it as `project` in every GTM Brain call/); assert.match(tpl, /never its folder path/);
-  assert.match(tpl, /`link_project`, `unlink_project`\)/); assert.match(tpl, /`gtm-brain-project`/);
+  assert.match(tpl, /pass it as `project` in every GTM Brain call/); assert.match(book, /never its\s+folder path/);
+  assert.match(book, /`link_project`, `unlink_project`\)/); assert.match(book, /`gtm-brain-project`/);
   const contrib = readFileSync(join(P, "..", "..", "AGENTS.md"), "utf8");
   assert.match(contrib, /A project is a tag and a local pointer, never an object/); assert.match(contrib, /never below cwd/);
   for (const doc of ["ONBOARDING.md", "GUIDE.md"]) assert.match(readFileSync(join(P, "..", "..", doc), "utf8"), /## Work in your own folders/, doc);

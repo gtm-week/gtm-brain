@@ -25,7 +25,7 @@ test("the core is at most 15 short lines, plain hyphens only", () => {
   for (const line of lines) assert.ok(line.length <= 100, `long line: ${line}`);
   assert.doesNotMatch(core, /[\u2013\u2014]/);
   // the non-negotiables, in the words the rules already use
-  for (const re of [/remember/, /one memory per distinct\s+outcome/, /`query` \(status\)/, /as of .*days ago/, /approve_change/, /memories\.jsonl/, /Never invent/, /one or two sentences/])
+  for (const re of [/remember/, /one memory per distinct\s+outcome/, /search it with\s+`query`/, /no status call first/, /as of .*days ago/, /approve_change/, /memories\.jsonl/, /Never invent/, /one or two sentences/])
     assert.match(core, re);
 });
 
@@ -40,9 +40,9 @@ test("the core is the first section of the template, once, generated from polici
   for (const line of core.split("\n").map(l => l.replace(/^\s*(\d+\.)?\s*/, "")).filter(l => l.length > 30))
     assert.equal(count(template, line), 1, `repeated: ${line}`);
   assert.match(template, /\(core 1\)/); assert.match(template, /core 4/);
-  // the rulebook keeps at least 1 KB of the 32 KiB Codex reads, with a long company name filled in
+  // the slim rulebook: at most 16 KB with a long company name filled in; the detail is in the rule pages
   const filled = Buffer.byteLength(template.replaceAll("{{COMPANY}}", "A Rather Long Company Name Holding International Sp. z o.o."));
-  assert.ok(filled <= 32768 - 1024, `${filled} bytes leaves under 1 KB of headroom`);
+  assert.ok(filled <= 16384, `${filled} bytes is over the 16 KB the slim rulebook allows`);
 });
 
 test("one source: the server reads policies/core.md and sync-derived writes it into the template", () => {
@@ -65,13 +65,14 @@ test("the server's instructions carry the core once, on either host", async () =
     server.kill();
     const text = reply.result.instructions;
     assert.equal(count(text, core), 1, `${host || "codex"}: the core, whole and once`);
-    assert.ok(text.indexOf(core) < text.indexOf("During company work"), "before the workflow pointers");
+    assert.ok(text.indexOf(core) < text.indexOf("Ordinary questions and saving need no skill file"), "before the workflow pointers");
+    assert.doesNotMatch(text, /start every chat with query \(object status\)|gtm-brain-use-brain\/SKILL\.md/, "no status call first, no skill read for recall");
     assert.match(text, /kept at once/);
     // Claude Code cuts a server's instructions at 2048 characters (MAX_MCP_DESCRIPTION_LENGTH): what must
     // arrive on either host sits before that, the core whole.
     const head = text.slice(0, 2048);
     assert.equal(count(head, core), 1, `${host || "codex"}: the core ends at character ${text.indexOf(core) + core.length}, past the 2048 a host keeps`);
-    for (const must of [/start every chat with query \(object status\)/, /kept at once/, /keep_approved_file, in the same turn/])
+    for (const must of [/first GTM Brain call, whatever it is/, /no separate status call/, /kept at once/, /keep_approved_file, in the same turn/])
       assert.match(head, must, `${host || "codex"}: ${must} is past the first 2048 characters`);
   }
 });
@@ -109,4 +110,6 @@ test("rules with a personal edit are not replaced: the new rules wait as a propo
   const path = proposal.startsWith("/") ? proposal : join(root, proposal);
   const text = readFileSync(path, "utf8");
   assert.equal(count(text, core), 1, "the proposal carries the core, for review beside the person's own file");
+  // the person's own lines stay in the proposal, under the heading for the brain's own additions
+  assert.match(text, /## This brain's own additions\n\n## Ours\n\nAlways copy Maria on pricing\.\n$/);
 });
