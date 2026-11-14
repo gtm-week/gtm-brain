@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import * as lib from "../lib/brain.mjs";
 import * as layout from "../lib/layout.mjs";
 import { entityStamp } from "../lib/entity-stamp.mjs";
-import { entityId, readEntityChange } from "../lib/entities.mjs";
+import { entityId, readEntityChange, readEntityFiles, editedBody } from "../lib/entities.mjs";
 import { isPagePath } from "../lib/layout.mjs";
 import { prepareAsset, assetRows } from "../lib/assets.mjs";
 import { randomUUID } from "node:crypto";
@@ -249,7 +249,21 @@ test("upgrade's move to kind folders keeps ids, aliases, merges, redirects and f
   lib.appendMemory(root, "sales", { authors: ["ann"], people: ["Acme"], content: "Acme logo approved.", asset: { entity: "Acme", label: "Logo", role: "logo", status: "approved", file: { base: "brain", path: "brain/entities/acme/logo.svg" } } });
   assert.equal(layout.layout(root), "flat");
   const before = lib.readNames(root).map(n => [n.id, n.name, n.aliases, n.previous_ids]);
+  // one page edited by hand (a link to its context in it); the others carry generated bodies, KP's citing a note
+  lib.appendMemory(root, "sales", { authors: ["ann"], people: ["Krzysztof Pawlak"], content: "Krzysztof Pawlak runs the pilot." });
+  lib.refreshEntityPages(root);
+  assert.match(readFileSync(join(root, lib.readNames(root).find(n => n.id === kp.id)._path), "utf8"), /\]\(\.\.\/contexts\/sales\//);
+  const acmePage = join(root, lib.readNames(root).find(n => n.id === acme.id)._path);
+  writeFileSync(acmePage, readFileSync(acmePage, "utf8") + "\nMy own line, see [sales](../contexts/sales/context.md).\n");
+  const handwritten = () => Object.fromEntries(readEntityFiles(root).map(e => [e.id, editedBody(e)]));
+  const editedBefore = handwritten();
+  assert.equal(editedBefore[acme.id], true); assert.equal(editedBefore[kp.id], false);
   const r = lib.migrateToKindFolders(root);
+  assert.deepEqual(handwritten(), editedBefore, "a generated body stays generated after its links are rewritten, a handwritten one stays handwritten");
+  assert.match(readFileSync(join(root, `brain/entities/organizations/acme-${sid(acme.id)}.md`), "utf8"), /My own line, see \[sales\]\(\.\.\/\.\.\/contexts\/sales\/context\.md\)/);
+  lib.appendMemory(root, "sales", { authors: ["ann"], people: ["Krzysztof Pawlak"], content: "Krzysztof Pawlak moved the pilot to March." });
+  lib.refreshEntityPages(root);
+  assert.match(readFileSync(join(root, `brain/entities/people/krzysztof-pawlak-${sid(kp.id)}.md`), "utf8"), /moved the pilot to March/, "a moved page still renders new notes");
   assert.equal(layout.layout(root), "kinds");
   assert.deepEqual(r.moves.map(m => m.to).sort(), [`brain/entities/organizations/acme-${sid(acme.id)}.md`, `brain/entities/people/ann-lee-${sid(entityId("Ann Lee"))}.md`, `brain/entities/people/chris-${sid(chris.id)}.md`, `brain/entities/people/krzysztof-pawlak-${sid(kp.id)}.md`].sort());
   assert.equal(r.moves.find(m => m.to.includes("/chris-")).redirect, kp.id);
@@ -260,4 +274,24 @@ test("upgrade's move to kind folders keeps ids, aliases, merges, redirects and f
   assert.equal(lib.migrateToKindFolders(root).moves.length, 0, "a second run moves nothing");
   const undo = lib.undoEntityMerge(root, { merge_id: merged.merge_id });
   assert.equal(lib.undoEntityMerge(root, { merge_id: merged.merge_id, by: "ann", as_of: undo.as_of }).status, "unmerged", "a merge recorded at flat paths still undoes");
+});
+
+test("flat pages a teammate on 0.34 writes into an upgraded brain: reads keep working, the next write folds them in", () => {
+  const root = kindBrain();
+  const max = lib.addName(root, "Max Jendral", { aliases: ["MJ"] });
+  const maxPath = lib.readNames(root).find(n => n.id === max.id)._path;
+  // 0.34 sees no pages, so it writes its own flat ones: a twin of Max (same id, from the same name) with an email
+  // only it knows, and a new person
+  writeFileSync(join(root, "brain/entities/max-jendral.md"), page(max.id, "Max Jendral").replace("emails: []", "emails: [max@acme.test]"));
+  const lena = entityId("Lena Ost");
+  writeFileSync(join(root, "brain/entities/lena-ost.md"), page(lena, "Lena Ost"));
+  const read = lib.readNames(root);
+  assert.equal(read.find(n => n.id === max.id)._path, maxPath, "the kind page wins over its twin; nothing throws");
+  assert.ok(read.some(n => n.id === lena));
+  lib.refreshEntityPages(root);
+  assert.deepEqual(readdirSync(join(root, "brain/entities")).filter(f => f.endsWith(".md")), [], "no flat page left");
+  const after = lib.readNames(root), m = after.find(n => n.id === max.id);
+  assert.equal(m._path, maxPath); assert.deepEqual(m.aliases, ["MJ"]); assert.deepEqual(m.emails, ["max@acme.test"], "what only the twin held is kept");
+  assert.equal(after.find(n => n.id === lena)._path, `brain/entities/people/lena-ost-${sid(lena)}.md`);
+  assert.equal(readdirSync(join(root, "work/manual-edits/entities")).length, 1, "the twin's text is kept");
 });

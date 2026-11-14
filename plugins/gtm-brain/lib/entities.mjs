@@ -297,6 +297,13 @@ export function readEntityFiles(root) {
     }
     entries.push({ id: fm.id, name: fm.name, ...type, status: fm.status || "active", merge_ids: fm.merge_ids || [], aliases: fm.aliases, emails: fm.emails, not: fm.not_same, previous_ids: fm.previous_ids, references: fm.references, identity_sources: fm.identity_sources, _path: relative, _fm: fm, _compilation: compilation, _body: body, _header: header, _text: original });
   }
+  // A flat page beside the kind folders is one a teammate on 0.34 wrote (it reads and writes only flat pages).
+  // When its id is already a kind-folder page it is that page's stale twin: the kind page wins, the twin is
+  // folded into it at the next write (foldStrayPages), and no read fails on the double id.
+  if (entries.some(e => isKindPagePath(e._path))) {
+    const kindIds = new Set(entries.filter(e => isKindPagePath(e._path)).flatMap(e => [e.id, ...e.previous_ids]));
+    for (let i = entries.length - 1; i >= 0; i--) if (!isKindPagePath(entries[i]._path) && kindIds.has(entries[i].id)) entries.splice(i, 1);
+  }
   const owners = new Map();
   for (const e of entries) for (const id of [e.id, ...e.previous_ids]) {
     if (owners.has(id)) invalid(e._path, "id / previous_ids", `${id} is also claimed by ${owners.get(id)}`, "restore the intended IDs from file history or resolve a confirmed merge; do not guess which identity wins");
@@ -724,7 +731,8 @@ export function refreshEntityPages(root) {
   return withEntityLock(root, () => refreshPages(root));
 }
 function refreshPages(root) {
-  const registry = lib.readNames(root), changed = refreshBriefs(root, registry);
+  const strays = foldStrayPages(root);
+  const registry = lib.readNames(root), changed = [...strays, ...refreshBriefs(root, registry)];
   // the kind indexes follow the pages: same lock, same write path, committed with them
   changed.push(...writeKindIndexes(root, changed.length ? lib.readNames(root) : registry, kindRelations(root)));
   return changed;
@@ -773,7 +781,34 @@ export function startKindLayout(root) {
    folder with it, redirects of merged identities too (they keep their redirect id). Ids, aliases, merge
    history and memories are untouched; links inside the moved redirects are rewritten. Returns the moves. */
 export function migrateToKindFolders(root) {
-  return withEntityLock(root, () => {
+  return withEntityLock(root, () => moveFlatPages(root));
+}
+/* Flat pages in a brain already in kind folders: written by a teammate still on 0.34. Each write folds them in:
+   a new identity moves to its kind folder like an upgrade would; a twin of an existing page (same id) gives the
+   page whatever aliases, emails and references only it holds, its text is kept in work/manual-edits/entities/,
+   and it is removed. Under the entity lock (refreshPages). Returns the paths it touched. */
+function foldStrayPages(root) {
+  if (layout(root) !== "kinds") return [];
+  const flat = pagePaths(root).filter(p => !isKindPagePath(p) && /^brain\/entities\/[a-z0-9-]+\.md$/.test(p));
+  if (!flat.length) return [];
+  const kept = readEntityFiles(root), byId = new Map(kept.map(e => [e.id, e])), touched = [];
+  const twins = flat.filter(rel => { try { const { fm } = parseEntityText(readFileSync(join(root, rel), "utf8"), rel); return byId.has(fm.id) && byId.get(fm.id)._path !== rel; } catch { return false; } });
+  if (twins.length) {
+    const backup = join(root, "work", "manual-edits", "entities"); mkdirSync(backup, { recursive: true });
+    for (const rel of twins) {
+      const text = readFileSync(join(root, rel), "utf8"), { fm } = parseEntityText(text, rel), page = byId.get(fm.id);
+      for (const field of ["aliases", "emails"]) for (const v of fm[field] || []) if (!page[field].includes(v)) page[field].push(v);
+      for (const field of ["references", "identity_sources"]) for (const r of fm[field] || []) if (!page[field].some(x => x.kind === r.kind && x.ref === r.ref)) page[field].push(r);
+      writeFileSync(join(backup, `${basename(rel, ".md")}-${Date.now()}.md`), text);
+      rmSync(join(root, rel)); touched.push(rel, page._path);
+    }
+    writeEntityFiles(root, kept);
+  }
+  const moved = moveFlatPages(root);
+  return [...touched, ...moved.moves.flatMap(m => [m.from, m.to]), ...moved.indexes];
+}
+function moveFlatPages(root) {
+  {
     const moves = [];
     for (const rel of pagePaths(root).filter(p => !isKindPagePath(p) && /^brain\/entities\/[a-z0-9-]+\.md$/.test(p))) {
       const text = readFileSync(join(root, rel), "utf8"), { fm } = parseEntityText(text, rel);
@@ -786,11 +821,16 @@ export function migrateToKindFolders(root) {
     for (const m of moves) if (existsSync(join(root, m.to))) throw new Error(`Entity filename collision: ${m.to} already exists; nothing was moved for it`);
     for (const m of moves) {
       // a redirect's "Merged into" link and any page link inside a moved page now point from the kind folder
-      const text = m.text.replace(/\]\(((?:\.\.\/)?[a-z0-9-]+\.md)\)/g, (all, link) => { const to = targets.get(flatPagePath(link.replace(/^\.\.\//, "").slice(0, -3))); return to ? `](${linkFrom(m.to, to)})` : all; })
+      const { fm, body, header } = parseEntityText(m.text, m.from);
+      const next = body.replace(/\]\(((?:\.\.\/)?[a-z0-9-]+\.md)\)/g, (all, link) => { const to = targets.get(flatPagePath(link.replace(/^\.\.\//, "").slice(0, -3))); return to ? `](${linkFrom(m.to, to)})` : all; })
         .replace(/\]\(\.\.\/contexts\//g, `](${linkFrom(m.to, "brain/contexts")}/`);
-      movePage(root, m.from, m.to, text);
+      // a generated body stays generated: its hash follows the rewritten links, or every later refresh would take
+      // the moved page for a handwritten one and never render it again. Only that one header line changes.
+      const generated = fm.rendered_body_hash && fm.rendered_body_hash === hash(body);
+      const head = generated && next !== body ? header.replace(/^(rendered_body_hash:[ \t]*["']?)[0-9a-f]+/m, `$1${hash(next)}`) : header;
+      movePage(root, m.from, m.to, head + next);
     }
     const indexes = writeKindIndexes(root, readEntityFiles(root), kindRelations(root), { kinds: ENTITY_KINDS });
     return { moves: moves.map(({ from, to, redirect }) => ({ from, to, redirect })), indexes };
-  });
+  }
 }
