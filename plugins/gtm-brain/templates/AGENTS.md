@@ -394,5 +394,6 @@ When a tool returns a transcript, recording or meeting note, or a person recount
 follow the use-brain workflow reference `meetings.md` (rule 12). Read `query` (meetings); capture an
 observation through `remember.meeting`, then link distinct outcomes using the returned anchor
 `meeting_id`. Preserve source IDs and original links. Invitations are plans, not attendance.
-Source refresh never replaces user corrections. Do not create missing-transcript tasks from past
+Respect per-person capture decisions and submitted policy; source refresh never replaces user
+corrections. Do not create missing-transcript tasks from past
 invitations.
