@@ -90,7 +90,7 @@ const TOOLS = [
     inputSchema: schema({ entity: str("Entity name, alias or stable ID; omit to list stale briefs") }),
     call: ({ brain, entity }) => run(brain, "gtm-brain-entities/compile-entity.mjs", entity ? ["--facts", entity] : []).then(result) },
   { name: "compile_facts", title: "Reading a context's memories", readOnly: true,
-    description: "Without context: which contexts are behind (memories newer than the last compile). With context: everything needed to rewrite its cover (rule, current summary, previous working guidance, people, tools, questions, decisions, every effective memory with IDs and source/action references) and the as_of id to pass to compile_apply.",
+    description: "Without context: which contexts are behind (memories newer than the last compile). With context: everything needed to rewrite its cover (rule, current summary, previous working guidance, people, tools, questions, decisions, the effective memories since the last compile with IDs and source/action references; older ones through query) and the as_of id to pass to compile_apply.",
     inputSchema: schema({ context: str("Context slug; omit to list what is behind") }),
     call: ({ brain, context }) => run(brain, "gtm-brain-compile/compile.mjs", context ? ["--facts", context] : ["--stale"]).then(result) },
   { name: "meeting_overview", title: "Reviewing meetings", readOnly: true,

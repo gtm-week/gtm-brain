@@ -36,7 +36,7 @@ if (args[0] === "--person" || args[0] === "--entity") {
     const count = view.evidence.filter(m => !context || m.context === context).length;
     console.log(view.entity.name + (context ? " in " + context : "") + ": " + count + " memories · " + (view.path ? resolve(root, view.path) : "identity has not been migrated yet"));
     // a byte budget on what reaches the chat: one brief reached 4 MB on a big brain
-    const BUDGET = Number(process.env.GTM_BRAIN_BRIEF_BYTES) || 64 * 1024;
+    const BUDGET = Number(process.env.GTM_BRAIN_BRIEF_BYTES) || 30 * 1024;
     let text = view.markdown;
     const attachments = view.evidence.filter(m => m.asset && (!context || m.context === context));
     if (attachments.length) text += "\n\n## Attachments\n" + attachments.map(m => assetSummary(root, m)).join("\n");

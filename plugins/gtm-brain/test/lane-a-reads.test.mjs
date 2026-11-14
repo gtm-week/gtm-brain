@@ -28,8 +28,9 @@ test("compile --facts through a pipe is not cut at 64 KiB, and is a capped diges
   assert.equal(r.status, 0, r.stderr);
   const out = r.stdout;
   assert.match(out, /^as_of: s_/m);
-  assert.match(out, /older notes are not shown .*the current summary carries them\. Look one up with query: object memories, filters\.context=/);
-  assert.ok(out.endsWith("\n") && /filters\.entities=<id>\)\.\n$/.test(out), "the closing line arrives whole");
+  assert.match(out, /\n\d+ more notes newer than compiled_at are not shown and are not in the current summary: read them with query: object memories, filters\.context=/);
+  assert.doesNotMatch(out, /the current summary carries them/, "never compiled: no summary carries anything");
+  assert.ok(out.endsWith("\n") && /filters\.entities=<id>\) before writing\.\n$/.test(out), "the closing line arrives whole");
   const shown = out.split("\n## Effective notes since the last compile")[1].split("\n").filter(l => /^- m_/.test(l));
   assert.ok(shown.length > 50 && shown.length < 420, `capped: ${shown.length}`);
   assert.ok(shown[0].includes(ids.at(-1)), "newest first");
@@ -79,4 +80,32 @@ test("deal-health shows the newest 200 and counts the rest", () => {
 test("the compile run is offered query", () => {
   const src = readFileSync(join(P, "server/server.mjs"), "utf8");
   assert.match(src, /COMPILE_TOOLSET = new Set\(\[[^\]]*"query"/);
+});
+
+test("a summary run lists query next to the compile tools, and little else", () => {
+  const output = execFileSync(process.execPath, [join(P, "server/server.mjs")], {
+    input: JSON.stringify({ jsonrpc: "2.0", id: 7, method: "tools/list" }) + "\n",
+    env: { ...env, GTM_BRAIN_RUN: "background", GTM_BRAIN_TOOLSET: "compile" }, encoding: "utf8", timeout: 60000,
+  });
+  const names = JSON.parse(output).result.tools.map(t => t.name);
+  for (const n of ["query", "compile_facts", "compile_apply"]) assert.ok(names.includes(n), n);
+  assert.ok(!names.includes("remember") && names.length <= 8, names.join(", "));
+});
+
+test("the digest keeps an older note the working guidance cites, and names a cited note that was withdrawn", () => {
+  const facts = () => script("gtm-brain-compile", "compile.mjs", "--facts", slug).stdout;
+  let f = facts();
+  const r = script("gtm-brain-compile", "compile.mjs", "--apply", slug, "--by", "ann", "--as-of", f.match(/^as_of: (\S+)/m)[1], "--summary", `Castorama notes are recorded [${ids[10]}].`, "--now", `Keep the Castorama method (${ids[20]}).`);
+  assert.equal(r.status, 0, r.stderr);
+  lib.appendMemory(root, slug, { authors: ["ann-lee"], content: "Castorama after the compile." });
+  f = facts();
+  assert.match(f, /newest first \(1 of 1 new\)/);
+  const cited = f.split("## Older notes the current summary and working guidance cite")[1];
+  assert.ok(cited.includes("- " + ids[10]) && cited.includes("- " + ids[20]), "cited notes are shown in full");
+  assert.match(f, /\n\d+ older notes are not shown; the current summary carries them\./);
+  assert.doesNotMatch(f, /newer than compiled_at (is|are) not shown/);
+  lib.appendMemory(root, slug, { authors: ["ann-lee"], content: "The Castorama method is withdrawn.", retracts: ids[20] });
+  f = facts();
+  assert.ok(!f.includes("- " + ids[20]));
+  assert.match(f, new RegExp("No longer in force [^\\n]*" + ids[20]));
 });

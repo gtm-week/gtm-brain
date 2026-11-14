@@ -72,9 +72,17 @@ if (opt.facts) {
     if (shown.length && (lines + n > FACTS_LINES || bytes + b > FACTS_BYTES)) break;
     shown.push(t); lines += n; bytes += b;
   }
-  const older = f.mem.length - shown.length;
+  // The notes the current summary and working guidance rest on stay in view, so both can be revalidated
+  // without a lookup; a cited note that was superseded or withdrawn is named instead.
+  const listed = new Set(fresh.slice(0, shown.length).map(m => m.id)), byId = new Map(f.mem.map(m => [m.id, m]));
+  const citedIds = [...new Set([...[f.c.fm?.summary_sources || []].flat().map(String), ...String(f.c.summary || "").match(/\bm_[0-9a-z]+\b/g) || [], ...String(f.c.now || "").match(/\bm_[0-9a-z]+\b/g) || []])];
+  const cited = citedIds.filter(id => byId.has(id) && !listed.has(id)).slice(0, 40), gone = citedIds.filter(id => !byId.has(id));
+  const hiddenNew = f.newSince.length - shown.length, carried = f.mem.length - f.newSince.length;
   out.push(`\n## Effective notes since the last compile, newest first (${shown.length} of ${f.newSince.length} new)`, ...shown);
-  if (older) out.push(`\n${older} older note${older === 1 ? " is" : "s are"} not shown${f.newSince.length > shown.length ? ` (${f.newSince.length - shown.length} of them newer than compiled_at)` : ""}; the current summary carries them. Look one up with query: object memories, filters.context=${f.c.slug} (add search or filters.entities=<id>).`);
+  if (cited.length || gone.length) out.push(`\n## Older notes the current summary and working guidance cite (${cited.length} still in force)`, ...cited.map(id => noteLines(byId.get(id))), ...(gone.length ? [`No longer in force (superseded or withdrawn), do not rest on them: ${gone.join(", ")}`] : []));
+  const lookup = `query: object memories, filters.context=${f.c.slug} (add search or filters.entities=<id>)`;
+  if (hiddenNew) out.push(`\n${hiddenNew} more note${hiddenNew === 1 ? "" : "s"} newer than compiled_at ${hiddenNew === 1 ? "is" : "are"} not shown and ${hiddenNew === 1 ? "is" : "are"} not in the current summary: read them with ${lookup} before writing.`);
+  if (carried) out.push(`\n${carried} older note${carried === 1 ? " is" : "s are"} not shown; the current summary carries them. Look one up with ${lookup}.`);
   await finish(out.join("\n"));
 }
 if (opt.apply) {

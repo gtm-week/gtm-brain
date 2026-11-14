@@ -2,7 +2,7 @@
 // deal-health: one deal's MEDDPICC rubric and the memories to score it from. Reads only.
 //   node deal-health.mjs <root> --entity "<company>"
 // The model scores; this read gives it the rubric (skills/gtm-brain-use-brain/references/deal-health.md)
-// and every memory about the company, newest first, each with its ID. admin.md deal_scoring: off turns it off.
+// and the newest memories about the company (200, then a count of the rest), each with its ID. admin.md deal_scoring: off turns it off.
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
