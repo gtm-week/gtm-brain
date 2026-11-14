@@ -1414,6 +1414,9 @@ const interactionOf = (raw, parsed) => ({
   input_schema: parsed.input_schema || { type: "object", properties: {}, additionalProperties: false },
   record: { context: raw.record?.context || null, kind: raw.record?.kind || "note", content: String(raw.record?.content || ""), people: [...(raw.record?.people || [])], companies: [...(raw.record?.companies || [])], action: raw.record?.action || null, tags: [...(raw.record?.tags || [])] },
   refuse_when: raw.refuse_when ? String(raw.refuse_when) : null,
+  // external false: nothing to do in a connector, so interact records at once. Otherwise the record
+  // waits for the outcome the connector returned (interactionMemory with outcome done or failed).
+  external: raw.external !== false,
 });
 export function readInteractions(root) {
   const path = join(root, INTERACTIONS_PATH);
@@ -1431,8 +1434,10 @@ export function validateInteraction(root, a, { existing = [] } = {}) {
   if (!/^[a-z][a-z0-9_]*$/.test(String(a.name || ""))) say(`name must be a bare identifier (letters, digits, underscore): ${a.name}`);
   if (RESERVED_TOOLS.has(a.name)) say(`${a.name} is a tool of its own; call it`);
   if (existing.some(x => x.name === a.name)) say(`${a.name} is already one of this company's interactions`);
-  if (!String(a.tool || "").trim()) say("tool is needed: the connector this is done in (attio, gmail, ...)");
-  if (!String(a.operation || "").trim()) say("operation is needed: what to do in the tool, in words the model follows");
+  if (a.external !== undefined && typeof a.external !== "boolean") say("external must be true or false: false when there is nothing to do in a connector and the note is recorded at once");
+  const external = a.external !== false;
+  if (external && !String(a.tool || "").trim()) say("tool is needed: the connector this is done in (attio, gmail, ...); external false when there is none");
+  if (external && !String(a.operation || "").trim()) say("operation is needed: what to do in the tool, in words the model follows");
   for (const [k, v] of Object.entries({ title: a.title, operation: a.operation, description: a.description, content: a.record?.content, refuse_when: a.refuse_when })) if (LONG_DASH.test(String(v || ""))) say(`${k} contains a long dash; use a plain hyphen`);
   const schema = a.input_schema || { type: "object", properties: {} };
   try { checkSchema(schema, "input_schema"); } catch (e) { say(e.message); }
@@ -1455,12 +1460,26 @@ export function renderTemplate(tpl, params = {}) {
     .replace(/\{([a-z_][a-z0-9_]*)\}/g, (_, k) => val(k))
     .replace(/[ \t]+$/gm, "").trim();
 }
-export function interactionMemory(a, params = {}) {
+/* The memory an interaction prescribes, as remember flags. outcome "failed" (the connector refused or
+   errored) gives a plain failure note instead: what was tried, with which inputs, and the error; no
+   action, since nothing was done. */
+export function interactionMemory(a, params = {}, { outcome = "done", error = "" } = {}) {
   const r = a.record; const pick = fields => fields.map(f => params[f]).filter(v => v !== undefined && v !== null && String(v).trim()).map(String);
-  return { context: r.context, kind: r.kind || "note", content: renderTemplate(r.content, params), people: pick(r.people), companies: pick(r.companies), tools: a.tool ? [a.tool] : [], actions: r.action ? [renderTemplate(r.action, params)] : [], tags: [...r.tags] };
+  const base = { context: r.context, people: pick(r.people), companies: pick(r.companies), tools: a.tool ? [a.tool] : [] };
+  if (outcome === "failed") {
+    // The connector's words must never keep the failure from being recorded: long dashes become hyphens,
+    // a page of text is cut, and the note carries the day it was tried, so "try again tomorrow" in the
+    // error is not held as a bare relative date.
+    const plain = (v, max) => { const s = String(v).replace(/[\u2013\u2014\u2015\u2212]/g, "-").replace(/\s+/g, " ").trim(); return s.length > max ? s.slice(0, max - 3) + "..." : s; };
+    const inputs = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && String(v).trim()).map(([k, v]) => `${k} ${plain(typeof v === "object" ? JSON.stringify(v) : v, 120)}`).join(", ");
+    const said = plain(error || "", 500), now = process.env.GTM_BRAIN_NOW ? new Date(process.env.GTM_BRAIN_NOW) : new Date();
+    const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    return { ...base, kind: "note", content: `Failed in ${a.tool || "the tool"}, not done: ${plain(a.title || a.name, 120)}${inputs ? ` (${plain(inputs, 400)})` : ""}, tried ${day}. ${said ? `Error: ${said}` : "No error text was returned."}`, actions: [], tags: [...new Set([...r.tags, "interaction-failed"])] };
+  }
+  return { ...base, kind: r.kind || "note", content: renderTemplate(r.content, params), actions: r.action ? [renderTemplate(r.action, params)] : [], tags: [...r.tags] };
 }
 export function writeInteractions(root, actions) {
   const admin = readAdmin(root) || {};
-  const raw = { version: "1", name: String(admin.company || "company").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "company", description: "This company's own interactions: what it does on its tools, and what each records.", custom_extensions: [{ vendor_name: "ALLETHIC", data: { actions: actions.map(a => ({ name: a.name, title: a.title, tool: a.tool, operation: a.operation, description: a.description, input_schema: a.input_schema, record: a.record, ...(a.refuse_when ? { refuse_when: a.refuse_when } : {}) })) } }] };
+  const raw = { version: "1", name: String(admin.company || "company").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "company", description: "This company's own interactions: what it does on its tools, and what each records.", custom_extensions: [{ vendor_name: "ALLETHIC", data: { actions: actions.map(a => ({ name: a.name, title: a.title, tool: a.tool, operation: a.operation, description: a.description, input_schema: a.input_schema, record: a.record, ...(a.refuse_when ? { refuse_when: a.refuse_when } : {}), ...(a.external === false ? { external: false } : {}) })) } }] };
   writeFileSync(join(root, INTERACTIONS_PATH), JSON.stringify(raw, null, 2) + "\n");
 }

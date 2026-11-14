@@ -152,6 +152,19 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
 
   await check("index.read_after_write", "remember", async () => ({ pass: busy === 0, text: "", note: `${busy} read${busy === 1 ? "" : "s"} refused with Memory index is busy and retried${busy ? ` (in check number ${[...new Set(busyAt)].map(i => i + 1).join(", ")})` : ""}` }), { known_gap: READ_AFTER_WRITE });
 
+  /* ---------- interact: check, act, then record ---------- */
+  // A company interaction on the scratch copy, written through lib as approve does; the connector step is simulated.
+  const lib = await import(`${P}/lib/brain.mjs`);
+  lib.writeInteractions(brain, [...lib.readInteractions(brain).actions,
+    { name: "e2e_move_deal", title: "Moving a deal", tool: "attio", operation: "Move the deal to the stage in Attio.", description: "A deal changes stage.", input_schema: { type: "object", properties: { deal: { type: "string" }, stage: { type: "string" } }, required: ["deal", "stage"], additionalProperties: false }, record: { context: "offer", kind: "note", people: [], companies: [], content: "Moved {deal} to {stage}.", action: "attio:move deal:{deal}", tags: ["deal-stage"] }, refuse_when: "the deal is already closed" },
+    { name: "e2e_log", title: "Logging a result", external: false, description: "A result, recorded at once.", input_schema: { type: "object", properties: { what: { type: "string" } }, required: ["what"], additionalProperties: false }, record: { context: "offer", kind: "note", people: [], companies: [], content: "Result: {what}", tags: [] } }]);
+  const written = token => lib.readMemories(brain, "offer").filter(m => m.content.includes(token));
+  await check("interact.refused_writes_nothing", "interact", async () => { const r = await call("interact", { by, name: "e2e_move_deal", params: { deal: "e2einteractrefused" } }); return { pass: r.isError && /refused/.test(r.text) && !written("e2einteractrefused").length, text: r.text }; });
+  await check("interact.first_call_writes_nothing", "interact", async () => { const r = await call("interact", { by, name: "e2e_move_deal", params: { deal: "e2einteractdone", stage: "proposal" } }); return { pass: !r.isError && /^checked: e2e_move_deal/.test(r.text) && /refuse when the deal is already closed/.test(r.text) && !written("e2einteractdone").length, text: r.text }; });
+  await check("interact.done_records_with_pointer", "interact", async () => { const r = await call("interact", { by, name: "e2e_move_deal", params: { deal: "e2einteractdone", stage: "proposal" }, outcome: "done", refs: [{ kind: "attio", account: "acme-ws", ref: "deals/d-1" }] }); const got = written("e2einteractdone"); const s = await q({ object: "memories", search: "e2einteractdone" }); return { pass: !r.isError && got.length === 1 && got[0].source.some(x => x.kind === "attio" && x.account === "acme-ws" && x.ref === "deals/d-1") && rowIds(s.text).length === 1, text: r.text, note: JSON.stringify(got[0]?.source || []) }; });
+  await check("interact.failed_records_failure", "interact", async () => { const r = await call("interact", { by, name: "e2e_move_deal", params: { deal: "e2einteractfailed", stage: "won" }, outcome: "failed", error: "403 forbidden" }); const got = written("e2einteractfailed"); return { pass: !r.isError && got.length === 1 && /^Failed in attio, not done/.test(got[0].content) && /403 forbidden/.test(got[0].content) && !(got[0].actions || []).length, text: r.text }; });
+  await check("interact.pure_record_at_once", "interact", async () => { const r = await call("interact", { by, name: "e2e_log", params: { what: "e2einteractlog" } }); return { pass: !r.isError && /^ok: e2e_log/.test(r.text) && written("e2einteractlog").length === 1, text: r.text }; });
+
   /* ---------- messy traps ---------- */
   const T = gold.traps || {};
   if (T.maxes) {

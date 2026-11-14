@@ -147,7 +147,7 @@ made there carry the project's tag, and everything stays searchable from the bra
 | A rule the work must follow (tone of voice, pricing, ICP) | write it as a document: `<name>.md` at the top, then "add <name>.md as a document" |
 | A recurring process with steps | "start the outbound workflow", or describe a new one; see `workflows/` |
 | A new skill for your team | "make a skill that ..." (gtm-brain-skill) |
-| An action your own tools run (a CRM write) | "propose an interaction for ..."; applied only after APPROVE |
+| An action your own tools run (a CRM write) | "propose an interaction for ..."; applied only after APPROVE. When it runs, Codex does it in the tool first and the note is written only after the tool confirms, with the record's link or id; a failed write is noted as a failure |
 | Which tools are connected | "connect my tools" |
 | A person's or company's name, alias, kind | "Chris is Krzysztof Pawlak", "Telli is a company" |
 | A wrong note | "correct ...", or "forget ..." |
@@ -162,6 +162,7 @@ in `work/manual-edits/protected/`.
 - Copy your CRM, mail or calendar into the brain: it reads them live and keeps what happened and
   what you decided.
 - Invent a fact: what is not in a note or a tool, it says it does not know.
+- Note a CRM write that did not happen: an interaction is recorded after the tool confirms it.
 - Merge two names, create a context, change company info or a scheduled task without your yes.
 - Run when your computer is off or asleep: summaries catch up at the next run.
 - Read other connectors' calls: it only sees its own tools; Codex marks an untested tool itself.

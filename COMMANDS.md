@@ -85,18 +85,34 @@ held with the candidate contexts in one line. Each kept note starts with `saved 
 described as its own interaction.
 
 Runs one of this company's own interactions (`brain/ontology.ossie.json`; `list_objects` lists
-them): the inputs are checked against the interaction's schema, the memory it prescribes is
-recorded through `remember` (context, kind, people, companies, the action as `tool:action:ref`),
-and the reply says exactly what to do in the connector, which Codex does with that connector's
-own tools. A plugin tool's name is refused: call the tool.
+them). Check, act, then record, in two calls that carry everything themselves (nothing waits in
+server memory between them):
 
-Tool: `interact`. Writes: `brain/contexts/<slug>/memories.jsonl` (via remember). Kept at once.
+1. `interact {name, params}`: the inputs are checked against the interaction's schema, and so is
+   what would refuse the note later (a person not in the team, a context that is not active, a
+   long dash or a bare relative date in the note); a refusal writes nothing. Otherwise the reply gives the interaction's `refuse_when` rule and exactly what
+   to do in the connector, which Codex does with that connector's own tools. Nothing is written yet.
+2. `interact {name, params, outcome, refs, error}` with the same name and params, after the
+   connector answered. `outcome: "done"` records the memory the interaction prescribes through
+   `remember` (context, kind, people, companies, the action as `tool:action:ref`), with `refs` (what
+   the connector returned: a direct URL, `provider:id`, a bare id read as the interaction's tool, or
+   `{kind, account, ref, url}`) as its source pointers, account included when known.
+   `outcome: "failed"` records a failure note instead: `Failed in <tool>, not done: <title>
+   (<inputs>), tried <date>. Error: <error>`, tagged `interaction-failed`, with no action. Long
+   inputs and a long error are cut, and long dashes become hyphens, so the note is always kept.
+
+An interaction with `external: false` in its file has no connector step and records at once on the
+first call (`outcome: "failed"` still records a failure note). `list_objects` shows it as
+`[record only]`. A plugin tool's name is refused: call the tool.
+
+Tool: `interact`. Writes: nothing on the first call; `brain/contexts/<slug>/memories.jsonl` (via
+remember) on the second, or at once for `external: false`.
 
 ### propose_interaction
 *"every week I move deals in Attio by hand; make that a thing"*, including after the advisor points out an action that recurs.
 
 Drafts one of this company's interactions from the person's words (name, tool, the operation in
-words, inputs, what it records), validates it and writes `work/interaction.proposed.json`. The
+words, inputs, what it records; `external: false` and no tool when nothing is done in a connector), validates it and writes `work/interaction.proposed.json`. The
 dashboard shows it in words; Codex then calls `approve_change` with kind interaction, and
 choosing APPROVE in its form applies it. `approve.mjs <root> --interaction --by <person>` is the only writer of
 `brain/ontology.ossie.json`: it appends the proposal and commits `interactions: <name>`. The
