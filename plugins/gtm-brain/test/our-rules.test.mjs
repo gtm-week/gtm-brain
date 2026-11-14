@@ -397,3 +397,11 @@ test("review: the fact and the status in two entries of one call: the status is 
   const g = spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, root, "--by", "artur-wala", "--batch", f], { cwd: root, env, encoding: "utf8" });
   assert.match(g.stderr, /Globex would be saved as a customer/, "another company's entry is no fact about Globex");
 });
+
+test("review: the offered workflow is created by the existing workflow create path, as a draft", () => {
+  const root = brain(), w = R.workOffer("Whenever a company becomes a customer, send the welcome pack.");
+  const r = spawnSync(process.execPath, [`${P}/scripts/gtm-brain-workflow/workflow.mjs`, "--create", w.title, "--body", w.body, "--applies-to", w.applies_to.join(", "), "--by", "artur-wala"], { cwd: root, env, encoding: "utf8" });
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  const list = spawnSync(process.execPath, [`${P}/scripts/gtm-brain-workflow/workflow.mjs`, "--list"], { cwd: root, env, encoding: "utf8" });
+  assert.match(list.stdout, /Send the welcome pack/);
+});
