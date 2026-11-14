@@ -339,7 +339,7 @@ const thisPass = root => { if (pass?.root !== root) { pass = { root }; setImmedi
 /* A saved note against the check rules that apply to it: a list of refusals (empty when it may be saved). Every
    refusal quotes the rule and says what would satisfy it. Reads RULES.md, and the notes only when a status or
    field rule needs an earlier fact. Never throws: a rule that cannot be evaluated refuses nothing. */
-export function saveRefusals(root, entry, { parsed = null, registry = null } = {}) {
+export function saveRefusals(root, entry, { parsed = null, registry = null, siblings = [] } = {}) {
   try {
     parsed ||= readOurRules(root);
     const checks = parsed.rules.filter(r => r.check && whenMatches(r, "saving"));
@@ -350,7 +350,9 @@ export function saveRefusals(root, entry, { parsed = null, registry = null } = {
     const earlier = s => {
       const memories = (batch.memories ??= lib.listContexts(root).flatMap(c => lib.effectiveMemories(c.memories)).filter(m => !m.retracts));
       const name = s.name.toLowerCase();
-      return memories.filter(m => (s.id && (m.entities || []).includes(s.id)) || (m.people || []).some(p => String(p).toLowerCase() === name) || (m.companies || []).some(p => String(p).toLowerCase() === name));
+      const about = m => (s.id && (m.entities || []).includes(s.id)) || (m.people || []).some(p => String(p).toLowerCase() === name) || (m.companies || []).some(p => String(p).toLowerCase() === name);
+      // the other entries of the same call count as earlier notes: "signed the contract" and the status in one batch
+      return [...memories.filter(about), ...(siblings || []).filter(m => m && m !== entry && typeof m === "object" && (about(m) || String(m.content || "").toLowerCase().includes(name)))];
     };
     const content = String(entry.content || ""), out = [];
     let said = null;

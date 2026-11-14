@@ -149,7 +149,7 @@ const problems = entries.map((e, i) => {
   if (relationErrors.length) return `${at(n)}${relationErrors.join("; ")}`;
   try { lib.guardRelationCorrection(root, ctx, { ...e, source: sourceOf(e) }); }
   catch (err) { return `${at(n)}${err.message}`; }
-  const ruled = ourRules.saveRefusals(root, e); if (ruled.length) return `${at(n)}${ruled.join("; ")}`;
+  const ruled = ourRules.saveRefusals(root, e, { siblings: entries }); if (ruled.length) return `${at(n)}${ruled.join("; ")}`;
   // a correction points at a note that exists, in this context: readers resolve supersedes and
   // retracts per context, so a pointer into another one corrects nothing and the brain says both
   for (const [field, verb] of [["supersedes", "replace"], ["retracts", "withdraw"]]) {

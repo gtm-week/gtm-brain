@@ -384,3 +384,16 @@ test("review: a thing not to do, or how a note is kept, is a rule even after a t
   assert.match(weekly.body, /it runs every monday/);
   assert.equal(R.workOffer("Once a quarter, review the partner list.").title, "Review the partner list");
 });
+
+test("review: the fact and the status in two entries of one call: the status is saved, not refused", () => {
+  const root = withRules(brain(), CONTRACT);
+  lib.addName(root, "Northwind", { kind: "organization" });
+  const f = join(root, "work", "pair.json");
+  writeFileSync(f, JSON.stringify([{ context: "company", content: "Northwind signed the contract on 2026-11-10.", companies: ["Northwind"], sources: ["gmail:abc"] },
+    { context: "company", content: "Northwind is our customer.", companies: ["Northwind"], sources: ["user:artur-wala"], customer: { entity: "Northwind", status: "customer", basis: "user", observed_at: NOW } }]));
+  const r = spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, root, "--by", "artur-wala", "--batch", f], { cwd: root, env, encoding: "utf8" });
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  writeFileSync(f, JSON.stringify([{ context: "company", content: "Globex is our customer.", companies: ["Globex"], sources: ["user:artur-wala"], customer: { entity: "Globex", status: "customer", basis: "user", observed_at: NOW } }, { context: "company", content: "Northwind wants a demo.", companies: ["Northwind"], sources: ["gmail:x"] }]));
+  const g = spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, root, "--by", "artur-wala", "--batch", f], { cwd: root, env, encoding: "utf8" });
+  assert.match(g.stderr, /Globex would be saved as a customer/, "another company's entry is no fact about Globex");
+});
