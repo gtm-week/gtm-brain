@@ -64,3 +64,30 @@ test("entityType checks a kind against the brain's list; 'any' only normalizes",
   assert.deepEqual(entities.entityType("company"), { kind: "organization", subtype: "company" });
   assert.deepEqual(schema.brainKinds(null), schema.DEFAULT_KINDS);
 });
+
+test("end to end on a setup brain: add_name with event and tool, speaker_at and integrates_with saved, a SCHEMA.md kind accepted", async () => {
+  const { mkdtempSync, realpathSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { execFileSync } = await import("node:child_process");
+  process.env.GTM_BRAIN_NO_COMPILE = "1"; process.env.GTM_BRAIN_NO_WATCH = "1"; process.env.GTM_BRAIN_NO_OPEN = "1"; process.env.GTM_BRAIN_NO_COMMIT = "1";
+  process.env.CODEX_HOME ||= mkdtempSync(join(tmpdir(), "gtm-kinds-home-"));
+  const env = { ...process.env, PLUGIN_ROOT: P, GTM_BRAIN_NO_VERSION_CHECK: "1", GTM_BRAIN_NO_SESSION_MAINTENANCE: "1" };
+  const lib = await import(`${P}/lib/brain.mjs`);
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "gtm-kinds-")));
+  execFileSync("git", ["init", "-q", root]);
+  execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "Demo Co", "--one-liner", "events", "--owner", "Marta Nowak <marta@demo.co>"], { cwd: root, env, stdio: "ignore" });
+  lib.addName(root, "Anna Lee"); lib.addName(root, "SaaStr Europa", { kind: "event" }); lib.addName(root, "HubSpot", { kind: "tool" }); lib.addName(root, "Attio", { kind: "tool" });
+  const reg = lib.readNames(root), kind = n => reg.find(e => e.name === n).kind;
+  assert.deepEqual([kind("SaaStr Europa"), kind("HubSpot")], ["event", "tool"]);
+  const rel = (from, type, to) => ({ from, type, to, status: "current", basis: "user", observed_at: "2026-11-13T10:00:00Z" });
+  const note = (content, relation) => lib.appendMemory(root, "company", { authors: ["marta-nowak"], content, source: [{ kind: "user", ref: "marta" }], relation }).rec;
+  assert.ok(note("Anna Lee speaks at SaaStr Europa.", rel("Anna Lee", "speaker_at", "SaaStr Europa")).entities.length >= 2);
+  note("HubSpot syncs with Attio.", rel("HubSpot", "integrates_with", "Attio"));
+  assert.throws(() => note("Anna integrates with HubSpot.", rel("Anna Lee", "integrates_with", "HubSpot")), /integrates_with goes from tool/);
+  assert.throws(() => lib.addName(root, "Hotel Bristol", { kind: "venue" }), /kind must be one of/);
+  const path = join(root, "SCHEMA.md");
+  writeFileSync(path, readFileSync(path, "utf8").replace("## Relationships", "## Venue\n\n| Field | What it means | Required |\n| --- | --- | --- |\n| capacity | Seats | no |\n\n## Relationships"));
+  lib.addName(root, "Hotel Bristol", { kind: "venue" });
+  assert.equal(lib.readNames(root).find(e => e.name === "Hotel Bristol").kind, "venue");
+  assert.ok(schema.schemaLine(root).includes("event: date*, location, url. tool: category*"));
+});
