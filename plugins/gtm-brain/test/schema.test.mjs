@@ -33,23 +33,23 @@ test("the shipped template parses: five kinds with fields, organization subtypes
   assert.deepEqual(schema.fieldsFor(s, "organization", "investor").map(f => f.name), ["website", "industry", "size", "hq", "stage"]);
   assert.deepEqual(schema.fieldsFor(s, "organization", "company").map(f => f.name), ["website", "industry", "size", "hq"]);
   assert.deepEqual(Object.keys(s.relations), ["works_at", "reports_to", "partner_of", "investor_in", "uses", "speaker_at", "attended", "integrates_with", "customer_of"]);
-  assert.deepEqual(Object.keys(s.kinds), ["person", "organization", "product", "event", "tool"]);
+  assert.deepEqual(Object.keys(s.kinds), ["person", "organization", "product", "event", "tool", "meeting"]);
   assert.deepEqual(s.relations.investor_in.to, ["organization", "us"]);
   assert.equal(s.relations.customer_of.built_in, true);
   assert.deepEqual(schema.requiredRelations(s, "person").map(r => r.type), ["works_at"]);
 });
 
 test("each problem has its line and a fix; a removed customer_of row still exists", () => {
-  const bad = ["# Schema", "", "## Meeting", "", "| Field | What it means | Required |", "| --- | --- | --- |", "| date | When | yes |", "", "## Person", "",
+  const bad = ["# Schema", "", "## Projects", "", "| Field | What it means | Required |", "| --- | --- | --- |", "| date | When | yes |", "", "## Person", "",
     "| Field | What it means | Required |", "| --- | --- | --- |", "| Role | Job | yes |", "| team | Team | maybe |", "", "### intern", "", "## Relationships", "",
     "| Type | From | To | What it means | Required |", "| --- | --- | --- | --- | --- |", "| owns | person | deal | x | no |"].join("\n");
   const error = (() => { try { schema.parseSchema(bad); } catch (e) { return e; } })();
   assert.ok(error instanceof schema.SchemaFormatError);
   const at = n => error.problems.find(p => p.line === n);
-  assert.match(at(3).problem, /"## Meeting" is not a kind/); assert.match(at(3).proposal, /meeting evidence stays in context memories/);
+  assert.match(at(3).problem, /"## Projects" is not a kind/); assert.match(at(3).proposal, /project:<slug> tag/);
   assert.match(at(13).problem, /field "Role" must be lowercase/); assert.equal(at(13).proposal, "`role`");
   assert.match(at(14).problem, /Required of team must be yes or no/);
-  assert.match(at(22).problem, /To of owns must be person, organization, product, event, tool or us \(not deal\)/);
+  assert.match(at(22).problem, /To of owns must be person, organization, product, event, tool, meeting or us \(not deal\)/);
   const without = readFileSync(join(T, "SCHEMA.md"), "utf8").replace(/^\| customer_of .*\n/m, "");
   assert.ok(schema.parseSchema(without).relations.customer_of.built_in);
 });

@@ -47,6 +47,9 @@ if [ -n "$kind_out" ]; then
   [ "$kind_n" -gt 0 ] && echo "moved $kind_n entity page$([ "$kind_n" = 1 ] || echo s) into a folder per kind (brain/entities/people/, organizations/, ...), each named with its short id"
   changed=1; paths="$paths brain/entities"
 fi
+# 0.35.0: a meeting is an entity; meetings captured before get theirs (their notes are not rewritten).
+meet_out="$(node --input-type=module -e 'const lib=await import(process.argv[1]); const n=lib.deriveMeetingEntities(".").length; if(n)console.log(n)' "$PLUGIN/lib/brain.mjs")"
+if [ -n "$meet_out" ]; then echo "added $meet_out meeting page$([ "$meet_out" = 1 ] || echo s) (brain/entities/meetings/), one per meeting already captured"; changed=1; paths="$paths brain/entities"; fi
 # 0.27.0: guidelines become documents at the root; the root README says what goes where.
 docs_out="$(node --input-type=module -e 'const d=await import(process.argv[1]);const r=d.migrateGuidelines(".");for(const [f,t] of r.moved)console.log(`moved ${f} -> ${t}`);for(const [f,w] of r.kept)console.log(`kept ${f}: ${w}`);' "$PLUGIN/lib/documents.mjs")"
 if [ -n "$docs_out" ]; then

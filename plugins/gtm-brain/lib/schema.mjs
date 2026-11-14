@@ -6,8 +6,8 @@
 // cannot be read is reported with a fix per line and left as it is. Field values are never stored here: they
 // stay cited claims from memories (the entity brief's Fields), and relationships are memories with a
 // `relation` block (lib/relations.mjs). Every "## <Kind>" section with a field table is a kind; the five
-// DEFAULT_KINDS always exist, even when the file leaves their section out. Meetings and projects are not kinds:
-// meeting evidence stays in context memories, a project is a tag.
+// DEFAULT_KINDS always exist, even when the file leaves their section out. A meeting is a kind (its page collects
+// the notes with its meeting id; the transcript stays in its tool); a project is not, it is a tag.
 import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { createHash } from "node:crypto";

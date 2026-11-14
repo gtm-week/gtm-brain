@@ -33,6 +33,8 @@ export { validateRelationEvidence, guardRelationCorrection, relationOverview, re
 export { updateEntity, mergeEntities, archiveEntity, undoEntityMerge } from "./entity-lifecycle.mjs";
 export { entityFacts, entityBrief, entityRecords, compileEntity, resolveEntity, refreshEntityPages, staleEntities, entityEvidenceIndex, entityType, ENTITY_FORMAT } from "./entities.mjs";
 export { withEntityLock, startKindLayout, migrateToKindFolders } from './entities.mjs';
+export { ensureMeetingEntities, deriveMeetingEntities, meetingEntityId, meetingAttendees } from './meeting-entities.mjs';
+import { ensureMeetingEntities as meetingEntitiesFor, meetingAnchors, anchorOf } from './meeting-entities.mjs';
 export { layout as entityLayout, pagePaths as entityPagePaths, kindFolder, kindPagePath, assetFolder, findPage } from './layout.mjs';
 
 /* The machine-wide GTM Brain preferences file. */
@@ -653,6 +655,9 @@ export function mentionsIn(names, memory) {
     const forms = [n.name, ...n.aliases].filter(f => !f.includes("@")).map(normalized).filter(f => f.length >= 3 && owners.get(f).size === 1);
     if (forms.some(f => text.includes(" " + f + " "))) out.push(n.name);
   }
+  // a note with a meeting id belongs to that meeting's entity (lib/meeting-entities.mjs)
+  const anchor = anchorOf(memory);
+  if (anchor) for (const n of names) if (!out.includes(n.name) && meetingAnchors(n).includes(anchor)) out.push(n.name);
   return out;
 }
 /* Reuse registry normalization while indexing a stream of memories. The ordinary reader
@@ -666,7 +671,8 @@ export function createMentionMatcher(names) {
     for (const key of new Set([n.name, ...n.aliases].map(x => x.toLowerCase().split(/\s+/)[0]))) add(first, key, n.name);
     for (const key of new Set([n.name, ...n.aliases].map(normalized))) add(owners, key, n.name);
   }
-  const trie = new Map();
+  const trie = new Map(), meetings = new Map();
+  for (const n of names) for (const a of meetingAnchors(n)) if (!meetings.has(a)) meetings.set(a, n.name);
   names.forEach((n, index) => {
     for (const form of [n.name, ...n.aliases].filter(f => !f.includes('@')).map(normalized).filter(f => f.length >= 3 && owners.get(f).length === 1)) {
       let node = trie;
@@ -689,6 +695,8 @@ export function createMentionMatcher(names) {
       for (let end = at; end < words.length && (node = node.get(words[end])); end++) if (node.has(null)) found.add(node.get(null));
     }
     for (const index of [...found].sort((a, b) => a - b)) if (!out.includes(names[index].name)) out.push(names[index].name);
+    const anchor = anchorOf(memory), meeting = anchor && meetings.get(anchor);
+    if (meeting && !out.includes(meeting)) out.push(meeting);
     return out;
   };
 }
@@ -1371,6 +1379,8 @@ function appendMemoryRecord(root, slug, { authors, via = "codex", kind = "note",
   const duplicate = duplicateMeetingMemory(root, rec);
   if (duplicate) return { rec: duplicate, warnings: [], alreadyRecorded: true };
   appendMemoryBytes(root, slug, join(dir, "memories.jsonl"), JSON.stringify(rec) + "\n");
+  // a captured meeting is an entity of kind meeting from its first note on; later notes find it by meeting_id
+  if (rec.meeting && rec.meeting_id === rec.id) meetingEntitiesFor(root, [rec]);
   return { rec, warnings: unknownTools(root, tools).map(t => `tool "${t}" is not listed in admin.md`) };
 }
 /* append-only: the committed text must be an unchanged prefix of the new text. Returns null

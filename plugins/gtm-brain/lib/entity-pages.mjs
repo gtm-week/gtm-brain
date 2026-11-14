@@ -100,7 +100,7 @@ function pageFacts(root, e, related, contexts, notes, records) {
       if (count++) hash.update(',');
       hash.update(row.raw);
       const m = JSON.parse(row.raw);
-      if (cited.has(m.id) || m.relation || m.customer) retained.set(m.id, m);
+      if (cited.has(m.id) || m.relation || m.customer || (m.meeting && e.kind === 'meeting')) retained.set(m.id, m);
       if (m.retracts) recent(withdrawals, m, 20);
       else {
         total++; recent(local, m, 3); if (row.timeline_visible) recent(latest, m, ENTITY_TIMELINE_LIMIT);

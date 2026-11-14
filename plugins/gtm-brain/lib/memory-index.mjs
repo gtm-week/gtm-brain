@@ -11,11 +11,12 @@ import { entityStamp } from './entity-stamp.mjs';
 import { relationsToUs } from './relation-to-us.mjs';
 import { readSchema } from './schema.mjs';
 import { shortId } from './layout.mjs';
+import { meetingAnchors, anchorOf } from './meeting-entities.mjs';
 import { hasMemoryIndex, indexPath, openDatabase, cacheLock, retireCache, cacheResetPending } from './memory-index-store.mjs';
 export { hasMemoryIndex };
 export const MAX_RECORD_BYTES = 4 * 1024 * 1024;
 export const MAX_RESULT_BYTES = 2 * 1024 * 1024;
-export const MEMORY_INDEX_VERSION = 6;   // 5: source pointers as members (field source); 6: entity rows with relation to us and SCHEMA.md fields
+export const MEMORY_INDEX_VERSION = 7;   // 5: source pointers as members (field source); 6: entity rows with relation to us and SCHEMA.md fields; 7: meeting ids as identity refs
 const VERSION = MEMORY_INDEX_VERSION;
 const normalizeMention = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 function hashFile(path, size) {
@@ -108,7 +109,8 @@ export class MemoryIndex {
     lib.withEntityLock(this.root, () => {
       this.identityRevision = entityStamp(this.root);
       const names = lib.readNames(this.root);
-      this.identitySnapshot = names.map(({ id, name, aliases, emails, previous_ids }) => ({ id, name, aliases, emails, previous_ids }));
+      // a meeting entity also carries its anchors: notes with that meeting id link to it
+      this.identitySnapshot = names.map(e => { const { id, name, aliases, emails, previous_ids } = e, meetings = meetingAnchors(e); return { id, name, aliases, emails, previous_ids, ...(meetings.length ? { meetings } : {}) }; });
       // what query entities filters on: identity, the SCHEMA.md fields compiled on the page, and the page's dates
       const compiled = e => { try { const f = JSON.parse(e._fm?.compiled_fields || '[]'); return Array.isArray(f) ? f.filter(x => x && typeof x.field === 'string' && typeof x.text === 'string') : []; } catch { return []; } };
       this.entitySnapshot = names.map(e => ({ id: e.id, name: e.name, kind: e.kind || 'person', subtype: e.subtype ?? null, status: e.status || 'active', aliases: e.aliases || [], emails: e.emails || [], previous_ids: e.previous_ids || [],
@@ -171,7 +173,7 @@ export class MemoryIndex {
     for (const id of changed) {
       linked.run(JSON.stringify(id));
       for (const n of [old.get(id), next.get(id)].filter(Boolean)) {
-        for (const ref of [n.id, ...(n.previous_ids || []), n.name, ...n.aliases, ...n.emails]) refs.add(ref.trim().toLowerCase());
+        for (const ref of [n.id, ...(n.previous_ids || []), n.name, ...n.aliases, ...n.emails, ...(n.meetings || []).map(a => `meeting:${a}`)]) refs.add(ref.trim().toLowerCase());
         for (const ref of [n.name, ...n.aliases]) { refs.add(ref.toLowerCase().split(/\s+/)[0]); const form = normalizeMention(ref); if (form.length >= 3 && !ref.includes('@')) forms.add(form); }
       }
     }
@@ -251,7 +253,7 @@ export class MemoryIndex {
             const row = project(r);
             const rowid = insert.run(f.file, line, r.id, r.context, r.kind, r.via, r.at, Date.parse(r.at) || 0, JSON.stringify(r), JSON.stringify(row.entities), r.authors.join(' '), r.people.join(' '), r.tools.join(' '), r.content, ...asset(r), normalizeMention(r.content)).lastInsertRowid;
             for (const field of ['authors', 'people', 'tools', 'tags', 'entities']) for (const value of row[field]) member.run(rowid, field, JSON.stringify(value));
-            for (const ref of new Set([...(r.entities || []), ...r.people, ...(r.asset ? [r.asset.entity] : [])])) member.run(rowid, 'identity_ref', String(ref).trim().toLowerCase());
+            for (const ref of new Set([...(r.entities || []), ...r.people, ...(r.asset ? [r.asset.entity] : []), ...(anchorOf(r) ? [`meeting:${anchorOf(r)}`] : [])])) member.run(rowid, 'identity_ref', String(ref).trim().toLowerCase());
             for (const key of sourceMembers(r.source)) member.run(rowid, 'source', JSON.stringify(key));
             touch.run(rowid);
             for (const target of [r.supersedes, r.retracts].filter(Boolean)) { correction.run(rowid, f.file, target); touchTarget.run(f.file, target); }

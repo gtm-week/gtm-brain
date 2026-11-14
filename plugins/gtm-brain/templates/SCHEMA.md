@@ -1,14 +1,14 @@
 # Schema
 
-What this brain keeps about each person, organization, product, event and tool, and how they
+What this brain keeps about each person, organization, product, event, tool and meeting, and how they
 relate. Codex fills these fields from your notes, each value citing the notes it rests on, and
 lists a required field nobody has said yet as a gap to ask about. Edit freely, or say
 `/gtm-brain-schema` and Codex changes it for you. GTM Brain never overwrites your edits.
 
-Every `## <Kind>` section with a field table is a kind. Person, organization, product, event
-and tool always exist; add a section to add a kind. Add fields, organization subtypes and
-relationship types the same way. Meetings and projects are not kinds: meeting notes stay in
-their context, and a project is a tag.
+Every `## <Kind>` section with a field table is a kind. Person, organization, product, event,
+tool and meeting always exist; add a section to add a kind. Add fields, organization subtypes and
+relationship types the same way. A meeting's page collects the notes saved with its meeting id;
+the transcript or recording stays in its tool. Projects are not kinds: a project is a tag.
 
 ## Person
 
@@ -71,6 +71,15 @@ their context, and a project is a tag.
 | owner | Who on our team owns it | no |
 | cost | What it costs us | no |
 
+## Meeting
+
+| Field | What it means | Required |
+| --- | --- | --- |
+| date | When it took place, as a date | yes |
+| title | What the meeting was called | no |
+| organizer | Who set it up | no |
+| source | Where the transcript or recording is, as a link or tool:id; it stays there | no |
+
 ## Relationships
 
 A relationship is a note with a type, kept over time: when one ends, a new note says so, and the
@@ -85,6 +94,6 @@ side should have a current one.
 | investor_in | person, organization | organization, us | Has invested in | no |
 | uses | person, organization | product | Uses this product, ours or another | no |
 | speaker_at | person | event | Speaks or spoke at this event | no |
-| attended | person | event | Attends or attended this event | no |
+| attended | person | event, meeting | Attends or attended this event or meeting | no |
 | integrates_with | tool | tool | Connected to this other tool | no |
 | customer_of | person, organization | us | Customer status (customer, prospect, former customer), kept by the customer notes | no |

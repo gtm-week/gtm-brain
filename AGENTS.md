@@ -90,8 +90,10 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
   brain's SCHEMA.md: every `## <Kind>` section with a field table is a kind, and person,
   organization, product, event and tool are the defaults that always exist (`lib/kinds.mjs`,
   `schema.brainKinds`). Company and team are organization subtypes. Roles and relationships
-  are supported by context memories. Meeting evidence stays in context memories; it is not a
-  separate object type, and neither meeting nor project can be a kind.
+  are supported by context memories. A meeting is a default kind: a meeting entity is created
+  or found when a meeting is captured (`lib/meeting-entities.mjs`), its page collects the notes
+  carrying its meeting id, participants link to it with `attended`, and the evidence stays in
+  context memories (the raw transcript stays in its tool). A project cannot be a kind.
 - GTM Brain is English-only: conversations, dashboard labels, user-facing commands and brain
   records. There is no language preference to read, save or ask about. Keep tool identifiers,
   CLI flags, and the APPROVE token stable.

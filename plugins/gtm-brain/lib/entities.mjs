@@ -11,6 +11,7 @@ import { DEFAULT_KINDS, KIND_NAME, NOT_KINDS } from './kinds.mjs';
 import { pagePaths, isPagePath, linkFrom, layout, kindPagePath, isKindPagePath, assetFolder, ENTITIES_DIR } from './layout.mjs';
 import { writeKindIndexes } from './entity-index.mjs';
 import { MemoryIndex } from './memory-index.mjs';
+import { meetingAttendees } from './meeting-entities.mjs';
 import { brainRelationsToUs } from './relation-to-us.mjs';
 
 export const ENTITY_FORMAT = "gtm-brain-entity-v2";
@@ -674,6 +675,12 @@ function renderBrief(facts, brief, evidence, registry, scope) {
   const relationships = brief?.relationships.filter(c => !scope || c.memories.every(id => all.get(id).context === scope)) || [];
   if (relationships.length) out.push(recorded.length ? "\nAlso stated in notes:\n\n" + claims(relationships) : "\n" + claims(relationships));
   if (!recorded.length && !relationships.length) out.push("\nNo recorded or compiled relationships. Shared mentions alone do not establish a relationship.");
+  // a meeting's page: who attended (they link to it as attended), from its latest meeting record
+  if (facts.entity.kind === "meeting") {
+    const a = meetingAttendees(facts.evidence), who = n => { const e = lib.resolveEntity(registry, n); return e?._path ? link(e.name, linkFrom(page, e._path)) : md(n); };
+    out.push("\n## Attendees");
+    out.push(a ? `\n${a.attended.length ? `Attended: ${a.attended.map(who).join(", ")}.` : "Nobody is recorded as attending."}${a.invited.length ? ` Invited: ${a.invited.map(who).join(", ")}.` : ""} ${md(a.record.meeting.evidence)}, ${md(a.record.meeting.occurrence)} ${citation(a.record.id)}${a.record.meeting.reference ? `\n\nSource (the transcript or recording stays there): \`${md(a.record.meeting.reference.kind + ":" + a.record.meeting.reference.ref)}\`` : ""}` : "\nNo meeting record among the current notes.");
+  }
   const selected = scope ? facts.evidence.filter(m => m.context === scope).sort((a, b) => Date.parse(b.at) - Date.parse(a.at)) : evidence;
   const mentions = lib.createMentionMatcher(registry);
   const peers = new Set(scope ? selected.flatMap(mentions).filter(n => n !== facts.entity.name) : facts.related_identities.map(n => n.name));
