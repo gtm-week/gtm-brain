@@ -80,13 +80,14 @@ const at = n => batched ? `#${n} ` : "";
 // note's people and companies already have evidence. Anything else is held with the candidates in one
 // line, never guessed.
 const evidenceCtx = new Map();
+let evidenceBase;   // read once per call: a batch of placeless entries must not re-read every context each time
 const evidenceOf = e => {
   if (evidenceCtx.has(e)) return evidenceCtx.get(e);
-  const reg = lib.readNames(root);
+  evidenceBase ??= { reg: lib.readNames(root), active: lib.listContexts(root).filter(c => c.status === "active").map(c => ({ slug: c.slug, people: new Set(lib.effectiveMemories(c.memories).filter(m => !m.retracts).flatMap(m => m.people || [])) })) };
+  const { reg, active } = evidenceBase;
   const wanted = new Set([...list(e.people), ...list(e.companies), ...(e.customer?.entity ? [e.customer.entity] : [])]
     .map(n => lib.exactName(reg, n) || lib.inferredName(reg, n)).filter(Boolean));
-  const homes = !wanted.size ? [] : lib.listContexts(root).filter(c => c.status === "active" &&
-    lib.effectiveMemories(c.memories).some(m => !m.retracts && (m.people || []).some(p => wanted.has(p)))).map(c => c.slug);
+  const homes = !wanted.size ? [] : active.filter(c => [...wanted].some(p => c.people.has(p))).map(c => c.slug);
   const found = { slug: homes.length === 1 ? homes[0] : null, candidates: homes };
   evidenceCtx.set(e, found); return found;
 };
