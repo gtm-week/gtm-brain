@@ -340,6 +340,8 @@ const TOOLS = [
     inputSchema: schema({ confirm: { type: "boolean", description: "true only after the person said yes to the layout change the previous run described" } }),
     call: ({ brain, confirm }) => run(brain, "gtm-brain-upgrade/upgrade.sh", confirm === true ? ["--confirm"] : []).then(result) },
 ];
+// Tools that write only work/ (gitignored, this machine): they go on in a brain on a newer file layout.
+const LOCAL_ONLY = new Set(["load_context", "render_dashboard", "open_dashboard", "memory_index"]);
 // Compilation belongs to the scheduled and background runs (they export GTM_BRAIN_RUN before codex exec).
 // A chat never sees these tools: it queues the worker instead (ALL-204 step 1). tools/call still works.
 const RUN_ONLY_TOOLS = new Set(["compile_facts", "compile_apply", "compile_entity", "entity_facts"]);
@@ -540,8 +542,9 @@ async function handle(req) {
     if (!tool.noBrain && !isBrain(args.brain)) return reply(id, brainError(args.brain));
     // A brain on a newer file layout than this plugin understands (lib/layout-version.mjs): every write is
     // refused before it starts, reads go on with the line on top, and the chat start (which writes) is skipped.
+    // load_context and the dashboard and index tools write only this machine's work/, never the shared brain.
     const blocked = !tool.noBrain && layoutBlock(args.brain);
-    if (blocked && !tool.readOnly) { const r = text(blocked, true); logCall(args, tool.name, r); return reply(id, r); }
+    if (blocked && !tool.readOnly && !LOCAL_ONLY.has(tool.name)) { const r = text(blocked, true); logCall(args, tool.name, r); return reply(id, r); }
     // Every writer script logs its change (lib.commit) and re-renders the dashboard itself.
     // The chat start runs first: it pulls, refreshes the rules and re-loads contexts the call then reads.
     const start = blocked ? null : await opening(args).catch(() => null);
