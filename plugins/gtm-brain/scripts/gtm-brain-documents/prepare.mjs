@@ -26,7 +26,7 @@ function knowledge(root, terms) {
   } catch (e) { return { hits: [], entities: [], searched: 0, error: String(e.message || e).split("\n")[0] }; }
 }
 
-export function prepare(root, { title, file }) {
+export function prepare(root, { title, file, version = "", by = null }) {
   const all = docs.listDocuments(root), out = [];
   let subject = title, text = null;
   if (file) {
@@ -36,13 +36,14 @@ export function prepare(root, { title, file }) {
   }
   const starter = docs.matchStarter(`${subject} ${file ? basename(file, ".md") : ""}`);
   const slug = docs.documentSlug(subject), path = file || docs.documentPathFor(slug);
-  const known = [...new Set(all.filter(d => d.extra?.type !== "workflow").flatMap(d => d.applies_to))];
   const choices = (starter ? starter.choices : GENERIC).slice(0, 3);
   const over = docs.overlaps(root, subject, starter, all).filter(o => o.doc.path !== path);
 
   out.push(file ? `${file} is here but the brain does not use it yet. Adopting it keeps every word of it; it only gains the frontmatter below. Nothing is saved by this read.`
     : `Base file: ${subject} (${path} at the brain root). Nothing is saved by this read.`);
-  if (!file && all.some(d => d.path === path)) out.push(`${path} already exists: offer to fill or extend it (update), never a second file.`);
+  // the file is there already: it is filled or extended, never created twice, and what it governs stays as it is
+  const same = !file && all.find(d => d.path === path);
+  if (same) out.push(`${path} already exists [${same.state}] (${same.applies_to.join(", ")}): fill or extend it, never a second file.`);
 
   // 1. overlap: a base file that already covers the subject is offered first
   if (over.length) {
@@ -51,33 +52,46 @@ export function prepare(root, { title, file }) {
   } else out.push(`\nNo existing base file covers it (checked ${all.length}: title, applies_to, headings, text).`);
 
   // 2. the adoption's frontmatter, or the starter and what the brain knows
+  let blank = false;   // nothing known: this turn asks for the facts; the work question waits for the draft
   if (file) {
-    const shown = docs.writeFields(root, file, { title: subject, applies_to: (starter ? starter.choices[0] : choices[0]), status: "draft", by: null }, { preview: true });
-    out.push(`\nThe frontmatter adopting it adds (applies_to from the answer), shown before anything is written:\n${shown.frontmatter}Its ${shown.text.split("\n").length} lines below stay byte for byte. Adopt on the person's yes: document create, file ${file}, title "${subject}", applies_to from the answer, status draft.`);
+    const shown = docs.writeFields(root, file, { title: subject, applies_to: choices[0], status: "draft", by, version }, { preview: true });
+    out.push(`\nThe frontmatter adopting it adds (applies_to from the pick):\n${shown.frontmatter}Its ${shown.text.split("\n").length} lines below stay byte for byte.`);
   } else {
     if (starter) out.push(`\nStarter: ${starter.template}. Keep its headings; replace each guidance line with what the notes say; leave a heading empty rather than guess:\n\n${starter.body.replace(docs.HEADER_LINE, "").replace(/\n{3,}/g, "\n\n")}`);
     else out.push("\nNo starter for this subject: take three to five headings from what the notes say.");
     const terms = new Set([...docs.subjectWords(subject), ...(starter ? starter.terms : [])]);
     const k = knowledge(root, terms);
-    if (k.error) out.push(`\nThe notes could not be searched (${k.error}). Say so and ask for the facts below instead.`);
+    if (k.error) { blank = true; out.push(`\nThe notes could not be searched (${k.error}). Say so in one line, write no draft, and ask in one question for: ${(starter ? starter.needs : NEEDS).map((n, i) => `${i + 1}) ${n}`).join(", ")}. End the turn there.`); }
     if (k.hits.length) {
       out.push(`\nWhat the brain knows (${k.hits.length} note${k.hits.length === 1 ? "" : "s"} of ${k.searched} searched). Draft only from these and list the ones used under "Drawn from" (id, context, date):`);
       for (const h of k.hits) out.push(`- ${h.id} · ${h.context} · ${String(h.at || "").slice(0, 10)} · ${String(h.content || "").replace(/\s+/g, " ").slice(0, 240)}`);
       if (k.entities.length) out.push(`Entities named: ${k.entities.map(e => `${e.name} (${e.kind || "person"})`).join(", ")}.`);
     } else if (!k.error) {
-      const needs = starter ? starter.needs : NEEDS;
-      out.push(`\nThe brain holds nothing about ${subject.toLowerCase()} (${k.searched} note${k.searched === 1 ? "" : "s"} searched). Say so in one line, write no draft, and ask in one question for: ${needs.map((n, i) => `${i + 1}) ${n}`).join(", ")}. Never invent them. Draft from the answer, then ask the question below.`);
+      const needs = starter ? starter.needs : NEEDS; blank = true;
+      out.push(`\nThe brain holds nothing about ${subject.toLowerCase()} (${k.searched} note${k.searched === 1 ? "" : "s"} searched). Say so in one line, write no draft, and ask in one question for: ${needs.map((n, i) => `${i + 1}) ${n}`).join(", ")}. Never invent them. End the turn there.`);
     }
   }
-  if (known.length) out.push(`\nKinds of work the brain's base files already name: ${known.join(", ")}.`);
-
-  // 3. the one question
-  out.push(`\nThe one question (question policy; one line on why first: the brain reads it before that work):`);
+  if (same) {
+    const fill = !same.filled;
+    out.push(`\nThe one question. ${blank ? "Not in this turn: once the facts are in, draft from them, show the draft in full" : `Show the ${fill ? "draft" : "new section"} in full`}, then these lines word for word:\n`);
+    out.push(`The brain reads ${path} before ${listed(same.applies_to.join(", "))}, so this text is followed there.\nSave this to ${path}?\n1. Yes, save it (recommended)\n2. No, change something`);
+    out.push(`\nThen end the turn and write nothing. On yes, one call: document update, ref ${same.slug}, ${fill ? "body the draft (it replaces the starter text)" : "append the section (the rest stays as it is)"}.`);
+    out.push(`After saving, the closing line names the saved path: "Saved ${path} [${same.status}]. The brain reads it before ${listed(same.applies_to.join(", "))}."`);
+    return out.join("\n");
+  }
+  // 3. the one question, as literal lines: the why line, the question and the choices, recommended first. A pick
+  // is the yes (each choice says so), so the second turn is one write and nothing is asked again.
   const opts = over.length
-    ? [`Add it to ${over[0].doc.path} as a section`, ...choices.slice(0, 2).map(c => `A new ${path} for ${listed(c)}`)]
+    ? [`A section in ${over[0].doc.path}`, ...choices.slice(0, 2).map(c => `A new ${path} for ${listed(c)}`)]
     : choices.map(c => sentence(listed(c)));
-  out.push(`${over.length ? `Where should ${subject.toLowerCase()} go, and what work should follow it?` : "What work should follow this document?"}\n${opts.map((o, i) => `${i + 1}. ${o}${i === 0 ? " (recommended)" : ""}`).join("\n")}`);
-  out.push(file ? "Show the frontmatter with the question. Write nothing before the person's yes."
-    : `Show the draft in full with the question (the section alone when it goes into an existing file). Save only on the person's yes, as a draft: document create, title "${subject}", applies_to from the answer, body the draft; or update with append for a section. An answer without a yes: ask once "Save it as a draft?" (Yes, save it / No, change something). After saving, one line: the path, draft, and the work it now governs.`);
+  const why = file ? `The brain reads ${file} before the work you pick, so the pick decides when it is followed. Picking one adopts it as a draft; its text stays as it is.`
+    : `The brain reads ${over.length ? "it" : path} before the work you pick, so the pick decides when it is followed. Picking one saves it as a draft.`;
+  out.push(`\nThe one question. ${file ? "Show the frontmatter above" : blank ? "Not in this turn: once the facts are in, draft from them, show the draft in full" : "Show the draft in full"}, then these lines word for word, the why line and "(recommended)" included:\n`);
+  out.push(`${why}\n${over.length ? `Where should ${subject.toLowerCase()} go, and what work should follow it?` : `What work should follow ${file ? "this file" : "this document"}?`}\n${opts.map((o, i) => `${i + 1}. ${o}${i === 0 ? " (recommended)" : ""}`).join("\n")}`);
+  const target = over.length ? `update, ref ${over[0].doc.slug}, append the section (choice 1); or ` : "";
+  const how = file ? `document create, file ${file}, title "${subject}", applies_to from the pick, status draft`
+    : `${target}document create, title "${subject}", applies_to from the pick, body the draft, status draft`;
+  out.push(`\nThen end the turn and write nothing. A number or a kind of work is the yes: save with one call, ${how}. A change asked for is not a yes: make it, show the result again and ask the same question again.`);
+  out.push(`After saving, the closing line names the saved path: "Saved ${over.length ? "<path>" : path} as a draft. The brain reads it before <the work picked>."`);
   return out.join("\n");
 }
