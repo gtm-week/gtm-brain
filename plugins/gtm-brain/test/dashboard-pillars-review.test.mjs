@@ -208,3 +208,12 @@ test("Workflows and Entities on a brain with runs, its own skill and a customer:
     p.run('show("entities")'); assert.match(p.node("#pe-groups").innerHTML, /Northwind.*class="pl-rel">customer</s);
   } finally { rmSync(b, { recursive: true, force: true }); }
 });
+
+test("health line: a page without the tabs' data claims nothing about the brain's health", () => {
+  for (const make of [d => { delete d.pillars; }, d => { d.pillars = null; d.pillarsUnread = true; }]) {
+    const older = structuredClone(D); make(older);
+    const p = page(older), el = p.node("#health-line");
+    assert.ok(el.hidden || !/Nothing to report/.test(el.innerHTML), "an older page or unread tabs do not say all is quiet");
+  }
+  assert.match(page({ ...structuredClone(D), pillars: { ...structuredClone(D.pillars), health: null } }).node("#health-line").innerHTML, /Nothing to report yet/, "a brain with nothing to report says so");
+});

@@ -1001,7 +1001,7 @@ const kindTitle=k=>({person:"People",organization:"Organizations",product:"Produ
 const plUnreadMsg=`<p class="empty pl-warn">${esc("This tab could not be read from the brain's files. The other tabs and More still work. Ask Codex to check the brain.")}</p>`;
 const plEmpty=D.pillarsUnread?plUnreadMsg:`<p class="empty">${esc("Refresh the dashboard in Codex to see this tab: it was made by an older version.")}</p>`;
 const plUnread=s=>Array.isArray(PL?.unread)&&PL.unread.includes(s);
-function renderHealthLine(){const el=$("#health-line");if(!el)return;el.hidden=false;el.innerHTML=`<b>${esc("Health")}</b> `+(PL?.health?esc(PL.health):`<span class="pl-age">${esc("Nothing to report yet: no meeting capture, summary run or sync recorded.")}</span>`)}
+function renderHealthLine(){const el=$("#health-line");if(!el)return;el.hidden=!PL;if(!PL){el.innerHTML="";return}/* no tabs' data: nothing is known, so nothing is claimed */el.innerHTML=`<b>${esc("Health")}</b> `+(PL?.health?esc(PL.health):`<span class="pl-age">${esc("Nothing to report yet: no meeting capture, summary run or sync recorded.")}</span>`)}
 function renderConfig(){
  if(!PL){$("#cfg-docs").innerHTML=plEmpty;return}
  if(plUnread("configuration")){$("#cfg-docs").innerHTML=plUnreadMsg;return}
