@@ -21,8 +21,9 @@ if (!result.ready) {
 JS
 COMPANY="$(sed -n 's/^company:[[:space:]]*//p' brain/admin.md | head -1 | sed 's/^"//; s/"$//')"
 changed=0
-tmp="$(mktemp)"; sed -e "s|{{COMPANY}}|$(printf '%s' "$COMPANY" | sed -e 's/[&|]/\\&/g')|g" "$T/AGENTS.md" > "$tmp"
-if ! cmp -s "$tmp" AGENTS.md; then cp "$tmp" AGENTS.md; echo "updated AGENTS.md"; changed=1; fi; rm -f "$tmp"
+# The shipped rules; a person's own additions under "## This brain's own additions" are carried over word for word.
+rules_out="$(node --input-type=module -e 'const u=await import(process.argv[1]);if(u.writeRules(".",process.argv[2]))console.log("changed")' "$PLUGIN/lib/upgrade-files.mjs" "$T")"
+[ "$rules_out" = changed ] && { echo "updated AGENTS.md"; changed=1; }
 # 0.30.0: Claude Code reads CLAUDE.md; a marked block imports AGENTS.md, the person's own lines stay.
 shim="$(node --input-type=module -e 'const l=await import(process.argv[1]);if(l.ensureRulebookShim("."))console.log("changed")' "$PLUGIN/lib/brain.mjs")"
 [ "$shim" = changed ] && { echo "updated CLAUDE.md (imports AGENTS.md for Claude Code)"; changed=1; }
