@@ -349,7 +349,7 @@ test("upgrade moves a flat brain's entity pages into a folder per kind in one co
   const flat = {};
   for (const p of lib.entityPagePaths(root)) flat[p] = `brain/entities/${p.split("/").pop().replace(/-[0-9a-f]{6}\.md$/, "")}.md`;
   for (const [from, to] of Object.entries(flat)) { writeFileSync(join(root, to), readFileSync(join(root, from), "utf8").replace(/\]\(\.\.\/\.\.\/contexts\//g, "](../contexts/")); rmSync(join(root, from)); }
-  for (const f of ["people", "organizations", "products", "events", "tools", "meetings"]) rmSync(join(root, "brain/entities", f), { recursive: true, force: true });
+  for (const f of ["people", "organizations", "products", "events", "tools", "meetings", "offerings"]) rmSync(join(root, "brain/entities", f), { recursive: true, force: true });
   mkdirSync(join(root, "brain/entities/acme")); writeFileSync(join(root, "brain/entities/acme/logo.svg"), "<svg/>");
   assert.equal(lib.entityLayout(root), "flat");
   const ids = lib.readNames(root).map(n => [n.id, n.name, n.aliases, n.previous_ids]);
