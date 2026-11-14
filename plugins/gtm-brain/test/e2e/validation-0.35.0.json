@@ -3,22 +3,23 @@
  "branch": "validate/0.35.0",
  "base": "main 7890c69 (plugin 0.34.3)",
  "node": "v25.2.1",
- "note": "Validation of release/0.35.0 (6df7b9e) against main 7890c69 on 2026-11-14 from 14:55. One heavy job at a time. Main code ran from a second worktree at 7890c69 with the harness files (test/e2e/, test/live/mentor-shapes.mjs, capture-cases.mjs, tool-routing.mjs) copied in uncommitted. Each shape was generated once per code version with seed 1, because the brain format differs (templates SCHEMA.md, AGENTS.md, admin.md and market.md changed). Compare pass, fail and known_gap; ms is only indicative: other agents ran test suites on the same machine at times (load average reached 237 at 15:12 during the release medium generation).",
+ "note": "Validation of release/0.35.0 (6df7b9e) against main 7890c69 on 2026-11-14, 14:55 to 16:10. One heavy job at a time. Main code ran from a second worktree at 7890c69 with the harness files (test/e2e/, test/live/mentor-shapes.mjs, capture-cases.mjs, tool-routing.mjs) copied in uncommitted. Each shape was generated once per code version with seed 1, because the brain format differs (templates SCHEMA.md, AGENTS.md, admin.md and market.md changed). Compare pass, fail and known_gap; ms is only indicative: other agents ran test suites on the same machine (load average 237 at 15:12 and 210 at 16:10). The run was stopped at 16:10 on the coordinator's instruction, before the large shape, the suite and the live cases. The counts below are the last run of each shape with the final harness (commit 4f82962); small is the suite test e2e.test.mjs on release code only.",
  "shapes": {
   "medium": {
    "generation": {
-    "main": "446 s for 4,990 notes on a quiet machine (about 85 ms per note)",
-    "release": "about 1,250 s, slowed by the load spike at 15:12 (610 ms per note at the worst, about 100 ms when quiet)"
+    "main": "446 s for 4,990 notes on a quiet machine (about 85 ms per note, flat from the first to the last 500)",
+    "release": "about 1,250 s, slowed by the load spike at 15:12 (610 ms per note at the worst)"
    },
+   "runs": "main 3 runs, release 4 runs; no plain failure in any run once the two pipe-cut checks were marked",
    "main": {
     "summary": {
      "shape": "medium",
      "notes": 5000,
-     "total": 51,
-     "pass": 41,
+     "total": 53,
+     "pass": 42,
      "fail": 0,
-     "known_gap": 10,
-     "ms": 37824
+     "known_gap": 11,
+     "ms": 49244
     },
     "not_passing": [
      {
@@ -27,7 +28,7 @@
       "note": "missing 2/3",
       "known_gap": "unstemmed search: invoice does not find invoicing or invoiced",
       "bytes": 362,
-      "ms": 141
+      "ms": 131
      },
      {
       "id": "search.typo",
@@ -35,7 +36,7 @@
       "note": "missing 3/3",
       "known_gap": "memory search has no typo tolerance",
       "bytes": 7,
-      "ms": 144
+      "ms": 138
      },
      {
       "id": "search.note_ids_on_lines",
@@ -43,7 +44,7 @@
       "note": "missing 3/3",
       "known_gap": "recall read lines carry no note id",
       "bytes": 617,
-      "ms": 105
+      "ms": 111
      },
      {
       "id": "brief.size_bounded",
@@ -51,7 +52,15 @@
       "note": "33389 bytes for 49 notes",
       "known_gap": "entity briefs grow without bound",
       "bytes": 33389,
-      "ms": 443
+      "ms": 528
+     },
+     {
+      "id": "relations.entity_scope",
+      "status": "known_gap",
+      "note": "572 of 588 lines are not about Granite Partners",
+      "known_gap": "query relations ignores search: entities.mjs --relations swallows the option after it, so every relationship (or every one of the type) comes back; same on main",
+      "bytes": 65536,
+      "ms": 464
      },
      {
       "id": "relations.history_ids",
@@ -59,7 +68,7 @@
       "note": "missing 1/2",
       "known_gap": "relation history lists dates without the note ids",
       "bytes": 9009,
-      "ms": 249
+      "ms": 343
      },
      {
       "id": "relations.all",
@@ -67,7 +76,7 @@
       "note": "6 of 20 sampled missing, 65536 bytes",
       "known_gap": "query relations and query customers are cut at 64 KiB through the server pipe (entities.mjs prints, then process.exit); same on main",
       "bytes": 65536,
-      "ms": 263
+      "ms": 318
      },
      {
       "id": "customers.listed",
@@ -75,7 +84,7 @@
       "note": "9 of 10 missing, 65536 bytes",
       "known_gap": "query relations and query customers are cut at 64 KiB through the server pipe (entities.mjs prints, then process.exit); same on main",
       "bytes": 65536,
-      "ms": 203
+      "ms": 410
      },
      {
       "id": "compile.facts_full",
@@ -83,7 +92,7 @@
       "note": "digest: 0 shown + 0 counted of 2560, 65379 chars",
       "known_gap": "compile --facts is cut at 64 KiB",
       "bytes": 65536,
-      "ms": 5896
+      "ms": 5643
      },
      {
       "id": "compile.facts_mcp",
@@ -91,14 +100,14 @@
       "note": "digest: 0 shown + 0 counted of 989",
       "known_gap": "compile --facts is cut at 64 KiB",
       "bytes": 65536,
-      "ms": 2827
+      "ms": 2567
      },
      {
       "id": "load_context.icp",
       "status": "known_gap",
       "known_gap": "load_context read lines carry no note id",
       "bytes": 4733,
-      "ms": 92
+      "ms": 110
      }
     ]
    },
@@ -106,11 +115,11 @@
     "summary": {
      "shape": "medium",
      "notes": 5000,
-     "total": 51,
+     "total": 53,
      "pass": 46,
      "fail": 0,
-     "known_gap": 5,
-     "ms": 38349
+     "known_gap": 7,
+     "ms": 67689
     },
     "not_passing": [
      {
@@ -119,7 +128,7 @@
       "note": "missing 2/3",
       "known_gap": "unstemmed search: invoice does not find invoicing or invoiced",
       "bytes": 362,
-      "ms": 123
+      "ms": 134
      },
      {
       "id": "search.typo",
@@ -127,7 +136,15 @@
       "note": "missing 3/3",
       "known_gap": "memory search has no typo tolerance",
       "bytes": 7,
-      "ms": 116
+      "ms": 136
+     },
+     {
+      "id": "relations.entity_scope",
+      "status": "known_gap",
+      "note": "572 of 588 lines are not about Granite Partners",
+      "known_gap": "query relations ignores search: entities.mjs --relations swallows the option after it, so every relationship (or every one of the type) comes back; same on main",
+      "bytes": 65535,
+      "ms": 293
      },
      {
       "id": "relations.history_ids",
@@ -135,7 +152,7 @@
       "note": "missing 1/2",
       "known_gap": "relation history lists dates without the note ids",
       "bytes": 9009,
-      "ms": 313
+      "ms": 504
      },
      {
       "id": "relations.all",
@@ -143,7 +160,7 @@
       "note": "6 of 20 sampled missing, 65535 bytes",
       "known_gap": "query relations and query customers are cut at 64 KiB through the server pipe (entities.mjs prints, then process.exit); same on main",
       "bytes": 65535,
-      "ms": 347
+      "ms": 390
      },
      {
       "id": "customers.listed",
@@ -151,7 +168,247 @@
       "note": "9 of 10 missing, 65536 bytes",
       "known_gap": "query relations and query customers are cut at 64 KiB through the server pipe (entities.mjs prints, then process.exit); same on main",
       "bytes": 65536,
-      "ms": 263
+      "ms": 233
+     },
+     {
+      "id": "index.read_after_write",
+      "status": "known_gap",
+      "note": "3 reads refused with Memory index is busy and retried (in check number 49)",
+      "known_gap": "a read right after a write can be refused: Memory index is busy (the index lock waits 1 s while the dashboard render started by the write refreshes the index); the note is there on retry; same on main",
+      "bytes": 0,
+      "ms": 0
+     }
+    ]
+   },
+   "differs": [
+    {
+     "id": "search.note_ids_on_lines",
+     "main": "known_gap",
+     "release": "pass"
+    },
+    {
+     "id": "brief.size_bounded",
+     "main": "known_gap",
+     "release": "pass"
+    },
+    {
+     "id": "compile.facts_full",
+     "main": "known_gap",
+     "release": "pass"
+    },
+    {
+     "id": "compile.facts_mcp",
+     "main": "known_gap",
+     "release": "pass"
+    },
+    {
+     "id": "load_context.icp",
+     "main": "known_gap",
+     "release": "pass"
+    },
+    {
+     "id": "index.read_after_write",
+     "main": "pass",
+     "release": "known_gap"
+    }
+   ]
+  },
+  "messy": {
+   "generation": {
+    "main": "483 s",
+    "release": "646 s"
+   },
+   "runs": "main 4 runs, release 5 runs. All ten trap checks pass on both. With the final harness (refused reads retried): main 50 pass, 0 fail, 13 known gaps twice; release 55 pass, 0 fail, 8 known gaps twice.",
+   "main": {
+    "summary": {
+     "shape": "messy",
+     "notes": 5000,
+     "total": 63,
+     "pass": 50,
+     "fail": 0,
+     "known_gap": 13,
+     "ms": 82134
+    },
+    "not_passing": [
+     {
+      "id": "search.stemmed",
+      "status": "known_gap",
+      "note": "missing 2/3",
+      "known_gap": "unstemmed search: invoice does not find invoicing or invoiced",
+      "bytes": 365,
+      "ms": 215
+     },
+     {
+      "id": "search.typo",
+      "status": "known_gap",
+      "note": "missing 3/3",
+      "known_gap": "memory search has no typo tolerance",
+      "bytes": 7,
+      "ms": 209
+     },
+     {
+      "id": "search.note_ids_on_lines",
+      "status": "known_gap",
+      "note": "missing 3/3",
+      "known_gap": "recall read lines carry no note id",
+      "bytes": 614,
+      "ms": 193
+     },
+     {
+      "id": "brief.size_bounded",
+      "status": "known_gap",
+      "note": "50096 bytes for 72 notes",
+      "known_gap": "entity briefs grow without bound",
+      "bytes": 50096,
+      "ms": 714
+     },
+     {
+      "id": "relations.entity_scope",
+      "status": "known_gap",
+      "note": "555 of 585 lines are not about Fernbrook Partners",
+      "known_gap": "query relations ignores search: entities.mjs --relations swallows the option after it, so every relationship (or every one of the type) comes back; same on main",
+      "bytes": 65535,
+      "ms": 479
+     },
+     {
+      "id": "relations.history_ids",
+      "status": "known_gap",
+      "note": "missing 1/2",
+      "known_gap": "relation history lists dates without the note ids",
+      "bytes": 8541,
+      "ms": 431
+     },
+     {
+      "id": "relations.job_change",
+      "status": "known_gap",
+      "note": "65536 bytes",
+      "known_gap": "query relations ignores search: entities.mjs --relations swallows the option after it, so every relationship (or every one of the type) comes back; same on main",
+      "bytes": 65536,
+      "ms": 535
+     },
+     {
+      "id": "relations.all",
+      "status": "known_gap",
+      "note": "9 of 20 sampled missing, 65535 bytes",
+      "known_gap": "query relations and query customers are cut at 64 KiB through the server pipe (entities.mjs prints, then process.exit); same on main",
+      "bytes": 65535,
+      "ms": 847
+     },
+     {
+      "id": "customers.listed",
+      "status": "known_gap",
+      "note": "8 of 10 missing, 65536 bytes",
+      "known_gap": "query relations and query customers are cut at 64 KiB through the server pipe (entities.mjs prints, then process.exit); same on main",
+      "bytes": 65536,
+      "ms": 419
+     },
+     {
+      "id": "compile.facts_full",
+      "status": "known_gap",
+      "note": "digest: 0 shown + 0 counted of 2590, 65384 chars",
+      "known_gap": "compile --facts is cut at 64 KiB",
+      "bytes": 65536,
+      "ms": 9019
+     },
+     {
+      "id": "compile.facts_mcp",
+      "status": "known_gap",
+      "note": "digest: 0 shown + 0 counted of 993",
+      "known_gap": "compile --facts is cut at 64 KiB",
+      "bytes": 65536,
+      "ms": 3732
+     },
+     {
+      "id": "load_context.icp",
+      "status": "known_gap",
+      "known_gap": "load_context read lines carry no note id",
+      "bytes": 4907,
+      "ms": 187
+     },
+     {
+      "id": "index.read_after_write",
+      "status": "known_gap",
+      "note": "4 reads refused with Memory index is busy and retried (in check number 48, 50)",
+      "known_gap": "a read right after a write can be refused: Memory index is busy (the index lock waits 1 s while the dashboard render started by the write refreshes the index); the note is there on retry; same on main",
+      "bytes": 0,
+      "ms": 0
+     }
+    ]
+   },
+   "release": {
+    "summary": {
+     "shape": "messy",
+     "notes": 5000,
+     "total": 63,
+     "pass": 55,
+     "fail": 0,
+     "known_gap": 8,
+     "ms": 66618
+    },
+    "not_passing": [
+     {
+      "id": "search.stemmed",
+      "status": "known_gap",
+      "note": "missing 2/3",
+      "known_gap": "unstemmed search: invoice does not find invoicing or invoiced",
+      "bytes": 363,
+      "ms": 186
+     },
+     {
+      "id": "search.typo",
+      "status": "known_gap",
+      "note": "missing 3/3",
+      "known_gap": "memory search has no typo tolerance",
+      "bytes": 7,
+      "ms": 185
+     },
+     {
+      "id": "relations.entity_scope",
+      "status": "known_gap",
+      "note": "557 of 586 lines are not about Fernbrook Partners",
+      "known_gap": "query relations ignores search: entities.mjs --relations swallows the option after it, so every relationship (or every one of the type) comes back; same on main",
+      "bytes": 65536,
+      "ms": 433
+     },
+     {
+      "id": "relations.history_ids",
+      "status": "known_gap",
+      "note": "missing 1/2",
+      "known_gap": "relation history lists dates without the note ids",
+      "bytes": 8541,
+      "ms": 339
+     },
+     {
+      "id": "relations.job_change",
+      "status": "known_gap",
+      "note": "65536 bytes",
+      "known_gap": "query relations ignores search: entities.mjs --relations swallows the option after it, so every relationship (or every one of the type) comes back; same on main",
+      "bytes": 65536,
+      "ms": 407
+     },
+     {
+      "id": "relations.all",
+      "status": "known_gap",
+      "note": "9 of 20 sampled missing, 65536 bytes",
+      "known_gap": "query relations and query customers are cut at 64 KiB through the server pipe (entities.mjs prints, then process.exit); same on main",
+      "bytes": 65536,
+      "ms": 344
+     },
+     {
+      "id": "customers.listed",
+      "status": "known_gap",
+      "note": "8 of 10 missing, 65536 bytes",
+      "known_gap": "query relations and query customers are cut at 64 KiB through the server pipe (entities.mjs prints, then process.exit); same on main",
+      "bytes": 65536,
+      "ms": 267
+     },
+     {
+      "id": "index.read_after_write",
+      "status": "known_gap",
+      "note": "4 reads refused with Memory index is busy and retried (in check number 49)",
+      "known_gap": "a read right after a write can be refused: Memory index is busy (the index lock waits 1 s while the dashboard render started by the write refreshes the index); the note is there on retry; same on main",
+      "bytes": 0,
+      "ms": 0
      }
     ]
    },
@@ -183,14 +440,10 @@
     }
    ]
   },
-  "messy": {
-   "main": "not run",
-   "release": "not run",
-   "differs": []
-  },
   "large": {
+   "generation": "not generated. Started once on release code only to measure the cost and stopped at 16:10: 2,470 entities took 60 s to write and no 500-note line was reached under load average 210.",
    "main": "not run",
-   "release": "not run",
+   "release": "not run: see shapes.large.generation and findings (large shape cost)",
    "differs": []
   }
  },
@@ -198,35 +451,60 @@
   {
    "check": "relations.all",
    "shapes": [
-    "medium"
+    "medium",
+    "messy"
    ],
-   "on_main": "fails the same way (6 of 20 sampled, reply exactly 65,536 bytes)",
+   "on_main": "fails the same way (medium: 6 of 20 sampled missing, reply exactly 65,536 bytes)",
    "on_release": "fails the same way",
-   "verdict": "existing limit on main, not a regression",
-   "root_cause": "scripts/gtm-brain-entities/entities.mjs prints --relations with console.log and then calls process.exit(0). The MCP server reads the script through a pipe (server.mjs run, execFile), and on macOS the exit drops everything after the first 64 KiB of pipe buffer. Run with stdout to a file the script writes all 179 KiB and nothing is missing. The lines in entities.mjs are unchanged between main and the release. It is the same defect lane A fixed for compile --facts (the finish helper in compile.mjs); entities.mjs was not in that lane.",
-   "action": "marked known_gap in e2e.mjs (PIPE_CUT) with the byte count in the note. Not fixed here: the instruction for an existing limit was to mark it. The fix is the compile.mjs finish helper (await the stdout write, then exit), plus a decision on how much of a 180 KiB list a model should get."
+   "verdict": "existing defect on main, not a regression",
+   "root_cause": "scripts/gtm-brain-entities/entities.mjs prints --relations with console.log and then calls process.exit(0). The MCP server reads the script through a pipe (server.mjs run, execFile), and the exit drops everything after the first 64 KiB. With stdout to a file the script writes all 179 KiB and nothing is missing; piped into wc it gives 65,536 bytes every time. The lines are unchanged between main and the release. It is the defect lane A fixed for compile --facts (the finish helper in compile.mjs); entities.mjs was not in that lane.",
+   "action": "marked known_gap in e2e.mjs (PIPE_CUT), byte count in the note. Not fixed: the instruction for a limit that exists on main was to mark it. Fix: write through the compile.mjs finish helper (await the stdout write, then exit), and decide how much of a 180 KiB list a model should get."
   },
   {
    "check": "customers.listed",
    "shapes": [
-    "medium"
+    "medium",
+    "messy"
    ],
-   "on_main": "fails the same way (9 of 10, reply exactly 65,536 bytes)",
+   "on_main": "fails the same way (medium: 9 of 10 missing, 65,536 bytes)",
    "on_release": "fails the same way",
-   "verdict": "existing limit on main, not a regression",
-   "root_cause": "The same pipe cut: entities.mjs --customers prints JSON (339 KiB for the medium brain) with console.log, then process.exit(0). The reply the model gets is the first 64 KiB of a JSON document, so it is also invalid JSON.",
+   "verdict": "existing defect on main, not a regression",
+   "root_cause": "The same pipe cut: entities.mjs --customers prints JSON (339 KiB for the medium brain) with console.log, then process.exit(0). The model gets the first 64 KiB of a JSON document, which is also invalid JSON.",
    "action": "marked known_gap in e2e.mjs (PIPE_CUT)."
   },
   {
    "check": "remember.batch_mcp",
    "shapes": [
-    "medium"
+    "medium",
+    "messy"
    ],
-   "on_main": "passes",
-   "on_release": "passes on a quiet machine: the e2e run twice, and a separate probe (one batch of three over MCP, each note queried at once) four times, every note found",
-   "verdict": "not reproduced; the earlier failure came from the overloaded machine, the exact path is not proven",
-   "root_cause": "Not a lost write: remember.mjs --batch writes the three notes before it prints, and the earlier run reported no remember error. The read after it goes through the memory index, which refuses to answer rather than return partial rows when its refresh does not finish (sync budget 20 s, reader limit 60 s including queue wait, 'refresh is in progress'). The check counted any reply without rows as missing, so a refused or late read under load average 20 to 120 looked like a missing note. The earlier reply text was not kept (that run's debug file is empty: the harness crashed in cleanup).",
-   "action": "harness: on a miss the check now records whether the read failed or came back empty and whether the note is there 2 s later. Pass still needs all three at once."
+   "on_main": "same refusal seen on main messy in every run (the third note of the batch in two runs)",
+   "on_release": "seen on release messy and medium; in one release messy run it also hit remember.single, remember.batch_script and corrections.supersede",
+   "verdict": "existing behaviour on main, not a regression and not a lost write; intermittent",
+   "root_cause": "The notes are written (remember reports all three ids). The query right after is refused: 'query failed: Memory index is busy; retry after the current refresh. database is locked', and the same query 2 s later finds the note. Every index connection takes a coordination lock (lib/memory-index-store.mjs cacheLock, BEGIN IMMEDIATE on work/memory-index-lock.sqlite) and waits 1,000 ms for it. remember ends with lib.rerender, which starts a dashboard render in the background; lib/dashboard-data.mjs and lib/entity-pages.mjs read through the index, so the render holds the lock while it refreshes a 5,000-note index. That the render is the holder is read from the code, not traced. memory-index-store.mjs is identical on main and the release. Refusals per messy run with retries counted: main 4 and 4, release 6 and 4.",
+   "action": "harness: a read refused with Memory index is busy is retried (the reply says to), and the new check index.read_after_write reports the count as one known gap, so a write check no longer fails at random. Product follow-up: a longer lock wait for reads, or a retry inside the server."
+  },
+  {
+   "check": "relations.job_change",
+   "shapes": [
+    "messy"
+   ],
+   "on_main": "fails",
+   "on_release": "fails",
+   "verdict": "existing defect on main, not a regression",
+   "root_cause": "query relations ignores search. entities.mjs line 13 reads options as --name value pairs starting at --relations itself, so the option right after --relations becomes its value and is lost. Checked by hand on both code versions: --relations --entity X returns every relationship (1,598), --relations --entity X --type partner_of returns all 80 partnerships, --relations --type partner_of --entity X returns X's 32 relations of every type. The server always sends --entity first, so over MCP the entity is never applied. The older relation checks passed because the entity is somewhere in the full list; on messy the works_at list is over 64 KiB and the job change falls behind the pipe cut. No suite test runs --relations through the script.",
+   "action": "new check relations.entity_scope (every line of an entity-scoped read must name the entity), known_gap ENTITY_DROPPED on it and on relations.job_change. Not fixed, for the same reason as the pipe cut. Fix: parse the options after --relations, and a test through the script or the server."
+  },
+  {
+   "check": "corrections.supersede, remember.single, remember.batch_script",
+   "shapes": [
+    "messy"
+   ],
+   "on_main": "pass in the runs made",
+   "on_release": "each failed once, before the harness retried refused reads; pass in the two runs after",
+   "verdict": "the same refused read after a write as remember.batch_mcp; harness fixed",
+   "root_cause": "In the release messy run where they failed, batch_mcp showed the Memory index is busy refusal; the reply text of these three reads was not kept in that run, so for them the cause is inferred from the retry fixing them.",
+   "action": "covered by the retry and index.read_after_write."
   },
   {
    "check": "(harness) e2e.mjs cleanup",
@@ -234,14 +512,71 @@
     "medium"
    ],
    "verdict": "harness mistake, fixed",
-   "root_cause": "runChecks killed the server and removed the scratch brain in the same tick; a child of the server was still writing into work/, rmSync threw ENOTEMPTY and the whole run's results were lost (first main medium run here, and the empty medium-debug.json of the earlier run).",
+   "root_cause": "runChecks killed the server and removed the scratch brain in the same tick; a child of the server was still writing into work/, rmSync threw ENOTEMPTY and the whole run's results were lost (the first main medium run here, and the empty medium-debug.json of the earlier run).",
    "action": "e2e.mjs waits for the server to exit and treats cleanup as best effort."
+  },
+  {
+   "check": "(cost) large shape",
+   "shapes": [
+    "large"
+   ],
+   "verdict": "too slow to generate through lib; measured instead",
+   "root_cause": "On a quiet machine medium costs about 85 ms per note and the cost does not grow with the number of notes; it grows with the number of entities. A CPU profile of 60 lib.appendMemory calls on the release medium brain (taken at load average 16, so 227 ms per note there): about 85% of the time is the entity registry being read again for every note: readFileSync 39%, parseEntityText 17.5%, parseFrontmatter 12%, lstatSync 7%, readEntityFiles 3%. One lib.readNames costs about half of one appendMemory, so the registry is read about twice per note. Large has 2,470 entities against 1,420: an estimate of 150 ms per note, about two hours for 50,000 notes on a quiet machine. The estimate is not measured.",
+   "action": "none in code. A registry cache inside lib.withEntityLock would remove most of it."
   }
  ],
- "suite": "not run yet",
- "live": "not run yet",
- "commits": [],
+ "suite": "not run on validate/0.35.0 (stopped before step 4). Only plugins/gtm-brain/test/e2e.test.mjs was run, after the first harness changes: 1 test, pass. sync-derived --check was not run. The commits here change only files under plugins/gtm-brain/test/.",
+ "live": {
+  "status": "no live case was run in this validation (stopped before step 5)",
+  "diagnosis_from_the_earlier_traces": [
+   {
+    "case": "skill-todo",
+    "failed": [
+     "route"
+    ],
+    "verdict": "the case's expectation is wrong",
+    "why": "The route needs a call to a question tool (question, configuration_question, onboarding_question). Commit 7ed4f4d on main removed those tools: GTM Brain asks through Codex's own box or in plain chat text. codex exec has no box, so the model asked in chat text ('Does Castorama buy in Q4? ...' with three numbered options), which is what the policy says. Reads, no writes and the wording check all passed."
+   },
+   {
+    "case": "skill-define-icp-interview",
+    "failed": [
+     "route",
+     "state"
+    ],
+    "verdict": "the case's expectation is wrong",
+    "why": "interviewRoute needs exactly one call to the removed question tool, and verify needs one question form in the trace. The final message is one focused question about the broader company pattern, nothing was written. test/define-icp.test.mjs pins the old route with a question call, so the case and that test have to change together; not changed here."
+   },
+   {
+    "case": "mentor-strategy",
+    "failed": [
+     "route"
+    ],
+    "verdict": "the harness was wrong, fixed",
+    "why": "interview() in mentor-shapes.mjs, new in this release, needed a question tool call. The model asked one question in chat text and wrote nothing. Now the route is no writes and the question is checked in the final message. Not rerun."
+   },
+   {
+    "case": "capture-decision",
+    "failed": [
+     "route",
+     "state"
+    ],
+    "verdict": "the case's expectation is wrong for this prompt; one product question is open",
+    "why": "The prompt says 'Anna from finance signed off'. The model looked up Anna (no match) and Castorama (resolved), then asked 'Who is Anna from finance?' with two options and wrote nothing. Rule P3 (a first name alone is never a new person) makes remember hold such a note and ask, and the harness cannot answer a chat question, so the case cannot pass in one turn. The model asked without calling remember first; the remember description says to write first and ask what the result says to ask. Whether the discount should be saved at once without the person link is a product decision. Not changed here."
+   }
+  ],
+  "other_stale_cases": "skill-document-fill, skill-create, the ICP update cases and context-routing-cases.mjs also test for question tool calls; not run, not changed."
+ },
+ "commits": [
+  "c56d898 e2e validation 0.35.0: medium on main and release, harness fixes",
+  "4f82962 e2e harness: relations entity scope check, refused reads retried and counted",
+  "the commit that adds this file's final state"
+ ],
  "unverified": [
-  "messy, large, the suite and the live cases: in progress"
+  "large shape on main and on release: not generated, not checked",
+  "whole suite and sync-derived --check on validate/0.35.0: not run",
+  "all seven live cases on the medium brain, on release and on main: not run; the mentor-shapes.mjs interview fix is untested against a live run",
+  "small shape on main code with the final harness: not rerun (baseline.json holds the earlier main run)",
+  "that the dashboard render is the process holding the index lock: read from the code, not traced",
+  "the large per-note estimate: extrapolated from the medium profile"
  ]
 }
