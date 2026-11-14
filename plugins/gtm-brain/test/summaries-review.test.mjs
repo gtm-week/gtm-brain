@@ -7,7 +7,7 @@ process.env.GTM_BRAIN_NO_WATCH = "1";
 //   a refused entity overview names a read the chat has, says the line for the person and reaches the health line
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawn, execFileSync, spawnSync } from "node:child_process";
@@ -140,4 +140,41 @@ test("a refused entity overview names a read the chat has, says one line for the
   const ok = await call("compile_entity", { brain: root, entity: facts.entity.id, by: "ann", as_of: facts.as_of, brief });
   assert.ok(!ok.isError, ok.text);
   assert.doesNotMatch(health(root), /last failure/, "the write that followed clears it");
+});
+
+// Second review (cloud handover): the cached summary with its age, the rule a 0.34 rulebook carries, and shipped text.
+test("a cached summary is returned with its age, and no as_of or write instruction while no note is newer", () => {
+  const root = brain();
+  remember(root, "Acme wants a pilot in December.");
+  const asOf = load(root).match(/as_of (s_[0-9a-f]+)/)[1], [id] = newIds(root);
+  assert.equal(apply(root, asOf, `Acme wants a pilot in December 2026 [${id}].`).status, 0);
+  const later = new Date(Date.now() + 3 * 864e5 + 3600e3).toISOString();
+  const out = node("gtm-brain-load/load.mjs", ["icp", "--only"], root, { GTM_BRAIN_NOW: later }).stdout;
+  assert.match(out, /Summary \(as of \d{4}-\d{2}-\d{2}, 3 days old\): Acme wants a pilot/);
+  assert.doesNotMatch(out, /Summary behind|as_of s_|compile_apply/);
+  assert.match(out, /## Last 1 of 1 memories/, "a current summary keeps the usual last-N list");
+});
+
+test("the write instruction says this load is the ask a pre-0.35 rulebook allows, so 'never compile in the chat' does not stop it", () => {
+  const root = brain();
+  remember(root, "Acme wants a pilot in December.");
+  const rule = readFileSync(join(root, "AGENTS.md"), "utf8");
+  const out = load(root);
+  assert.match(out, /This load is the person's ask that AGENTS\.md rule 1b allows: write it here\./);
+  if (/Never compile in the chat/.test(rule)) assert.match(rule, /^1b\. /m, "the rule the instruction names is still 1b");
+});
+
+// Shipped text that still promises a background summary. templates/AGENTS.md belongs to another lane (its byte limit
+// and legacy snapshots); it is listed as a todo so the conflict stays visible until that lane rewrites rule 1b.
+const PROMISE = /summar(?:y|ies) (?:is |are )?(?:update|updating|updates)\b[^.\n]*(?:background|by themselves|shortly)|summaries update by themselves|refill in the background|updated by a separate run shortly/i;
+const shipped = () => {
+  const out = [], walk = d => { for (const n of readdirSync(d, { withFileTypes: true })) { const p = join(d, n.name); if (n.isDirectory()) { if (!["legacy", "node_modules", "test", "ui"].includes(n.name)) walk(p); } else if (/\.(md|mjs|sh)$/.test(n.name)) out.push(p); } };
+  walk(P); return out.filter(p => !p.endsWith("templates/AGENTS.md") && !p.endsWith("lib/summaries.mjs") && !p.endsWith("lib/brain.mjs"));
+};
+test("no shipped skill, script or template outside templates/AGENTS.md promises a summary in the background", () => {
+  const hits = shipped().flatMap(p => readFileSync(p, "utf8").split("\n").map((l, i) => [p, i + 1, l])).filter(([, , l]) => PROMISE.test(l) && !/^\s*(\/\/|#|\/\*|\*)/.test(l));
+  assert.deepEqual(hits.map(([p, i]) => `${p.slice(P.length + 1)}:${i}`), []);
+});
+test("templates/AGENTS.md rule 1b still says summaries update by themselves (owned by another lane)", { todo: "rewrite rule 1b for summaries written on demand" }, () => {
+  assert.doesNotMatch(readFileSync(join(P, "templates/AGENTS.md"), "utf8"), PROMISE);
 });
