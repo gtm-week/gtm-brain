@@ -25,8 +25,8 @@ const read = (root, filters = {}, object = "entities") => backend().list(object,
 
 test("entity and brain modules can be loaded in either order", () => {
   const entityModule = new URL("../lib/entities.mjs", import.meta.url).href;
-  execFileSync(process.execPath, ["--input-type=module", "-e", `const entities = await import(${JSON.stringify(entityModule)}); if (entities.ENTITY_KINDS.length !== 3) process.exit(1);`]);
-  assert.deepEqual(lib.NAME_KINDS, ["person", "organization", "product"]);
+  execFileSync(process.execPath, ["--input-type=module", "-e", `const entities = await import(${JSON.stringify(entityModule)}); if (entities.ENTITY_KINDS.length !== 5) process.exit(1);`]);
+  assert.deepEqual(lib.NAME_KINDS, ["person", "organization", "product", "event", "tool"]);
 });
 
 test("the formal catalog exposes entities, their writers, and usable memory/context links", async () => {

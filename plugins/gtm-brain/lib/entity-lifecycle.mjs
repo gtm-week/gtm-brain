@@ -6,6 +6,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import * as lib from "./brain.mjs";
 import { withEntityLock, entityType, identity, idOK, entityText, parseEntityText, editedBody, applyEntityChange, readEntityChange } from "./entities.mjs";
+import { brainKinds } from "./schema.mjs";
 
 const hash = value => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const object = v => v && typeof v === "object" && !Array.isArray(v);
@@ -61,8 +62,8 @@ export function updateEntity(root, { entity, by, set = {}, add = {}, remove = {}
       if (typeof set.name !== "string" || !set.name.trim() || /[\r\n]/.test(set.name)) throw new Error("name must be a non-empty single line");
       next.name = set.name.trim();
     }
-    if (Object.hasOwn(set, "kind") && typeof set.kind !== "string") throw new Error("kind must be person, organization or product");
-    Object.assign(next, entityType(set.kind ?? e.kind, Object.hasOwn(set, "subtype") ? set.subtype : set.kind && set.kind !== e.kind ? null : e.subtype ?? null));
+    if (Object.hasOwn(set, "kind") && typeof set.kind !== "string") throw new Error("kind must be a kind in SCHEMA.md, such as person, organization, product, event or tool");
+    Object.assign(next, entityType(set.kind ?? e.kind, Object.hasOwn(set, "subtype") ? set.subtype : set.kind && set.kind !== e.kind ? null : e.subtype ?? null, brainKinds(root)));
     for (const field of listFields) {
       const key = listKey(field), values = [...(set[field] === undefined ? next[key] || [] : set[field])];
       if (field === "aliases" && next.name !== e.name) values.push(e.name);
@@ -93,7 +94,7 @@ function mergePlan(root, source, target, resolution) {
   if ([from, into].some(e => e.status === "archived")) throw new Error("Restore archived identities before merging them");
   if (!object(resolution) || Object.keys(resolution).some(k => !["kind", "subtype", "allow_distinct", "references"].includes(k))) throw new Error("Invalid merge resolution");
   if (resolution.allow_distinct !== undefined && typeof resolution.allow_distinct !== "boolean") throw new Error("allow_distinct must be a boolean");
-  if (Object.hasOwn(resolution, "kind") && typeof resolution.kind !== "string") throw new Error("kind must be person, organization or product");
+  if (Object.hasOwn(resolution, "kind") && typeof resolution.kind !== "string") throw new Error("kind must be a kind in SCHEMA.md, such as person, organization, product, event or tool");
   const conflicts = [], unresolved = [];
   for (const field of ["kind", "subtype"]) if ((from[field] ?? null) !== (into[field] ?? null)) {
     conflicts.push({ field, source: from[field] ?? null, target: into[field] ?? null });
@@ -107,7 +108,7 @@ function mergePlan(root, source, target, resolution) {
     if (!["combine", "source", "target"].includes(resolution.references)) unresolved.push("references");
   }
   if (resolution.references !== undefined && !["combine", "source", "target"].includes(resolution.references)) throw new Error("references resolution must be combine, source or target");
-  const type = entityType(resolution.kind ?? into.kind, Object.hasOwn(resolution, "subtype") ? resolution.subtype : into.subtype ?? null);
+  const type = entityType(resolution.kind ?? into.kind, Object.hasOwn(resolution, "subtype") ? resolution.subtype : into.subtype ?? null, brainKinds(root));
   const merged = { ...structuredClone(into), ...type,
     aliases: unique([...into.aliases, from.name, ...from.aliases]).filter(n => n.toLowerCase() !== into.name.toLowerCase()),
     emails: unique([...into.emails, ...from.emails]),

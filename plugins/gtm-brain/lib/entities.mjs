@@ -6,18 +6,23 @@ import * as lib from "./brain.mjs";
 import { acquireProcessLock, releaseProcessLock } from './process-lock.mjs';
 import { refreshIndexedPages } from './entity-pages.mjs';
 import { hasMemoryIndex } from './memory-index-store.mjs';
-import { readSchema, fieldsFor, requiredRelations, kindHash, US } from './schema.mjs';
+import { readSchema, fieldsFor, requiredRelations, kindHash, US, brainKinds } from './schema.mjs';
+import { DEFAULT_KINDS, KIND_NAME, NOT_KINDS } from './kinds.mjs';
 
 export const ENTITY_FORMAT = "gtm-brain-entity-v2";
 // Brains written before the GTM OS -> GTM Brain rename carry the gtm-os names; migration rewrites them.
 const LEGACY_FORMATS = ["gtm-brain-entity-v1", "gtm-os-entity-v2", "gtm-os-entity-v1"];
-export const ENTITY_KINDS = ["person", "organization", "product"];
-export function entityType(kind = "person", subtype = null) {
+// The default kinds; a brain's own list is SCHEMA.md's sections (schema.brainKinds(root)).
+export const ENTITY_KINDS = DEFAULT_KINDS;
+/* kinds: the brain's kinds (brainKinds(root)) where a person's input is checked; "any" where an identity
+   already read from a file is only normalized. */
+export function entityType(kind = "person", subtype = null, kinds = ENTITY_KINDS) {
   if (["company", "team"].includes(kind)) {
     if (subtype !== null && subtype !== kind) throw new Error(`legacy kind ${kind} conflicts with subtype ${subtype}`);
     return { kind: "organization", subtype: kind };
   }
-  if (!ENTITY_KINDS.includes(kind)) throw new Error(`kind must be one of ${ENTITY_KINDS.join(", ")}; company and team are accepted as legacy organization subtypes`);
+  const known = kinds === "any" ? typeof kind === "string" && KIND_NAME.test(kind) && !Object.hasOwn(NOT_KINDS, kind) : kinds.includes(kind);
+  if (!known) throw new Error(`kind must be one of ${(kinds === "any" ? ENTITY_KINDS : kinds).join(", ")}${kinds === "any" ? " or another kind in SCHEMA.md" : ""}; company and team are accepted as legacy organization subtypes; a new kind is a ## <Kind> section in SCHEMA.md`);
   if (subtype !== null && (kind !== "organization" || typeof subtype !== "string" || !/^[a-z][a-z0-9-]{0,63}$/.test(subtype))) throw new Error("subtype must be an organization category such as company or team, or null");
   return { kind, subtype };
 }
@@ -223,6 +228,10 @@ export function readEntityFiles(root) {
   if (!existsSync(dir)) return [];
   if (lstatSync(dir).isSymbolicLink()) throw new Error("brain/entities must not be a symbolic link");
   const entries = [];
+  // a SCHEMA.md that cannot be read must not take a kind away from entities already registered:
+  // then the kind is only checked for its form
+  const kinds = root && readSchema(root).error ? "any" : brainKinds(root);
+  const kindNames = kinds === "any" ? ENTITY_KINDS : kinds;
   for (const file of readdirSync(dir).filter(f => f.endsWith(".md")).sort()) {
     const path = join(dir, file);
     if (lstatSync(path).isSymbolicLink()) throw new Error(`Entity file must not be a symbolic link: ${file}`);
@@ -231,12 +240,12 @@ export function readEntityFiles(root) {
     if (!idOK(fm.id)) invalid(relative, "id", "expected e_ followed by 16 lowercase hexadecimal characters", "restore this entity's stable ID from file history; do not invent a replacement ID");
     if (fm.redirect) { if (!idOK(fm.redirect)) invalid(relative, "redirect", "expected a stable entity ID", "restore the destination ID from the confirmed merge"); continue; }
     if (typeof fm.name !== "string" || !fm.name.trim()) invalid(relative, "name", "expected a non-empty name", "restore the intended canonical name as a string");
-    if (typeof fm.kind !== "string") invalid(relative, "kind", "expected an entity kind", "restore person, organization or product from the known identity");
+    if (typeof fm.kind !== "string") invalid(relative, "kind", "expected an entity kind", `restore ${kindNames.join(", ")} from the known identity`);
     if (fm.status !== undefined && !["active", "archived"].includes(fm.status)) invalid(relative, "status", "expected active or archived", "restore the intended entity status");
     if (fm.merge_ids !== undefined && (!strings(fm.merge_ids) || !fm.merge_ids.every(id => /^ec_[a-f0-9-]{36}$/.test(id)))) invalid(relative, "merge_ids", "expected recorded merge IDs", "restore merge IDs from identity history");
     let type;
-    try { type = entityType(fm.kind, fm.subtype ?? null); }
-    catch (e) { invalid(relative, "kind / subtype", e.message, "use person, organization or product, with an optional organization subtype; preserve the original values for review"); }
+    try { type = entityType(fm.kind, fm.subtype ?? null, kinds); }
+    catch (e) { invalid(relative, "kind / subtype", e.message, `use ${kindNames.join(", ")} (the kinds in SCHEMA.md), with an optional organization subtype, or add a ## ${fm.kind} section to SCHEMA.md; preserve the original values for review`); }
     for (const field of ["aliases", "emails", "not_same", "previous_ids"]) {
       if (!strings(fm[field])) invalid(relative, field, "expected a list of non-empty strings", `write ${field}: [value] for a single value or ${field}: [] for an empty list, preserving existing entries`);
     }
@@ -265,7 +274,7 @@ export function resolveEntity(registry, name) {
 }
 
 export function identity(e) {
-  return { id: e.id || entityId(e.name), name: e.name, ...entityType(e.kind || "person", e.subtype ?? null), status: e.status || "active", merge_ids: e.merge_ids || [], aliases: e.aliases || [], emails: e.emails || [], not_same: e.not || [], previous_ids: e.previous_ids || [], references: e.references || [], identity_sources: e.identity_sources || [] };
+  return { id: e.id || entityId(e.name), name: e.name, ...entityType(e.kind || "person", e.subtype ?? null, "any"), status: e.status || "active", merge_ids: e.merge_ids || [], aliases: e.aliases || [], emails: e.emails || [], not_same: e.not || [], previous_ids: e.previous_ids || [], references: e.references || [], identity_sources: e.identity_sources || [] };
 }
 
 // File locations are permanent. Name changes do not break links; IDs survive explicit merges.
@@ -282,7 +291,7 @@ export function writeEntityFiles(root, names) {
   }
   for (const e of old) if (!names.some(n => n.id === e.id || n.previous_ids?.includes(e.id))) names.push(e);
   for (const e of names) {
-    Object.assign(e, entityType(e.kind || "person", e.subtype ?? null));
+    Object.assign(e, entityType(e.kind || "person", e.subtype ?? null, "any"));
     e.id ||= entityId(e.name);
     e.previous_ids ||= []; e.references ||= []; e.identity_sources ||= [];
     if (!idOK(e.id) || !refsOK(e.references) || !refsOK(e.identity_sources)) throw new Error(`Invalid identity for ${e.name}`);

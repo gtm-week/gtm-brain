@@ -26,7 +26,7 @@ import { validateCustomerEvidence, guardCustomerCorrection } from "./customers.m
 import { host, hostId, HOST_DIRS } from "./host.mjs";
 export { customerOverview, customerIdentity, validateCustomerEvidence, guardCustomerCorrection } from "./customers.mjs";
 import { validateRelationEvidence, guardRelationCorrection } from "./relations.mjs";
-import { readSchema, checkRelation, US } from "./schema.mjs";
+import { readSchema, checkRelation, brainKinds, US } from "./schema.mjs";
 export { validateRelationEvidence, guardRelationCorrection, relationOverview, relationsText } from "./relations.mjs";
 export { updateEntity, mergeEntities, archiveEntity, undoEntityMerge } from "./entity-lifecycle.mjs";
 export { entityFacts, entityBrief, entityRecords, compileEntity, resolveEntity, refreshEntityPages, staleEntities, entityEvidenceIndex, entityType, ENTITY_FORMAT } from "./entities.mjs";
@@ -500,7 +500,7 @@ function mergeEntity(into, e) {
   if (e.name.toLowerCase() !== into.name.toLowerCase() && !into.aliases.some(x => x.toLowerCase() === e.name.toLowerCase())) into.aliases.push(e.name);
   for (const m of e.emails) if (!into.emails.some(x => x.toLowerCase() === m.toLowerCase())) into.emails.push(m);
   for (const x of e.not || []) if (!(into.not = into.not || []).some(y => y.toLowerCase() === x.toLowerCase())) into.not.push(x);
-  if (into.kind === "person" && e.kind !== "person") Object.assign(into, entityType(e.kind, e.subtype ?? null));
+  if (into.kind === "person" && e.kind !== "person") Object.assign(into, entityType(e.kind, e.subtype ?? null, "any"));
   else if (into.kind === "organization" && e.kind === "organization" && !into.subtype) into.subtype = e.subtype ?? null;
   promoteFullName(into);
 }
@@ -617,7 +617,7 @@ function updateName(root, name, { aliases = [], emails = [], kind = null, subtyp
     entry = { id, name: name.trim(), aliases: [], emails: [], kind: "person", not: [], previous_ids: [], references: [], identity_sources: [] }; names.push(entry); }
   // "Nestle Poland is not Nestle": remembered, so the pair is never suggested as one again
   for (const x of not) { const other = exactName(names, x) || x.trim(); if (other && !(entry.not = entry.not || []).some(y => y.toLowerCase() === other.toLowerCase())) entry.not.push(other); }
-  if (kind || subtype !== undefined) Object.assign(entry, entityType(kind || entry.kind, subtype !== undefined ? subtype : (!kind || kind === entry.kind ? entry.subtype ?? null : null)));
+  if (kind || subtype !== undefined) Object.assign(entry, entityType(kind || entry.kind, subtype !== undefined ? subtype : (!kind || kind === entry.kind ? entry.subtype ?? null : null), brainKinds(root)));
   for (const a of aliases) if (a && a.toLowerCase() !== entry.name.toLowerCase() && !entry.aliases.some(x => x.toLowerCase() === a.toLowerCase())) entry.aliases.push(a.trim());
   for (const e of emails) if (e && !entry.emails.some(x => x.toLowerCase() === e.toLowerCase())) entry.emails.push(e.trim().toLowerCase());
   for (const [key, values] of [["references", references], ["identity_sources", sources]]) entry[key] = [...new Map([...(entry[key] || []), ...values].map(r => [JSON.stringify(r), r])).values()];
