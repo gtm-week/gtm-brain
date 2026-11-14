@@ -17,6 +17,8 @@ export const SCHEDULE_PROMPT = "Run the gtm-brain-sync skill as the scheduled ru
    a background compile, so a working brain is never behind that long) and no scheduled run saved anything
    in the last 8 days; at most once a week. */
 export function scheduleNotice(root, now = today()) {
+  // 0.35.0: topic summaries are written on demand, so one behind its notes is normal and never asks for a run (lane S1)
+  if (!process.env.GTM_BRAIN_SCHEDULE_NOTICE) return "";
   if (!host().scheduledTasks) return "";
   const behind = activeContexts(root).filter(c => c.stale && !c.manualEdit?.blocked).map(c => ({ c, since: c.compiledAt || c.lastMemory }))
     .filter(x => x.since && now - new Date(x.since) > 2 * DAY);

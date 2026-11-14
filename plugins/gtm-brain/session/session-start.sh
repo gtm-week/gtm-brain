@@ -132,13 +132,6 @@ brief=""; [ -n "$loaded" ] && [ -f "$P/scripts/gtm-brain-load/load.mjs" ] && bri
 if [ -n "$loaded" ] && [ -f "$P/scripts/gtm-brain-load/load.mjs" ]; then
   echo; echo "Re-loading what was loaded last time${project:+ in project $project}: $loaded"
   lo="$( cd "$root" && node "$P/scripts/gtm-brain-load/load.mjs" . $loaded --only --last 0 ${project:+--project "$project"} 2>/dev/null )"; printf '%s\n' "$lo"
-  # compile: background: a separate run updates them; the chat never compiles and never offers to
-  if printf '%s' "$lo" | grep -q 'summary updating' && ! node "$H" can compile; then
-    echo; node "$H" text noCompile
-  elif printf '%s' "$lo" | grep -q 'summary updating'; then
-    ( cd "$root" && node -e 'const l=await import(process.argv[1]);l.kickCompile(".")' "$P/lib/brain.mjs" >/dev/null 2>&1 & )
-    echo; echo "compile: background (brain/admin.md): the summaries that are behind will be updated by a separate run shortly (after each saved change). Use those words, 'summary updating shortly'; never 'behind', never compile or offer to compile in this chat."
-  fi
   echo; echo "If the person starts on something else, switch: load the fitting context, or offer a new one (AGENTS.md rule 1)."
 else
   echo "Nothing loaded yet. If a pending onboarding instruction above applies, follow its next step. Otherwise infer a context from the request; ask what they are working on only when no task is known (AGENTS.md rule 1)."

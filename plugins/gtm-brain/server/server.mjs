@@ -74,7 +74,7 @@ const TOOLS = [
         const t = JSON.parse(readFileSync(join(brain, "work", "tools.json"), "utf8")), keys = new Set(((lib.readAdmin(brain) || {}).tools || []).map(lib.toolKey));
         tools = Object.entries(t).filter(([k]) => keys.has(k)).map(([, x]) => `${x.tool}: ${x.status}${x.test ? ` (read test ${x.test})` : ""}`).join(", ");
       } catch {}
-      return text(`${r.out}${r.err}\nLoaded in this ${project ? `project (${project})` : "chat"}: ${loaded.length ? loaded.join(", ") : "nothing (admin only)"}${tools ? `\nTools: ${tools}` : ""}\n${docs.documentsLine(brain)}\nSummaries: updated by themselves in the background (after each saved change); a chat never compiles; when asked, queue the background worker as the compile procedure says` + companyLine(brain) + `\n${lib.onboardingInstruction(brain, { project })}`, r.code !== 0);
+      return text(`${r.out}${r.err}\nLoaded in this ${project ? `project (${project})` : "chat"}: ${loaded.length ? loaded.join(", ") : "nothing (admin only)"}${tools ? `\nTools: ${tools}` : ""}\n${docs.documentsLine(brain)}\nSummaries: written when asked; load_context of a topic whose summary is behind gives the notes and as_of to write it once with compile_apply` + companyLine(brain) + `\n${lib.onboardingInstruction(brain, { project })}`, r.code !== 0);
     } },
   { name: "list_contexts", title: "Listing the contexts", readOnly: true,
     description: "List the contexts: title, stable slug, standing rule, memory count, summary state and whether loaded in this chat. Choose by title, rule and summary; the rule includes purpose and boundaries. Show titles to the person and use slugs in tool calls. Our company describes the organization that owns this brain; external company findings belong in the relevant topic's context.",
@@ -339,14 +339,16 @@ const TOOLS = [
     inputSchema: schema({}),
     call: ({ brain }) => run(brain, "gtm-brain-upgrade/upgrade.sh", []).then(result) },
 ];
-// Compilation belongs to the scheduled and background runs (they export GTM_BRAIN_RUN before codex exec).
-// A chat never sees these tools: it queues the worker instead (ALL-204 step 1). tools/call still works.
-const RUN_ONLY_TOOLS = new Set(["compile_facts", "compile_apply", "compile_entity", "entity_facts"]);
+// Since 0.35.0 a summary is written on demand, in the chat that asks (lib/summaries.mjs): load_context and a
+// brief read give the notes and as_of, compile_apply and compile_entity write once, and compile_facts serves an
+// explicit "rewrite the summary". So a chat sees those three. entity_facts (all evidence, large) stays with the
+// scheduled and background runs (GTM_BRAIN_RUN); tools/call still answers it.
+const RUN_ONLY_TOOLS = new Set(["entity_facts"]);
 // The reads that query covers (ALL-204 step 2b): never listed; still answering, marked deprecated, for one release.
 const RETIRED_READS = { recall: "query (memories with search, or object brief)", who_is: "query (entities with search)", list_contexts: "query (contexts)", list_projects: "query (projects)", list_brains: "query (brains)", customer_overview: "query (customers)", meeting_overview: "query (meetings)", advise: "query (health)", where_we_are: "query (status)", why_here: "query (why)", check_rules: "query (rules)", guideline: "document" };
 // A summary run (GTM_BRAIN_TOOLSET=compile, set by scripts/gtm-brain-compile/run-args.mjs) is listed only what it
 // calls: every other description is re-sent with each of its requests and is pure cost there.
-const COMPILE_TOOLSET = new Set([...RUN_ONLY_TOOLS, "render_dashboard", "query"]);   // query: --facts is a digest, older notes are looked up
+const COMPILE_TOOLSET = new Set(["compile_facts", "compile_apply", "compile_entity", "entity_facts", "render_dashboard", "query"]);   // query: --facts is a digest, older notes are looked up
 // With Codex's own question box on in ordinary chats, it asks instead: the free text sits on the same screen.
 const NATIVE_QUESTIONS = (() => { try { return host().nativeQuestions(); } catch { return false; } })();
 const NATIVE_LINE = "\nQuestions: GTM Brain shows no question forms of its own. This Codex has its own question box on, so ask every question with request_user_input: one question per call unless a procedure groups them, two or three concrete options, recommended first. It adds the free-text answer itself, so never add Other or Something else. It has no checkboxes: where several can apply, offer the likely combinations as options. APPROVE still goes only through approve_change.";

@@ -72,7 +72,7 @@ test("setup writes CLAUDE.md importing AGENTS.md; upgrade adds it to an older br
   assert.equal(lib.ensureRulebookShim(root), false, "a second run changes nothing");
 });
 
-test("Claude session start: Claude words, no Codex pane or threads, and an honest compile line without a runner", () => {
+test("Claude session start: Claude words, no Codex pane or threads, and no summary promised on either host (written on demand since 0.35.0)", () => {
   const root = brain();
   lib.appendMemory(root, "company", { authors: ["ann-lee"], content: "Acme signed.", kind: "decision" });
   lib.writeLoaded(root, ["company"]);
@@ -83,10 +83,10 @@ test("Claude session start: Claude words, no Codex pane or threads, and an hones
   assert.doesNotMatch(out, /Codex pane|open_in_codex|codex:\/\/|in this Codex/);
   assert.match(out, /claude --resume/);
   assert.match(out, /Files under \.codex belong to Codex and are off limits/); assert.doesNotMatch(out, /Files under \.claude/);
-  assert.match(out, /summaries are not compiled on this machine yet/); assert.doesNotMatch(out, /updated by a separate run shortly/);
+  assert.doesNotMatch(out, /updated by a separate run shortly|not compiled on this machine/); assert.match(out, /written when this context is loaded in full/);
   const codex = run({});
   assert.match(codex, /Files under \.claude belong to Claude and are off limits/);
-  assert.match(codex, /codex:\/\/threads/, "Codex says what it always said"); assert.match(codex, /updated by a separate run shortly/);
+  assert.match(codex, /codex:\/\/threads/, "Codex says what it always said"); assert.doesNotMatch(codex, /updated by a separate run shortly/);
   rmSync(bin, { recursive: true, force: true });
 });
 

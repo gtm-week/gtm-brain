@@ -426,8 +426,8 @@ moves the card.
 ## Step 6: close
 
 Include a one-time refresh of the starting summaries in the snapshot confirmation: explain
-that accepting the snapshot also prepares those summaries for the next chat; from then on they
-update by themselves in the background.
+that accepting the snapshot also prepares those summaries for the next chat; from then on each
+is written again when someone asks about its topic.
 
 Do not mark Running for you complete while an accepted daily sync still has an unconfigured
 or unverified automation. Keep the accepted choice as continuation with its blocker; a
@@ -446,8 +446,8 @@ the snapshot are linked in the registry before announcing completion.
 Finish with a short confirmation in three parts: what connected, what was learned (and
 filed where), what is now running. Base the running-status sentence on submitted choices and
 verified results. When the one-time summary refresh was declined, say "The initial summary
-refresh is deferred, as requested." Do not replace that outcome with a generic "summaries are
-updating shortly" promise from the normal save workflow. Tell the user they can change any of
+refresh is deferred, as requested." Do not replace that outcome with a promise that the summaries
+update later by themselves. Tell the user they can change any of
 it later and where the ten-minute guide is.
 End this closing reply with [the documents question](skills-tour.md#the-documents-question):
 which of the five starters (strategy, ICP, voice, design system, market) to fill now, or later. After

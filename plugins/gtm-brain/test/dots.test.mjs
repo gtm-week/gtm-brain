@@ -172,12 +172,14 @@ test("chat start: today's date, and each \"next <day>\" with two readings, for a
   assert.equal(dots.datesLine(new Date(2026, 10, 15)), "Today is Sunday, 15 November 2026.");
 });
 
-test("chat start: a summary behind for days with no scheduled run says so once a week; a working brain stays quiet", () => {
+test("chat start: a summary behind for days asks nothing since 0.35.0 (written when asked); the old weekly notice only behind GTM_BRAIN_SCHEDULE_NOTICE", () => {
   const sched = schedule;
   const root = mkdtempSync(join(tmpdir(), "gtm-brain-sched-")); execFileSync("git", ["init", "-q", root]); execFileSync("git", ["-C", root, "config", "commit.gpgsign", "false"]);
   execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "X", "--one-liner", "y", "--owner", "Ann Lee <ann@b.c>"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P } });
   lib.appendMemory(root, "icp", { authors: ["ann-lee"], content: "Mid-market SaaS fits best." });
   const later = new Date(Date.now() + 10 * 864e5);
+  assert.equal(sched.scheduleNotice(root, later), "", "topic summaries are written on demand: behind is normal");
+  process.env.GTM_BRAIN_SCHEDULE_NOTICE = "1";
   assert.equal(sched.scheduleNotice(root, new Date()), "", "behind for minutes: the compile after the save is still coming");
   const said = sched.scheduleNotice(root, later);
   assert.match(said, /^Summaries behind: Our company \(never compiled\), Target customers \(never compiled\); no weekly summary run is set up\. After answering the person.s request, ask this once/);
@@ -187,6 +189,7 @@ test("chat start: a summary behind for days with no scheduled run says so once a
   execFileSync("git", ["-C", root, "commit", "-q", "--allow-empty", "-m", "compile: company (3 memories, by schedule)"]);
   assert.equal(sched.scheduleNotice(root, new Date(Date.now() + 5 * 864e5)), "", "a scheduled run saved something this week");
   assert.equal(sched.scheduleNotice(root, new Date(Date.now() + 20 * 864e5)).includes("the weekly summary run last ran on"), true);
+  delete process.env.GTM_BRAIN_SCHEDULE_NOTICE;
 });
 
 test("contexts: a project or a look-alike is never a new context (X1, X3); a summary days behind says out of date", () => {
@@ -204,8 +207,8 @@ test("contexts: a project or a look-alike is never a new context (X1, X3); a sum
 
   lib.appendMemory(root, "icp", { authors: ["ann-lee"], content: "Mid-market SaaS fits best." });
   const c = () => lib.readContext(root, "icp");
-  assert.match(lib.summaryState(c()), /^summary updating shortly \(1 new\)$/);
-  assert.match(lib.summaryState(c(), false, Date.now() + 3 * 864e5), /^summary out of date: never compiled, 1 new not in it$/);
+  assert.match(lib.summaryState(c()), /^no summary yet, 1 newer note \(written when asked\)$/);
+  assert.match(lib.summaryState(c(), false, Date.now() + 3 * 864e5), /^no summary yet, 1 newer note \(written when asked\)$/, "never updating shortly, however old");
   assert.match(readFileSync(join(root, "README.md"), "utf8"), /## How contexts work[\s\S]*\*\*X1\*\* A project is not a context[\s\S]*\*\*L2\*\* Loading puts/);
 });
 

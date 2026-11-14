@@ -73,11 +73,11 @@ test("the chat start records the chat id from its stdin", () => {
   assert.match(chrome, /Codex pane/);
   assert.doesNotMatch(chrome, /Chrome opening is handled/);
   setAdmin(admin, readFileSync(admin, "utf8").replace("dashboard_browser: chrome\n", ""));
-  // a loaded context behind at chat start: the hook starts the background run
+  // a loaded context behind at chat start: no background run and no promise (0.35.0: written when loaded in full)
   execFileSync(process.execPath, [`${P}/scripts/gtm-brain-load/load.mjs`, ".", "icp"], { cwd: root, env });
   execFileSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "marta", "--context", "icp", "--content", "First note."], { cwd: root, env: { ...env, GTM_BRAIN_NO_COMPILE: "1" } });
   const bgo = execFileSync("bash", [`${P}/session/session-start.sh`], { cwd: root, encoding: "utf8", env: { ...env, GTM_BRAIN_NO_COMPILE: "1" }, input: JSON.stringify({ session_id: "thread-123", cwd: root }) });
-  assert.match(bgo, /compile: background \(brain\/admin.md\): the summaries that are behind will be updated by a separate run/);
+  assert.doesNotMatch(bgo, /separate run|shortly/); assert.match(bgo, /written when this context is loaded in full/);
 });
 
 test("a separate run's session hook keeps the person's chat and records its own thread for the dashboard", () => {

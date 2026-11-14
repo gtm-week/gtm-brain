@@ -72,7 +72,7 @@ header and separator lines as they are. Never touch the intro text unless the pe
 ## Step 3: keep it
 
 Call `save` with a message naming the change ("SCHEMA.md: every company has a budget owner").
-Then one line: what changed, and that briefs of that kind refill in the background. In this chat,
+Then one line: what changed, and that briefs of that kind are rewritten when someone asks about them. In this chat,
 follow it already. After a new required field, offer once to see who is missing it: `query` with
 object `rules` (its SCHEMA.md findings).
 

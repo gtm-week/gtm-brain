@@ -149,6 +149,8 @@ memories and relevant live MCP results: name the work, the evidence, and the nex
 Check changeable external state before presenting an old next step as current. If access is
 missing, date the recorded facts and say what remains unverified.
 
+For "where do we stand on <topic>" about one known topic, call `load_context` for it: one call
+gives the summary and the notes, and when the summary is behind, the `as_of` to write it once.
 For "where are we", "what is new" or a company overview, call `query` (status) to locate
 relevant contexts, then read the supporting memories as described in operational evidence.
 For a company-wide request, include relevant contexts beyond the loaded set. Answer with a
@@ -176,7 +178,7 @@ customer, a deal, a partner or a decision.
 Inspect tool results, check for duplicates, and keep a brief, a change, or a descriptive source
 pointer. When the destination is clear, write first and confirm after. Honor exclusions.
 Before finishing, check for missed information from the turn. Compilation follows the brain's
-summaries update by themselves; broad capture does not change that.
+summaries are written when someone asks about the topic; broad capture does not change that.
 
 When the conversation changes topic, use `gtm-brain-use-brain` to check the destination.
 Reuse an existing context first. Create only after an explicit creation request or agreement
@@ -202,8 +204,8 @@ one already read in this chat is still in context, so reuse it instead of readin
 | Find prior knowledge, count or join it, or build a person view | [Recall](references/recall.md) | `query` (memories with search; `sql` for counts, joins and dates; brief for a person view) |
 | How healthy a deal is, what is missing before the next call | [Deal health](references/deal-health.md) | `query` (deal; search = the company) |
 | Resolve, update, merge, archive, restore or split an identity; open its brief | [Entities](references/entities.md) | `query` (entities), `add_name`, `update_entity`, `merge_entities`, `archive_entity`, `undo_entity_merge`; `query` (brief) |
-| Refresh a cited entity brief | [Entity compilation](references/entity-compile.md) | the background run; `query` (memories by entity) to read the evidence |
-| Update a summary, or release one paused by a manual edit | [Compilation](references/compile.md) | the background worker, queued through the shell; no compile tool in a chat |
+| Refresh a cited entity brief | [Entity compilation](references/entity-compile.md) | `compile_entity` once, from a brief read that says its overview is behind; `query` (memories by entity) to read more evidence |
+| Update a summary, or release one paused by a manual edit | [Compilation](references/compile.md) | `compile_apply` once, from a `load_context` that says the summary is behind; `compile_facts` first for an explicit rewrite |
 | Open or refresh the dashboard, or trace a wrong sentence to its note | [Dashboard](references/dashboard.md) | `open_dashboard`, `render_dashboard` |
 | Keep edits the person made by hand, when requested | [Saving manual edits](references/save.md) | `save` |
 

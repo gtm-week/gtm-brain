@@ -183,8 +183,9 @@ test("handshake and tool list carry titles and the brain parameter", async () =>
   assert.deepEqual(update.inputSchema.required, ["mode"]);
   assert.equal(update.annotations.openWorldHint, true);
   for (const n of ["load_context", "remember", "query", "render_dashboard", "open_dashboard", "archive_context", "edit_context", "add_name", "propose_admin_change", "setup_brain"]) assert.ok(names.includes(n), n);
-  // compilation belongs to the scheduled and background runs: a chat never sees the tools (ALL-204 step 1)
-  for (const n of ["compile_facts", "compile_apply", "compile_entity"]) assert.ok(!names.includes(n), `${n} is not offered to a chat`);
+  // 0.35.0: summaries are written on demand in the chat that asks, so a chat sees the writers; entity_facts stays with the runs
+  for (const n of ["compile_facts", "compile_apply", "compile_entity"]) assert.ok(names.includes(n), `${n} is offered to a chat`);
+  assert.ok(!names.includes("entity_facts"), "entity_facts is not offered to a chat");
   const rem = result.tools.find(t => t.name === "remember");
   assert.equal(rem.title, "Remembering"); assert.equal(rem.annotations.readOnlyHint, false);
   assert.deepEqual(rem.inputSchema.required, ["brain", "by"], "content or memories: a turn's findings go in one call");
@@ -387,7 +388,7 @@ test("the interactions are the ontology's: none hand-written twice, names and ti
   const { result } = await rpc("tools/list");
   const r = compareCatalog(onto, result.tools);
   assert.deepEqual(onto.actions.map(a => a.tool_name).sort(), ["add_name", "archive_context", "archive_entity", "compile_apply", "compile_entity", "edit_context", "fork_context", "merge_entities", "new_context", "remember", "undo_entity_merge", "update_entity"]);
-  assert.deepEqual(r.renameCandidates, [], "no act_ names"); assert.deepEqual(r.missingInHost.sort(), ["compile_apply", "compile_entity"], "only the run-only compile tools are hidden from a chat"); assert.deepEqual(r.duplicates, []);
+  assert.deepEqual(r.renameCandidates, [], "no act_ names"); assert.deepEqual(r.missingInHost.sort(), [], "every interaction is offered to a chat, the summary writers included (0.35.0)"); assert.deepEqual(r.duplicates, []);
   assert.ok(!r.extra.some(x => onto.actions.some(a => a.tool_name === x.name)), "a described interaction is not also hand-written");
   for (const [name, title] of [["new_context", "Opening a context"], ["add_name", "Adding a name"]]) assert.equal(result.tools.find(t => t.name === name).title, title);
   // and they run: a channel opened through the generated tool is a channel

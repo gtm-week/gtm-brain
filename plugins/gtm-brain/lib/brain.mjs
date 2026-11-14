@@ -133,8 +133,9 @@ export function readAdmin(root) {
   return { ...fm, body: body.trim(), path: f };
 }
 
-/* Summaries update by themselves, in a separate run (compilePlan says when): the only mode. Kept as a
-   function so every caller reads the same word; an old `compile:` line in admin.md is ignored. */
+/* The dashboard's word for how summaries are kept; an old `compile:` line in admin.md is ignored. Since 0.35.0
+   nothing starts the background run by itself (kickCompile is retired), so compileBusy is true only while a
+   run started by hand or by a scheduled task works. */
 export function compileMode(root) { return "background"; }
 /* A setting changed by the person on the dashboard: the frontmatter line in brain/admin.md, kept at once.
    Only the two settings; anything else in admin.md still goes through a proposal and APPROVE. */
@@ -152,21 +153,29 @@ export function setAdminSetting(root, key, value) {
 export function readCompileState(root) {
   try { const s = JSON.parse(readFileSync(join(root, "work", "compile.json"), "utf8")); if (s.state === "queued" || s.state === "running") { if (Date.now() - Date.parse(s.at) > 20 * 60 * 1000) return { ...s, state: "failed" }; } return s; } catch { return null; }
 }
-/* How a context's summary stands, in the words the chat and the dashboard use. A summary more than 2 days
-   behind says so with its date: "updating shortly" a month later is what Artur saw (ICP, 2026-10-15). */
+/* How a context's summary stands, in the words the chat and the dashboard use. Since 0.35.0 a topic summary
+   is written on demand (lib/summaries.mjs): when someone asks about the topic, in that chat, then cached until
+   new notes arrive. So a summary behind its notes is normal and never "updating shortly": that promise ran
+   for weeks on a machine whose background run kept failing (ICP, 2026-10-15; the real brain, 2026-11-14). */
 export function summaryState(c, busy = false, nowMs = process.env.GTM_BRAIN_NOW ? Date.parse(process.env.GTM_BRAIN_NOW) : Date.now()) {
   const eff = effectiveMemories(c.memories), fresh = c.compiledAt ? eff.filter(m => newer(m.at, c.compiledAt)) : eff;
   const day = iso => String(iso || "").slice(0, 10);
   if (!eff.length) return "nothing recorded yet";
   if (!c.stale) return `summary up to date (as of ${day(c.compiledAt)})`;
-  if (busy) return `summary updating (${fresh.length} new, in the background)`;
-  const oldest = fresh.map(m => Date.parse(m.at)).filter(Boolean).sort((a, b) => a - b)[0];
-  if (oldest && nowMs - oldest > 2 * 864e5) return `summary out of date: ${c.compiledAt ? `as of ${day(c.compiledAt)}` : "never compiled"}, ${fresh.length} new not in it`;
-  return `summary updating shortly (${fresh.length} new)`;
+  if (c.manualEdit?.blocked) return `summary paused by a manual edit${c.compiledAt ? ` (as of ${day(c.compiledAt)})` : ""}, ${fresh.length} newer not in it`;
+  if (busy) return `summary being written (${fresh.length} new)`;
+  return `${c.compiledAt ? `summary as of ${day(c.compiledAt)}` : "no summary yet"}, ${fresh.length} newer note${fresh.length === 1 ? "" : "s"} (written when asked)`;
 }
 export function compileBusy(root) { const s = readCompileState(root); return !!s && (s.state === "queued" || s.state === "running"); }
 /* a failed run that will not try again by itself: the last attempt failed and something is still behind */
-export function compileGaveUp(root) { const s = readCompileState(root); return !!s && (s.state === "blocked" || (s.state === "failed" && (s.attempt || 1) >= (s.tries || 1))) && activeContexts(root).some(c => c.stale); }
+export function compileGaveUp(root) { const s = readCompileState(root); return !!s && (s.state === "blocked" || (s.state === "failed" && (s.attempt || 1) >= (s.tries || 1))) && !writtenSince(root, s.at) && activeContexts(root).some(c => c.stale); }
+/* A summary written after that run (work/runs.jsonl, a chat's write included) ends "gave up": since 0.35.0 no
+   later background run resets work/compile.json, and a context behind its notes is normal, so without this an
+   upgraded brain whose last 0.34 run failed would show "Summary update failed" for good. Only a summary's own
+   line counts (context set, recordSummaryRun), never the usage line a run writes about itself. */
+function writtenSince(root, at) {
+  try { return readFileSync(join(root, "work", "runs.jsonl"), "utf8").split("\n").some(l => { if (!l) return false; try { const r = JSON.parse(l); return !!r.context && r.turns > 0 && !r.error && Date.parse(r.at) > Date.parse(at); } catch { return false; } }); } catch { return false; }
+}
 /* Every saved memory makes its context eligible immediately. Concurrent changes are
    drained by one worker; an empty plan starts no model run. */
 export function compilePlan(root) {
@@ -192,11 +201,12 @@ export const COMPILE_COOLDOWN_MS = 30 * 60 * 1000;
 export function compileBlocked(root, now = Date.now()) {
   try { const s = JSON.parse(readFileSync(join(root, "work", "compile.json"), "utf8")); return s.state === "blocked" && now - Date.parse(s.at) < COMPILE_COOLDOWN_MS; } catch { return false; }
 }
-export function kickCompile(root, { force = false } = {}) {
-  if (process.env.GTM_BRAIN_NO_COMPILE || process.env.GTM_BRAIN_RUN || !host().compiles() || !compilePlan(root).pending) return false;
-  if (!force && compileBlocked(root)) return false;
-  try { const script = fileURLToPath(new URL("../scripts/gtm-brain-compile/background-compile.sh", import.meta.url)); const child = spawn("bash", [script, root], { detached: true, stdio: "ignore", env: { ...process.env, PLUGIN_ROOT: fileURLToPath(new URL("..", import.meta.url)).replace(/[\\/]$/, ""), ...(force ? { GTM_BRAIN_COMPILE_DELAY: "0" } : {}) } }); child.unref(); return true; } catch { return false; }
-}
+/* Retired in 0.35.0: no background model run starts after a save or at chat start. Topic summaries are
+   written on demand in the chat that asks (lib/summaries.mjs); entity pages refresh deterministically on
+   every write (refreshEntityPages) and their prose overview is also written on demand. Kept so older
+   callers and a teammate's older scripts still import it; background-compile.sh still runs when started by
+   hand or by a scheduled run. */
+export function kickCompile(root, { force = false } = {}) { return false; }
 
 /* Baselines live in work/, never as additional brain objects. They record plugin writes
    or the first observed legacy cover, so upgrading alone does not imply a manual edit. */
@@ -1261,7 +1271,6 @@ export function stopBrainWatcher(root) {
 }
 /* ---------- dashboard refresh: any skill that changes state calls this at the end ---------- */
 export function rerender(root) {
-  kickCompile(root);
   return requestDashboardRefresh(root, fileURLToPath(new URL('../scripts/gtm-brain-render/render.mjs', import.meta.url)));
 }
 /* ---------- memories ---------- */

@@ -106,7 +106,7 @@ source-specific checkpoints. Then call `render_dashboard`.
 ## Step 3: say what changed
 
 Three to six lines, grouped by context: what was recorded, what needs an answer, what was
-skipped as noise (one line). Summaries update by themselves after the notes land. Then stop:
+skipped as noise (one line). A summary is written the next time someone asks about its topic. Then stop:
 no next step, no reminder, no to-do offer (the brain is not the person's to-do system).
 
 ## Hard rules

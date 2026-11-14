@@ -45,7 +45,7 @@ test("one line, with every part, and nothing when nothing is known", t => {
   const line = healthLine(root, { ...none, meetings: [{ state: "held", capture: "pending" }] });
   assert.equal(line.split("\n").length, 1);
   assert.match(line, /^health: meeting capture: Sync skips meetings/);
-  assert.match(line, /summaries: last good run 2026-11-10 08:00 UTC, last error 2026-11-11 08:00 UTC: rate limited/);
+  assert.match(line, /summaries \(written when asked\): last written 2026-11-10 08:00 UTC, last failure 2026-11-11 08:00 UTC: writing it failed \(rate limited\); what to do: ask again/);
   assert.match(line, /last sync: gmail 2026-11-12 06:00 UTC/);
   assert.match(line, /open gaps: 1 meeting not captured/);
   assert.doesNotMatch(line, /[\u2013\u2014]/);
@@ -60,5 +60,5 @@ test("the chat start prints the health line once", t => {
   const out = spawnSync("bash", [join(plugin, "session/session-start.sh")], { cwd: root, env: { ...env, PLUGIN_ROOT: plugin, GTM_BRAIN_NO_VERSION_CHECK: "1", GTM_BRAIN_NO_SESSION_MAINTENANCE: "1" }, encoding: "utf8", input: JSON.stringify({ session_id: "s1", cwd: root }) }).stdout;
   const lines = out.split("\n").filter(l => l.startsWith("health: "));
   assert.equal(lines.length, 1, out);
-  assert.match(lines[0], /meeting capture: No sync has finished.*summaries: last good run 2026-11-10 08:00 UTC/);
+  assert.match(lines[0], /meeting capture: No sync has finished.*summaries \(written when asked\): last written 2026-11-10 08:00 UTC/);
 });
