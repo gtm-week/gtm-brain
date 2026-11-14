@@ -114,6 +114,13 @@ Tool: `query` with object `deal` and search = the company. Off for a brain whose
 front matter has `deal_scoring: off` (new brains get `deal_scoring: on`; a brain without the line
 has it on). The line is workplace info, so it changes through APPROVE.
 
+`big_files` in the same front matter says where a file over 25 MB goes, since git never keeps it:
+`google-drive` (new brains, and a brain without the line) moves it to the shared drive and links it
+from the project's `README.md`; `local` keeps it in a folder on this computer outside git
+(`big_files_folder:`, an absolute path, else `~/gtm-brain-files/<brain folder>`), not shared, linked
+as a `file:` path. `save`, the chat start and `add-file.mjs` give the same instruction
+(`lib.bigFileAdvice`). It changes through APPROVE.
+
 ### recall
 *"what do we know about the TCO?"*, *"did we ever talk about Berlin?"*, *"tell me about Pierre Aubert"*
 

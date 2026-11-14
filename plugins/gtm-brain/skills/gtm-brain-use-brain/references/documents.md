@@ -56,8 +56,8 @@ An ICP the person already wrote is added here like any other document.
 
 ## Fill a starter
 
-Setup writes four starters at the brain root: `strategy.md`, `icp.md`, `voice.md` and
-`design-system.md`. Until someone fills one, the chat line shows it as `[not filled]`: it holds
+Setup writes five starters at the brain root: `strategy.md`, `icp.md`, `voice.md`,
+`design-system.md` and `market.md`. Until someone fills one, the chat line shows it as `[not filled]`: it holds
 headings and no guidance. The person fills one when they choose, at the end of onboarding or later
 ("fill in our tone of voice"). Each is filled where it lies; never a second document for the same
 thing.
@@ -71,6 +71,9 @@ thing.
   and fill each one; leave a heading empty rather than guess. The voice follows
   [authoring](document-authoring.md). The design system names real values only (hex colours,
   font names, the logo file in `design-system/`), never invented ones.
+- Market: draft from the market and competitor notes already in the brain (`recall`) and the
+  competitors' websites the person names. Name only competitors and prices a source shows; leave
+  a heading empty rather than guess. Battle cards and reports go in `market/` beside it.
 - Confirm with one question showing the first lines under each heading (under 500 characters):
   "Save it as a draft" first, "Change something". Then `document` with `action: update`, the
   starter's `ref`, the new `body`, and the person's `by`. Approving is a separate word from the

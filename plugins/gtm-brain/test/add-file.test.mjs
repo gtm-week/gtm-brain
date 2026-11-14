@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, realpathSync, existsSync, openSync, closeSync, ftruncateSync } from 'node:fs';
 import { join } from 'node:path';
-import { tmpdir } from 'node:os';
+import { tmpdir, homedir } from 'node:os';
 import { execFileSync } from 'node:child_process';
 import * as lib from '../lib/brain.mjs';
 import { resolveEntity } from '../lib/entities.mjs';
@@ -58,6 +58,62 @@ test('it refuses a folder, a missing file and anything over 25 MB, and says why'
  const big = join(f.outside, 'big.mov'); const fd = openSync(big, 'w'); ftruncateSync(fd, 25 * 1024 * 1024 + 1); closeSync(fd);
  assert.match(f.fail('--file', big), /over 25 MB/);
  assert.ok(!existsSync(join(f.root, 'files')));
+});
+
+test('a file over 25 MB gets the same instruction as save and the chat start, following big_files in admin.md', () => {
+ const f = fixture();
+ const big = join(f.outside, 'keynote.mov'); const fd = openSync(big, 'w'); ftruncateSync(fd, 25 * 1024 * 1024 + 1); closeSync(fd);
+ const drive = f.fail('--file', big);
+ assert.match(drive, /too big for git, not kept/);
+ assert.ok(drive.includes(lib.bigFileAdvice(f.root)), 'the add-file refusal carries the lib advice word for word');
+ assert.match(drive, /shared drive \(Google Drive\)/);
+ assert.doesNotMatch(drive, /Keep it in a project folder/, 'the old contradicting advice is gone');
+ const admin = join(f.root, 'brain/admin.md');
+ writeFileSync(admin, readFileSync(admin, 'utf8').replace('dashboard: on-demand', 'dashboard: on-demand\nbig_files: local\nbig_files_folder: /Users/ann/big'));
+ const local = f.fail('--file', big);
+ assert.ok(local.includes(lib.bigFileAdvice(f.root)));
+ assert.match(local, /\/Users\/ann\/big, outside git/); assert.match(local, /file:\/Users\/ann\/big\/<name>/); assert.match(local, /not shared/);
+ assert.doesNotMatch(local, /Google Drive/);
+ assert.match(lib.largeNote([{ path: 'a.mov', size: 30 * 1048576 }], f.root), /^Too big for git, not kept \(over 25 MB\): a\.mov \(30 MB\)\. This brain keeps big files on this computer/);
+});
+
+test('big_files: google-drive by default and for an unknown value; local falls back to a folder outside the brain', () => {
+ const f = fixture(); const admin = join(f.root, 'brain/admin.md'); const base = readFileSync(admin, 'utf8');
+ assert.deepEqual(lib.bigFiles(f.root), { mode: 'google-drive', folder: null });
+ assert.deepEqual(lib.bigFiles(undefined), { mode: 'google-drive', folder: null }, 'no brain: the default');
+ writeFileSync(admin, base.replace('dashboard: on-demand', 'dashboard: on-demand\nbig_files: dropbox'));
+ assert.equal(lib.bigFiles(f.root).mode, 'google-drive');
+ writeFileSync(admin, base.replace('dashboard: on-demand', 'dashboard: on-demand\nbig_files: local'));
+ const { mode, folder } = lib.bigFiles(f.root);
+ assert.equal(mode, 'local'); assert.ok(!folder.startsWith(f.root), 'never inside the brain, so never in git');
+ assert.match(folder, /gtm-brain-files\/gtm-add-file-/);
+ writeFileSync(admin, base.replace('dashboard: on-demand', 'dashboard: on-demand\nbig_files: local\nbig_files_folder: relative/path'));
+ assert.match(lib.bigFiles(f.root).folder, /gtm-brain-files/, 'a relative folder is ignored');
+ writeFileSync(admin, base.replace('dashboard: on-demand', 'dashboard: on-demand\nbig_files: local\nbig_files_folder: ~/Movies/brain'));
+ assert.equal(lib.bigFiles(f.root).folder, join(homedir(), 'Movies/brain'), '~/ is the home folder');
+ writeFileSync(admin, base.replace('dashboard: on-demand', 'dashboard: on-demand\nbig_files: local\nbig_files_folder: ' + join(f.root, 'big')));
+ assert.ok(!lib.bigFiles(f.root).folder.startsWith(f.root), 'a folder inside the brain would be in git: ignored');
+});
+
+test('big_files changes through APPROVE like any workplace setting, and the instruction follows at once', () => {
+ const scratch = realpathSync(mkdtempSync(join(tmpdir(), 'gtm-big-files-approve-'))); const root = join(scratch, 'brain'); const home = join(scratch, 'home'); mkdirSync(root); mkdirSync(home);
+ const env = { ...process.env, GTM_BRAIN_NO_COMPILE: '1', GTM_BRAIN_NO_SESSION_START: '1', HOME: home }; delete env.GTM_BRAIN_NO_COMMIT; delete env.GTM_BRAIN_APPROVAL_TICKET;
+ execFileSync('git', ['init', '-q', root]); execFileSync('git', ['-C', root, 'config', 'commit.gpgsign', 'false']);
+ execFileSync('bash', [join(P, 'scripts/gtm-brain-setup/setup.sh'), '--company', 'Reflow', '--one-liner', 'returns automation', '--owner', 'Marta Nowak <marta@reflow.io>', '--dashboard', 'on-demand'], { cwd: root, env, stdio: 'ignore' });
+ const admin = readFileSync(join(root, 'brain/admin.md'), 'utf8');
+ assert.match(admin, /^big_files: google-drive$/m, 'a new brain says where big files go');
+ assert.equal(lib.bigFiles(root).mode, 'google-drive');
+ writeFileSync(join(root, 'work/admin.proposed.md'), admin.replace('big_files: google-drive', 'big_files: local\nbig_files_folder: /Volumes/Media/reflow'));
+ // What approve_change does after the person chose APPROVE: a single-use ticket. The audit log goes to the scratch home.
+ const apply = `import os from 'node:os'; import { syncBuiltinESMExports } from 'node:module'; os.homedir = () => ${JSON.stringify(home)}; syncBuiltinESMExports();
+  const lib = await import(${JSON.stringify(join(P, 'lib/brain.mjs'))});
+  process.env.GTM_BRAIN_APPROVAL_TICKET = lib.issueApproval(${JSON.stringify(root)}, 'admin');
+  process.argv = [process.execPath, 'approve.mjs', ${JSON.stringify(root)}, '--apply', '--by', 'marta'];
+  await import(${JSON.stringify(join(P, 'scripts/gtm-brain-approve/approve.mjs'))});`;
+ execFileSync(process.execPath, ['--input-type=module', '-e', apply], { cwd: root, env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+ assert.deepEqual(lib.bigFiles(root), { mode: 'local', folder: '/Volumes/Media/reflow' });
+ assert.match(lib.largeNote([{ path: 'demo.mov', size: 40 * 1048576 }], root), /offer to move each to \/Volumes\/Media\/reflow, outside git/);
+ assert.equal(execFileSync('git', ['-C', root, 'status', '--porcelain', 'brain/admin.md'], { encoding: 'utf8' }).trim(), '', 'the approved admin.md is committed');
 });
 
 test('text is extracted for the notes when an extractor exists, and its absence is said, not hidden', () => {

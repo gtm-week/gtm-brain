@@ -331,7 +331,7 @@ Weekly (Sunday 20:00) or nightly. Run it in the local project. Computer on, app 
 bash $PLUGIN_ROOT/scripts/gtm-brain-schedule/scheduled-run.sh ~/brain-try      # run it once by hand first
 ```
 
-Then the plist in `scripts/gtm-brain-schedule/launchd.plist.example` (replace the two paths, load with
+Then the plist in `scripts/gtm-brain-schedule/launchd.plist.example` (replace the brain folder, load with
 `launchctl`), or a cron line. Both call `codex exec`, so Codex must be signed in.
 
 Check: `git log --oneline | head` shows `scheduled: compile pipeline`; `work/hooks.log` has
