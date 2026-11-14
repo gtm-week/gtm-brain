@@ -5,12 +5,13 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync 
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
+import * as lib from "../lib/brain.mjs";
 const plugin = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 const connect = join(plugin, "scripts/gtm-brain-connect/connect.mjs");
 const ID = "app-6a3d93e966b8819198c93780c2577383";
 
 function brain(t, tools = ["HubSpot", "ZYNT"], list = "") {
-  const outer = mkdtempSync(join(tmpdir(), "gtm-mcp-")); t.after(() => rmSync(outer, { recursive: true, force: true }));
+  const outer = mkdtempSync(join(tmpdir(), "gtm-mcp-")); t.after(() => rmSync(outer, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }));
   const root = join(outer, "brain"), home = join(outer, "codex-home"), bin = join(outer, "bin"); mkdirSync(root); mkdirSync(home); mkdirSync(bin);
   writeFileSync(join(bin, "codex"), `#!/bin/sh\nprintf '%s\\n' "${list}"\n`); chmodSync(join(bin, "codex"), 0o755);
   const env = { ...process.env, CODEX_HOME: home, PATH: `${bin}:${process.env.PATH}`, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_CATALOG_DIR: join(outer, "none") };
@@ -50,4 +51,19 @@ test("an installed plugin the catalog misses takes its name from its own manifes
   const dir = join(f.home, "plugins/cache/openai-curated-remote", ID, "1.0.0/.codex-plugin"); mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, "plugin.json"), JSON.stringify({ interface: { displayName: "Pocket AI" } }));
   assert.match(f.check(), /installed in Codex but not in admin\.md tools: Pocket AI/);
+});
+
+// ZYNT's setup runs on its HTTP API with a key pasted in the chat: no plugin, no MCP server (gtm-brain-zynt-setup).
+test("a tool read through its API is on the page once a read test and a note back it; a failed read shows as failed", t => {
+  const f = brain(t, ["HubSpot"]);
+  const mark = (status, note) => spawnSync(process.execPath, [connect, f.root, "--mark", "zynt", status, note], { cwd: f.root, env: f.env, encoding: "utf8" });
+  mark("ok", "GET /api/v1/audiences returned 1 list"); f.check();
+  assert.equal(f.state().zynt, undefined, "a read test alone, with no note naming the tool, is not kept");
+  mark("ok", "GET /api/v1/audiences returned 1 list");
+  lib.appendMemory(f.root, "icp", { authors: ["ann-lee"], content: "ZYNT set up for the Berlin startups segment.", at: "2026-11-14T10:00:00Z", source: [{ kind: "zynt", ref: "audience/7" }], tools: ["ZYNT"] });
+  const out = f.check(), z = f.state().zynt;
+  assert.equal(z.status, "installed"); assert.equal(z.api, true); assert.equal(z.test, "ok"); assert.equal(z.plugin ?? null, null);
+  assert.match(out, /used in this brain, on the dashboard, not in admin\.md tools: zynt \(read through its API\)/i);
+  mark("fail", "401 key expired"); f.check();
+  assert.equal(f.state().zynt.test, "fail", "an expired key stays visible as failed, never connected");
 });

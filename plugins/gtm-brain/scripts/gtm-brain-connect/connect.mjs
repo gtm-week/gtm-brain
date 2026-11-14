@@ -197,6 +197,15 @@ if (listed) {
     used.push({ tool: state[k].tool, why });
   }
 }
+/* Read through its HTTP API with a key the person pasted (ZYNT's setup), no plugin and no MCP server: on the page
+   once a read test was recorded (mark_tool) and a memory names it in tools or as its source. A failed test stays
+   visible as failed, so a key that expired never reads as connected. */
+for (const k of Object.keys(state)) {
+  const s = state[k]; if (!s || s.plugin || s.mcp || s.suggested || s.used || !s.test || s.test === "skip") continue;
+  if (![k, s.tool].some(x => brainText.tools.has(norm(x)))) continue;
+  state[k] = { ...s, status: "installed", api: true, used: "read through its API" };
+  if (!used.some(u => norm(u.tool) === norm(s.tool))) used.push({ tool: s.tool, why: "read through its API" });
+}
 for (const k of Object.keys(state)) if (!(state[k] && (state[k].suggested || state[k].mcp || state[k].used)) && !(admin.tools || []).some(t => key(t) === k)) delete state[k]; // a tool removed from admin.md leaves the record
 writeFileSync(wf, JSON.stringify(state, null, 1));
 console.log(`tools in admin.md: ${rows.length}${listed ? "" : " · codex plugin list failed: install state as last checked, not re-checked now"}${catalogAt ? ` · catalog as of ${lib.localDateTime(catalogAt)}` : " · no catalog cache yet (open the Codex app once)"}`);

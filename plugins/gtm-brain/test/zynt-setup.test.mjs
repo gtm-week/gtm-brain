@@ -30,13 +30,13 @@ test('the key is used in the chat only and never kept', () => {
   assert.match(skill, /Not the answers sent, not the key\./);
 });
 
-test('ZYNT ends up in the brain tools: the MCP connection, check_tools, then a read test with mark_tool', () => {
-  assert.match(skill, /codex mcp add zynt --url https:\/\/app\.getzynt\.com\/mcp/);
-  assert.match(skill, /On yes, run it yourself/);
-  assert.match(skill, /ask them to run `codex mcp login zynt`/);
-  assert.match(skill, /Never run the login yourself\./);
-  assert.match(skill, /call `check_tools`/);
-  assert.match(skill, /call `mark_tool` with tool `zynt`/);
+test('ZYNT ends up in the brain tools without MCP: a read test with mark_tool, a note naming it, then check_tools', () => {
+  assert.match(skill, /call\s+`mark_tool` with tool `ZYNT`, status `ok`/);
+  assert.match(skill, /with status `fail` and the exact error/);
+  assert.match(skill, /tools: \["ZYNT"\]/);
+  assert.match(skill, /Then call `check_tools`\./);
+  assert.match(skill, /Do not offer MCP/);
+  assert.doesNotMatch(skill, /codex mcp add/);
 });
 
 test('reads the brain before asking, sends guesses as drafts and lets the person confirm in ZYNT', () => {

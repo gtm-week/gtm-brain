@@ -52,23 +52,12 @@ Pick the first path that works and say which one this chat uses:
 The key is used in this chat only. Never write it to a file, a note, a document, a commit or
 the dashboard, and never repeat it back in full. ZYNT shows the key once and hides it after.
 
-So that ZYNT shows in the brain's tools, offer the MCP connection once, after the setup answers
-are sent: "Connect ZYNT to Codex so the brain lists it and every chat can read it?" with Yes,
-connect ZYNT and No, keep using the key. On yes, run it yourself (it writes Codex's own
-config, so Codex asks the person to approve the command):
-
-```
-codex mcp add zynt --url https://app.getzynt.com/mcp
-```
-
-The sign-in is the person's: ask them to run `codex mcp login zynt` in a terminal and finish
-the sign-in in the browser, then wait for their reply. Never run the login yourself. If the
-add fails or is not approved, show both commands for the person to run and go on.
-
-Then call `check_tools`: ZYNT is listed as installed, untested. In a new chat (Codex lists tools
-at chat start), make one small read with ZYNT's tools and call `mark_tool` with tool `zynt`,
-status `ok` and what the read returned, or `fail` with the exact error. Only then is ZYNT
-connected on the dashboard.
+So that ZYNT shows in the brain's tools, without MCP: after the first request that works, call
+`mark_tool` with tool `ZYNT`, status `ok` and what it returned in one line; when a request fails
+with an expired or refused key, call it with status `fail` and the exact error. The note in step
+5 names ZYNT, and `check_tools` at the end puts ZYNT on the brain's tools as connected through
+its API (or read failed). Do not offer MCP: ZYNT's own MCP tools are used only when they are
+already listed in this chat.
 
 ## 3. Ask, one question at a time
 
@@ -89,7 +78,7 @@ click Looks right, or tell me what is wrong". Do not answer in ZYNT while the pe
 
 When the person says the summary is right, keep one note through `remember` in Target customers:
 what was set up, the segment, the list name and the date, with `tools: ["ZYNT"]` and `sources`
-as `zynt:<the list or workspace id ZYNT returned>`. Not the answers sent, not the key.
+as `zynt:<the list or workspace id ZYNT returned>`. Not the answers sent, not the key. Then call `check_tools`.
 
 Never claim a failed request succeeded. Finish in one to three sentences, then offer the first
 question the person can ask now: "Which companies on my list had news this week?"
