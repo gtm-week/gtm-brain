@@ -167,6 +167,11 @@ export function parseQuestion(question, names, { now = nowDate() } = {}) {
 }
 
 const parts = w => w.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+// a rough common stem, for matching a question's word to a relationship type or a name's word
+// (partners, partnership and partner_of; works and works_at; customers and customer)
+const stemish = w => { let x = String(w).toLowerCase(); for (let i = 0; i < 2; i++) x = x.length > 4 ? x.replace(/(?:ships?|ments?|ings?|ers?|ors?|ed|es|s)$/, '') : x; return x; };
+const REL_STOP = new Set(['of', 'at', 'in', 'to', 'for', 'with', 'by', 'on', 'is', 'has', 'a', 'the']);
+const CUSTOMER_WORDS = new Set(['custom', 'prospect', 'client', 'churn', 'churned', 'former', 'lead'].map(stemish));
 // The full-text forms of one word: itself, or for a hyphenated or dotted word the words in a row and
 // the word written together ("sign-ups": sign ups, signups).
 function forms(w) {
@@ -220,7 +225,22 @@ export function searchIndex(index, question, { filters = {}, project = null, now
     return g;
   });
   const searchable = groups.filter(g => g.df > 0);
-  for (const g of searchable) g.weight = Math.log(1 + total / g.df);
+  const nameStems = new Set(q.entities.flatMap(e => { const x = (index.entries || []).find(y => y.id === e.id); return [x?.name || e.name, ...(x?.aliases || [])].flatMap(n => parts(fold(n))).map(stemish); }));
+  for (const g of searchable) g.weight = Math.log(1 + total / g.df) * (parts(g.word).every(w => nameStems.has(stemish(w))) ? 0.2 : 1);
+  // relationship types and customer status the question's words name, for stateRows
+  const termStems = new Set(q.terms.flatMap(parts).map(stemish));
+  let types = null;
+  const askedTypes = () => types ??= db.prepare("SELECT DISTINCT json_extract(raw,'$.relation.type') AS t FROM memories WHERE json_extract(raw,'$.relation.type') IS NOT NULL").all().map(x => String(x.t))
+    .filter(t => t.split(/[^a-z0-9]+/i).filter(w => w && !REL_STOP.has(w.toLowerCase())).some(w => termStems.has(stemish(w.toLowerCase()))));
+  const askedCustomer = [...termStems].some(w => CUSTOMER_WORDS.has(w));
+  const stateRows = scope => {
+    if (!scope.entities) return [];
+    const kinds = askedTypes(), clauses = [];
+    if (kinds.length) clauses.push(`json_extract(m.raw,'$.relation.type') IN (${kinds.map(() => '?').join(',')})`);
+    if (askedCustomer) clauses.push("json_extract(m.raw,'$.customer') IS NOT NULL");
+    if (!clauses.length) return [];
+    return db.prepare(`${scope.prefix}SELECT m.rowid AS r, m.time AS time, m.id AS id FROM memories m WHERE ${[...scope.where, `(${clauses.join(' OR ')})`].join(' AND ')} ORDER BY m.time DESC LIMIT 200`).all(...scope.params, ...kinds);
+  };
   const missing = groups.filter(g => !g.df).map(g => g.word);
 
   // narrowing: explicit filters, then the names, kind, tags and period the question names
@@ -250,6 +270,10 @@ export function searchIndex(index, question, { filters = {}, project = null, now
     } else {
       const all = searchable.map(g => g.fuzzy ? `(${g.exact}) OR (${g.fuzzy})` : g.exact).map(e => `(${e})`).join(' OR ');
       rows = db.prepare(`${prefix}SELECT m.rowid AS r, m.time AS time, m.id AS id, bm25(keywords) AS s FROM keywords k JOIN memories m ON m.rowid=k.rowid WHERE ${where.join(' AND ')} AND keywords MATCH ? ORDER BY s LIMIT 5000`).all(...params, all);
+      // the named entity's notes that record the relationship the question asks about ("a partner": its
+      // partner_of notes, "a customer": its customer status), though they may use another word for it
+      const states = stateRows(scope), have = new Set(rows.map(x => x.r));
+      for (const x of states) if (!have.has(x.r)) rows.push({ ...x, s: 0 });
       if (!rows.length) return [];
       const exactSets = searchable.map(g => set(g.exact)), fuzzySets = searchable.map(g => g.fuzzy ? set(g.fuzzy) : new Set());
       const words = searchable.filter(g => !g.fuzzy && parts(g.word).length === 1).map(g => parts(g.word)[0]);
@@ -258,10 +282,12 @@ export function searchIndex(index, question, { filters = {}, project = null, now
       const phrase = seq.length >= 3 ? set(`"${seq.join(' ')}"`) : new Set();
       const near = words.length >= 2 ? set(`NEAR(${words.map(ftsWord).join(' ')}, ${4 + words.length * 2})`) : new Set();
       const quoted = q.quoted.length ? set(q.quoted.map(x => `"${parts(x).join(' ')}"`).join(' AND ')) : new Set();
+      const stateHit = new Set(states.map(x => x.r));
       const weight = searchable.reduce((a, g) => a + g.weight, 0), best = Math.min(...rows.map(r => r.s)) || -1;
       for (const row of rows) {
         let got = 0;
         searchable.forEach((g, i) => { if (exactSets[i].has(row.r)) got += g.weight; else if (fuzzySets[i].has(row.r)) got += g.weight * 0.5; });
+        if (stateHit.has(row.r)) got += weight * 0.6;
         row.score = 20 * got / weight + pairSets.reduce((a, p) => a + (p.has(row.r) ? 4 : 0), 0) + (phrase.has(row.r) ? 6 : 0) + (near.has(row.r) ? 3 : 0) + (quoted.has(row.r) ? 8 : 0) + 3 * (row.s / best);
       }
     }
@@ -346,7 +372,57 @@ export function searchIndex(index, question, { filters = {}, project = null, now
     rows = db.prepare(`${scope.prefix}SELECT m.rowid AS r, m.time AS time, m.id AS id FROM memories m WHERE ${[...scope.where, 'text_matches(m.projected,?)'].join(' AND ')} ORDER BY m.time DESC, m.id LIMIT 500`).all(...scope.params, JSON.stringify([text])).map(r => ({ ...r, score: 0 }));
     literal = rows.length > 0;
   }
+  rows = currentFirst(index, rows);
   return { parsed: q, rows, total, said, widened, literal, missing, searched: groups };
+}
+
+/* Current over superseded, for a state a note records (a relationship, a customer status): when a later
+   note of the same relationship or company says otherwise, the old note sinks, says so, and the later
+   one is shown right after it, so an answer never stops at a status that has since changed. The same
+   choice as lib/relations.mjs and lib/customers.mjs: the latest note the person confirmed, else the
+   latest observed. One scan of the notes that record a state, only when a top row records one. */
+const LOOK = 60;
+const stateOf = (index, m) => {
+  const id = v => v === 'us' ? 'us' : (lib.resolveEntity(index.entries || index.names, v)?.id || v);
+  if (m?.relation?.type && m.relation.from && m.relation.to) return { key: `r ${id(m.relation.from)} ${m.relation.type} ${id(m.relation.to)}`, what: m.relation.type, status: m.relation.status, basis: m.relation.basis, observed: m.relation.observed_at || m.at };
+  if (m?.customer?.entity && m.customer.status) return { key: `c ${id(m.customer.entity)}`, what: 'customer status', status: m.customer.status, basis: m.customer.basis, observed: m.customer.observed_at || m.at };
+  return null;
+};
+const laterState = (c, was) => {
+  const cu = c.basis === 'user', wu = was.basis === 'user';
+  if (cu !== wu) return cu;
+  const d = cu ? Date.parse(c.at) - Date.parse(was.at) : Date.parse(c.observed) - Date.parse(was.observed) || Date.parse(c.at) - Date.parse(was.at);
+  return d > 0 || (d === 0 && c.id > was.id);
+};
+function currentFirst(index, rows) {
+  if (!rows.length) return rows;
+  const db = index.db, get = db.prepare("SELECT json_extract(raw,'$.relation') AS r, json_extract(raw,'$.customer') AS c, at FROM memories WHERE rowid=?");
+  const parse = x => { try { return x ? JSON.parse(x) : null; } catch { return null; } };
+  const top = rows.slice(0, LOOK).map(row => { const x = get.get(row.r); return { row, state: x && stateOf(index, { relation: parse(x.r), customer: parse(x.c), at: x.at }) }; }).filter(x => x.state);
+  if (!top.length) return rows;
+  const scope = index.filterSql({});
+  const chosen = new Map();
+  for (const x of db.prepare(`${scope.prefix}SELECT m.rowid AS r, m.id AS id, m.time AS time, m.at AS at, json_extract(m.raw,'$.relation') AS rel, json_extract(m.raw,'$.customer') AS cus FROM memories m WHERE ${[...scope.where, "(json_extract(m.raw,'$.relation') IS NOT NULL OR json_extract(m.raw,'$.customer') IS NOT NULL)"].join(' AND ')}`).all(...scope.params)) {
+    const st = stateOf(index, { relation: parse(x.rel), customer: parse(x.cus), at: x.at }); if (!st) continue;
+    const c = { r: x.r, id: x.id, time: x.time, at: x.at, ...st }, was = chosen.get(st.key);
+    if (!was || laterState(c, was)) chosen.set(st.key, c);
+  }
+  const at = new Map(rows.map((row, i) => [row.r, i])), after = new Map();
+  for (const { row, state } of top) {
+    const c = chosen.get(state.key);
+    if (!c || c.r === row.r || c.status === state.status) continue;
+    row.later = { what: state.what, status: c.status, observed: String(c.observed).slice(0, 10), id: c.id };
+    row.score = (row.score === Infinity ? row.score : (row.score || 0) - 15);
+    if (!at.has(c.r) || at.get(c.r) >= LOOK) after.set(row.r, { r: c.r, id: c.id, time: c.time, score: row.score });
+  }
+  const sorted = rows.filter(row => !after.size || ![...after.values()].some(x => x.r === row.r)).sort((a, b) => (b.score ?? 0) - (a.score ?? 0) || b.time - a.time || a.id.localeCompare(b.id));
+  const out = [], seen = new Set();
+  for (const row of sorted) {
+    if (seen.has(row.r)) continue;
+    out.push(row); seen.add(row.r);
+    const next = after.get(row.r); if (next && !seen.has(next.r)) { out.push(next); seen.add(next.r); }
+  }
+  return out;
 }
 
 const fetchRow = (index, rowid) => JSON.parse(index.db.prepare('SELECT projected FROM memories WHERE rowid=?').get(rowid).projected);
@@ -356,9 +432,9 @@ const sourceLine = m => {
   const list = (m.source || []).filter(s => s.kind !== 'codex' && s.kind !== 'memory').slice(0, 2).map(s => clip(`${s.kind}:${s.ref}`, 110));
   return list.length ? list.join(', ') : (m.source || []).some(s => s.kind === 'codex') ? 'a chat' : 'none';
 };
-export function noteText(m, now, chars) {
+export function noteText(m, now, chars, later = null) {
   const who = [...new Set([...(m.authors || [])])].join(', ');
-  return `${m.id} · ${lib.localDateTime(m.at).slice(0, 10)} (${age(m.at, now)}) · ${m.context} · ${m.kind}${who ? ` · by ${who}` : ''} · source: ${sourceLine(m)}${m.supersedes ? ` · replaces ${m.supersedes}` : ''}${m.retracts ? ` · withdraws ${m.retracts}` : ''}\n   ${clip(String(m.content).replace(/\s*\n\s*/g, ' '), chars)}`;
+  return `${m.id} · ${lib.localDateTime(m.at).slice(0, 10)} (${age(m.at, now)}) · ${m.context} · ${m.kind}${who ? ` · by ${who}` : ''} · source: ${sourceLine(m)}${m.supersedes ? ` · replaces ${m.supersedes}` : ''}${m.retracts ? ` · withdraws ${m.retracts}` : ''}${later ? ` · no longer current: ${later.what} ${later.status} ${later.observed} (${later.id})` : ''}\n   ${clip(String(m.content).replace(/\s*\n\s*/g, ' '), chars)}`;
 }
 
 /* The short card of an entity the question names: kind, aliases, the compiled overview, the fields,
@@ -374,6 +450,8 @@ function entityCard(index, root, ref, now, registry, relationsFor) {
   const shown = (Array.isArray(fields) ? fields : []).filter(f => f && f.name && f.value != null && f.value !== '').slice(0, 6);
   if (shown.length) out.push(`  Fields: ${shown.map(f => `${f.name}: ${clip(String(f.value), 80)}`).join('; ')}`);
   const rel = relationsFor(e.id).filter(r => r.status === 'current').slice(0, 6);
+  const ended = relationsFor(e.id).filter(r => r.status === 'ended').sort((a, b) => String(b.observed_at).localeCompare(String(a.observed_at))).slice(0, 3);
+  if (ended.length) out.push(`  Ended: ${ended.map(r => `${r.from.id === e.id ? '' : `${r.from.name} `}${r.type}${r.to.id === e.id ? ' this' : ` ${r.to.name}`} (${String(r.observed_at).slice(0, 10)}, ${r.memory})`).join('; ')}`);
   if (rel.length) out.push(`  Relations: ${rel.map(r => `${r.from.id === e.id ? '' : `${r.from.name} `}${r.type}${r.customer_status ? ` (${r.customer_status})` : ''}${r.to.id === e.id ? ' this' : ` ${r.to.name}`} (observed ${String(r.observed_at).slice(0, 10)}, ${r.memory})`).join('; ')}`);
   return out.join('\n');
 }
@@ -414,7 +492,7 @@ export function answerText(index, root, question, { filters = {}, limit, project
   const notes = [];
   for (const row of r.rows.slice(0, n)) {
     const m = fetchRow(index, row.r);
-    const line = `${shown + 1}. ${noteText(m, now, shown < 3 ? FULL_NOTE_CHARS : SHORT_NOTE_CHARS)}`;
+    const line = `${shown + 1}. ${noteText(m, now, shown < 3 ? FULL_NOTE_CHARS : SHORT_NOTE_CHARS, row.later)}`;
     const size = Buffer.byteLength(line) + 1;
     if (shown && bytes + size > maxBytes - 200) break;
     if (!shown) out.push('');
@@ -447,6 +525,7 @@ export function searchRows(index, root, search, { filters = {}, limit, project =
       cut.push(`${m.id}: content cut after ${content.length} of ${m.content.length} characters; the full text: query sql SELECT content FROM memories WHERE id='${m.id}'.`);
     }
     lines.push(line); rows.push(m); bytes += size;
+    if (row.later) cut.push(`${m.id} is no longer current: ${row.later.what} ${row.later.status} ${row.later.observed} (${row.later.id}).`);
   }
   const tail = [...cut, ...r.said, ...(r.widened ? [r.widened] : []), ...(r.literal ? ['No word matched; these rows contain the text as typed.'] : [])];
   const more = r.rows.length - lines.length;

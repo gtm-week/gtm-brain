@@ -192,3 +192,29 @@ test('a first name two people share is said in the reply, not guessed and not se
   assert.doesNotMatch(answer(root, 'What did Max Weber sign?'), /could be/);
   void p;
 });
+
+test('a relationship or customer status that changed later: the later note comes with it and the old one says it is no longer current', () => {
+  const root = fixture();
+  const org = lib.addName(root, 'Saltmarsh Partners', { kind: 'organization' });
+  const began = note(root, 'Saltmarsh Partners became a referral partner of ours.', { people: ['Saltmarsh Partners'], at: '2026-01-06T10:00:00Z', source: [{ kind: 'user', ref: 'ann' }], relation: { from: org.id, type: 'partner_of', to: 'us', status: 'current', basis: 'user', observed_at: '2026-01-06T10:00:00Z' } });
+  const ended = note(root, 'The partnership with Saltmarsh Partners ended: no co-sold deals in two quarters.', { people: ['Saltmarsh Partners'], at: '2026-06-19T10:00:00Z', source: [{ kind: 'user', ref: 'ann' }], relation: { from: org.id, type: 'partner_of', to: 'us', status: 'ended', basis: 'user', observed_at: '2026-06-19T10:00:00Z' } });
+  for (let i = 0; i < 12; i++) note(root, `Saltmarsh Partners partner portal update ${i}.`, { people: ['Saltmarsh Partners'], at: `2026-0${1 + (i % 8)}-1${i % 9}T10:00:00Z` });
+  const r = answer(root, 'Is Saltmarsh Partners a partner of ours?');
+  const got = ids(r);
+  assert.ok(got.includes(ended.id), r);
+  if (got.includes(began.id)) {
+    assert.equal(got.indexOf(ended.id), got.indexOf(began.id) + 1, 'the later note follows the old one');
+    assert.match(r, new RegExp(`${began.id} .*no longer current: partner_of ended 2026-06-19 \\(${ended.id}\\)`));
+  }
+  assert.match(r, /Ended: partner_of us \(2026-06-19, m_[0-9a-f]{12}\)/, 'the card names the ended relationship');
+  const s = search(root, 'partner of ours');
+  assert.ok(ids(s).includes(ended.id), s);
+  // a customer status: prospect, then customer
+  const acme = lib.addName(root, 'Quarry Foods', { kind: 'organization' });
+  const was = note(root, 'Attio shows Quarry Foods as prospect.', { people: ['Quarry Foods'], at: '2026-02-01T10:00:00Z', source: [{ kind: 'attio', ref: 'companies/quarry' }], customer: { entity: acme.id, status: 'prospect', basis: 'source', observed_at: '2026-02-01T10:00:00Z' } });
+  const now2 = note(root, 'Quarry Foods signed: a customer from today.', { people: ['Quarry Foods'], at: '2026-06-01T10:00:00Z', source: [{ kind: 'attio', ref: 'companies/quarry' }], customer: { entity: acme.id, status: 'customer', basis: 'source', observed_at: '2026-06-01T10:00:00Z' } });
+  const q = answer(root, 'Is Quarry Foods a prospect?');
+  assert.ok(ids(q).includes(now2.id), q);
+  assert.ok(ids(q).indexOf(now2.id) < ids(q).indexOf(was.id) || ids(q).indexOf(now2.id) === ids(q).indexOf(was.id) + 1, q);
+  assert.match(q, new RegExp(`${was.id} .*no longer current: customer status customer 2026-06-01 \\(${now2.id}\\)`));
+});
