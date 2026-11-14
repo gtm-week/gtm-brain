@@ -59,7 +59,7 @@ mkdir -p "$root/work"
 # A brain on a newer file layout than this plugin understands (brain/layout.json, lib/layout-version.mjs) is
 # read-only here: one line and nothing else, since every step below may write into it.
 if [ -f "$root/brain/layout.json" ]; then
-  blocked="$(node -e 'const v=await import(process.argv[1]);process.stdout.write(v.layoutBlock(process.argv[2]))' "$P/lib/layout-version.mjs" "$root" 2>/dev/null || true)"
+  blocked="$(node -e 'const v=await import(process.argv[1]);process.stdout.write(v.layoutBlock(process.argv[2]))' "$(dirname "${BASH_SOURCE[0]}")/../lib/layout-version.mjs" "$root" 2>/dev/null || true)"
   [ -n "$blocked" ] && { echo "$blocked"; exit 0; }
 fi
 # Remember which Codex chat this is (work/session.json): the dashboard shows which chat is linked.

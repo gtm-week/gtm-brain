@@ -14,6 +14,8 @@ import { createInterface } from "node:readline";
 import * as lib from "../lib/brain.mjs";
 import { readLayout, layoutBlock, layoutPlan, recentTeammates, LayoutError, LAYOUT_FILE } from "../lib/layout-version.mjs";
 import { legacyTemplates, STARTERS } from "../lib/upgrade-files.mjs";
+import { ensureRules } from "../lib/where.mjs";
+import { ensureSchema } from "../lib/schema.mjs";
 import { removeBrain } from "./helpers/dash-cleanup.mjs";
 
 const P = new URL("../", import.meta.url).pathname;
@@ -117,6 +119,11 @@ test("a brain on a newer layout: lib writers refuse before writing, commit and s
   assert.equal(lib.save(root, "x").ok, false);
   assert.equal(git("rev-parse", "HEAD"), head);
   assert.equal(lib.readMemories(root, "company").at(-1).content, "Kept before the newer layout.", "reads go on");
+  // RULES.md and SCHEMA.md are delivered when missing, but never into a brain this plugin must not write
+  rmSync(join(root, "RULES.md")); rmSync(join(root, "SCHEMA.md"));
+  assert.equal(ensureRules(root, join(P, "templates")), false);
+  assert.equal(ensureSchema(root, join(P, "templates")), false);
+  assert.equal(existsSync(join(root, "RULES.md")) || existsSync(join(root, "SCHEMA.md")), false);
 });
 
 test("an unreadable layout file (a merge conflict) refuses writes with its own line", t => {
@@ -143,10 +150,12 @@ test("the chat start of a newer-layout brain prints the one line and nothing els
   rmSync(join(root, "RULES.md"));
   writeFileSync(join(root, LAYOUT_FILE), NEWER);
   const before = tree(root);
-  const out = spawnSync("bash", [join(P, "session/session-start.sh")], { cwd: root, env: { ...env, PLUGIN_ROOT: P }, input: "{}", encoding: "utf8" });
-  assert.equal(out.status, 0, out.stderr);
-  assert.equal(out.stdout.trim(), layoutBlock(root));
-  assert.deepEqual(tree(root), before, "RULES.md is not added to a brain this plugin must not write");
+  for (const plugin of [P, ""]) {   // with and without PLUGIN_ROOT: the guard finds its lib next to the script
+    const out = spawnSync("bash", [join(P, "session/session-start.sh")], { cwd: root, env: { ...env, PLUGIN_ROOT: plugin }, input: "{}", encoding: "utf8" });
+    assert.equal(out.status, 0, out.stderr);
+    assert.equal(out.stdout.trim(), layoutBlock(root));
+    assert.deepEqual(tree(root), before, "RULES.md is not added to a brain this plugin must not write");
+  }
 });
 
 test("through the MCP server: a write tool is refused with the line, a read answers with the line on top", async t => {
@@ -171,6 +180,11 @@ test("through the MCP server: a write tool is refused with the line, a read answ
   assert.match(read.content[0].text, /^GTM Brain: this brain was upgraded to file layout 2/);
   assert.match(read.content.slice(1).map(c => c.text).join("\n"), /Acme signed the pilot/);
   assert.doesNotMatch(read.content.map(c => c.text).join("\n"), /chat start/, "no chat start: it writes");
+  const loaded = await call("load_context", { brain: root, contexts: ["company"] });
+  assert.notEqual(loaded.isError, true, "loading writes only work/: it is a read for the shared brain");
+  assert.match(loaded.content[0].text, /^GTM Brain: this brain was upgraded/);
+  assert.match(loaded.content.map(c => c.text).join("\n"), /Context loaded/);
+  assert.equal(readFileSync(join(root, "brain/contexts/company/memories.jsonl"), "utf8"), memories);
 });
 
 test("a layout-changing upgrade names the teammates who saved in the last 14 days and waits for --confirm", t => {
