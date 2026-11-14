@@ -83,7 +83,10 @@ a new memory using `supersedes`. Structured event dates belong to the future eve
 context where its people or companies already have notes. With no unique answer the entry is held
 and the candidate contexts are listed in one line; send it again with `context`. Each kept note
 starts with one short line for the person: `saved in <Context title>: <the note>`. The tool
-answers "kept" (or "kept and shared"): the note is in the company memory; nothing to save, nothing to add. For several
+answers "kept" (or "kept, not shared yet" when the brain has a remote: the push runs in the
+background and records its result, and the chat start says when one failed): the note is in the
+company memory; nothing to save, nothing to add. Never tell the person a note reached teammates
+before a push succeeded. For several
 entries it answers `kept 3 of 4` and numbers each line `#1`, `#2` by the entry's position, so you
 can see which landed and which did not.
 

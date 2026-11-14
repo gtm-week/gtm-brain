@@ -899,11 +899,15 @@ export function commit(root, paths, message, { always = false, push = true, allo
     // file already kept (allowEmpty) is a commit of its own, with nothing staged in it.
     if (staged) git("-c", "commit.gpgsign=false", "commit", "-q", "-m", message, "--", ...paths);
     else git("-c", "commit.gpgsign=false", "commit", "-q", "--allow-empty", "--only", "-m", message);
-    // Shared right away when the brain has a remote; in the background, so a slow network never
-    // holds a note. A failed push is retried by the next commit and by the session start's pull.
-    let shared = false;
-    try { const remote = push && pushRemote(git("remote")); if (remote) { spawn("git", ["-C", root, ...PUSH, remote, "HEAD"], { detached: true, stdio: "ignore" }).unref(); shared = true; } } catch {}
-    return { ok: true, note: shared ? "kept and shared" : "kept" };
+    // Sent right away when the brain has a remote; in the background, so a slow network never
+    // holds a note. The push records its own outcome (work/push.json, lib/push-runner.mjs), so the
+    // note never claims a share that has not happened: "not shared yet" until a push succeeds. A
+    // failed push is retried by the next commit and by the session start.
+    let sending = false;
+    const last = pushFailure(root);
+    try { const remote = push && pushRemote(git("remote")); if (remote) { pushInBackground(root, remote); sending = true; } } catch {}
+    if (!sending) return { ok: true, note: "kept" };
+    return { ok: true, note: `${NOT_SHARED_YET}${last ? `; the last push failed: ${last.error}` : ""}` };
   } catch (e) {
     const err = String(e.stderr || e.message).trim().split("\n").filter(Boolean);
     const readOnly = /read-only|Permission denied|Operation not permitted|unable to create|not a git repository/i.test(err.join(" "));
@@ -931,6 +935,38 @@ export function unsavedChanges(root, paths = savePathsFor(root)) {
    (git remote add, no -u) has none, and a bare "git push" then fails in the background with nothing
    said while the note reads "kept and shared". origin when there is one, else the first remote. */
 export const PUSH = ["push", "-q", "-u"];
+export const NOT_SHARED_YET = "kept, not shared yet (sending to teammates in the background)";
+/* The outcome of the last push, written by the push itself: { ok, at, head, remote, error }. */
+const pushStatePath = root => join(root, "work", "push.json");
+export function readPushState(root) { try { return JSON.parse(readFileSync(pushStatePath(root), "utf8")); } catch { return null; } }
+export function recordPush(root, { ok, remote = "", error = "" }) {
+  let head = ""; try { head = execFileSync("git", ["-C", root, "rev-parse", "--short", "HEAD"], { encoding: "utf8", stdio: "pipe" }).trim(); } catch {}
+  try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(pushStatePath(root), JSON.stringify({ ok: !!ok, at: new Date().toISOString(), head, remote, error: String(error || "").trim().split("\n")[0].slice(0, 200) }) + "\n"); } catch {}
+}
+/* The last push when it failed and its commits are still not on the remote. Two background pushes can
+   overlap, and the loser's failure may be written last although the other one sent everything: a
+   branch with nothing ahead of its upstream has no failure to report. */
+export function pushFailure(root) {
+  const push = readPushState(root);
+  if (!push || push.ok !== false) return null;
+  try { if (execFileSync("git", ["-C", root, "rev-list", "--count", "@{u}..HEAD"], { encoding: "utf8", stdio: "pipe", timeout: 5000 }).trim() === "0") return null; } catch {}
+  return push;
+}
+/* A detached push that writes its own result where the next read (a note, the chat start) sees it. */
+export function pushInBackground(root, remote) {
+  spawn(process.execPath, [fileURLToPath(new URL("./push-runner.mjs", import.meta.url)), root, remote], { detached: true, stdio: "ignore" }).unref();
+}
+/* What pulling teammates left behind (session maintenance): { status: "ok" | "merged" | "conflict" | "failed", files, at }.
+   Not work/sync.json: that file is the source sync's own (gtm-brain-sync), and its presence means a sync has finished. */
+export const syncStatePath = root => join(root, "work", "teammates.json");
+/* The chat-start lines for sharing: a failed last push, or a teammate merge that conflicted. Empty when all is well. */
+export function syncNotice(root) {
+  const out = [], push = pushFailure(root);
+  if (push) out.push(`Not shared yet: the last push to ${push.remote || "the remote"} failed (${push.error || "no reason given"}). Notes are kept on this computer; the next note or save tries again.`);
+  let sync = null; try { sync = JSON.parse(readFileSync(syncStatePath(root), "utf8")); } catch {}
+  if (sync && sync.status === "conflict") out.push(`Teammates' changes are not merged: pulling them conflicted in ${(sync.files || []).join(", ") || "some files"}. The merge was undone and nothing was lost; tell the person and offer to resolve it together.`);
+  return out.join("\n");
+}
 export const pushRemote = list => { const r = String(list || "").split("\n").map(x => x.trim()).filter(Boolean); return r.includes("origin") ? "origin" : r[0] || ""; };
 /* Where a file too big for git goes: brain/admin.md `big_files: google-drive | local`, changed through APPROVE like
    any workplace setting. google-drive (the default, and what an unknown value means): the shared drive, linked
@@ -967,8 +1003,9 @@ export function save(root, message, { covers = false, trailers = [] } = {}) {
   const git = (...a) => execFileSync("git", ["-C", root, ...a], { encoding: "utf8", stdio: "pipe" }).trim();
   const hash = git("rev-parse", "--short", "HEAD");
   let pushed = "no remote, local only";
-  try { const remote = pushRemote(git("remote")); if (remote) { execFileSync("git", ["-C", root, ...PUSH, remote, "HEAD"], { stdio: "pipe", timeout: 30000 }); pushed = `pushed to ${remote}`; } }
-  catch (e) { pushed = `commit is local; push failed: ${String(e.stderr || e.message).trim().split("\n")[0].slice(0, 160)}`; }
+  let remote = "";
+  try { remote = pushRemote(git("remote")); if (remote) { execFileSync("git", ["-C", root, ...PUSH, remote, "HEAD"], { stdio: "pipe", timeout: 30000 }); pushed = `pushed to ${remote}`; recordPush(root, { ok: true, remote }); } }
+  catch (e) { const why = String(e.stderr || e.message).trim().split("\n")[0].slice(0, 160); pushed = `commit is local; push failed: ${why}`; if (remote) recordPush(root, { ok: false, remote, error: why }); }
   logActivity(root, "save", `saved ${hash}: ${files.length} file(s), ${pushed}`);
   const large = largeUnsaved(root), left = large.length ? `\n${largeNote(large, root)}` : "";
   return { ok: true, note: `saved ${hash}: ${files.length} file(s)\n${files.map(f => `${f.state} ${f.path}`).join("\n")}\n${pushed}${left}`, hash, files, pushed, large };

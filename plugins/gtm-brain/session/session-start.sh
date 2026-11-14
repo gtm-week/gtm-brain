@@ -94,6 +94,11 @@ elif [ -n "$url" ]; then
   node "$H" text dashboardOnDemand "$url"
 fi
 echo "brain: $(basename "$root")  ·  admin: brain/admin.md (always loaded)"
+# Sharing, said honestly: a failed last push, or a teammate merge that conflicted (lib.syncNotice).
+# Node starts only when one of the two state files records a problem, so a healthy chat start pays nothing.
+if grep -qs '"ok": *false' "$root/work/push.json" || grep -qs '"status": *"conflict"' "$root/work/teammates.json"; then
+  node --input-type=module -e 'const l=await import(process.argv[1]);const n=l.syncNotice(process.argv[2]);if(n)console.log(n)' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
+fi
 # Other chats are linked, never entered: the person opens them, or not.
 node "$H" text chats
 # The other assistant's home is its own memory, reads included; IMPORT.md is the only way across.
