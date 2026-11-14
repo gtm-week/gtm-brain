@@ -204,6 +204,20 @@ function claims(contexts, runs) {
   return { taken, dismissed };
 }
 
+/* A plain note about a run's subject, saved while that run was going, is that run's work: it carries the run's
+   workflow and depth. Milestones are reached through remember, whose notes have no run tag, so without this a chain
+   of workflows offering each other the same account's notes would never reach the depth limit. */
+export function attribute(events, runs) {
+  const spans = runs.filter(r => r.subject && r.startedAt && !r.duplicateOf); if (!spans.length) return events;
+  return events.map(ev => {
+    if (!ev.entity || ev.change === "missing" || ev.from) return ev;
+    const own = spans.filter(r => r.subject === ev.entity && String(ev.at) > String(r.startedAt) && (!r.ended || String(ev.at) <= String(r.ended.at)));
+    if (!own.length) return ev;
+    const deep = own.reduce((a, b) => (b.depth > a.depth ? b : a));
+    return { ...ev, from: deep.workflow, depth: Math.max(ev.depth, deep.depth), run: deep.id };
+  });
+}
+
 /* What every active workflow is offered now: its waiting events, newest first, or why it is held. */
 export function pendingOffers(root, { contexts = lib.listContexts(root), runs = listRuns(root, contexts), registry = lib.readNames(root), now = new Date(), workflows = listWorkflows(root) } = {}) {
   if (workflowsOff(root)) return [];
@@ -215,7 +229,7 @@ export function pendingOffers(root, { contexts = lib.listContexts(root), runs = 
     const sinceFile = Date.parse(w.header.active_since || "") || 0, since = Math.max(sinceFile, now - LIMITS.eventWindowDays * DAY);
     let waiting = [];
     if (t.kind === "schedule") { const o = scheduleOccurrence(t, now); if (o && Date.parse(o.at) >= sinceFile) waiting = [{ ...o, type: "schedule", depth: 0 }]; }
-    else { events ||= brainEvents(root, { contexts, registry, now: +now }); waiting = events.filter(ev => matches(t, ev, w.slug, +now) && (ev.change === "missing" ? true : Date.parse(ev.at) >= since)); }
+    else { events ||= attribute(brainEvents(root, { contexts, registry, now: +now }), runs); waiting = events.filter(ev => matches(t, ev, w.slug, +now) && (ev.change === "missing" ? true : Date.parse(ev.at) >= since)); }
     // an entity already in a live run of this workflow is not offered again: the run's own work (its milestone notes
     // saved through remember) would otherwise start the same workflow about the same entity, round and round
     const busy = new Set(runs.filter(r => r.workflow === w.slug && isLive(r) && r.subject).map(r => r.subject));

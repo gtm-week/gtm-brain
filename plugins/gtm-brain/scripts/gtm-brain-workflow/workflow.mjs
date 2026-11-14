@@ -147,6 +147,8 @@ if (opt.start) {
   needBy(); off();
   const raw = wf.readWorkflow(root, String(opt.start)); if (!raw) refuse(`no workflow "${opt.start}"; workflows: ${slugs()}`);
   if (raw.ok && raw.header.status === "paused") refuse(`${raw.slug} is paused; workflow resume switches it back on`);
+  const held = raw.ok ? tr.effectiveStatus(root, raw).flag : null;
+  if (held) refuse(`${raw.slug} is held: ${held}. Fix the header, or the schema through /gtm-brain-schema, then workflow check`);
   let ev = null;
   if (opt.event) {
     const id = String(opt.event), offer = tr.pendingOffers(root).find(o => o.workflow.slug === raw.slug);
