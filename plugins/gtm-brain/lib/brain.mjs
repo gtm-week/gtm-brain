@@ -736,9 +736,14 @@ export const NAME_RULES = {
    mention may be whom, so the caller can ask "same as X?" first. A single word nobody has (P3) is
    held the same way in `unnamed`, unless the person confirmed it (confirmedNew) or it is a company
    or an already resolved name (trusted). Every mention that took judgment is in `mentions`, as
-   {mention, name, resolution, rule}, for the memory to keep. Returns {people, added, similar, unnamed, inferred, mentions}. */
-export function normalisePeople(root, mentions, { confirmedNew = [], companies = [], trusted = [] } = {}) {
-  const names = readNames(root), sure = new Set(confirmedNew.map(foldName)), people = [], fresh = [], similar = [], unnamed = [], inferred = [], said = [];
+   {mention, name, resolution, rule}, for the memory to keep. Returns {people, added, similar, unnamed, inferred, mentions, unclear}.
+   With saveUnclear, a bare first name nobody known has (P3), or one several known people have (P2), does
+   not hold the note: it goes in `unclear` as {mention, candidates} and stays out of people, so the note
+   is saved with the name as written and the caller asks who it is. */
+export function normalisePeople(root, mentions, { confirmedNew = [], companies = [], trusted = [], saveUnclear = false } = {}) {
+  const names = readNames(root), sure = new Set(confirmedNew.map(foldName)), people = [], fresh = [], similar = [], unnamed = [], inferred = [], said = [], unclear = [];
+  const sharing = t => names.filter(n => n.kind === "person" && [n.name, ...n.aliases].some(x => foldName(x).split(/\s+/)[0] === foldName(t))).map(n => n.name);
+  const askLater = (t, candidates) => { if (!unclear.some(x => foldName(x.mention) === foldName(t))) unclear.push({ mention: t, candidates }); };
   const plain = new Set([...companies, ...trusted].map(foldName));
   const take = c => { if (!people.includes(c)) people.push(c); };
   const note = (mention, name, resolution, rule) => { if (!said.some(x => x.mention === mention)) said.push({ mention, name, resolution, rule }); };
@@ -747,17 +752,19 @@ export function normalisePeople(root, mentions, { confirmedNew = [], companies =
     const exact = exactName(names, t); if (exact) { take(exact); if (exact !== t) note(t, exact, "exact", "P1"); continue; }
     if (sure.has(foldName(t))) { names.push({ name: t, aliases: [], emails: [], kind: "person" }); fresh.push(t); take(t); note(t, t, "confirmed_new", plain.has(foldName(t)) ? "C1" : /\s/.test(t) ? "P1" : "P3"); continue; }   // the person said: someone new
     const guess = inferredName(names, t); if (guess) { inferred.push({ mention: t, name: guess }); take(guess); note(t, guess, "inferred_first_name", "P2"); continue; }
+    const one = !/\s/.test(t) && !plain.has(foldName(t));
+    if (saveUnclear && one) { const several = sharing(t); if (several.length > 1) { askLater(t, several); continue; } }
     const like = similarNames(names, t);
     if (like.length) { similar.push({ mention: t, matches: like }); continue; }
-    if (!/\s/.test(t) && !plain.has(foldName(t))) { unnamed.push(t); continue; }
+    if (one) { if (saveUnclear) askLater(t, []); else unnamed.push(t); continue; }
     names.push({ name: t, aliases: [], emails: [], kind: "person" }); fresh.push(t); take(t); note(t, t, "new", plain.has(foldName(t)) ? "C1" : "P1");
   }
-  if (similar.length || unnamed.length) return { people: [], added: [], similar, unnamed, inferred: [], mentions: [] };
+  if (similar.length || unnamed.length) return { people: [], added: [], similar, unnamed, inferred: [], mentions: [], unclear };
   // Resolve all mentions before writing, so an ambiguous company cannot leave a partial registry.
   const companyNames = new Set(companies.map(m => canonicalName(names, m)).filter(Boolean));
   for (const t of fresh) addName(root, t, { kind: companyNames.has(t) ? "company" : "person" });
   for (const name of companyNames) if (!fresh.includes(name)) addName(root, name, { kind: "company" });
-  return { people, added: fresh, similar: [], unnamed: [], inferred, mentions: said };
+  return { people, added: fresh, similar: [], unnamed: [], inferred, mentions: said, unclear };
 }
 
 /* ---------- the loaded set: work/loaded-contexts.json, per brain, local ---------- */
@@ -1245,7 +1252,7 @@ export function rerender(root) {
 // retracts); the file is never rewritten. effectiveMemories() resolves them for readers.
 export const MEMORY_FIELDS = ["id", "context", "at", "authors", "via", "kind", "tools", "people", "content", "source", "actions", "supersedes", "retracts", "tags", "asset", "entities", "entity_mentions", "customer", "customer_coverage", "relation", ...MEETING_FIELDS];
 export const KINDS = ["note", "decision", "question"];
-export const MENTION_RESOLUTIONS = ["exact", "inferred_first_name", "new", "confirmed_new"];
+export const MENTION_RESOLUTIONS = ["exact", "inferred_first_name", "new", "confirmed_new", "answered"];
 export const LEGACY_KINDS = ["action"]; // retired; records written before stay valid
 const isList = (v, f) => Array.isArray(v) && v.every(f);
 const isStr = s => typeof s === "string" && s.length > 0;
