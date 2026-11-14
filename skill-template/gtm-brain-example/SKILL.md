@@ -40,6 +40,12 @@ Pick the first path that works and say which one this chat uses:
    guide, or `codex mcp add <tool> --url <your MCP url>` then `codex mcp login <tool>`), and
    stop. After connecting, the person opens a new chat: Codex lists tools at chat start.
 
+So the tool shows in the brain's tools: through MCP it is listed by itself (installed, then
+connected after a read). Through the HTTP API, call `mark_tool` after the first request that works
+(status `ok`, one line on what it returned; `fail` with the exact error when a key is refused or
+expired), keep a note that names the tool in `tools`, then call `check_tools`: the tool is shown
+as connected through its API, or read failed. Do not ask the person to add MCP just to be listed.
+
 Never use the tool's website through the browser instead. An empty result is a result: say so.
 On an error, report the exact error and stop.
 

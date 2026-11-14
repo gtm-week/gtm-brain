@@ -70,8 +70,10 @@ For a vendor such as Zynt, the contract between your tool and the brain:
   step, no code written. Name both paths in `SKILL.md` step 2 with your own URLs.
 - **GTM Brain sees your connector, but cannot install it.** A remote MCP server in the person's
   Codex `config.toml` shows on the dashboard as installed, untested, and as connected after a
-  successful call. A tool used only through its HTTP API shows as "no official plugin" (export
-  or paste). `gtm-brain-configure` cannot add your server for them, so put your own connect
+  successful call. A tool used only through its HTTP API is listed once the skill records a read
+  test (`mark_tool`) and a note names it in `tools`: connected through its API, or read failed
+  when the key expired. Use MCP when your tools are already there; never make the person add MCP
+  only to be listed. `gtm-brain-configure` cannot add your server for them, so put your own connect
   steps in the skill, check your tools are callable first, and when they are not, say so and
   show those steps. After connecting, the person opens a new chat: Codex lists tools at chat start.
 - **The brain keeps pointers, not your data.** A signal or a news item becomes one short note in
