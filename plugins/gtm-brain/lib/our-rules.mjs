@@ -470,7 +470,7 @@ export function ourRulesFindings(root) {
 /* search: a kind or subtype, "link <type>", general, or an entity's name; when: saving, drafting or reading; text: a
    draft to check. Every rule that applies, not once per chat: it was asked for. */
 export function scopedReport(root, { search = "", when = null, text = null } = {}) {
-  const parsed = readOurRules(root), vocab = vocabulary(root), q = String(search || "").trim(), verb = when ? verbOf(when) || null : null;
+  const parsed = readOurRules(root), vocab = vocabulary(root), q = String(search || "").trim().replace(/^(?:(?:our\s+)?rules\s+)?for\s+/i, ""), verb = when ? verbOf(when) || null : null;
   if (when && !verb) return { text: `when must be saving, drafting or reading (it says "${when}").`, error: true };
   const link = q.match(/^(?:link|relationship)\s+([a-z0-9_]+)$/i), lower = q.toLowerCase(), everything = !q || /^(general|all|everything)$/i.test(q);
   let scopes, about;
@@ -480,7 +480,7 @@ export function scopedReport(root, { search = "", when = null, text = null } = {
   else if (vocab.subtypes.includes(lower)) { scopes = [{ kind: "organization", subtype: lower, links: [] }]; about = `organization (${lower})`; }
   else {
     let s = null; try { s = entityScope(root, q, { rules: parsed.rules }); } catch {}
-    if (!s) return { text: `rules for "${q}": no kind, link type or known entity by that name. Pass a kind (${vocab.kinds.join(", ")}), link <type>, general, or a name.`, error: true };
+    if (!s) return { text: `rules for "${q}": no kind, link type or known entity by that name. Pass a kind (${vocab.kinds.join(", ")}), link <type>, general, or a name.`, error: true, unknown: true };
     scopes = [s]; about = `${s.name} (${s.kind}${s.subtype ? `, ${s.subtype}` : ""}${s.links.length ? `; ${s.links.join(", ")}` : ""})`;
   }
   const picked = everything ? { scoped: parsed.rules.filter(r => !r.work && !isGeneral(r) && whenMatches(r, verb)), general: parsed.rules.filter(r => !r.work && isGeneral(r) && whenMatches(r, verb)), moreGeneral: 0 } : rulesFor(parsed, scopes, verb);
@@ -489,16 +489,17 @@ export function scopedReport(root, { search = "", when = null, text = null } = {
   return { text: `${shown}${text ? `\n${broken.length ? `The draft ${broken.join("; ")}. Change it before it goes out.` : "The draft breaks no check rule."}` : ""}`, error: false };
 }
 
-/* For the chat start (lib/dots.mjs rulebookText, another lane's file): what every chat needs of Our rules, the general
-   and unfiled rules, and one line counting the filed ones that come with the reply that needs them. Same shape as
-   where.ownRules: "" when there is nothing. */
+/* For the chat start (lib/dots.mjs rulebookText): what every chat needs of Our rules once one is filed, the general
+   and unfiled rules, and one line counting the filed ones that come with the reply that needs them. null while no
+   rule has a tag line: the chat start then prints the section as written, as before. */
 export function startRules(root) {
   try {
-    const { rules } = readOurRules(root), general = rules.filter(r => !r.work && isGeneral(r)), scoped = rules.filter(r => !r.work && !isGeneral(r)), work = rules.filter(r => r.work);
-    return [...general.map(r => `${r.text}${label(r)}`),
+    const { rules } = readOurRules(root); if (!rules.some(r => r.tag)) return null;
+    const general = rules.filter(r => !r.work && isGeneral(r)), scoped = rules.filter(r => !r.work && !isGeneral(r)), work = rules.filter(r => r.work);
+    return [...general.map(r => `${r.text}${r.note ? ` ${r.note}` : ""}${label(r)}`),
       ...(scoped.length ? [`${scoped.length} more rule${scoped.length === 1 ? "" : "s"} for a kind or link (${[...new Set(scoped.flatMap(r => r.tag.applies.map(a => a.link ? `link ${a.link}` : a.subtype || a.kind)))].join(", ")}): each comes with the reply that needs it (a save, a brief, query rules).`] : []),
       ...(work.length ? [`${work.length} ${work.length === 1 ? "line that starts work waits" : "lines that start work wait"} to become workflows (query rules); never act on them as rules.`] : [])].join("\n");
-  } catch { return ""; }
+  } catch { return null; }
 }
 
 /* The lines a reply carries for the entities in hand: scoped rules, once per chat per rule and action (shown is a

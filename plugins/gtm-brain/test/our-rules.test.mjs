@@ -200,7 +200,7 @@ test("server: query rules gains the scoped list; a brief and a save carry the ru
     const q = (await rpc("tools/list")).result.tools.find(t => t.name === "query");
     assert.match(q.description.slice(0, 2048), /the Our rules that apply to it, filters\.when = saving, drafting or reading, filters\.text = a draft to check/);
     assert.ok(q.description.length <= 2048, `query's description is ${q.description.length} characters; a host keeps 2048`);
-    let r = await call("query", { object: "rules", search: "organization" });
+    let r = await call("query", { object: "rules", search: "rules for organization" });
     assert.match(r.text, /^Our rules for organization \(RULES.md[^\n]*\n- Never call a company a customer before a signed contract\. \[check\]/);
     assert.doesNotMatch(r.text, /partner tier|pricing/);
     r = await call("query", { object: "rules", search: "link partner_of", filters: { when: "drafting" } });
@@ -362,4 +362,14 @@ test("review: a tag line typed on a keyboard (hyphens, slashes, commas, full sto
   }
   assert.deepEqual(R.parseTag("> applies to: customers · drafting", VOCAB).tag, { applies: [{ kind: "organization" }], when: "drafting", on: null, mode: "guidance" });
   assert.deepEqual(R.parseTag("> applies to: person, organization · guidance", VOCAB).tag.applies, [{ kind: "person" }, { kind: "organization" }], "a comma between kinds stays a list");
+});
+
+test("review: the chat start shows only the general rules once one is filed, and the section as written before that", async () => {
+  const dots = await import(`${P}/lib/dots.mjs`);
+  const plain = withRules(brain(), "Always ask before tagging a client.\n");
+  assert.match(dots.rulebookText(plain), /## This brain's own rules[^\n]*\n\nAlways ask before tagging a client\.\n---$/, "nothing filed: as before");
+  const filed = withRules(brain(), `${OWNER}\nBe polite.\n> applies to: general · guidance\n`);
+  const text = dots.rulebookText(filed);
+  assert.match(text, /\n\nBe polite\.\n2 more rules for a kind or link \(organization, link partner_of\): each comes with the reply that needs it/);
+  assert.doesNotMatch(text, /signed contract|partner tier|> applies to/, "a rule for a kind is not in every chat");
 });
