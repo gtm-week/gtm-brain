@@ -99,7 +99,7 @@ export class MemoryIndex {
     // index while holding their own lock without an inverse lock order in readers.
     lib.withEntityLock(this.root, () => {
       this.identityRevision = entityStamp(this.root);
-      this.identitySnapshot = lib.readNames(this.root).map(({ id, name, aliases, emails, previous_ids }) => ({ id, name, aliases, emails, previous_ids }));
+      this.identitySnapshot = lib.readNamesShared(this.root).map(({ id, name, aliases, emails, previous_ids }) => ({ id, name, aliases, emails, previous_ids }));
     });
     this.path = indexPath(this.root);
     this.stats = { recordsRead: 0, filesRead: 0, rebuiltFiles: 0, hashedBytes: 0, trustedAppends: 0, relinkedRecords: 0, visibilityRows: 0, checkpoints: 0 };
@@ -400,7 +400,7 @@ export class MemoryIndex {
       const putContext = this.db.prepare('INSERT INTO contexts VALUES (?,?,?,?,?,?)');
       for (const c of lib.listContexts(this.root, { includeMemories: false })) putContext.run(c.slug, c.title || c.slug, c.status || 'active', c.summary || '', c.rule || '', loaded.has(c.slug) ? 1 : 0);
       const putEntity = this.db.prepare('INSERT INTO entities VALUES (?,?,?,?,?,?)');
-      for (const n of lib.readNames(this.root)) putEntity.run(n.id, n.name, n.kind || 'person', n.subtype || null, JSON.stringify(n.aliases || []), JSON.stringify(n.emails || []));
+      for (const n of lib.readNamesShared(this.root)) putEntity.run(n.id, n.name, n.kind || 'person', n.subtype || null, JSON.stringify(n.aliases || []), JSON.stringify(n.emails || []));
       this.viewsReady = true;
     }
     this.db.exec('PRAGMA query_only=1');

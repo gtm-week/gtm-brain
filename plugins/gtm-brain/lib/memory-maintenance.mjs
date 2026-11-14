@@ -32,7 +32,7 @@ export function memoryIndexMaintenance(root, { mode = 'status', budget_ms = 1000
   if (!lib.readAdmin(root)) throw new Error('no brain here');
   if (!['status', 'refresh', 'rebuild'].includes(mode)) throw new Error('mode must be status, refresh or rebuild');
   if (!Number.isInteger(budget_ms) || budget_ms < 100 || budget_ms > 5000) throw new Error('budget_ms must be an integer from 100 to 5000');
-  const registry = JSON.stringify(lib.readNames(root).map(({ id, name, aliases, emails, previous_ids }) => ({ id, name, aliases, emails, previous_ids })));
+  const registry = JSON.stringify(lib.readNamesShared(root).map(({ id, name, aliases, emails, previous_ids }) => ({ id, name, aliases, emails, previous_ids })));
   if (mode === 'status') {
     if (!existsSync(indexPath(root))) return describe(root, null, registry);
     let release, db;
