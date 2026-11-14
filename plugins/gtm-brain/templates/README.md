@@ -37,7 +37,7 @@ what it belongs to.
 ## How we name people
 
 Every note says who it is about. Codex matches each name by four fixed rules, and the person's page
-in `brain/entities/` shows which rule matched each spelling, when, and from which source and project.
+in `brain/entities/people/` shows which rule matched each spelling, when, and from which source and project.
 
 - **P1** A name, alias or email that belongs to exactly one known person, company or product is that one.
 - **P2** A first name alone ("Max") means a known person only when exactly one known person has that
@@ -75,7 +75,11 @@ date" with the date when it falls more than 2 days behind.
 
 - `contexts/<topic>/memories.jsonl`: every note, one per line, never edited. Corrections are new notes.
 - `contexts/<topic>/context.md`: the summary of those notes, rewritten by Codex.
-- `entities/`: who and what the notes are about. One file each, shared by every topic and project.
+- `entities/`: who and what the notes are about, in a folder per kind (`people/`, `organizations/`,
+  `products/`, `events/`, `tools/`, `meetings/`). One page each, named by the name and a short id
+  (`people/max-jendral-3f9a2c.md`), shared by every topic and project; its files sit in the folder
+  of the same name beside it. Each kind folder has an `index.md`, one line per entity, written by
+  GTM Brain.
 - `admin.md`: the company profile. Protected.
 - `ontology.ossie.json`: actions your own tools can run. Protected.
 
