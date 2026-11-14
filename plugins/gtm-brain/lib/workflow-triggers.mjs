@@ -219,7 +219,11 @@ export function pendingOffers(root, { contexts = lib.listContexts(root), runs = 
     // an entity already in a live run of this workflow is not offered again: the run's own work (its milestone notes
     // saved through remember) would otherwise start the same workflow about the same entity, round and round
     const busy = new Set(runs.filter(r => r.workflow === w.slug && isLive(r) && r.subject).map(r => r.subject));
-    waiting = waiting.filter(ev => !taken.has(`${w.slug}|${ev.id}`) && !dismissed.has(`${w.slug}|${ev.id}`) && !(ev.entity && busy.has(ev.entity))).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+    // and what was saved about that entity while a run of this workflow about it was going is that run's work, not a
+    // new event: without this the milestone notes of a finished run offer the workflow again, once per note
+    const spans = runs.filter(r => r.workflow === w.slug && r.subject && r.startedAt && r.ended);
+    const ownWork = ev => ev.entity && ev.change !== "missing" && spans.some(r => r.subject === ev.entity && String(ev.at) >= String(r.startedAt) && String(ev.at) <= String(r.ended.at));
+    waiting = waiting.filter(ev => !taken.has(`${w.slug}|${ev.id}`) && !dismissed.has(`${w.slug}|${ev.id}`) && !(ev.entity && busy.has(ev.entity)) && !ownWork(ev)).sort((a, b) => String(b.at).localeCompare(String(a.at)));
     if (!waiting.length) continue;
     const tooDeep = waiting.filter(ev => ev.depth + 1 > LIMITS.chainDepth); waiting = waiting.filter(ev => ev.depth + 1 <= LIMITS.chainDepth);
     const active = runs.filter(r => r.workflow === w.slug && isLive(r)).length;
@@ -233,7 +237,9 @@ export function offerLines(root, { contexts = lib.listContexts(root), runs = lis
   const workflows = listWorkflows(root); if (!workflows.length) return [];
   if (workflowsOff(root)) return workflows.some(w => w.ok && w.header.status === "active") ? ["workflows are off in this brain (workflows: off in brain/admin.md): nothing is offered or moved; say so only if asked."] : [];
   const lines = [], flagged = workflows.filter(w => effectiveStatus(root, w).flag);
-  for (const w of flagged) lines.push(`workflow ${w.slug} is held: ${effectiveStatus(root, w).flag}. Say it once; the fix is the header (or the schema through /gtm-brain-schema), then workflow check.`);
+  // one line however many are held: the chat start is read every chat until the header or the schema is fixed
+  if (flagged.length === 1) lines.push(`workflow ${flagged[0].slug} is held: ${effectiveStatus(root, flagged[0]).flag}. Say it once; the fix is the header (or the schema through /gtm-brain-schema), then workflow check.`);
+  else if (flagged.length) lines.push(`${flagged.length} workflows are held because SCHEMA.md changed: ${flagged.slice(0, 10).map(w => w.slug).join(", ")}${flagged.length > 10 ? ` and ${flagged.length - 10} more` : ""}. Say it once; query workflows says what each one lost; the fix is the header (or the schema through /gtm-brain-schema), then workflow check.`);
   const offers = pendingOffers(root, { contexts, runs, now, workflows });
   for (const o of offers.slice(0, LIMITS.offersPerChat)) {
     const ev = o.events[0], more = o.events.length - 1;
@@ -246,17 +252,29 @@ export function offerLines(root, { contexts = lib.listContexts(root), runs = lis
 }
 
 /* ---------- milestones: has the brain seen it, since the step opened? ---------- */
-export function milestoneEvidence(root, ms, { since = null, subject = null, run = null, contexts = lib.listContexts(root), registry = null } = {}) {
+/* Whose note is it? A note carrying this run's tag is the run's. A note carrying another run's tag never is: one
+   run's advance note (it carries the milestone tag) must not finish another run's step. A plain note (saved through
+   remember) counts when it names the run's subject, or, for a run with no subject, when it is in the run's context.
+   step: the step whose milestone is asked for; the run's own note for a different step is not it (two steps on
+   one tag). A field with no subject counts only when a note saved since the step opened filled it. */
+export function milestoneEvidence(root, ms, { since = null, subject = null, run = null, context = null, step = null, contexts = lib.listContexts(root), registry = null } = {}) {
   if (!ms || ms.kind === "invalid") return null;
   const after = m => !since || String(m.at) >= String(since);
   const mems = () => contexts.flatMap(c => lib.effectiveMemories(c.memories || [])).sort((a, b) => String(b.at).localeCompare(String(a.at)));
-  if (ms.kind === "tag") { const m = mems().find(m => after(m) && (m.tags || []).includes(ms.tag) && (!subject || (m.entities || []).includes(subject) || (run && (m.tags || []).includes(`run:${run}`)))); return m ? { memory: m.id, at: m.at, what: `${milestoneText(ms)} (${m.id})` } : null; }
-  if (ms.kind === "link") { const read = readSchema(root), canon = t => read.schema ? relationType(read.schema, t)?.type || t : t; const m = mems().find(m => after(m) && m.relation && m.relation.status === "current" && canon(m.relation.type) === canon(ms.type) && (!subject || m.relation.from === subject || m.relation.to === subject)); return m ? { memory: m.id, at: m.at, what: `${milestoneText(ms)} (${m.id})` } : null; }
+  const mine = (m, names) => {
+    const of = tagOf(m, "run:");
+    if (of) return !!run && of === run && (step == null || !tagOf(m, "step:") || Number(tagOf(m, "step:")) === Number(step));
+    return subject ? names(m) : !context || m.context === context;
+  };
+  if (ms.kind === "tag") { const m = mems().find(m => after(m) && (m.tags || []).includes(ms.tag) && mine(m, m => (m.entities || []).includes(subject))); return m ? { memory: m.id, at: m.at, what: `${milestoneText(ms)} (${m.id})` } : null; }
+  if (ms.kind === "link") { const read = readSchema(root), canon = t => read.schema ? relationType(read.schema, t)?.type || t : t; const m = mems().find(m => after(m) && m.relation && m.relation.status === "current" && canon(m.relation.type) === canon(ms.type) && mine(m, m => m.relation.from === subject || m.relation.to === subject)); return m ? { memory: m.id, at: m.at, what: `${milestoneText(ms)} (${m.id})` } : null; }
   if (ms.kind === "field") {
-    const reg = registry || lib.readNames(root);
+    const reg = registry || lib.readNames(root), at = subject || !since ? null : new Map(contexts.flatMap(c => (c.memories || []).map(m => [m.id, m.at])));
     for (const e of reg.filter(e => e.kind === ms.entityKind && (!subject || e.id === subject))) {
       let f = []; try { f = JSON.parse(e._fm?.compiled_fields || "[]"); } catch {}
-      const hit = Array.isArray(f) && f.find(x => x.field === ms.field); if (hit) return { memory: hit.memories?.[0] || null, at: null, what: `${e.name}'s ${ms.field}: ${hit.text}` };
+      const hit = Array.isArray(f) && f.find(x => x.field === ms.field); if (!hit) continue;
+      if (at && !(hit.memories || []).some(id => at.has(id) && String(at.get(id)) >= String(since))) continue;
+      return { memory: hit.memories?.[0] || null, at: null, what: `${e.name}'s ${ms.field}: ${hit.text}` };
     }
     return null;
   }

@@ -62,9 +62,9 @@ function setHeader(w, changes, message) {
   let fm = m[1];
   for (const [k, v] of Object.entries(changes)) {
     const line = `${k}: ${/[:#"]/.test(v) ? JSON.stringify(v) : v}`, re = new RegExp(`^${k}:.*$`, "m");
-    fm = re.test(fm) ? fm.replace(re, line) : `${fm}\n${line}`;
+    fm = re.test(fm) ? fm.replace(re, () => line) : `${fm}\n${line}`;
   }
-  text = text.replace(m[0], `---\n${fm}\n---`); writeFileSync(path, text);
+  text = text.replace(m[0], () => `---\n${fm}\n---`); writeFileSync(path, text);   // a function: $& and $$ in a title are text, not patterns
   const c = lib.commit(root, [w.path], message); lib.logActivity(root, "workflow", message); lib.rerender(root);
   return c;
 }
@@ -249,7 +249,7 @@ const openNext = (r, w, n, today, closingLine) => {
   }
   let st = wf.stepDue(next, today);
   // a gate on a named milestone: reached already in this run (since it started), the step is due at once
-  const reached = st.wait ? tr.milestoneEvidence(root, st.wait, { since: r.startedAt, subject: r.subject, run: r.id }) : null;
+  const reached = st.wait ? tr.milestoneEvidence(root, st.wait, { since: r.startedAt, subject: r.subject, run: r.id, context: r.context }) : null;
   if (reached) st = { status: "due", due: today };
   stepRecord(w, next, st, r.id, st.status === "pending" ? `Waiting for the gate. ${next.text}` : `Ready now.${reached ? ` Gate reached: ${reached.what}.` : ""} ${next.text}`, {}, r.depth);
   if (st.ask) gateQuestion(w, next, r.id, st.ask, r.depth);
@@ -262,7 +262,7 @@ const openNext = (r, w, n, today, closingLine) => {
 if (opt.advance) {
   needBy(); off();
   const { r, ctx, w } = liveRun(opt.advance), { n, cur, def } = currentStep(r, w), today = wf.localDate();
-  if (def.milestone && !["tag", "invalid"].includes(def.milestone.kind) && !tr.milestoneEvidence(root, def.milestone, { since: r.opened[n], subject: r.subject, run: r.id }))
+  if (def.milestone && !["tag", "invalid"].includes(def.milestone.kind) && !tr.milestoneEvidence(root, def.milestone, { since: r.opened[n], subject: r.subject, run: r.id, context: r.context, step: n }))
     refuse(`step ${n} is done when ${wf.milestoneText(def.milestone)}, and the brain does not see it yet. Do that first (save it, compile the brief, write the document), or skip the step with a reason.`);
   stepRecord(w, def, { status: "done" }, r.id, `Done on ${today}. ${String(opt.note || "").trim()}${opt.answer ? ` Gate answer: ${String(opt.answer).trim()}` : ""}`.trim(),
     { supersedes: cur.memory, retracts: r.open?.step === n ? r.open.memory : null, actions: parseActions(opt.actions) }, r.depth, milestoneTag(def));
@@ -331,7 +331,10 @@ if (opt.due) {
   const today = String(opt.today || wf.localDate()); if (!/^\d{4}-\d{2}-\d{2}$/.test(today)) refuse("--today must be YYYY-MM-DD");
   if (wf.workflowsOff(root)) { console.log("workflows are off (workflows: off in brain/admin.md): nothing checked"); process.exit(0); }
   const lines = [], touched = new Set(), commitRun = (ctx, msg) => { const c = lib.commit(root, [`brain/contexts/${ctx}/memories.jsonl`, ...lib.ENTITIES_PATHS], msg); lib.logActivity(root, "workflow", msg); touched.add(ctx); return c; };
-  const stepsToday = r => lib.readMemories(root, r.context).filter(m => (m.tags || []).includes(`run:${r.id}`) && String(m.at).slice(0, 10) === today && m.authors?.some(a => AUTOMATIC.has(a)) && (m.tags || []).some(t => t.startsWith("step-status:"))).length;
+  // steps the automatic check closed in this run on this machine's day: the day the notes were written, whatever
+  // --today says, and only the closing notes (the note that opens the next step is not a step moved)
+  const realDay = wf.localDate();
+  const stepsToday = r => lib.readMemories(root, r.context).filter(m => (m.tags || []).includes(`run:${r.id}`) && wf.localDate(new Date(m.at)) === realDay && m.authors?.some(a => AUTOMATIC.has(a)) && (m.tags || []).includes("step-status:done")).length;
   const wfCache = new Map(), wfOf = slug => { if (!wfCache.has(slug)) wfCache.set(slug, wf.readWorkflow(root, slug)); return wfCache.get(slug); };
   const raisedPath = join(root, "work", "workflow-raised.json"); let raised = {}; try { raised = JSON.parse(readFileSync(raisedPath, "utf8")); } catch {}
   for (const start of wf.listRuns(root).filter(wf.isMoving)) {
@@ -351,13 +354,13 @@ if (opt.due) {
         lines.push(`due: ${r.id} step ${cur.n} (${def.title}), asked: ${ask} (${c.note})`); continue;
       }
       if (cur.status === "pending" && !cur.due && def.gate?.milestone) {
-        const ev = tr.milestoneEvidence(root, def.gate.milestone, { since: r.startedAt, subject: r.subject, run: r.id }); if (!ev) break;
+        const ev = tr.milestoneEvidence(root, def.gate.milestone, { since: r.startedAt, subject: r.subject, run: r.id, context: r.context }); if (!ev) break;
         stepRecord(wl, def, { status: "due", due: today }, r.id, `Gate reached: ${ev.what}.`, { supersedes: cur.memory, ...(ev.memory ? { source: [{ kind: "memory", ref: ev.memory }] } : {}) }, r.depth);
         const c = commitRun(r.context, `workflow: ${r.id} step ${cur.n} due`);
         lines.push(`due: ${r.id} step ${cur.n} (${def.title}), gate reached: ${ev.what} (${c.note})`); continue;
       }
       if (cur.status === "due" && def.milestone && def.milestone.kind !== "invalid") {
-        const ev = tr.milestoneEvidence(root, def.milestone, { since: r.opened[cur.n], subject: r.subject, run: r.id });
+        const ev = tr.milestoneEvidence(root, def.milestone, { since: r.opened[cur.n], subject: r.subject, run: r.id, context: r.context, step: cur.n });
         if (ev) {
           stepRecord(wl, def, { status: "done" }, r.id, `Milestone reached on ${today}: ${ev.what}.`, { supersedes: cur.memory, retracts: r.open?.step === cur.n ? r.open.memory : null, ...(ev.memory ? { source: [{ kind: "memory", ref: ev.memory }] } : {}) }, r.depth, ["milestone-reached"]);
           const line = openNext(r, wl, cur.n, today, `milestone: ${r.id} step ${cur.n} (${def.title}) done, ${ev.what}`);
