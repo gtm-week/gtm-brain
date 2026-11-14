@@ -27,6 +27,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { prepareAsset, assetSummary, assetRows, currentApproved } from '../../lib/assets.mjs';
 import { meetingOverview } from '../../lib/meetings.mjs';
 import { join } from "node:path";
+import { spawn } from "node:child_process";
 import { isChatSource, host } from "../../lib/host.mjs";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const dots = await import(new URL("../../lib/dots.mjs", import.meta.url));
@@ -77,6 +78,7 @@ if (!authors.length) die("need --by <person>");
 const batched = entries.length > 1;
 if (entries.some(e => e?.customer) && entries.some(e => e?.customer_coverage)) die("Record customer coverage in a separate call after checking which customer entries were kept or held.");
 const kept = [], held = [], failed = [], lines = [], asks = [];
+const toolsNamed = []; // the tools and source kinds of the notes kept in this call, for the tools check below
 const esc = t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const personText = chat && !process.env.GTM_BRAIN_RUN ? (host().lastPersonText?.(chat) || "") : "";
 // where the one question goes: Codex's own question box when the person turned it on, else plain chat text
@@ -327,7 +329,7 @@ for (let i = 0; i < entries.length; i++) {
   // one commit per memory: git history stays readable as one commit, one memory
   const closedPath = closed ? [`brain/contexts/${closedIn}/memories.jsonl`] : [];
   lines.push(`${at(n)}${lib.commit(root, [`brain/contexts/${ctx}/memories.jsonl`, ...closedPath, ...lib.ENTITIES_PATHS], `remember: ${ctx} ${rec.kind} by ${rec.authors.join(",")}`).note}`);
-  kept.push({ n, id: rec.id, ctx });
+  kept.push({ n, id: rec.id, ctx }); toolsNamed.push(...(rec.tools || []), ...(rec.source || []).filter(s => s && !isChatSource(s)).map(s => s.kind));
   const memPaths = [`brain/contexts/${ctx}/memories.jsonl`, ...lib.ENTITIES_PATHS];
   const sharing = w => { const s = lib.readNames(root).filter(x => x.kind === "person" && [x.name, ...(x.aliases || [])].some(a => fold(a).split(/\s+/)[0] === fold(w))).map(x => x.name); return s.length > 1 ? s : []; };
   // the question about a saved note, kept in the brain until the person answers it: on the first save, for the
@@ -403,4 +405,12 @@ if (asks.length) console.log(`Ask the person once, ${askIn}, after quoting the n
 
 // 0.35.0: no summary is promised after a save; a topic's summary is written when someone asks (lib/summaries.mjs)
 if (!held.length && rules()) console.log(rules().trim());
+// A note from a tool the brain's tools list does not know yet (MagicPath, ZYNT): check the tools in the
+// background, so the dashboard lists it without waiting for someone to ask (connect.mjs: "a memory came from it").
+if (!process.env.GTM_BRAIN_NO_TOOLS_CHECK && !process.env.GTM_BRAIN_NO_COMMIT && !process.env.NODE_TEST_CONTEXT) {   // never from tests or dry runs
+  let known = []; try { known = Object.entries(JSON.parse(readFileSync(join(root, "work", "tools.json"), "utf8"))).flatMap(([k, s]) => [k, s && s.tool, s && s.plugin, s && s.display]); } catch {}
+  const flat = s => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const has = new Set(known.map(flat).filter(Boolean)), NEVER = new Set(["memory", "file", "url", "web", "person", "manual", "document"]);
+  if (toolsNamed.map(flat).some(x => x.length >= 3 && !NEVER.has(x) && !has.has(x))) spawn(process.execPath, [new URL("../gtm-brain-connect/connect.mjs", import.meta.url).pathname, root, "--check"], { detached: true, stdio: "ignore", env: { ...process.env, GTM_BRAIN_CODEX_TIMEOUT: "20000" } }).unref();
+}
 lib.rerender(root);
