@@ -343,9 +343,9 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
 <!-- /generated: computer-use -->
 
 This company's own interactions (move a deal in Attio, send a proposal by mail) are described in
-`brain/ontology.ossie.json`; `list_objects` lists them and `interact` runs one: it records the
-memory the interaction prescribes and tells you what to do in the connector, with that
-connector's own tools, never with Computer Use. When the person keeps doing the same thing by
+`brain/ontology.ossie.json`; `list_objects` lists them and `interact` runs one in two calls: the
+first checks and says what to do in the connector, with that connector's own tools, never with
+Computer Use; the second, with the outcome and the connector's refs, records it. When the person keeps doing the same thing by
 hand, call `propose_interaction`; the file is protected, so call `approve_change` with kind
 interaction and the person approves in its form.
 

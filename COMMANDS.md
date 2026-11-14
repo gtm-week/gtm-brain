@@ -84,8 +84,9 @@ Runs one of this company's own interactions (`brain/ontology.ossie.json`; `list_
 them). Check, act, then record, in two calls that carry everything themselves (nothing waits in
 server memory between them):
 
-1. `interact {name, params}`: the inputs are checked against the interaction's schema; a refusal
-   writes nothing. Otherwise the reply gives the interaction's `refuse_when` rule and exactly what
+1. `interact {name, params}`: the inputs are checked against the interaction's schema, and so is
+   what would refuse the note later (a person not in the team, a context that is not active, a
+   long dash or a bare relative date in the note); a refusal writes nothing. Otherwise the reply gives the interaction's `refuse_when` rule and exactly what
    to do in the connector, which Codex does with that connector's own tools. Nothing is written yet.
 2. `interact {name, params, outcome, refs, error}` with the same name and params, after the
    connector answered. `outcome: "done"` records the memory the interaction prescribes through
@@ -93,10 +94,12 @@ server memory between them):
    the connector returned: a direct URL, `provider:id`, a bare id read as the interaction's tool, or
    `{kind, account, ref, url}`) as its source pointers, account included when known.
    `outcome: "failed"` records a failure note instead: `Failed in <tool>, not done: <title>
-   (<inputs>). Error: <error>`, tagged `interaction-failed`, with no action.
+   (<inputs>), tried <date>. Error: <error>`, tagged `interaction-failed`, with no action. Long
+   inputs and a long error are cut, and long dashes become hyphens, so the note is always kept.
 
 An interaction with `external: false` in its file has no connector step and records at once on the
-first call. A plugin tool's name is refused: call the tool.
+first call (`outcome: "failed"` still records a failure note). `list_objects` shows it as
+`[record only]`. A plugin tool's name is refused: call the tool.
 
 Tool: `interact`. Writes: nothing on the first call; `brain/contexts/<slug>/memories.jsonl` (via
 remember) on the second, or at once for `external: false`.
