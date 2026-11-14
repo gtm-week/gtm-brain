@@ -343,7 +343,8 @@ test("upgrade moves a flat brain's entity pages into a folder per kind in one co
   const { root, env } = fixture(t);
   const git = (...a) => spawnSync("git", ["-C", root, ...a], { encoding: "utf8" });
   // a brain from before 0.35: pages flat in brain/entities, a merge and a company's files folder
-  const acme = lib.addName(root, "Acme", { kind: "organization", subtype: "company" }), chris = lib.addName(root, "Chris"), kp = lib.addName(root, "Krzysztof Pawlak");
+  const acme = lib.addName(root, "Acme", { kind: "organization", subtype: "company" }), chris = lib.addName(root, "Chris"), kp = lib.addName(root, "Krzysztof Pawlak", { aliases: ["KP"], emails: ["kp@acme.test"], references: [{ kind: "hubspot", ref: "contact/42" }] });
+  lib.appendMemory(root, "offer", { authors: ["ann-lee"], people: ["Krzysztof Pawlak"], content: "Krzysztof Pawlak runs the Acme pilot." });
   const preview = lib.mergeEntities(root, { source: chris.id, target: kp.id });
   lib.mergeEntities(root, { source: chris.id, target: kp.id, by: "ann-lee", as_of: preview.as_of });
   const flat = {};
@@ -352,14 +353,17 @@ test("upgrade moves a flat brain's entity pages into a folder per kind in one co
   for (const f of ["people", "organizations", "products", "events", "tools", "meetings", "offerings"]) rmSync(join(root, "brain/entities", f), { recursive: true, force: true });
   mkdirSync(join(root, "brain/entities/acme")); writeFileSync(join(root, "brain/entities/acme/logo.svg"), "<svg/>");
   assert.equal(lib.entityLayout(root), "flat");
-  const ids = lib.readNames(root).map(n => [n.id, n.name, n.aliases, n.previous_ids]);
+  const ids = lib.readNames(root).map(n => [n.id, n.name, n.aliases, n.emails, n.references, n.previous_ids]);
+  const notes = () => Object.fromEntries(readdirSync(join(root, "brain/contexts")).map(c => [c, existsSync(join(root, "brain/contexts", c, "memories.jsonl")) ? readFileSync(join(root, "brain/contexts", c, "memories.jsonl"), "utf8") : null]));
+  const notesBefore = notes();
   git("add", "-A"); git("-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "commit", "-qm", "flat brain");
   const { GTM_BRAIN_NO_COMMIT, ...committing } = env;
   const result = spawnSync("bash", [join(plugin, "scripts/gtm-brain-upgrade/upgrade.sh"), root], { cwd: root, env: committing, encoding: "utf8" });
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /moved \d+ entity pages into a folder per kind/);
   assert.equal(lib.entityLayout(root), "kinds");
-  assert.deepEqual(lib.readNames(root).map(n => [n.id, n.name, n.aliases, n.previous_ids]), ids);
+  assert.deepEqual(lib.readNames(root).map(n => [n.id, n.name, n.aliases, n.emails, n.references, n.previous_ids]), ids, "ids, aliases, emails and references are kept");
+  assert.deepEqual(notes(), notesBefore, "notes are untouched");
   assert.equal(lib.resolveEntity(lib.readNames(root), chris.id).id, kp.id, "the retired id still resolves");
   assert.ok(existsSync(join(root, `brain/entities/organizations/acme-${acme.id.slice(2, 8)}/logo.svg`)));
   assert.ok(existsSync(join(root, "brain/entities/people/index.md")));
@@ -367,8 +371,12 @@ test("upgrade moves a flat brain's entity pages into a folder per kind in one co
   assert.match(status, new RegExp(`^R\\d+\\s+brain/entities/acme\\.md\\s+brain/entities/organizations/acme-${acme.id.slice(2, 8)}\\.md$`, "m"));
   assert.match(status, /^R\d+\s+brain\/entities\/acme\/logo\.svg\s+brain\/entities\/organizations\/acme-[0-9a-f]{6}\/logo\.svg$/m);
   assert.equal(git("status", "--porcelain", "brain").stdout.trim(), "", "everything moved is in that commit");
+  const tree = git("ls-files", "-s", "brain").stdout;
   const again = spawnSync("bash", [join(plugin, "scripts/gtm-brain-upgrade/upgrade.sh"), root], { cwd: root, env: committing, encoding: "utf8" });
-  assert.doesNotMatch(again.stdout, /entity pages? into a folder per kind/);
+  assert.equal(again.status, 0, again.stderr);
+  assert.doesNotMatch(again.stdout, /entity pages? into a folder per kind|meeting pages?/);
+  assert.equal(git("ls-files", "-s", "brain").stdout, tree, "a second run changes no brain file");
+  assert.equal(git("status", "--porcelain", "brain").stdout.trim(), "", "and leaves nothing uncommitted");
 });
 
 test("the README does not call work/ safe to delete", () => {
