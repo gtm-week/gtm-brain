@@ -176,7 +176,10 @@ test("the cap: the pass stops near it, says what it left, and the next pass cont
 test("the heartbeat: fine, late after 36 hours, failed with the reason in the person's terms, and off", t => {
   const root = brain();
   assert.equal(capture.captureHealth(root).state, "never");
-  assert.match(capture.captureNotice(root, { mark: false }), /CAPTURE LATE: .*has not run on this machine yet.*Run it now in the background\? Yes, run it now \/ No, skip it/);
+  // a new brain's first chats (onboarding) are not asked about a pass that had nothing to read yet
+  assert.equal(capture.captureNotice(root), "", "no offer in the first 36 hours");
+  assert.equal(capture.captureNotice(root, { now: Date.now() + 35 * 3600e3 }), "");
+  assert.match(capture.captureNotice(root, { mark: false, now: Date.now() + 37 * 3600e3 }), /CAPTURE LATE: .*has not run on this machine yet.*Run it now in the background\? Yes, run it now \/ No, skip it/);
   codexChat(root, [["P", "We decided to hire a second SDR."]]);
   pass(root);
   const fine = capture.captureHealth(root);

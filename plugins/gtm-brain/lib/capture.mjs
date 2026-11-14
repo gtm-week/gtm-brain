@@ -354,14 +354,17 @@ export function captureNotice(root, { now = nowMs(), mark = true } = {}) {
   const held = s.announce?.held || [];
   if (held.length) out.push(`CAPTURED, HELD: ${held.length} outcome${held.length === 1 ? "" : "s"} from recent chats the saving rules held (an unclear name or date): ${held.slice(0, 3).map(x => `"${String(x.content).slice(0, 90)}" (${x.context})`).join("; ")}. Mention ${held.length === 1 ? "it" : "them"} in the same line and offer to save ${held.length === 1 ? "it" : "them"} with remember once the person settles the name or date; nothing is saved without that.`);
   const h = captureHealth(root, now);
-  const offerDue = ["late", "failed", "never"].includes(h.state) && !(Number.isFinite(Date.parse(s.offered)) && now - Date.parse(s.offered) < OFFER_EVERY_MS);
+  // never run counts as late once it has been due for 36 hours: a new brain's first chats (onboarding) get no offer
+  const seen = Number.isFinite(Date.parse(s.seen)) ? Date.parse(s.seen) : null;
+  const due = h.state === "never" ? seen !== null && now - seen > LATE_HOURS * 3600e3 : ["late", "failed"].includes(h.state);
+  const offerDue = due && !(Number.isFinite(Date.parse(s.offered)) && now - Date.parse(s.offered) < OFFER_EVERY_MS);
   if (offerDue) {
     const why = h.state === "failed" ? `the last pass failed: ${s.last.reason}` : h.state === "never" ? "it has not run on this machine yet" : `the last good pass was ${when(s.lastOk)}`;
     out.push(`CAPTURE LATE: the nightly chat capture (outcomes said in chats and never saved) is behind: ${why}. After answering, offer once, in one line: "The nightly chat capture is behind (${why}). Run it now in the background? Yes, run it now / No, skip it." On yes: capture_chats mode run (it returns at once). ${h.state === "failed" ? "If the reason needs the person (sign-in, permissions), say what to fix instead of offering the run. " : ""}Never run it without a yes; turning it off is capture_chats mode off.`);
   }
-  if (mark && (notes.length || held.length || offerDue)) update(root, x => {
+  if (mark && (notes.length || held.length || offerDue || (h.state === "never" && seen === null))) update(root, x => {
     const { announce, ...rest } = x;
-    return { ...rest, ...(offerDue ? { offered: new Date(now).toISOString() } : {}), ...(notes.length ? { undo: { notes } } : {}) };
+    return { ...rest, ...(x.seen ? {} : { seen: new Date(now).toISOString() }), ...(offerDue ? { offered: new Date(now).toISOString() } : {}), ...(notes.length ? { undo: { notes } } : {}) };
   });
   return out.join("\n");
 }
