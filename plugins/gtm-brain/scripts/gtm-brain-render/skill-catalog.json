@@ -158,5 +158,13 @@
     "title": "Draft our tone of voice",
     "description": "Settle whose voice it is, draft it from writing that fits, test it on one fresh email or post, then check a new chat follows it.",
     "example": "Draft our tone of voice from our website and posts."
+  },
+  {
+    "id": "gtm-brain-zynt-setup",
+    "group": "setup",
+    "featured": false,
+    "title": "Set up ZYNT",
+    "description": "Paste the prompt ZYNT gives you, and the brain fills ZYNT in from what it already knows.",
+    "example": "Set up ZYNT for me."
   }
 ]

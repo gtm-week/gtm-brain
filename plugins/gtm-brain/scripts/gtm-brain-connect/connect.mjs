@@ -197,8 +197,21 @@ if (listed) {
     used.push({ tool: state[k].tool, why });
   }
 }
+/* Read through its HTTP API with a key the person pasted (ZYNT's setup), no plugin and no MCP server: on the page
+   once a read test was recorded (mark_tool) and a memory names it in tools or as its source. A failed test stays
+   visible as failed, so a key that expired never reads as connected. */
+for (const k of Object.keys(state)) {
+  const s = state[k]; if (!s || s.plugin || s.mcp || s.suggested || s.used || !s.test || s.test === "skip") continue;
+  if (![k, s.tool].some(x => brainText.tools.has(norm(x)))) continue;
+  state[k] = { ...s, status: "installed", api: true, used: "read through its API" };
+  if (!used.some(u => norm(u.tool) === norm(s.tool))) used.push({ tool: s.tool, why: "read through its API" });
+}
 for (const k of Object.keys(state)) if (!(state[k] && (state[k].suggested || state[k].mcp || state[k].used)) && !(admin.tools || []).some(t => key(t) === k)) delete state[k]; // a tool removed from admin.md leaves the record
+// a tool that came or went redraws the dashboard (a background check after a save, gtm-brain-remember)
+const rowsOf = s => JSON.stringify(Object.entries(s || {}).map(([k, v]) => [k, v && v.status, v && v.test, v && v.used]).sort());
+let before = null; try { before = rowsOf(JSON.parse(readFileSync(wf, "utf8"))); } catch {}
 writeFileSync(wf, JSON.stringify(state, null, 1));
+if (before !== null && before !== rowsOf(state)) { const { requestDashboardRefresh } = await import(new URL("../../lib/dashboard-refresh.mjs", import.meta.url)); requestDashboardRefresh(root, fileURLToPath(new URL("../gtm-brain-render/render.mjs", import.meta.url))); }
 console.log(`tools in admin.md: ${rows.length}${listed ? "" : " · codex plugin list failed: install state as last checked, not re-checked now"}${catalogAt ? ` · catalog as of ${lib.localDateTime(catalogAt)}` : " · no catalog cache yet (open the Codex app once)"}`);
 for (const r of rows) {
   console.log(`- ${r.tool.padEnd(22)} ${r.status.padEnd(26)}${r.stale ? ` (as of ${lib.localDateTime(r.stale)})` : ""}${r.p && r.p.display && norm(r.p.display) !== norm(key(r.tool)) ? ` plugin "${r.p.display}"` : ""}${r.test ? ` read test: ${r.test}${r.note ? " (" + r.note + ")" : ""}` : ""}`);

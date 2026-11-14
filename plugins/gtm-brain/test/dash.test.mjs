@@ -113,6 +113,17 @@ test("the server serves the viewer, rejects all writes, and never launches Codex
   dash("--stop");assert.equal(dash("--url"),"");assert.equal(dash("--start"),url);
 });
 
+test("a server another plugin version started is replaced on start, on the same port", () => {
+  const url = dash("--start"), stateFile = join(root, "work", "dash.json"), s = JSON.parse(readFileSync(stateFile, "utf8"));
+  assert.equal(s.version, JSON.parse(readFileSync(join(P, ".codex-plugin", "plugin.json"), "utf8")).version, "the server records its plugin version");
+  assert.equal(dash("--start"), url); assert.equal(JSON.parse(readFileSync(stateFile, "utf8")).pid, s.pid, "the same version is reused");
+  writeFileSync(stateFile, JSON.stringify({ ...s, version: "0.0.1" }));   // as if an older install started it
+  assert.equal(dash("--start"), url, "the same address");
+  const n = JSON.parse(readFileSync(stateFile, "utf8"));
+  assert.notEqual(n.pid, s.pid, "a new server"); assert.equal(n.version, s.version);
+  assert.throws(() => process.kill(s.pid, 0), "the old one is gone");
+});
+
 test("legacy dashboard open flags never launch an external browser (ALL-207)", () => {
   const before = existsSync(calls) ? readFileSync(calls, "utf8") : "";
   const url = dash("--start");
