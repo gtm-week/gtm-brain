@@ -1,0 +1,37 @@
+Repository gtm-week/gtm-brain is checked out. This is a code-only task: do not use any connected account or connector (mail, chat, calendar, documents or others), and do not ask anyone questions; nobody is available to answer. Work to completion and open a pull request.
+
+Run: git fetch origin && git checkout lane-s4-typed-rules. Its tip must be 157dc193ad98e6b51dde63e994d400f980223188; if it is not, stop and report. The base is origin/release/0.35.0, whose tip must be d13c91735a8b6090ded4a85321196895cfd75cca or a descendant.
+
+You are finishing one lane of GTM Brain 0.35.0, a Codex plugin. Read CLAUDE.md and AGENTS.md first: the "Contributor invariants" bind you (Node built-ins only at runtime, no em or en dashes anywhere, English only, lib/ is the only write path, memories are append-only, the dashboard is a read-only viewer, never hand-edit generated blocks: run node scripts/sync-derived.mjs after touching policies or the ontology and commit source and output together). Never bump the version. Do not edit plugins/gtm-brain/templates/AGENTS.md unless your lane below says it owns that file (it has a 32,768 byte limit guarded by a test). Never hard-code brain/entities/ paths: another lane moves entity pages into kind folders through lib/layout.mjs.
+
+State of the branch: the builder finished and committed its work. Your job is to review it adversarially and fix what you find.
+
+What the owner measures, with the real Codex CLI on a real brain: a simple save or question in under 30 seconds, five tool calls or fewer, nothing over 2 minutes. Design for fewer tool calls and less text read by the model, not only for correctness. Teams share a brain through git, so think about a teammate still on plugin 0.34 opening a brain this code has written.
+
+## Lane S4: typed rules
+A brain's RULES.md has "Where things go" (a table), "Ask the source" (a table) and "Our rules" (free text the team writes; see lib/rules-check.mjs, the gtm-brain-rules skill, lib/where.mjs, lib/ask-source.mjs). Today "Our rules" are free text that Codex is expected to remember; nothing checks them and all of them are shown regardless of what is being done (ticket: enforce rules deterministically).
+Owner's decisions: a person writes a rule in plain words anywhere under "Our rules"; Codex proposes a tag line under it and the person accepts; only the rules for the kind in hand are shown; a rule never starts work: an instruction that starts work ("whenever a company becomes a customer, send the welcome pack") is offered as a one-step workflow instead and moved on acceptance; a rule Codex cannot scope stays general. The agreed form:
+
+Never call a company a customer before a signed contract.
+> applies to: organization · when: saving customer status · check
+
+Mention the partner tier when writing to a partner.
+> applies to: link partner_of · when: drafting · guidance
+
+Build:
+- A parser for "Our rules" that reads each rule and its optional tag line (applies to: a kind, a link type, or general; when: saving, drafting, reading, or a named field or status; and check or guidance), tolerant of hand edits, reporting problems per line in the house style and never throwing. Kinds and link types are checked against SCHEMA.md.
+- Untagged rules: listed by the rules check as "not filed yet"; the rules skill proposes a tag line for each and writes it on the person's yes (through the existing rules write path). Nothing is rewritten without a yes.
+- Showing only what applies: when a note is saved about an entity of a kind, when an entity brief is read, when a draft is requested, the reply carries the rules whose scope matches (and the general ones marked guidance only when few), in as few bytes as possible, once per chat per scope. Provide the function and wire it into the replies you own; for remember (owned by another lane) expose the function and describe the one-line call in your report rather than editing that script, unless the edit is a single import and call.
+- Checks: a rule tagged check with a recognisable condition (a status that requires a field or a prior fact, a word that must not appear in a saved note or a draft, a field that must be present) is evaluated at save and reported as a refusal with the rule quoted; anything that cannot be evaluated deterministically stays guidance and is shown, never silently skipped. List which patterns you support.
+- An instruction that starts work is detected when it is filed and offered as a workflow (write the proposal text; creating the workflow file is another lane's code, so emit the proposal and the file content and use the existing workflow create path if one exists).
+- query rules keeps its check and gains the scoped list ("rules for organization").
+Tests for the parser, the scope match, each supported check, the filing proposal, and the workflow offer. Real brain copy: it has no RULES.md "Our rules" of its own (it was on an old template), so write five realistic rules into a copy and report what is shown for a save about a person, a company and a draft.
+
+Not available here, so skip and list under "Unverified" in the pull request: the real team's brain, any live run of the Codex CLI, the harness bench and the Claude Code smoke test.
+
+Review as a skeptic before you finish. Earlier reviews of this project found: a field value that older installs reject, a check widened until it accepted a wrong answer, a "pass" that counted failed calls, a rule cut off by a host's length limit, and the word "channel" in shipped text failing the terminology test. For each behaviour in the brief, make sure a test exists that fails without it; write the missing adversarial test first, then fix what fails.
+
+Verification, all required: your lane's test files; node --test 'plugins/gtm-brain/test/*.test.mjs' (the whole suite, quote the glob; it takes 10 to 15 minutes; every failure must be fixed or shown to fail the same way on origin/release/0.35.0); node scripts/sync-derived.mjs --check; the end-to-end small shape described in plugins/gtm-brain/test/e2e/README.md.
+
+Commit in small commits with plain messages, each ending with the line "Co-Authored-By: Claude Opus <noreply@anthropic.com>". Push to lane-s4-typed-rules. Open a pull request from lane-s4-typed-rules into release/0.35.0 titled "Round three: typed rules" (if one exists already, update it). The body: what the lane does in plain words, the design choices you made, test numbers, what an existing brain and a teammate on 0.34 see, and "Unverified". End the body with the line: 🤖 Generated with [Claude Code](https://claude.com/claude-code)
+Do not merge the pull request and do not push to release/0.35.0 or main.

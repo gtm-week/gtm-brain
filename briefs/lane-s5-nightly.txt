@@ -1,0 +1,31 @@
+Repository gtm-week/gtm-brain is checked out. This is a code-only task: do not use any connected account or connector (mail, chat, calendar, documents or others), and do not ask anyone questions; nobody is available to answer. Work to completion and open a pull request.
+
+Run: git fetch origin && git checkout lane-s5-nightly. Its tip must be 07812a1eafb0ff45a80b9195951bea981f80d4ab; if it is not, stop and report. The base is origin/release/0.35.0, whose tip must be d13c91735a8b6090ded4a85321196895cfd75cca or a descendant.
+
+You are finishing one lane of GTM Brain 0.35.0, a Codex plugin. Read CLAUDE.md and AGENTS.md first: the "Contributor invariants" bind you (Node built-ins only at runtime, no em or en dashes anywhere, English only, lib/ is the only write path, memories are append-only, the dashboard is a read-only viewer, never hand-edit generated blocks: run node scripts/sync-derived.mjs after touching policies or the ontology and commit source and output together). Never bump the version. Do not edit plugins/gtm-brain/templates/AGENTS.md unless your lane below says it owns that file (it has a 32,768 byte limit guarded by a test). Never hard-code brain/entities/ paths: another lane moves entity pages into kind folders through lib/layout.mjs.
+
+State of the branch: the builder finished and committed its work. Your job is to review it adversarially and fix what you find.
+
+What the owner measures, with the real Codex CLI on a real brain: a simple save or question in under 30 seconds, five tool calls or fewer, nothing over 2 minutes. Design for fewer tool calls and less text read by the model, not only for correctness. Teams share a brain through git, so think about a teammate still on plugin 0.34 opening a brain this code has written.
+
+## Lane S5: the nightly capture pass
+The brain misses outcomes that were said in a chat and never saved. A background run exists (scripts/gtm-brain-schedule, the launchd or scheduled job set up by the schedule script, GTM_BRAIN_RUN, the compile toolset; see how sessions and chats are found in lib/host.mjs currentChat and the host's session files).
+Owner's decisions: the pass runs on the laptop in the existing background run; if the laptop was closed at night it catches up at the next chat start; the chat start shows one line when the last pass is older than 36 hours; it reads only chats changed since the last pass and stops near 200,000 tokens, saying what it skipped; it can be switched off.
+Build:
+- A capture pass: find the host chats in this brain's folder (and linked project folders) changed since the last pass; for each, extract the person's and the assistant's turns compactly (no tool output, no file dumps), skip chats already fully covered, and hand them to one bounded model run whose only job is to list outcomes that were established and not saved (decisions, changes, commitments with dates, corrections), each as a candidate note with the exact sentence it rests on and the chat it came from.
+- Candidates are saved through the normal remember path, tagged captured with the chat as source, so every rule and check applies (duplicates are refused there). They are listed in one line at the next chat start ("3 notes captured from yesterday's chats: ... Say 'undo captured' to withdraw them"), and can be withdrawn together.
+- Budget: a hard cap on input tokens per pass (default 200,000) and per chat; when the cap is reached the pass stops, records what it skipped, and continues next time from there. Report the tokens of each pass in its record.
+- A heartbeat: the time, result and token count of the last pass in the brain's machine-local state; the health line shows one line when the last successful pass is older than 36 hours or the last one failed, with the reason in the person's terms. A pass that cannot run (not signed in, the host's state database read-only, the model tool unavailable) records that reason. Those exact failures happened on a real machine for weeks without anyone being told.
+- Catch-up: at chat start, if the last pass is older than 36 hours, offer to run it now in one line (do not run it silently inside a person's turn).
+- A setting to turn it off, and to change the cap.
+- It must never read another brain's chats, never read chats outside the brain and its linked folders, and never send anything anywhere but the model run it starts.
+Tests with a fake host session folder and a stand-in for the model run: finds only changed chats, respects the cap and resumes, candidates go through remember, the undo, the heartbeat lines for late, failed and fine, the off switch. Report the tokens a pass would read for the real brain's last day if host session files for it exist on this machine (they may not; say so).
+
+Not available here, so skip and list under "Unverified" in the pull request: the real team's brain, any live run of the Codex CLI, the harness bench and the Claude Code smoke test.
+
+Review as a skeptic before you finish. Earlier reviews of this project found: a field value that older installs reject, a check widened until it accepted a wrong answer, a "pass" that counted failed calls, a rule cut off by a host's length limit, and the word "channel" in shipped text failing the terminology test. For each behaviour in the brief, make sure a test exists that fails without it; write the missing adversarial test first, then fix what fails.
+
+Verification, all required: your lane's test files; node --test 'plugins/gtm-brain/test/*.test.mjs' (the whole suite, quote the glob; it takes 10 to 15 minutes; every failure must be fixed or shown to fail the same way on origin/release/0.35.0); node scripts/sync-derived.mjs --check; the end-to-end small shape described in plugins/gtm-brain/test/e2e/README.md.
+
+Commit in small commits with plain messages, each ending with the line "Co-Authored-By: Claude Opus <noreply@anthropic.com>". Push to lane-s5-nightly. Open a pull request from lane-s5-nightly into release/0.35.0 titled "Round three: nightly" (if one exists already, update it). The body: what the lane does in plain words, the design choices you made, test numbers, what an existing brain and a teammate on 0.34 see, and "Unverified". End the body with the line: 🤖 Generated with [Claude Code](https://claude.com/claude-code)
+Do not merge the pull request and do not push to release/0.35.0 or main.

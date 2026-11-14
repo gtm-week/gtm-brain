@@ -1,0 +1,30 @@
+Repository gtm-week/gtm-brain is checked out. This is a code-only task: do not use any connected account or connector (mail, chat, calendar, documents or others), and do not ask anyone questions; nobody is available to answer. Work to completion and open a pull request.
+
+Run: git fetch origin && git checkout lane-s1-summaries. Its tip must be d635dd8e42ea8f31e60e47e54816c4dc3b20da15; if it is not, stop and report. The base is origin/release/0.35.0, whose tip must be d13c91735a8b6090ded4a85321196895cfd75cca or a descendant.
+
+You are finishing one lane of GTM Brain 0.35.0, a Codex plugin. Read CLAUDE.md and AGENTS.md first: the "Contributor invariants" bind you (Node built-ins only at runtime, no em or en dashes anywhere, English only, lib/ is the only write path, memories are append-only, the dashboard is a read-only viewer, never hand-edit generated blocks: run node scripts/sync-derived.mjs after touching policies or the ontology and commit source and output together). Never bump the version. Do not edit plugins/gtm-brain/templates/AGENTS.md unless your lane below says it owns that file (it has a 32,768 byte limit guarded by a test). Never hard-code brain/entities/ paths: another lane moves entity pages into kind folders through lib/layout.mjs.
+
+State of the branch: the builder finished and committed its work. Your job is to review it adversarially and fix what you find.
+
+What the owner measures, with the real Codex CLI on a real brain: a simple save or question in under 30 seconds, five tool calls or fewer, nothing over 2 minutes. Design for fewer tool calls and less text read by the model, not only for correctness. Teams share a brain through git, so think about a teammate still on plugin 0.34 opening a brain this code has written.
+
+## Lane S1: topic summaries on demand
+Today each context has a compiled summary (brain/contexts/<slug>/context.md) written by a background model run after saves (scripts/gtm-brain-compile, the run-bounded runner, lib.compileBusy, summaryState). On a real team's machine that run failed for weeks (a read-only Codex state database, a compiler tool that could not be called, an interrupted write) while the chat said "summary updating shortly"; the real brain's summaries are days behind its notes.
+Owner's decision: entity briefs and their schema fields stay and are kept current; topic summaries are built only when someone asks, and cached until new notes arrive; the background summary run for topics is retired; contexts shrink to plain tags.
+Build:
+- No background model run is started for topic summaries after a save. Nothing in a reply promises a summary "shortly".
+- A topic summary is produced when asked for (load_context for a topic, "where do we stand on X", the compile tool called explicitly): if the cached summary is older than the topic's newest note, the reply returns the digest of notes (the lane A digest already exists: compile --facts) and says in one line that the summary is being written now in this chat, or returns the cached one with its age. The model writes it through the existing compile tools in the foreground, once, and it is cached.
+- Entity briefs and compiled fields: find how they are produced today (lib.compileEntity, entityBrief, compiled_fields) and what depends on the background run. Keep them current without a background model run where that is possible deterministically (fields and relations derive from notes); where a model is needed (the prose overview), build it on demand the same way and cache it. Say plainly which parts needed a model.
+- When a summary run fails for any reason, the reply says what failed in the person's terms and what to do, once; add that to the health line.
+- Keep the files where they are; do not delete existing summaries. The dashboard must still render.
+Real brain: how many background runs a day of saving would have started before and after (count from its commit history: commits named "compile:"), and the bytes of a topic load before and after.
+
+Not available here, so skip and list under "Unverified" in the pull request: the real team's brain, any live run of the Codex CLI, the harness bench and the Claude Code smoke test.
+
+Review as a skeptic before you finish. Earlier reviews of this project found: a field value that older installs reject, a check widened until it accepted a wrong answer, a "pass" that counted failed calls, a rule cut off by a host's length limit, and the word "channel" in shipped text failing the terminology test. For each behaviour in the brief, make sure a test exists that fails without it; write the missing adversarial test first, then fix what fails.
+
+Verification, all required: your lane's test files; node --test 'plugins/gtm-brain/test/*.test.mjs' (the whole suite, quote the glob; it takes 10 to 15 minutes; every failure must be fixed or shown to fail the same way on origin/release/0.35.0); node scripts/sync-derived.mjs --check; the end-to-end small shape described in plugins/gtm-brain/test/e2e/README.md.
+
+Commit in small commits with plain messages, each ending with the line "Co-Authored-By: Claude Opus <noreply@anthropic.com>". Push to lane-s1-summaries. Open a pull request from lane-s1-summaries into release/0.35.0 titled "Round three: summaries" (if one exists already, update it). The body: what the lane does in plain words, the design choices you made, test numbers, what an existing brain and a teammate on 0.34 see, and "Unverified". End the body with the line: 🤖 Generated with [Claude Code](https://claude.com/claude-code)
+Do not merge the pull request and do not push to release/0.35.0 or main.
+Note: the last commit on this branch ("Work in progress at the cloud handover") holds a reviewer's unfinished edits, with tests not confirmed. Read that commit on its own first, finish or revert each part of it, then continue the review.
