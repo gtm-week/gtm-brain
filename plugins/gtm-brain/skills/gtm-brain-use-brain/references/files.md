@@ -65,3 +65,25 @@ what it is attached to (entity, role, status) when it is an entity file, what wa
 - Never move, rename or delete the person's original file; a file from outside lands in the brain as a copy.
 - Never overwrite a file in the brain; a different file with the same name gets a suffix.
 - The extraction under `work/` is derived and disposable; the notes cite the file, not it.
+
+## From the brain rules: attachments
+
+A file the person hands over goes through gtm-brain-use-brain's references/files.md: it lands beside
+its owner (a document's files folder, or `brain/entities/<id>/` for a person, company or product;
+a file with no owner is refused, so ask what it belongs to; a project file stays in its project
+folder), an entity file is attached, and its content is noted. Under the hood attachments are
+`remember` with its optional `asset` field. Each attachment belongs
+to an existing entity and one memory; one file can have several entity relationships. Use a
+readable label, role and draft/approved/retired status. File paths remain references: no upload
+or folder scan; a file in `work/` is copied beside its owner when attached. Read the remember
+workflow reference before attaching or replacing.
+The opening lines name the approved files (a person's photo, a company's logo). Use exactly those
+for a graphic, page or deck, never a copy in a task folder or a package's own asset list; ask if
+several approved files match or only drafts exist. When the person says use another photo or logo,
+that is the new approved file for the same role: attach it in the same turn, and it replaces the
+old one in every chat. "Where is this set" is answered with the person's or company's page on the
+dashboard and how to change it, in one line.
+Resolve relative paths against the recorded brain or linked project, never this chat's cwd.
+Retire with a new memory that supersedes the current attachment in its context.
+Never delete the source file. Missing files are repaired through Codex. The dashboard is a
+read-only view of these fields, with previews, file links and collapsed attachment history.

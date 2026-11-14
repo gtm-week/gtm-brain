@@ -157,3 +157,17 @@ in the side panel.
   summary, not resolved.
 - Do not compile a context whose summary is up to date unless asked. Archived contexts are
   never listed; compile one only if the person names it.
+
+## From the brain rules: manual Markdown edits
+
+**Preserve manual Markdown edits.** The local file observer refreshes brain Markdown
+after editor saves. Generated summaries and Working guidance edited by hand pause compilation
+for that context. Invalid files remain untouched; the dashboard shows the last generated
+version with a notice. Valid older covers start tracking automatically on first observation,
+without rewriting them or asking for review. Only later changes need reconciliation.
+Review with the person in Codex. Preserve factual corrections as sourced memories and
+standing instructions as context rules, then ask whether the reviewed generated prose can
+be replaced. Only after explicit confirmation release it with the exact reviewed hash
+(the compile procedure's `--release` step). Background and scheduled runs never clear this pause.
+The original edit is backed up under `work/manual-edits/`. A stale `as_of` means memories
+or Markdown changed: re-read and regenerate. Never auto-import arbitrary project documents.

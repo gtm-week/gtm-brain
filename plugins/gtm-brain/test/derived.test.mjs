@@ -54,3 +54,13 @@ test("source edits flag drift without writing, then update every copy and remove
   assert.equal(run(root).status, 0);
   for (const file of files) assert.equal(read(file), after[file], "generation must be idempotent");
 });
+
+test("the brain rules fit what Codex reads: templates/AGENTS.md stays under 32,768 bytes", () => {
+  // Codex reads only the first 32 KiB of a project doc (project_doc_max_bytes); anything after it never reaches the model.
+  const rules = readFileSync(join(repo, "plugins/gtm-brain/templates/AGENTS.md"));
+  assert.ok(rules.length <= 32768, `templates/AGENTS.md is ${rules.length} bytes; Codex drops everything after 32768`);
+  const text = rules.toString("utf8");
+  assert.match(text, /## Meeting evidence/, "the last section is still in the file");
+  assert.match(text, /\*\*Documents govern the work\.\*\*/);
+  assert.match(text, /\*\*Meeting evidence is always captured\.\*\*/);
+});

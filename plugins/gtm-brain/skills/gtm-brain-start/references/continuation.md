@@ -89,3 +89,23 @@ memories or existing proposal if needed, and act on the next step. Verify a prev
 blocked connection once. If it still fails, describe the actual blocker and offer a useful
 alternative or explicit skip; do not send the person through another identical restart.
 If setup was already accepted in the prepared prompt and the folder is empty, start it.
+
+## From the brain rules: onboarding state in ordinary chats
+
+reference in the use-brain workflow. The live onboarding state from the opening lines or
+`query` (status) takes precedence over old reminders in summaries and previous chats.
+Completed onboarding stays complete across updates; missing markers and newer optional
+steps do not start it. Incomplete legacy workflows wait for an explicit resume request.
+Use inactive or completed state internally; do not announce onboarding status in ordinary
+greetings or business answers unless the person asks about onboarding.
+If the person says they already finished, record completion with
+`remember`, superseding the pending marker if present; do not ask them to prove it or
+repeat the steps. Only an active pending request by this person resumes onboarding. Use
+`query` (status) to read the saved step and follow gtm-brain-start immediately on a greeting
+or return after restart. Reuse answers; do not ask whether to continue. Keep progressing
+after each outcome until completion, an explicit stop or a real blocker. Save a continuation
+note before a required new chat and give at most two actions with a prepared chat link;
+the person opens it and presses Send. See gtm-brain-start/references/continuation.md.
+Do not interrupt or follow a business request or status answer with an onboarding
+question. Do not offer a teammate's onboarding. If no context is loaded, infer it from the
+request; ask what they are working on only when there is no task to infer from.

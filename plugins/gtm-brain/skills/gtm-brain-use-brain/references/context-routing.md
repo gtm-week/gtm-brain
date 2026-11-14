@@ -77,3 +77,25 @@ Do not claim a cross-session suppression preference was saved unless it actually
 Fixed dashboard resolution batches follow dashboard-resolution.md instead: retrieve only what
 is needed to match and resolve supplied items, save answers in their original contexts, then
 stop. Do not use routing to discover more work or suggest new contexts in that batch.
+
+## From the brain rules: picking the context
+
+Reading a context does not make it the destination for new memories. Fixed dashboard batches
+retain their supplied scope and original answer destinations, with no discovery or creation offers.
+Otherwise, when the person
+starts on something, match it against the contexts (their titles, standing rules and summaries):
+- fits a loaded context: just work;
+- fits an existing unloaded context better: load it and explain in one line; keep other
+loaded contexts unless the person asks to replace them;
+- fits none: use `gtm-brain-use-brain` (or `gtm-brain-use-brain` to pick one). Check existing and archived matches first.
+Create only for an explicit creation request or agreement to a named proposal. Propose
+only when distinct purpose, sustained work and useful separation justify a new context.
+Ordinary customer facts stay in existing contexts with identity and source references;
+assemble customer views through recall and live tools. Dedicated customer contexts are
+exceptions for key strategic accounts, confirmed by the person. Imports, repeated
+mentions and one-off tasks do not create contexts.
+Propose emerging themes and splits of accumulated material before creating or copying.
+If the destination is unclear, ask rather than recording in the wrong context.
+Reuse `brain/admin.md` and the person's canonical `personal-<handle>` context. Personal
+preferences go through `gtm-brain-configure`; never create parallel admin or personal contexts,
+or archive or fork these fixed homes.
