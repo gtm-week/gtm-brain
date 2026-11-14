@@ -688,6 +688,13 @@ test("query object reference finds every note citing a source pointer, whatever 
   assert.match(byUrl.text, /Notes citing it \(2\)/);
   assert.ok((await call("query", { brain: refRoot, object: "reference" })).isError);
   assert.match((await call("query", { brain: refRoot, object: "reference", search: "hubspot:0-1/1" })).text, /Notes citing it: none/);
+  // the entity that holds the pointer is named, and a source with an account is found with or without it
+  const person = lib.addName(refRoot, "Dana Reference");
+  lib.updateEntity(refRoot, { entity: person.id, by: "ann", add: { references: [{ kind: "Attio", ref: "people/0a1b2c3d-4e5f-6789-abcd-ef0123456789" }] } });
+  lib.appendMemory(refRoot, "deals", { authors: ["ann"], content: "Thread about the renewal.", source: [{ kind: "gmail", account: "sales@fixture.test", ref: "t1" }] });
+  const named = await call("query", { brain: refRoot, object: "reference", search: url });
+  assert.match(named.text, new RegExp(`Entity: Dana Reference \\(${person.id}\\)`)); assert.match(named.text, /Notes citing it \(2\)/);
+  for (const search of ["gmail:t1", "gmail:sales@fixture.test/t1", "mail:t1"]) assert.match((await call("query", { brain: refRoot, object: "reference", search })).text, /Notes citing it \(1\)[\s\S]*Thread about the renewal/, search);
   const odd = await call("query", { brain: refRoot, object: "reference", search: "hubspot:it's; DROP x" });
   assert.ok(!odd.isError, odd.text); assert.match(odd.text, /Notes citing it: none/);
 });
