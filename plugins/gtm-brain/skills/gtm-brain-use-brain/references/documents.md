@@ -58,7 +58,7 @@ An ICP the person already wrote is added here like any other document.
 
 A base file is a document the team adds for itself beyond the five starters: "add pricing as a
 base file", "we need a positioning document", "make a competitors file". One sentence starts it;
-the flow is two turns and at most five tool calls.
+the flow is two turns, one tool call each after the chat's first status read.
 
 1. Call `document` with `action: prepare` and `title` (the subject in the person's words:
    Pricing, Positioning, Competitors). It writes nothing and returns, in one read: the base file
@@ -74,18 +74,20 @@ the flow is two turns and at most five tool calls.
    "Drawn from:" and the notes used (id, context, date). No notes: say the brain knows nothing
    about it yet, write no draft, and ask in one question for the two or three facts `prepare`
    names. Never invent a price, a competitor or a quote.
-4. Show the draft in full, then ask the one question, what work should follow this document,
-   with the two or three choices `prepare` gives, recommended first (question policy above).
-   The answer with a yes saves it: `action: create`, `title`, `applies_to` from the answer,
-   `body` the draft, status draft, the person's `by`. An answer without a yes: ask once "Save it
-   as a draft?" (Yes, save it / No, change something). Nothing is written before the yes.
-5. One line back: the path, `[draft]`, what it now governs, and that the brain reads it before
-   that work. No `remember` follows (rule 11).
+4. Show the draft in full, then copy the question lines `prepare` gives word for word: the why
+   line, the question (what work should follow this document) and its two or three choices with
+   "(recommended)" on the first. End the turn. A pick (a number or a kind of work) is the yes,
+   because the why line says picking saves it: one call, `action: create`, `title`, `applies_to`
+   from the pick, `body` the draft, status draft, the person's `by`. A change asked for is no yes:
+   make it, show the draft again with the same question. Nothing is written before the pick. When
+   the subject's own file already exists, `prepare` gives a yes/no on saving into it instead.
+5. One line back, with the saved path: "Saved pricing.md as a draft. The brain reads it before
+   proposals, outreach and landing pages." No `remember` follows (rule 11).
 
 A Markdown dropped at the root by hand that is not a document yet: the document list and the
 health line say "pricing.md is here but the brain does not use it yet" (the health line once per
 new file). Offer once to adopt it: `action: prepare` with `file`, then show the frontmatter it
-would gain and ask what work it governs. On the yes, `action: create` with `file`: only the
+would gain and copy its question lines. On the pick, `action: create` with `file`: only the
 frontmatter is added, the person's text stays byte for byte. Never rewrite or tidy it.
 
 `preview: true` on create or update returns what would be written and writes nothing.

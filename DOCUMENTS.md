@@ -75,7 +75,7 @@ its headings and its text) and then offers a section there before a new file. It
 your notes and the people and companies the brain knows, under the headings of a ready starter
 for pricing, positioning, competitors and objections, and lists the notes it drew on. When the
 brain knows nothing about it, it says so and asks for the two or three facts it needs. It shows
-the draft in full and asks one thing: what work should follow it. Your yes saves it as a draft.
+the draft in full and asks one thing: what work should follow it. Picking one saves it as a draft.
 
 A Markdown you drop at the top of the folder by hand shows in `list the documents` and once in
 the health line as "pricing.md is here but the brain does not use it yet". Adopting it asks what
