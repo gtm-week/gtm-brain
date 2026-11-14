@@ -2,12 +2,12 @@
 // a save starts, a refresh in another chat) is using the memory index.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, existsSync, renameSync, rmSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawn } from 'node:child_process';
 import * as lib from '../lib/brain.mjs';
-import { withMemoryIndex } from '../lib/memory-index.mjs';
+import { withMemoryIndex, openForRead, MemoryIndex } from '../lib/memory-index.mjs';
 import * as store from '../lib/memory-index-store.mjs';
 process.env.GTM_BRAIN_NO_COMMIT = '1';
 process.env.GTM_BRAIN_NO_COMPILE = '1';
@@ -115,4 +115,87 @@ test('200 save-then-read pairs with a render-like reader running beside them: no
   } finally { writeFileSync(stop, ''); }
   assert.deepEqual({ refused, missing }, { refused: 0, missing: 0 });
   const { code, err } = await exited; assert.equal(code, 0, err);
+});
+
+// Review additions.
+test('a read that outlasts the short attempts takes the long wait and still succeeds', async () => {
+  const root = fixture();
+  const exited = holder(root, `
+    const [root, signal, done, P] = process.argv.slice(1);
+    const { writeFileSync } = await import('node:fs');
+    const { cacheLock } = await import(P + 'lib/memory-index-store.mjs');
+    const release = cacheLock(root); writeFileSync(signal, '');
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1500); writeFileSync(done, ''); release();`);
+  lib.appendMemory(root, 'sales', { authors: ['ann'], content: 'Fresh note zebralongwait.' });
+  // 200 ms of short attempts is over long before the holder lets go: the final wait must carry it.
+  const index = openForRead(root, { waitMs: 200, finalWaitMs: 20000 });
+  try { assert.equal(index.query({ search: 'zebralongwait' }).length, 1, 'the read sees its own save'); } finally { index.close(); }
+  assert.ok(existsSync(join(root, 'work', 'held')), 'the read waited until the holder was done');
+  const { code, err } = await exited; assert.equal(code, 0, err);
+});
+
+test('an open snapshot does not see a later save; the next read does', () => {
+  const root = fixture();
+  const open = openForRead(root);
+  try {
+    assert.equal(open.count(), 5);
+    const { rows } = saveAndRead(root, 'zebrasnapshot');
+    assert.equal(rows.length, 1, 'a new read sees the save');
+    assert.equal(open.count(), 5, 'the open snapshot is unchanged');
+    assert.equal(open.query({ search: 'zebrasnapshot' }).length, 0);
+    assert.throws(() => open.sync(), /pinned memory index snapshot cannot refresh/, 'and it never writes the cache without the lock');
+  } finally { open.close(); }
+  assert.equal(withMemoryIndex(root, i => i.count()), 6);
+});
+
+test('a reader that was killed does not keep the cache from being replaced', async () => {
+  const root = fixture();
+  const signal = join(root, 'work', 'holding');
+  const child = spawn(process.execPath, ['--no-warnings', '--input-type=module', '-e', `
+    const [root, signal, P] = process.argv.slice(1);
+    const { writeFileSync } = await import('node:fs');
+    const { openForRead } = await import(P + 'lib/memory-index.mjs');
+    const index = openForRead(root); index.count(); writeFileSync(signal, '');
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 60000);`, root, signal, P], { stdio: 'ignore' });
+  const exited = new Promise(resolve => child.on('exit', resolve));
+  for (let n = 0; n < 400 && !existsSync(signal); n++) sleep(25);
+  assert.ok(existsSync(signal), 'the reader holds its snapshot');
+  const release = store.cacheLock(root);
+  try {
+    assert.throws(() => store.retireCache(root, { readersTimeoutMs: 100 }), /still open/, 'while it lives the cache stays');
+    child.kill('SIGKILL'); await exited;
+    store.retireCache(root, { readersTimeoutMs: 2000 });
+    assert.ok(!existsSync(store.indexPath(root)));
+  } finally { release(); }
+  assert.equal(withMemoryIndex(root, i => i.count()), 5, 'the next read rebuilds it');
+});
+
+// A server of an older version, still running in another chat, knows only the cache lock: it
+// replaces the cache (its index version differs) without waiting for open snapshots. The open
+// read keeps its old files; closing it must not take the write-ahead log of the new cache with it.
+test('an older version replacing the cache under an open read loses nothing from the new cache', () => {
+  const root = fixture();
+  const open = openForRead(root);
+  let rebuilt;
+  try {
+    assert.equal(open.count(), 5);
+    const release = store.cacheLock(root);
+    try {
+      for (const suffix of ['', '-wal', '-shm']) {
+        const current = store.indexPath(root) + suffix, prior = join(root, 'work/memory-index.previous.sqlite') + suffix;
+        rmSync(prior, { force: true }); if (existsSync(current)) renameSync(current, prior);
+      }
+    } finally { release(); }
+    lib.appendMemory(root, 'sales', { authors: ['ann'], content: 'Fresh note zebramixed.' });
+    rebuilt = new MemoryIndex(root); rebuilt.sync();   // as the older version reads: the lock held throughout
+    assert.equal(rebuilt.count(), 6);
+    const wal = store.indexPath(root) + '-wal';
+    assert.ok(existsSync(wal) && statSync(wal).size > 0, 'the new cache has commits only in its write-ahead log');
+    assert.equal(open.count(), 5, 'the open read still answers from the files it opened');
+    open.close();
+    assert.ok(existsSync(wal) && statSync(wal).size > 0, 'closing the old read left the new write-ahead log alone');
+    assert.equal(rebuilt.count(), 6);
+  } finally { open.close(); rebuilt?.close(); }
+  assert.equal(withMemoryIndex(root, i => i.query({ search: 'zebramixed' })).length, 1, 'and the next read finds the save');
+  assert.equal(withMemoryIndex(root, i => i.count()), 6);
 });

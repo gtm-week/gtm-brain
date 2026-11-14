@@ -89,3 +89,94 @@ test('saving a note does not get slower as the registry grows', () => {
   assert.ok(large < 30, `600 entities: ${large.toFixed(1)} ms a note`);
   assert.ok(large < small * 4 + 10, `20 entities ${small.toFixed(1)} ms, 600 entities ${large.toFixed(1)} ms a note`);
 });
+
+// Review additions. The lookup tables behind mentionsIn must give the answers the plain scan gave,
+// on registries built to collide: shared first names, an alias two entities claim, a name that is
+// another entity's alias, emails, retired IDs, accents, two-letter aliases, an empty alias.
+const fold = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+function scanMentions(names, memory) {   // the implementation before the tables, kept as the reference
+  const mentions = [...(memory.entities || []), ...(memory.people || [])].filter(p => names.filter(n => lib.exactName([n], p)).length <= 1);
+  const out = lib.resolvePeople(names, mentions), text = ' ' + fold(memory.content).replace(/[^a-z0-9]+/g, ' ') + ' ';
+  const owners = new Map(), normalized = s => fold(s).replace(/[^a-z0-9]+/g, ' ').trim();
+  for (const n of names) for (const form of [n.name, ...n.aliases].map(normalized)) { if (!owners.has(form)) owners.set(form, new Set()); owners.get(form).add(n.name); }
+  for (const n of names) {
+    if (out.includes(n.name)) continue;
+    const forms = [n.name, ...n.aliases].filter(f => !f.includes('@')).map(normalized).filter(f => f.length >= 3 && owners.get(f).size === 1);
+    if (forms.some(f => text.includes(' ' + f + ' '))) out.push(n.name);
+  }
+  return out;
+}
+const frozen = value => { if (value && typeof value === 'object') { Object.freeze(value); Object.values(value).forEach(frozen); } return value; };
+test('mentionsIn with lookup tables answers as the plain scan did, on colliding registries', () => {
+  let seed = 20261114;
+  const rnd = n => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) % n; }, pick = list => list[rnd(list.length)];
+  const norm = s => fold(s).replace(/[^a-z0-9]+/g, ' ').trim();
+  let sharedAliasInText = 0, sharedExactMention = 0, firstNameOnly = 0;
+  const firsts = ['Chris', 'chris', 'Zoë', 'Zoe', 'Ann', 'Łukasz', 'Jo', 'Maria-Luisa', 'O\'Neil', ' Sam'], lasts = ['Taylor', 'Evans', 'Lee', 'Nowak', 'de la Cruz', 'Labs', 'Group GmbH', ''];
+  const hex = () => 'e_' + Array.from({ length: 16 }, () => '0123456789abcdef'[rnd(16)]).join('');
+  let compared = 0, found = 0;
+  for (let round = 0; round < 60; round++) {
+    const ids = Array.from({ length: 14 }, hex), names = [];
+    for (let i = 0; i < 12; i++) {
+      const name = `${pick(firsts)} ${pick(lasts)}`.replace(/ $/, '') || 'Solo';
+      const pool = [pick(firsts), `${pick(firsts)} ${pick(lasts)}`.trim(), 'CT', 'X', '', `${pick(firsts).trim().toLowerCase()}@acme.test`, 'ACME', 'Acme Labs', pick(lasts)];
+      names.push({ id: ids[i], name, aliases: Array.from({ length: rnd(4) }, () => pick(pool)), emails: rnd(3) ? [] : [`${pick(firsts).trim()}@Acme.test`], previous_ids: rnd(4) ? [] : [pick(ids)], kind: 'person' });
+    }
+    const shared = frozen(JSON.parse(JSON.stringify(names)));
+    for (let m = 0; m < 25; m++) {
+      const n = pick(names), forms = [n.name, ...n.aliases, ...n.emails, n.id, ...n.previous_ids, n.name.split(/\s+/)[0], n.name.toUpperCase(), ` ${n.name} `, 'Nobody Known', '', null, 'chris', 'Chris'];
+      const memory = { people: Array.from({ length: rnd(4) }, () => pick(forms)), entities: rnd(3) ? undefined : [pick(forms)],
+        content: Array.from({ length: 1 + rnd(4) }, () => { const x = pick(names); return `met ${pick([x.name, ...x.aliases, x.name.toUpperCase(), fold(x.name)])}, then`; }).join(' ') + ' left.' };
+      const expected = scanMentions(names, memory);
+      assert.deepStrictEqual(lib.mentionsIn(names, memory), expected, `plain registry, round ${round}: ${JSON.stringify(memory)}`);
+      assert.deepStrictEqual(lib.mentionsIn(shared, memory), expected, `frozen registry, round ${round}: ${JSON.stringify(memory)}`);
+      compared++; found += expected.length;
+      // What the notes exercised: a name form two entities own in the text, a mention two entities
+      // match exactly, a first name that resolves only by inference.
+      const text = ' ' + norm(memory.content) + ' ', owned = form => new Set(names.filter(x => [x.name, ...x.aliases].map(norm).includes(form)).map(x => x.name)).size;
+      if (names.some(x => [x.name, ...x.aliases].map(norm).some(f => f.length >= 3 && text.includes(' ' + f + ' ') && owned(f) > 1))) sharedAliasInText++;
+      for (const p of [...(memory.entities || []), ...memory.people]) {
+        if (names.filter(x => lib.exactName([x], p)).length > 1) sharedExactMention++;
+        else if (!lib.exactName(names, p) && lib.inferredName(names, p)) firstNameOnly++;
+      }
+    }
+  }
+  assert.ok(compared === 1500 && found > 1500, `the comparison saw real mentions (${found} over ${compared} notes)`);
+  assert.ok(sharedAliasInText > 50 && sharedExactMention > 50 && firstNameOnly > 10, `the hard cases were present: ${JSON.stringify({ sharedAliasInText, sharedExactMention, firstNameOnly })}`);
+});
+
+test('a kind added to or taken out of SCHEMA.md is seen by the next registry read', () => {
+  const root = fixture();
+  const venue = lib.addName(root, 'Hala Stulecia', { kind: 'organization' });
+  const file = join(root, lib.readNames(root).find(e => e.id === venue.id)._path), text = readFileSync(file, 'utf8');
+  const schemaFile = join(root, 'SCHEMA.md'), template = readFileSync(new URL('../templates/SCHEMA.md', import.meta.url), 'utf8');
+  const withVenue = template.replace('## Relationships', '## Venue\n\n| Field | What it means | Required |\n| --- | --- | --- |\n| capacity | Seats | no |\n\n## Relationships');
+  writeFileSync(schemaFile, withVenue);
+  writeFileSync(file, text.replace(/^kind: .*$/m, 'kind: venue').replace(/^subtype: .*\n/m, ''));
+  assert.equal(lib.readNames(root).find(e => e.id === venue.id).kind, 'venue', 'a kind SCHEMA.md declares is accepted');
+  same(root, 'with a kind from SCHEMA.md');
+  assert.equal(lib.readNamesShared(root).find(e => e.id === venue.id).kind, 'venue');
+  // The entity file is untouched; only SCHEMA.md changes. The cached parse must not be served.
+  writeFileSync(schemaFile, template);
+  assert.throws(() => lib.readNames(root), /venue/, 'a kind taken out of SCHEMA.md is not served from the cache');
+  assert.throws(() => lib.readNamesShared(root), /venue/);
+  writeFileSync(schemaFile, withVenue);
+  assert.equal(lib.readNames(root).find(e => e.id === venue.id).kind, 'venue', 'and is back when the section is');
+  same(root, 'after the kind is back in SCHEMA.md');
+});
+
+test('a save sees an entity another process added, and never changes the shared registry', () => {
+  const root = fixture(30);
+  const before = lib.readNamesShared(root), snapshot = JSON.stringify(before);
+  lib.appendMemory(root, 'sales', { authors: ['ann'], content: 'Person0 Surname0 asked about Company2 Labs.', people: ['Person1 Surname1'] });
+  execFileSync(process.execPath, ['--no-warnings', '--input-type=module', '-e',
+    `process.env.GTM_BRAIN_NO_COMMIT = '1'; process.env.GTM_BRAIN_NO_COMPILE = '1'; const lib = await import(${JSON.stringify(brainModule)}); lib.addName(process.argv[1], 'Quentin Outsider', { aliases: ['Quentin O'] });`, root]);
+  const saved = lib.appendMemory(root, 'sales', { authors: ['ann'], content: 'Quentin Outsider wants the pilot.' });
+  const added = lib.readNames(root).find(e => e.name === 'Quentin Outsider');
+  assert.ok(added, 'the entity the other process wrote is in the registry');
+  const record = JSON.parse(readFileSync(join(root, 'brain', 'contexts', 'sales', 'memories.jsonl'), 'utf8').trim().split('\n').pop());
+  assert.ok(record.content.includes('Quentin') && record.entities.includes(added.id), 'the save right after links the new entity');
+  assert.equal(JSON.stringify(before), snapshot, 'the registry handed out before is unchanged');
+  assert.notEqual(lib.readNamesShared(root), before, 'and a new one replaced it');
+  void saved;
+});
