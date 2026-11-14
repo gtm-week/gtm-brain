@@ -176,6 +176,14 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
   await check("interact.failed_records_failure", "interact", async () => { const r = await call("interact", { by, name: "e2e_move_deal", params: { deal: "e2einteractfailed", stage: "won" }, outcome: "failed", error: "403 forbidden" }); const got = written("e2einteractfailed"); return { pass: !r.isError && got.length === 1 && /^Failed in attio, not done/.test(got[0].content) && /403 forbidden/.test(got[0].content) && !(got[0].actions || []).length, text: r.text }; });
   await check("interact.pure_record_at_once", "interact", async () => { const r = await call("interact", { by, name: "e2e_log", params: { what: "e2einteractlog" } }); return { pass: !r.isError && /^ok: e2e_log/.test(r.text) && written("e2einteractlog").length === 1, text: r.text }; });
 
+  /* ---------- the two demo loops, tool path only (the live run is test/live/demo-loops.mjs) ---------- */
+  await check("loops.document_voice", "loops", async () => { const r = await call("document", { action: "show", ref: "voice" }); return { pass: !r.isError && /Tone of voice/.test(r.text), text: r.text }; });
+  await check("loops.workflow_outbound", "loops", async () => { const r = await call("workflow", { action: "list" }); return { pass: !r.isError && /outbound/i.test(r.text), text: r.text }; });
+  await check("loops.sent_recorded", "loops", async () => { const w = await call("remember", { by, context: "icp", content: "E2E loop: sent the first outreach email (e2eloopsent).", actions: ["gmail:send:e2e-draft-1"], sources: [`user:${by}`] }); const s = await q({ object: "memories", search: "e2eloopsent" }); return { pass: !w.isError && rowIds(s.text).length > 0 && /gmail/.test(s.text) && /send/.test(s.text), text: w.isError ? w.text : s.text }; });
+  // the step "update the customer status": a prospect the person confirms as a customer, the overview follows
+  const prospect = gold.customers.find(c => c.status === "prospect");
+  if (prospect) await check("loops.customer_status", "loops", async () => { const w = await call("remember", { by, context: "icp", content: `E2E loop: ${prospect.name} signed the pilot and is now a customer (e2eloopstatus).`, people: [prospect.name], companies: [prospect.name], sources: [`user:${by}`], customer: { entity: prospect.name, status: "customer", basis: "user", observed_at: "2026-11-14T09:00:00Z" } }); const r = await q({ object: "customers" }); let row = null; try { row = JSON.parse(r.text).customers.find(c => c.name === prospect.name); } catch {} return { pass: !w.isError && row?.status === "customer" && row?.basis === "user", text: w.isError ? w.text : r.text, note: `${prospect.name}: ${row?.status || "absent"}` }; });
+
   /* ---------- messy traps ---------- */
   const T = gold.traps || {};
   if (T.maxes) {

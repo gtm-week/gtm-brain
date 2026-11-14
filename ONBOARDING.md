@@ -194,6 +194,7 @@ add that folder. Then start a new chat in it.
 
 ## Read next
 
-- `GUIDE.md`: the ten-minute guide to daily use.
+- `GUIDE.md`: the ten-minute guide to daily use. Showing GTM Brain to a room: the
+  [workshop demo](GUIDE.md#workshop-demo-the-two-loops), outreach and content in a dozen sentences.
 - `COMMANDS.md`: every workflow and what it touches.
 - `SETUP.md`: the technical manual, for whoever maintains your installation.

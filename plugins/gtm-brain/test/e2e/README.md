@@ -39,7 +39,9 @@ SQL), entities (name, id, alias, typo, email), briefs (facts, cited ids, size), 
 history, customers, meetings, deal, rules, status, compile (`--facts` read through a pipe, full
 size, and over MCP), load_context, remember (single, batch over MCP, `--batch` script, a bare first name saved then
 asked, and the answer linked back),
-corrections (supersede, retract), and on messy the traps. Each result: `id`, `section`, `pass`,
+corrections (supersede, retract), the tool path of the two demo loops (the voice document, the
+outbound workflow, a recorded send, a user-confirmed prospect; the live run is
+`test/live/demo-loops.mjs`), and on messy the traps. Each result: `id`, `section`, `pass`,
 `ms`, `bytes`, `note`. A failure caused by a gap main is known to have carries `known_gap`; the run
 exits 1 only on a plain failure. `E2E_DEBUG=1` adds the reply text to failed checks.
 
