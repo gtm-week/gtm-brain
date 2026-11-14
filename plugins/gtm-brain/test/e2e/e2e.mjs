@@ -19,6 +19,19 @@ const KiB = 1024;
 const ids = s => [...new Set(String(s).replace(/m\\_/g, "m_").match(/\bm_[0-9a-f]{6,}\b/g) || [])];
 const rowIds = s => [...new Set([...String(s).matchAll(/"id":"(m_[0-9a-f]{6,})"/g)].map(m => m[1]))];
 const hasAll = (s, list) => list.every(x => s.includes(x));
+// entities.mjs --relations and --customers print everything with console.log and then call process.exit: read through
+// the pipe of the MCP server the reply ends at 64 KiB (65,536 bytes), on main 7890c69 and on 0.35.0 alike. Small
+// brains fit; at about 1,500 relations (180 KiB) and 200 customers (340 KiB) most of the list is gone, with no notice.
+// entities.mjs reads its options as --name value pairs starting at --relations itself, so the option right after it is
+// taken as the value of --relations and lost: search alone returns every relationship, search with filters.type only
+// filters by type. The other relation checks pass because the entity is somewhere in the full list; on messy the
+// works_at list is over 64 KiB and the job change falls behind the cut.
+const ENTITY_DROPPED = "query relations ignores search: entities.mjs --relations swallows the option after it, so every relationship (or every one of the type) comes back; same on main";
+// remember ends with lib.rerender, which starts a dashboard render in the background; the render reads through the memory
+// index and holds its coordination lock (memory-index-lock.sqlite) while it refreshes. A query in that window waits
+// 1,000 ms for the lock and is then refused. Intermittent, from about 5,000 notes up.
+const READ_AFTER_WRITE = "a read right after a write can be refused: Memory index is busy (the index lock waits 1 s while the dashboard render started by the write refreshes the index); the note is there on retry; same on main";
+const PIPE_CUT = "query relations and query customers are cut at 64 KiB through the server pipe (entities.mjs prints, then process.exit); same on main";
 
 export async function runChecks({ brain: source, gold: goldPath, keep = false }) {
   const gold = JSON.parse(readFileSync(goldPath, "utf8"));
@@ -42,7 +55,10 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
     let text = ""; try { const r = await fn(); pass = !!r.pass; bytes = r.bytes ?? Buffer.byteLength(r.text || ""); note = r.note || ""; text = r.text || ""; } catch (e) { note = `threw: ${e.message}`; }
     results.push({ id, section, pass, ms: Date.now() - t, bytes, ...(note ? { note } : {}), ...(!pass && known_gap ? { known_gap } : {}), ...(!pass && process.env.E2E_DEBUG ? { text: text.slice(0, 2500) } : {}) });
   };
-  const q = (args) => call("query", args);
+  // A read can be refused while the index is being refreshed (READ_AFTER_WRITE); the reply itself says to retry. Retried
+  // here so a write check judges the write, and counted: index.read_after_write reports the refusals as one known gap.
+  let busy = 0; const busyAt = [];
+  const q = async (args) => { for (let i = 0; ; i++) { const r = await call("query", args); if (!(r.isError && /Memory index is busy/.test(r.text)) || i >= 20) return r; busy++; busyAt.push(results.length); await new Promise(done => setTimeout(done, 500)); } };
   const found = (text, want, pick = rowIds) => { const got = pick(text), miss = want.filter(x => !got.includes(x)); return { pass: !miss.length && want.length > 0, text, note: miss.length ? `missing ${miss.length}/${want.length}` : "" }; };
 
   /* ---------- search ---------- */
@@ -81,17 +97,18 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
 
   /* ---------- relations ---------- */
   if (gold.hub) {
+    await check("relations.entity_scope", "relations", async () => { const r = await q({ object: "relations", search: gold.hub.name }); const lines = r.text.split("\n").filter(l => /^  \S/.test(l)), other = lines.filter(l => !l.includes(gold.hub.name)); return { pass: !r.isError && lines.length > 0 && !other.length, text: r.text, note: `${other.length} of ${lines.length} lines are not about ${gold.hub.name}` }; }, { known_gap: ENTITY_DROPPED });
     await check("relations.hub", "relations", async () => { const r = await q({ object: "relations", search: gold.hub.name }); return { pass: !r.isError && r.text.includes(gold.hub.name) && /partner_of/.test(r.text), text: r.text }; });
     await check("relations.ended_partnership", "relations", async () => { const r = await q({ object: "relations", search: gold.hub.name, filters: { type: "partner_of" } }); return { pass: /ended/.test(r.text), text: r.text }; });
     await check("relations.history_dates", "relations", async () => { const r = await q({ object: "relations", search: gold.hub.name, filters: { type: "partner_of" } }); return { pass: hasAll(r.text, gold.hub.partnership.history.map(h => `${h.status} ${h.observed_at.slice(0, 10)}`)), text: r.text }; });
     await check("relations.history_ids", "relations", async () => { const r = await q({ object: "relations", search: gold.hub.name, filters: { type: "partner_of" } }); return found(r.text, gold.hub.partnership.history.map(h => h.memory), ids); }, { known_gap: "relation history lists dates without the note ids" });
   }
   const job = gold.changes.find(c => c.what === "works_at");
-  if (job) await check("relations.job_change", "relations", async () => { const r = await q({ object: "relations", search: job.entity, filters: { type: "works_at" } }); const names = [job.from, job.to].map(id => gold.entities.find(e => e.id === id)?.name); return { pass: hasAll(r.text, names) && /ended/.test(r.text) && /current/.test(r.text), text: r.text }; });
-  await check("relations.all", "relations", async () => { const r = await q({ object: "relations" }); const sample = gold.relations.slice(0, 20).filter(x => x.from_name); const miss = sample.filter(x => !r.text.includes(x.from_name)); return { pass: !r.isError && !miss.length, text: r.text, note: `${miss.length} of ${sample.length} sampled missing` }; });
+  if (job) await check("relations.job_change", "relations", async () => { const r = await q({ object: "relations", search: job.entity, filters: { type: "works_at" } }); const names = [job.from, job.to].map(id => gold.entities.find(e => e.id === id)?.name); return { pass: hasAll(r.text, names) && /ended/.test(r.text) && /current/.test(r.text), text: r.text, note: `${Buffer.byteLength(r.text)} bytes` }; }, { known_gap: ENTITY_DROPPED });
+  await check("relations.all", "relations", async () => { const r = await q({ object: "relations" }); const sample = gold.relations.slice(0, 20).filter(x => x.from_name); const miss = sample.filter(x => !r.text.includes(x.from_name)); return { pass: !r.isError && !miss.length, text: r.text, note: `${miss.length} of ${sample.length} sampled missing, ${Buffer.byteLength(r.text)} bytes` }; }, { known_gap: PIPE_CUT });
 
   /* ---------- customers ---------- */
-  await check("customers.listed", "customers", async () => { const r = await q({ object: "customers" }); const sample = gold.customers.filter(c => c.status === "customer").slice(0, 10); const miss = sample.filter(c => !r.text.includes(c.name)); return { pass: !r.isError && sample.length > 0 && !miss.length, text: r.text, note: `${miss.length} of ${sample.length} missing` }; });
+  await check("customers.listed", "customers", async () => { const r = await q({ object: "customers" }); const sample = gold.customers.filter(c => c.status === "customer").slice(0, 10); const miss = sample.filter(c => !r.text.includes(c.name)); return { pass: !r.isError && sample.length > 0 && !miss.length, text: r.text, note: `${miss.length} of ${sample.length} missing, ${Buffer.byteLength(r.text)} bytes` }; }, { known_gap: PIPE_CUT });
   await check("customers.former", "customers", async () => { const r = await q({ object: "customers" }); const want = gold.customers.filter(c => c.status === "former_customer"); return { pass: !want.length || /former/i.test(r.text), text: r.text, note: `${want.length} former` }; });
   const demo = gold.drafts.find(d => d.why === "demo-tagged customer evidence");
   if (demo) await check("customers.demo_excluded", "customers", async () => { const r = await q({ object: "customers" }); const name = gold.entities.find(e => e.id === demo.entity)?.name; return { pass: !!name && !r.text.includes(name), text: r.text, note: name }; });
@@ -122,10 +139,12 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
   await check("load_context.size", "load", async () => { const r = await call("load_context", { contexts: ["icp", "offer"], mode: "only" }); const b = Buffer.byteLength(r.text); return { pass: !r.isError && b <= 64 * KiB, text: r.text, note: `${b} bytes` }; });
   let single = null;
   await check("remember.single", "remember", async () => { const r = await call("remember", { by, context: "offer", content: "E2E probe: the starter tier now includes onboarding (e2eprobetwo).", sources: [`user:${by}`] }); const s = await q({ object: "memories", search: "e2eprobetwo" }); single = rowIds(s.text)[0]; return { pass: !r.isError && !!single, text: r.text, note: r.isError ? r.text.slice(0, 160) : "" }; });
-  await check("remember.batch_mcp", "remember", async () => { const r = await call("remember", { by, memories: [1, 2, 3].map(i => ({ context: "offer", content: `E2E batch probe ${i} (e2ebatchmcp${i}).`, sources: [`user:${by}`] })) }); const got = []; for (const i of [1, 2, 3]) got.push(rowIds((await q({ object: "memories", search: `e2ebatchmcp${i}` })).text).length > 0); return { pass: !r.isError && got.every(Boolean), text: r.text, note: r.isError ? r.text.slice(0, 160) : got.join(",") }; });
+  await check("remember.batch_mcp", "remember", async () => { const r = await call("remember", { by, memories: [1, 2, 3].map(i => ({ context: "offer", content: `E2E batch probe ${i} (e2ebatchmcp${i}).`, sources: [`user:${by}`] })) }); const got = [], why = []; for (const i of [1, 2, 3]) { const s = await q({ object: "memories", search: `e2ebatchmcp${i}` }); got.push(rowIds(s.text).length > 0); if (!got.at(-1)) why.push(`#${i} ${s.isError ? "read error" : "no rows"}: ${s.text.slice(0, 120)}`); } return { pass: !r.isError && got.every(Boolean), text: r.text, note: r.isError ? r.text.slice(0, 160) : [got.join(","), ...why].join(" | ") }; });
   await check("remember.batch_script", "remember", async () => { const f = join(scratch, "batch.json"); writeFileSync(f, JSON.stringify([1, 2].map(i => ({ context: "icp", content: `E2E script batch ${i} (e2ebatchscript${i}).`, sources: [`user:${by}`] })))); const r = script("scripts/gtm-brain-remember/remember.mjs", [".", "--by", by, "--batch", f]); const got = []; for (const i of [1, 2]) got.push(rowIds((await q({ object: "memories", search: `e2ebatchscript${i}` })).text).length > 0); return { pass: r.code === 0 && got.every(Boolean), text: r.text + r.err, note: r.code ? r.err.slice(0, 160) : got.join(",") }; });
-  await check("corrections.supersede", "corrections", async () => { if (!single) return { pass: false, note: "no note from remember.single" }; const r = await call("remember", { by, context: "offer", supersedes: single, content: "E2E probe: the starter tier includes onboarding only on annual plans (e2eprobetwo).", sources: [`user:${by}`] }); const got = rowIds((await q({ object: "memories", search: "e2eprobetwo" })).text); return { pass: !r.isError && got.length === 1 && got[0] !== single, text: r.text, note: got.join(",") }; });
+  await check("corrections.supersede", "corrections", async () => { if (!single) return { pass: false, note: "no note from remember.single" }; const r = await call("remember", { by, context: "offer", supersedes: single, content: "E2E probe: the starter tier includes onboarding only on annual plans (e2eprobetwo).", sources: [`user:${by}`] }); const s = await q({ object: "memories", search: "e2eprobetwo" }), got = rowIds(s.text); return { pass: !r.isError && got.length === 1 && got[0] !== single, text: r.text, note: got.join(",") || `read after the write: ${s.isError ? "error" : "no rows"}: ${s.text.slice(0, 140)}` }; });
   await check("corrections.retract", "corrections", async () => { const w = await call("remember", { by, context: "offer", content: "E2E probe: wrong note (e2eprobethree).", sources: [`user:${by}`] }); const id = rowIds((await q({ object: "memories", search: "e2eprobethree" })).text)[0]; if (!id) return { pass: false, text: w.text, note: "probe not written" }; const r = await call("remember", { by, context: "offer", retracts: id, content: "Withdrawn: the e2eprobethree note was wrong.", sources: [`user:${by}`] }); const after = rowIds((await q({ object: "memories", search: "e2eprobethree" })).text); return { pass: !r.isError && !after.includes(id), text: r.text }; });
+
+  await check("index.read_after_write", "remember", async () => ({ pass: busy === 0, text: "", note: `${busy} read${busy === 1 ? "" : "s"} refused with Memory index is busy and retried${busy ? ` (in check number ${[...new Set(busyAt)].map(i => i + 1).join(", ")})` : ""}` }), { known_gap: READ_AFTER_WRITE });
 
   /* ---------- messy traps ---------- */
   const T = gold.traps || {};
@@ -142,8 +161,11 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
     if (T.contradiction) await check("traps.contradicting_job", "traps", async () => { const r = await q({ object: "relations", search: T.contradiction.person, filters: { type: "works_at" } }); return { pass: /conflict|disagree|linkedin/i.test(r.text), text: r.text }; });
   }
 
-  server.kill();
-  if (!keep) { rmSync(scratch, { recursive: true, force: true }); rmSync(profile, { recursive: true, force: true }); }
+  // wait for the server to exit before removing its brain: a child it started (the index worker, a
+  // background render) may still be writing into work/, and rmSync then fails with ENOTEMPTY and the
+  // results of the whole run are lost. Cleanup is best effort: a leftover scratch folder is no failure.
+  await new Promise(done => { server.once("exit", done); server.kill(); setTimeout(done, 5000).unref(); });
+  if (!keep) for (const dir of [scratch, profile]) { try { rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }); } catch {} }
   const summary = { shape: gold.shape, notes: gold.counts?.notes, total: results.length, pass: results.filter(r => r.pass).length, fail: results.filter(r => !r.pass && !r.known_gap).length, known_gap: results.filter(r => !r.pass && r.known_gap).length, ms: results.reduce((a, r) => a + r.ms, 0) };
   return { summary, results, ...(keep ? { scratch } : {}) };
 }
