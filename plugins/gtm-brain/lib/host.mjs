@@ -101,13 +101,11 @@ const ADAPTERS = {
     },
     capture: {
       name: "Codex",
-      // Threads whose rollout changed since `since`: the day folders of the last 31 days (a resumed thread keeps
-      // writing to the file of the day it started). GTM Brain's own runs (codex exec), sub-agents and scheduled
-      // automations are nobody's conversation and are left out.
+      // Threads whose rollout changed since `since`, in every day folder: a resumed thread keeps writing to the
+      // file of the day it started, however long ago (one stat per file, no read). GTM Brain's own runs
+      // (codex exec), sub-agents and scheduled automations are nobody's conversation and are left out.
       chats(since, home = process.env.CODEX_HOME || join(homedir(), ".codex")) {
-        const days = Array.from({ length: 31 }, (_, n) => new Date(Date.now() - n * 864e5)).filter(d => d.getTime() > since - 2 * 864e5)
-          .map(d => join(home, "sessions", String(d.getFullYear()), String(d.getMonth() + 1).padStart(2, "0"), String(d.getDate()).padStart(2, "0")));
-        const files = days.flatMap(dir => { try { return readdirSync(dir).filter(f => f.endsWith(".jsonl")).map(f => join(dir, f)); } catch { return []; } });
+        const files = walkFiles(join(home, "sessions"), f => f.endsWith(".jsonl"));
         return changedSince(files, since).map(c => {
           let p = {}; try { p = JSON.parse(head(c.file).split("\n", 1)[0]).payload || {}; } catch {}
           const id = /-([0-9a-f-]{36})\.jsonl$/.exec(c.file)?.[1];
@@ -149,7 +147,7 @@ const ADAPTERS = {
       // Signed in? Checked before any chat is read, so a signed-out machine costs nothing and says why.
       preflight() {
         try { execFileSync("codex", ["login", "status"], { encoding: "utf8", timeout: 15000, stdio: ["ignore", "pipe", "pipe"] }); return null; }
-        catch (e) { return e.code === "ENOENT" ? `codex not found` : `not logged in: ${String(e.stderr || e.stdout || e.message).trim().split("\n")[0]}`; }
+        catch (e) { return e.code === "ENOENT" ? { missing: true, detail: "codex not found" } : { detail: String(e.stderr || e.stdout || e.message).trim().split("\n")[0] || "codex login status failed" }; }
       },
     },
     // Where GTM Brain is installed from and which version is installed, as the host's plugin manager reports it.
@@ -225,7 +223,7 @@ const ADAPTERS = {
       turns(file) {
         const out = [];
         for (const r of jsonLines(file) || []) {
-          if ((r.type !== "user" && r.type !== "assistant") || r.isMeta || r.isSidechain) continue;
+          if ((r.type !== "user" && r.type !== "assistant") || r.isMeta || r.isSidechain || r.isCompactSummary) continue;   // a compaction summary is the host's text, not the person's
           const c = r.message?.content;
           const t = typeof c === "string" ? c : Array.isArray(c) ? c.filter(x => x?.type === "text").map(x => x.text || "").join("\n") : "";
           if (!t.trim() || (r.type === "user" && SCAFFOLD.test(t))) continue;
@@ -240,7 +238,7 @@ const ADAPTERS = {
           return { text: r.is_error ? "" : String(r.result || ""), usage: { input: (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0), cached: u.cache_read_input_tokens || 0, output: u.output_tokens || 0 }, error: r.is_error ? String(r.result || "the run failed") : "" };
         } catch { return { text: "", usage: null, error: String(stdout).trim().split("\n").slice(-1)[0] || "" }; }
       },
-      preflight: () => (onPath("claude") ? null : "claude not found"),
+      preflight: () => (onPath("claude") ? null : { missing: true, detail: "claude not found" }),
     },
     plugin: {
       home: () => process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude"),

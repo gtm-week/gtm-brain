@@ -83,9 +83,10 @@ export function healthLine(root, overview) {
   if (syncs.length) parts.push(`last sync: ${syncs.map(([t, at]) => `${t} ${when(at)}${late.has(t) ? ` (overdue: older than ${late.get(t).window_days} days)` : ""}`).join(", ")}`);
   const gaps = openGaps(overview);
   if (gaps) parts.push(`open gaps: ${gaps} meeting${gaps === 1 ? "" : "s"} not captured`);
-  // the nightly chat capture's heartbeat (lib/capture.mjs): fine, late, failed with the reason, or off
+  // the nightly chat capture's heartbeat (lib/capture.mjs): only when the last good pass is late or the last one
+  // failed, with the reason; a fine or switched-off capture adds nothing to what every chat start reads
   const chats = captureHealth(root);
-  if (chats.state !== "never") parts.push(chats.text);
+  if (chats.state === "late" || chats.state === "failed") parts.push(chats.text);
   const population = populationPart(root);
   if (population) parts.push(population);
   if (!parts.length) return null;

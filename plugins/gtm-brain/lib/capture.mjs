@@ -9,8 +9,9 @@
 
    Machine-local, in work/ (gitignored): work/capture.json holds the settings, the heartbeat, the cursor per
    chat and the chats a cap left for next time; work/capture-runs.jsonl one record per pass, with its tokens.
-   Nothing is sent anywhere but the model run the pass starts: the notes are committed, not pushed (the next
-   ordinary save shares them, after the person has seen the line). Host specifics live in lib/host.mjs. */
+   The chats go nowhere but the model run the pass starts. The notes are committed without a push of their
+   own; the next commit in the brain shares them with the team like any note, and that is usually the summary
+   run right after the pass, so before the person has seen the line. Host specifics live in lib/host.mjs. */
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, appendFileSync, mkdtempSync, rmSync, realpathSync } from "node:fs";
 import { join, sep } from "node:path";
 import { tmpdir } from "node:os";
@@ -24,7 +25,7 @@ export const CAP = 200000, CHAT_CAP = 50000, LATE_HOURS = 36;
 const FIRST_LOOKBACK_MS = 864e5;          // a first pass reads the last day
 const OFFER_EVERY_MS = 864e5;             // the late offer is said at most once a day
 const TIMEOUT_MS = () => Number(process.env.GTM_BRAIN_CAPTURE_TIMEOUT_MS) || 10 * 60 * 1000;
-const PERSON_MAX = 3000, ASSISTANT_MAX = 1500, EARLIER = 2;
+const PERSON_MAX = 3000, ASSISTANT_MAX = 1500, EARLIER = 2, MIN_QUOTE = 12;
 const REMEMBER = fileURLToPath(new URL("../scripts/gtm-brain-remember/remember.mjs", import.meta.url));
 
 const file = root => join(root, "work", "capture.json");
@@ -90,8 +91,10 @@ export function planPass(root, { now = nowMs(), settings = captureSettings(root)
   const found = new Map();
   for (const c of h.chats(since)) found.set(c.file, c);
   // chats a cap left for later are read again whatever their time
-  for (const p of state.pending || []) if (p?.file && !found.has(p.file) && existsSync(p.file)) for (const c of h.chats(0).filter(x => x.file === p.file)) found.set(c.file, c);
+  const waiting = (state.pending || []).filter(p => p?.file && !found.has(p.file) && existsSync(p.file)).map(p => p.file);
+  if (waiting.length) for (const c of h.chats(0)) if (waiting.includes(c.file)) found.set(c.file, c);   // one listing, however many wait
   const list = [...found.values()].sort((a, b) => a.mtime - b.mtime);
+  const saved = list.length ? savedFrom(root, list.map(c => c.id)) : new Map();
   const header = promptHeader(root, []);
   let used = tokens(header);
   const chats = [], skipped = [], covered = [], elsewhere = [];
@@ -107,8 +110,11 @@ export function planPass(root, { now = nowMs(), settings = captureSettings(root)
     if (stopped) { skipped.push({ chat: c.id, file: c.file, why: "pass cap", turns: fresh.length, tokens: tokens(fresh.map(turnLine).join("\n")) }); continue; }
     const budget = Math.min(settings.chat_cap, settings.cap - used);
     const earlier = all.slice(Math.max(0, from - EARLIER), from).map(t => ({ ...t, text: t.text.slice(0, 600) }));
-    let size = tokens(`=== chat ${c.id}\n`) + tokens(earlier.map(turnLine).join("\n")), take = 0;
+    let size = tokens(`=== chat ${c.id}\n`) + tokens(savedBlock(saved, c.id).join("\n")) + tokens(earlier.map(turnLine).join("\n")), take = 0;
     for (const t of fresh) { const n = tokens(turnLine(t) + "\n"); if (size + n > budget) break; size += n; take++; }
+    // A pass always moves forward: a cap smaller than one turn (or than the instructions) would otherwise leave the
+    // same chat waiting for ever while every pass reports itself partial and the heartbeat stays fine.
+    if (!take && (!chats.length || settings.cap - used >= settings.chat_cap)) { size += tokens(turnLine(fresh[0]) + "\n"); take = 1; }
     if (!take) { stopped = true; skipped.push({ chat: c.id, file: c.file, why: "pass cap", turns: fresh.length, tokens: tokens(fresh.map(turnLine).join("\n")) }); continue; }
     chats.push({ id: c.id, kind: c.kind, file: c.file, size: c.size, project: home.project, earlier, turns: fresh.slice(0, take), through: from + take, tokens: size });
     used += size;
@@ -118,7 +124,7 @@ export function planPass(root, { now = nowMs(), settings = captureSettings(root)
       if (why === "pass cap") stopped = true;
     }
   }
-  return { since: new Date(since).toISOString(), listedAt: new Date(now).toISOString(), chats, skipped, covered, elsewhere: elsewhere.length, tokens: used, settings };
+  return { since: new Date(since).toISOString(), listedAt: new Date(now).toISOString(), chats, skipped, covered, elsewhere: elsewhere.length, tokens: used, settings, saved };
 }
 
 /* ---------- the prompt ---------- */
@@ -141,11 +147,12 @@ function savedFrom(root, ids) {
   }
   return out;
 }
+function savedBlock(saved, id) { return saved.get(id)?.length ? [`saved from this chat:\n${saved.get(id).slice(0, 40).map(s => `- ${s}`).join("\n")}`] : []; }
 export function buildPrompt(root, plan) {
-  const saved = savedFrom(root, plan.chats.map(c => c.id));
+  const saved = plan.saved || savedFrom(root, plan.chats.map(c => c.id));
   return promptHeader(root, plan.chats) + plan.chats.map(c => [
     `=== chat ${c.id}${c.project ? ` (project ${c.project})` : ""}`,
-    ...(saved.get(c.id)?.length ? [`saved from this chat:\n${saved.get(c.id).slice(0, 40).map(s => `- ${s}`).join("\n")}`] : []),
+    ...savedBlock(saved, c.id),
     ...c.earlier.map(t => `earlier ${turnLine(t)}`),
     ...c.turns.map(turnLine),
   ].join("\n")).join("\n\n") + "\n";
@@ -154,7 +161,7 @@ export function buildPrompt(root, plan) {
 /* ---------- the model run: one, bounded, with no tools ---------- */
 function reasonOf(kind, detail, name) {
   const d = String(detail || "").replace(/\s+/g, " ").trim().slice(0, 160);
-  if (kind === "missing" || /\bnot found\b|ENOENT/.test(d)) return `${name} could not be started: it is not installed where the background run looks (not on its PATH)`;
+  if (kind === "missing") return `${name} could not be started: it is not installed where the background run looks (not on its PATH)`;
   if (kind === "timeout") return `the capture run took longer than ${Math.round(TIMEOUT_MS() / 60000)} minutes and was stopped`;
   if (/readonly database|read-only database|attempt to write a readonly|read-only file system/i.test(d)) return `${name} cannot write its own state database on this machine (it is read-only), so no run can start: check the permissions of ${name}'s home folder`;
   if (/not logged in|log ?in|sign(ed)? ?in|unauthori[sz]ed|\b401\b|auth(entication)? (required|failed)|api key/i.test(d)) return `${name} is not signed in on this machine: open ${name} and sign in`;
@@ -200,6 +207,8 @@ export function readCandidates(text, plan, root) {
     if (!chat) { dropped.push({ why: "names no chat that was read", content }); continue; }
     if (!content || !quote) { dropped.push({ chat: chat.id, why: "no content or no quote", content }); continue; }
     const said = fold(chat.turns.map(t => t.text).join("\n"));
+    // a word or two is in every chat: the quote has to be enough of a sentence to rest a note on
+    if (fold(quote).length < MIN_QUOTE || fold(quote).split(" ").length < 3) { dropped.push({ chat: chat.id, why: "the quote is too short to rest a note on", content }); continue; }
     if (!said.includes(fold(quote))) { dropped.push({ chat: chat.id, why: "the quote is not in the chat", content }); continue; }
     if (!active.has(n.context)) { dropped.push({ chat: chat.id, why: `no active context ${n.context || "(none)"}`, content }); continue; }
     if (have.has(fold(content))) { dropped.push({ chat: chat.id, why: "already saved", content }); continue; }
@@ -242,7 +251,7 @@ export async function runPass(root, { now = nowMs(), by } = {}) {
     if (!plan.chats.length) { record.result = "ok"; record.tokens.estimated = 0; return finishPass(root, record, advance); }
     const person = currentPerson(root, by);
     if (!person) return fail("this checkout has no confirmed person to save notes as (work/person.json or a git email in admin.md team)");
-    if (!process.env.GTM_BRAIN_CAPTURE_MODEL) { const pre = host().capture.preflight(); if (pre) return fail(reasonOf(/not found/.test(pre) ? "missing" : "error", pre, name)); }
+    if (!process.env.GTM_BRAIN_CAPTURE_MODEL) { const pre = host().capture.preflight(); if (pre) return fail(reasonOf(pre.missing ? "missing" : "error", pre.detail, name)); }
     const reply = await runModel(buildPrompt(root, plan));
     if (reply.usage) Object.assign(record.tokens, reply.usage);
     if (reply.fail) return fail(reply.fail);
@@ -255,7 +264,8 @@ export async function runPass(root, { now = nowMs(), by } = {}) {
       const mine = tagged(root, `capture:${id}`);
       record.saved = mine.map(m => m.id); record.held = found.kept.length - mine.length;
       if (record.held) record.remember = saved.out.split("\n").filter(l => /held|not kept|not remembered|ask/i.test(l)).slice(0, 5).map(l => l.slice(0, 200));
-      if (!saved.ok && !mine.length) return fail(`the notes could not be saved: ${saved.out.split("\n")[0].slice(0, 160)}`);
+      // nothing kept because the saving rules held every candidate is a pass that ran: the chat start names them
+      if (!saved.ok && !mine.length && !/^not (kept|remembered yet)\b/m.test(saved.out)) return fail(`the notes could not be saved: ${saved.out.split("\n")[0].slice(0, 160)}`);
       record.notes = mine.map(m => ({ id: m.id, context: m.context, content: m.content }));
       // held by the saving rules (an unclear name, a relative date): never dropped silently, the chat start names them
       const kept = new Set(mine.map(m => fold(m.content)));
@@ -290,12 +300,18 @@ export function undoCaptured(root, { by, pass } = {}) {
   const person = currentPerson(root, by);
   if (!person) throw new Error("no confirmed person in this checkout to withdraw the notes as");
   const state = readCapture(root);
-  const ids = pass ? null : new Set((state.announce?.notes || state.undo?.notes || []).map(n => n.id));
+  // what the person was shown (undo, set when the chat start listed them); before any listing, what waits to be listed
+  const ids = pass ? null : new Set(((state.undo?.notes?.length ? state.undo : state.announce)?.notes || []).map(n => n.id));
   const targets = (pass ? tagged(root, `capture:${pass}`) : tagged(root, "captured").filter(m => ids.has(m.id)));
   if (!targets.length) return { withdrawn: 0, text: "no captured notes to withdraw" };
   const r = remember(root, person, targets.map(m => ({ context: m.context, retracts: m.id, content: `Withdrawn: a note the chat capture saved from a chat; the person said undo captured.` })));
   const left = new Set(tagged(root, "captured").map(m => m.id)), gone = targets.filter(m => !left.has(m.id));
-  update(root, s => { const { announce, undo, ...rest } = s; return rest; });
+  // only what was withdrawn leaves the lists: a later pass's unseen notes are still listed, a failed undo can be said again
+  const out = new Set(gone.map(m => m.id)), keep = list => (list || []).filter(x => !out.has(x.id));
+  update(root, s => {
+    const { announce, undo, ...rest } = s, a = keep(announce?.notes), u = keep(undo?.notes);
+    return { ...rest, ...(a.length || announce?.held?.length ? { announce: { ...announce, notes: a } } : {}), ...(u.length ? { undo: { notes: u } } : {}) };
+  });
   return { withdrawn: gone.length, text: gone.length ? `withdrew ${gone.length} captured note${gone.length === 1 ? "" : "s"}: ${gone.map(m => m.id).join(", ")}` : `nothing withdrawn: ${r.out.split("\n")[0]}` };
 }
 

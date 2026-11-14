@@ -2,7 +2,8 @@
 // session folder and a stand-in for the model run; the real remember script and a brain made by setup.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, utimesSync, existsSync, appendFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, utimesSync, existsSync, appendFileSync, chmodSync } from "node:fs";
+import { setTimeout as wait } from "node:timers/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync, spawnSync } from "node:child_process";
@@ -181,7 +182,7 @@ test("the heartbeat: fine, late after 36 hours, failed with the reason in the pe
   const fine = capture.captureHealth(root);
   assert.equal(fine.state, "fine"); assert.match(fine.text, /chat capture: last pass .* UTC, 0 notes saved, \d+ tokens/);
   assert.equal(capture.captureNotice(root, { mark: false }), "", "a fine pass says nothing at the chat start");
-  assert.match(healthLine(root, { coverage: [], policies: [], meetings: [] }), /chat capture: last pass/);
+  assert.match(capture.statusText(root), /chat capture: last pass/);
   const later = Date.now() + 37 * 3600e3;
   assert.equal(capture.captureHealth(root, later).state, "late");
   assert.match(capture.captureHealth(root, later).text, /late, the last good pass was .* \(more than 36 hours ago\)/);
@@ -204,7 +205,7 @@ test("the heartbeat: fine, late after 36 hours, failed with the reason in the pe
   const off = pass(root, { FAKE_LOG: log });
   assert.equal(off.code, 0); assert.match(off.out, /off on this machine/); assert.equal(prompts(log).length, 0);
   assert.equal(capture.captureNotice(root, { now: later + 9 * 864e5 }), "");
-  assert.match(healthLine(root, { coverage: [], policies: [], meetings: [] }), /chat capture: off on this machine/);
+  assert.match(capture.statusText(root), /chat capture: off on this machine/);
   capture.setCapture(root, { on: true });
   assert.equal(capture.captureSettings(root).on, true);
   assert.throws(() => capture.setCapture(root, { cap: -5 }), /whole number/);
@@ -220,12 +221,13 @@ test("Claude Code: sessions under projects/, matched by the cwd inside the file,
     { type: "assistant", cwd, timestamp: at, message: { role: "assistant", content: [{ type: "thinking", thinking: "SECRET THINKING" }, { type: "text", text: "Understood." }, { type: "tool_use", name: "Bash", input: {} }] } },
     { type: "user", cwd, timestamp: at, message: { role: "user", content: [{ type: "tool_result", content: "TOOL RESULT" }] } },
     { type: "user", cwd, isMeta: true, timestamp: at, message: { role: "user", content: "META" } },
+    { type: "user", cwd, isCompactSummary: true, timestamp: at, message: { role: "user", content: "COMPACTED: this session is being continued; the person decided things." } },
   ].map(l => JSON.stringify(l)).join("\n") + "\n");
   const r = pass(root, { GTM_BRAIN_HOST: "claude", FAKE_LOG: log, FAKE_REPLY: reply([{ chat: id, context: slug, kind: "decision", content: "Acme renews on 2027-01-01.", quote: "Acme renews on 2027-01-01." }]) });
   assert.equal(r.code, 0, r.out);
   const [prompt] = prompts(log);
   assert.match(prompt, /P \[\d{4}-\d\d-\d\d\]: We settled it/); assert.match(prompt, /A \[[^\]]+\]: Understood\./);
-  assert.doesNotMatch(prompt, /SECRET THINKING|TOOL RESULT|META/);
+  assert.doesNotMatch(prompt, /SECRET THINKING|TOOL RESULT|META|COMPACTED/);
   const [m] = lib.readMemories(root, slug).filter(x => (x.tags || []).includes("captured"));
   assert.deepEqual(m.source, [{ kind: "claude", ref: id }]);
 });
@@ -240,4 +242,122 @@ test("capture_chats is a tool: status, settings and undo through the server; run
   assert.ok(replies.find(x => x.id === 2).result.tools.some(x => x.name === "capture_chats"));
   assert.match(replies.find(x => x.id === 3).result.content.map(c => c.text).join("\n"), /cap 150,000 tokens per pass, 50,000 per chat/);
   assert.equal(capture.captureSettings(root).cap, 150000);
+});
+
+/* ---------- review, 0.35.0 round three: what the tests above would not have caught ---------- */
+test("a thread started days ago and continued today is read: the rollout stays in the folder of the day it started", t => {
+  const root = brain(), log = join(scratch, `log-resumed-${n}`);
+  const old = codexChat(root, [["P", "Old news from last week."]], { at: Date.now() - 6 * 864e5 });
+  addTurns(old, [["P", "RESUMED TODAY: we decided to close the Lyon office on 2027-03-01."]], Date.now() - 60000);
+  const r = pass(root, { FAKE_LOG: log });
+  assert.equal(r.code, 0, r.out);
+  assert.match(prompts(log)[0] || "", /RESUMED TODAY/, "a chat changed since the last pass is found wherever its file lies");
+});
+
+test("a pass whose only candidates are held by the saving rules is not a failed pass, and does not read the chat again", t => {
+  const root = brain(), slug = ctx(root), log = join(scratch, `log-held-${n}`);
+  const chat = codexChat(root, [["P", "We meet Acme again on Thursday."]]);
+  const FAKE_REPLY = reply([{ chat: chat.id, context: slug, kind: "note", content: "We meet Acme again on Thursday.", quote: "We meet Acme again on Thursday." }]);
+  const r = pass(root, { FAKE_LOG: log, FAKE_REPLY });
+  assert.equal(r.code, 0, r.out); assert.notEqual(r.state.last.result, "failed", r.state.last.reason);
+  assert.match(capture.captureNotice(root, { mark: false }), /CAPTURED, HELD: 1 outcome .*Thursday/);
+  pass(root, { FAKE_LOG: log, FAKE_REPLY });
+  assert.equal(prompts(log).length, 1, "the same turns are not sent to the model every night");
+});
+
+test("the reason is the real one: a model that is not found is not a missing install, a failed sign-in check is not a sign-out", t => {
+  const root = brain(), bin = join(scratch, `bin-${n}`), argsLog = join(scratch, `args-${n}`); mkdirSync(bin);
+  writeFileSync(join(bin, "codex"), `#!/usr/bin/env node
+const a = process.argv.slice(2), fs = require("node:fs");
+if (a[0] === "login") { if (process.env.FAKE_LOGIN) { console.error(process.env.FAKE_LOGIN); process.exit(1); } console.log("Logged in using ChatGPT"); process.exit(0); }
+fs.appendFileSync(process.env.FAKE_ARGS, JSON.stringify(a) + "\\n"); fs.readFileSync(0, "utf8");
+console.log(JSON.stringify({ type: "item.completed", item: { type: "agent_message", text: '{"notes": []}' } }));
+console.log(JSON.stringify({ type: "turn.completed", usage: { input_tokens: 4321, cached_input_tokens: 21, output_tokens: 7 } }));
+`); chmodSync(join(bin, "codex"), 0o755);
+  const real = (env = {}) => pass(root, { GTM_BRAIN_CAPTURE_MODEL: "", PATH: `${bin}:${process.env.PATH}`, FAKE_ARGS: argsLog, ...env });
+  let k = 0, step = 0; const t0 = Date.now(), fresh = () => codexChat(root, [["P", `Decided: thing number ${++k}.`]], { at: t0 + k * 100000 });
+  const later = () => new Date(t0 + k * 100000 + 5000 + (step++) * 1000).toISOString();
+  // the real command, through the host adapter: read-only, no tools to write with, and the host's own token count in the record
+  fresh(); const ok = real({ GTM_BRAIN_NOW: later() });
+  assert.equal(ok.code, 0, ok.out); assert.equal(ok.state.last.tokens, 4321, "the tokens the host reports, not the estimate");
+  const args = JSON.parse(readFileSync(argsLog, "utf8").trim().split("\n")[0]);
+  assert.equal(args[0], "exec"); assert.ok(args.includes("read-only") && args.includes("--ephemeral") && !args.includes("workspace-write"), args.join(" "));
+  fresh(); const out = real({ GTM_BRAIN_NOW: later(), FAKE_LOGIN: "Error: operation timed out reading the keychain" });
+  assert.equal(out.state.last.result, "failed"); assert.doesNotMatch(out.state.last.reason, /not signed in/, out.state.last.reason);
+  const signedOut = real({ GTM_BRAIN_NOW: later(), FAKE_LOGIN: "Not logged in" });
+  assert.match(signedOut.state.last.reason, /not signed in on this machine: open Codex and sign in/);
+  const model = pass(root, { GTM_BRAIN_NOW: later(), FAKE_FAIL: "Error: the model gpt-9 was not found (404)" });
+  assert.doesNotMatch(model.state.last.reason, /not installed/, model.state.last.reason);
+  assert.match(model.state.last.reason, /gpt-9 was not found/);
+});
+
+test("never another brain's chats: a brain nested in this one, and a linked folder whose pointer names another brain", t => {
+  const root = brain(), other = brain(), log = join(scratch, `log-nested-${n}`);
+  const nested = join(root, "clients", "inner"); mkdirSync(join(nested, "brain"), { recursive: true }); writeFileSync(join(nested, "brain", "admin.md"), readFileSync(join(other, "brain", "admin.md")));
+  const moved = join(scratch, `moved-${n}`); mkdirSync(moved);
+  lib.writeProjects(root, [{ slug: "moved", title: "Moved", path: moved, contexts: [] }]);
+  lib.writePointer(moved, { brain: other, slug: "moved" });
+  const mine = codexChat(join(root, "brain"), [["P", "MINE: decided in a sub-folder of this brain."]]);
+  codexChat(nested, [["P", "NESTED BRAIN text."]]); codexChat(moved, [["P", "RELINKED FOLDER text."]]);
+  codexChat(`${root}-sibling`, [["P", "SIBLING PREFIX text."]]);
+  pass(root, { FAKE_LOG: log });
+  const [prompt] = prompts(log);
+  assert.match(prompt, new RegExp(mine.id)); assert.doesNotMatch(prompt, /NESTED BRAIN|RELINKED FOLDER|SIBLING PREFIX/);
+});
+
+test("a quote of a word or two proves nothing: the candidate is dropped", t => {
+  const root = brain(), slug = ctx(root);
+  const chat = codexChat(root, [["P", "Maybe we go with the annual plan, not sure yet."]]);
+  pass(root, { FAKE_REPLY: reply([{ chat: chat.id, context: slug, kind: "decision", content: "Acme signed a three year contract for 900000 EUR.", quote: "we go" }]) });
+  assert.equal(lib.readMemories(root, slug).filter(m => (m.tags || []).includes("captured")).length, 0);
+});
+
+test("undo captured withdraws the notes the person was shown, not ones a later pass saved unseen", t => {
+  const root = brain(), slug = ctx(root);
+  const chat = codexChat(root, [["P", "Decision: we drop the Berlin event."]]);
+  pass(root, { FAKE_REPLY: reply([{ chat: chat.id, context: slug, kind: "decision", content: "We drop the Berlin event.", quote: "Decision: we drop the Berlin event." }]) });
+  assert.match(capture.captureNotice(root), /Berlin/);
+  addTurns(chat, [["P", "Decision: we keep the Paris event."]], Date.now() + 1000);
+  pass(root, { GTM_BRAIN_NOW: new Date(Date.now() + 5000).toISOString(), FAKE_REPLY: reply([{ chat: chat.id, context: slug, kind: "decision", content: "We keep the Paris event.", quote: "Decision: we keep the Paris event." }]) });
+  const live = () => lib.effectiveMemories(lib.readMemories(root, slug)).filter(m => !m.retracts && (m.tags || []).includes("captured")).map(m => m.content);
+  assert.equal(live().length, 2);
+  const save = process.env.GTM_BRAIN_NO_COMMIT; process.env.GTM_BRAIN_NO_COMMIT = "1";
+  try {
+    const r = capture.undoCaptured(root);
+    assert.equal(r.withdrawn, 1, r.text);
+    assert.deepEqual(live(), ["We keep the Paris event."], "the note nobody has been shown stays");
+    assert.match(capture.captureNotice(root, { now: Date.now() + 10000 }), /1 note captured from your recent chats: "We keep the Paris event\."/, "and is still listed at the next chat start");
+  } finally { if (save === undefined) delete process.env.GTM_BRAIN_NO_COMMIT; else process.env.GTM_BRAIN_NO_COMMIT = save; }
+});
+
+test("a cap smaller than one turn still moves forward: a pass never reports partial for ever while reading nothing", t => {
+  const root = brain(), log = join(scratch, `log-tiny-${n}`);
+  codexChat(root, [["P", "TINY ONE: the offsite is on 2027-01-15."], ["P", "TINY TWO: the budget is 20000 EUR."]]);
+  capture.setCapture(root, { cap: 40, chat_cap: 40 });
+  for (let i = 0; i < 4; i++) pass(root, { FAKE_LOG: log });
+  const all = prompts(log).join("\n");
+  assert.match(all, /TINY ONE/); assert.match(all, /TINY TWO/);
+  assert.equal((capture.readCapture(root).pending || []).length, 0);
+});
+
+test("the health line says nothing while the capture is fine or switched off; status still does", t => {
+  const root = brain(), none = { coverage: [], policies: [], meetings: [] };
+  codexChat(root, [["P", "We decided to hire a second SDR."]]);
+  pass(root);
+  assert.doesNotMatch(healthLine(root, none) || "", /chat capture:/, "nothing to read at every chat start when all is well");
+  assert.match(capture.statusText(root), /chat capture: last pass/);
+  capture.setCapture(root, { on: false });
+  assert.doesNotMatch(healthLine(root, none) || "", /chat capture:/);
+  assert.match(capture.statusText(root), /off on this machine/);
+});
+
+test("capture_chats mode run through the server starts a pass that finishes and records itself", async t => {
+  const root = brain(), log = join(scratch, `log-run-${n}`);
+  codexChat(root, [["P", "SERVER RUN: we decided to move the launch to 2027-02-10."]]);
+  const r = spawnSync(process.execPath, [`${P}/server/server.mjs`], { input: [{ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18" } },
+    { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "capture_chats", arguments: { brain: root, mode: "run" } } }].map(m => JSON.stringify(m)).join("\n") + "\n", encoding: "utf8",
+    env: { ...process.env, GTM_BRAIN_NO_SESSION_MAINTENANCE: "1", GTM_BRAIN_NO_VERSION_CHECK: "1", GTM_BRAIN_RUN: "test", GTM_BRAIN_CAPTURE_MODEL: fake, GTM_BRAIN_NO_COMMIT: "1", FAKE_LOG: log }, timeout: 30000 });
+  assert.match(r.stdout, /started in the background/);
+  for (let i = 0; i < 100 && !capture.readCapture(root).last; i++) await wait(100);
+  assert.equal(capture.readCapture(root).last?.result, "ok"); assert.match(prompts(log)[0] || "", /SERVER RUN/);
 });
