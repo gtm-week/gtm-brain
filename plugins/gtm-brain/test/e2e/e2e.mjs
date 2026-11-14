@@ -158,8 +158,10 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
   });
   await check("dashboard.entity_kinds", "dashboard", async () => {
     const kinds = Object.fromEntries((dash?.pillars?.entities?.kinds || []).map(k => [k.kind, k.count]));
-    // exactly the gold count per kind (archived and merged entities are not counted), and no kind the generator never wrote
-    const bad = [...Object.entries(gold.counts.entities).filter(([k, n]) => kinds[k] !== n).map(([k]) => k), ...Object.keys(kinds).filter(k => kinds[k] && !(k in gold.counts.entities))].map(k => [k]);
+    // exactly the gold count per kind (archived and merged entities are not counted), and no kind the generator never wrote;
+    // meeting entities are not in counts.entities (they come from the captured meetings), the gold keeps them apart
+    const want = { ...gold.counts.entities, ...(gold.meeting_entities ? { meeting: gold.meeting_entities.count } : {}) };
+    const bad = [...Object.entries(want).filter(([k, n]) => kinds[k] !== n).map(([k]) => k), ...Object.keys(kinds).filter(k => kinds[k] && !(k in want))].map(k => [k]);
     return { pass: !!dash && !bad.length, text: JSON.stringify(kinds), note: bad.map(b => b[0]).join(",") };
   });
   await check("dashboard.notes_first_page", "dashboard", async () => {
