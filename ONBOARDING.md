@@ -130,6 +130,7 @@ summary is written when you ask about it. When you want a specific workflow:
 | Define who to target: company fit, buying roles and readiness, kept as one draft | `/gtm-brain-define-icp` |
 | Fill in the strategy the brain starts with (`strategy.md`), in a 10-15 minute conversation | `/gtm-brain-strategy` |
 | Draft a tone of voice: first whose it is (the company's, yours or a team's), then from writing that fits, tested on one fresh email or post; `voice.md` for the company; offered at the end of setup, skippable, run again any time | `/gtm-brain-voice` |
+| Set up ZYNT from what the brain knows: paste the prompt ZYNT gives you after "Set up with my AI agent" | `/gtm-brain-zynt-setup` |
 | Add a PDF, image or deck to the brain | drop it in the chat and say what it belongs to; no command |
 | Keep a recording or a file over 25 MB | drop it in the chat; it goes to Google Drive or a folder outside git, and the note keeps the link |
 | Change company info, team or tools | `/gtm-brain-configure` |
