@@ -86,10 +86,12 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
   Run `node scripts/sync-derived.mjs` after editing them or the single-memory input fields
   in the ontology. It refreshes the marked instruction blocks and batch schema; tests
   enforce `--check`. Historical templates are excluded. See [README.md](README.md#maintaining-shared-text-and-schemas).
-- Three formal ontology objects: contexts, memories and entities. Entity kinds are person,
-  organization and product; company and team are organization subtypes. Roles and relationships
+- Three formal ontology objects: contexts, memories and entities. Entity kinds come from the
+  brain's SCHEMA.md: every `## <Kind>` section with a field table is a kind, and person,
+  organization, product, event and tool are the defaults that always exist (`lib/kinds.mjs`,
+  `schema.brainKinds`). Company and team are organization subtypes. Roles and relationships
   are supported by context memories. Meeting evidence stays in context memories; it is not a
-  separate object type.
+  separate object type, and neither meeting nor project can be a kind.
 - GTM Brain is English-only: conversations, dashboard labels, user-facing commands and brain
   records. There is no language preference to read, save or ask about. Keep tool identifiers,
   CLI flags, and the APPROVE token stable.
