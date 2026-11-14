@@ -337,7 +337,8 @@ for (let i = 0; i < entries.length; i++) {
   // (only the asked word: "Which Fabian?", never the candidates, so the answer links nobody it rules out)
   if (answering) { const ask = String(answering.content).split(" (about ")[0].replace(/\b(Which [^:?]+):[^?]*\?/g, "$1?").replace(/\s*Full name or company\.$/, "").trim(); if (ask && !String(e.content).includes(ask)) e.content = `${ask} ${String(e.content).trim()}`; }
   // outcomes of one conversation in one call: the first one written is the meeting, the others link to it
-  if (e.meeting && !e.meeting_id && anchors.has(meetingSourceKey(e.meeting.reference))) e.meeting_id = anchors.get(meetingSourceKey(e.meeting.reference));
+  // (an outcome carries meeting_id and no meeting block of its own: with the block it would read as a revision of the meeting, not an outcome of it)
+  if (e.meeting && !e.meeting_id && anchors.has(meetingSourceKey(e.meeting.reference))) { e.meeting_id = anchors.get(meetingSourceKey(e.meeting.reference)); delete e.meeting; }
   let rec, warnings, alreadyRecorded;
   try {
     ({ rec, warnings, alreadyRecorded } = lib.appendMemory(root, ctx, {

@@ -13,6 +13,7 @@ const P = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 process.env.CODEX_HOME = mkdtempSync(join(tmpdir(), "gtm-brain-test-home-"));   // never the real brains registry
 const lib = await import(`${P}/lib/brain.mjs`);
 const checks = await import(`${P}/lib/note-checks.mjs`);
+const meetings = await import(`${P}/lib/meetings.mjs`);
 
 const CHAT = "01a1db26-7e7b-7543-911b-d280d361c9cb";
 const brain = () => {
@@ -77,7 +78,7 @@ test("a different value of the same fact supersedes the kept note and says so; a
 test("a brain dump: notes that only say a call happened are refused with the reason; the outcomes are one note each, linked to one meeting per conversation (s09, s14)", () => {
   const b = brain();
   const start = b.all().length, startLive = b.live().length;
-  const dump = "ok brain dump after today's calls: Iveta Kirilova picked the reverse-engineering pipeline topic for her session, so that one's settled. Maksim Pertsev agreed to shoot the opening night for EUR 600, photos only, no reels.";
+  const dump = "ok brain dump after today's calls: Iveta Kirilova picked the reverse-engineering pipeline topic for her session, so that one's settled. Maksim Pertsev agreed to shoot the opening night for EUR 600, photos only, no reels, and he wants the run sheet by 1 December.";
   b.say(dump);
   const shells = b.batch([
     { context: "strategy", content: "Artur recounted today's session-topic call with Iveta Kirilova on 14 November 2026.", people: ["Iveta Kirilova"], meeting: meeting("Session topic call with Iveta Kirilova", "iveta-1", "Iveta Kirilova") },
@@ -89,8 +90,9 @@ test("a brain dump: notes that only say a call happened are refused with the rea
   // the user source is the author: no refusal for it
   const outcomes = b.batch([
     { context: "strategy", content: "Iveta Kirilova picked the reverse-engineering pipeline topic for her session; settled.", people: ["Iveta Kirilova"], meeting: meeting("Session topic call with Iveta Kirilova", "iveta-1", "Iveta Kirilova") },
-    { context: "company", content: "Maksim Pertsev agreed to shoot the opening night for EUR 600, photos only.", people: ["Maksim Pertsev"], meeting: meeting("Opening night photography call with Maksim Pertsev", "maksim-1", "Maksim Pertsev") },
-    { context: "company", content: "Maksim Pertsev will deliver no reels, only photos.", people: ["Maksim Pertsev"], meeting: meeting("Opening night photography call with Maksim Pertsev", "maksim-1", "Maksim Pertsev") }]);
+    // one statement, several clauses: one note (s14); another outcome of the same call: its own note
+    { context: "company", content: "Maksim Pertsev agreed to shoot the opening night for EUR 600, photos only, no reels.", people: ["Maksim Pertsev"], meeting: meeting("Opening night photography call with Maksim Pertsev", "maksim-1", "Maksim Pertsev") },
+    { context: "company", content: "Maksim Pertsev wants the run sheet by 1 December 2026.", people: ["Maksim Pertsev"], meeting: meeting("Opening night photography call with Maksim Pertsev", "maksim-1", "Maksim Pertsev") }]);
   assert.equal(outcomes.status, 0, outcomes.stderr);
   assert.match(outcomes.stdout, /kept 3 of 3/);
   const notes = b.live().filter(m => /Iveta|Maksim/.test(m.content));
@@ -101,6 +103,9 @@ test("a brain dump: notes that only say a call happened are refused with the rea
   const maksim = notes.filter(m => /Maksim/.test(m.content)).sort((a, b) => a.at.localeCompare(b.at));
   assert.equal(new Set(maksim.map(m => m.meeting_id)).size, 1, "two outcomes of one conversation: one meeting");
   assert.equal(maksim[1].meeting_id, maksim[0].id);
+  assert.ok(maksim[0].meeting && !maksim[1].meeting, "the first is the meeting, the second an outcome of it, not a revision");
+  const view = meetings.meetingOverview(b.root, { by: "artur-wala" }).meetings?.find(x => x.id === maksim[0].id) ?? meetings.meetingOverview(b.root, { by: "artur-wala" });
+  assert.match(JSON.stringify(view), new RegExp(maksim[1].id), "the meeting view lists the second outcome");
   // a meeting note with its outcome in it is not a shell, and one the person told alone ("I met Lena") is kept
   b.say("I met Lena Hoffmann at the Circuit meetup last night");
   assert.equal(b.remember("--context", "company", "--content", "Met Lena Hoffmann at the Circuit meetup on 13 November 2026.", "--people", "Lena Hoffmann").status, 0);
