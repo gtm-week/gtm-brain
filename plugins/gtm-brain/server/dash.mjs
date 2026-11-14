@@ -28,6 +28,9 @@ const viewingUrl = url => project ? `${url}#view=home&project=${encodeURICompone
 // The server's protocol: a start replaces a running server of another one. 4 added /file, so a server an
 // older plugin left running (no /file) is retired on the first start after an upgrade.
 const PROTOCOL = 4;
+// The plugin version that started this server: after an update an old server would go on serving the old
+// code from a cache folder Codex replaced, so --start retires a server from another version.
+const VERSION = (() => { try { return JSON.parse(readFileSync(new URL("../.codex-plugin/plugin.json", import.meta.url), "utf8")).version || null; } catch { return null; } })();
 const work = join(root, "work"), stateFile = join(work, "dash.json"), home = join(work, "home");
 if (!existsSync(join(root, "brain", "admin.md"))) { console.error(`not a brain: ${root}`); process.exit(1); }
 mkdirSync(work, { recursive: true });
@@ -45,8 +48,8 @@ if (flag === "--stop") { lib.stopBrainWatcher(root); const s = readState(); if (
 if (flag === "--start" || flag === "--open" || flag === "--open-chrome") {
   lib.startBrainWatcher(root);
   const s = readState();
-  if (alive(s) && s.protocol === PROTOCOL && (requestedPort === undefined || s.port === requestedPort)) { console.log(viewingUrl(s.url)); process.exit(0); }
-  if (alive(s)) { try { process.kill(s.pid); } catch {} } // retire older action-capable servers
+  if (alive(s) && s.protocol === PROTOCOL && s.version === VERSION && (requestedPort === undefined || s.port === requestedPort)) { console.log(viewingUrl(s.url)); process.exit(0); }
+  if (alive(s)) { try { process.kill(s.pid); } catch {} } // retire older action-capable servers and servers from another plugin version
   const out = openSync(join(work, "dash.log"), "a");
   const childArgs = [fileURLToPath(import.meta.url), root, ...(requestedPort === undefined ? [] : [`--port=${requestedPort}`])];
   const child = spawn(process.execPath, childArgs, { detached: true, stdio: ["ignore", out, out], env: process.env });
@@ -150,7 +153,7 @@ function serve() {
   server.on("error", e => { if (e.code === "EADDRINUSE" && requestedPort === undefined && tries++ < 20) { port++; server.listen(port, "127.0.0.1"); } else { console.error(e.message); process.exit(1); } });
   server.on("listening", () => {
     const url = `http://127.0.0.1:${port}/`;
-    writeFileSync(stateFile, JSON.stringify({ port, pid: process.pid, protocol: PROTOCOL, url, startedAt: new Date().toISOString() }, null, 1));
+    writeFileSync(stateFile, JSON.stringify({ port, pid: process.pid, protocol: PROTOCOL, version: VERSION, url, startedAt: new Date().toISOString() }, null, 1));
     log(`serving ${url}`);
     console.log(url);
   });
