@@ -49,16 +49,19 @@ const nameWords = names => new Set(names.flatMap(n => tokens(n)));
 /* The words that carry the note's meaning: no stop words, no names, no numbers or months, stemmed. */
 export function meaningWords(text, names = []) {
   const skip = nameWords(names);
-  return new Set(tokens(text).filter(w => !STOP.has(w) && !skip.has(w) && !/\d/.test(w) && !NEGATION.has(w) && !DAYS.includes(w) && !MONTH_WORD.test(w) && w.length > 1).map(stem));
+  // a value's unit or currency ("minutes", "PLN") is part of the value, not of what the note is about
+  return new Set(tokens(text).filter(w => !STOP.has(w) && !skip.has(w) && !/\d/.test(w) && !NEGATION.has(w) && !DAYS.includes(w) && !MONTH_WORD.test(w) && !UNITS.test(w) && !Object.hasOwn(CURRENCY, w) && w.length > 1).map(stem));
 }
 const negations = text => new Set(tokens(text).filter(w => NEGATION.has(w)));
 const overlap = (a, b) => !a.size ? 1 : [...a].filter(w => b.has(w)).length / a.size;
 const subset = (a, b) => [...a].every(x => b.has(x));
+const same = (a, b) => subset(a, b) && subset(b, a);
+const projectOf = tags => (tags || []).filter(t => String(t).startsWith("project:")).sort().join(",");
 const shown = s => { const t = String(s).replace(/\s+/g, " ").trim(); return t.length > 140 ? t.slice(0, 137) + "..." : t; };
 
 /* The kept note this one restates, or the one it changes.
    pool: notes in force across the brain (each with id, context, kind, content, people, source);
-   note: { content, people (resolved names), sources }; speakers: the authors' names, never an anchor.
+   note: { content, people (resolved names), sources, tags }; speakers: the authors' names, never an anchor.
    Returns { kept: m } when every value and almost every word is already in a kept note, { changed: m, type,
    was, now } when the same fact has a different value of one type, else null. */
 export function restatement(pool, note, { speakers = [], cache = new Map() } = {}) {
@@ -70,7 +73,9 @@ export function restatement(pool, note, { speakers = [], cache = new Map() } = {
   const evidence = list => (list || []).filter(s => s && !["user", "codex", "claude", "memory"].includes(s.kind)).map(s => `${s.kind}:${s.ref}`);
   const ours = evidence(note.sources);
   const facts = m => { if (!cache.has(m.id)) cache.set(m.id, { values: noteValues(m.content), people: who(m.people), neg: negations(m.content), flat: flat(m.content), words: meaningWords(m.content, [...(m.people || []), ...speakers]) }); return cache.get(m.id); };
-  const plain = m => (m.kind === "note" || m.kind === "decision") && !m.retracts && !(m.tags || []).includes("brain-question");
+  // another project's note with the same words is that project's fact, never this one's
+  const project = projectOf(note.tags);
+  const plain = m => (m.kind === "note" || m.kind === "decision") && !m.retracts && !(m.tags || []).includes("brain-question") && projectOf(m.tags) === project;
   let best = null;
   const codes = mine.values.get("code");
   for (const m of pool) {
@@ -83,17 +88,21 @@ export function restatement(pool, note, { speakers = [], cache = new Map() } = {
     if (!sharedCode && !sameWho) continue;
     const ov = overlap(mine.words, f.words), types = [...mine.values.keys()].filter(t => t !== "code" || !sharedCode);
     const covered = [...mine.values].every(([t, vs]) => subset(vs, f.values.get(t) || new Set()));
-    // the same fact again: nothing new in its values, its words or its denials, and no new source
-    const quiet = subset(mine.neg, f.neg) && subset(new Set(ours), new Set(evidence(m.source)));
-    if (covered && quiet && (sharedCode ? types.length > 0 || ov >= 0.6 : mine.values.size ? ov >= 0.6 : ov >= 0.85)) return { kept: m };
+    // the same fact again: nothing new in its values or its words, the same denials (a "won't" dropped is a
+    // reversal, never a restatement), and no new source. Without a shared code nearly every word must be the
+    // kept note's: "invoiced EUR 600" is not "agreed to EUR 600"
+    const quiet = same(mine.neg, f.neg) && subset(new Set(ours), new Set(evidence(m.source)));
+    if (covered && quiet && (sharedCode ? types.length > 0 || ov >= 0.6 : ov >= 0.85)) return { kept: m };
     // the same fact with another value: one type whose values all differ from the kept note's
     const changable = !m.meeting && !m.meeting_id && !m.asset && !m.customer && !m.relation;
-    if (!changable || !(sharedCode || ov >= 0.5)) continue;
+    // the same fact, not two of a kind: a shared code, most of the words, or another value in common with all
+    // that the kept note says ("the closing panel" on the same day is not "the opening panel")
+    if (!changable) continue;
+    const back = overlap(f.words, mine.words);
     const differs = types.find(t => f.values.get(t)?.size && ![...mine.values.get(t)].some(v => f.values.get(t).has(v)));
     if (!differs) continue;
-    // the same fact, not just the same people: a code, another value in common, or most of the words
     const sharedOther = types.some(t => t !== differs && [...mine.values.get(t)].some(v => f.values.get(t)?.has(v)));
-    if (!sharedCode && !sharedOther && ov < 0.6) continue;
+    if (!sharedCode && ov < 0.6 && !(sharedOther && back >= 0.75)) continue;
     const score = ov + (sharedCode ? 1 : 0) + (sharedOther ? 0.5 : 0);
     if (!best || score > best.score || (score === best.score && Date.parse(m.at) > Date.parse(best.m.at))) best = { m, score, type: differs, was: [...f.values.get(differs)], now: [...mine.values.get(differs)] };
   }

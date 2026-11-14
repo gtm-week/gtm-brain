@@ -327,7 +327,7 @@ for (let i = 0; i < entries.length; i++) {
   // a meeting record sent again word for word keeps its own check ("already recorded"); reworded, it is a restatement too (s07)
   const plainEntry = !e.supersedes && !e.retracts && !answering && !resent && !e.asset && !e.customer && !e.relation && !e.customer_coverage && !e.meeting_capture && !e.meeting_policy && !e.meeting_coverage && (e.kind || "note") !== "question";
   if (plainEntry) {
-    let found = checks.restatement(poolOf(), { content: e.content, people, sources: lib.parseSources(e.sources) }, { speakers, cache: factsCache });
+    let found = checks.restatement(poolOf(), { content: e.content, people, sources: lib.parseSources(e.sources), tags: [...list(e.tags), ...(project ? [`project:${project}`] : []), ...(where.one ? [`project:${where.one}`] : [])] }, { speakers, cache: factsCache });
     if (e.meeting && (found?.changed || String(found?.kept?.content || "").trim() === String(e.content).trim())) found = null;
     if (found?.kept) { kept.push({ n, id: found.kept.id, ctx: found.kept.context }); lines.push(`${at(n)}${checks.keptLine(found.kept, titleOf(found.kept.context))}`); continue; }
     if (found?.changed && found.auto && (!(e.meeting || e.meeting_id) || found.changed.context === ctx)) { changes = found; e.supersedes = found.changed.id; ctx = found.changed.context; }

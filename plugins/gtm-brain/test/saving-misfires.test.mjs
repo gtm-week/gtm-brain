@@ -186,3 +186,27 @@ test("the values a note states, by type", () => {
   assert.deepEqual([...v.get("code")], ["CODEUNI50"]);
   assert.deepEqual([...v.get("percent")], ["50"]);
 });
+
+test("not a restatement: a reversal, another action with the same value, another project, or another panel on the same day", () => {
+  const b = brain();
+  const keep = (...a) => { const r = b.remember(...a); assert.equal(r.status, 0, r.stderr); return r; };
+  // a reversal is news, never "already kept"
+  keep("--context", "company", "--content", "Fabian Struck won't send the speaker deck.", "--people", "Fabian Struck");
+  const back = keep("--context", "company", "--content", "Fabian Struck will send the speaker deck.", "--people", "Fabian Struck");
+  assert.doesNotMatch(back.stdout, /already kept/, "the opposite claim is written");
+  // the same amount, another thing done with it
+  keep("--context", "company", "--content", "Maksim Pertsev agreed to EUR 600 for opening night photos.", "--people", "Maksim Pertsev");
+  const paid = keep("--context", "company", "--content", "Maksim Pertsev invoiced EUR 600 for opening night photos.", "--people", "Maksim Pertsev");
+  assert.doesNotMatch(paid.stdout, /already kept/, "an invoice is not the agreement");
+  // another panel on the same day is not a correction of the first
+  keep("--context", "strategy", "--content", "Iveta Kirilova will do 30 minutes on the opening panel on 12 December 2026.", "--people", "Iveta Kirilova");
+  const other = keep("--context", "strategy", "--content", "Iveta Kirilova will do 15 minutes on the closing panel on 12 December 2026.", "--people", "Iveta Kirilova");
+  assert.doesNotMatch(other.stdout, /this changes/);
+  assert.equal(b.live().filter(m => /Iveta/.test(m.content)).length, 2, "both panels stay");
+  // the same words for another project are that project's fact
+  lib.writeProjects(b.root, [{ slug: "berlin", path: b.root }, { slug: "warsaw", path: b.root }]);
+  keep("--context", "company", "--project", "berlin", "--content", "The kickoff call moved to 3 December 2026.");
+  const w = keep("--context", "company", "--project", "warsaw", "--content", "The kickoff call moved to 3 December 2026.");
+  assert.doesNotMatch(w.stdout, /already kept/, "another project's kickoff");
+  assert.match(keep("--context", "company", "--project", "warsaw", "--content", "The kickoff call moved to 3 December 2026.").stdout, /already kept/, "the same project's, said again");
+});
