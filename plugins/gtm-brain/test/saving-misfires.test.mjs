@@ -215,3 +215,18 @@ test("not a restatement: a reversal, another action with the same value, another
   assert.doesNotMatch(w.stdout, /already kept/, "another project's kickoff");
   assert.match(keep("--context", "company", "--project", "warsaw", "--content", "The kickoff call moved to 3 December 2026.").stdout, /already kept/, "the same project's, said again");
 });
+
+test("a short outcome is an outcome: declined, agreed or signed is never refused as a call that only happened", () => {
+  const b = brain();
+  b.say("Calls today: Lena Hoffmann declined the keynote. Oskar Lis agreed. Nina Berg signed the sponsor contract.");
+  const r = b.batch([
+    { context: "company", content: "Lena Hoffmann declined the keynote.", people: ["Lena Hoffmann"], meeting: meeting("Call with Lena Hoffmann", "lena-1", "Lena Hoffmann") },
+    { context: "company", content: "Oskar Lis agreed.", people: ["Oskar Lis"], meeting: meeting("Call with Oskar Lis", "oskar-1", "Oskar Lis") },
+    { context: "company", content: "Nina Berg signed.", people: ["Nina Berg"], meeting: meeting("Call with Nina Berg", "nina-1", "Nina Berg") }]);
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /kept 3 of 3/);
+  for (const t of ["Artur recounted today's call with Lena Hoffmann.", "Had a quick call with Lena Hoffmann today.", "Spoke with Lena Hoffmann this morning."])
+    assert.ok(checks.statesNoOutcome({ content: t, people: ["Lena Hoffmann"], meeting: { title: "Call with Lena Hoffmann" } }, { speakers: ["Artur Wala"] }), t);
+  for (const t of ["Lena Hoffmann declined the keynote.", "Lena Hoffmann agreed.", "Lena Hoffmann cancelled."])
+    assert.ok(!checks.statesNoOutcome({ content: t, people: ["Lena Hoffmann"], meeting: { title: "Call with Lena Hoffmann" } }, { speakers: ["Artur Wala"] }), t);
+});

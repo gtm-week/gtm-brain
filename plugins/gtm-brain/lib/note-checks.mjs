@@ -117,12 +117,15 @@ export const mayChangeLine = (r, title) => `this may change ${r.changed.id} in $
 export const changedLine = (r, title, id) => `this changes ${r.changed.id} in ${title} ("${shown(r.changed.content)}"): ${r.was.map(v => said(r.type, v)).join(", ")} is now ${r.now.map(v => said(r.type, v)).join(", ")}, so ${id} replaces it. Say what changed in one line; if both are true, remember the old note again.`;
 
 /* A note that only says a conversation happened: after the names, the dates, the meeting's own title and the
-   words for "we talked", fewer than two words are left. */
+   words for "we talked", no word is left. One word is an outcome ("Lena agreed", "Nina signed"), and so is a
+   denial ("declined", "cancelled"): those are kept here, though the restatement check sets them aside. */
+const outcomeWords = (text, names) => { const skip = nameWords(names);
+  return new Set(tokens(text).filter(w => !STOP.has(w) && !skip.has(w) && !/\d/.test(w) && !DAYS.includes(w) && !MONTH_WORD.test(w) && w.length > 1 && !["not", "no"].includes(w)).map(stem)); };
 export function statesNoOutcome(entry, { speakers = [] } = {}) {
   const names = [...(entry.people || []), ...(entry.companies || []), ...(entry.meeting?.participants || []).map(p => p.name), ...speakers];
-  const title = meaningWords(entry.meeting?.title || "", names);
-  const left = [...meaningWords(entry.content, names)].filter(w => !FILLED.has(w) && !title.has(w));
-  return left.length < 2;
+  const title = outcomeWords(entry.meeting?.title || "", names);
+  const left = [...outcomeWords(entry.content, names)].filter(w => !FILLED.has(w) && !title.has(w));
+  return left.length === 0;
 }
 /* Whether the person said more than the note holds: their message has outcome words the note lacks. */
 export function saidMore(personText, contents, names = []) {
