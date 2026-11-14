@@ -86,7 +86,9 @@ createInterface({ input: process.stdin }).on('line', line => {
   });
   t.after(() => {
     try { if (existsSync(join(root, "brain"))) run(process.execPath, [join(P, "server/dash.mjs"), root, "--stop"]); }
-    finally { rmSync(scratch, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 }); }
+    // a render or index worker the last call started may still be writing work/: wait for it, and never fail a
+    // passed test because its scratch folder could not be removed (ENOTEMPTY on a slow CI runner)
+    finally { try { rmSync(scratch, { recursive: true, force: true, maxRetries: 40, retryDelay: 100 }); } catch {} }
   });
   return { scratch, root, bin, env, run, rpc, call, remember, render, hook };
 }
