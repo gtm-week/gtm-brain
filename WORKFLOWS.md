@@ -113,6 +113,11 @@ event on every machine.
 - The session and the scheduled run watch for milestones: a due step whose milestone is in the
   brain is recorded done (a note citing the evidence), and the next step opens. A milestone not
   reached by its date raises the step again, once a day at most.
+- Whose note counts: a note tagged with the run, or a note saved since the step opened that names
+  the entity the run is about; for a run about no entity, a note in the run's context. Another
+  run's note never counts, and a field counts for a run about no entity only when a note saved
+  since the step opened filled it. Two runs about no entity in one context share such a note:
+  tag it with the run (`run:<id>`) to say which.
 - `skip this step`, `move step 2 to 2026-12-01`, `pause the run`, `resume the run`,
   `cancel the run`, `step 3 failed: <why>`: each is a note with your reason. A failed step stops
   the run and says why.
@@ -123,7 +128,8 @@ event on every machine.
 
 In one place, `LIMITS` in `lib/workflows.mjs`: 3 active runs per workflow, 5 steps a day moved
 automatically per run, a chain of workflows starting each other stops at depth 3, 3 workflow lines
-at one chat start, events at most 14 days old. A workflow's own notes never trigger it.
+at one chat start, events at most 14 days old. A workflow's own notes never trigger it, and
+neither does what was saved about an entity while a run of the workflow about it was going.
 `workflows: off` in `brain/admin.md` (a workplace change, through APPROVE) turns them all off:
 nothing is offered, started or moved.
 
@@ -132,7 +138,12 @@ nothing is offered, started or moved.
 A teammate on 0.34 reads a 0.35 workflow as before: the header keys are extra frontmatter, the
 milestone is part of the step text, the gate is still the last `Gate:`; an active or paused
 workflow shows as a draft. They see no offers, and their saves become events on 0.35 machines once
-pulled. A workflow with an empty "Before starting" does not parse on 0.34.
+pulled. A workflow with an empty "Before starting" does not parse on 0.34. A step waiting for a
+milestone gate shows there as "waiting, due null", and 0.34 does not know a paused run: it can
+still advance one.
+
+Editing an active or paused workflow through the `document` tool keeps its status; only
+`workflow activate`, `pause` and `resume` change it. An edit is not checked again: run `check`.
 
 ## Pings
 
