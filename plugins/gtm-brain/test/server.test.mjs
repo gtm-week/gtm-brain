@@ -452,10 +452,14 @@ test("interact: the company's interaction records the prescribed memory and says
     record: { context: "pipeline", kind: "note", companies: ["deal"], people: [], content: "Moved {deal} to {stage}.{note? Note: {note}}", action: "attio:move deal:{deal}", tags: ["deal-stage"] } }]);
   const catalog = await call("list_objects", { brain: root });
   assert.match(catalog.text, /Interactions of this company \(run with interact\):\n- move_deal\(deal, stage, note\?\) \[attio\]: A deal changes stage\./);
-  const done = await call("interact", { brain: root, by: "marta", name: "move_deal", params: { deal: "Castorama", stage: "proposal", note: "asked for a discount" } });
-  assert.ok(!done.isError, done.text); assert.match(done.text, /^ok: move_deal/); assert.match(done.text, /remembered m_[0-9a-f]{12} in pipeline/); assert.match(done.text, /Now in attio: Move the deal to the given stage in Attio\./);
+  const asked = { brain: root, by: "marta", name: "move_deal", params: { deal: "Castorama", stage: "proposal", note: "asked for a discount" } };
+  const first = await call("interact", asked);
+  assert.ok(!first.isError, first.text); assert.match(first.text, /^checked: move_deal; nothing recorded yet/); assert.match(first.text, /Now in attio: Move the deal to the given stage in Attio\./);
+  assert.ok(!lib.readMemories(root, "pipeline").some(x => /Moved Castorama/.test(x.content)), "nothing recorded before the connector confirms");
+  const done = await call("interact", { ...asked, outcome: "done", refs: ["attio:deals/d-77"] });
+  assert.ok(!done.isError, done.text); assert.match(done.text, /^ok: move_deal/); assert.match(done.text, /remembered m_[0-9a-f]{12} in pipeline/);
   const m = lib.effectiveMemories(lib.readMemories(root, "pipeline")).find(x => /Moved Castorama to proposal/.test(x.content));
-  assert.ok(m, "the memory is in pipeline"); assert.deepEqual(m.actions, [{ tool: "attio", action: "move deal", ref: "Castorama" }]); assert.deepEqual(m.people, ["Castorama"]); assert.deepEqual(m.tools, ["attio"]); assert.deepEqual(m.tags, ["deal-stage"]); assert.match(m.content, /Note: asked for a discount/);
+  assert.ok(m, "the memory is in pipeline"); assert.deepEqual(m.actions, [{ tool: "attio", action: "move deal", ref: "Castorama" }]); assert.deepEqual(m.people, ["Castorama"]); assert.deepEqual(m.tools, ["attio"]); assert.deepEqual(m.tags, ["deal-stage"]); assert.match(m.content, /Note: asked for a discount/); assert.ok(m.source.some(s => s.kind === "attio" && s.ref === "deals/d-77"), "the connector's reference is the note's source");
   const missing = await call("interact", { brain: root, by: "marta", name: "move_deal", params: { deal: "Castorama" } });
   assert.equal(missing.isError, true); assert.match(missing.text, /stage/);
   const unknown = await call("interact", { brain: root, by: "marta", name: "close_deal", params: {} });

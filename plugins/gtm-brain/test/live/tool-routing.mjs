@@ -233,8 +233,9 @@ const cases = [
     expect: "Krzysztof Nowak was recorded as a new person, not merged with Krzysztof Pawlak; the assistant asked through the question form before saving and the note about the volume discount is in offer." },
   { name: "interact", interaction: true, prompt: 'Move the Castorama deal to the proposal stage in Attio and note that they asked for a discount. Then tell me what you did and what was recorded.',
     verify: root => { const m = lib.effectiveMemories(lib.readMemories(root, "pipeline")).find(x => /Castorama/.test(x.content) && /proposal/.test(x.content)); return !!m && m.actions.some(a => a.tool === "attio" && a.action === "move deal") && m.people.includes("Castorama"); },
-    calls: calls => calls.some(c => c.tool === "interact" && c.arguments.name === "move_deal" && /Castorama/.test(JSON.stringify(c.arguments.params))),
-    expect: "The move was recorded in pipeline through the company's move_deal interaction (Castorama, stage proposal, the discount note), and the move itself was done with the Attio tool (simulated), not by hand and not through the screen." },
+    // check, act, then record: a first interact call without an outcome, then one with outcome done
+    calls: calls => { const mine = calls.filter(c => c.tool === "interact" && c.arguments.name === "move_deal" && /Castorama/.test(JSON.stringify(c.arguments.params))); const first = mine.findIndex(c => !c.arguments.outcome); return first >= 0 && mine.slice(first + 1).some(c => c.arguments.outcome === "done"); },
+    expect: "interact was called first to check, the move was done with the Attio tool (simulated), not by hand and not through the screen, and only then interact recorded it with outcome done: the note in pipeline through move_deal (Castorama, stage proposal, the discount note)." },
   // a chat opened in a linked folder: the hook names the project, the note is tagged with it, the person hears the name, never the path
   { name: "project", project: true, prompt: 'Note that the M2 curriculum draft is due Friday. Then tell me where you kept it and which project it belongs to.',
     verify: root => lib.listContexts(root).filter(c => c.status === "active").some(c => lib.effectiveMemories(lib.readMemories(root, c.slug)).some(m => /M2/.test(m.content) && /Friday/.test(m.content) && m.tags.includes("project:curriculum"))),

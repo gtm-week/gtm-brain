@@ -251,25 +251,40 @@ const TOOLS = [
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
     call: () => { const b = lib.knownBrains(); return text(b.length ? b.map(x => `${x.company}: ${x.path} (last opened ${x.lastOpened.slice(0, 10)})`).join("\n") : "no brain known on this machine yet: open the brain folder in Codex once, or give its path."); } },
   { name: "interact", title: "Doing it and recording it", readOnly: false,
-    description: "Run one of this company's own interactions (list_objects shows them): the inputs are checked, the memory the interaction prescribes is recorded through remember (context, people, companies, action), and the reply says exactly what to do in the connector, or to confirm it was done. Never a plugin tool's name: call those directly. Never Computer Use for the connector step.",
-    inputSchema: schema({ by: str("The current person's confirmed handle, name or email"), name: str("The interaction's name, from list_objects"), params: { type: "object", description: "The interaction's inputs", additionalProperties: true }, project: PROJECT }, ["brain", "by", "name"]),
-    async call({ brain, by, name, params = {}, project }) {
+    description: "Run one of this company's own interactions (list_objects shows them) in two calls: check, act, then record. The first call checks the inputs and writes nothing: it returns the refusal rule and exactly what to do in the connector. Do that with the connector's own tools, then call interact again with the same name and params plus outcome: done with refs (the record ids or links the connector returned) records the note the interaction prescribes with those refs as its sources; failed with error records a failure note. An interaction with nothing to do in a connector records at once. Never a plugin tool's name: call those directly. Never Computer Use for the connector step.",
+    inputSchema: schema({ by: str("The current person's confirmed handle, name or email"), name: str("The interaction's name, from list_objects"), params: { type: "object", description: "The interaction's inputs; the same on the second call", additionalProperties: true },
+      outcome: str("Leave out on the first call. On the second, after the connector step: done when the connector confirmed it, failed when it refused or errored", { enum: ["done", "failed"] }),
+      refs: { type: "array", items: { anyOf: [{ type: "string" }, { type: "object" }] }, description: "With outcome: what the connector returned for the record it wrote. The exact direct URL when one was returned, else provider:id, or {kind, account, ref, url} with the portal, workspace or mailbox when known. A bare id is taken as the interaction's tool. Never invent one." },
+      error: str("With outcome failed: what the connector said, word for word"), project: PROJECT }, ["brain", "by", "name"]),
+    async call({ brain, by, name, params = {}, outcome, refs = [], error, project }) {
       const pe = projectError(brain, project); if (pe) return pe;
-      const { actions, error } = lib.readInteractions(brain);
-      if (error) return text(`error: ${error}`, true);
+      const { actions, error: bad } = lib.readInteractions(brain);
+      if (bad) return text(`error: ${bad}`, true);
       if (lib.RESERVED_TOOLS.has(name)) return text(`refused: ${name} is a tool of its own; call it`, true);
       const a = actions.find(x => x.name === name);
       if (!a) return text(`refused: no interaction "${name}" here; this company has: ${actions.map(x => x.name).join(", ") || "none yet (propose_interaction adds one)"}`, true);
-      const bad = validateValue(a.input_schema, params, name); if (bad) return text(`refused: ${bad}`, true);
-      const m = lib.interactionMemory(a, params);
-      const r = await run(brain, "gtm-brain-remember/remember.mjs", ["--by", by, "--via", "codex", "--context", m.context, "--kind", m.kind, "--content", m.content, ...(m.people.length ? ["--people", m.people.join(", ")] : []), ...(m.companies.length ? ["--companies", m.companies.join(", ")] : []), ...(m.tools.length ? ["--tools", m.tools.join(", ")] : []), ...m.actions.flatMap(x => ["--action", x]), ...(m.tags.length ? ["--tags", m.tags.join(", ")] : []), ...(project ? ["--project", project] : [])]);
+      const invalid = validateValue(a.input_schema, params, name); if (invalid) return text(`refused: ${invalid}; nothing recorded`, true);
+      if (outcome !== undefined && outcome !== "done" && outcome !== "failed") return text(`refused: outcome is done or failed, not ${outcome}; nothing recorded`, true);
+      // a bare id is the interaction's own tool; everything else is a source as remember reads it
+      const list = (Array.isArray(refs) ? refs : [refs]).filter(x => x !== undefined && x !== null && x !== "")
+        .map(x => typeof x === "string" && a.tool && !/^https?:\/\//i.test(x.trim()) && !/^\s*\{/.test(x) && x.indexOf(":") < 1 ? { kind: a.tool, ref: x.trim() } : x);
+      let sources; try { sources = lib.parseSources(list); } catch (e) { return text(`refused: refs: ${e.message}; nothing recorded`, true); }
+      if (a.external && !outcome) {
+        const rule = a.refuse_when ? `First check: refuse when ${a.refuse_when}. If it holds, stop and tell the person why; nothing is recorded.\n` : "";
+        return text(`checked: ${name}; nothing recorded yet.\n${rule}Now in ${a.tool}: ${a.operation}\nThen call interact again with the same name and params and outcome: done with refs (the record id or direct link ${a.tool} returned, with the account when known), or failed with error (what ${a.tool} said). Only that call records it.`);
+      }
+      const failed = a.external && outcome === "failed";
+      const m = lib.interactionMemory(a, params, { outcome: failed ? "failed" : "done", error });
+      const r = await run(brain, "gtm-brain-remember/remember.mjs", ["--by", by, "--via", "codex", "--context", m.context, "--kind", m.kind, "--content", m.content, ...(m.people.length ? ["--people", m.people.join(", ")] : []), ...(m.companies.length ? ["--companies", m.companies.join(", ")] : []), ...(m.tools.length ? ["--tools", m.tools.join(", ")] : []), ...m.actions.flatMap(x => ["--action", x]), ...sources.flatMap(x => ["--source", JSON.stringify(x)]), ...(m.tags.length ? ["--tags", m.tags.join(", ")] : []), ...(project ? ["--project", project] : [])]);
       const said = [r.out, r.err].filter(Boolean).join("\n").trim();
       if (r.code !== 0) return text(`${r.code === 2 ? "refused" : "error"}: ${said}`, true);
-      return text(`ok: ${name}\n${said}\nNow in ${a.tool}: ${a.operation} If it is already done, nothing more; if it fails, remember the failure as a note.${a.refuse_when ? `\nRefuse when ${a.refuse_when}.` : ""}`);
+      if (failed) return text(`recorded failure: ${name} was not done in ${a.tool}\n${said}\nTell the person it failed and what ${a.tool} said; do not retry a create without checking whether it happened.`);
+      const noRef = a.external && !sources.length ? `\nNo reference from ${a.tool} was given; when one comes back, save it with remember: supersedes the note above, the same content, the reference as its source.` : "";
+      return text(`ok: ${name}\n${said}${noRef}`);
     } },
   { name: "propose_interaction", title: "Proposing an interaction", readOnly: false,
     description: "Propose one of this company's own interactions from the person's words: name, tool, the operation in words, inputs, and what it records. Validated, then written as work/interaction.proposed.json; then call approve_change with kind interaction: its form asks the person for APPROVE. Never edits brain/ontology.ossie.json.",
-    inputSchema: schema({ interaction: { type: "object", description: "name, title, tool, operation, description, input_schema, record {context, kind, content, people, companies, action, tags}, refuse_when", additionalProperties: true } }, ["brain", "interaction"]),
+    inputSchema: schema({ interaction: { type: "object", description: "name, title, tool, operation, description, input_schema, record {context, kind, content, people, companies, action, tags}, refuse_when; external false (and no tool) when nothing is done in a connector", additionalProperties: true } }, ["brain", "interaction"]),
     call({ brain, interaction }) {
       const { actions, error } = lib.readInteractions(brain); if (error) return text(`error: ${error}`, true);
       const errs = lib.validateInteraction(brain, interaction, { existing: actions });

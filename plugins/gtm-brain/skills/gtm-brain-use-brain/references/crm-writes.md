@@ -53,6 +53,22 @@ Batch genuinely new mappings with the outcome at the end; do not save unchanged 
   linked outcomes. Give a short result with returned source links. Do not add dashboard, broad
   enrichment, sync or summary-compilation work.
 
+## When the write is one of the company's interactions
+
+When `list_objects` shows a company interaction for the request, run it through `interact`:
+check, act, then record.
+
+1. Call `interact` with the name and params. It checks the inputs and writes nothing. Apply its
+   refusal rule: if it holds, stop and tell the person; nothing is recorded.
+2. Do the step it names with the connector's own tools, following this page.
+3. Call `interact` again with the same name and params and `outcome`. On success: `done` and
+   `refs`, the direct URL or ID each write returned (`{kind, account, ref}` when the portal or
+   workspace is known). On a rejection or error: `failed` and `error`, the connector's words. Only
+   this call writes the note. Never call `done` for a write the connector did not confirm.
+
+A timeout with an unresolved write is neither: resolve it first, or report the uncertainty and do
+not make the second call.
+
 ## Provider details
 
 Read [Attio writes](attio-writes.md) for Attio or [HubSpot writes](hubspot-writes.md)
