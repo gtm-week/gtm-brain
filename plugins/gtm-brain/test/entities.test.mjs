@@ -117,8 +117,10 @@ test("new backdated evidence invalidates a brief; stale compilation and wrong-co
   note(root, "events", "Historical preference from May.", { at: "2026-05-01T10:00:00Z" });
   const view = lib.entityBrief(root, "Chris");
   assert.equal(view.stale, true);
-  assert.equal(view.compilation, null);
-  assert.doesNotMatch(view.markdown, /organizes sponsors and is discussing referrals/);
+  // 0.35.0: no background run rewrites it, so the claims whose notes still stand are kept, dated (lane S1)
+  assert.ok(view.compilation && view.compilation.overview.length, "carried, not dropped");
+  assert.match(view.markdown, /## Overview\n\nAs of \d{4}-\d{2}-\d{2}:\n\n- .*organizes sponsors and is discussing referrals/);
+  assert.match(view.markdown, /Its notes changed since the overview was written; claims below whose notes still stand are kept from it/, "a backdated note is not newer, but it changed the evidence");
   assert.throws(() => lib.compileEntity(root, "Chris", { by: "ann", as_of: facts.as_of, brief }), /changed/);
 });
 

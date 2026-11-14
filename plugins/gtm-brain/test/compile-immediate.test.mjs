@@ -5,12 +5,15 @@ import assert from 'node:assert/strict';
 import {mkdtempSync,readFileSync,writeFileSync,existsSync,mkdirSync,statSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
-import {execFileSync} from 'node:child_process';
+import {execFileSync,spawn} from 'node:child_process';
+// Since 0.35.0 a save starts no worker (topic summaries are written on demand, lib/summaries.mjs); the worker
+// still runs when started by hand or by a scheduled task, so these tests start it themselves.
+const kick=(root,env)=>spawn('bash',[join(P,'scripts/gtm-brain-compile/background-compile.sh'),root],{detached:true,stdio:'ignore',env}).unref();
 import * as lib from '../lib/brain.mjs';
 const P=new URL('../',import.meta.url).pathname.replace(/\/$/,'');
 const waitFor=async (fn)=>{for(let i=0;i<200;i++){if(fn())return;await new Promise(r=>setTimeout(r,50))}assert.fail('timed out waiting for worker')};
 
-test('with no batching delay a saved change starts at once, and another change during the run gets compiled serially',async()=>{
+test('a worker started by hand with no batching delay runs at once, and another change during the run gets compiled serially',async()=>{
  const root=mkdtempSync(join(tmpdir(),'gtm-immediate-')),profile=mkdtempSync(join(tmpdir(),'gtm-immediate-profile-'));
  const env={...process.env,CODEX_HOME:profile,PLUGIN_ROOT:P,GTM_BRAIN_NO_OPEN:'1',GTM_BRAIN_NO_VERSION_CHECK:'1'};
  execFileSync('git',['init','-q',root]);
@@ -38,11 +41,14 @@ test('with no batching delay a saved change starts at once, and another change d
  const live={...env,GTM_BRAIN_NO_COMPILE:'',PATH:bin+':'+process.env.PATH,GTM_BRAIN_COMPILE_RETRY:'0'};
  live.GTM_BRAIN_COMPILE_DELAY='0';
  const remember=content=>execFileSync(process.execPath,[join(P,'scripts/gtm-brain-remember/remember.mjs'),root,'--by','ann','--context','icp','--content',content],{env:live,encoding:'utf8'});
- remember('First change.');
+ remember('First change.');kick(root,live);
  try{
   await waitFor(()=>existsSync(join(root,'work/first-ready')));
   // The first snapshot is already applied, but its worker still holds the brain lock.
-  remember('Second change while the first worker is active.');
+  const kicked=readFileSync(join(root,'work/compile.kick'),'utf8');
+  remember('Second change while the first worker is active.');kick(root,live);
+  // the hand start publishes its kick before the first worker is released, as the save's kick did
+  await waitFor(()=>readFileSync(join(root,'work/compile.kick'),'utf8')!==kicked);
   assert.equal(readFileSync(join(root,'work/fake-count'),'utf8'),'1');
  }finally{writeFileSync(join(root,'work/release-first'),'')}
  await waitFor(()=>{
@@ -70,7 +76,7 @@ test('a run that compiles nothing is blocked, not retried, and new notes wait ou
  for(const e of [{type:'thread.started',thread_id:'t-1'},{type:'item.completed',item:{type:'agent_message',text:'Compilation blocked: the compile tools are unavailable in this run.'}},{type:'turn.completed',usage:{input_tokens:241939,cached_input_tokens:203535,output_tokens:778}}])console.log(JSON.stringify(e));
  `,{mode:0o755});
  const live={...env,GTM_BRAIN_NO_COMPILE:'',PATH:bin+':'+process.env.PATH,GTM_BRAIN_COMPILE_RETRY:'0',GTM_BRAIN_COMPILE_DELAY:'0'};
- execFileSync(process.execPath,[join(P,'scripts/gtm-brain-remember/remember.mjs'),root,'--by','ann','--context','icp','--content','A note to compile.'],{env:live,encoding:'utf8'});
+ execFileSync(process.execPath,[join(P,'scripts/gtm-brain-remember/remember.mjs'),root,'--by','ann','--context','icp','--content','A note to compile.'],{env:live,encoding:'utf8'});kick(root,live);
  await waitFor(()=>{try{return JSON.parse(readFileSync(join(root,'work/compile.json'),'utf8')).state==='blocked'&&!existsSync(join(root,'work/compile.lock'))}catch{return false}});
  assert.equal(readFileSync(join(root,'work/fake-runs'),'utf8'),'x','one run, no retries');
  const log=readFileSync(join(root,'work/hooks.log'),'utf8');
@@ -79,7 +85,7 @@ test('a run that compiles nothing is blocked, not retried, and new notes wait ou
  assert.match(log,/scheduled-run  tokens in=241939 cached=203535 out=778 codex:\/\/threads\/t-1/);
  const run=JSON.parse(readFileSync(join(root,'work/runs.jsonl'),'utf8').trim().split('\n').at(-1));
  assert.deepEqual([run.by,run.thread,run.input,run.cached,run.output],['background','t-1',241939,203535,778]);
- // within the cooldown a new note starts nothing; the advisor's explicit start still may
+ // a new note starts nothing (kickCompile is retired), within the cooldown or after it
  assert.equal(lib.compileBlocked(root),true);
  const saved=process.env.GTM_BRAIN_NO_COMPILE;delete process.env.GTM_BRAIN_NO_COMPILE;
  try{assert.equal(lib.kickCompile(root),false)}finally{process.env.GTM_BRAIN_NO_COMPILE=saved}
@@ -92,7 +98,7 @@ test('the MCP server receives GTM_BRAIN_RUN, or a scheduled run never sees the c
  assert.ok(mcp.mcpServers.gtm_brain.env_vars.includes('GTM_BRAIN_RUN'),'Codex passes only listed variables to an MCP server');
 });
 
-test('notes are batched: the worker waits until no note has been saved for the delay, then compiles them in one run (2026-10-01)',async()=>{
+test('notes are batched: a worker started by hand waits until no note has been saved for the delay, then compiles them in one run (2026-10-01)',async()=>{
  const root=mkdtempSync(join(tmpdir(),'gtm-batch-')),profile=mkdtempSync(join(tmpdir(),'gtm-batch-profile-'));
  const env={...process.env,CODEX_HOME:profile,PLUGIN_ROOT:P,GTM_BRAIN_NO_OPEN:'1',GTM_BRAIN_NO_VERSION_CHECK:'1'};
  execFileSync('git',['init','-q',root]);
@@ -108,7 +114,7 @@ test('notes are batched: the worker waits until no note has been saved for the d
  `,{mode:0o755});
  const live={...env,GTM_BRAIN_NO_COMPILE:'',PATH:bin+':'+process.env.PATH,GTM_BRAIN_COMPILE_RETRY:'0',GTM_BRAIN_COMPILE_DELAY:'3'};
  const remember=content=>execFileSync(process.execPath,[join(P,'scripts/gtm-brain-remember/remember.mjs'),root,'--by','ann','--context','icp','--content',content],{env:live,encoding:'utf8'});
- remember('First note.');
+ remember('First note.');kick(root,live);
  await new Promise(r=>setTimeout(r,1500));
  assert.ok(!existsSync(join(root,'work/fake-runs')),'nothing runs while notes are still coming');
  remember('Second note, inside the delay.');

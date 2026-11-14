@@ -482,11 +482,21 @@ function applyCompilation(root, name, { as_of, by, brief }) {
 }
 
 const BRIEF_TIMELINE = 50, BRIEF_WITHDRAWALS = 10, BRIEF_SOURCES = 30;
+/* A brief behind its evidence keeps the claims and fields whose every cited note is still in force (0.35.0):
+   no background run rewrites the overview after each save any more, and hiding the whole synthesis at the
+   first new note left nearly every page with none. A claim resting on a withdrawn or replaced note drops out
+   by itself; the rest is shown as of its compile date. Deterministic: no model. */
+export function carriedBrief(facts) {
+  const brief = facts.previous; if (!brief) return null;
+  const inForce = new Set(facts.evidence.map(m => m.id)), keep = list => (list || []).filter(c => c.memories.every(id => inForce.has(id)));
+  const contexts = (brief.contexts || []).filter(c => facts.contexts.some(f => f.context === c.context)).map(c => ({ ...c, summary: keep(c.summary), open_threads: keep(c.open_threads) })).filter(c => c.summary.length || c.open_threads.length);
+  return { overview: keep(brief.overview), contexts, relationships: keep(brief.relationships) };
+}
 const moreLine = (n, id) => `${n} more: query memories with filters.entities=${id}`;
 export function entityBrief(root, name, options = {}) {
   const registry = options.registry || lib.readNames(root), facts = options.facts || entityFacts(root, name, { ...options, registry });
   if (!facts.stale && facts.previous) validateBrief(facts, facts.previous);
-  const e = resolveEntity(registry, name), compilation = facts.stale ? null : facts.previous;
+  const e = resolveEntity(registry, name), compilation = facts.stale ? carriedBrief(facts) : facts.previous;
   const evidence = lib.hideForkCopies(options.context ? facts.evidence.filter(m => m.context === options.context) : facts.evidence).sort((a, b) => Date.parse(b.at) - Date.parse(a.at) || a.id.localeCompare(b.id));
   // one context's view is capped like the whole brief: a big brain's brief ran to megabytes
   const scoped = options.context ? lib.memoryTimeline(evidence) : null;
@@ -528,17 +538,20 @@ function fieldsSection(facts, all, citation, aged = () => "") {
   const fields = facts.schema?.fields || [];
   if (facts.schema?.error) return [`\n## Fields\n\nSCHEMA.md cannot be read, so no fields are shown: ${md(facts.schema.error)}`];
   if (!fields.length) return [];
-  const name = md(facts.entity.name), filled = new Map((facts.stale ? [] : facts.previous_fields || []).filter(f => f.memories.every(id => all.has(id))).map(f => [f.field, f]));
+  // a value whose notes are all still in force stays shown when newer notes arrive (as the carried overview)
+  const inForce = new Set(facts.evidence.map(m => m.id));
+  const name = md(facts.entity.name), filled = new Map((facts.previous_fields || []).filter(f => f.memories.every(id => all.has(id) && inForce.has(id))).map(f => [f.field, f]));
   const out = ["\n## Fields"];
-  if (!facts.compiled_at || facts.stale || facts.schema_behind && !filled.size) {
-    out.push(`\nFields fill at the next compile.${fields.some(f => f.required) ? ` Required in SCHEMA.md: ${fields.filter(f => f.required).map(f => words(f.name)).join(", ")}.` : ""}`);
+  if (!facts.compiled_at || (facts.stale || facts.schema_behind) && !filled.size) {
+    out.push(`\nFields are written with the overview, when someone asks about ${name}.${fields.some(f => f.required) ? ` Required in SCHEMA.md: ${fields.filter(f => f.required).map(f => words(f.name)).join(", ")}.` : ""}`);
     return out;
   }
   out.push("\n" + fields.map(f => { const v = filled.get(f.name); return `- ${md(words(f.name))[0].toUpperCase()}${md(words(f.name)).slice(1)}: ${v ? `${v.interpretation ? "Interpretation: " : ""}${md(v.text)}${aged(v.memories)} ${v.memories.map(citation).join(" ")}` : "not recorded"}`; }).join("\n"));
   const current = recordedRelations(facts).filter(r => r.status === "current" && r.from === facts.entity.id).map(r => r.type);
   const gaps = [...fields.filter(f => f.required && !filled.has(f.name)).map(f => ({ what: words(f.name), ask: `What is ${name}'s ${words(f.name)}?` })),
     ...(facts.schema.relations_required || []).filter(r => !current.includes(r.type)).map(r => ({ what: `a current ${words(r.type)}`, ask: `${name} ${words(r.type)} ...?` }))];
-  if (facts.schema_behind) out.push("\nSCHEMA.md changed since this brief was compiled; the fields refill at the next compile.");
+  if (facts.schema_behind) out.push("\nSCHEMA.md changed since this brief was compiled; the fields are rewritten with the overview, when asked.");
+  else if (facts.stale) out.push(`\nAs of ${lib.localDateTime(facts.compiled_at).slice(0, 10)}; newer notes may change them.`);
   if (gaps.length) out.push(`\nGaps (required in SCHEMA.md): ${gaps.map(g => g.what).join(", ")}. Ask: ${gaps.map(g => `"${g.ask}"`).join(" ")}`);
   return out;
 }
@@ -572,6 +585,11 @@ function relationLines(facts, registry, citation, scope, old = () => "") {
 /* now (ms): a read for the chat (recall, query brief) dates what is old, "(as of 2026-09-02, 73 days ago)" on a fact
    or relation past 30 days and when the entity was last mentioned. Without it (the page kept in brain/entities)
    the text holds no relative age, so a stored page never changes because a day passed. */
+const behindText = facts => {
+  const newer = facts.compiled_at ? facts.evidence.filter(m => lib.newer(m.at, facts.compiled_at)).length : facts.evidence.length;
+  return !facts.compiled_at ? "No overview written yet; it is written when someone asks"
+    : `${newer ? `${newer} newer note${newer === 1 ? " is" : "s are"} not in the overview yet` : "Its notes changed since the overview was written"}; claims below whose notes still stand are kept from it`;
+};
 function renderBrief(facts, brief, evidence, registry, scope, now = null) {
   if (scope && !facts.contexts.some(c => c.context === scope)) throw new Error(`No evidence about ${facts.entity.name} in ${scope}`);
   const all = new Map(facts.contexts.flatMap(c => c.memories).map(m => [m.id, m]));
@@ -583,7 +601,9 @@ function renderBrief(facts, brief, evidence, registry, scope, now = null) {
   // A source that kept its direct link (url on the entry) links there; older entries link as before.
   const source = s => typeof s.url === "string" && /^https?:\/\//i.test(s.url) && s.url !== s.ref ? link(s.kind === "gmail" ? "Gmail" : `${s.kind}:${s.ref}`, s.url) : /^https?:\/\//.test(s.ref) ? link(s.kind, s.ref) : s.kind === "gmail" ? link("Gmail", `https://mail.google.com/mail/u/0/#all/${encodeURIComponent(s.ref)}`) : s.kind === "codex" ? link("Conversation", `codex://threads/${encodeURIComponent(s.ref)}`) : `\`${md(s.kind + ":" + s.ref)}\``;
   const out = [`\n# ${md(facts.entity.name)}`, `\n${md(facts.entity.kind)}${facts.entity.subtype ? ` (${md(facts.entity.subtype)})` : ""}${facts.entity.aliases.length ? " · Also known as: " + facts.entity.aliases.map(md).join(", ") : ""}`,
-    `\nLatest memory recorded: ${lib.localDateTime(facts.latest_evidence_at) || "none"}. Brief compiled: ${lib.localDateTime(facts.compiled_at) || "never"}. ${facts.stale ? "Summary needs updating; current evidence is shown below." : "Recorded knowledge only; linked tools have not been checked live."}`];
+    `\nLatest memory recorded: ${lib.localDateTime(facts.latest_evidence_at) || "none"}. Brief compiled: ${lib.localDateTime(facts.compiled_at) || "never"}. ${facts.stale ? `${behindText(facts)}; current evidence is shown below.` : "Recorded knowledge only; linked tools have not been checked live."}`];
+  // a chat read (now set) of a brief behind its notes: the overview is written now, in that chat, once (0.35.0)
+  if (now !== null && facts.stale && facts.evidence.length && !scope) out.push(`\nOverview behind: after answering, write it once with compile_entity: entity ${facts.entity.id}, by your handle, as_of ${facts.as_of}, brief {overview, contexts (one entry per context under By context, citing only its notes), relationships, fields} from the cited notes on this page; claims kept from the last brief may be reused when their notes still stand. It is cached until new notes arrive.`);
   if (now !== null && evidence[0]) out.push(`\nLast mentioned: ${day(evidence[0].at)} (${agoText(daysSince(evidence[0].at, now))}).`);
   if (facts.entity.status === "archived") out.push("\nArchived identity. Historical evidence and links remain available.");
   if (facts.entity.emails.length) out.push(`\nContact: ${facts.entity.emails.map(md).join(", ")}`);
@@ -591,7 +611,7 @@ function renderBrief(facts, brief, evidence, registry, scope, now = null) {
   if (facts.entity.identity_sources.length) out.push(`\nIdentity evidence: ${facts.entity.identity_sources.map(source).join(" · ")}`);
   if (facts.entity.not_same.length) out.push(`\nKept separate from: ${facts.entity.not_same.map(md).join(", ")}.`);
   if (!scope) out.push(...nameProvenance(facts, [...all.values()], citation, source));
-  if (!scope) out.push("\n## Overview", brief?.overview.length ? "\n" + claims(brief.overview) : "\nNo current synthesis yet. The context evidence below preserves what was recorded and where it applies.");
+  if (!scope) out.push("\n## Overview", brief?.overview.length ? `${facts.stale ? `\nAs of ${lib.localDateTime(facts.compiled_at).slice(0, 10)}:\n` : ""}\n` + claims(brief.overview) : "\nNo current synthesis yet. The context evidence below preserves what was recorded and where it applies.");
   if (!scope) out.push(...fieldsSection(facts, all, citation, aged));
   out.push("\n## By context");
   const contexts = facts.contexts.filter(c => !scope || c.context === scope);

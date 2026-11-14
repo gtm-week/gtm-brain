@@ -78,7 +78,7 @@ if (args[0] === "--fork") {
 
 const cs = lib.listContexts(root);
 if (args.includes("--json")) { console.log(JSON.stringify(cs.map(c => ({ slug: c.slug, title: c.title, rule: c.rule, status: c.status, summary: c.summary, memories: lib.effectiveMemories(c.memories).length, stored: c.memories.length, lastMemory: c.lastMemory, compiledAt: c.compiledAt, stale: c.stale, people: c.people, tools: c.tools, related: c.related })), null, 1)); process.exit(0); }
-// Same words as the dashboard: "summary up to date" / "summary updating (shortly)", "loaded in this chat"; "out of date" only after 2 days behind.
+// lib.summaryState's words: "summary up to date", "summary as of <date>, N newer notes (written when asked)", "loaded in this chat".
 console.log("admin: brain/admin.md (always loaded)");
 const loadedNow = lib.readLoaded(root, project); const busy = lib.compileBusy(root);
 // --brief-loaded: the chat start prints each loaded context in full right after this list, so its

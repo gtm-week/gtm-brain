@@ -1700,7 +1700,7 @@
             "title": "Writing the summary",
             "object": "contexts",
             "returns": "Opaque",
-            "description": "Write the current summary and Working guidance from effective memories. Summary: 2 to 4 sentences covering the situation, what is open and supported immediate next steps; end every sentence with the ids of the notes it rests on in brackets ([m_...]); absolute dates only, never next Tuesday or tomorrow. Refused otherwise, with the reason. Working guidance (now): only reusable methods learned from memories, including evidenced tool usage, with memory IDs for each method. Revalidate prior methods and remove unsupported or superseded advice; pass an empty string when none remain. Do not repeat standing instructions, current status or one-off tasks in guidance. Older guidance may mix methods and actions: keep supported actions in the summary and their source follow-ups. Keeps the standing rule. Refuses if memories or Markdown changed after compile_facts. Manual edits pause compilation until reviewed in Codex; never overwrite them silently.",
+            "description": "Write a context's summary and Working guidance, once, when load_context or compile_facts says it is behind and gives as_of; it is cached until new notes arrive. Summary: 2 to 4 sentences on the situation, what is open and supported next steps, each ending with the note ids it rests on ([m_...]), absolute dates only. now: reusable methods from the notes with their ids, or an empty string. Refused with the reason otherwise, or when notes changed after as_of, or while a manual edit awaits review.",
             "input_schema": {
               "type": "object",
               "properties": {
@@ -1714,11 +1714,11 @@
                 },
                 "by": {
                   "type": "string",
-                  "description": "Your handle: the person's handle, or schedule"
+                  "description": "The person's handle (schedule in a scheduled run)"
                 },
                 "as_of": {
                   "type": "string",
-                  "description": "The as_of id from compile_facts"
+                  "description": "The as_of id from load_context or compile_facts"
                 },
                 "summary": {
                   "type": "string",
@@ -1973,7 +1973,7 @@
             "tool_name": "compile_entity",
             "title": "Compiling an entity brief",
             "returns": "Opaque",
-            "description": "Compile a permanent entity brief from entity_facts. Every claim cites current relevant memory IDs; context perspectives cite only that context. Keep dates, scope, interpretations and disagreements explicit. Does not create facts or rewrite memories. Refuses outdated as_of. Follow the entity compilation procedure in gtm-brain-use-brain.",
+            "description": "Write an entity brief's overview, once, when a brief read says it is behind and gives as_of (or from entity_facts in a run); cached until new notes arrive. Every claim cites current relevant memory IDs; context perspectives cite only that context. Keep dates, scope, interpretations and disagreements explicit. Does not create facts or rewrite memories. Refuses outdated as_of. Follow the entity compilation procedure in gtm-brain-use-brain.",
             "input_schema": {
               "type": "object",
               "properties": {

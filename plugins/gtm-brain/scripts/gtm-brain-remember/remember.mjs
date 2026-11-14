@@ -401,8 +401,6 @@ for (const l of lines) console.log(l);
 if (held.length) console.log(holdReport());
 if (asks.length) console.log(`Ask the person once, ${askIn}, after quoting the note${held.some(h => h.ask) ? ", in the same question as the held entries" : ""}, one numbered part each: ${asks.map((a, k) => `${k + 1}) ${a}`).join(" ")}. Never more than this one question.`);
 
-// once for the whole call, not once per memory
-// The shared refresh path starts compilation for saved changes.
-if (!process.env.GTM_BRAIN_NO_COMPILE) console.log("the summaries update by themselves after each saved change; do not compile in this chat and do not offer to.");
+// 0.35.0: no summary is promised after a save; a topic's summary is written when someone asks (lib/summaries.mjs)
 if (!held.length && rules()) console.log(rules().trim());
 lib.rerender(root);

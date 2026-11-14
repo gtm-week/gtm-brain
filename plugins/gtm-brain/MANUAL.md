@@ -84,27 +84,27 @@ Change a context in chat: "rename Market to Competitors", "change the rule of Ou
 
 ## Summaries
 
-Each context's summary is rewritten by a separate Codex run (the compile):
+Each context's summary is rewritten from its notes (the compile):
 
-1. **After you save.** Every save starts it; it waits until nothing was saved for 2 minutes, then
-   rewrites every summary with new notes in one run (about 15-20 seconds). The run continues after
-   you close the chat; it needs the computer awake and Codex installed.
-2. **When you ask.** "Update the summary now" starts it without the wait.
-3. **On a schedule, if you set one up.** A Codex Scheduled task (Codex app, the brain's project,
+1. **When you ask.** Loading the context, asking where things stand, or "update the summary" in a
+   chat: Codex writes the summary there, once, from the notes since the last one, and it is kept
+   until new notes arrive. Nothing runs after a save (since 0.35.0).
+2. **On a schedule, if you set one up.** A Codex Scheduled task (Codex app, the brain's project,
    Scheduled tasks, run in the local project, weekly) with the prompt: "Run the gtm-brain-sync
    skill as the scheduled run: compile every context whose summary is behind with by: schedule,
-   render the dashboard. Do nothing else." It catches what the first case missed: the computer
-   slept, a run failed three times.
+   render the dashboard. Do nothing else."
 
 A summary is 2-4 sentences under 90 words: what is going on, what is open, what changed. Every
 sentence rests on named notes (kept in `summary_sources`) and uses real dates, never "next
 Tuesday". The compile refuses anything else.
 
-The chat and the dashboard say how old a summary is: "up to date (as of 12 Nov)", "updating
-shortly" right after a save, and "out of date" with its date once it is more than 2 days behind.
-When summaries fall behind and no scheduled run saved anything in 8 days, the next chat asks
-once a week whether to compile now and set up the weekly run. A summary you edited by hand is
-paused until you review the edit in chat; the compile never overwrites it.
+Since 0.35.0 a topic's summary is written when you ask about the topic ("where do we stand on
+pricing?", loading the context, or "update the summary"), in that chat, and kept until new notes
+arrive; no separate run writes it after each save. The chat says how old a summary is: "up to
+date (as of 12 Nov)", or "as of 12 Nov, 4 newer notes", and then says it is writing the summary
+now, answers from the notes, and saves the new summary once. If writing fails, it says what
+failed and what to do, once, and the health line keeps the last failure. A summary you edited by
+hand is paused until you review the edit in chat; nothing overwrites it.
 
 Answers do not depend on summaries: Codex searches the notes themselves. The summary is the
 overview you see first on the dashboard and at the start of a chat.

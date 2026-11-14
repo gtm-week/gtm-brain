@@ -37,7 +37,9 @@ Copies the brain to a scratch folder (the write checks append notes), starts `se
 and runs about 50 checks in sections: search (single and multi-word, stemmed, typo, names, aliases,
 SQL), entities (name, id, alias, typo, email), briefs (facts, cited ids, size), relations and their
 history, customers, meetings, deal, rules, status, compile (`--facts` read through a pipe, full
-size, and over MCP), load_context, remember (single, batch over MCP, `--batch` script, a bare first name saved then
+size, and over MCP), load_context, topic summaries on demand (a load behind its notes gives the digest and the
+as_of compile_apply checks, the chat writes it once, the next load is current, no reply promises a summary, the
+writers are offered to a chat), remember (single, batch over MCP, `--batch` script, a bare first name saved then
 asked, and the answer linked back),
 corrections (supersede, retract), the tool path of the two demo loops (the voice document, the
 outbound workflow, a recorded send, a user-confirmed prospect; the live run is

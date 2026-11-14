@@ -7,19 +7,23 @@ import { join } from "node:path";
 import { meetingCaptureStatus, toolKey } from "./brain.mjs";   // through brain.mjs: meetings.mjs imports it back
 import { normalizeKind } from "./pointers.mjs";
 import { populationPart, SYNC_WINDOW_DAYS } from "./population.mjs";
+import { explainFailure } from "./summaries.mjs";
 
 const readJson = f => { try { return JSON.parse(readFileSync(f, "utf8")); } catch { return null; } };
 const readRuns = root => { try { return readFileSync(join(root, "work", "runs.jsonl"), "utf8").split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(r => r && r.at); } catch { return []; } };
 const when = at => { const t = Date.parse(at); return Number.isFinite(t) ? new Date(t).toISOString().slice(0, 16).replace("T", " ") + " UTC" : null; };
 const newest = list => list.filter(x => x && Number.isFinite(Date.parse(x.at))).sort((a, b) => Date.parse(b.at) - Date.parse(a.at))[0] || null;
 
-/* the summary runs: the last good one and the last error, from both records */
+/* the summary runs: the last good one and the last error, from both records. Since 0.35.0 most lines are a
+   summary written in a chat (foreground, with its context); a background or scheduled run still writes its own.
+   The error carries what failed in the person's words and what to do (lib/summaries.mjs explainFailure). */
 export function summaryRuns(root) {
   const runs = readRuns(root), state = readJson(join(root, "work", "compile.json"));
   const good = newest([...runs.filter(r => r.turns > 0 && !r.error), ...(state?.state === "done" ? [state] : [])]);
-  const bad = newest([...runs.filter(r => r.error || !r.turns).map(r => ({ at: r.at, why: r.error || "the run did no work" })),
+  const bad = newest([...runs.filter(r => r.error || !r.turns).map(r => ({ at: r.at, why: r.error || "the run did no work", context: r.context || null })),
     ...(["failed", "blocked"].includes(state?.state) ? [{ at: state.at, why: `${state.state === "blocked" ? "compiled nothing" : "failed"}${state.contexts ? ` (${state.contexts})` : ""}` }] : [])]);
-  return { good: good?.at || null, error: bad && (!good || Date.parse(bad.at) > Date.parse(good.at)) ? bad : null };
+  const error = bad && (!good || Date.parse(bad.at) > Date.parse(good.at)) ? { ...bad, ...explainFailure(bad.why) } : null;
+  return { good: good?.at || null, error };
 }
 
 /* The source sync's checkpoints (work/sync.json, written by gtm-brain-sync). Since 0.35.0 one per source kind
@@ -77,7 +81,7 @@ export function healthLine(root, overview) {
   const parts = [], capture = meetingCaptureStatus(root, overview);
   if (capture) parts.push(`meeting capture: ${capture}`);
   const { good, error } = summaryRuns(root);
-  if (good || error) parts.push(`summaries: ${good ? `last good run ${when(good)}` : "no good run yet"}${error ? `, last error ${when(error.at)}: ${String(error.why).replace(/\s+/g, " ").slice(0, 120)}` : ""}`);
+  if (good || error) parts.push(`summaries (written when asked): ${good ? `last written ${when(good)}` : "none written yet"}${error ? `, last failure ${when(error.at)}${error.context ? ` (${error.context})` : ""}: ${error.what}; what to do: ${error.todo}` : ""}`);
   const syncs = Object.entries(lastSyncs(root, overview)), late = new Map(overdueSyncs(root, overview).map(o => [o.tool, o]));
   if (syncs.length) parts.push(`last sync: ${syncs.map(([t, at]) => `${t} ${when(at)}${late.has(t) ? ` (overdue: older than ${late.get(t).window_days} days)` : ""}`).join(", ")}`);
   const gaps = openGaps(overview);
