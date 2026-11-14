@@ -1,4 +1,5 @@
 // Meeting evidence remains append-only memories. This module never writes a second store.
+import { normalizeKind, sourceKind } from './pointers.mjs';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
@@ -35,7 +36,7 @@ export function validateMeetingEvidence(r) {
     if (m?.evidence === 'calendar' && Array.isArray(m.participants) && m.participants.some(p => p.role === 'attended')) errors.push('calendar invitations do not establish attendance');
     if (m?.evidence === 'recollection' && m?.basis !== 'user') errors.push('recollection needs basis=user');
     if (m?.basis === 'user' && !userEvidence(r)) errors.push('user meeting evidence needs a user source');
-    if (m?.basis === 'source' && (!Array.isArray(r.source) || !r.source.some(s => s?.kind === m.reference?.kind) || ['user', 'memory', 'codex'].includes(m.reference?.kind))) errors.push('source meeting evidence needs its external provider in sources');
+    if (m?.basis === 'source' && (!Array.isArray(r.source) || !r.source.some(s => s && sourceKind(s) === normalizeKind(m.reference?.kind)) || ['user', 'memory', 'codex'].includes(normalizeKind(m.reference?.kind)))) errors.push('source meeting evidence needs its external provider in sources');
     if (r.kind && r.kind !== 'note') errors.push('meeting observations must be notes; record outcomes separately with meeting_id');
   }
   if (c !== undefined) {

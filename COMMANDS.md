@@ -39,7 +39,7 @@ The sections below document the underlying operations, tools, and script paths f
 They are not additional discoverable skills. Tools show outcomes such as "Remembering" or
 "Searching the brain" in chat. Review proposals on the read-only dashboard. APPROVE is a choice in the form `approve_change` shows; in a chat nothing else applies it.
 Scripts retain their paths for terminal use with
-`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.34.5`.
+`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.35.0`.
 
 Legend for "writes": what files the command changes. Nothing else is ever touched.
 
@@ -75,7 +75,9 @@ completed actions or decisions, meeting artifacts, and open questions. A short b
 descriptive source pointer is enough; duplicate reads add nothing.
 
 Tool: `remember`. Writes: `brain/contexts/<slug>/memories.jsonl` (append), `brain/entities/` (new
-people). Kept at once.
+people). Kept at once. `context` is optional: the single loaded context, else the one active
+context where the note's people or companies already have notes; with no unique answer the entry is
+held with the candidate contexts in one line. Each kept note starts with `saved in <Context title>: ...`.
 `node $PLUGIN_ROOT/scripts/gtm-brain-remember/remember.mjs . --by <handle> --kind note --content "..." [--context <slug>] [--tools "attio"] [--people "Pierre Aubert"] [--source gmail:<id>] [--action "gmail:sent email:<id>"] [--supersedes m_x] [--retracts m_x]`
 
 ### interact
@@ -115,6 +117,18 @@ remembered like any finding and the next read scores them. The rubric is
 Tool: `query` with object `deal` and search = the company. Off for a brain whose `brain/admin.md`
 front matter has `deal_scoring: off` (new brains get `deal_scoring: on`; a brain without the line
 has it on). The line is workplace info, so it changes through APPROVE.
+
+`save_nudge` in the same front matter: after three reads in a chat (`query`, `load_context`) with
+nothing saved, the read's reply ends with one line asking to save what the turn established; it
+comes back only after five more reads and never in a scheduled or background run. `save_nudge: off`
+turns it off (a brain without the line has it on).
+
+`big_files` in the same front matter says where a file over 25 MB goes, since git never keeps it:
+`google-drive` (new brains, and a brain without the line) moves it to the shared drive and links it
+from the project's `README.md`; `local` keeps it in a folder on this computer outside git
+(`big_files_folder:`, an absolute path, else `~/gtm-brain-files/<brain folder>`), not shared, linked
+as a `file:` path. `save`, the chat start and `add-file.mjs` give the same instruction
+(`lib.bigFileAdvice`). It changes through APPROVE.
 
 ### recall
 *"what do we know about the TCO?"*, *"did we ever talk about Berlin?"*, *"tell me about Pierre Aubert"*
@@ -166,7 +180,7 @@ cap on this guidance. Your standing rule from setup is never changed. Only conte
 one. Runs unattended on the schedule.
 
 Tools: `compile_facts`, `compile_apply`. Writes: `brain/contexts/<slug>/context.md`; kept at once.
-A separate run does it by itself (`background-compile.sh`, state in `work/compile.json`): after each saved change, once no note has been saved for 2 minutes (`GTM_BRAIN_COMPILE_DELAY`), and at chat start; changes during a run get a follow-up pass; the chat only compiles when asked.
+A separate run does it by itself (`background-compile.sh`, state in `work/compile.json`): after each saved change, once no note has been saved for 2 minutes (`GTM_BRAIN_COMPILE_DELAY`), and at chat start; changes during a run get a follow-up pass; the chat only compiles when asked. The chat start carries one `health:` line when there is something to say: why meetings may be missing, the last good summary run and the last error (`work/runs.jsonl`, `work/compile.json`), the last sync per tool (`work/sync.json`, meeting coverage) and the count of held meetings not captured.
 Model passes have a 15-minute timeout (`GTM_BRAIN_COMPILE_TIMEOUT_MS` overrides it in milliseconds).
 Failed scans and timed-out runs enter the three-attempt retry path; completed compilations stay
 saved. Successful passes that reduce the pending context or entity set continue without using
@@ -226,7 +240,8 @@ arrived with no reason (made by shell, kept by background maintenance), once per
 
 *"Check the brain against its rules"* is `query` with object `rules`: people known by a first name
 only (P3), look-alike names nobody confirmed (P4), top-level folders no RULES.md row names, files
-with no recorded reason (grouped by folder), names with capitals or spaces. Each finding names its
+with no recorded reason (grouped by folder), names with capitals or spaces, Ask the source rows that
+cannot be read. Each finding names its
 rule, the person or path, and two or three fixed choices carried out through the tools above
 (`add_name`, `merge_entities`, `save` with `placed`), so each fix leaves its own reason. It reads
 only and changes nothing; `query` with object `health` counts what it found.
@@ -618,6 +633,21 @@ what the person said. `query` object `relations` (search = an entity, filters.ty
 current state, history and disagreeing sources. `query` object `rules` lists entities with a compiled
 brief missing a required field or relationship.
 
+Source pointers: `lib/pointers.mjs` gives each source one spelling. Kinds are lowercased and short
+forms mapped (`drive`, `gdrive` mean `google-drive`; `mail` means `gmail`), a doubled prefix
+(`attio:attio:people/9`) loses its repeat, and a record URL on app.hubspot.com, app.attio.com,
+mail.google.com, drive.google.com or notes.granola.ai becomes one entry for the record:
+`{kind, account?, ref, url?}`. `ref` is the stable id, `url` is the link exactly as given, and `account`
+is read from the link when its path carries one (the HubSpot portal id, the Attio workspace slug).
+`remember` also takes a source as an object (`{kind, account, ref}`) for a second mailbox, workspace
+or portal. Identity is kind, account and ref; `url` is never compared, and of two sources that differ
+only in `url` the first stays. A link on another host, or one without a stable id, stays
+`{kind: "url", ref: <link>}`. Stored notes are never rewritten; readers normalize, so a 0.35.0 note
+that holds the pointer plus a separate `url` entry for the same link reads as one record. `query`
+object `reference` (search = `kind:ref`, `kind:account/ref` or a record URL) returns the entity whose
+references include it and every note citing it, from the memory index's `source` members; a search
+that names an account also finds what was saved without one.
+
 `/gtm-brain-schema` (*"what do we keep about people"*, *"every company must have a budget owner"*,
 *"investors are a subtype"*) shows the file and adds, renames or removes one row in the person's
 words, then calls `save`. A relationship rename keeps the old name in `Was called`.
@@ -628,7 +658,7 @@ words, then calls `save`. A relationship rename keeps the old name in `Was calle
 and adds, changes or removes one row or one line in the person's words, then calls `save`. A rule
 cannot switch off APPROVE, the protected files or W1.
 
-`RULES.md` at the brain root is the brain's own rules, in two sections. "Our rules" holds its people's
+`RULES.md` at the brain root is the brain's own rules, in three sections. "Our rules" holds its people's
 rules for what Codex saves and asks, one line each; the chat start prints them after the shared saving
 rules (R1, R2). "Where things go" is the table of where every file goes: rules at the root, brand in
 `brand/`, projects in `projects/<project>/` with their deliverables inside, raw sources with their
@@ -640,3 +670,18 @@ fits. The person edits it freely: an edited `RULES.md` is never overwritten, an 
 follows the shipped template. `save` keeps it. A brain from before 0.33.9 had `WHERE.md` for the table
 and a `RULES.md` with only its own lines; the next chat start merges both into one `RULES.md` (an
 unedited `WHERE.md` becomes the new template, an edited one keeps its rows) and removes `WHERE.md`.
+
+"Ask the source" (0.35.0) is a table of `| Question about | Ask | Brain answer is good for |`: per kind of
+question, the tool that knows better than a saved note (CRM, billing, events tool, calendar, email,
+meeting notes, the brain, or a tool by name) and how old a note may be ("1 day", "2 weeks", "always
+ask", "no limit"). `lib/ask-source.mjs` reads it, columns by header name. A row applies only while a
+tool of its kind is connected (`work/tools.json`: installed, not declined, read test not failed); a
+note matches a row by its source kind (a `hubspot:` source for the CRM row), never by its words. Then
+the chat start prints one `Ask the source (RULES.md): ...` line naming those rows, and `query`
+(memories search, brief) and `load_context` add one line per row whose newest matching note is older
+than allowed (any matching note for "always ask"): *"Deal stage and amount: the newest note here from
+the CRM is 9 days old (2026-11-05); RULES.md says ask HubSpot (good for 1 day). Read it there before
+answering."* A `RULES.md` without the section (edited before 0.35.0, so never overwritten) uses the
+shipped rows; an unedited 0.33.10 template is refreshed to include it. A row that cannot be read is
+left out and listed by `query` with object `rules` with its line and a fix; when no row can be read,
+the shipped rows apply.

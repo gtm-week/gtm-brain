@@ -1,17 +1,24 @@
-// SCHEMA.md: what a brain keeps about each person, organization and product, and how they relate
+// SCHEMA.md: what a brain keeps about each kind of entity (person, organization, product, event, tool and
+// any kind the person adds), and how they relate
 // (GTM week sync, 2026-11-13: "schema defines the shape of the universe, rules define how we act in it").
 // The person edits it, by hand or through /gtm-brain-schema; setup writes it, a brain without one gets it at
 // the chat start, an unedited one follows the shipped template, an edited one is never touched. A file that
 // cannot be read is reported with a fix per line and left as it is. Field values are never stored here: they
 // stay cited claims from memories (the entity brief's Fields), and relationships are memories with a
-// `relation` block (lib/relations.mjs). The kinds are fixed in phase 1 (lib/entities.mjs ENTITY_KINDS).
+// `relation` block (lib/relations.mjs). Every "## <Kind>" section with a field table is a kind; the five
+// DEFAULT_KINDS always exist, even when the file leaves their section out. Meetings and projects are not kinds:
+// meeting evidence stays in context memories, a project is a tag.
 import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 import { readAdmin, commit } from "./brain.mjs";
+import { DEFAULT_KINDS, KIND_NAME, NOT_KINDS } from "./kinds.mjs";
+export { DEFAULT_KINDS, KIND_NAME, NOT_KINDS };
 
 export const SCHEMA = "SCHEMA.md";
-export const SCHEMA_KINDS = ["person", "organization", "product"];
+/** The defaults; a brain's own kinds come from brainKinds(root). */
+export const SCHEMA_KINDS = DEFAULT_KINDS;
+const orList = list => list.length < 2 ? list.join("") : `${list.slice(0, -1).join(", ")} or ${list[list.length - 1]}`;
 export const US = "us";
 // customer_of is the customer block (lib/customers.mjs): always known, whatever the file says
 export const BUILT_IN = { customer_of: { from: ["person", "organization"], to: [US], about: "Customer status, kept by the customer notes", required: false, formerly: [], built_in: true } };
@@ -34,7 +41,7 @@ const digest = obj => createHash("sha256").update(JSON.stringify(obj)).digest("h
    thrown together as a SchemaFormatError. Prose and tables outside the known sections are left alone. */
 export function parseSchema(text) {
   const lines = String(text || "").split("\n"), problems = [], add = (line, problem, proposal) => { if (problems.length < 10) problems.push({ line, problem, proposal }); };
-  const kinds = { person: { fields: [] }, organization: { fields: [], subtypes: {} }, product: { fields: [] } }, relations = {}, subtypeFields = [];
+  const kinds = Object.fromEntries(DEFAULT_KINDS.map(k => [k, k === "organization" ? { fields: [], subtypes: {} } : { fields: [] }])), relations = {}, subtypeFields = [], relationRows = [];
   let h2 = null, h2Raw = "", h2Line = 0, h3 = null, h3Raw = "", h3Line = 0;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i], n = i + 1;
@@ -57,19 +64,22 @@ export function parseSchema(text) {
         if (!type) continue;
         if (!TYPE.test(type)) { add(n, `relationship type "${type}" must be lowercase words joined by _`, `\`${snake(type)}\``); continue; }
         if (relations[type]) { add(n, `relationship type ${type} is listed twice`, "remove one of the two rows"); continue; }
-        const f = kindList(from), t = kindList(to);
-        const badFrom = f.filter(k => !SCHEMA_KINDS.includes(k)), badTo = t.filter(k => !SCHEMA_KINDS.includes(k) && k !== US);
-        if (!f.length || badFrom.length) { add(n, `From of ${type} must be person, organization or product${badFrom.length ? ` (not ${badFrom.join(", ")})` : ""}`, "for example: person, organization"); continue; }
-        if (!t.length || badTo.length) { add(n, `To of ${type} must be person, organization, product or us${badTo.length ? ` (not ${badTo.join(", ")})` : ""}`, "for example: organization, us"); continue; }
-        if (!yes(required) && !no(required)) { add(n, `Required of ${type} must be yes or no (it says "${required}")`, "yes or no"); continue; }
-        const formerly = formerlyCol >= 0 ? kindList(c[formerlyCol] || "").filter(x => TYPE.test(x)) : [];
-        relations[type] = { from: f, to: t, about, required: yes(required), formerly };
+        relationRows.push({ n, type, from, to, about, required, formerly: formerlyCol >= 0 ? kindList(c[formerlyCol] || "").filter(x => TYPE.test(x)) : [] });
       }
       continue;
     }
-    if (!SCHEMA_KINDS.includes(h2)) {
-      if (header[0] === "field") add(h2Line || start, `"## ${h2Raw || "(no heading)"}" is not a kind: the kinds are person, organization and product`, "make it an organization subtype (a row under ### Subtypes, its fields under ### <subtype>), or remove the section");
-      continue;
+    if (!kinds[h2]) {
+      // a new section with a field table defines a kind; any other table outside the known sections is prose
+      if (header[0] !== "field") continue;
+      if (!h2) { add(start, "a field table needs a \"## <Kind>\" heading above it", "add a heading such as ## Event above the table, or remove the table"); continue; }
+      const reserved = NOT_KINDS[h2] || NOT_KINDS[h2.replace(/s$/, "")];
+      if (reserved) { add(h2Line, `"## ${h2Raw}" is not a kind`, reserved); continue; }
+      // "## Products" or "## People" would make a second kind beside the one it means
+      const twin = { people: "person", persons: "person", organisation: "organization", organisations: "organization", companies: "company" }[h2] || (kinds[h2.replace(/s$/, "")] ? h2.replace(/s$/, "") : null);
+      if (twin) { add(h2Line, `"## ${h2Raw}" is not a kind`, NOT_KINDS[twin] || `the kind is ${twin}: name the section ## ${twin[0].toUpperCase() + twin.slice(1)}`); continue; }
+      if (!KIND_NAME.test(h2)) { add(h2Line, `kind "${h2Raw}" must be one lowercase word, or words joined by _`, `## ${snake(h2Raw)}`); continue; }
+      if (h3) { add(h3Line, `a subtype under ${h2} is not possible: only organizations have subtypes`, `move "${h3Raw}" under ## Organization, or remove the ### heading`); continue; }
+      kinds[h2] = { fields: [] };
     }
     if (h3 && h2 !== "organization") { add(h3Line, `a subtype under ${h2} is not possible: only organizations have subtypes`, `move "${h3Raw}" under ## Organization, or remove the ### heading`); continue; }
     if (h2 === "organization" && h3 === "subtypes") {
@@ -98,6 +108,15 @@ export function parseSchema(text) {
     const sub = kinds.organization.subtypes[s.subtype];
     if (!sub) { add(s.line, `"### ${s.subtype}" has fields but is not in the Subtypes table`, `add | ${s.subtype} | <what it is> | to ### Subtypes`); continue; }
     sub.fields = s.fields.filter(f => !kinds.organization.fields.some(x => x.name === f.name));
+  }
+  const known = Object.keys(kinds);
+  for (const { n, type, from, to, about, required, formerly } of relationRows) {
+    const f = kindList(from), t = kindList(to);
+    const badFrom = f.filter(k => !known.includes(k)), badTo = t.filter(k => !known.includes(k) && k !== US);
+    if (!f.length || badFrom.length) { add(n, `From of ${type} must be ${orList(known)}${badFrom.length ? ` (not ${badFrom.join(", ")})` : ""}`, badFrom.length ? `add a ## ${badFrom[0]} section with a field table, or use for example: person, organization` : "for example: person, organization"); continue; }
+    if (!t.length || badTo.length) { add(n, `To of ${type} must be ${orList([...known, US])}${badTo.length ? ` (not ${badTo.join(", ")})` : ""}`, badTo.length ? `add a ## ${badTo[0]} section with a field table, or use for example: organization, us` : "for example: organization, us"); continue; }
+    if (!yes(required) && !no(required)) { add(n, `Required of ${type} must be yes or no (it says "${required}")`, "yes or no"); continue; }
+    relations[type] = { from: f, to: t, about, required: yes(required), formerly };
   }
   if (problems.length) throw new SchemaFormatError(problems);
   for (const [type, def] of Object.entries(BUILT_IN)) relations[type] = { ...def, about: relations[type]?.about || def.about, built_in: true };
@@ -147,6 +166,13 @@ export function readSchema(root) {
   return value;
 }
 
+/* The kinds this brain knows: SCHEMA.md's sections, or the defaults when the file is missing or unreadable
+   (an unreadable file never takes a kind away from entities already registered). */
+export function brainKinds(root) {
+  const r = root ? readSchema(root) : { missing: true };
+  return r.schema ? Object.keys(r.schema.kinds) : [...DEFAULT_KINDS];
+}
+
 /* Write SCHEMA.md when it is missing, refresh it when it is a shipped version nobody edited. */
 export function ensureSchema(root, templates) {
   if (process.env.GTM_BRAIN_RUN || !readAdmin(root)) return false;
@@ -157,7 +183,7 @@ export function ensureSchema(root, templates) {
     if (current === next || !older.includes(current)) return false;
   }
   writeFileSync(path, next);
-  commit(root, [SCHEMA], had ? "upgrade: SCHEMA.md, what the brain keeps" : "SCHEMA.md: what the brain keeps about people, organizations and products");
+  commit(root, [SCHEMA], had ? "upgrade: SCHEMA.md, what the brain keeps" : "SCHEMA.md: what the brain keeps about people, organizations, products, events and tools");
   return true;
 }
 
@@ -170,6 +196,6 @@ export function schemaLine(root) {
   const subs = Object.entries(s.kinds.organization.subtypes).map(([n, v]) => v.fields.length ? `${n} (+${f(v.fields)})` : n).join(", ");
   const rels = Object.entries(s.relations).map(([t, v]) => v.built_in ? `${t} (the customer block)` : `${t} ${v.from.join("|")}>${v.to.join("|")}${v.required ? "*" : ""}`).join(", ");
   return [`SCHEMA.md says what the brain keeps (the person's to edit; /gtm-brain-schema changes it), * = required:`,
-    `  person: ${f(s.kinds.person.fields)}. organization: ${f(s.kinds.organization.fields)}${subs ? `; subtypes ${subs}` : ""}. product: ${f(s.kinds.product.fields)}.`,
+    `  ${Object.entries(s.kinds).map(([k, v]) => `${k}: ${f(v.fields)}${k === "organization" && subs ? `; subtypes ${subs}` : ""}`).join(". ")}.`,
     `  relationships: ${rels}. A field value goes plainly in the note's text; a listed relationship goes in remember's relation block (saving rules S1-S3).`].join("\n");
 }

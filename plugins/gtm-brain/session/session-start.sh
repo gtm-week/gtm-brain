@@ -66,7 +66,7 @@ node -e 'const l=await import(process.argv[1]);const t=l.restoredNotice(l.guardP
 # background maintenance then keeps what changed since the last save (lib.save covers the whole brain).
 node "$P/skills/gtm-brain-project/project.mjs" "$root" --share >/dev/null 2>&1 || true
 # A file too big for git (a video, a recording) is never committed: Codex is told, to offer the shared drive.
-node -e 'const l=await import(process.argv[1]);const g=l.largeUnsaved(process.argv[2]);if(g.length)console.log(l.largeNote(g))' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
+node -e 'const l=await import(process.argv[1]);const g=l.largeUnsaved(process.argv[2]);if(g.length)console.log(l.largeNote(g,process.argv[2]))' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
 P="${PLUGIN_ROOT:-}"
 # A clone has no local git config: point the pre-commit hook at this plugin's lib every session.
 if [ -n "$P" ] && [ -f "$P/lib/brain.mjs" ] && [ -d "$root/.githooks" ]; then
@@ -94,6 +94,11 @@ elif [ -n "$url" ]; then
   node "$H" text dashboardOnDemand "$url"
 fi
 echo "brain: $(basename "$root")  ·  admin: brain/admin.md (always loaded)"
+# Sharing, said honestly: a failed last push, or a teammate merge that conflicted (lib.syncNotice).
+# Node starts only when one of the two state files records a problem, so a healthy chat start pays nothing.
+if grep -qs '"ok": *false' "$root/work/push.json" || grep -qs '"status": *"conflict"' "$root/work/teammates.json"; then
+  node --input-type=module -e 'const l=await import(process.argv[1]);const n=l.syncNotice(process.argv[2]);if(n)console.log(n)' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
+fi
 # Other chats are linked, never entered: the person opens them, or not.
 node "$H" text chats
 # The other assistant's home is its own memory, reads included; IMPORT.md is the only way across.
@@ -145,8 +150,9 @@ if [ -f "$root/work/tools.json" ]; then
 else
   node "$H" text toolsUnchecked
 fi
-# Why meetings may be missing: said to the model, so a bare count is never read as "no meetings".
-node -e 'const l=await import(process.argv[1]);const r=process.argv[2],s=l.meetingCaptureStatus(r,l.meetingOverview(r,{by:l.currentPerson(r)||undefined}));if(s)console.log(`meeting capture: ${s} Say this if the person asks about meetings or a meeting is missing; do not raise it otherwise.`)' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
+# One health line: why meetings may be missing (so a bare count is never read as "no meetings"), the last good
+# summary run and the last error, the last sync per tool, the open meeting gaps (lib/health-line.mjs).
+node -e 'const l=await import(process.argv[1]),h=await import(process.argv[2]);const r=process.argv[3],s=h.healthLine(r,l.meetingOverview(r,{by:l.currentPerson(r)||undefined}));if(s)console.log(s)' "$P/lib/brain.mjs" "$P/lib/health-line.mjs" "$root" 2>/dev/null || true
 # The documents (root Markdown with kind: document): what the work must follow, named every chat so rule 11
 # has something to point at; absolute paths in a linked project, where the landing pages get built.
 node -e 'const d=await import(process.argv[1]);console.log(d.documentsLine(process.argv[2],{absolute:!!process.argv[3]}))' "$P/lib/documents.mjs" "$root" "$project" 2>/dev/null || true
@@ -162,6 +168,8 @@ node -e 'const u=await import(process.argv[1]);const o=u.autoRefresh(process.arg
 node -e 'const u=await import(process.argv[1]);u.refreshReadme(process.argv[2],process.argv[3])' "$P/lib/upgrade-files.mjs" "$root" "$P/templates" 2>/dev/null || true
 # Where things go (RULES.md, the person's to edit; an older WHERE.md is merged into it once) and the projects under projects/: a deliverable goes into its project.
 node -e 'const w=await import(process.argv[1]);w.ensureRules(process.argv[2],process.argv[3]);const l=w.whereLine(process.argv[2]);if(l)console.log(l)' "$P/lib/where.mjs" "$root" "$P/templates" 2>/dev/null || true
+# Which questions go to a connected tool instead of a saved note (RULES.md Ask the source, the defaults when it has none): one line, only when such a tool is connected.
+node -e 'const a=await import(process.argv[1]);const l=a.askSourceLine(process.argv[2]);if(l)console.log(l)' "$P/lib/ask-source.mjs" "$root" 2>/dev/null || true
 # What the brain keeps per person, organization and product, and the relationship types (SCHEMA.md, the person's to edit).
 node -e 'const s=await import(process.argv[1]);s.ensureSchema(process.argv[2],process.argv[3]);const l=s.schemaLine(process.argv[2]);if(l)console.log(l)' "$P/lib/schema.mjs" "$root" "$P/templates" 2>/dev/null || true
 # A summary paused by a hand edit never updates by itself: said once per set, so the person hears it in the chat.

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // The entity folder: identity metadata and compiled views. Source facts remain context memories.
 //   node entities.mjs <root>                                           list, grouped by kind
-//   node entities.mjs <root> --add "Krzysztof Pawlak" [--alias "Chris, Pawlak"] [--email "a@b.io"] [--kind person|organization|product] [--subtype company|team]
+//   node entities.mjs <root> --add "Krzysztof Pawlak" [--alias "Chris, Pawlak"] [--email "a@b.io"] [--kind person|organization|product|event|tool|<SCHEMA.md kind>] [--subtype company|team]
 //   node entities.mjs <root> --who "Chris"                             resolve a mention
 //   node entities.mjs <root> --add "Nestle Poland" --not "Nestle"       these two are different; never suggest merging them
 import { existsSync } from "node:fs"; import { join } from "node:path";
@@ -10,10 +10,13 @@ function main() {
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
 if (!existsSync(join(root, "brain", "admin.md"))) { console.error("no brain here"); process.exit(1); }
 if (args[0] === "--brain-legacy-note") process.exit(0);
-const opt = {}; for (let i = 0; i < args.length; i++) if (args[i].startsWith("--")) { opt[args[i].slice(2)] = args[i + 1]; i++; }
-if (args[0] === "--customers") { console.log(JSON.stringify(lib.customerOverview(root), null, 2)); process.exit(0); }
+// A flag followed by another flag (or by nothing) takes no value: --relations --entity X used to swallow --entity.
+const opt = {}; for (let i = 0; i < args.length; i++) if (args[i].startsWith("--")) { const bare = args[i + 1] === undefined || args[i + 1].startsWith("--"); opt[args[i].slice(2)] = bare ? undefined : args[i + 1]; if (!bare) i++; }
+// Long replies are read through a pipe by the server: exit only after stdout has taken the text (console.log + exit cut it at 64 KiB).
+const finish = text => { process.stdout.write(text + "\n", () => process.exit(0)); };
+if (args[0] === "--customers") return finish(JSON.stringify(lib.customerOverview(root), null, 2));
 //   node entities.mjs <root> --relations [--entity "Northwind"] [--type works_at]   relationships from SCHEMA.md types, with history
-if (args[0] === "--relations") { try { console.log(lib.relationsText(lib.relationOverview(root, { entity: opt.entity || null, type: opt.type || null }))); process.exit(0); } catch (e) { console.error(e.message); process.exit(1); } }
+if (args[0] === "--relations") { try { return finish(lib.relationsText(lib.relationOverview(root, { entity: opt.entity || null, type: opt.type || null }))); } catch (e) { console.error(e.message); process.exit(1); } }
 const list = s => (s || "").split(",").map(x => x.trim()).filter(Boolean);
 if (opt.add) { const registry = lib.readNames(root); const like = lib.canonicalName(registry, opt.add) ? [] : lib.similarNames(registry, opt.add).filter(x => x.name.toLowerCase() !== opt.add.trim().toLowerCase()); let e; try { e = lib.addName(root, opt.add, { aliases: list(opt.alias), emails: list(opt.email), kind: opt.kind || null, ...(Object.hasOwn(opt, "subtype") ? { subtype: opt.subtype || null } : {}), not: list(opt.not), references: JSON.parse(opt.references || "[]"), sources: JSON.parse(opt.sources || "[]") }); } catch (err) { console.error(err.message); process.exit(1); } console.log(`${e.name}${e.kind !== "person" ? ` (${e.kind}${e.subtype ? ": " + e.subtype : ""})` : ""}${e.aliases.length ? " | aliases: " + e.aliases.join(", ") : ""}${e.emails.length ? " | emails: " + e.emails.join(", ") : ""}`); if (like.length) console.log(`looks like ${like.map(x => x.name).join(", ")} already in the registry: if it is the same, confirm it and use merge_entities for two existing identities; nothing is merged on a guess.`); console.log(lib.commit(root, lib.ENTITIES_PATHS, `entities: ${e.name}`).note); lib.kickCompile(root); lib.rerender(root); process.exit(0); }
 if (opt.who !== undefined || opt.candidates !== undefined) {
@@ -44,7 +47,7 @@ const all = lib.readNames(root).filter(n => n.status !== "archived"), members = 
 const contacts = rest.filter(n => n.kind === "person"), others = rest.filter(n => n.kind !== "person");
 console.log(`Team (${members.length}, from brain/admin.md)`); for (const n of members) console.log(line(n));
 console.log(`\nContacts (${contacts.length}, people named in memories)`); if (!contacts.length) console.log("- none yet"); for (const n of contacts) console.log(line(n));
-for (const kind of lib.NAME_KINDS.filter(k => k !== "person")) { const g = others.filter(n => n.kind === kind); if (g.length) { console.log(`\n${kind[0].toUpperCase() + kind.slice(1)}s (${g.length})`); for (const n of g) console.log(line(n)); } }
+for (const kind of [...new Set([...lib.NAME_KINDS, ...others.map(n => n.kind)])].filter(k => k !== "person")) { const g = others.filter(n => n.kind === kind); if (g.length) { console.log(`\n${kind[0].toUpperCase() + kind.slice(1)}s (${g.length})`); for (const n of g) console.log(line(n)); } }
 const merges = lib.suggestMerges(all);
 if (merges.length) console.log(`\nMight be the same: ${merges.map(m => `${m.a} and ${m.b}`).join("; ")}. Ask the person; then "${merges[0].b} is ${merges[0].a}" (one entity, the notes count together) or "${merges[0].b} is not ${merges[0].a}" (kept apart, not asked again).`);
 const incomplete = contacts.filter(n => !n.name.includes(" ") || !n.emails.length);

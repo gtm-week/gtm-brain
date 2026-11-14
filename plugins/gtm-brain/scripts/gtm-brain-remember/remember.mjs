@@ -7,6 +7,9 @@
 //        [--kind note|decision|question]          default note
 //        [--tools "attio, gmail"] [--people "Pierre Aubert, Ingrid Solberg"]
 //        [--source gmail:19faef...]  (repeatable)   [--action "gmail:sent email:19faef..."] (repeatable)
+//          a source is provider:reference, a direct URL, or an object as JSON text
+//          ('{"kind":"gmail","account":"sales@acme.com","ref":"19faef"}') when the record lives in a
+//          named mailbox, workspace or portal; in a batch file the object is given as it is
 //        [--supersedes m_xxxxxx] [--retracts m_xxxxxx] [--tags "synthetic"]
 //        [--new "Pierre Dupont"]  names the person confirmed as new, when one looked like a known name
 //
@@ -76,7 +79,25 @@ const FORGET = /\b(forget|scratch|withdraw|never ?mind|disregard|ignore that|del
 let rulesText; const rules = () => rulesText ??= (process.env.GTM_BRAIN_RUN ? "" : dots.rulebookOnce(root, chat));
 const at = n => batched ? `#${n} ` : "";
 // every entry is checked before the first one is written: a bad entry in the middle must not leave the ones before it kept and unreported
-const ctxOf = e => e.context || opt.context || (loaded.length === 1 ? loaded[0] : null);
+// The context is optional: the one named, else the single loaded one, else the one context where the
+// note's people and companies already have evidence. Anything else is held with the candidates in one
+// line, never guessed.
+const evidenceCtx = new Map();
+let evidenceBase;   // read once per call: a batch of placeless entries must not re-read every context each time
+const evidenceOf = e => {
+  if (evidenceCtx.has(e)) return evidenceCtx.get(e);
+  evidenceBase ??= { reg: lib.readNames(root), active: lib.listContexts(root).filter(c => c.status === "active").map(c => ({ slug: c.slug, people: new Set(lib.effectiveMemories(c.memories).filter(m => !m.retracts).flatMap(m => m.people || [])) })) };
+  const { reg, active } = evidenceBase;
+  const wanted = new Set([...list(e.people), ...list(e.companies), ...(e.customer?.entity ? [e.customer.entity] : [])]
+    .map(n => lib.exactName(reg, n) || lib.inferredName(reg, n)).filter(Boolean));
+  const homes = !wanted.size ? [] : active.filter(c => [...wanted].some(p => c.people.has(p))).map(c => c.slug);
+  const found = { slug: homes.length === 1 ? homes[0] : null, candidates: homes };
+  evidenceCtx.set(e, found); return found;
+};
+const ctxOf = e => e.context || opt.context || (loaded.length === 1 ? loaded[0] : null) || (loaded.length ? null : evidenceOf(e).slug);
+const titleOf = slug => { try { return lib.readContext(root, slug, { includeMemories: false })?.title || slug; } catch { return slug; } };
+// entries with no context to go to: held with the candidates named; the rest of the call is still written
+const placeless = new Map();
 if (entries.some(e => e?.meeting_coverage) && entries.some(e => e?.meeting || e?.meeting_id)) die("Record meeting coverage in a separate call after checking kept, held and failed entries.");
 const preparedAssets = new Map(), changedAssets = new Set();
 const sourceOf = e => lib.parseSources(e.sources);
@@ -102,7 +123,12 @@ const problems = entries.map((e, i) => {
   if (e.kind && !lib.KINDS.includes(e.kind)) return `${at(n)}kind must be one of ${lib.KINDS.join(", ")}`;
   try { lib.parseSources(e.sources); } catch (err) { return `${at(n)}${err.message}`; }
   const ctx = ctxOf(e);
-  if (!ctx) return loaded.length > 1 ? `${at(n)}several contexts loaded (${loaded.join(", ")}); name the context` : `${at(n)}no context loaded and none given. Load a context first.`;
+  if (!ctx) {
+    const { candidates } = loaded.length > 1 ? { candidates: loaded } : evidenceOf(e);
+    const pool = candidates.length ? candidates : lib.listContexts(root, { includeMemories: false }).filter(c => c.status === "active").map(c => c.slug);
+    placeless.set(i, { n, why: `which context is this for: ${pool.map(s => `${titleOf(s)} (${s})`).join(" or ")}? ${candidates.length > 1 ? (loaded.length > 1 ? "Several contexts are loaded" : "The people in it have notes in each") : "Nothing in the note points at one"}; send it again with context: the slug that fits what the person said, and ask them only when two fit equally`, mentions: [], ask: false });
+    return null;
+  }
   if (!existsSync(join(root, "brain", "contexts", ctx, "context.md"))) return `${at(n)}no such context: ${ctx}`;
   try { entries[i] = e = lib.prepareMeetingMemory(root, ctx, { ...e, authors, source: sourceOf(e) }); }
   catch (err) { return `${at(n)}${err.message}`; }
@@ -138,6 +164,7 @@ const withChat = source => chat && !source.some(isChatSource) ? [...source, { ki
 if (problems.length) die(`nothing remembered: ${problems.join("; ")}. Fix these and call again with all the entries.`);
 for (let i = 0; i < entries.length; i++) {
   const e = entries[i] || {}, n = i + 1;
+  if (placeless.has(i)) { held.push(placeless.get(i)); continue; }
   // a held question needs the person's reply: while their last message is still the one the question was
   // held on, a resend is the model answering for them (new-brain rerun, 2026-11-12: "Thursday" sent back as the
   // 19th with no reply). Only when the chat can be read; an answer in the same message passes.
@@ -232,6 +259,8 @@ for (let i = 0; i < entries.length; i++) {
   // The person sees this line through the model: the note itself, so they know what landed (ALL-209)
   const said = String(rec.content).replace(/\s+/g, " ").trim(), shown = said.length > 240 ? said.slice(0, 237) + "..." : said;
   if (replacing.has(i)) lines.push(`${at(n)}replaced the approved ${replacing.get(i).role} of ${replacing.get(i).entity} (${replacing.get(i).label}, ${replacing.get(i).id}): every chat now uses the new file`);
+  // one short line for the person; the detail line after it is for the model
+  lines.push(`${at(n)}saved in ${titleOf(ctx)}: ${shown.length > 100 ? shown.slice(0, 97) + "..." : shown}`);
   lines.push(`${at(n)}remembered ${rec.id} in ${ctx} · ${rec.kind} · ${rec.authors.join(", ")}${rec.people.length ? " · people: " + rec.people.join(", ") : ""} · "${shown}"`);
   if (rec.asset) lines.push(assetSummary(root, rec).trim());
   for (const w of warnings) lines.push(`${at(n)}warning: ${w}`);

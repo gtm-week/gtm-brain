@@ -269,7 +269,7 @@
       "primary_key": [
         "id"
       ],
-      "description": "A person, organization or product with a global stable identity. Stored in brain/entities/*.md with readable cited briefs. Evidence remains in context memories.",
+      "description": "A person, organization, product, event, tool or another SCHEMA.md kind with a global stable identity. Stored in brain/entities/*.md with readable cited briefs. Evidence remains in context memories.",
       "ai_context": {
         "synonyms": [
           "people",
@@ -279,7 +279,7 @@
           "teams",
           "identity registry"
         ],
-        "instructions": "Use kind person, organization or product; teams and companies are organization subtypes. query entities with filters.contexts for a context perspective, or search a name/email/alias. Then query memories with filters.entities set to the returned ID and optionally filters.context. Use query (brief) for its readable brief. add_name creates identities or adds unclaimed aliases. update_entity edits by stable ID. merge_entities previews and applies explicit merges; archive_entity with undo restores archived identities, and undo_entity_merge reverses a recorded merge. Query defaults to active entities; filter status to include archives, or id for direct lookup; compile_entity refreshes a cited view. Never infer customer status or employment from identity kind or shared mentions."
+        "instructions": "Use kind person, organization, product, event, tool or another kind in SCHEMA.md; teams and companies are organization subtypes. query entities with filters.contexts for a context perspective, or search a name/email/alias. Then query memories with filters.entities set to the returned ID and optionally filters.context. Use query (brief) for its readable brief. add_name creates identities or adds unclaimed aliases. update_entity edits by stable ID. merge_entities previews and applies explicit merges; archive_entity with undo restores archived identities, and undo_entity_merge reverses a recorded merge. Query defaults to active entities; filter status to include archives, or id for direct lookup; compile_entity refreshes a cited view. Never infer customer status or employment from identity kind or shared mentions."
       },
       "fields": [
         {
@@ -298,7 +298,7 @@
           "name": "kind",
           "expression": "kind",
           "data_type": "String",
-          "description": "person, organization or product. Customer, partner and employer are relationships, not kinds."
+          "description": "A kind in SCHEMA.md: person, organization, product, event, tool or one the brain added. Customer, partner and employer are relationships, not kinds."
         },
         {
           "name": "subtype",
@@ -523,9 +523,16 @@
                       "sources": {
                         "type": "array",
                         "items": {
-                          "type": "string"
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object"
+                            }
+                          ]
                         },
-                        "description": "Where it comes from, provider:reference. When a connector returns a direct URL (url, web_url, webUrl, permalink), save that exact URL with its provider. If no direct URL is returned, keep provider:ID. Never invent a link. This chat is added automatically."
+                        "description": "Where it comes from, provider:reference. When a connector returns a direct URL (url, web_url, webUrl, permalink), save that exact URL with its provider. If no direct URL is returned, keep provider:ID. Never invent a link. Or an object {kind, account, ref} for a named mailbox or workspace. This chat is added automatically."
                       },
                       "actions": {
                         "type": "array",
@@ -1070,7 +1077,7 @@
                 },
                 "context": {
                   "type": "string",
-                  "description": "Context slug; omit when exactly one is loaded"
+                  "description": "Context slug; omit when one is loaded or the people in the note already have notes in one context"
                 },
                 "tools": {
                   "type": "array",
@@ -1096,9 +1103,16 @@
                 "sources": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "object"
+                      }
+                    ]
                   },
-                  "description": "Where it comes from, provider:reference. When a connector returns a direct URL (url, web_url, webUrl, permalink), save that exact URL with its provider. If no direct URL is returned, keep provider:ID. Never invent a link. This chat is added automatically."
+                  "description": "Where it comes from, provider:reference. When a connector returns a direct URL (url, web_url, webUrl, permalink), save that exact URL with its provider. If no direct URL is returned, keep provider:ID. Never invent a link. Or an object {kind, account, ref} for a named mailbox or workspace. This chat is added automatically."
                 },
                 "actions": {
                   "type": "array",
@@ -1866,7 +1880,7 @@
             "tool_name": "add_name",
             "title": "Adding a name",
             "returns": "Opaque",
-            "description": "Create an Entity or add unclaimed aliases, emails and references. This never merges two existing identities: use merge_entities for that. For renaming, replacing or removing metadata use update_entity with a current stable ID. Kinds: person, organization, product; legacy company/team map to organization subtypes. Facts and relationships stay in context memories. Never infer an identity match.",
+            "description": "Create an Entity or add unclaimed aliases, emails and references. This never merges two existing identities: use merge_entities for that. For renaming, replacing or removing metadata use update_entity with a current stable ID. Kinds: person, organization, product, event, tool and any kind in SCHEMA.md; legacy company/team map to organization subtypes. Facts and relationships stay in context memories. Never infer an identity match.",
             "input_schema": {
               "type": "object",
               "properties": {
@@ -1891,14 +1905,9 @@
                 },
                 "kind": {
                   "type": "string",
-                  "description": "person (default), organization or product. Legacy company and team are accepted and normalized to organization with that subtype.",
-                  "enum": [
-                    "person",
-                    "organization",
-                    "product",
-                    "company",
-                    "team"
-                  ]
+                  "description": "person (default), organization, product, event, tool or another kind in SCHEMA.md. Legacy company and team are accepted and normalized to organization with that subtype.",
+                  "minLength": 1,
+                  "maxLength": 40
                 },
                 "not_same": {
                   "type": "array",
@@ -2176,11 +2185,9 @@
                     },
                     "kind": {
                       "type": "string",
-                      "enum": [
-                        "person",
-                        "organization",
-                        "product"
-                      ]
+                      "description": "A kind in SCHEMA.md: person, organization, product, event, tool or one the brain added",
+                      "minLength": 1,
+                      "maxLength": 40
                     },
                     "subtype": {
                       "anyOf": [
@@ -2417,11 +2424,9 @@
                   "properties": {
                     "kind": {
                       "type": "string",
-                      "enum": [
-                        "person",
-                        "organization",
-                        "product"
-                      ]
+                      "description": "A kind in SCHEMA.md: person, organization, product, event, tool or one the brain added",
+                      "minLength": 1,
+                      "maxLength": 40
                     },
                     "subtype": {
                       "anyOf": [

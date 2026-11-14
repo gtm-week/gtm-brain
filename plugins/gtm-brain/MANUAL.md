@@ -46,6 +46,9 @@ cannot settle. It asks in Codex's question box whenever Codex has it in the chat
   they are in several, Codex asks which.
 - **Your reply first.** A held question waits for your answer; Codex never picks it for you.
 
+A chat that keeps reading the brain and saves nothing is reminded once, with the third read, to save
+what the turn established; `save_nudge: off` in `brain/admin.md` turns the reminder off.
+
 Notes are never edited. "Actually the board meeting is on the 19th" saves a correction that
 replaces the old note. "Forget that Lena runs the workshop" withdraws it: the old note leaves every
 view, and a short note says what was withdrawn. Both stay in the file and in git.
@@ -120,6 +123,10 @@ made there carry the project's tag, and everything stays searchable from the bra
 - "Why did you add Florian?" answers from the page: the first note, when, by whom, from where. It
   never answers from the chat's memory.
 - "What is open?" lists open questions; answering one closes it.
+- "What stage is the Acme deal in?" goes to the CRM when the brain's note is older than the "Ask the
+  source" table in `RULES.md` allows and the CRM is connected; otherwise the brain answers and says
+  how old its note is. A row applies only when its tool is connected; without the section, the
+  shipped rows apply.
 - "Open the dashboard" shows contexts, notes, entities, questions and search, read-only. To change
   anything, use "Chat about this" on a card, or say it in chat.
 
@@ -130,6 +137,7 @@ made there carry the project's tag, and everything stays searchable from the bra
 | Company profile, team, tools, settings | say it in chat; Codex shows the change and applies it only when you choose APPROVE |
 | What Codex saves and asks | your own rules under "Our rules" in `RULES.md`, one line each; Codex offers to add one when you correct a save, and yours win over the defaults |
 | Where files go | `/gtm-brain-rules`, or edit the rows under "Where things go" in `RULES.md` |
+| Which questions go to a live tool, and how old a note may be | edit the rows under "Ask the source" in `RULES.md` (deal stage: CRM, 1 day; meeting times: calendar, always ask) |
 | What the brain keeps (fields, subtypes, relationship types) | `/gtm-brain-schema`, or edit `SCHEMA.md`; briefs refill in the background |
 | How Codex works in a context | "change the rule of <context> to ..." |
 | A rule the work must follow (tone of voice, pricing, ICP) | write it as a document: `<name>.md` at the top, then "add <name>.md as a document" |
@@ -160,6 +168,8 @@ in `work/manual-edits/protected/`.
 | You see | Check |
 |---|---|
 | A note saved that should not have been | "why did you add X?"; then "forget ..." |
+| Something said in a chat was not saved | say it again as a plain sentence, or "save that"; the status and each loaded context show "last note N days ago", and a brain with nothing saved for over a week says so at chat start |
+| A fact that may be out of date | ask for the brief ("who is X"): a fact or relationship older than 30 days shows "as of <date>, N days ago", and the brief says when the entity was last mentioned |
 | A summary that looks old | its "as of" date; "update the summary now"; `work/compile.json` shows queued, running, done or failed |
 | Summaries never update | `work/hooks.log` lines `scheduled-run ... failed`; `work/runs.jsonl` has one line per compile run with its tokens; no lines at all means no run started |
 | A file in the wrong place | "why is this here?"; fix the `RULES.md` row |

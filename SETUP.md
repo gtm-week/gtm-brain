@@ -28,7 +28,7 @@ needed only if you later choose to share your own private company brain through 
 codex plugin marketplace add gtm-week/gtm-brain   # straight from GitHub (verified)
 codex plugin marketplace upgrade gtm-brain        # refresh an existing marketplace snapshot
 codex plugin add gtm-brain@gtm-brain
-codex plugin list | grep gtm-brain                                      # installed, enabled, 0.34.5
+codex plugin list | grep gtm-brain                                      # installed, enabled, 0.35.0
 ```
 
 The install is a snapshot of the configured branch. In the Codex app, say **"update GTM Brain"**
@@ -79,7 +79,7 @@ new chat in Codex on the test folder (restart the app only if old skills linger)
 Set this once in your shell; the scripts below use it:
 
 ```bash
-export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.34.5
+export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.35.0
 ```
 
 In a chat the skills run as GTM Brain tools: you see "Remembering", "Searching the brain",
@@ -291,7 +291,8 @@ cover changed in an editor, names fixed by hand). APPROVE commits the workplace 
 scheduled run's compile commits its covers; setup makes the first commit; upgrade keeps the rules
 it refreshed. Anything you had staged yourself stays out of these commits.
 
-Every writer ends with *kept* or *kept and shared*. There is nothing for you to do; the badge on
+Every writer ends with *kept*, or *kept, not shared yet* when the brain has a remote: the push runs
+in the background and the next chat start says so if it failed. There is nothing for you to do; the badge on
 the chat start keeps files changed outside Codex; ask Codex to save if needed. From a terminal the scripts commit by themselves, one commit per change (`git log`
 reads as a diary). `approve` commits in the app too, after you choose APPROVE in its form.
 
@@ -331,7 +332,7 @@ Weekly (Sunday 20:00) or nightly. Run it in the local project. Computer on, app 
 bash $PLUGIN_ROOT/scripts/gtm-brain-schedule/scheduled-run.sh ~/brain-try      # run it once by hand first
 ```
 
-Then the plist in `scripts/gtm-brain-schedule/launchd.plist.example` (replace the two paths, load with
+Then the plist in `scripts/gtm-brain-schedule/launchd.plist.example` (replace the brain folder, load with
 `launchctl`), or a cron line. Both call `codex exec`, so Codex must be signed in.
 
 Check: `git log --oneline | head` shows `scheduled: compile pipeline`; `work/hooks.log` has

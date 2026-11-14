@@ -6,18 +6,24 @@ import * as lib from "./brain.mjs";
 import { acquireProcessLock, releaseProcessLock } from './process-lock.mjs';
 import { refreshIndexedPages } from './entity-pages.mjs';
 import { hasMemoryIndex } from './memory-index-store.mjs';
-import { readSchema, fieldsFor, requiredRelations, kindHash, US } from './schema.mjs';
+import { readSchema, fieldsFor, requiredRelations, kindHash, US, brainKinds } from './schema.mjs';
+import { DEFAULT_KINDS, KIND_NAME, NOT_KINDS } from './kinds.mjs';
+import { oldFact, daysSince, agoText } from './staleness.mjs';
 
 export const ENTITY_FORMAT = "gtm-brain-entity-v2";
 // Brains written before the GTM OS -> GTM Brain rename carry the gtm-os names; migration rewrites them.
 const LEGACY_FORMATS = ["gtm-brain-entity-v1", "gtm-os-entity-v2", "gtm-os-entity-v1"];
-export const ENTITY_KINDS = ["person", "organization", "product"];
-export function entityType(kind = "person", subtype = null) {
+// The default kinds; a brain's own list is SCHEMA.md's sections (schema.brainKinds(root)).
+export const ENTITY_KINDS = DEFAULT_KINDS;
+/* kinds: the brain's kinds (brainKinds(root)) where a person's input is checked; "any" where an identity
+   already read from a file is only normalized. */
+export function entityType(kind = "person", subtype = null, kinds = ENTITY_KINDS) {
   if (["company", "team"].includes(kind)) {
     if (subtype !== null && subtype !== kind) throw new Error(`legacy kind ${kind} conflicts with subtype ${subtype}`);
     return { kind: "organization", subtype: kind };
   }
-  if (!ENTITY_KINDS.includes(kind)) throw new Error(`kind must be one of ${ENTITY_KINDS.join(", ")}; company and team are accepted as legacy organization subtypes`);
+  const known = kinds === "any" ? typeof kind === "string" && KIND_NAME.test(kind) && !Object.hasOwn(NOT_KINDS, kind) : kinds.includes(kind);
+  if (!known) throw new Error(`kind must be one of ${(kinds === "any" ? ENTITY_KINDS : kinds).join(", ")}${kinds === "any" ? " or another kind in SCHEMA.md" : ""}; company and team are accepted as legacy organization subtypes; a new kind is a ## <Kind> section in SCHEMA.md`);
   if (subtype !== null && (kind !== "organization" || typeof subtype !== "string" || !/^[a-z][a-z0-9-]{0,63}$/.test(subtype))) throw new Error("subtype must be an organization category such as company or team, or null");
   return { kind, subtype };
 }
@@ -223,6 +229,10 @@ export function readEntityFiles(root) {
   if (!existsSync(dir)) return [];
   if (lstatSync(dir).isSymbolicLink()) throw new Error("brain/entities must not be a symbolic link");
   const entries = [];
+  // a SCHEMA.md that cannot be read must not take a kind away from entities already registered:
+  // then the kind is only checked for its form
+  const kinds = root && readSchema(root).error ? "any" : brainKinds(root);
+  const kindNames = kinds === "any" ? ENTITY_KINDS : kinds;
   for (const file of readdirSync(dir).filter(f => f.endsWith(".md")).sort()) {
     const path = join(dir, file);
     if (lstatSync(path).isSymbolicLink()) throw new Error(`Entity file must not be a symbolic link: ${file}`);
@@ -231,12 +241,12 @@ export function readEntityFiles(root) {
     if (!idOK(fm.id)) invalid(relative, "id", "expected e_ followed by 16 lowercase hexadecimal characters", "restore this entity's stable ID from file history; do not invent a replacement ID");
     if (fm.redirect) { if (!idOK(fm.redirect)) invalid(relative, "redirect", "expected a stable entity ID", "restore the destination ID from the confirmed merge"); continue; }
     if (typeof fm.name !== "string" || !fm.name.trim()) invalid(relative, "name", "expected a non-empty name", "restore the intended canonical name as a string");
-    if (typeof fm.kind !== "string") invalid(relative, "kind", "expected an entity kind", "restore person, organization or product from the known identity");
+    if (typeof fm.kind !== "string") invalid(relative, "kind", "expected an entity kind", `restore ${kindNames.join(", ")} from the known identity`);
     if (fm.status !== undefined && !["active", "archived"].includes(fm.status)) invalid(relative, "status", "expected active or archived", "restore the intended entity status");
     if (fm.merge_ids !== undefined && (!strings(fm.merge_ids) || !fm.merge_ids.every(id => /^ec_[a-f0-9-]{36}$/.test(id)))) invalid(relative, "merge_ids", "expected recorded merge IDs", "restore merge IDs from identity history");
     let type;
-    try { type = entityType(fm.kind, fm.subtype ?? null); }
-    catch (e) { invalid(relative, "kind / subtype", e.message, "use person, organization or product, with an optional organization subtype; preserve the original values for review"); }
+    try { type = entityType(fm.kind, fm.subtype ?? null, kinds); }
+    catch (e) { invalid(relative, "kind / subtype", e.message, `use ${kindNames.join(", ")} (the kinds in SCHEMA.md), with an optional organization subtype, or add a ## ${fm.kind} section to SCHEMA.md; preserve the original values for review`); }
     for (const field of ["aliases", "emails", "not_same", "previous_ids"]) {
       if (!strings(fm[field])) invalid(relative, field, "expected a list of non-empty strings", `write ${field}: [value] for a single value or ${field}: [] for an empty list, preserving existing entries`);
     }
@@ -265,7 +275,7 @@ export function resolveEntity(registry, name) {
 }
 
 export function identity(e) {
-  return { id: e.id || entityId(e.name), name: e.name, ...entityType(e.kind || "person", e.subtype ?? null), status: e.status || "active", merge_ids: e.merge_ids || [], aliases: e.aliases || [], emails: e.emails || [], not_same: e.not || [], previous_ids: e.previous_ids || [], references: e.references || [], identity_sources: e.identity_sources || [] };
+  return { id: e.id || entityId(e.name), name: e.name, ...entityType(e.kind || "person", e.subtype ?? null, "any"), status: e.status || "active", merge_ids: e.merge_ids || [], aliases: e.aliases || [], emails: e.emails || [], not_same: e.not || [], previous_ids: e.previous_ids || [], references: e.references || [], identity_sources: e.identity_sources || [] };
 }
 
 // File locations are permanent. Name changes do not break links; IDs survive explicit merges.
@@ -282,7 +292,7 @@ export function writeEntityFiles(root, names) {
   }
   for (const e of old) if (!names.some(n => n.id === e.id || n.previous_ids?.includes(e.id))) names.push(e);
   for (const e of names) {
-    Object.assign(e, entityType(e.kind || "person", e.subtype ?? null));
+    Object.assign(e, entityType(e.kind || "person", e.subtype ?? null, "any"));
     e.id ||= entityId(e.name);
     e.previous_ids ||= []; e.references ||= []; e.identity_sources ||= [];
     if (!idOK(e.id) || !refsOK(e.references) || !refsOK(e.identity_sources)) throw new Error(`Invalid identity for ${e.name}`);
@@ -471,13 +481,17 @@ function applyCompilation(root, name, { as_of, by, brief }) {
   return { path: saved._path, note: lib.commit(root, lib.ENTITIES_PATHS, `compile entity: ${saved.name} by ${author}`).note };
 }
 
+const BRIEF_TIMELINE = 50, BRIEF_WITHDRAWALS = 10, BRIEF_SOURCES = 30;
+const moreLine = (n, id) => `${n} more: query memories with filters.entities=${id}`;
 export function entityBrief(root, name, options = {}) {
   const registry = options.registry || lib.readNames(root), facts = options.facts || entityFacts(root, name, { ...options, registry });
   if (!facts.stale && facts.previous) validateBrief(facts, facts.previous);
   const e = resolveEntity(registry, name), compilation = facts.stale ? null : facts.previous;
   const evidence = lib.hideForkCopies(options.context ? facts.evidence.filter(m => m.context === options.context) : facts.evidence).sort((a, b) => Date.parse(b.at) - Date.parse(a.at) || a.id.localeCompare(b.id));
-  const timeline = options.context ? lib.memoryTimeline(evidence) : facts.timeline;
-  let markdown = renderBrief({ ...facts, timeline }, compilation, evidence, registry, options.context);
+  // one context's view is capped like the whole brief: a big brain's brief ran to megabytes
+  const scoped = options.context ? lib.memoryTimeline(evidence) : null;
+  const timeline = scoped ? scoped.slice(0, BRIEF_TIMELINE) : facts.timeline;
+  let markdown = renderBrief({ ...facts, timeline, ...(scoped ? { timeline_total: scoped.length } : {}) }, compilation, evidence, registry, options.context, options.now ?? null);
   if (facts.file_notes && !options.context) markdown += `\n## Saved Markdown\n\nThis text was preserved from the editable file. It is not automatically treated as context evidence.\n\n${facts.file_notes.markdown}`;
   if (options.absoluteLinks) markdown = markdown.replace(/\]\((\.\.\/contexts\/[^)]+|[a-z0-9-]+\.md)\)/g,
     (_, path) => `](${dest(resolve(root, "brain", "entities", decodeURI(path)))})`);
@@ -510,7 +524,7 @@ function nameProvenance(facts, memories, citation, source) {
 const words = s => String(s).replace(/_/g, " ");
 /* SCHEMA.md's fields for this kind: each compiled value with its notes, "not recorded" for the rest, and the
    required ones nobody has said yet as gaps, each with the question to ask. */
-function fieldsSection(facts, all, citation) {
+function fieldsSection(facts, all, citation, aged = () => "") {
   const fields = facts.schema?.fields || [];
   if (facts.schema?.error) return [`\n## Fields\n\nSCHEMA.md cannot be read, so no fields are shown: ${md(facts.schema.error)}`];
   if (!fields.length) return [];
@@ -520,7 +534,7 @@ function fieldsSection(facts, all, citation) {
     out.push(`\nFields fill at the next compile.${fields.some(f => f.required) ? ` Required in SCHEMA.md: ${fields.filter(f => f.required).map(f => words(f.name)).join(", ")}.` : ""}`);
     return out;
   }
-  out.push("\n" + fields.map(f => { const v = filled.get(f.name); return `- ${md(words(f.name))[0].toUpperCase()}${md(words(f.name)).slice(1)}: ${v ? `${v.interpretation ? "Interpretation: " : ""}${md(v.text)} ${v.memories.map(citation).join(" ")}` : "not recorded"}`; }).join("\n"));
+  out.push("\n" + fields.map(f => { const v = filled.get(f.name); return `- ${md(words(f.name))[0].toUpperCase()}${md(words(f.name)).slice(1)}: ${v ? `${v.interpretation ? "Interpretation: " : ""}${md(v.text)}${aged(v.memories)} ${v.memories.map(citation).join(" ")}` : "not recorded"}`; }).join("\n"));
   const current = recordedRelations(facts).filter(r => r.status === "current" && r.from === facts.entity.id).map(r => r.type);
   const gaps = [...fields.filter(f => f.required && !filled.has(f.name)).map(f => ({ what: words(f.name), ask: `What is ${name}'s ${words(f.name)}?` })),
     ...(facts.schema.relations_required || []).filter(r => !current.includes(r.type)).map(r => ({ what: `a current ${words(r.type)}`, ask: `${name} ${words(r.type)} ...?` }))];
@@ -542,27 +556,35 @@ function recordedRelations(facts) {
     return { ...chosen.relation, memory: chosen.id, notes };
   });
 }
-function relationLines(facts, registry, citation, scope) {
+function relationLines(facts, registry, citation, scope, old = () => "") {
   const nameOf = id => id === US ? "us" : registry.find(e => e.id === id || e.previous_ids?.includes(id))?.name || id;
   const rows = recordedRelations(facts).filter(r => !scope || r.notes.some(m => m.context === scope));
-  const line = r => `- ${md(nameOf(r.from))} ${md(words(r.type))} ${md(nameOf(r.to))} (${r.status}, ${r.basis === "user" ? "said by the person" : "from a source"}, observed ${String(r.observed_at).slice(0, 10)}) ${citation(r.memory)}`;
+  const line = r => `- ${md(nameOf(r.from))} ${md(words(r.type))} ${md(nameOf(r.to))} (${r.status}, ${r.basis === "user" ? "said by the person" : "from a source"}, observed ${String(r.observed_at).slice(0, 10)})${r.status === "current" ? old(r.observed_at) : ""} ${citation(r.memory)}`;
   const out = rows.filter(r => r.status === "current").map(line);
   const ended = rows.filter(r => r.status === "ended");
   if (ended.length) out.push("", "Ended:", "", ...ended.map(line));
   const customer = facts.evidence.filter(m => m.customer && !m.retracts && m.customer.entity === facts.entity.id).sort((a, b) => Date.parse(b.customer.observed_at) - Date.parse(a.customer.observed_at));
   const said = customer.find(m => m.customer.basis === "user") || customer[0];
-  if (said) out.unshift(`- Customer status: ${md(words(said.customer.status))} (${said.customer.basis === "user" ? "said by the person" : "from a source"}, observed ${String(said.customer.observed_at).slice(0, 10)}) ${citation(said.id)}`);
+  if (said) out.unshift(`- Customer status: ${md(words(said.customer.status))} (${said.customer.basis === "user" ? "said by the person" : "from a source"}, observed ${String(said.customer.observed_at).slice(0, 10)})${old(said.customer.observed_at)} ${citation(said.id)}`);
   return out;
 }
 
-function renderBrief(facts, brief, evidence, registry, scope) {
+/* now (ms): a read for the chat (recall, query brief) dates what is old, "(as of 2026-09-02, 73 days ago)" on a fact
+   or relation past 30 days and when the entity was last mentioned. Without it (the page kept in brain/entities)
+   the text holds no relative age, so a stored page never changes because a day passed. */
+function renderBrief(facts, brief, evidence, registry, scope, now = null) {
   if (scope && !facts.contexts.some(c => c.context === scope)) throw new Error(`No evidence about ${facts.entity.name} in ${scope}`);
   const all = new Map(facts.contexts.flatMap(c => c.memories).map(m => [m.id, m]));
   const citation = id => { const m = all.get(id); return link(`${m.context}, recorded ${lib.localDateTime(m.at).slice(0, 10)}, ${id}`, `../contexts/${m.context}/memories.jsonl`); };
-  const claims = a => a.map(c => `- ${c.interpretation ? "Interpretation: " : ""}${md(c.text)} ${c.memories.map(citation).join(" ")}`).join("\n");
-  const source = s => /^https?:\/\//.test(s.ref) ? link(s.kind, s.ref) : s.kind === "gmail" ? link("Gmail", `https://mail.google.com/mail/u/0/#all/${encodeURIComponent(s.ref)}`) : s.kind === "codex" ? link("Conversation", `codex://threads/${encodeURIComponent(s.ref)}`) : `\`${md(s.kind + ":" + s.ref)}\``;
+  const day = at => lib.localDateTime(at).slice(0, 10), old = at => now === null ? "" : oldFact(at, day, now);
+  // a claim is as old as the newest note it rests on
+  const aged = ids => old(ids.map(id => all.get(id)?.at).filter(Boolean).sort((a, b) => Date.parse(b) - Date.parse(a))[0]);
+  const claims = a => a.map(c => `- ${c.interpretation ? "Interpretation: " : ""}${md(c.text)}${aged(c.memories)} ${c.memories.map(citation).join(" ")}`).join("\n");
+  // A source that kept its direct link (url on the entry) links there; older entries link as before.
+  const source = s => typeof s.url === "string" && /^https?:\/\//i.test(s.url) && s.url !== s.ref ? link(s.kind === "gmail" ? "Gmail" : `${s.kind}:${s.ref}`, s.url) : /^https?:\/\//.test(s.ref) ? link(s.kind, s.ref) : s.kind === "gmail" ? link("Gmail", `https://mail.google.com/mail/u/0/#all/${encodeURIComponent(s.ref)}`) : s.kind === "codex" ? link("Conversation", `codex://threads/${encodeURIComponent(s.ref)}`) : `\`${md(s.kind + ":" + s.ref)}\``;
   const out = [`\n# ${md(facts.entity.name)}`, `\n${md(facts.entity.kind)}${facts.entity.subtype ? ` (${md(facts.entity.subtype)})` : ""}${facts.entity.aliases.length ? " · Also known as: " + facts.entity.aliases.map(md).join(", ") : ""}`,
     `\nLatest memory recorded: ${lib.localDateTime(facts.latest_evidence_at) || "none"}. Brief compiled: ${lib.localDateTime(facts.compiled_at) || "never"}. ${facts.stale ? "Summary needs updating; current evidence is shown below." : "Recorded knowledge only; linked tools have not been checked live."}`];
+  if (now !== null && evidence[0]) out.push(`\nLast mentioned: ${day(evidence[0].at)} (${agoText(daysSince(evidence[0].at, now))}).`);
   if (facts.entity.status === "archived") out.push("\nArchived identity. Historical evidence and links remain available.");
   if (facts.entity.emails.length) out.push(`\nContact: ${facts.entity.emails.map(md).join(", ")}`);
   if (facts.entity.references.length) out.push(`\nExternal records: ${facts.entity.references.map(source).join(" · ")}`);
@@ -570,7 +592,7 @@ function renderBrief(facts, brief, evidence, registry, scope) {
   if (facts.entity.not_same.length) out.push(`\nKept separate from: ${facts.entity.not_same.map(md).join(", ")}.`);
   if (!scope) out.push(...nameProvenance(facts, [...all.values()], citation, source));
   if (!scope) out.push("\n## Overview", brief?.overview.length ? "\n" + claims(brief.overview) : "\nNo current synthesis yet. The context evidence below preserves what was recorded and where it applies.");
-  if (!scope) out.push(...fieldsSection(facts, all, citation));
+  if (!scope) out.push(...fieldsSection(facts, all, citation, aged));
   out.push("\n## By context");
   const contexts = facts.contexts.filter(c => !scope || c.context === scope);
   if (!contexts.length) out.push("\nNo context evidence recorded yet.");
@@ -583,12 +605,14 @@ function renderBrief(facts, brief, evidence, registry, scope) {
       if (compiled.open_threads.length) out.push("\n**Open threads**\n\n" + claims(compiled.open_threads));
     } else {
       const recent = c.memories.filter(m => !m.retracts).sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 3);
-      out.push("\nLatest recorded evidence (not a verified current status):\n\n" + (recent.map(m => `- ${md(m.content)} (${md(lib.memoryTimeText(m))}) ${citation(m.id)}`).join("\n") || "No remaining current claims."));
+      out.push("\nLatest recorded evidence (not a verified current status):\n\n" + (recent.map(m => `- ${md(m.content)} (${md(lib.memoryTimeText(m))})${old(m.at)} ${citation(m.id)}`).join("\n") || "No remaining current claims."));
     }
-    for (const m of c.memories.filter(m => m.retracts)) out.push(`\nWithdrawal: ${md(m.content)} ${citation(m.id)}`);
+    const withdrawals = c.memories.filter(m => m.retracts);
+    for (const m of withdrawals.slice(0, BRIEF_WITHDRAWALS)) out.push(`\nWithdrawal: ${md(m.content)} ${citation(m.id)}`);
+    if (withdrawals.length > BRIEF_WITHDRAWALS) out.push(`\n${withdrawals.length - BRIEF_WITHDRAWALS} more withdrawals. ${moreLine(withdrawals.length - BRIEF_WITHDRAWALS, facts.entity.id)}.`);
   }
   out.push("\n## Relationships");
-  const recorded = relationLines(facts, registry, citation, scope);
+  const recorded = relationLines(facts, registry, citation, scope, old);
   if (recorded.length) out.push("\n" + recorded.join("\n"));
   const relationships = brief?.relationships.filter(c => !scope || c.memories.every(id => all.get(id).context === scope)) || [];
   if (relationships.length) out.push(recorded.length ? "\nAlso stated in notes:\n\n" + claims(relationships) : "\n" + claims(relationships));
@@ -599,7 +623,7 @@ function renderBrief(facts, brief, evidence, registry, scope) {
   if (peers.size) out.push("\nAlso mentioned with: " + [...peers].map(n => { const e = registry.find(x => x.name === n); return e?._path ? link(n, basename(e._path)) : md(n); }).join(", ") + ".");
   const timeline = facts.timeline;
   out.push("\n## Timeline", "\nNotes in recording order, newest first. Relevant event dates are kept in the note text; the timestamp labels when the memory was recorded.");
-  if (facts.timeline_total > timeline.length) out.push(`\nShowing the latest ${timeline.length} of ${facts.timeline_total} current context records. Follow the full memory histories below for earlier evidence.`);
+  if (facts.timeline_total > timeline.length) out.push(`\nShowing the latest ${timeline.length} of ${facts.timeline_total} current context records. Follow the full memory histories below for earlier evidence. ${moreLine(facts.timeline_total - timeline.length, facts.entity.id)}${scope ? ` and filters.context=${scope}` : ""}.`);
   for (const m of timeline) {
     out.push(`\n- ${md(lib.memoryTimeText(m))}: ${md(m.content)} ${citation(m.id)}`);
   }
@@ -607,7 +631,8 @@ function renderBrief(facts, brief, evidence, registry, scope) {
   out.push("\n## Further information");
   for (const c of contexts) out.push(`\n- ${link(c.title, `../contexts/${c.context}/context.md`)} · ${link("Full memory history", `../contexts/${c.context}/memories.jsonl`)}`);
   const sources = new Map(selected.flatMap(m => m.source.map(s => [JSON.stringify(s), s])));
-  for (const s of sources.values()) out.push(`\n- ${source(s)}`);
+  for (const s of [...sources.values()].slice(0, BRIEF_SOURCES)) out.push(`\n- ${source(s)}`);
+  if (sources.size > BRIEF_SOURCES) out.push(`\n${sources.size - BRIEF_SOURCES} more sources. ${moreLine(sources.size - BRIEF_SOURCES, facts.entity.id)}.`);
   out.push("\nThis brief is compiled from context memories. You can edit this file; keep its frontmatter format. To update the shared factual record, also capture corrections in the originating context.\n");
   return out.join("\n");
 }

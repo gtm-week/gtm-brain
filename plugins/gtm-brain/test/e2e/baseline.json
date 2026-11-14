@@ -1,0 +1,536 @@
+{
+  "base": "main 7890c69 (plugin 0.34.3)",
+  "node": "v25.2.1",
+  "note": "Timings were taken while other generators and the suite ran on the same machine; compare pass, fail and known_gap, not ms. medium, messy and large are missing: generating them took too long on this code (about 100 ms per note and growing; medium reached about 1,000 of 5,000 notes in 11 minutes).",
+  "shapes": {
+    "small": {
+      "summary": {
+        "shape": "small",
+        "notes": 100,
+        "total": 49,
+        "pass": 44,
+        "fail": 0,
+        "known_gap": 5,
+        "ms": 63202
+      },
+      "results": [
+        {
+          "id": "search.single_word",
+          "section": "search",
+          "pass": true,
+          "ms": 960,
+          "bytes": 1070
+        },
+        {
+          "id": "search.multi_word",
+          "section": "search",
+          "pass": true,
+          "ms": 55,
+          "bytes": 1471
+        },
+        {
+          "id": "search.stemmed",
+          "section": "search",
+          "pass": false,
+          "ms": 154,
+          "bytes": 362,
+          "note": "missing 2/3",
+          "known_gap": "unstemmed search: invoice does not find invoicing or invoiced"
+        },
+        {
+          "id": "search.typo",
+          "section": "search",
+          "pass": false,
+          "ms": 13,
+          "bytes": 7,
+          "note": "missing 3/3",
+          "known_gap": "memory search has no typo tolerance"
+        },
+        {
+          "id": "search.recall_tool",
+          "section": "search",
+          "pass": true,
+          "ms": 181,
+          "bytes": 611
+        },
+        {
+          "id": "search.name",
+          "section": "search",
+          "pass": true,
+          "ms": 10,
+          "bytes": 10081
+        },
+        {
+          "id": "search.no_match",
+          "section": "search",
+          "pass": true,
+          "ms": 26,
+          "bytes": 7
+        },
+        {
+          "id": "search.note_ids_on_lines",
+          "section": "search",
+          "pass": false,
+          "ms": 11,
+          "bytes": 611,
+          "note": "missing 3/3",
+          "known_gap": "recall read lines carry no note id"
+        },
+        {
+          "id": "search.superseded_hidden",
+          "section": "corrections",
+          "pass": true,
+          "ms": 11,
+          "bytes": 411
+        },
+        {
+          "id": "search.retracted_hidden",
+          "section": "corrections",
+          "pass": true,
+          "ms": 391,
+          "bytes": 407
+        },
+        {
+          "id": "search.sql_count",
+          "section": "search",
+          "pass": true,
+          "ms": 15,
+          "bytes": 12,
+          "note": "sql 97, effective 101"
+        },
+        {
+          "id": "search.sql_kinds",
+          "section": "entities",
+          "pass": true,
+          "ms": 21,
+          "bytes": 58
+        },
+        {
+          "id": "search.sql_subtypes",
+          "section": "entities",
+          "pass": true,
+          "ms": 19,
+          "bytes": 71
+        },
+        {
+          "id": "entities.by_name",
+          "section": "entities",
+          "pass": true,
+          "ms": 1448,
+          "bytes": 1562,
+          "note": "resolved"
+        },
+        {
+          "id": "entities.by_id",
+          "section": "entities",
+          "pass": true,
+          "ms": 1330,
+          "bytes": 1563,
+          "note": "resolved"
+        },
+        {
+          "id": "entities.typo",
+          "section": "entities",
+          "pass": true,
+          "ms": 2399,
+          "bytes": 1238,
+          "note": "Luemn Outdoor"
+        },
+        {
+          "id": "entities.by_email",
+          "section": "entities",
+          "pass": true,
+          "ms": 1138,
+          "bytes": 1452,
+          "note": "resolved"
+        },
+        {
+          "id": "brief.facts",
+          "section": "brief",
+          "pass": true,
+          "ms": 1495,
+          "bytes": 12342
+        },
+        {
+          "id": "brief.cited_ids",
+          "section": "brief",
+          "pass": true,
+          "ms": 1878,
+          "bytes": 12342,
+          "note": "19 ids"
+        },
+        {
+          "id": "brief.size_bounded",
+          "section": "brief",
+          "pass": true,
+          "ms": 2026,
+          "bytes": 12342,
+          "note": "12342 bytes for 16 notes"
+        },
+        {
+          "id": "brief.entity_facts",
+          "section": "brief",
+          "pass": true,
+          "ms": 1466,
+          "bytes": 25288
+        },
+        {
+          "id": "relations.hub",
+          "section": "relations",
+          "pass": true,
+          "ms": 1593,
+          "bytes": 3658
+        },
+        {
+          "id": "relations.ended_partnership",
+          "section": "relations",
+          "pass": true,
+          "ms": 1385,
+          "bytes": 330
+        },
+        {
+          "id": "relations.history_dates",
+          "section": "relations",
+          "pass": true,
+          "ms": 1780,
+          "bytes": 330
+        },
+        {
+          "id": "relations.history_ids",
+          "section": "relations",
+          "pass": false,
+          "ms": 1256,
+          "bytes": 330,
+          "note": "missing 1/2",
+          "known_gap": "relation history lists dates without the note ids"
+        },
+        {
+          "id": "relations.job_change",
+          "section": "relations",
+          "pass": true,
+          "ms": 1435,
+          "bytes": 1436
+        },
+        {
+          "id": "relations.all",
+          "section": "relations",
+          "pass": true,
+          "ms": 1444,
+          "bytes": 3658,
+          "note": "0 of 20 sampled missing"
+        },
+        {
+          "id": "customers.listed",
+          "section": "customers",
+          "pass": true,
+          "ms": 1467,
+          "bytes": 8526,
+          "note": "0 of 3 missing"
+        },
+        {
+          "id": "customers.former",
+          "section": "customers",
+          "pass": true,
+          "ms": 1681,
+          "bytes": 8526,
+          "note": "0 former"
+        },
+        {
+          "id": "customers.demo_excluded",
+          "section": "customers",
+          "pass": true,
+          "ms": 1234,
+          "bytes": 8526,
+          "note": "Raven Living"
+        },
+        {
+          "id": "meetings.listed",
+          "section": "meetings",
+          "pass": true,
+          "ms": 1588,
+          "bytes": 20025
+        },
+        {
+          "id": "meetings.planned",
+          "section": "meetings",
+          "pass": true,
+          "ms": 1346,
+          "bytes": 4074
+        },
+        {
+          "id": "meetings.by_entity",
+          "section": "meetings",
+          "pass": true,
+          "ms": 1155,
+          "bytes": 4305
+        },
+        {
+          "id": "deal.hub",
+          "section": "deal",
+          "pass": true,
+          "ms": 1483,
+          "bytes": 3174
+        },
+        {
+          "id": "rules.check",
+          "section": "rules",
+          "pass": true,
+          "ms": 258,
+          "bytes": 1406
+        },
+        {
+          "id": "status.view",
+          "section": "status",
+          "pass": true,
+          "ms": 1743,
+          "bytes": 3901
+        },
+        {
+          "id": "status.health",
+          "section": "status",
+          "pass": true,
+          "ms": 2262,
+          "bytes": 1461
+        },
+        {
+          "id": "status.list_contexts",
+          "section": "status",
+          "pass": true,
+          "ms": 1628,
+          "bytes": 2169
+        },
+        {
+          "id": "compile.facts_full",
+          "section": "compile",
+          "pass": true,
+          "ms": 1689,
+          "bytes": 14201,
+          "note": "49 ids of 49, 13976 chars"
+        },
+        {
+          "id": "compile.facts_mcp",
+          "section": "compile",
+          "pass": true,
+          "ms": 1573,
+          "bytes": 7670,
+          "note": "0 of 26 missing"
+        },
+        {
+          "id": "compile.stale",
+          "section": "compile",
+          "pass": true,
+          "ms": 1302,
+          "bytes": 804
+        },
+        {
+          "id": "remember.without_load",
+          "section": "remember",
+          "pass": true,
+          "ms": 2888,
+          "bytes": 502,
+          "note": "ok: remember\nremembered m_491016630e58 in offer · note · marta-nowak · \"E2E probe: pricing page gets a store calculator (e2eprobeone).\"\nwords in this note not l"
+        },
+        {
+          "id": "load_context.icp",
+          "section": "load",
+          "pass": false,
+          "ms": 1823,
+          "bytes": 4822,
+          "known_gap": "load_context read lines carry no note id"
+        },
+        {
+          "id": "load_context.size",
+          "section": "load",
+          "pass": true,
+          "ms": 1345,
+          "bytes": 9117,
+          "note": "9117 bytes"
+        },
+        {
+          "id": "remember.single",
+          "section": "remember",
+          "pass": true,
+          "ms": 1857,
+          "bytes": 506
+        },
+        {
+          "id": "remember.batch_mcp",
+          "section": "remember",
+          "pass": true,
+          "ms": 2600,
+          "bytes": 1509,
+          "note": "true,true,true"
+        },
+        {
+          "id": "remember.batch_script",
+          "section": "remember",
+          "pass": true,
+          "ms": 2314,
+          "bytes": 1171,
+          "note": "true,true"
+        },
+        {
+          "id": "corrections.supersede",
+          "section": "corrections",
+          "pass": true,
+          "ms": 1935,
+          "bytes": 523,
+          "note": "m_1eb34abfe970"
+        },
+        {
+          "id": "corrections.retract",
+          "section": "corrections",
+          "pass": true,
+          "ms": 4091,
+          "bytes": 176
+        }
+      ]
+    },
+    "medium": null,
+    "messy": null,
+    "large": null
+  },
+  "live": {
+    "base": "main 7890c69 (plugin 0.34.3)",
+    "brain": "the seeded routing brain of tool-routing.mjs (setup.sh plus its seed), not the medium shape",
+    "note": "Unchanged main code; run one case at a time through test/live (mentor-shapes.mjs for deepdive, todo, define-icp, strategy; tool-routing.mjs for the capture cases) on 2026-11-14 with load average about 200. No judge: no OpenAI key. The medium shape was not used: generating it ran at about 3.6 s per note under this load (62 of 4,990 notes after about 5 minutes) and was stopped. skill-deepdive and skill-todo first failed with spawnSync bash ETIMEDOUT in setup (30 s limit) and the rows here are the reruns after raising it to 180 s.",
+    "cases": [
+      {
+        "name": "skill-define-icp-interview",
+        "status": "fail",
+        "finished": "2026-11-14T13:04:39.352Z",
+        "seconds": 146,
+        "tokens": {
+          "input": 484099,
+          "cached": 443648,
+          "output": 2207
+        },
+        "failed": [
+          "route",
+          "state"
+        ],
+        "tools": [
+          "query",
+          "load_context",
+          "query",
+          "query",
+          "document",
+          "document"
+        ]
+      },
+      {
+        "name": "mentor-strategy",
+        "status": "fail",
+        "finished": "2026-11-14T13:07:45.795Z",
+        "seconds": 131,
+        "tokens": {
+          "input": 388292,
+          "cached": 350464,
+          "output": 2659
+        },
+        "failed": [
+          "route"
+        ],
+        "tools": [
+          "query",
+          "query",
+          "load_context"
+        ]
+      },
+      {
+        "name": "capture-call",
+        "status": "pass",
+        "finished": "2026-11-14T13:11:07.745Z",
+        "seconds": 153,
+        "tokens": {
+          "input": 566013,
+          "cached": 519552,
+          "output": 3274
+        },
+        "failed": [],
+        "tools": [
+          "query",
+          "query",
+          "query",
+          "query",
+          "query",
+          "query",
+          "remember"
+        ]
+      },
+      {
+        "name": "capture-decision",
+        "status": "fail",
+        "finished": "2026-11-14T13:13:52.126Z",
+        "seconds": 114,
+        "tokens": {
+          "input": 379359,
+          "cached": 333184,
+          "output": 1787
+        },
+        "failed": [
+          "route",
+          "state"
+        ],
+        "tools": [
+          "query",
+          "query",
+          "query",
+          "query"
+        ]
+      },
+      {
+        "name": "capture-draft-unsent",
+        "status": "pass",
+        "finished": "2026-11-14T13:16:20.896Z",
+        "seconds": 100,
+        "tokens": {
+          "input": 255536,
+          "cached": 219392,
+          "output": 1141
+        },
+        "failed": [],
+        "tools": [
+          "query"
+        ]
+      },
+      {
+        "name": "skill-deepdive",
+        "status": "pass",
+        "finished": "2026-11-14T13:19:10.012Z",
+        "seconds": 126,
+        "tokens": {
+          "input": 498775,
+          "cached": 457472,
+          "output": 2687
+        },
+        "failed": [],
+        "tools": [
+          "query",
+          "query",
+          "query"
+        ]
+      },
+      {
+        "name": "skill-todo",
+        "status": "fail",
+        "finished": "2026-11-14T13:21:37.899Z",
+        "seconds": 110,
+        "tokens": {
+          "input": 309029,
+          "cached": 267520,
+          "output": 2140
+        },
+        "failed": [
+          "route"
+        ],
+        "tools": [
+          "query",
+          "load_context",
+          "query",
+          "query"
+        ]
+      }
+    ]
+  }
+}

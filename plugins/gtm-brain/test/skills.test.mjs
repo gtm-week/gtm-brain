@@ -530,12 +530,13 @@ test("compilation exposes tool evidence and prior guidance, then reloads revised
   add({ content: "Acme's renewal owner is confirmed." });
   f = facts();
   assert.ok(f.includes(guidance), "prior guidance is available for reassessment");
-  assert.ok(f.split("## All effective memories, recording order (oldest first)")[1].includes(lesson.id), "older supporting evidence is still supplied");
+  assert.ok(f.split("## Older notes the current summary and working guidance cite")[1].includes("- " + lesson.id), "older supporting evidence is still supplied");
   const correction = add({ content: "The renewal field has changed to renewal_end.", tools: ["attio"],
     source: [{ kind: "attio", ref: "schema/renewals-v2" }], supersedes: lesson.id });
   f = facts();
-  const effective = f.split("## All effective memories, recording order (oldest first)")[1];
-  assert.ok(!effective.includes(lesson.id), "superseded evidence is excluded from effective facts");
+  const effective = f.split("## Effective notes since the last compile")[1];
+  assert.ok(!effective.includes("- " + lesson.id), "superseded evidence is excluded from effective facts");
+  assert.match(effective, new RegExp("No longer in force [^\\n]*" + lesson.id), "a cited note that was superseded is named");
   assert.ok(effective.includes(correction.id) && effective.includes("attio:schema/renewals-v2"));
   const revised = `Use renewal_end for renewals (${correction.id}).`;
   apply(f, revised);
@@ -673,6 +674,9 @@ test("remember attaches the chat it was called from as a codex: source, and only
   assert.deepEqual(rem([]), [{ kind: "codex", ref: "01a0-chat" }], "the chat from work/session.json is the source");
   assert.deepEqual(rem(["--source", "gmail:19fa"]), [{ kind: "gmail", ref: "19fa" }, { kind: "codex", ref: "01a0-chat" }], "tool sources keep their place, the chat comes last");
   assert.deepEqual(rem(["--source", "codex:01a0-named"]), [{ kind: "codex", ref: "01a0-named" }], "a codex source given by hand is not doubled");
+  assert.deepEqual(rem(["--source", '{"kind":"Gmail","account":"Sales@X.io","ref":"19fa"}', "--source", "https://app.hubspot.com/contacts/123456/record/0-1/42"]),
+    [{ kind: "gmail", account: "sales@x.io", ref: "19fa" }, { kind: "hubspot", account: "123456", ref: "0-1/42", url: "https://app.hubspot.com/contacts/123456/record/0-1/42" }, { kind: "codex", ref: "01a0-chat" }], "a source object names its account; a record link is one entry with its url");
+  assert.throws(() => rem(["--source", '{"kind":"gmail","account":"","ref":"19fa"}']), /source account/);
   assert.deepEqual(rem([], { ...env, GTM_BRAIN_RUN: "background" }), [], "a separate run is not the person's chat: no source is attached");
 });
 

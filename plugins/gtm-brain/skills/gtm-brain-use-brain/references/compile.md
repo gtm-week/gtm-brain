@@ -65,9 +65,16 @@ that one even if it is current.
 
 Call `compile_facts` with `context` = the slug.
 
-You get the standing rule, the current summary, previous working guidance, names with counts,
-tools with counts, related contexts, open questions, decisions, and every effective memory
-in recording order with its ID, recording timestamp, source references, and action references.
+You get a digest: the standing rule, the current summary, previous working guidance, names with
+counts, tools with counts, related contexts, every open question and decision still in force,
+and the effective memories recorded since the last compile, newest first, each with its ID,
+recording timestamp, source references, and action references. The list is capped (300 lines);
+older notes that the current summary or working guidance cite follow, and a cited note that was
+superseded or withdrawn is named. Closing lines say how many notes are not shown. The current
+summary carries the older ones. When the new notes contradict or refer to an older one, look it
+up with `query` (object `memories`, `filters.context` = the slug, plus `search` or
+`filters.entities`) rather than guessing. When a closing line says new notes are not shown
+(a first compile of a long context), read them with the same `query` before writing.
 Relevant event dates are kept in the memory text. The output includes
 `as_of: s_...`, a key of the memories and exact Markdown these facts include. Keep it for step 3.
 
@@ -157,3 +164,17 @@ in the side panel.
   summary, not resolved.
 - Do not compile a context whose summary is up to date unless asked. Archived contexts are
   never listed; compile one only if the person names it.
+
+## From the brain rules: manual Markdown edits
+
+**Preserve manual Markdown edits.** The local file observer refreshes brain Markdown
+after editor saves. Generated summaries and Working guidance edited by hand pause compilation
+for that context. Invalid files remain untouched; the dashboard shows the last generated
+version with a notice. Valid older covers start tracking automatically on first observation,
+without rewriting them or asking for review. Only later changes need reconciliation.
+Review with the person in Codex. Preserve factual corrections as sourced memories and
+standing instructions as context rules, then ask whether the reviewed generated prose can
+be replaced. Only after explicit confirmation release it with the exact reviewed hash
+(the compile procedure's `--release` step). Background and scheduled runs never clear this pause.
+The original edit is backed up under `work/manual-edits/`. A stale `as_of` means memories
+or Markdown changed: re-read and regenerate. Never auto-import arbitrary project documents.

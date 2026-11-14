@@ -378,7 +378,7 @@ test("recall groups a project's hits before it limits them; without a project it
   assert.match(withProject, /## elsewhere · 40 of 45\n/);
   const withoutProject = script(root, "gtm-brain-recall/recall.mjs", "sprocket");
   assert.match(withoutProject, /^46 memories match "sprocket"/m);
-  assert.equal((withoutProject.match(/^- Recorded: \d{4}-\d{2}-\d{2}/gm) || []).length, 40, "still capped at 40 without a project");
+  assert.equal((withoutProject.match(/^- (?:m_[0-9a-z]+ · )?Recorded: \d{4}-\d{2}-\d{2}/gm) || []).length, 40, "still capped at 40 without a project");
 });
 
 const hook = (cwd, name, input, extra = {}) => execFileSync("bash", [`${P}/session/${name}`], { cwd, encoding: "utf8", env: { ...env, ...extra }, input: JSON.stringify({ hook_event_name: "SessionStart", session_id: "thread-p1", cwd, ...input }) });

@@ -48,7 +48,7 @@ Each entry takes:
 - `people`: every entity the text names, as written in the source: people, and just as much
   companies, products and teams (Castorama, ByteDance, Wispr Flow). A name left out here is not
   an entity anywhere. A new name lands in the registry as a person; if it is not one, follow
-  with `add_name` and its `kind` (organization, product; company/team are organization subtypes), without asking when the note makes
+  with `add_name` and its `kind` (organization, product, event, tool; company/team are organization subtypes), without asking when the note makes
   it plain. If the tool answers *possibly entities, not recorded as such: "Castorama"*, do that
   now for each one that is an entity. Compile collects these names, with their kinds, into the
   context's cover, and the dashboard counts them from the text as well once they are known.
@@ -79,8 +79,14 @@ The tool assigns the existing `at` timestamp to when the memory is recorded. A h
 import is recorded now, with its relevant historical dates in the text. Correct a date with
 a new memory using `supersedes`. Structured event dates belong to the future event abstraction.
 
-If exactly one context is loaded, `context` can be omitted. The tool answers "kept" (or "kept
-and shared"): the note is in the company memory; nothing to save, nothing to add. For several
+`context` can be omitted: the note goes to the single loaded context, else to the one active
+context where its people or companies already have notes. With no unique answer the entry is held
+and the candidate contexts are listed in one line; send it again with `context`. Each kept note
+starts with one short line for the person: `saved in <Context title>: <the note>`. The tool
+answers "kept" (or "kept, not shared yet" when the brain has a remote: the push runs in the
+background and records its result, and the chat start says when one failed): the note is in the
+company memory; nothing to save, nothing to add. Never tell the person a note reached teammates
+before a push succeeded. For several
 entries it answers `kept 3 of 4` and numbers each line `#1`, `#2` by the entry's position, so you
 can see which landed and which did not.
 
@@ -184,6 +190,12 @@ read with no new information adds nothing, while a read that reveals a new fact 
 from its result before recording it as completed; a request, failure, or ambiguous response is
 not proof of success. A failure can itself reveal a finding or unresolved issue worth recording.
 Agent proposals are not user decisions until the user adopts them.
+
+After three reads in a chat with nothing saved (`query`, `load_context`), the read's reply ends with
+one line, "Nothing saved in this chat since <time>: ...": check the turn against the triggers above
+and save what it established, or carry on when it established nothing. The line comes back only
+after five more reads, never in a scheduled or background run, and a brain turns it off with
+`save_nudge: off` in `brain/admin.md`.
 
 Some completed actions are not company knowledge and are not recorded unless the person asks
 to keep them: an unsent draft (record the email once it is sent), an event or reminder on the

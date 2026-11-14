@@ -20,6 +20,8 @@ import { host } from "../lib/host.mjs";
 import { validateValue } from "../lib/ontology/validation.mjs";
 import { placementTrailers, whyHere, WHY_TRAILER } from "../lib/where.mjs";
 import { rulesReport } from "../lib/rules-check.mjs";
+import { askSourceLines } from "../lib/ask-source.mjs";
+import { createSaveNudge } from "../lib/save-nudge.mjs";
 
 const P = dirname(dirname(fileURLToPath(import.meta.url)));
 const lib = await import(join(P, "lib", "brain.mjs"));
@@ -90,7 +92,7 @@ const TOOLS = [
     inputSchema: schema({ entity: str("Entity name, alias or stable ID; omit to list stale briefs") }),
     call: ({ brain, entity }) => run(brain, "gtm-brain-entities/compile-entity.mjs", entity ? ["--facts", entity] : []).then(result) },
   { name: "compile_facts", title: "Reading a context's memories", readOnly: true,
-    description: "Without context: which contexts are behind (memories newer than the last compile). With context: everything needed to rewrite its cover (rule, current summary, previous working guidance, people, tools, questions, decisions, every effective memory with IDs and source/action references) and the as_of id to pass to compile_apply.",
+    description: "Without context: which contexts are behind (memories newer than the last compile). With context: everything needed to rewrite its cover (rule, current summary, previous working guidance, people, tools, questions, decisions, the effective memories since the last compile with IDs and source/action references; older ones through query) and the as_of id to pass to compile_apply.",
     inputSchema: schema({ context: str("Context slug; omit to list what is behind") }),
     call: ({ brain, context }) => run(brain, "gtm-brain-compile/compile.mjs", context ? ["--facts", context] : ["--stale"]).then(result) },
   { name: "meeting_overview", title: "Reviewing meetings", readOnly: true,
@@ -123,7 +125,7 @@ const TOOLS = [
     call: ({ brain }) => run(brain, "gtm-brain-advisor/advisor.mjs", []).then(result) },
   { name: "who_is", title: "Looking up who is who", readOnly: true,
     description: "Read saved identity first: exact name, alias, email or stable ID resolves it; partial names, accents and typos return ranked candidates with reasons, emails and source references, never automatic identity changes. Omit name to list everyone. Optional candidates ranks a bounded shortlist already returned by a CRM; it makes no connector calls and saves nothing. For live name search prefer the connector's fuzzy/full-text capability, not equality filters. Zero results never justify merging. Use recall with a confirmed entity ID for its brief.",
-    inputSchema: schema({ name: str("Name, alias, email or stable ID; required when ranking source candidates", { minLength: 1, maxLength: 256 }), limit: { type: "integer", minimum: 1, maximum: 10, description: "Candidate limit, default 5; output reports truncation" }, candidates: { type: "array", maxItems: 100, description: "Optional already retrieved CRM shortlist. Preserve returned IDs, names and source references; never invent candidates. Results remain unconfirmed.", items: { type: "object", properties: { id: str("Record ID from the source", { minLength: 1 }), name: str("Returned name", { minLength: 1, maxLength: 256 }), kind: str("Entity kind", { enum: ["person", "organization", "product"] }), aliases: strs("Known source aliases"), emails: strs("Returned email addresses"), reference: { type: "object", properties: { kind: str("Source connector/account", { minLength: 1 }), ref: str("Exact source record URL or scoped ID", { minLength: 1 }) }, required: ["kind", "ref"], additionalProperties: false } }, required: ["id", "name", "reference"], additionalProperties: false } } }),
+    inputSchema: schema({ name: str("Name, alias, email or stable ID; required when ranking source candidates", { minLength: 1, maxLength: 256 }), limit: { type: "integer", minimum: 1, maximum: 10, description: "Candidate limit, default 5; output reports truncation" }, candidates: { type: "array", maxItems: 100, description: "Optional already retrieved CRM shortlist. Preserve returned IDs, names and source references; never invent candidates. Results remain unconfirmed.", items: { type: "object", properties: { id: str("Record ID from the source", { minLength: 1 }), name: str("Returned name", { minLength: 1, maxLength: 256 }), kind: str("Entity kind, a kind in SCHEMA.md", { minLength: 1, maxLength: 40 }), aliases: strs("Known source aliases"), emails: strs("Returned email addresses"), reference: { type: "object", properties: { kind: str("Source connector/account", { minLength: 1 }), ref: str("Exact source record URL or scoped ID", { minLength: 1 }) }, required: ["kind", "ref"], additionalProperties: false } }, required: ["id", "name", "reference"], additionalProperties: false } } }),
     call(args) {
       const invalid = validateValue(TOOLS.find(t => t.name === "who_is").inputSchema, args);
       if (invalid) return text(invalid, true);
@@ -319,7 +321,7 @@ const RUN_ONLY_TOOLS = new Set(["compile_facts", "compile_apply", "compile_entit
 const RETIRED_READS = { recall: "query (memories with search, or object brief)", who_is: "query (entities with search)", list_contexts: "query (contexts)", list_projects: "query (projects)", list_brains: "query (brains)", customer_overview: "query (customers)", meeting_overview: "query (meetings)", advise: "query (health)", where_we_are: "query (status)", why_here: "query (why)", check_rules: "query (rules)", guideline: "document" };
 // A summary run (GTM_BRAIN_TOOLSET=compile, set by scripts/gtm-brain-compile/run-args.mjs) is listed only what it
 // calls: every other description is re-sent with each of its requests and is pure cost there.
-const COMPILE_TOOLSET = new Set([...RUN_ONLY_TOOLS, "render_dashboard"]);
+const COMPILE_TOOLSET = new Set([...RUN_ONLY_TOOLS, "render_dashboard", "query"]);   // query: --facts is a digest, older notes are looked up
 // With Codex's own question box on in ordinary chats, it asks instead: the free text sits on the same screen.
 const NATIVE_QUESTIONS = (() => { try { return host().nativeQuestions(); } catch { return false; } })();
 const NATIVE_LINE = "\nQuestions: GTM Brain shows no question forms of its own. This Codex has its own question box on, so ask every question with request_user_input: one question per call unless a procedure groups them, two or three concrete options, recommended first. It adds the free-text answer itself, so never add Other or Something else. It has no checkboxes: where several can apply, offer the likely combinations as options. APPROVE still goes only through approve_change.";
@@ -369,7 +371,7 @@ const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [colu
   const base = query.call, describeBase = describe.call, objectsBase = objects.call;
   query.description = "The one read: rows of one object, newest first (exact filters, free-text search with alias expansion, limit), or one read-only SQL SELECT over the memory index (memories, members, contexts, entities, keywords; describe_object shows the columns) for counts, joins and dates. Derived reads by object: status (where we are: contexts, loaded set, tools, onboarding; call it first), brief (an entity's cited one-page view; search = the name; also the answer to who is X and why did you add X: when and from which note it was first saved, and the rule each spelling matched), deal (one deal's MEDDPICC rubric and every memory about it, to score with cited IDs; search = the company), relations (relationships from SCHEMA.md with their history; search = an entity, filters.type = one type), why (why a file or folder is where it is: the RULES.md row, reason, who and when; search = the path), rules (the brain checked against its naming and RULES.md rules, each finding with fixed choices; for: check the brain), projects, brains, customers, meetings, health (how the brain is doing). An entities search resolves a name, alias, email or typo to ranked candidates. Answer from the rows; no rows means say so.";
   query.inputSchema = { ...query.inputSchema, required: [], properties: { ...query.inputSchema.properties,
-    object: { ...query.inputSchema.properties.object, enum: [...datasets, ...Object.keys(VIEWS), "deal", "why", "rules", "relations"] },
+    object: { ...query.inputSchema.properties.object, enum: [...datasets, ...Object.keys(VIEWS), "deal", "why", "rules", "relations", "reference"] },
     sql: { type: "string", description: "One SELECT (or WITH ... SELECT) over memories, members, contexts, entities and keywords. Read-only; at most limit rows (default 200)." },
     candidates: { type: "array", items: { type: "object", additionalProperties: true }, description: "With object entities and search: rank this bounded shortlist a CRM returned instead of the registry; no connector calls." },
     project: PROJECT } };
@@ -380,15 +382,34 @@ const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [colu
     if (object === "rules") return original.get("check_rules")({ brain });
     if (object === "why") return search ? original.get("why_here")({ brain, path: search }) : text("why needs search: the file or folder path.", true);
     if (object === "relations") return run(brain, "gtm-brain-entities/entities.mjs", ["--relations", ...(search ? ["--entity", search] : []), ...(filters?.type ? ["--type", String(filters.type)] : [])]).then(result);
+    if (object === "reference") {   // a source pointer (kind:ref or a record URL): the entity that holds it and every note citing it
+      const p = lib.parsePointer(search); if (!p) return text("reference needs search: a kind:ref pointer (hubspot:0-1/42) or a record URL.", true);
+      // Looked up by kind:ref; an account in the search (a record link names its portal or workspace) then
+      // keeps the notes that cite that account or none, so a link finds a note saved as kind:ref and back.
+      const key = Buffer.from(lib.lookupKey({ kind: p.kind, ref: p.ref }), "utf8").toString("hex");   // a hex literal: no quote or semicolon of the reference reaches the SQL
+      try { const r = await memoryReader.read(brain, "sql", { sql: `SELECT m.id AS id, m.context AS context, m.at AS at, m.kind AS kind, m.content AS content, m.sources AS sources FROM members v JOIN memories m ON m.id=v.memory_id WHERE v.field='source' AND v.value=CAST(x'${key}' AS TEXT) ORDER BY m.time DESC`, limit: limit || 200 });
+        const cites = row => { if (!p.account) return true; try { return lib.citesPointer(typeof row.sources === "string" ? JSON.parse(row.sources) : row.sources, p); } catch { return true; } };
+        return text(lib.referenceText(p, lib.readNames(brain), r.rows.filter(cites))); } catch (e) { return text(e.message, true); }
+    }
     if (object === "deal") return search ? run(brain, "gtm-brain-recall/deal-health.mjs", ["--entity", search]).then(result) : text("deal needs search: the company name, alias or id.", true);
     if (VIEWS[object]) return original.get(VIEWS[object])(object === "brains" ? {} : { brain, ...(project ? { project } : {}), ...(filters && typeof filters === "object" ? filters : {}) });   // a view's options travel in filters (projects: include_available; meetings: its options)
     if (object === "entities" && search && !filters) return original.get("who_is")({ brain, name: search, ...(candidates ? { candidates } : {}) });
-    return base({ brain, object, ...(search !== undefined ? { search } : {}), ...(filters !== undefined ? { filters } : {}), ...(limit !== undefined ? { limit } : {}) });
+    const r = await base({ brain, object, ...(search !== undefined ? { search } : {}), ...(filters !== undefined ? { filters } : {}), ...(limit !== undefined ? { limit } : {}) });
+    return object === "memories" && !r.isError ? withAskSource(brain, r) : r;
   };
-  describe.inputSchema = { ...describe.inputSchema, properties: { ...describe.inputSchema.properties, name: { ...describe.inputSchema.properties.name, enum: [...datasets, ...Object.keys(VIEWS), "deal", "why", "rules", "relations"] } } };
+  // RULES.md Ask the source: memory rows from a connected tool, older than their row allows, get one line per row
+  const withAskSource = (brain, r) => {
+    try {
+      const rows = (r.content?.[0]?.text || "").split("\n").filter(l => l.startsWith("{")).map(l => JSON.parse(l));
+      const lines = askSourceLines(brain, rows, { day: at => lib.localDateTime(at).slice(0, 10) });
+      return lines.length ? { ...r, content: [{ ...r.content[0], text: `${r.content[0].text}\n\n${lines.join("\n")}` }, ...r.content.slice(1)] } : r;
+    } catch { return r; }
+  };
+  describe.inputSchema = { ...describe.inputSchema, properties: { ...describe.inputSchema.properties, name: { ...describe.inputSchema.properties.name, enum: [...datasets, ...Object.keys(VIEWS), "deal", "why", "rules", "relations", "reference"] } } };
   describe.call = async args => {
     if (args.name === "rules") return text("rules: a derived read (query with object rules). Checks the brain against its own rules: people known by a first name only (P3), look-alike names nobody confirmed (P4), top-level folders no RULES.md row names, files with no recorded reason (by folder), names with capitals or spaces. Each finding: the rule, the person or path, two or three fixed choices through existing tools. Reads only.");
     if (args.name === "why") return text("why: a derived read (query with object why, search = a path inside the brain). Returns the RULES.md row and reason recorded when the file or folder was saved (save's placed), who put it there and when; for a folder, the reasons for what is inside; with no reason recorded, when it arrived and that the person should be asked. Reads only.");
+    if (args.name === "reference") return text("reference: a derived read (query with object reference; search = a source pointer as kind:ref, kind:account/ref or a record URL). Kinds are normalized (HubSpot, hubspot and an app.hubspot.com link are one pointer). Returns the entity whose references include it and every note whose sources cite it, newest first. Reads only.");
     if (args.name === "relations") return text("relations: a derived read (query with object relations; search = an entity for its relationships only; filters.type = one type). Every relationship recorded with remember's relation block, typed by SCHEMA.md: from, type, to (an entity or us), current or ended, said by the person or from a source, the observed date, the note it rests on, the history (oldest notes stay) and source records that disagree. Customer status is included read-only as customer_of. A type removed from SCHEMA.md is kept and marked. Reads only.");
     if (args.name === "deal") return text("deal: a derived read (query with object deal, search = the company). Returns the MEDDPICC rubric and every memory about that company, newest first, with IDs; score each element confirmed, weak or missing from those memories only, citing IDs, then ask about what is missing. Reads only. Off when brain/admin.md has deal_scoring: off.");
     if (VIEWS[args.name]) return text(`${args.name}: a derived read (query with object ${args.name}${args.name === "brief" ? ", search = the entity; filters.context for one perspective" : ""}). ${byName(VIEWS[args.name]).description}`);
@@ -447,6 +468,20 @@ function logCall(args, name, res) {
   try { appendFileSync(join(args.brain, "work", "tool-usage.jsonl"), JSON.stringify(line) + "\n"); } catch {}
 }
 
+/* ---------- The save nudge ---------- */
+// A chat that reads and reads and saves nothing gets one line with a read's reply (lib/save-nudge.mjs holds the
+// counts and the words). Only reads carry it; never in a separate run or the compile toolset; off with
+// save_nudge: off in brain/admin.md.
+const nudges = createSaveNudge({ quietMs: OPEN_AGAIN_MS });
+function saveNudge(args, name, res) {
+  if (process.env.GTM_BRAIN_RUN || process.env.GTM_BRAIN_TOOLSET === "compile" || process.env.GTM_BRAIN_NO_SAVE_NUDGE || !isBrain(args.brain)) return "";   // NO_SAVE_NUDGE: tests that parse a read as one text
+  const project = typeof args.project === "string" ? args.project : "";
+  const line = nudges.note(`${resolve(args.brain)}\t${project}`, name, { ok: !res?.isError });
+  if (!line) return "";
+  try { if (String(lib.readAdmin(args.brain)?.save_nudge ?? "on").toLowerCase() === "off") return ""; } catch {}
+  return line;
+}
+
 /* ---------- JSON-RPC over stdio ---------- */
 const send = m => process.stdout.write(JSON.stringify(m) + "\n");
 /* What a host is shown: the root of a tool's input schema is a plain object. OpenAI-style hosts
@@ -475,7 +510,8 @@ async function handle(req) {
     const start = await opening(args).catch(() => null);
     let r; try { r = await tool.call(args, id); } catch (e) { r = text(`${tool.name} failed: ${e.message}`, true); }
     logCall(args, tool.name, r);
-    return reply(id, start ? { ...r, content: [...(r.content || []), { type: "text", text: start }] } : r);
+    const extra = [saveNudge(args, tool.name, r), start].filter(Boolean).map(t => ({ type: "text", text: t }));
+    return reply(id, extra.length ? { ...r, content: [...(r.content || []), ...extra] } : r);
   }
   if (method === "prompts/list") return reply(id, { prompts: [] });
   if (method === "resources/list") return reply(id, { resources: [] });

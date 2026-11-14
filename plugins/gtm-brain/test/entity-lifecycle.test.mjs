@@ -48,6 +48,16 @@ for (const choice of ['source', 'target', 'combine']) test(`merge ${choice} reso
   assert.deepEqual(get(root, target.id).references, refs);
 });
 
+test("merge compares reference kinds in their normalized spelling", () => {
+  const { root, source, target } = setup();
+  lib.updateEntity(root, { entity: source.id, by: 'ann', set: { references: [{ kind: 'HubSpot', ref: '0-1/1' }, { kind: 'Attio', ref: 'attio:people/9' }] } });
+  lib.updateEntity(root, { entity: target.id, by: 'ann', set: { references: [{ kind: 'hubspot', ref: '0-1/2' }, { kind: 'attio', ref: 'people/9' }] } });
+  const preview = lib.mergeEntities(root, { source: source.id, target: target.id, resolution: {} });
+  assert.deepEqual(preview.conflicts.find(c => c.field === 'references')?.kinds, ['hubspot']);   // the two Attio spellings are one record
+  const refs = merge(root, source, target, { references: 'target' }).entity.references;
+  assert.deepEqual(refs.filter(r => /hubspot/i.test(r.kind)), [{ kind: 'hubspot', ref: '0-1/2' }]);
+});
+
 test("explicit updates preserve identity, file edits and history while replacing, adding and removing metadata", () => {
   const { root, source } = setup(); note(root, source.id);
   const path = join(root, source._path);

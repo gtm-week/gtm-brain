@@ -17,7 +17,7 @@ import * as lib from "../../lib/brain.mjs";
 import * as docs from "../../lib/documents.mjs";
 import { resolveEntity } from "../../lib/entities.mjs";
 
-const MAX_BYTES = 25 * 1024 * 1024;
+const MAX_BYTES = lib.LARGE_FILE_MB * 1024 * 1024;
 const KINDS = [[/^\.(png|jpe?g|gif|webp|svg|heic)$/i, "image"], [/^\.pdf$/i, "pdf"], [/^\.(txt|md|csv|rtf|html?|docx?|odt|pptx?|xlsx?|key|pages|numbers)$/i, "document"]];
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? realpathSync(resolve(args.shift())) : realpathSync(".");
 const fail = message => { console.error(message); process.exit(1); };
@@ -27,7 +27,7 @@ const source = resolve(given);
 if (!existsSync(source)) fail(`${given} does not exist. Drag the file from Finder into the chat to paste its path.`);
 if (statSync(source).isDirectory()) fail(`${given} is a folder. Add a file, not a folder.`);
 const real = realpathSync(source); const bytes = statSync(real).size;
-if (bytes > MAX_BYTES) fail(`${basename(given)} is ${(bytes / 1048576).toFixed(0)} MB, over 25 MB. Keep it in a project folder and reference it there.`);
+if (bytes > MAX_BYTES) fail(`${basename(given)} is ${(bytes / 1048576).toFixed(0)} MB, over ${lib.LARGE_FILE_MB} MB: too big for git, not kept. ${lib.bigFileAdvice(root)}`);
 const within = (base, path) => { const r = relative(base, path); return r !== "" && !isAbsolute(r) && !r.startsWith("..") ; };
 const kind = (KINDS.find(([re]) => re.test(extname(real))) || [null, "other"])[1];
 
@@ -46,7 +46,7 @@ if (wantDoc !== undefined) {
 }
 if (wantEntity !== undefined) {
   const e = resolveEntity(lib.readNames(root), wantEntity);
-  if (!e || !e._path) fail(`${wantEntity} is not a known person, organization or product; register it with add_name first`);
+  if (!e || !e._path) fail(`${wantEntity} is not a known entity; register it with add_name first`);
   owner = { kind: "entity", ref: e._path, dir: e._path.replace(/\.md$/, "") };
 }
 

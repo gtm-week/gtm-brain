@@ -7,15 +7,17 @@
 // No dependencies. Node built-ins only.
 
 import { readFileSync, writeFileSync, appendFileSync, existsSync, readdirSync, statSync, lstatSync, realpathSync, mkdirSync , unlinkSync, rmSync, renameSync, linkSync, chmodSync} from "node:fs";
-import { join, isAbsolute, resolve, basename, dirname } from "node:path";
+import { join, isAbsolute, resolve, relative, basename, dirname } from "node:path";
 import { homedir } from "node:os";
 import { createHash, randomUUID, randomBytes } from "node:crypto";
 import { spawnSync, execFileSync, execFile, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { parseOntology } from "./ontology/ontology.mjs";
 import { validateAsset } from './assets.mjs';
+import { normalizeSource, accountOK, urlOK } from "./pointers.mjs";
 import { rankEntityCandidates } from './entity-search.mjs';
 export { rankEntityCandidates } from './entity-search.mjs';
+export { normalizeKind, normalizeSource, normalizeSources, pointerKey, parsePointer, urlPointer, lookupKey, sourceMembers, citesPointer, referenceText } from './pointers.mjs';
 import { checkSchema } from "./ontology/validation.mjs";
 import { readEntityFiles, writeEntityFiles, entityId, entityType, ENTITY_FORMAT, refreshEntityPages, staleEntities, withEntityLock } from "./entities.mjs";
 import { appendMemoryBytes } from './memory-journal.mjs';
@@ -26,7 +28,7 @@ import { validateCustomerEvidence, guardCustomerCorrection } from "./customers.m
 import { host, hostId, HOST_DIRS } from "./host.mjs";
 export { customerOverview, customerIdentity, validateCustomerEvidence, guardCustomerCorrection } from "./customers.mjs";
 import { validateRelationEvidence, guardRelationCorrection } from "./relations.mjs";
-import { readSchema, checkRelation, US } from "./schema.mjs";
+import { readSchema, checkRelation, brainKinds, US } from "./schema.mjs";
 export { validateRelationEvidence, guardRelationCorrection, relationOverview, relationsText } from "./relations.mjs";
 export { updateEntity, mergeEntities, archiveEntity, undoEntityMerge } from "./entity-lifecycle.mjs";
 export { entityFacts, entityBrief, entityRecords, compileEntity, resolveEntity, refreshEntityPages, staleEntities, entityEvidenceIndex, entityType, ENTITY_FORMAT } from "./entities.mjs";
@@ -500,7 +502,7 @@ function mergeEntity(into, e) {
   if (e.name.toLowerCase() !== into.name.toLowerCase() && !into.aliases.some(x => x.toLowerCase() === e.name.toLowerCase())) into.aliases.push(e.name);
   for (const m of e.emails) if (!into.emails.some(x => x.toLowerCase() === m.toLowerCase())) into.emails.push(m);
   for (const x of e.not || []) if (!(into.not = into.not || []).some(y => y.toLowerCase() === x.toLowerCase())) into.not.push(x);
-  if (into.kind === "person" && e.kind !== "person") Object.assign(into, entityType(e.kind, e.subtype ?? null));
+  if (into.kind === "person" && e.kind !== "person") Object.assign(into, entityType(e.kind, e.subtype ?? null, "any"));
   else if (into.kind === "organization" && e.kind === "organization" && !into.subtype) into.subtype = e.subtype ?? null;
   promoteFullName(into);
 }
@@ -617,7 +619,7 @@ function updateName(root, name, { aliases = [], emails = [], kind = null, subtyp
     entry = { id, name: name.trim(), aliases: [], emails: [], kind: "person", not: [], previous_ids: [], references: [], identity_sources: [] }; names.push(entry); }
   // "Nestle Poland is not Nestle": remembered, so the pair is never suggested as one again
   for (const x of not) { const other = exactName(names, x) || x.trim(); if (other && !(entry.not = entry.not || []).some(y => y.toLowerCase() === other.toLowerCase())) entry.not.push(other); }
-  if (kind || subtype !== undefined) Object.assign(entry, entityType(kind || entry.kind, subtype !== undefined ? subtype : (!kind || kind === entry.kind ? entry.subtype ?? null : null)));
+  if (kind || subtype !== undefined) Object.assign(entry, entityType(kind || entry.kind, subtype !== undefined ? subtype : (!kind || kind === entry.kind ? entry.subtype ?? null : null), brainKinds(root)));
   for (const a of aliases) if (a && a.toLowerCase() !== entry.name.toLowerCase() && !entry.aliases.some(x => x.toLowerCase() === a.toLowerCase())) entry.aliases.push(a.trim());
   for (const e of emails) if (e && !entry.emails.some(x => x.toLowerCase() === e.toLowerCase())) entry.emails.push(e.trim().toLowerCase());
   for (const [key, values] of [["references", references], ["identity_sources", sources]]) entry[key] = [...new Map([...(entry[key] || []), ...values].map(r => [JSON.stringify(r), r])).values()];
@@ -897,11 +899,15 @@ export function commit(root, paths, message, { always = false, push = true, allo
     // file already kept (allowEmpty) is a commit of its own, with nothing staged in it.
     if (staged) git("-c", "commit.gpgsign=false", "commit", "-q", "-m", message, "--", ...paths);
     else git("-c", "commit.gpgsign=false", "commit", "-q", "--allow-empty", "--only", "-m", message);
-    // Shared right away when the brain has a remote; in the background, so a slow network never
-    // holds a note. A failed push is retried by the next commit and by the session start's pull.
-    let shared = false;
-    try { const remote = push && pushRemote(git("remote")); if (remote) { spawn("git", ["-C", root, ...PUSH, remote, "HEAD"], { detached: true, stdio: "ignore" }).unref(); shared = true; } } catch {}
-    return { ok: true, note: shared ? "kept and shared" : "kept" };
+    // Sent right away when the brain has a remote; in the background, so a slow network never
+    // holds a note. The push records its own outcome (work/push.json, lib/push-runner.mjs), so the
+    // note never claims a share that has not happened: "not shared yet" until a push succeeds. A
+    // failed push is retried by the next commit and by the session start.
+    let sending = false;
+    const last = pushFailure(root);
+    try { const remote = push && pushRemote(git("remote")); if (remote) { pushInBackground(root, remote); sending = true; } } catch {}
+    if (!sending) return { ok: true, note: "kept" };
+    return { ok: true, note: `${NOT_SHARED_YET}${last ? `; the last push failed: ${last.error}` : ""}` };
   } catch (e) {
     const err = String(e.stderr || e.message).trim().split("\n").filter(Boolean);
     const readOnly = /read-only|Permission denied|Operation not permitted|unable to create|not a git repository/i.test(err.join(" "));
@@ -929,8 +935,59 @@ export function unsavedChanges(root, paths = savePathsFor(root)) {
    (git remote add, no -u) has none, and a bare "git push" then fails in the background with nothing
    said while the note reads "kept and shared". origin when there is one, else the first remote. */
 export const PUSH = ["push", "-q", "-u"];
+export const NOT_SHARED_YET = "kept, not shared yet (sending to teammates in the background)";
+/* The outcome of the last push, written by the push itself: { ok, at, head, remote, error }. */
+const pushStatePath = root => join(root, "work", "push.json");
+export function readPushState(root) { try { return JSON.parse(readFileSync(pushStatePath(root), "utf8")); } catch { return null; } }
+export function recordPush(root, { ok, remote = "", error = "" }) {
+  let head = ""; try { head = execFileSync("git", ["-C", root, "rev-parse", "--short", "HEAD"], { encoding: "utf8", stdio: "pipe" }).trim(); } catch {}
+  try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(pushStatePath(root), JSON.stringify({ ok: !!ok, at: new Date().toISOString(), head, remote, error: String(error || "").trim().split("\n")[0].slice(0, 200) }) + "\n"); } catch {}
+}
+/* The last push when it failed and its commits are still not on the remote. Two background pushes can
+   overlap, and the loser's failure may be written last although the other one sent everything: a
+   branch with nothing ahead of its upstream has no failure to report. */
+export function pushFailure(root) {
+  const push = readPushState(root);
+  if (!push || push.ok !== false) return null;
+  try { if (execFileSync("git", ["-C", root, "rev-list", "--count", "@{u}..HEAD"], { encoding: "utf8", stdio: "pipe", timeout: 5000 }).trim() === "0") return null; } catch {}
+  return push;
+}
+/* A detached push that writes its own result where the next read (a note, the chat start) sees it. */
+export function pushInBackground(root, remote) {
+  spawn(process.execPath, [fileURLToPath(new URL("./push-runner.mjs", import.meta.url)), root, remote], { detached: true, stdio: "ignore" }).unref();
+}
+/* What pulling teammates left behind (session maintenance): { status: "ok" | "merged" | "conflict" | "failed", files, at }.
+   Not work/sync.json: that file is the source sync's own (gtm-brain-sync), and its presence means a sync has finished. */
+export const syncStatePath = root => join(root, "work", "teammates.json");
+/* The chat-start lines for sharing: a failed last push, or a teammate merge that conflicted. Empty when all is well. */
+export function syncNotice(root) {
+  const out = [], push = pushFailure(root);
+  if (push) out.push(`Not shared yet: the last push to ${push.remote || "the remote"} failed (${push.error || "no reason given"}). Notes are kept on this computer; the next note or save tries again.`);
+  let sync = null; try { sync = JSON.parse(readFileSync(syncStatePath(root), "utf8")); } catch {}
+  if (sync && sync.status === "conflict") out.push(`Teammates' changes are not merged: pulling them conflicted in ${(sync.files || []).join(", ") || "some files"}. The merge was undone and nothing was lost; tell the person and offer to resolve it together.`);
+  return out.join("\n");
+}
 export const pushRemote = list => { const r = String(list || "").split("\n").map(x => x.trim()).filter(Boolean); return r.includes("origin") ? "origin" : r[0] || ""; };
-export const largeNote = large => `Too big for git, not kept (over ${LARGE_FILE_MB} MB): ${large.map(f => `${f.path} (${Math.round(f.size / 1048576)} MB)`).join(", ")}. Offer to move each to the shared drive (Google Drive) and link it from its project's README.md, as RULES.md says; delete the local copy only after the person says yes and the upload is verified. If Google Drive is not connected in this Codex, offer to connect it first (connect my tools); if they decline, the file stays on this computer only, and say once that teammates will not get it.`;
+/* Where a file too big for git goes: brain/admin.md `big_files: google-drive | local`, changed through APPROVE like
+   any workplace setting. google-drive (the default, and what an unknown value means): the shared drive, linked
+   from the brain. local: a folder on this computer outside git (`big_files_folder:` in admin.md, absolute or ~/ and never inside the brain, else
+   ~/gtm-brain-files/<brain folder>), not shared, linked as a file: pointer. */
+export const BIG_FILES = ["google-drive", "local"];
+export function bigFiles(root) {
+  const a = root ? readAdmin(root) : null;
+  const mode = a && BIG_FILES.includes(String(a.big_files || "").trim()) ? String(a.big_files).trim() : "google-drive";
+  const given = String(a?.big_files_folder || "").trim().replace(/^~(?=\/|$)/, homedir());
+  const inside = given && isAbsolute(given) && !relative(resolve(root), resolve(given)).startsWith("..");   // a folder in the brain would be in git
+  const folder = mode === "local" ? (given && isAbsolute(given) && !inside ? resolve(given) : join(homedir(), "gtm-brain-files", basename(resolve(root)))) : null;
+  return { mode, folder };
+}
+/* The one instruction for a file too big for git, shared by save, the chat start and add-file. */
+export function bigFileAdvice(root) {
+  const { mode, folder } = bigFiles(root);
+  if (mode === "local") return `This brain keeps big files on this computer (big_files: local in brain/admin.md): offer to move each to ${folder}, outside git, and link it from its project's README.md as file:${folder}/<name>; delete the original only after the person says yes and the copy is verified. That folder is not shared: say once that teammates will not get the file.`;
+  return `Offer to move each to the shared drive (Google Drive) and link it from its project's README.md, as RULES.md says; delete the local copy only after the person says yes and the upload is verified. If Google Drive is not connected in this Codex, offer to connect it first (connect my tools); if they decline, the file stays on this computer only, and say once that teammates will not get it.`;
+}
+export const largeNote = (large, root) => `Too big for git, not kept (over ${LARGE_FILE_MB} MB): ${large.map(f => `${f.path} (${Math.round(f.size / 1048576)} MB)`).join(", ")}. ${bigFileAdvice(root)}`;
 /* The person's save: commit what unsavedChanges lists, push when there is a remote. */
 export function save(root, message, { covers = false, trailers = [] } = {}) {
   if (!covers && existsSync(join(root, "work", "admin.proposed.md"))) return { ok: false, note: "a change to brain/admin.md is waiting for APPROVE; ask for APPROVE or a drop, then save" };
@@ -938,7 +995,7 @@ export function save(root, message, { covers = false, trailers = [] } = {}) {
   if (!covers) { const back = restoredNotice(guardProtected(root)); if (back) logActivity(root, "save", back.split(".")[0]); }
   const paths = covers ? COVER_PATHS : savePathsFor(root);
   const files = unsavedChanges(root, paths);
-  if (!files.length && !trailers.length) { const large = covers ? [] : largeUnsaved(root); return { ok: true, note: covers ? "nothing to save: no cover changed" : large.length ? `nothing else to save\n${largeNote(large)}` : "nothing to save: everything is committed", files, large }; }
+  if (!files.length && !trailers.length) { const large = covers ? [] : largeUnsaved(root); return { ok: true, note: covers ? "nothing to save: no cover changed" : large.length ? `nothing else to save\n${largeNote(large, root)}` : "nothing to save: everything is committed", files, large }; }
   // save pushes in the foreground below; a background push from commit would race it for the ref.
   const subject = String(message || (files.length ? "save" : "why: placed files")).split("\n")[0].slice(0, 120);
   const r = commit(root, files.length ? paths : [], trailers.length ? `${subject}\n\n${trailers.join("\n")}` : subject, { always: true, push: false, allowEmpty: !files.length });
@@ -946,10 +1003,11 @@ export function save(root, message, { covers = false, trailers = [] } = {}) {
   const git = (...a) => execFileSync("git", ["-C", root, ...a], { encoding: "utf8", stdio: "pipe" }).trim();
   const hash = git("rev-parse", "--short", "HEAD");
   let pushed = "no remote, local only";
-  try { const remote = pushRemote(git("remote")); if (remote) { execFileSync("git", ["-C", root, ...PUSH, remote, "HEAD"], { stdio: "pipe", timeout: 30000 }); pushed = `pushed to ${remote}`; } }
-  catch (e) { pushed = `commit is local; push failed: ${String(e.stderr || e.message).trim().split("\n")[0].slice(0, 160)}`; }
+  let remote = "";
+  try { remote = pushRemote(git("remote")); if (remote) { execFileSync("git", ["-C", root, ...PUSH, remote, "HEAD"], { stdio: "pipe", timeout: 30000 }); pushed = `pushed to ${remote}`; recordPush(root, { ok: true, remote }); } }
+  catch (e) { const why = String(e.stderr || e.message).trim().split("\n")[0].slice(0, 160); pushed = `commit is local; push failed: ${why}`; if (remote) recordPush(root, { ok: false, remote, error: why }); }
   logActivity(root, "save", `saved ${hash}: ${files.length} file(s), ${pushed}`);
-  const large = largeUnsaved(root), left = large.length ? `\n${largeNote(large)}` : "";
+  const large = largeUnsaved(root), left = large.length ? `\n${largeNote(large, root)}` : "";
   return { ok: true, note: `saved ${hash}: ${files.length} file(s)\n${files.map(f => `${f.state} ${f.path}`).join("\n")}\n${pushed}${left}`, hash, files, pushed, large };
 }
 /* ---------- the protected files, without a write gate ----------
@@ -1073,28 +1131,44 @@ export function recordRunThread(root, kind, input) {
    one still links. foreign: the thread belongs to another project (null when unknown). */
 export const THREAD_URL = id => `codex://threads/${id}`;
 // Source strings split only at the provider delimiter. URLs keep their query, commas and fragment.
-// A connector-provided bare URL is also accepted; opaque IDs still need a provider.
+// A connector-provided bare URL is also accepted; opaque IDs still need a provider. A source can also
+// be an object {kind, account?, ref, url?} (or that object as JSON text, for the --source flag): the
+// way to name the mailbox, workspace or portal a record lives in. One entry per record: kind, account
+// and ref are the identity, and a repeat that differs only in url keeps the first url.
 export function parseSources(input = []) {
   const entries = Array.isArray(input) ? input : [input];
   const unique = new Map();
-  for (const value of entries) {
-    if (typeof value !== "string") throw new Error("sources must contain strings: provider:reference or a direct URL");
-    const text = value.trim();
-    let kind, ref;
-    if (/^https?:\/\//i.test(text)) { kind = "url"; ref = text; }
-    else {
-      const colon = text.indexOf(":");
-      if (colon < 1) throw new Error("source needs a provider:reference or a direct URL");
-      kind = text.slice(0, colon).trim(); ref = text.slice(colon + 1).trim();
-    }
+  for (let value of entries) {
+    if (typeof value === "string" && /^\s*\{/.test(value)) { try { value = JSON.parse(value); } catch { throw new Error("source object is not valid JSON: use {\"kind\": ..., \"ref\": ...} or provider:reference"); } }
+    let kind, ref, account, url;
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const extra = Object.keys(value).filter(k => !["kind", "account", "ref", "url"].includes(k));
+      if (extra.length) throw new Error(`source object takes kind, account, ref and url, not ${extra.join(", ")}`);
+      if (typeof value.kind !== "string" || typeof value.ref !== "string") throw new Error("source object needs a non-empty kind and ref");
+      kind = value.kind.trim(); ref = value.ref.trim();
+      if (value.account !== undefined && value.account !== null) { if (!accountOK(value)) throw new Error("source account must be a non-empty string when given"); account = value.account; }
+      if (value.url !== undefined && value.url !== null) { if (!urlOK(value)) throw new Error("source url must be an http or https link when given"); url = value.url; }
+    } else if (typeof value === "string") {
+      const text = value.trim();
+      if (/^https?:\/\//i.test(text)) { kind = "url"; ref = text; }
+      else {
+        const colon = text.indexOf(":");
+        if (colon < 1) throw new Error("source needs a provider:reference or a direct URL");
+        kind = text.slice(0, colon).trim(); ref = text.slice(colon + 1).trim();
+      }
+    } else throw new Error("sources must contain strings (provider:reference or a direct URL) or {kind, account, ref} objects");
     if (!kind || !ref) throw new Error("source needs a non-empty provider and reference");
-    unique.set(JSON.stringify([kind, ref]), { kind, ref });
+    for (const n of normalizeSource({ kind, account, ref, url })) if (n.kind && n.ref) {
+      const key = JSON.stringify([n.kind, n.account || "", n.ref]), had = unique.get(key);
+      if (had) { if (!had.url && n.url) had.url = n.url; } else unique.set(key, n);
+    }
   }
   return [...unique.values()];
 }
 /* Sources as text, for the model to hand over: a Codex thread carries its link so a decision can be
-   traced back to the conversation it came from. The page links them instead (threadHtml). */
-export const sourceText = source => (source || []).map(s => s.kind === "codex" ? `codex:${s.ref} (${THREAD_URL(s.ref)})` : `${s.kind}:${s.ref}`).join(", ");
+   traced back to the conversation it came from, and a record its direct link when the note kept one.
+   The page links them instead (threadHtml). */
+export const sourceText = source => (source || []).map(s => s.kind === "codex" ? `codex:${s.ref} (${THREAD_URL(s.ref)})` : `${s.kind}:${s.ref}${s.url && s.url !== s.ref ? ` (${s.url})` : ""}`).join(", ");
 export function resolveThread(id, root, { codexHome = process.env.CODEX_HOME || join(homedir(), ".codex") } = {}) {
   if (typeof id !== "string" || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(id)) return null;
   const out = { id, url: THREAD_URL(id), name: null, cwd: null, originator: null, foreign: null };
@@ -1192,6 +1266,8 @@ export function validateMemory(r) {
   if (!isStr(r.content)) errs.push("content required");
   if (/[\u2013\u2014\u2015\u2212]/.test(r.content || "")) errs.push("long dash in content; use a plain hyphen");
   if (!isList(r.source, s => s && isStr(s.kind) && isStr(s.ref))) errs.push("source must be a list of {kind, ref}");
+  else if (!r.source.every(accountOK)) errs.push("source account must be a non-empty string when given");
+  else if (!r.source.every(urlOK)) errs.push("source url must be an http or https link when given");
   if (!isList(r.actions, a => a && isStr(a.tool) && isStr(a.action))) errs.push("actions must be a list of {tool, action, ref?}");
   for (const k of ["supersedes", "retracts"]) if (r[k] !== null && !/^m_[0-9a-f]{6,12}$/.test(r[k] || "")) errs.push(`${k} must be a memory id or null`);
   if (!isList(r.tags, isStr)) errs.push("tags must be a list of strings");

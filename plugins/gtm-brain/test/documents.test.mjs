@@ -19,7 +19,7 @@ function brain() {
   execFileSync("git", ["init", "-q", root]); execFileSync("git", ["-C", root, "config", "commit.gpgsign", "false"]);
   execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "Reflow", "--one-liner", "returns automation", "--owner", "Marta Nowak <marta@reflow.io>", "--dashboard", "on-demand"], { cwd: root, env, stdio: "ignore" });
   // These tests are about the format; the starters setup writes since 0.33.10 have their own test below.
-  for (const f of ["icp.md", "voice.md", "design-system.md"]) execFileSync("git", ["-C", root, "rm", "-q", f]);
+  for (const f of ["icp.md", "voice.md", "design-system.md", "market.md"]) execFileSync("git", ["-C", root, "rm", "-q", f]);
   execFileSync("git", ["-C", root, "commit", "-qm", "format tests start from strategy.md alone"]);
   return root;
 }
@@ -276,14 +276,18 @@ test("upgrade refreshes a README a release wrote and keeps one the person edited
   assert.match(readFileSync(join(edited, "README.md"), "utf8"), /Our own note\./);
 });
 
-test("setup writes strategy, icp, voice and design-system as starters: not filled until someone writes in them, by hand or through document", () => {
+test("setup writes strategy, icp, voice, design-system and market as starters: not filled until someone writes in them, by hand or through document", () => {
   const root = trackBrain(realpathSync(mkdtempSync(join(tmpdir(), "gtm-brain-doc-starters-"))), P);
   execFileSync("git", ["init", "-q", root]); execFileSync("git", ["-C", root, "config", "commit.gpgsign", "false"]);
   execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "Reflow", "--one-liner", "returns automation", "--owner", "Marta Nowak <marta@reflow.io>", "--dashboard", "on-demand"], { cwd: root, env, stdio: "ignore" });
   const starters = docs.listDocuments(root).filter(d => docs.STARTERS.includes(d.slug));
-  assert.deepEqual(starters.map(d => [d.path, d.filled]), [["design-system.md", false], ["icp.md", false], ["strategy.md", false], ["voice.md", false]]);
-  assert.equal(execFileSync("git", ["-C", root, "ls-files", "icp.md", "voice.md", "design-system.md"], { encoding: "utf8" }).trim().split("\n").length, 3, "shared with the team");
+  assert.deepEqual(starters.map(d => [d.path, d.filled]), [["design-system.md", false], ["icp.md", false], ["market.md", false], ["strategy.md", false], ["voice.md", false]]);
+  assert.equal(execFileSync("git", ["-C", root, "ls-files", "icp.md", "voice.md", "design-system.md", "market.md"], { encoding: "utf8" }).trim().split("\n").length, 4, "shared with the team");
   assert.match(readFileSync(join(root, "voice.md"), "utf8"), /This is how Reflow sounds/);
+  const market = readFileSync(join(root, "market.md"), "utf8");
+  assert.match(market, /^kind: document$/m); assert.match(market, /^title: Market$/m); assert.match(market, /the market Reflow sells into/);
+  assert.doesNotMatch(market, /\{\{/, "every placeholder is filled");
+  assert.match(docs.documentsLine(root), /Market \[not filled\] \(market, competitors, positioning, pricing, battle cards, category\) -> market\.md/);
   const line = docs.documentsLine(root);
   assert.match(line, /Tone of voice \[not filled\] \(copy, outreach, emails, posts, landing pages\) -> voice\.md/);
   assert.match(line, /A not filled one is still its starter and holds no guidance/);

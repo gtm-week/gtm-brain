@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Opt-in real Codex evaluation. Uses account sign-in, isolated config and scratch brains.
 // Model outcomes are evidence for these prompts only, never a guarantee of tool preference.
-import { mkdtempSync, readFileSync, writeFileSync, existsSync, mkdirSync, realpathSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync, existsSync, mkdirSync, realpathSync, cpSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,6 +16,7 @@ import { judge } from "./judge.mjs";
 import { contextRoutingCases } from './context-routing-cases.mjs';
 import { skillCases } from './skill-cases.mjs';
 import { icpRoutingCases } from './icp-cases.mjs';
+import { captureCases } from './capture-cases.mjs';
 
 // GTM_BRAIN_PLUGIN points the same cases at another build of the plugin: the baseline a before/after claim needs
 const plugin = process.env.GTM_BRAIN_PLUGIN ? process.env.GTM_BRAIN_PLUGIN.replace(/\/?$/, "/") : fileURLToPath(new URL("../../", import.meta.url));
@@ -25,7 +26,9 @@ const artifacts = mkdtempSync(join(scratchBase, "gtm-tool-routing-"));
 const fixtureProfile = join(artifacts, "fixture-profile");
 mkdirSync(fixtureProfile);
 const env = { ...process.env, CODEX_HOME: fixtureProfile, GTM_BRAIN_EVAL_PROFILE: fixtureProfile, PLUGIN_ROOT: plugin, GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_WATCH: "1" };   // no file watcher on a scratch brain
-const run = (root, operation, args) => execFileSync(process.execPath, [join(plugin, existsSync(join(plugin, "scripts", operation.split("/")[0])) ? "scripts" : "skills", operation), ".", ...args], { cwd: root, env, encoding: "utf8", timeout: 30000 });
+// setup and seeding scripts: 30 s was too short on a loaded machine (setup.sh alone took 28 s)
+const SETUP_TIMEOUT = Number(process.env.GTM_BRAIN_EVAL_SETUP_TIMEOUT_MS || 180000);
+const run = (root, operation, args) => execFileSync(process.execPath, [join(plugin, existsSync(join(plugin, "scripts", operation.split("/")[0])) ? "scripts" : "skills", operation), ".", ...args], { cwd: root, env, encoding: "utf8", timeout: SETUP_TIMEOUT });
 const readJSONL = path => existsSync(path) ? readFileSync(path, "utf8").split("\n").filter(Boolean).map(line => JSON.parse(line)) : [];
 const rows = (root, ctx = "offer") => lib.readMemories(root, ctx);
 const effective = (root, ctx = "offer") => lib.effectiveMemories(rows(root, ctx));
@@ -67,6 +70,9 @@ const cases = [
   ...hubspotWriteCases,
   ...skillCases,
   ...icpRoutingCases(),
+  ...captureCases,
+  // mentor-shapes.mjs adds its own cases (a module exporting `cases`) and may hand in a brain to copy
+  ...(process.env.GTM_BRAIN_EVAL_CASES ? (await import(resolve(process.env.GTM_BRAIN_EVAL_CASES))).cases : []),
   { name: 'dashboard-chrome', workflow: 'gtm-brain-use-brain',
     prompt: 'Open the brain dashboard. It is configured to use a separate Chrome window.',
     prepare: root => { const path = join(root, 'brain', 'admin.md'); writeFileSync(path, readFileSync(path, 'utf8').replace('dashboard: always', 'dashboard: always\ndashboard_browser: chrome')); },
@@ -285,7 +291,9 @@ async function judgeAnswer(scenario, { root, before, after, final, calls, channe
     '{"faithful": true|false, "complete": true|false, "score": 0..1, "issues": ["..."]}');
 }
 
-const selected = process.argv[2] ? cases.filter(c => c.name === process.argv[2] || (process.argv[2] === 'crm' && c.name.startsWith('crm-')) || (process.argv[2] === 'skills' && c.name.startsWith('skill-')) || (['attio-write', 'hubspot-write'].includes(process.argv[2]) && c.name.startsWith(`${process.argv[2]}-`))) : cases;
+const wanted = (process.argv[2] || "").split(",").filter(Boolean);
+const pick = (c, arg) => c.name === arg || (arg === 'capture' && c.name.startsWith('capture-')) || (arg === 'mentor' && c.name.startsWith('mentor-')) || (arg === 'crm' && c.name.startsWith('crm-')) || (arg === 'skills' && c.name.startsWith('skill-')) || (['attio-write', 'hubspot-write'].includes(arg) && c.name.startsWith(`${arg}-`));
+const selected = wanted.length ? cases.filter(c => wanted.some(arg => pick(c, arg))) : cases;
 if (!selected.length) throw new Error(`case must be one of ${cases.map(c => c.name).join(", ")}`);
 const report = { scope: "Real Codex with production MCP and a simulated computer-use competitor. No real UI, external connectors or Desktop configuration are exercised. No before/after improvement claim.", plugin, model, artifacts, cases: [] };
 console.log(`Artifacts: ${artifacts}`);
@@ -297,21 +305,28 @@ for (const scenario of selected) {
   try {
     // Artifacts may live under the contributor checkout. Give the fixture its own git
     // repository so setup can never adopt or configure the parent repository.
+    const sourceBrain = scenario.brain || process.env.GTM_BRAIN_EVAL_BRAIN;
+    if (sourceBrain) {   // a given brain is copied per case, never touched; work/ is disposable and rebuilt
+      cpSync(resolve(sourceBrain), root, { recursive: true, filter: src => !/^[\\/]work([\\/]|$)/.test(src.slice(resolve(sourceBrain).length)) });
+      if (!existsSync(join(root, ".git"))) execFileSync("git", ["init", "-q", root], { env });
+    } else {
     execFileSync("git", ["init", "-q", root], { env });
-    execFileSync("bash", [join(plugin, "scripts/gtm-brain-setup/setup.sh"), "--company", "Routing Fixture", "--one-liner", "Synthetic integration test", "--owner", "Marta Nowak <marta@example.test>", "--dashboard", "on-demand", ...(/^(hubspot-)?write-/.test(scenario.crm || "") ? ["--tools", scenario.provider || "attio"] : [])], { cwd: root, env, encoding: "utf8", timeout: 30000 });
+    execFileSync("bash", [join(plugin, "scripts/gtm-brain-setup/setup.sh"), "--company", "Routing Fixture", "--one-liner", "Synthetic integration test", "--owner", "Marta Nowak <marta@example.test>", "--dashboard", "on-demand", ...(/^(hubspot-)?write-/.test(scenario.crm || "") ? ["--tools", scenario.provider || "attio"] : [])], { cwd: root, env, encoding: "utf8", timeout: SETUP_TIMEOUT });
+    }
     const by = lib.readAdmin(root).team[0].handle;
-    seedBrain(root, by);
+    if (!sourceBrain) seedBrain(root, by);
     if (scenario.daily) lib.appendMemory(root, `personal-${by}`, { authors: [by], content: "Capture work conversations and refresh the primary calendar daily.", source: [{kind:"user",ref:by}], meeting_policy: {by,sources:["fixture-notes/work"],calendars:["fixture-calendar/primary"],include:["Customer conversations", "Internal work"],exclude:["Personal"],calendar_refresh:"daily"} });
     scenario.prepare?.(root, by);
     if (scenario.interaction) { run(root, "gtm-brain-contexts/contexts.mjs", ["--new", "pipeline", "Pipeline", "Deals in flight."]); lib.writeInteractions(root, [MOVE_DEAL]); }
-    run(root, "gtm-brain-load/load.mjs", ["offer", "--only"]);
+    const offerLoaded = !!cover(root, "offer");   // a given brain may have no offer context
+    if (offerLoaded) run(root, "gtm-brain-load/load.mjs", ["offer", "--only"]);
     let cwd = root;
     if (scenario.project) { cwd = mkdtempSync(join(tmpdir(), "gtm-routing-folder-")); run(root, "gtm-brain-project/project.mjs", ["--link", cwd, "--slug", "curriculum", "--title", "Curriculum", "--contexts", "icp"]); }
     const allRows = r => lib.listContexts(r).flatMap(c => c.memories);
     const before = allRows(root); const channelsBefore = channels(root);
     writeFileSync(join(artifacts, `${scenario.name}-before.json`), JSON.stringify(before, null, 2));
     const onboardingContext = scenario.onboarding ? `\n\nSession context from GTM Brain:\n${lib.onboardingInstruction(root)}\nOwning workflow: ${join(plugin, "skills/gtm-brain-start/SKILL.md")}` : "";
-    const prompt = `This is a synthetic GTM Brain company brain at ${root}. You work for Marta Nowak, confirmed handle ${by}${scenario.project ? "; this chat is in a linked project folder" : "; offer is loaded"}. Use only this synthetic brain and plugin workflow instructions. Do not read real account data, assistant archives or other company files; report out-of-scope steps instead. Use the available application capabilities to complete the request. The plugin build under test is ${plugin}; use its skills/${scenario.workflow || "gtm-brain-use-brain"}/SKILL.md and its referenced procedures for this evaluation.${onboardingContext}\n\n${scenario.daily ? dailyRefreshPrompt(root, by) : scenario.prompt}`;
+    const prompt = `This is a synthetic GTM Brain company brain at ${root}. You work for ${lib.readAdmin(root).team[0].name || "Marta Nowak"}, confirmed handle ${by}${scenario.project ? "; this chat is in a linked project folder" : offerLoaded ? "; offer is loaded" : ""}. Use only this synthetic brain and plugin workflow instructions. Do not read real account data, assistant archives or other company files; report out-of-scope steps instead. Use the available application capabilities to complete the request. The plugin build under test is ${plugin}; use its skills/${scenario.workflow || "gtm-brain-use-brain"}/SKILL.md and its referenced procedures for this evaluation.${onboardingContext}\n\n${scenario.daily ? dailyRefreshPrompt(root, by) : scenario.prompt}`;
     writeFileSync(join(artifacts, `${scenario.name}-prompt.txt`), prompt);
     console.log(`Running ${scenario.name} in ${root}`);
     const args = ["exec", "--ignore-user-config", "--ephemeral", "--json", "--sandbox", "read-only", "-C", cwd, "-m", model, ...(scenario.project ? ["--skip-git-repo-check"] : []),
@@ -336,6 +351,9 @@ for (const scenario of selected) {
     });
     const records = readJSONL(trace), calls = records.filter(r => r.kind === "call"), asked = records.filter(r => r.kind === "question");
     const elapsed_ms = Date.now() - agentStarted;
+    // codex exec --json reports usage on turn.completed; summed over the turns of the run
+    const tokens = readFileSync(events, "utf8").split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(e => e?.type === "turn.completed" && e.usage)
+      .reduce((t, e) => ({ input: t.input + (e.usage.input_tokens || 0), cached: t.cached + (e.usage.cached_input_tokens || 0), output: t.output + (e.usage.output_tokens || 0) }), { input: 0, cached: 0, output: 0 });
     const tool_timings = calls.map(c => { const end = records.find(r => r.kind === "result" && r.id === c.id && r.tool === c.tool); return { tool: c.tool, elapsed_ms: end ? Date.parse(end.at) - Date.parse(c.at) : null }; });
     const after = allRows(root);
     writeFileSync(join(artifacts, `${scenario.name}-after.json`), JSON.stringify(after, null, 2));
@@ -349,7 +367,7 @@ for (const scenario of selected) {
     if (/^(hubspot-)?write-/.test(scenario.crm || '') && verdict.error) checks.judge = false;
     checks.build = records.some(r => r.kind === 'build' && r.server === join(plugin, 'server/server.mjs'));
     const status = Object.values(checks).every(Boolean) ? "pass" : "fail";
-    report.cases.push({ name: scenario.name, status, checks, exit: result.code, timedOut: result.timedOut, elapsed_ms, tool_timings, ...(/^(hubspot-)?write-/.test(scenario.crm || "") ? { [scenario.provider || "attio"]: scenario.provider === "hubspot" ? hubspotMetrics(calls) : attioMetrics(calls), fixture_errors: records.filter(r => r.kind === "result" && r.tool?.startsWith(`${scenario.provider || "attio"}_`) && r.result?.error).length } : {}), judge: verdict, tools: calls.map(c => c.tool), asked: asked.map(q => ({ question: q.message, options: q.options, answered: q.answered })), brain: root, trace, events, final });
+    report.cases.push({ name: scenario.name, status, checks, exit: result.code, timedOut: result.timedOut, elapsed_ms, tokens, tool_timings, ...(/^(hubspot-)?write-/.test(scenario.crm || "") ? { [scenario.provider || "attio"]: scenario.provider === "hubspot" ? hubspotMetrics(calls) : attioMetrics(calls), fixture_errors: records.filter(r => r.kind === "result" && r.tool?.startsWith(`${scenario.provider || "attio"}_`) && r.result?.error).length } : {}), judge: verdict, tools: calls.map(c => c.tool), asked: asked.map(q => ({ question: q.message, options: q.options, answered: q.answered })), brain: root, trace, events, final });
     for (const q of asked) console.log(`  asked: "${q.message}" ${JSON.stringify(q.options)} -> ${JSON.stringify(q.answered)}`);
     console.log(`${scenario.name}: ${status} ${JSON.stringify(checks)}${result.timedOut ? "  TIMED OUT" : result.code ? `  exit ${result.code}` : ""}  tools: ${calls.map(c => c.tool).join(" > ") || "none"}${verdict.skipped ? `  judge: skipped (${verdict.skipped})` : verdict.error ? `  judge: ${verdict.error}` : `  judge: ${verdict.score} ${(verdict.issues || []).join("; ")}`}`);
   } catch (error) { report.cases.push({ name: scenario.name, status: "fail", error: error.message, brain: root }); console.error(`${scenario.name}: ${error.message}`); }

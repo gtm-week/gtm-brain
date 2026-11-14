@@ -45,7 +45,7 @@ Before producing copy, outreach, posts, landing pages, creatives, proposals, a d
 read the document that applies (the opening lines and `query` (status) list the documents at the
 brain root with what each applies to) and follow it, saying which one in one line; AGENTS.md
 rule 11. Adding, filling or changing one: follow [documents](references/documents.md). Setup
-writes `strategy.md`, `icp.md`, `voice.md` and `design-system.md` as starters; one shown as
+writes `strategy.md`, `icp.md`, `voice.md`, `design-system.md` and `market.md` as starters; one shown as
 `[not filled]` holds no guidance yet.
 
 What the brain keeps about each person, organization and product, and the relationship types,
