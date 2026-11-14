@@ -102,7 +102,8 @@ export async function generate({ shape = "small", out, seed = 1, gold: goldPath 
     if (NICK[first] && chance(0.6)) { const alias = `${NICK[first]} ${name.split(" ").slice(1).join(" ")}`; if (!used.has(alias.toLowerCase())) { used.add(alias.toLowerCase()); e.aliases.push(alias); } }
   }
   // any kind SCHEMA.md lists that this generator has no names for still gets entities
-  const otherKinds = kinds.filter(k => !["person", "organization", "product"].includes(k)), others = {};
+  // meetings are entities too, but they come from the captured meetings below, never from a name list
+  const otherKinds = kinds.filter(k => !["person", "organization", "product", "meeting"].includes(k)), others = {};
   for (const k of otherKinds) { others[k] = []; for (let i = 0; i < Math.max(5, Math.round(cfg.products / 2)); i++) others[k].push(addEntity(`${k[0].toUpperCase()}${k.slice(1)} ${ORG_A[i % ORG_A.length]} ${i + 1}`, k)); }
 
   // the hub: a partner-subtype organization with many relations and a partnership that ended
@@ -395,6 +396,17 @@ export async function generate({ shape = "small", out, seed = 1, gold: goldPath 
       renamed: { id: canon(traps.renamed.entity.id), before: traps.renamed.before, after: traps.renamed.after }, merged: { survivor: canon(traps.merged.survivor.id), retired: traps.merged.duplicate.id, name: traps.merged.survivor.name, alias: traps.merged.duplicate.name },
       size: traps.size, relative: traps.relative.map(e => e.id) };
   }
+  // entity pages by kind (0.35): an index per kind folder, the relation-to-us filter, a meeting's entity
+  gold.layout = { indexes: [...new Set(["person", "organization", "product", "meeting", ...gold.entities.map(e => e.kind)])].map(k => lib.kindPagePath(k, "x", "e_0000000000000000").replace(/[^/]+$/, "index.md")) };
+  const latestCustomer = new Map(gold.customers.map(c => [c.id, c.status]));
+  const customerOrgs = gold.customers.filter(c => c.status === "customer" && gold.entities.find(e => e.id === c.id)?.kind === "organization").map(c => c.id);
+  const notCustomer = gold.customers.filter(c => c.status === "not_customer").map(c => c.id);
+  // a person whose current employer is a customer and who has no relation of their own
+  const own = new Set([...gold.customers.map(c => c.id), ...gold.relations.filter(r => r.to === "us" && r.status === "current").map(r => r.from), ...gold.relations.filter(r => r.type === "works_at" && r.status === "current" && latestCustomer.get(r.to) !== "customer").map(r => r.from)]);
+  const staffer = gold.relations.find(r => r.type === "works_at" && r.status === "current" && latestCustomer.get(r.to) === "customer" && !own.has(r.from) && gold.entities.find(e => e.id === r.from)?.kind === "person");
+  gold.filters = { customers: customerOrgs, not_customers: notCustomer, staffer: staffer ? { id: staffer.from, name: staffer.from_name, employer: staffer.to } : null };
+  const firstMeeting = meetingEvents.find(m => !m.planned && m.staff.length);
+  gold.meeting_entities = { count: meetingEvents.length, first: firstMeeting ? { id: lib.meetingEntityId(firstMeeting.anchor.id), title: firstMeeting.title, attendee: firstMeeting.staff[0].name, outcome: firstMeeting.outcome.id } : null };
   // one commit, so the folder is an ordinary brain (lib.save commits even with GTM_BRAIN_NO_COMMIT)
   const saved = lib.save(root, `e2e fixture: ${shape} (seed ${seed})`);
   if (!saved.ok) log(`save: ${saved.note}`);
