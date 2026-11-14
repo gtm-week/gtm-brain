@@ -175,3 +175,43 @@ Legacy v1 files remain readable without modification. On upgrade or the next ide
 original v1 files are backed up under `work/entity-migration/`, then updated to v2 with stable
 IDs, file paths and handwritten Markdown preserved. Company and team kinds retain their
 meaning as organization subtypes. Memories and their source records are never rewritten.
+
+## From the brain rules: identity, briefs and edits
+
+The files in `brain/entities/` form the global identity registry and readable entity briefs.
+Each Markdown file holds a stable ID, canonical name, kind, aliases, contacts and external
+references, plus a generated overview, per-context state, relationships, the full timeline
+and source links. Create identities with `add_name`; use `update_entity` by stable ID for
+renaming or replacing, adding and removing metadata. Facts remain in context memories.
+An alias cannot merge existing entities. Follow the entity procedure: `merge_entities`
+previews affected identities, contexts and conflicts; apply with its fresh `as_of` only for a
+confirmed match. `archive_entity` hides an identity from active lists; `undo: true` restores it.
+Archive preserves memory references and direct lookup. `undo_entity_merge` previews and
+reverses a recorded merge using its `merge_id`. Later identity or handwritten edits block
+automatic reversal; memories captured under the survivor ID stay there. Recovery records
+live in `brain/entities/.history/` and travel with the brain. Do not erase identities or history.
+New memories reference stable entity IDs as well as names. Historical memories are never
+rewritten during migration or identity merges. Legacy registries are read until the first
+write or upgrade migrates them, with originals backed up under `work/entity-migration/`.
+Use `query` (entities) to resolve a name or ID. Use `query` with `entity` to read its global brief,
+optionally with `context` for one perspective; this does not load context instructions.
+For CRM lookups and misspellings, follow the use-brain workflow's entity-search reference.
+`query` (entities) returns spelling candidates with reasons and source pointers; similarity is never
+identity confirmation. Prefer the connected CRM's fuzzy/text search over name equality.
+Zero results never authorize merging. Answer from retained evidence when sufficient and
+check only the source needed for current state, without scanning every connected tool.
+Briefs are refreshed by the background run through the entity compilation procedure; in a
+chat, read the evidence with `query` (memories by entity) and queue the run when asked. Every compiled claim cites effective memory IDs; context claims stay in their
+context. Interpretations are labeled. An evidence fingerprint detects new, corrected,
+withdrawn and backdated notes. Stale synthesis is hidden until refreshed.
+Entity files are editable. Keep their expected frontmatter format; handwritten Markdown is
+preserved during refreshes and shown separately from cited context evidence. If parsing
+fails, explain the file and field, propose a minimal repair, and preserve the original text.
+Apply the repair when requested; do not silently fix it in a background run. To update facts
+across contexts, also record corrections as a memory in the originating context.
+An entity mention creates an identity reference, never an automatic context.
+Entities are formal objects, queryable through `list_objects`, `describe_object` and `query`.
+Use `query` on entities, then its stable ID in a memories query with `filters.entities`.
+Customer, partner, competitor and employer are contextual relationships supported by memories.
+Deals and meetings remain context information, not objects of their own. Memories retain customer relationships, source links and scoped coverage, plus other findings; a context's
+cover says which tool to read live.
