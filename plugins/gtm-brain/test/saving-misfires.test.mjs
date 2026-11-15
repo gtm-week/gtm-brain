@@ -290,3 +290,25 @@ test("said in other words: shown the kept note once, saved when sent again; anot
   assert.match(rel.stdout, /the note is saved; its relationship was not recorded/);
   assert.match(b.live().at(-1).content, /Nina Vogel joined Circuit/);
 });
+
+test("a reworded fact anchored by a code is shown as already recorded; a note worded as a correction is asked to supersede", () => {
+  const b = brain();
+  // s08: a code anchors the fact, no person named, other words for the same terms, another context guessed
+  assert.equal(b.remember("--context", "offer", "--content", "WEEK50 gives 50% off any ticket, with unlimited uses and no expiry.").status, 0);
+  const n = b.live().length;
+  const again = b.remember("--content", "WEEK50 takes half off, works on every ticket, never expires and has no usage cap.");
+  assert.match(again.stdout + again.stderr, /not saved yet: this looks already recorded in .*: "WEEK50 gives 50% off/);
+  assert.equal(b.live().length, n, "no second copy");
+  // s06: the new time with the old one beside it, no supersedes
+  assert.equal(b.remember("--context", "company", "--content", "The 9x workshop on 17 November 2026 runs 10:00-14:00 in the main hall.").status, 0);
+  const m = b.live().find(r => /runs 10:00-14:00/.test(r.content)), before = b.live().length;
+  const fix = b.remember("--context", "company", "--content", "The 9x workshop on 17 November 2026 is 13:00-17:00, replacing 10:00-14:00. The agenda is unchanged.");
+  assert.match(fix.stdout + fix.stderr, new RegExp(`not saved yet: this reads as a correction of ${m.id} in .*Send it again with supersedes: ${m.id}`));
+  assert.equal(b.live().length, before, "nothing written before the model answers");
+  const done = b.remember("--context", "company", "--supersedes", m.id, "--content", "The 9x workshop on 17 November 2026 is 13:00-17:00, replacing 10:00-14:00. The agenda is unchanged.");
+  assert.equal(done.status, 0, done.stderr + done.stdout);
+  assert.ok(!b.live().some(r => r.id === m.id), "the old time is no longer in force");
+  // a second event on another day, worded plainly, is not a correction
+  const other = b.remember("--context", "company", "--content", "The 9x workshop repeats on 24 November 2026, 10:00-14:00, in the main hall.");
+  assert.equal(other.status, 0, other.stderr + other.stdout);
+});

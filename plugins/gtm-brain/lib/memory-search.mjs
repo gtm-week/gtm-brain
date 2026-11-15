@@ -505,7 +505,8 @@ export function answerText(index, root, question, { filters = {}, limit, project
   if (r.rows.length) {
     const ask = askSourceLines(root, notes, { day: at => lib.localDateTime(at).slice(0, 10) });
     if (ask.length) out.push('', ...ask);
-    out.push('', 'Answer from these notes; a second search is needed only for a different question.');
+    // the reply is as long as the question needs (ALL-716: answers were as long as before the round, 451 characters at the median)
+    out.push('', 'Answer from these notes; a second search is needed only for a different question. Keep the reply to what was asked: one to three sentences with the fact, its date and who or what it came from. No list of everything found and no offers, unless the person asks for more.');
   }
   return out.join('\n');
 }

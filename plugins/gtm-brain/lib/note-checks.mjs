@@ -100,7 +100,10 @@ export function restatement(pool, note, { speakers = [], cache = new Map() } = {
     // after "agreed to EUR 600") is another fact and is saved as it is.
     // Only for a note that states a value (an amount, a date, a count): without one there is nothing to compare,
     // and "approved the annual discount" beside "approved the volume discount" would be held for nothing.
-    if (mine.values.size && covered && quiet && sameWho && ov >= 0.34 && ov < 0.7 && (!cand || ov > cand.ov)) cand = { m, ov };
+    // A shared code (a coupon, a ticket) anchors the fact by itself, whatever the wording and with no person named
+    // ("half off" for "50%", "no usage cap" for "unlimited uses": benchmark case s08).
+    // With a shared code the denials need not match word for word ("never expires" for "no expiry"): the model reads both.
+    if (mine.values.size && covered && (sharedCode ? ov < 0.6 : (quiet && sameWho && ov >= 0.34 && ov < 0.7)) && (!cand || ov > cand.ov)) cand = { m, ov };
     // the same fact with another value: one type whose values all differ from the kept note's
     const changable = !m.meeting && !m.meeting_id && !m.asset && !m.customer && !m.relation;
     // the same fact, not two of a kind: a shared code, most of the words, or another value in common with all
@@ -116,8 +119,29 @@ export function restatement(pool, note, { speakers = [], cache = new Map() } = {
   }
   // a note that rests on a source (an email, a CRM record) stays true of its moment: the new note is saved beside it, and the reply names it
   if (best) return { changed: best.m, type: best.type, was: best.was, now: best.now, auto: !evidence(best.m.source).length };
-  return cand ? { candidate: cand.m } : null;
+  if (cand) return { candidate: cand.m };
+  // Worded as a correction ("13:00-17:00, replacing 10:00-14:00") but sent as a new note: the kept note that holds
+  // the old value. The changed-value test above cannot see it, because the new note repeats the old value beside
+  // the new one (benchmark case s06: both notes stayed in force). Looked for only when the wording says so.
+  if (CORRECTS.test(text) && mine.values.size) {
+    let target = null;
+    for (const m of pool) {
+      if (!plain(m) || m.meeting || m.asset || m.customer || m.relation) continue;
+      const f = facts(m);
+      let shared = 0, added = 0;
+      for (const [t, vs] of mine.values) { const theirs = f.values.get(t); if (!theirs) continue; for (const v of vs) { if (theirs.has(v)) shared++; else added++; } }
+      if (!shared || !added) continue;   // it must repeat a value the kept note has and bring one it lacks
+      const ov = overlap(mine.words, f.words), named = mine.people.size > 0 && subset(mine.people, who(m.people));
+      if (ov < 0.2 && !named && shared < 2) continue;   // tied to the kept note by its words, its people, or two values it repeats
+      const score = shared + ov + (named ? 1 : 0);
+      if (!target || score > target.score || (score === target.score && Date.parse(m.at) > Date.parse(target.m.at))) target = { m, score };
+    }
+    if (target) return { corrects: target.m };
+  }
+  return null;
 }
+const CORRECTS = /\b(replac(?:es|ed|ing)|instead of|rather than|no longer|not anymore|chang(?:ed|es) (?:from|to)|mov(?:ed|es) (?:from|to)|push(?:ed)? (?:back|forward) (?:from|to)|correct(?:ion|ed|ing)|was wrong|it is now|is now|not .{1,40}? but)\b/i;
+export const correctsLine = (m, title) => `not saved yet: this reads as a correction of ${m.id} in ${title}: "${shown(m.content)}". Send it again with supersedes: ${m.id} so the old note stops being in force (it is saved in ${title}, where that note lives). If it is a separate fact and the old note stays true, send it again as it is.`;
 export const candidateLine = (m, title) => `not saved yet: this looks already recorded in ${title}, ${m.id}: "${shown(m.content)}". If it adds nothing, tell the person it is already recorded and save nothing. If it adds or changes something, call remember again with the same content (it is saved then), or with supersedes: ${m.id} when it corrects that note.`;
 
 export const keptLine = (m, title) => `already kept in ${title}, ${m.id}: "${shown(m.content)}". Nothing written; tell the person it was already there.`;

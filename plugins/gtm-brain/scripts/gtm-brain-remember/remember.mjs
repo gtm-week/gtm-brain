@@ -371,6 +371,11 @@ for (let i = 0; i < entries.length; i++) {
       if (!shownBefore(e.content)) { noteShown(e.content); held.push({ n, why: checks.candidateLine(found.candidate, titleOf(found.candidate.context)), mentions: [], ask: false }); continue; }
       found = null;
     }
+    // worded as a correction, sent without supersedes: the kept note it corrects is shown once
+    if (found?.corrects) {
+      if (!shownBefore(e.content)) { noteShown(e.content); held.push({ n, why: checks.correctsLine(found.corrects, titleOf(found.corrects.context)), mentions: [], ask: false }); continue; }
+      found = null;
+    }
     if (found?.changed && found.auto && (!(e.meeting || e.meeting_id) || found.changed.context === ctx)) { changes = found; e.supersedes = found.changed.id; ctx = found.changed.context; }
     else if (found?.changed) changes = { ...found, beside: true };
   }
