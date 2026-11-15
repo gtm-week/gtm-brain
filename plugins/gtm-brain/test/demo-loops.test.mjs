@@ -124,6 +124,10 @@ test("demo stub checks: the tool was called with the brain's criteria, its data 
   const good = evidence({ stub: [enrich], toolsList: marked, names: lea, added: [fromTool("Fernbrook Outdoor: 85 stores in Germany and Austria; Head of Operations Lea Hoffmann.")] });
   assert.equal(stubStep("o2-enrich").check(good), true);
   assert.match(stubStep("o2-enrich").check({ ...good, stub: [] }), /company_enrich was not called/);
+  // live run 2026-11-15: the search step had saved the store count, so the enrichment turn did not save it again and
+  // failed on "store count not saved". What only the enrichment tells (returns, systems, the contact) is what counts.
+  assert.equal(stubStep("o2-enrich").check({ ...good, added: [fromTool("Fernbrook Outdoor enrichment: returns are handled by hand in each store; Shopify Plus online. Contact: Lea Hoffmann, Head of Operations.")] }), true);
+  assert.match(stubStep("o2-enrich").check({ ...good, added: [fromTool("Contact at Fernbrook Outdoor: Lea Hoffmann.")] }), /what the enrichment found/);
   assert.match(stubStep("o2-enrich").check({ ...good, toolsList: {} }), /tools list/);
   assert.match(stubStep("o2-enrich").check({ ...good, added: [{ ...good.added[0], source: [{ kind: "user", ref: "marta" }] }] }), /no note from the tool/);
   assert.match(stubStep("o2-enrich").check({ ...good, commands: ["curl https://api.example.test"] }), /network|send/);

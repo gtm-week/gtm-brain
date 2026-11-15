@@ -218,7 +218,8 @@ for (const k of Object.keys(state)) {
 const CHAT = new Set(["user", "codex", "claude", "memory", "file", "url", "web", "document", "manual", "person"]);
 const me = lib.currentPerson(root);
 for (const r of me ? brainText.recs.filter(r => (r.authors || []).includes(me)) : []) for (const t of r.tools || []) {
-  const base = String(t).split(".")[0].trim(), nb = norm(base);
+  // the server, not its tool: notes spell it server.tool, server:tool or server/tool, and one server is one row
+  const base = String(t).split(/[.:/]/)[0].trim(), nb = norm(base);
   if (nb.length < 3 || COMMON.has(nb) || DEV.has(base.toLowerCase()) || findPlugin(base).plugin) continue;
   if (!(r.source || []).some(s => s && !CHAT.has(String(s.kind || "").toLowerCase()) && norm(s.kind).length >= 3 && (nb.startsWith(norm(s.kind)) || norm(s.kind).startsWith(nb)))) continue;
   const k = entryKey(state, base), s = state[k] || {};

@@ -104,6 +104,17 @@ test("a teammate's note from a tool does not list it here, and a tool with a plu
   assert.equal(Object.values(f.state()).find(x => x && x.tool === "gtm_test_tools")?.used, "a note came from it", "the person's own note counts");
 });
 
+// Live run 2026-11-15: Codex wrote tools as "gtm-test-tools:company_search", "gtm-test-tools:buying_signals" and
+// "gtm-test-tools:company_enrich", and the page listed one server as three tools, each offered for admin.md.
+test("one server is one row, however the notes spell its tools", t => {
+  const f = brain(t, ["HubSpot"]);
+  for (const tool of ["gtm-test-tools:company_search", "gtm_test_tools.company_enrich", "gtm-test-tools/buying_signals", "gtm-test-tools"])
+    lib.appendMemory(f.root, "icp", { authors: ["ann-lee"], content: `Heron Home: 46 stores (${tool}).`, at: "2026-11-15T10:00:00Z", source: [{ kind: "gtm-test-tools", ref: "companies/heron-home" }], tools: [tool] });
+  const out = f.check(), rows = Object.values(f.state()).filter(x => x && x.used === "a note came from it");
+  assert.deepEqual(rows.map(x => x.tool), ["gtm-test-tools"], JSON.stringify(f.state()));
+  assert.equal(out.match(/a note came from it/g).length, 1, out);
+});
+
 // codex plugin list can fail (offline, a slow start): the last list stands. A read test recorded since then still
 // turns "a note came from it" into a tested read.
 test("a read test recorded after a note listed the tool shows as tested, also when codex plugin list fails", t => {

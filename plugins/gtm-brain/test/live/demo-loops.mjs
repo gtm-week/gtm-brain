@@ -228,7 +228,9 @@ const STUB = {
   "o2-enrich": { say: "Enrich Fernbrook Outdoor with the company enrichment tool and save what it found, including the person to write to.",
     shows: "enrichment called and saved with its source, the contact registered",
     check: x => viaStub(x, called(x, "company_enrich", a => /fernbrook/i.test(a.company || ""), "not asked for Fernbrook Outdoor"),
-      savedFromStub(x, /Lea Hoffmann/, "no note from the tool names Lea Hoffmann"), saved(x, /85/, "store count not saved"),
+      savedFromStub(x, /Lea Hoffmann/, "no note from the tool names Lea Hoffmann"),
+      // the search step may have saved the store count already: any company fact the enrichment returned counts, in words (a bare 85 also matches an id)
+      savedFromStub(x, /\b85 stores|1,?400 employees|by hand|any store|Shopify|in-house/i, "what the enrichment found about the company (stores, returns, systems) is not saved from the tool"),
       need(x.names.some(n => n.name === "Lea Hoffmann" && n.kind === "person"), "Lea Hoffmann is not a person in the registry"),
       need(x.names.some(n => n.name === "Lea Hoffmann" && n.emails.includes("lea.hoffmann@fernbrook-outdoor.example")) || x.added.some(m => m.content.includes("lea.hoffmann@fernbrook-outdoor.example")), "her email is kept nowhere")),
     fail: failureCheck("company_enrich", /Lea Hoffmann|85 stores|1,?400 employees/i) },
