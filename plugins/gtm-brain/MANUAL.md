@@ -321,7 +321,8 @@ person, company and note keeps its id.
 1. **Everyone on the team updates the plugin first.** In Codex, say "update GTM Brain". Without
    Codex: `codex plugin marketplace upgrade gtm-brain`, then `codex plugin add gtm-brain@gtm-brain`.
 2. **Quit and reopen Codex, then start a new chat in the brain folder.** A new chat alone is not
-   enough: the running app still holds the old plugin.
+   enough: the running app still holds the old plugin. An update started from the brain's chat
+   may already show the upgrade question; it changes nothing and is asked again in the new chat.
 3. **Read the first reply of that chat.** The first GTM Brain call refreshes what it can on its
    own and says so: "GTM Brain refreshed this brain's rules (AGENTS.md) from GTM Brain 0.34.x on
    its own". The old `AGENTS.md` is kept in `work/upgrades/before-<id>/`. It also refreshes
