@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { meetingCaptureStatus, toolKey } from "./brain.mjs";   // through brain.mjs: meetings.mjs imports it back
 import { normalizeKind } from "./pointers.mjs";
-import { populationPart, SYNC_WINDOW_DAYS } from "./population.mjs";
+import { populationPart, SYNC_WINDOW_DAYS, HOUSEKEEPING_HINT } from "./population.mjs";
 import { unadoptedPart } from "./documents.mjs";
 import { explainFailure } from "./summaries.mjs";
 import { captureHealth } from "./capture.mjs";
@@ -98,5 +98,5 @@ export function healthLine(root, overview) {
   const loose = unadoptedPart(root);
   if (loose) parts.push(loose);
   if (!parts.length) return null;
-  return `health: ${parts.join(" | ").replace(/\.$/, "")}. Say this if the person asks about meetings, sync, summaries, chat capture or how full the brain is, or something is missing; do not raise it otherwise.${loose ? " The base files part is the exception: say it once now, in one line, and offer to adopt it by asking what work it governs (document prepare with file)." : ""}`;
+  return `health: ${parts.join(" | ").replace(/\.$/, "")}. Say this if the person asks about meetings, sync, summaries, chat capture or how full the brain is, or something is missing; do not raise it otherwise.${population?.includes(HOUSEKEEPING_HINT) ? " Housekeeping starts only when the person asks for it: query (object housekeeping), then one item at a time with them; never start on it or count it out unasked." : ""}${loose ? " The base files part is the exception: say it once now, in one line, and offer to adopt it by asking what work it governs (document prepare with file)." : ""}`;
 }
