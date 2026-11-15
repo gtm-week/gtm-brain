@@ -161,7 +161,7 @@ test("page: Entities filters as you type, by kind and by relation, in plain word
   assert.match(p.node("#ent-kinds").innerHTML, /data-ent-kind="person"[^>]*>People<span>\d+<\/span>/); assert.match(p.node("#ent-kinds").innerHTML, />Companies<span>/);
   assert.doesNotMatch(p.node("#ent-kinds").innerHTML, />Events</, "a kind with nothing in it has no chip");
   fire(p, "input", { target: { id: "ent-q", value: "olka" } });   // an alias
-  assert.match(p.node("#ent-list").innerHTML, /Ola Kowalska/); assert.doesNotMatch(p.node("#ent-list").innerHTML, /Jan Zielinski/);
+  assert.match(p.node("#ent-list").innerHTML, /Ola(<\/mark>)? Kowalska/); assert.doesNotMatch(p.node("#ent-list").innerHTML, /Jan Zielinski/);
   assert.equal(p.node("#ent-count").textContent, `1 of ${all} shown`);
   fire(p, "input", { target: { id: "ent-q", value: "ACME.TEST" } });   // an email address
   assert.equal((p.node("#ent-list").innerHTML.match(/role="option"/g) || []).length, 1);

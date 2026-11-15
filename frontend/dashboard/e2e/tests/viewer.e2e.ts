@@ -1,8 +1,9 @@
-// The dashboard is a viewer: nothing on any page offers an edit or an action, nothing it sends writes, and
-// nothing it does shows as an error in the browser console.
+// The dashboard is a viewer with one exception, the document editor (a person opens a document and saves it,
+// through POST /document with the page's token). Nothing else on any page offers an edit or an action, nothing
+// the pages send while browsing writes, and nothing shows as an error in the browser console.
 import { test } from '@e2e-dev/web';
 import { expect } from 'e2e';
-import { fixture, TABS } from './fixture.ts';
+import { fixture, TABS, PLACES } from './fixture.ts';
 
 // A button's words that would change the brain from the page. Links are judged by where they go instead: a
 // prepared chat (codex://threads/new, the person presses Send in Codex), a brain file or a source, read-only.
@@ -12,19 +13,16 @@ const ACTION = /^(edit|save|delete|remove|approve|apply|submit|send|run|start|up
 async function visitAll({ app, screen, browser }: any, f: ReturnType<typeof fixture>, each: (where: string) => Promise<void>) {
   await app.open('/');
   const nav = screen.getByRole('navigation', 'Main navigation');
-  for (const tab of TABS) { await nav.getByRole('button', tab).tap(); await expect(screen.getByRole('heading', tab, { level: 1 })).toBeVisible(); await each(tab); }
-  await nav.getByRole('button', 'More').tap();
-  for (const sub of ['Overview', 'Explore', 'Help']) {
-    await screen.getByRole('navigation', 'More').getByRole('button', sub).tap();
-    await expect(screen.getByRole('navigation', 'More').getByRole('button', sub)).toHaveAttribute('aria-current', 'page');
-    await each(sub);
-  }
+  for (const place of PLACES) { await nav.getByRole('button', place).tap(); await expect(screen.getByRole('heading', place, { level: 1 })).toBeVisible(); await each(place); }
+  await nav.getByRole('button', 'Configuration').tap();
+  for (const part of [/^Rules/, /^What the brain records/, /^Company and team/]) { await screen.getByRole('tablist', 'Parts of the configuration').getByRole('tab', part).tap(); await each(`Configuration ${part}`); }
+  await screen.getByRole('button', 'Help').tap(); await expect(screen.getByRole('heading', 'Help', { level: 1 })).toBeVisible(); await each('Help');
   await screen.getByRole('button', 'Settings').tap(); await expect(screen.getByRole('heading', 'Settings', { level: 1 })).toBeVisible(); await each('Settings');
   await nav.getByRole('button', 'Entities').tap();
-  await browser.locator('[data-pe-kind="person"]').getByRole('button', f.person.name).tap();
-  await expect(screen.getByRole('heading', f.person.name, { level: 1 })).toBeVisible();
-  await screen.getByText('Evidence & history').tap();
-  await each('an entity page');
+  const search = screen.getByLabel('Find by name, company or email');
+  await search.fill(f.person.name); await search.press('Enter');
+  await expect(screen.getByRole('heading', f.person.name, { level: 2 })).toBeVisible();
+  await each('an entity');
 }
 
 test('nothing on the page offers an edit or an action, and nothing it requests writes', async ({ app, screen, browser }) => {
@@ -55,12 +53,19 @@ test('nothing on the page offers an edit or an action, and nothing it requests w
   expect(writes).toEqual([]);
 });
 
-test('the server behind the page refuses anything but a read', async ({ app, browser }) => {
+test('the server behind the page refuses anything but a read, and a save without the page\'s token', async ({ app, browser }) => {
   await app.open('/');
   for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) for (const path of ['/', '/data.json', '/file?path=RULES.md', '/entity?id=x']) {
     const status = await browser.evaluate(([m, p]: string[]) => fetch(p, { method: m, body: m === 'DELETE' ? undefined : '{}' }).then(r => r.status), [method, path]);
     expect({ method, path, status }).toEqual({ method, path, status: 405 });
   }
+  // the one write: only with this page's token; a guessed one, or none, is refused and nothing is written
+  for (const token of ['', '0'.repeat(64)]) {
+    const status = await browser.evaluate((t: string) => fetch('/document', { method: 'POST', headers: { 'content-type': 'application/json', 'x-gtm-brain-token': t }, body: JSON.stringify({ path: 'strategy.md', body: 'x', hash: '0'.repeat(64) }) }).then(r => r.status), token);
+    expect({ token, status }).toEqual({ token, status: 403 });
+  }
+  for (const method of ['PUT', 'PATCH', 'DELETE']) expect(await browser.evaluate((m: string) => fetch('/document', { method: m }).then(r => r.status), method)).toBe(405);
+  expect(await browser.evaluate(() => fetch('/search?q=x', { method: 'POST' }).then(r => r.status))).toBe(405);
 });
 
 test('the page shows no console errors on any tab', async ({ app, screen, browser }) => {

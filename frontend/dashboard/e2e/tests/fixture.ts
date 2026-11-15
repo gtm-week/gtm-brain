@@ -28,6 +28,8 @@ export function remember(f: Fixture, content: string): string {
 
 // The four tabs by pillar, as the navigation names them.
 export const TABS = ['Configuration', 'Entities', 'Memories', 'Workflows'] as const;
+// The whole navigation, in order: Overview is where the dashboard opens.
+export const PLACES = ['Overview', ...TABS] as const;
 
 export const KIND_TITLE: Record<string, string> = { person: 'People', organization: 'Organizations', product: 'Products', event: 'Events', tool: 'Tools' };
 export const kindTitle = (k: string) => KIND_TITLE[k] ?? k.charAt(0).toUpperCase() + k.slice(1).replace(/_/g, ' ') + 's';

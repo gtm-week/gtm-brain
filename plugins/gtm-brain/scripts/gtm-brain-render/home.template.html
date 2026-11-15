@@ -1199,13 +1199,16 @@ let exQ="",exKind="",exRel="",exSort="notes",exSel="",exActive=0,exRows=[],exFro
 try{const p=new URLSearchParams(String(location.hash||"").slice(1));if(p.get("view")==="entities"&&p.get("e"))exSel=p.get("e")}catch{}
 const entById=()=>exIndex||(exIndex=new Map((PL?.entities?.rows||[]).map(e=>[e.id,e])));
 const entHay=e=>{exHay||(exHay=new Map());let h=exHay.get(e.id);if(h===undefined){h=[e.name,...(e.aliases||[]),...(e.emails||[e.email||""]),e.company||""].join("\n").toLowerCase();exHay.set(e.id,h)}return h};
-const entMark=(text,q)=>{const s=String(text),i=q?s.toLowerCase().indexOf(q):-1;return i<0?esc(s):esc(s.slice(0,i))+`<mark class="ent-hit">${esc(s.slice(i,i+q.length))}</mark>`+esc(s.slice(i+q.length))};
+/* The filter is the page's one scorer (fzMatch, with the header search): typos, part words and word order all match. */
+const entMark=(text,q)=>{const m=q?fzMatch(q,[[text,1]]):null;return m?fzMark(text,m.marks).replace(/<mark>/g,'<mark class="ent-hit">'):esc(String(text))};
 function entFiltered(){
  const q=exQ.trim().toLowerCase(),counts={};let rows=[];
- for(const e of PL.entities.rows){if(q&&!entHay(e).includes(q))continue;if(exRel&&!(e.rel||[]).includes(exRel))continue;counts[e.kind]=(counts[e.kind]||0)+1;rows.push(e)}
+ const tokens=q?fzWords(q).map(x=>x.w):[],score=new Map();
+ for(const e of PL.entities.rows){if(tokens.length){const m=fzMatch(tokens,[[e.name,1],[(e.aliases||[]).join(" "),.9],[(e.emails||[e.email||""]).join(" "),.8],[e.company||"",.7]]);if(!m)continue;score.set(e.id,m.score)}if(exRel&&!(e.rel||[]).includes(exRel))continue;counts[e.kind]=(counts[e.kind]||0)+1;rows.push(e)}
  const total=rows.length;if(exKind)rows=rows.filter(e=>e.kind===exKind);
  const name=(a,b)=>a.name.localeCompare(b.name),recent=(a,b)=>String(b.last||"").localeCompare(String(a.last||""));
  rows.sort(exSort==="az"?name:exSort==="recent"?(a,b)=>recent(a,b)||name(a,b):(a,b)=>b.notes-a.notes||recent(a,b)||name(a,b));
+ if(tokens.length)rows.sort((a,b)=>score.get(b.id)-score.get(a.id));   // while filtering: the best match first
  return {rows,counts,total,q};
 }
 function entRowHtml(e,i,q){
@@ -1217,7 +1220,7 @@ function entDrawList(force){
  const span=Math.ceil(((typeof innerHeight==="number"&&innerHeight)||900)/ENT_ROW)+8,from=Math.max(0,Math.min(Math.max(0,n-span),Math.floor((box.scrollTop||0)/ENT_ROW)-4));
  if(!force&&from===exFrom)return;exFrom=from;const to=Math.min(n,from+span);
  box.setAttribute("aria-activedescendant",n?"ent-o-"+exActive:"");
- if(!n){const any=PL.entities.rows.length;box.innerHTML=`<div class="ent-none">${any?`<strong>${esc("Nothing matches")}</strong><p>${esc(exQ.trim()?`No name, company or email contains "${exQ.trim()}"`:"Nothing fits these filters")}${esc(exKind||exRel?" with the filters on.":".")}</p><button type="button" class="linkbtn" data-ent-reset>${esc("Clear search and filters")}</button>`:`<strong>${esc("Nobody here yet")}</strong><p>${esc("People, companies and products appear here as you tell Codex about them or connect a tool like your CRM, email or calendar.")}</p>`}</div>`;return}
+ if(!n){const any=PL.entities.rows.length;box.innerHTML=`<div class="ent-none">${any?`<strong>${esc("Nothing matches")}</strong><p>${esc(exQ.trim()?`No name, company or email is close to "${exQ.trim()}"`:"Nothing fits these filters")}${esc(exKind||exRel?" with the filters on.":".")}</p><button type="button" class="linkbtn" data-ent-reset>${esc("Clear search and filters")}</button>`:`<strong>${esc("Nobody here yet")}</strong><p>${esc("People, companies and products appear here as you tell Codex about them or connect a tool like your CRM, email or calendar.")}</p>`}</div>`;return}
  let html=`<div style="height:${from*ENT_ROW}px" aria-hidden="true"></div>`;
  for(let i=from;i<to;i++)html+=entRowHtml(exRows[i],i,q);
  box.innerHTML=html+`<div style="height:${(n-to)*ENT_ROW}px" aria-hidden="true"></div>`;
@@ -1359,6 +1362,17 @@ const entRestoreRoute=restoreRoute;restoreRoute=()=>{entRestoreRoute();if(typeof
 /* Memories: one timeline, newest first. A filter box and a few plain filters; questions and decisions are filters of
    the same list. The page carries the newest notes and fetches the whole list once a filter or "Show older" needs it. */
 const PM_PAGE=40;let pmFiltersDrawn=false,pmAll=null,pmLoading=null,pmError=false,pmLimit=PM_PAGE,pmFocus="";const pmF={q:"",kind:"",who:"",topic:"",project:"",tag:"",entity:"",period:"",state:"in force"};
+let pmFound={q:"",ids:null,loading:false},pmFindTimer=null;
+/* The filter box asks the server's search for every note that matches (the whole text, with its stemming), and the
+   page adds what its own scorer matches in the list it holds. */
+function pmFind(){
+ const q=pmF.q.trim();clearTimeout(pmFindTimer);
+ if(q.length<2||!LIVE||gqServer===false){pmFound={q,ids:null,loading:false};return}
+ pmFound={q,ids:pmFound.q===q?pmFound.ids:null,loading:true};
+ const run=async()=>{let ids=null;try{const r=await fetch("/search?q="+encodeURIComponent(q)+"&limit=50",{cache:"no-store"});if(r.status===404)gqServer=false;else if(r.ok){const j=await r.json();if(Array.isArray(j.notes))ids=new Set(j.notes.map(n=>n.id))}}catch{}
+  if(pmF.q.trim()!==q)return;pmFound={q,ids,loading:false};renderNotesTab()};
+ pmFindTimer=setTimeout(run,200);if(!pmAll)pmLoad();
+}
 function pmLoad(){
  if(pmAll||pmLoading||pmError||!LIVE||!PL)return pmLoading;
  const file=PL.memories.file;if(!/^entities-[a-f0-9-]{36}\/notes\.json$/.test(file||"")){pmError=true;return null}
@@ -1370,7 +1384,7 @@ function pmFiltered(list){
  const ids=q?new Set(PL.entities.rows.filter(e=>[e.name,...(e.aliases||[])].some(n=>String(n).toLowerCase()===q)).map(e=>e.id)):null;
  if(ids&&!ids.size)for(const e of PL.entities.rows)if(peMatch(e,q))ids.add(e.id);
  const tokens=text?fzWords(text).map(x=>x.w):null,project=pmF.project?"project:"+pmF.project:"";
- return list.filter(n=>(!pmF.kind||n.kind===pmF.kind)&&(!pmF.tag||n.tags.includes(pmF.tag))&&(!project||n.tags.includes(project))&&(!pmF.state||n.state===pmF.state)&&(!pmF.who||(n.authors||[]).includes(pmF.who))&&(!pmF.topic||n.context===pmF.topic)&&(!since||Date.parse(n.at)>=since)&&(!ids||n.entities.some(id=>ids.has(id)))&&(!tokens||!!fzMatch(tokens,[[n.text,1]])));
+ return list.filter(n=>(!pmF.kind||n.kind===pmF.kind)&&(!pmF.tag||n.tags.includes(pmF.tag))&&(!project||n.tags.includes(project))&&(!pmF.state||n.state===pmF.state)&&(!pmF.who||(n.authors||[]).includes(pmF.who))&&(!pmF.topic||n.context===pmF.topic)&&(!since||Date.parse(n.at)>=since)&&(!ids||n.entities.some(id=>ids.has(id)))&&(!tokens||!!fzMatch(tokens,[[n.text,1]])||(pmFound.q===text&&!!pmFound.ids?.has(n.id))));
 }
 const pmEntityById=id=>(pmEntityById.map??=new Map((PL?.entities?.rows||[]).map(e=>[e.id,e]))).get(id);
 const pmKindWord=k=>({note:"Note",decision:"Decision",question:"Question",action:"Action"})[k]||k.charAt(0).toUpperCase()+k.slice(1);
@@ -1378,7 +1392,7 @@ function pmRow(n){
  const c=D.contexts.find(x=>x.slug===n.context),topic=c?contextTitle(c):"";
  const rel=(n.replaces?`<p class="pl-rel-line">${esc("Replaces what was saved")} ${n.replaces.at?whenText(n.replaces.at)+": ":""}${n.replaces.text?esc(n.replaces.text):`<span class="pl-age">${esc("an earlier note")}</span>`}</p>`:"")+(n.replacedBy?`<p class="pl-rel-line pl-warn">${esc("Replaced")} ${whenText(n.replacedBy.at)} ${esc("by")}: ${esc(n.replacedBy.text)}</p>`:"")+(n.withdrawnBy?`<p class="pl-rel-line pl-warn">${esc("Withdrawn")} ${whenText(n.withdrawnBy.at)}: ${esc(n.withdrawnBy.text)}</p>`:"");
  const people=(n.entities||[]).map(pmEntityById).filter(Boolean).slice(0,8),who=(n.authors||[]).map(authorName).join(", ");
- return `<article class="pl-row pl-note mem-card${n.state!=="in force"?" pl-old":""}${n.id===pmFocus?" focus":""}" data-note="${esc(n.id)}"><div class="pl-row-main"><div class="pl-meta"><span class="pl-date">${whenText(n.at)}</span>${who?`<span>${esc(who)}</span>`:""}${n.kind!=="note"?`<span class="pill ${esc(n.kind)}">${esc(pmKindWord(n.kind))}</span>`:""}${n.state!=="in force"?stateBadge(n.state):""}${topic?`<span class="mem-topic">${esc(topic)}</span>`:""}</div><p class="pl-text">${esc(n.text)}</p>${rel}${people.length?`<div class="mem-people" aria-label="${esc("People and companies in this note")}">${people.map(e=>`<button type="button" class="tag" data-entity-id="${esc(e.id)}">${esc(e.name)}</button>`).join("")}</div>`:""}${n.source.length?`<div class="pl-sources">${sourcesHtml(n.source)}</div>`:""}</div>${rowLinks(null,`Let's discuss the note saved ${localDate(n.at)}${topic?" about "+topic:""}: "${n.text.slice(0,200)}". Read it and its sources first.`,"this note")}</article>`;
+ return `<article class="pl-row pl-note mem-card${n.state!=="in force"?" pl-old":""}${n.id===pmFocus?" focus":""}" data-note="${esc(n.id)}"><div class="pl-row-main"><div class="pl-meta"><span class="pl-date">${whenText(n.at)}</span>${who?`<span>${esc(who)}</span>`:""}${n.kind!=="note"?`<span class="pill ${esc(n.kind)}">${esc(pmKindWord(n.kind))}</span>`:""}${n.state!=="in force"?stateBadge(n.state):""}${topic?`<span class="mem-topic">${esc(topic)}</span>`:""}</div><p class="pl-text">${pmF.q.trim()?fzMark(n.text,fzMatch(pmF.q,[[n.text,1]])?.marks):esc(n.text)}</p>${rel}${people.length?`<div class="mem-people" aria-label="${esc("People and companies in this note")}">${people.map(e=>`<button type="button" class="tag" data-entity-id="${esc(e.id)}">${esc(e.name)}</button>`).join("")}</div>`:""}${n.source.length?`<div class="pl-sources">${sourcesHtml(n.source)}</div>`:""}</div>${rowLinks(null,`Let's discuss the note saved ${localDate(n.at)}${topic?" about "+topic:""}: "${n.text.slice(0,200)}". Read it and its sources first.`,"this note")}</article>`;
 }
 function renderNotesTab(){
  if(!PL){$("#pm-list").innerHTML=plEmpty;return}
@@ -1398,12 +1412,13 @@ function renderNotesTab(){
    `<label>${esc("Show")} <select id="pm-state">${[["in force","Current notes"],["replaced","Replaced notes"],["withdrawn","Withdrawn notes"],["","All of them"]].map(([v,l])=>opt(v,l,pmF.state)).join("")}</select></label></div>`;
  }
  const rows=pmFiltered(source),partial=!pmAll&&M.total>M.first.length;
+ if(pmF.q.trim()){const tokens=fzWords(pmF.q).map(x=>x.w),score=new Map(rows.map(n=>[n.id,(fzMatch(tokens,[[n.text,1]])?.score||0)+(pmFound.ids?.has(n.id)?40:0)]));rows.sort((a,b)=>score.get(b.id)-score.get(a.id)||String(b.at).localeCompare(String(a.at)))}
  if(pmFocus){const at=rows.findIndex(n=>n.id===pmFocus);if(at>0)rows.unshift(rows.splice(at,1)[0])}
  if(partial&&rows.length<pmLimit&&LIVE&&!pmError)pmLoad();
  const filtered=!!(pmF.q||pmF.kind||pmF.who||pmF.topic||pmF.project||pmF.tag||pmF.entity||pmF.period||pmF.state!=="in force");
  $("#pm-list").innerHTML=rows.slice(0,pmLimit).map(pmRow).join("")+(rows.length>pmLimit?`<button class="btn quiet pl-more mem-older" data-pm-more>${esc("Show older")} (${rows.length-pmLimit} ${esc("more")})</button>`:partial&&LIVE&&!pmError&&!pmLoading&&rows.length?`<button class="btn quiet pl-more mem-older" data-pm-more>${esc("Show older")}</button>`:"")||`<p class="empty">${esc(pmLoading?"Loading notes…":filtered?"No note matches these filters. Remove one, or try other words.":"Nothing saved yet. Tell Codex something worth remembering, for example \"remember that Acme renews in March\".")}</p>`;
  const shown=Math.min(rows.length,pmLimit);
- $("#pm-status").textContent=partial?(pmLoading?`Showing ${shown} of the ${M.first.length} newest notes. Loading all ${M.total}…`:pmError||!LIVE?`Showing ${shown} of the ${M.first.length} newest notes. ${LIVE?"The full list could not be loaded; refresh the dashboard to retry.":"Open the live dashboard to filter all "+M.total+" notes."}`:`Showing the ${shown} newest of ${M.total} notes.`):`Showing ${shown} of ${rows.length} ${rows.length===1?"note":"notes"}${rows.length!==M.total?" ("+M.total+" in all)":""}.`;
+ $("#pm-status").textContent=pmF.q.trim()&&(pmFound.loading||pmLoading)?`Searching all ${M.total} notes…`:partial?(pmLoading?`Showing ${shown} of the ${M.first.length} newest notes. Loading all ${M.total}…`:pmError||!LIVE?`Showing ${shown} of the ${M.first.length} newest notes. ${LIVE?"The full list could not be loaded; refresh the dashboard to retry.":"Open the live dashboard to filter all "+M.total+" notes."}`:`Showing the ${shown} newest of ${M.total} notes.`):`Showing ${shown} of ${rows.length} ${rows.length===1?"note":"notes"}${rows.length!==M.total?" ("+M.total+" in all)":""}.`;
  const docs=(PL.configuration?.documents||[]).filter(d=>!d.base&&d.path);
  $("#pm-docs").innerHTML=docs.length?`<details class="fold mem-docs"><summary>${esc("Documents your team keeps")} · ${docs.length}</summary><p class="m">${esc("Longer texts that are not base documents: playbooks, plans, lists. Click one to read or edit it.")}</p><ul class="pl-list">${docs.map(d=>`<li><button type="button" class="linkbtn" data-doc="${esc(d.path)}">${esc(d.title)}</button> <span class="pl-age">${d.changed?esc("changed")+" "+whenText(d.changed):""}</span></li>`).join("")}</ul></details>`:"";
 }
@@ -1447,7 +1462,7 @@ function plObserve(){
 }
 document.addEventListener("click",e=>{const r=e.target.closest?.("tr[data-open]");if(r&&!e.target.closest("a,button"))window.open(r.dataset.open,"_blank","noopener")});document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.matches?.("tr[data-open]"))window.open(e.target.dataset.open,"_blank","noopener")});
 document.addEventListener("click",e=>{const b=e.target.closest?.("[data-pe-more],[data-pm-more]");if(!b)return;if(b.hasAttribute("data-pm-more")){pmLimit+=PM_PAGE;renderNotesTab()}else{const k=b.dataset.peMore;peLimits[k]=(peLimits[k]||PE_PAGE)+PE_PAGE*2;renderEntitiesTab()}});
-document.addEventListener("input",e=>{if(e.target?.id==="pe-q"){peQuery=e.target.value;peLimits={};renderEntitiesTab()}else if(e.target?.id==="pm-entity"||e.target?.id==="pm-q"){pmF[e.target.id.slice(3)]=e.target.value;pmFocus="";pmLimit=PM_PAGE;renderNotesTab()}});
+document.addEventListener("input",e=>{if(e.target?.id==="pe-q"){peQuery=e.target.value;peLimits={};renderEntitiesTab()}else if(e.target?.id==="pm-entity"||e.target?.id==="pm-q"){pmF[e.target.id.slice(3)]=e.target.value;pmFocus="";pmLimit=PM_PAGE;if(e.target.id==="pm-q")pmFind();renderNotesTab()}});
 document.addEventListener("change",e=>{const id=e.target?.id;if(!["pm-who","pm-topic","pm-project","pm-tag","pm-period","pm-state"].includes(id))return;pmF[id.slice(3)]=e.target.value;pmFocus="";pmLimit=PM_PAGE;renderNotesTab()});
 /* ---------- Overview: what needs the person, most important first. Each item is one plain sentence, why it
    matters, and one way to deal with it: a prepared chat, or the view that shows what is affected. ---------- */
@@ -1741,7 +1756,7 @@ function fzWord(q,w){
  if(w===q)return [100,w.length];
  if(w.startsWith(q))return [80+10*q.length/w.length,q.length];
  if(q.length>=3&&w.includes(q))return [55,-1];
- const max=q.length<3?0:q.length<=5?1:2;if(!max||w[0]!==q[0])return null;
+ const max=q.length<3||/\d/.test(q)?0:q.length<=5?1:2;if(!max||w[0]!==q[0])return null;   // a number or a code is typed as it is
  let best=null;for(const len of new Set([q.length-1,q.length,q.length+1,w.length])){if(len<2||len>w.length)continue;const d=fzDistance(q,w.slice(0,len),max);if(d<=max&&(!best||d<best[0]||(d===best[0]&&len===w.length)))best=[d,len]}
  return best?[62-18*best[0]+(best[1]===w.length?6:0),best[1]]:null;
 }
