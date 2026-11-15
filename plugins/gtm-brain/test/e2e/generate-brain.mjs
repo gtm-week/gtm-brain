@@ -389,6 +389,12 @@ export async function generate({ shape = "small", out, seed = 1, gold: goldPath 
   const mentions = new Map(); for (const e of events) for (const n of e.people || []) mentions.set(n, (mentions.get(n) || 0) + 1);
   const busiest = [...mentions].filter(([n]) => byName.get(n)?.kind === "organization").sort((a, b) => b[1] - a[1])[0];
   gold.busiest = busiest ? { id: canon(byName.get(busiest[0]).id), name: reg.find(e => e.id === canon(byName.get(busiest[0]).id))?.name, notes: busiest[1] } : null;
+  // the relationship log (ALL-711): e2e saves a three-field works_at from this person to first, then to second, then
+  // renames first; neither company is the hub, the busiest one or a trap, and the person is no Max and not the owner
+  { const skip = new Set([gold.hub?.id, gold.busiest?.id, cfg.messy ? canon(traps.renamed.entity.id) : null, cfg.messy ? canon(traps.merged.survivor.id) : null].filter(Boolean));
+    const ppl = gold.entities.filter(e => e.kind === "person" && /\s/.test(e.name) && !/^Max\b/.test(e.name) && e.name !== gold.owner.name);
+    const orgs = gold.entities.filter(e => e.kind === "organization" && e.subtype === "company" && !skip.has(e.id) && /\s/.test(e.name));
+    if (ppl.length && orgs.length >= 2) gold.relation_probe = { person: { id: ppl[0].id, name: ppl[0].name }, first: { id: orgs[0].id, name: orgs[0].name }, second: { id: orgs[1].id, name: orgs[1].name } }; }
   if (cfg.messy) {
     const [mw, mg] = traps.maxes;
     gold.traps = { ...gold.traps, maxes: [{ id: mw.id, name: mw.name, emails: mw.emails, employer: canon(traps.employers.maxWeber.id) }, { id: mg.id, name: mg.name, employer: canon(traps.employers.maxWagner.id) }], typo_mention: "Max Webber",

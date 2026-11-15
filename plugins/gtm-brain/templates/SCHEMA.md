@@ -87,16 +87,17 @@ is still on GTM Brain 0.34: that version cannot read a file with one.
 
 A relationship is a note with a type, kept over time: when one ends, a new note says so, and the
 history stays. `us` is our own company. Required means every person or organization on the From
-side should have a current one.
+side should have a current one. One at a time means a new current one ends the previous one, dated
+to the new note (a person has one employer); no means several at once.
 
-| Type | From | To | What it means | Required |
-| --- | --- | --- | --- | --- |
-| works_at | person | organization | Employed by, or a founder of | yes |
-| reports_to | person | person | Their manager | no |
-| partner_of | organization | us | A partner of ours: referrals, integrations, co-selling | no |
-| investor_in | person, organization | organization, us | Has invested in | no |
-| uses | person, organization | product | Uses this product, ours or another | no |
-| speaker_at | person | event | Speaks or spoke at this event | no |
-| attended | person | event | Attends or attended this event (a meeting too, always) | no |
-| integrates_with | tool | tool | Connected to this other tool | no |
-| customer_of | person, organization | us | Customer status (customer, prospect, former customer), kept by the customer notes | no |
+| Type | From | To | What it means | Required | One at a time |
+| --- | --- | --- | --- | --- | --- |
+| works_at | person | organization | Employed by, or a founder of | yes | yes |
+| reports_to | person | person | Their manager | no | yes |
+| partner_of | organization | us | A partner of ours: referrals, integrations, co-selling | no | no |
+| investor_in | person, organization | organization, us | Has invested in | no | no |
+| uses | person, organization | product | Uses this product, ours or another | no | no |
+| speaker_at | person | event | Speaks or spoke at this event | no | no |
+| attended | person | event | Attends or attended this event (a meeting too, always) | no | no |
+| integrates_with | tool | tool | Connected to this other tool | no | no |
+| customer_of | person, organization | us | Customer status (customer, prospect, former customer), kept by the customer notes | no | yes |

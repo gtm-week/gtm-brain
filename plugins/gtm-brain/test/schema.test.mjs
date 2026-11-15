@@ -57,7 +57,7 @@ test("each problem has its line and a fix; a removed customer_of row still exist
 test("a subtype under person is refused (it would break every entity read), and a renamed type keeps its old name", () => {
   const text = readFileSync(join(T, "SCHEMA.md"), "utf8");
   assert.throws(() => schema.parseSchema(text.replace("## Organization", "### intern\n\n| Field | What it means | Required |\n| --- | --- | --- |\n| school | x | no |\n\n## Organization")), /a subtype under person is not possible/);
-  const renamed = schema.parseSchema(text.replace("| Type | From | To | What it means | Required |\n| --- | --- | --- | --- | --- |", "| Type | From | To | What it means | Required | Was called |\n| --- | --- | --- | --- | --- | --- |").replace("| partner_of | organization | us | A partner of ours: referrals, integrations, co-selling | no |", "| partnered_with | organization | us | A partner | no | partner_of |"));
+  const renamed = schema.parseSchema(text.replace("| Type | From | To | What it means | Required | One at a time |\n| --- | --- | --- | --- | --- | --- |", "| Type | From | To | What it means | Required | One at a time | Was called |\n| --- | --- | --- | --- | --- | --- | --- |").replace("| partner_of | organization | us | A partner of ours: referrals, integrations, co-selling | no | no |", "| partnered_with | organization | us | A partner | no | no | partner_of |"));
   assert.equal(schema.relationType(renamed, "partner_of").type, "partnered_with");
   assert.throws(() => schema.checkRelation(renamed, { type: "owns", fromKind: "person", toKind: "organization" }), /not in SCHEMA.md/);
   assert.throws(() => schema.checkRelation(renamed, { type: "works_at", fromKind: "organization", toKind: "organization" }), /goes from person/);

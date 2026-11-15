@@ -29,7 +29,11 @@ export const MEETING_FIELDS = [
   { name: "title", about: "What the meeting was called", required: false },
   { name: "organizer", about: "Who set it up", required: false },
   { name: "source", about: "Where the transcript or recording is, as a link or tool:id; it stays there", required: false }];
-export const BUILT_IN = { customer_of: { from: ["person", "organization"], to: [US], about: "Customer status, kept by the customer notes", required: false, formerly: [], built_in: true } };
+export const BUILT_IN = { customer_of: { from: ["person", "organization"], to: [US], about: "Customer status, kept by the customer notes", required: false, one: true, formerly: [], built_in: true } };
+// One at a time: a new current link of the type ends the previous one from the same entity (lib/relation-log.mjs).
+// SCHEMA.md says it per type in its One at a time column; a file without the column (0.34, early 0.35), or a row
+// that leaves the cell empty, gets these: one employer, one manager. Every other type allows many.
+export const ONE_AT_A_TIME = ["works_at", "reports_to"];
 const FIELD = /^[a-z][a-z0-9_]{0,39}$/, SUBTYPE = /^[a-z][a-z0-9-]{0,63}$/, TYPE = /^[a-z][a-z0-9_]{0,40}$/;
 
 export class SchemaFormatError extends Error {
@@ -66,13 +70,13 @@ export function parseSchema(text) {
     const where = h3 ? `${h2} / ${h3}` : h2;
     if (h2 === "relationships") {
       if (header[0] !== "type") { add(start, `the Relationships table starts with a Type column (it starts with "${header[0]}")`, "| Type | From | To | What it means | Required |"); continue; }
-      const formerlyCol = header.findIndex(h => /was called|formerly/.test(h));
+      const formerlyCol = header.findIndex(h => /was called|formerly/.test(h)), oneCol = header.findIndex(h => /one at a time|^one$|cardinality/.test(h));
       for (const { n, c } of rows) {
         const [type, from, to, about = "", required = ""] = c;
         if (!type) continue;
         if (!TYPE.test(type)) { add(n, `relationship type "${type}" must be lowercase words joined by _`, `\`${snake(type)}\``); continue; }
         if (relations[type]) { add(n, `relationship type ${type} is listed twice`, "remove one of the two rows"); continue; }
-        relationRows.push({ n, type, from, to, about, required, formerly: formerlyCol >= 0 ? kindList(c[formerlyCol] || "").filter(x => TYPE.test(x)) : [] });
+        relationRows.push({ n, type, from, to, about, required, one: oneCol >= 0 ? (c[oneCol] || "").trim() : "", formerly: formerlyCol >= 0 ? kindList(c[formerlyCol] || "").filter(x => TYPE.test(x)) : [] });
       }
       continue;
     }
@@ -118,13 +122,14 @@ export function parseSchema(text) {
     sub.fields = s.fields.filter(f => !kinds.organization.fields.some(x => x.name === f.name));
   }
   const known = Object.keys(kinds);
-  for (const { n, type, from, to, about, required, formerly } of relationRows) {
+  for (const { n, type, from, to, about, required, one, formerly } of relationRows) {
     const f = kindList(from), t = kindList(to);
     const badFrom = f.filter(k => !known.includes(k)), badTo = t.filter(k => !known.includes(k) && k !== US);
     if (!f.length || badFrom.length) { add(n, `From of ${type} must be ${orList(known)}${badFrom.length ? ` (not ${badFrom.join(", ")})` : ""}`, badFrom.length ? `add a ## ${badFrom[0]} section with a field table, or use for example: person, organization` : "for example: person, organization"); continue; }
     if (!t.length || badTo.length) { add(n, `To of ${type} must be ${orList([...known, US])}${badTo.length ? ` (not ${badTo.join(", ")})` : ""}`, badTo.length ? `add a ## ${badTo[0]} section with a field table, or use for example: organization, us` : "for example: organization, us"); continue; }
     if (!yes(required) && !no(required)) { add(n, `Required of ${type} must be yes or no (it says "${required}")`, "yes or no"); continue; }
-    relations[type] = { from: f, to: t, about, required: yes(required), formerly };
+    if (one && !yes(one) && !no(one)) { add(n, `One at a time of ${type} must be yes or no (it says "${one}")`, "yes: a new current one ends the previous one; no: several at once"); continue; }
+    relations[type] = { from: f, to: t, about, required: yes(required), one: one ? yes(one) : ONE_AT_A_TIME.includes(type), formerly };
   }
   if (problems.length) throw new SchemaFormatError(problems);
   if (!kinds.meeting.fields.length) kinds.meeting.fields = MEETING_FIELDS.map(f => ({ ...f }));

@@ -9,6 +9,8 @@ import { validateAsset } from './assets.mjs';
 import { memoryStamp as stamp, trustedMemoryAppend, recordMemoryCheckpoint } from './memory-journal.mjs';
 import { entityStamp } from './entity-stamp.mjs';
 import { relationsToUs } from './relation-to-us.mjs';
+import { buildRelationLog } from './relation-log.mjs';
+import { readEntityEvents, entityEventsStamp } from './entity-events.mjs';
 import { readSchema } from './schema.mjs';
 import { shortId } from './layout.mjs';
 import { meetingAnchors, anchorOf } from './meeting-entities.mjs';
@@ -16,7 +18,7 @@ import { hasMemoryIndex, indexPath, openDatabase, cacheLock, readerLock, retireC
 export { hasMemoryIndex };
 export const MAX_RECORD_BYTES = 4 * 1024 * 1024;
 export const MAX_RESULT_BYTES = 2 * 1024 * 1024;
-export const MEMORY_INDEX_VERSION = 8;   // 5: source pointers as members (field source); 6: entity rows with relation to us and SCHEMA.md fields; 7: meeting ids as identity refs; 8: stemmed keywords, word list for typos
+export const MEMORY_INDEX_VERSION = 9;   // 5: source pointers as members (field source); 6: entity rows with relation to us and SCHEMA.md fields; 7: meeting ids as identity refs; 8: stemmed keywords, word list for typos; 9: relations, relation events and entity events (lib/relation-log.mjs)
 const VERSION = MEMORY_INDEX_VERSION;
 const normalizeMention = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 function hashFile(path, size) {
@@ -89,6 +91,13 @@ const SCHEMA = `
  CREATE INDEX IF NOT EXISTS entity_row_kind ON entity_rows(kind,relation_to_us);
  CREATE TABLE IF NOT EXISTS entity_fields(id TEXT,field TEXT,value TEXT);
  CREATE INDEX IF NOT EXISTS entity_field_value ON entity_fields(field,value,id);
+ CREATE TABLE IF NOT EXISTS relations(id TEXT PRIMARY KEY,from_id TEXT,type TEXT,to_id TEXT,status TEXT,since TEXT,until TEXT,observed_at TEXT,memory TEXT,raw TEXT);
+ CREATE INDEX IF NOT EXISTS relation_from ON relations(from_id,type);
+ CREATE INDEX IF NOT EXISTS relation_to ON relations(to_id,type);
+ CREATE TABLE IF NOT EXISTS relation_events(relation TEXT,at TEXT,event TEXT,status TEXT,basis TEXT,memory TEXT,implied INTEGER);
+ CREATE INDEX IF NOT EXISTS relation_event_relation ON relation_events(relation,at);
+ CREATE TABLE IF NOT EXISTS entity_events(entity TEXT,at TEXT,change TEXT,from_value TEXT,to_value TEXT,by TEXT,raw TEXT);
+ CREATE INDEX IF NOT EXISTS entity_event_entity ON entity_events(entity,at);
  CREATE TRIGGER IF NOT EXISTS entity_member_insert AFTER INSERT ON members WHEN new.field='entities' BEGIN
    INSERT INTO entity_versions VALUES (new.value,1) ON CONFLICT(id) DO UPDATE SET version=version+1;
  END;
@@ -342,16 +351,29 @@ export class MemoryIndex {
   }
   /* The entity rows query entities filters on, rebuilt when an identity or a memory file changed: relation to
      us (lib/relation-to-us.mjs) from the visible relation and customer notes, and each compiled SCHEMA.md field. */
-  entityRowsKey(before) { return JSON.stringify([this.identityRevision, before.map(f => f.state?.key || 'missing'), readSchema(this.root).schema?.hash || null]); }
+  entityRowsKey(before) { return JSON.stringify([this.identityRevision, before.map(f => f.state?.key || 'missing'), readSchema(this.root).schema?.hash || null, entityEventsStamp(this.root)]); }
   refreshEntities(before) {
     const db = this.db, key = this.entityRowsKey(before);
     if (this.meta('entity_rows') === key) return;
     if (!this.release) throw new Error('A pinned memory index snapshot cannot refresh the cache.');
-    const notes = db.prepare(`SELECT m.raw FROM memories m WHERE ${visible('m')} AND (json_extract(m.raw,'$.relation') IS NOT NULL OR json_extract(m.raw,'$.customer') IS NOT NULL)`).all().map(r => JSON.parse(r.raw));
-    const relation = relationsToUs({ registry: this.entitySnapshot, memories: notes, admin: lib.readAdmin(this.root), schema: readSchema(this.root).schema || null });
+    const linked = db.prepare(`SELECT m.raw FROM memories m WHERE ${visible('m')} AND (json_extract(m.raw,'$.relation') IS NOT NULL OR json_extract(m.raw,'$.customer') IS NOT NULL OR json_extract(m.raw,'$.meeting') IS NOT NULL)`).all().map(r => JSON.parse(r.raw));
+    const notes = linked.filter(m => m.relation || m.customer), schema = readSchema(this.root).schema || null;
+    const relation = relationsToUs({ registry: this.entitySnapshot, memories: notes, admin: lib.readAdmin(this.root), schema });
+    // the relationship log (lib/relation-log.mjs) and the entity log (lib/entity-events.mjs), rebuilt with the rows
+    const byRef = new Map(); for (const e of this.entitySnapshot) for (const id of [e.id, ...e.previous_ids]) byRef.set(id, e);
+    const resolve = v => { const e = byRef.get(v) || lib.resolveEntity(this.entries, v); return e ? { id: e.id, kind: e.kind || 'person' } : null; };
+    const meetings = new Map(this.identitySnapshot.flatMap(e => (e.meetings || []).map(a => [a, e.id])));
+    const { relations } = buildRelationLog(linked, { resolve, schema, meetingOf: a => meetings.get(a) || null, anchorOf });
+    const entityEvents = readEntityEvents(this.root);
     db.exec('BEGIN IMMEDIATE');
     try {
-      db.exec('DELETE FROM entity_rows; DELETE FROM entity_fields;');
+      db.exec('DELETE FROM entity_rows; DELETE FROM entity_fields; DELETE FROM relations; DELETE FROM relation_events; DELETE FROM entity_events;');
+      const rel = db.prepare('INSERT INTO relations VALUES (?,?,?,?,?,?,?,?,?,?)'), relEvent = db.prepare('INSERT INTO relation_events VALUES (?,?,?,?,?,?,?)'), entEvent = db.prepare('INSERT INTO entity_events VALUES (?,?,?,?,?,?,?)');
+      for (const r of relations) {
+        rel.run(r.id, r.from, r.type, r.to, r.status, r.since, r.until, r.observed_at, r.memory, JSON.stringify(r));
+        for (const e of r.events) relEvent.run(r.id, e.at, e.event, e.status, e.basis || null, e.memory, e.implied ? 1 : 0);
+      }
+      for (const e of entityEvents) entEvent.run(byRef.get(e.entity)?.id || e.entity, e.at, e.change, e.from, e.to, e.by || null, JSON.stringify(e));
       const row = db.prepare('INSERT INTO entity_rows VALUES (?,?,?,?,?,?,?,?,?,?)'), field = db.prepare('INSERT INTO entity_fields VALUES (?,?,?)');
       for (const e of this.entitySnapshot) {
         const out = { id: e.id, name: e.name, kind: e.kind, subtype: e.subtype, status: e.status, relation_to_us: relation.get(e.id) || null, aliases: e.aliases, emails: e.emails, previous_ids: e.previous_ids, short_id: shortId(e.id), path: e.path, last_mentioned: e.last_mentioned, fields: e.fields };
@@ -361,6 +383,25 @@ export class MemoryIndex {
       this.setMeta('entity_rows', key); db.exec('COMMIT');
     } catch (e) { db.exec('ROLLBACK'); throw e; }
   }
+  /* The relationship log, read from the index: every relation of an entity (either end), of a type, or all. */
+  relations({ entity = null, type = null } = {}) {
+    this.requireReady();
+    const where = [], params = [];
+    if (entity) { const id = this.entitySnapshot.find(e => e.id === entity || e.previous_ids.includes(entity))?.id || entity; where.push('(from_id=? OR to_id=?)'); params.push(id, id); }
+    if (type) { const t = (readSchema(this.root).schema && this.relationType(type)) || type; where.push('type=?'); params.push(t); }
+    const name = new Map(this.entitySnapshot.map(e => [e.id, e.name]));
+    return this.db.prepare(`SELECT raw FROM relations${where.length ? ' WHERE ' + where.join(' AND ') : ''}`).all(...params).map(r => JSON.parse(r.raw))
+      .sort((a, b) => (name.get(a.from) || a.from).localeCompare(name.get(b.from) || b.from) || a.type.localeCompare(b.type) || (name.get(a.to) || a.to).localeCompare(name.get(b.to) || b.to));
+  }
+  relationType(type) { const s = readSchema(this.root).schema, rel = s?.relations || {}; return rel[type] ? type : Object.entries(rel).find(([, r]) => r.formerly?.includes(type))?.[0] || null; }
+  /* An entity's renames, merges and kind changes, oldest first; a merged entity's past stays with the survivor. */
+  entityEvents(entity) {
+    this.requireReady();
+    const e = this.entitySnapshot.find(x => x.id === entity || x.previous_ids.includes(entity)); if (!e) return [];
+    const ids = [e.id, ...e.previous_ids];
+    return this.db.prepare(`SELECT raw FROM entity_events WHERE entity IN (${ids.map(() => '?').join(',')}) ORDER BY at`).all(...ids).map(r => JSON.parse(r.raw));
+  }
+  resolveEntity(ref) { return lib.resolveEntity(this.entries, ref); }
   relationsToUs() { return new Map(this.db.prepare('SELECT id, relation_to_us FROM entity_rows WHERE relation_to_us IS NOT NULL').all().map(r => [r.id, r.relation_to_us])); }
   /* query entities with filters, without reading a page: kind, subtype, status, relation_to_us, id, name, short_id
      match exactly (a list means any of them; a retired id names its survivor); aliases and emails match a member;

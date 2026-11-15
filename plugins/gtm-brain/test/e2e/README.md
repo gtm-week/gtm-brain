@@ -36,7 +36,7 @@ and messy take well over ten minutes and large is impractical; see `baseline.jso
 Copies the brain to a scratch folder (the write checks append notes), starts `server/server.mjs`
 and runs about 50 checks in sections: search (single and multi-word, stemmed, typo, names, aliases,
 SQL, and the one-call answer: a question, its entity card, Not found, the size cap), entities (name, id, alias, typo, email), briefs (facts, cited ids, size), relations and their
-history, customers, meetings, deal, rules, status, compile (`--facts` read through a pipe, full
+history, the relationship log (a works_at saved with three fields and read back, an employer change ending the previous one, an as-of read, a rename read from the entity log; `gold.relation_probe` names the person and two companies), customers, meetings, deal, rules, status, compile (`--facts` read through a pipe, full
 size, and over MCP), load_context, topic summaries on demand (a load behind its notes gives the digest and the
 as_of compile_apply checks, the chat writes it once, the next load is current, no reply promises a summary, the
 writers are offered to a chat), remember (single, batch over MCP, `--batch` script, a bare first name saved then

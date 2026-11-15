@@ -230,7 +230,7 @@
           "name": "relation",
           "expression": "relation",
           "data_type": "Opaque",
-          "description": "A typed relationship from SCHEMA.md between two entities (to may be us): status current or ended, kept over time. Ended is a new note; a wrong one is corrected with supersedes. User evidence is never replaced by a source refresh."
+          "description": "A typed relationship from SCHEMA.md between two entities (to may be us): status current or ended, kept over time as a record whose notes are its events. Ended is a new note; a wrong one is corrected with supersedes. User evidence is never replaced by a source refresh."
         },
         {
           "name": "meeting",
@@ -697,10 +697,7 @@
                         "required": [
                           "from",
                           "type",
-                          "to",
-                          "status",
-                          "basis",
-                          "observed_at"
+                          "to"
                         ],
                         "additionalProperties": false
                       },
@@ -1257,7 +1254,7 @@
                 },
                 "relation": {
                   "type": "object",
-                  "description": "A SCHEMA.md relationship; see the relations reference.",
+                  "description": "A SCHEMA.md relationship: from, type and to are enough; status, basis and observed_at come from the note.",
                   "properties": {
                     "from": {
                       "type": "string",
@@ -1293,10 +1290,7 @@
                   "required": [
                     "from",
                     "type",
-                    "to",
-                    "status",
-                    "basis",
-                    "observed_at"
+                    "to"
                   ],
                   "additionalProperties": false
                 },

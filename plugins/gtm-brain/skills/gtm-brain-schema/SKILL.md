@@ -28,7 +28,8 @@ SCHEMA.md when it is missing and reports one that cannot be read, with a fix per
 - `## Person`, `## Organization`, `## Product`: a table each, `| Field | What it means | Required |`.
 - Under Organization, `### Subtypes` (`| Subtype | What it is |`) and a `### <subtype>` field table
   for a subtype with fields of its own.
-- `## Relationships`: `| Type | From | To | What it means | Required |`, and a `Was called` column
+- `## Relationships`: `| Type | From | To | What it means | Required | One at a time |` (One at a
+  time yes: a new current one ends the previous one; left out, works_at and reports_to are), and a `Was called` column
   once a type has been renamed. `us` is our own company. `customer_of` is the customer status.
 
 When the chat start said SCHEMA.md cannot be read, show its fix and offer to apply it before
