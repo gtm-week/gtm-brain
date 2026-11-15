@@ -269,13 +269,18 @@ time.pl-when{white-space:nowrap;cursor:help;text-decoration:underline dotted var
 .ov-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.ov-act{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border:1px solid var(--accent);border-radius:3px;background:var(--accent-soft);color:var(--accent);font:600 12.5px var(--body);text-decoration:none;white-space:nowrap;cursor:pointer}.ov-act:hover{background:var(--accent);color:var(--on-accent)}.ov-act.quiet{background:none;border-color:var(--rule);color:var(--muted);font-weight:500}.ov-act.quiet:hover{background:var(--soft);color:var(--ink)}
 .ov-calm{margin:0 0 34px;padding:18px 20px;border:1px solid var(--rule);border-left:3px solid var(--green);border-radius:4px;background:var(--surface);font-size:14px}
 #ov-more{margin-top:34px}#ov-more h2{font-family:var(--display);font-size:16px;font-weight:650;margin-bottom:12px}.ov-counts{display:flex;gap:10px;flex-wrap:wrap}.ov-count{display:flex;flex-direction:column;gap:2px;min-width:150px;padding:12px 16px;border:1px solid var(--rule);border-radius:4px;background:var(--surface);color:var(--ink);font:inherit;text-align:left;cursor:pointer}.ov-count:hover{border-color:var(--accent)}.ov-count b{font-family:var(--display);font-size:22px}.ov-count span{font-size:12px;color:var(--muted)}
+.gq-pop{position:absolute;top:calc(100% + 8px);left:0;z-index:40;width:min(600px,calc(100vw - 40px));max-height:min(72vh,640px);overflow:auto;padding:6px;background:var(--surface);border:1px solid var(--rule);border-radius:6px;box-shadow:0 18px 48px #000a}.gq-pop[hidden]{display:none}
+.gq-label{display:flex;align-items:center;gap:8px;padding:10px 10px 4px;font-family:var(--label);font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}.gq-group+.gq-group{border-top:1px solid var(--soft);margin-top:4px}
+.gq-opt{display:flex;flex-direction:column;gap:2px;width:100%;padding:8px 10px;border:0;border-radius:4px;background:none;color:var(--ink);font:inherit;font-size:13.5px;text-align:left;cursor:pointer}.gq-opt.on,.gq-opt:hover{background:var(--accent-soft)}.gq-opt.on{box-shadow:inset 2px 0 0 var(--accent)}
+.gq-title{overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.45}.gq-detail{font-size:11.5px;color:var(--muted)}.gq-pop mark{background:none;color:var(--accent);font-weight:700;text-decoration:underline;text-decoration-color:var(--accent);text-underline-offset:3px}
+.gq-how,.gq-keys{margin:0;padding:6px 10px;font-size:11.5px;color:var(--muted)}.gq-keys{border-top:1px solid var(--soft);margin-top:4px}.gq-none{padding:14px 12px;font-size:13px}.gq-none p{margin:0 0 6px;color:var(--muted)}.gq-none p b{color:var(--ink)}
 </style>
 <link rel="stylesheet" href="ui/dashboard.css">
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to content</a>
 <div class="app">
-<header class="app-header"><div class="header-inner"><div class="top"><div class="brand"><div class="brand-copy"><b id="brand-co"></b><span id="sub"></span></div></div><nav class="nav" id="nav" aria-label="Main navigation"></nav><div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><label class="sr-only" for="gq">Search this brain</label><input id="gq" class="gq" type="search" placeholder="Search people, notes, documents" autocomplete="off" aria-controls="s-grid"><kbd aria-hidden="true">/</kbd></div><span class="sync-status" id="brain-health" role="status"></span><button class="help-link" data-v="skills" aria-label="Help" title="Help: what you can ask Codex to do">?</button><button class="workspace-link" id="workspace-link" data-v="admin">Settings</button></div><div class="project-picker" id="project-picker" hidden><label for="project-select" id="project-label"></label><div class="project-select-wrap"><select id="project-select"></select></div></div><nav class="subnav" id="subnav" aria-label="More" hidden></nav></div></header>
+<header class="app-header"><div class="header-inner"><div class="top"><div class="brand"><div class="brand-copy"><b id="brand-co"></b><span id="sub"></span></div></div><nav class="nav" id="nav" aria-label="Main navigation"></nav><div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><label class="sr-only" for="gq">Search this brain</label><input id="gq" class="gq" type="search" placeholder="Search people, notes, documents" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="gq-results"><kbd aria-hidden="true">/</kbd><div class="gq-pop" id="gq-results" role="listbox" aria-label="Search results" hidden></div></div><span class="sync-status" id="brain-health" role="status"></span><button class="help-link" data-v="skills" aria-label="Help" title="Help: what you can ask Codex to do">?</button><button class="workspace-link" id="workspace-link" data-v="admin">Settings</button></div><div class="project-picker" id="project-picker" hidden><label for="project-select" id="project-label"></label><div class="project-select-wrap"><select id="project-select"></select></div></div><nav class="subnav" id="subnav" aria-label="More" hidden></nav></div></header>
 <main class="main" id="main-content" tabindex="-1"><div class="view-toolbar"><button class="view-back" id="view-back" type="button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m12 5-7 7 7 7M5 12h14"/></svg><span id="view-back-label">Back</span></button><div class="location" id="location" hidden></div><p class="chat-instruction" id="chat-instruction"></p></div>
 <p class="m" id="view-scope"></p>
 <div id="manual-edits" role="status"></div>
@@ -1011,19 +1016,12 @@ function gsearch(q){
  if(view!=='search'){searchReturn=view;show('search')}
  paintSearch();void loadSearchHistory();
 }
-$('#gq').oninput=e=>{clearTimeout(searchTimer);const value=e.target.value;searchTimer=setTimeout(()=>{const replacing=view==='search';gsearch(value);updateChatLink();publishRoute(replacing)},150)};
 document.addEventListener('click',e=>{
  const kind=e.target.closest('[data-search-kind]');if(kind){searchFilter=kind.dataset.searchKind;searchPage=0;paintSearch();return}
  const page=e.target.closest('[data-search-page]');if(page&&!page.disabled){searchPage+=Number(page.dataset.searchPage);paintSearch();$('#s-title').focus();return}
  const retry=e.target.closest('[data-search-retry]');if(retry){failedSearchPages.clear();paintSearch();void loadSearchHistory();return}
  const memory=e.target.closest('[data-search-memory]');if(memory){const m=searchRecords.get(memory.dataset.searchMemory);if(m){addCitations([m]);jumpToMemory(m.id)}return}
 });
-document.addEventListener('keydown',e=>{
- const a=document.activeElement,editing=['INPUT','TEXTAREA','SELECT'].includes(a.tagName)||a.isContentEditable;
- if((e.key==='/'&&!editing)||((e.key==='k'||e.key==='K')&&(e.metaKey||e.ctrlKey))){e.preventDefault();$('#gq').focus()}
- if(e.key==='Escape'&&a===$('#gq')){clearTimeout(searchTimer);$('#gq').value='';gsearch('');$('#gq').blur();updateChatLink();publishRoute(true)}
-});
-
 /* ---------- the front page: four tabs by pillar, one health line above them. Reads D.pillars only; no actions. ---------- */
 const PL=D.pillars||null;
 const askLink=prompt=>"codex://threads/new?path="+encodeURIComponent(D.brain)+"&prompt="+encodeURIComponent("Use GTM Brain. "+prompt);
@@ -1154,7 +1152,7 @@ function inboxItems(){
  const capture=String(D.meetings?.captureStatus||"");
  if(/no sync has finished|not (being )?captured|never/i.test(capture))add("mid","Meetings are not being captured","No sync has finished in this brain yet, so a meeting shows up only when you ask for it by name.",[chat("Set up the daily sync","Set up the daily sync so meetings and notes from our tools are captured every day.")]);
  if(D.plugin?.status==="newer"&&D.plugin.latest)add("mid",`GTM Brain ${D.plugin.latest} is available`,`This brain runs ${D.plugin.installed}. Updates bring fixes and new abilities.`,[chat("Update with Codex","Update GTM Brain to the newest version.")]);
- if(stale.length)add("mid",`${many(stale.length,"topic has","topics have")} notes newer than ${stale.length===1?"its":"their"} summary`,`Codex answers from the summary first, so it may miss what was saved since: ${stale.slice(0,4).map(contextTitle).join(", ")}${stale.length>4?" and "+(stale.length-4)+" more":""}.`,[chat("Update the summaries with Codex",`Update the summaries of these topics from their newest notes: ${stale.map(contextTitle).join(", ")}.`)]);
+ /* A topic whose summary is older than its notes is not an item: since 0.35 a summary is written when someone asks about the topic, so it catches up by itself. */
  const merges=(D.merges||[]).length;
  if(merges)add("mid",`${many(merges,"pair of names","pairs of names")} may be the same person or company`,"Notes about one person split across two names are easy to miss.",[{label:"Check the first pair with Codex",href:duplicateChatHref(D.merges[0])}]);
  if(P?.missing_required){const fields=Object.entries(P.missing_required_fields||{}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([f,n])=>`${f.replace(/_/g," ")} (${n})`);
@@ -1164,7 +1162,6 @@ function inboxItems(){
  if(R?.problems)add("low",`The rules check found ${many(R.problems,"problem","problems")}`,"A note or page does not follow one of the brain's rules, for example where it is filed.",[chat("Fix them with Codex","Let's go through the rules check: what should I fix first?"),go("See the rules","config")]);
  const base=(PL?.configuration?.documents||[]).filter(d=>d.base),unwritten=base.filter(d=>d.state==="not written");
  if(unwritten.length)add("low",`${unwritten.length} of ${base.length} base documents are not written yet`,`Codex writes and plans without them: ${unwritten.map(d=>d.title).join(", ")}.`,[chat("Write one with Codex",`Help me write our ${unwritten[0].title} document.`),go("See base documents","config")]);
- if(P?.uncited_flag)add("low",`${P.uncited} of ${P.uncited_of} older notes are not reflected in any topic summary`,"A summary is what Codex reads first. Notes it does not mention are found only by searching.",[chat("Review with Codex","Many older notes are cited in no summary. Check which topics need their summary rewritten.")]);
  return items;
 }
 function renderInbox(){
@@ -1173,7 +1170,9 @@ function renderInbox(){
  box.innerHTML=`<div class="ov-head"><h2>${esc(items.length?"Needs your attention":"Nothing needs you right now")}</h2>${items.length?`<span class="pl-count">${items.length} ${esc(items.length===1?"item":"items")}</span>`:""}</div>`+
   (items.length?`<ol class="ov-list">${items.map(i=>`<li class="ov-item ${i.tone}"><div class="ov-text"><h3>${esc(i.title)}</h3><p>${esc(i.why)}</p></div><div class="ov-actions">${i.actions.map(action).join("")}</div></li>`).join("")}</ol>`:`<p class="ov-calm">${esc("The brain is healthy: no open questions, nothing waiting for a decision, nothing out of date. New notes appear below as they are saved.")}</p>`);
  const counts=[[PL?.memories?.total,"notes","notes"],[PL?.entities?.rows?.length,"people, companies and products","entities"],[active.length,"topics","contexts"],[meetingData.meetings.length,"meetings","meetings"],[(customerData.customers||[]).length,"customer relationships","customers"]].filter(([n])=>Number.isFinite(n));
- $("#ov-more").innerHTML=`<h2>${esc("In this brain")}</h2><div class="ov-counts">${counts.map(([n,label,v])=>`<button type="button" class="ov-count" data-v="${v}"><b>${n}</b><span>${esc(label)}</span></button>`).join("")}</div>`;
+ $("#ov-more").innerHTML=`<h2>${esc("In this brain")}</h2><div class="ov-counts">${counts.map(([n,label,v])=>`<button type="button" class="ov-count" data-v="${v}"><b>${n}</b><span>${esc(label)}</span></button>`).join("")}</div>`+
+  /* the chat start's own status line, part by part, for whoever wants the detail behind the items above */
+  (PL?`<details class="fold ov-status"><summary>${esc("Sync and capture details")}</summary><div>${PL.health?`<ul class="pl-list">${String(PL.health).split(/\s+\|\s+/).map(part=>`<li>${esc(part.replace(/\s*\(query [a-z_ ]+\)/g,""))}</li>`).join("")}</ul>`:`<p class="pl-age">${esc("Nothing to report yet: no meeting capture, summary run or sync recorded.")}</p>`}</div></details>`:"");
 }
 /* ---------- Documents: read and edit in the page. Markdown is escaped first; only the marks below become tags,
    so nothing a document says can run as script. The one write goes to POST /document (server/dash.mjs). ---------- */
@@ -1390,6 +1389,117 @@ if(typeof addEventListener==="function")addEventListener("beforeunload",e=>{if(d
  if(view==="doc"&&v!=="doc"){docState=null;try{sessionStorage.removeItem("gtm-doc")}catch{}if(docPendingRefresh){docPendingRefresh=false;plain(v);newer("left");return}}
  if(v==="doc"&&!docState){let path="";try{path=sessionStorage.getItem("gtm-doc")||""}catch{}if(docInfo(path)){plain("doc");openDoc(path,true);return}v="config"}
  plain(v)}}
+/* ---------- One search box for the whole brain. Names, documents and workflows are matched in the page, forgiving
+   typos, missing letters, part words and word order; notes are searched by the dashboard server over the memory
+   index (GET /search), or in the page over the note list when that is not available. Reads only. ---------- */
+const fzFold=s=>Array.from(String(s??""),c=>{const b=c.normalize("NFD")[0].toLowerCase();return b==="ł"?"l":b==="ø"?"o":b==="ß"?"s":b}).join("");
+const fzWords=t=>{const out=[],re=/[\p{L}\p{N}]+/gu,f=fzFold(t);let m;while((m=re.exec(f)))out.push({w:m[0],at:m.index});return out};
+/* Edit distance (a swap of two neighbours counts once), given up as soon as it passes max. */
+function fzDistance(a,b,max){
+ if(Math.abs(a.length-b.length)>max)return max+1;
+ let prev2=null,prev=Array.from({length:b.length+1},(_,i)=>i);
+ for(let i=1;i<=a.length;i++){const row=[i];let best=i;
+  for(let j=1;j<=b.length;j++){let v=Math.min(prev[j]+1,row[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));if(prev2&&i>1&&j>1&&a[i-1]===b[j-2]&&a[i-2]===b[j-1])v=Math.min(v,prev2[j-2]+1);row.push(v);if(v<best)best=v}
+  if(best>max)return max+1;prev2=prev;prev=row}
+ return prev[b.length];
+}
+/* How well one typed word matches one word of a text: [points, letters of the word it covers], or null. */
+function fzWord(q,w){
+ if(w===q)return [100,w.length];
+ if(w.startsWith(q))return [80+10*q.length/w.length,q.length];
+ if(q.length>=3&&w.includes(q))return [55,-1];
+ const max=q.length<3?0:q.length<=5?1:2;if(!max||w[0]!==q[0])return null;
+ let best=null;for(const len of new Set([q.length-1,q.length,q.length+1,w.length])){if(len<2||len>w.length)continue;const d=fzDistance(q,w.slice(0,len),max);if(d<=max&&(!best||d<best[0]||(d===best[0]&&len===w.length)))best=[d,len]}
+ return best?[62-18*best[0]+(best[1]===w.length?6:0),best[1]]:null;
+}
+/* A query against the fields of one thing ([[text, weight], ...], the first is its title). Every typed word has to
+   match somewhere; the order does not matter. Returns the points and the parts of the title to highlight. */
+function fzMatch(query,fields){
+ const tokens=typeof query==="string"?fzWords(query).map(x=>x.w):query;if(!tokens.length)return null;
+ const words=fields.map(([text])=>fzWords(text));let total=0;const marks=[];
+ for(const q of tokens){let best=null;
+  for(let f=0;f<fields.length;f++)for(const x of words[f]){const m=fzWord(q,x.w);if(!m)continue;const points=m[0]*fields[f][1];if(!best||points>best.points)best={points,f,at:m[1]<0?x.at+x.w.indexOf(q):x.at,len:m[1]<0?q.length:m[1]}}
+  if(!best)return null;total+=best.points;if(best.f===0)marks.push([best.at,best.at+best.len])}
+ const title=fzFold(fields[0][0]);
+ return {score:total/tokens.length+(title===tokens.join(" ")?30:title.startsWith(tokens.join(" "))?12:0),marks};
+}
+const fzMark=(text,marks)=>{const t=String(text??"");if(!marks?.length||fzFold(t).length!==t.length)return esc(t);let out="",pos=0;for(const [a,b] of [...marks].sort((x,y)=>x[0]-y[0])){if(a<pos)continue;out+=esc(t.slice(pos,a))+"<mark>"+esc(t.slice(a,b))+"</mark>";pos=b}return out+esc(t.slice(pos))};
+/* Best first. When several words were typed and nothing has them all, what has one of them is still shown, lower. */
+const fzRank=(query,items,fieldsOf,limit=6)=>{const tokens=fzWords(query).map(x=>x.w),out=[];for(const item of items){const m=fzMatch(tokens,fieldsOf(item));if(m)out.push({item,...m})}
+ if(!out.length&&tokens.length>1)for(const item of items){let best=null;for(const t of tokens){if(t.length<3)continue;const m=fzMatch([t],fieldsOf(item));if(m&&(!best||m.score>best.score))best=m}if(best)out.push({item,score:best.score/2,marks:best.marks})}
+ return out.sort((a,b)=>b.score-a.score).slice(0,limit)};
+/* The nearest names to a query that found nothing: looser than a match, for "did you mean". */
+function fzNearest(query,names,limit=3){const q=fzFold(query).replace(/[^\p{L}\p{N}]+/gu,"");if(q.length<3)return [];const max=Math.max(2,Math.ceil(q.length/2));
+ return names.map(n=>{let best=max+1;for(const x of fzWords(n)){if(x.w.length<3)continue;const d=fzDistance(q.slice(0,x.w.length+2),x.w,max);if(d<=Math.max(1,Math.floor(x.w.length/3))&&d<best)best=d}return [best,n]}).filter(([d])=>d<=max).sort((a,b)=>a[0]-b[0]).slice(0,limit).map(([,n])=>n)}
+
+const gqEntityKind=e=>({person:"Person",organization:e.subtype?e.subtype.charAt(0).toUpperCase()+e.subtype.slice(1):"Company",product:"Product",meeting:"Meeting",event:"Event",tool:"Tool"})[e.kind]||e.kind;
+let gqState={q:"",groups:[],flat:[],active:-1,notes:null,notesFor:"",notesHow:"",loading:false,seq:0},gqServer=LIVE?null:false,gqNotesAll=null,gqTimer=null;
+function gqLocal(q){
+ const groups=[],C=PL?.configuration,W=PL?.workflows;
+ const people=fzRank(q,PL?.entities?.rows||[],e=>[[e.name,1],[(e.aliases||[]).join(" "),.9],[e.email||"",.8]],6);
+ groups.push({key:"entities",label:"People and companies",rows:people.map(r=>({kind:"entity",id:r.item.id,name:r.item.name,title:fzMark(r.item.name,r.marks),detail:[gqEntityKind(r.item),r.item.relation,r.item.notes?noteCount(r.item.notes):"",!r.marks.length?(r.item.aliases||[]).concat(r.item.email||[]).find(a=>fzMatch(q,[[a,1]]))||"":""].filter(Boolean).join(" · ")}))});
+ const docs=C?[...C.documents.filter(d=>d.path).map(d=>({path:d.path,title:d.title,what:d.base?"Base document":"Document"})),...(C.rules.path?[{path:C.rules.path,title:"Rules",what:"How notes are kept",also:"RULES.md rules"}]:[]),...(C.schema.path?[{path:C.schema.path,title:"Schema",what:"What the brain records about each kind",also:"SCHEMA.md schema fields kinds"}]:[])]:[];
+ groups.push({key:"documents",label:"Documents",rows:fzRank(q,docs,d=>[[d.title,1],[d.also||"",.8],[d.path,.5]],5).map(r=>({kind:"doc",path:r.item.path,title:fzMark(r.item.title,r.marks),detail:r.item.what}))});
+ groups.push({key:"workflows",label:"Workflows",rows:fzRank(q,W?.files||[],f=>[[f.title,1],[f.slug||"",.7]],4).map(r=>({kind:"workflow",path:r.item.path,slug:r.item.slug,title:fzMark(r.item.title,r.marks),detail:r.item.ok?r.item.status:"needs fixing"}))});
+ groups.push({key:"topics",label:"Topics",rows:fzRank(q,active,c=>[[contextTitle(c),1],[c.slug,.6]],3).map(r=>({kind:"topic",slug:r.item.slug,title:fzMark(contextTitle(r.item),r.marks),detail:noteCount(r.item.totalMemories??r.item.memories.length)}))});
+ return groups;
+}
+const gqNoteRow=(n,q)=>{const text=String(n.content??n.text??""),tokens=fzWords(q).map(x=>x.w),words=fzWords(text);let at=0;const marks=[];
+ for(const t of tokens){let best=null;for(const x of words){const m=fzWord(t,x.w);if(m&&(!best||m[0]>best[0]))best=[m[0],x.at,m[1]<0?x.w.length:Math.max(m[1],Math.min(x.w.length,t.length))]}if(best)marks.push([best[1],best[1]+best[2]])}
+ if(marks.length)at=Math.max(0,Math.min(...marks.map(m=>m[0]))-50);const from=at?text.indexOf(" ",at)+1||at:0,slice=text.slice(from,from+170);
+ const c=D.contexts.find(x=>x.slug===n.context);
+ return {kind:"note",id:n.id,note:n,title:(from?"…":"")+fzMark(slice,marks.map(([a,b])=>[a-from,b-from]).filter(([a,b])=>a>=0&&b<=slice.length))+(text.length>from+170?"…":""),detail:[ageText(n.at),(n.authors||[]).map(authorName).join(", "),c?contextTitle(c):""].filter(Boolean).join(" · ")}};
+function gqNotesLocal(q){const list=gqNotesAll||PL?.memories?.first||[];return fzRank(q,list.filter(n=>n.state!=="withdrawn"),n=>[[n.text,1],[(n.tags||[]).join(" "),.6]],6).map(r=>r.item)}
+async function gqNotes(q,seq){
+ const s=gqState;let notes=null,how="";
+ if(gqServer!==false){try{const r=await fetch("/search?q="+encodeURIComponent(q)+"&limit=6",{cache:"no-store"});if(r.status===404||r.status===405){gqServer=false}else if(r.ok){const j=await r.json();if(Array.isArray(j.notes)){gqServer=true;notes=j.notes;how=j.more?`${j.more} more notes match. Add a word to narrow it.`:""}}}catch{}}
+ if(!notes){if(!gqNotesAll&&LIVE&&PL&&/^entities-[a-f0-9-]{36}\/notes\.json$/.test(PL.memories.file||"")){try{const r=await fetch(PL.memories.file);if(r.ok){const j=await r.json();if(Array.isArray(j.notes))gqNotesAll=j.notes}}catch{}}
+  notes=gqNotesLocal(q);const total=PL?.memories?.total||0;how=gqNotesAll?"Notes are matched on their first 320 characters.":total>(PL?.memories?.first||[]).length?`Only the ${(PL?.memories?.first||[]).length} newest of ${total} notes are searched in this saved copy.`:""}
+ if(gqState!==s||s.seq!==seq)return;s.notes=notes;s.notesFor=q;s.notesHow=how;s.loading=false;gqPaint();
+}
+function gqPaint(){
+ const s=gqState,box=$("#gq-results"),input=$("#gq");if(!s.q){box.hidden=true;box.innerHTML="";input.setAttribute("aria-expanded","false");return}
+ const groups=s.groups.slice(0,1).concat([{key:"notes",label:"Notes",rows:(s.notes||[]).map(n=>gqNoteRow(n,s.q)),how:s.notesHow,loading:s.loading}],s.groups.slice(1)).filter(g=>g.rows.length||g.loading);
+ s.flat=groups.flatMap(g=>g.rows);if(s.active>=s.flat.length)s.active=s.flat.length-1;let i=0;
+ const row=r=>{const n=i++;return `<button type="button" role="option" class="gq-opt${n===s.active?" on":""}" id="gq-opt-${n}" data-gq="${n}" aria-selected="${n===s.active}"><span class="gq-title">${r.title}</span>${r.detail?`<span class="gq-detail">${esc(r.detail)}</span>`:""}</button>`};
+ const nothing=!s.flat.length&&!s.loading,near=nothing?fzNearest(s.q,[...(PL?.entities?.rows||[]).map(e=>e.name),...(PL?.configuration?.documents||[]).map(d=>d.title)]):[];
+ box.innerHTML=groups.map(g=>`<div class="gq-group" role="group" aria-label="${esc(g.label)}"><div class="gq-label">${esc(g.label)}${g.loading?` <span class="spin"></span>`:""}</div>${g.rows.map(row).join("")}${g.loading&&!g.rows.length?`<p class="gq-how">${esc("Searching notes…")}</p>`:""}${g.how?`<p class="gq-how">${esc(g.how)}</p>`:""}</div>`).join("")+
+  (nothing?`<div class="gq-none"><p><b>${esc("Nothing found for")} "${esc(s.q)}"</b></p><p>${esc(`Searched ${PL?.entities?.rows?.length??D.names.length} people and companies, ${PL?.memories?.total??0} notes, the documents and the workflows.`)}</p>${near.length?`<p>${esc("Closest names:")} ${near.map(n=>`<button type="button" class="linkbtn" data-gq-try="${esc(n)}">${esc(n)}</button>`).join(", ")}</p>`:`<p>${esc("Try a name, a company, or a few words from a conversation.")}</p>`}</div>`:`<p class="gq-keys" aria-hidden="true">${esc("↑ ↓ to move · Enter to open · Esc to close")}</p>`);
+ box.hidden=false;input.setAttribute("aria-expanded","true");if(s.active>=0)input.setAttribute("aria-activedescendant","gq-opt-"+s.active);else input.removeAttribute("aria-activedescendant");
+ document.getElementById("gq-opt-"+s.active)?.scrollIntoView?.({block:"nearest"});
+}
+function gqSearch(value){
+ const q=String(value||"").trim().slice(0,120);clearTimeout(gqTimer);
+ if(!q){gqState={q:"",groups:[],flat:[],active:-1,notes:null,notesFor:"",notesHow:"",loading:false,seq:gqState.seq+1};gqPaint();return}
+ const seq=gqState.seq+1;gqState={q,groups:gqLocal(q),flat:[],active:0,notes:gqState.notesFor===q?gqState.notes:gqNotesLocal(q),notesFor:gqState.notesFor===q?q:"",notesHow:"",loading:q.length>=2&&LIVE,seq};gqPaint();
+ if(q.length>=2)gqTimer=setTimeout(()=>gqNotes(q,seq),180);
+}
+function gqClose(clear=false){if(clear)$("#gq").value="";gqSearch(clear?"":"");const box=$("#gq-results");box.hidden=true;$("#gq").setAttribute("aria-expanded","false")}
+function gqOpen(r){
+ if(!r)return;gqClose(true);$("#gq").blur?.();
+ if(r.kind==="entity"){
+  /* the Entities tab owns how an entity is shown; the address is #entities/<id> */
+  if(typeof openEntity==="function")openEntity(r.id);else{show("entities");try{if(typeof history!=="undefined")history.pushState(null,"","#entities/"+encodeURIComponent(r.id))}catch{}if(typeof dispatchEvent==="function"&&typeof HashChangeEvent!=="undefined")dispatchEvent(new HashChangeEvent("hashchange"));if(typeof peQuery!=="undefined"){peQuery=r.name;syncField("#pe-q",r.name);renderEntitiesTab()}}
+ }else if(r.kind==="doc"||r.kind==="workflow")openDoc(r.path);
+ else if(r.kind==="topic"){contextDirectory=false;chan=r.slug;renderContextDirectory();renderChannels();show("contexts")}
+ else if(r.kind==="note"){const n=r.note;addCitations([{...n,content:n.content??n.text,authors:n.authors||[],people:n.people||[],tools:n.tools||[],actions:n.actions||[],source:n.source||[],tags:n.tags||[]}]);jumpToMemory(n.id)}
+ updateChatLink();publishRoute();
+}
+$("#gq").oninput=e=>gqSearch(e.target.value);
+document.addEventListener("click",e=>{const t=e.target;if(!t?.closest)return;
+ const again=t.closest("[data-gq-try]");if(again){$("#gq").value=again.dataset.gqTry;gqSearch(again.dataset.gqTry);$("#gq").focus();return}
+ const opt=t.closest("[data-gq]");if(opt){e.stopPropagation?.();gqOpen(gqState.flat[Number(opt.dataset.gq)]);return}
+ if(!t.closest(".search-wrap")&&gqState.q)gqClose()});
+document.addEventListener("focusin",e=>{if(e.target?.id==="gq"&&e.target.value&&$("#gq-results").hidden)gqSearch(e.target.value)});
+document.addEventListener("keydown",e=>{
+ const a=document.activeElement,editing=["INPUT","TEXTAREA","SELECT"].includes(a?.tagName)||a?.isContentEditable,input=$("#gq");
+ if((e.key==="/"&&!editing)||((e.key==="k"||e.key==="K")&&(e.metaKey||e.ctrlKey))){e.preventDefault();input.focus();input.select?.();return}
+ if(a!==input)return;
+ if(e.key==="Escape"){e.preventDefault();gqClose(true);input.blur();return}
+ if(!gqState.q)return;
+ if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();const n=gqState.flat.length;if(n){gqState.active=(gqState.active+(e.key==="ArrowDown"?1:-1)+n)%n;gqPaint()}return}
+ if(e.key==="Enter"){e.preventDefault();gqOpen(gqState.flat[Math.max(0,gqState.active)])}
+});
 renderInbox();renderConfig();renderEntitiesTab();renderNotesTab();renderWorkflowsTab();
 (function(){let v="home";try{v=sessionStorage.getItem("gtm-view")||"home"}catch{}if(v==="search"||v==="explore"||!document.querySelector(`.view[data-view="${v}"]`))v="home";show(v)})();
 const _show=show;show=v=>{_show(v);try{sessionStorage.setItem("gtm-view",v)}catch{}};
@@ -1646,10 +1756,10 @@ if(typeof history!=='undefined'&&typeof addEventListener==='function'){
 }
 
 updateChatLink();
-function freshness(ok){$("#freshness").classList.toggle("stale",!ok);$("#freshness").textContent=(ok?"Dashboard refreshed: ":"Connection lost. Dashboard last refreshed: ")+localDateTime(D.generatedAt)}
+function freshness(ok){if(typeof renderBrainHealth==="function")renderBrainHealth(ok);$("#freshness").classList.toggle("stale",!ok);$("#freshness").textContent=(ok?"Dashboard refreshed: ":"Connection lost. Dashboard last refreshed: ")+localDateTime(D.generatedAt)}
 freshness(true);
 function renderBrainHealth(ok=true){const el=$("#brain-health");if(!el||!D.generatedAt)return;el.textContent=(ok?"Updated ":"Connection lost. Last updated ")+ageText(D.generatedAt);el.setAttribute("title","This page was last updated "+localDateTime(D.generatedAt)+". It updates by itself when something is saved.");el.classList.toggle("stale",!ok)}
-renderBrainHealth();setInterval(()=>renderBrainHealth(!$("#freshness").classList.contains("stale")),30000);
+renderBrainHealth();
 let refreshing=false;
 function refreshStatus(state){if(["pending","running","failed"].includes(state?.status))$("#freshness").textContent=(state.status==="failed"?"Dashboard refresh failed. Your saved records are safe; retry in Codex.":"Saved changes are being added to this dashboard.")}
 function newer(revision){if(revision&&revision!==D.generatedAt&&!refreshing){if(docDirty()||docState?.saving){docPendingRefresh=true;docNotice();return}refreshing=true;refreshPage()}}

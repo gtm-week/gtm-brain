@@ -43,8 +43,7 @@ const fixture=()=>({brain:'/tmp/FDE OS & Łódź #1',name:'FDE OS',generatedAt:'
  admin:{company:'FDE OS',owner:'alex',team:[],tools:[],body:'',dashboard:'on-demand'},skills:skillCatalog()});
 test(`shortcuts and searchable examples open exact workflow drafts`,()=>{
  const D=fixture(),p=page(D);
- const home=p.node('#h-skills').innerHTML;assert.equal((home.match(/<article /g)||[]).length,0);assert.equal(home,'');p.run('show("home")');assert.match(p.node('#subnav').innerHTML,/data-v="skills"/);
- assert.match(p.node('#subnav').innerHTML,/Help/);
+ const home=p.node('#h-skills').innerHTML;assert.equal((home.match(/<article /g)||[]).length,0);assert.equal(home,'');p.run('show("skills")');assert.equal(p.run('view'),'skills','Help opens from its own link in the header');assert.equal(p.node('#subnav').hidden,true);
  assert.match(p.node('#admin-skills').innerHTML,/press Send/);
  const results=p.node('#skill-results').innerHTML;assert.equal((results.match(/<article /g)||[]).length,D.skills.length);
  const links=[...results.matchAll(/href="([^"]+)"/g)].map(m=>new URL(m[1].replaceAll('&amp;','&')));
@@ -70,7 +69,7 @@ test('copy prompt copies the exact command and example without navigating',async
  p.run('globalThis.copiedPrompt="";globalThis.navigator={clipboard:{writeText:async text=>{globalThis.copiedPrompt=text}}}');
  await Promise.all(p.listeners.click.map(fn=>fn({target:{closest:selector=>selector==='[data-skill-copy]'?{dataset:{skillCopy:s.id}}:null}})));
  assert.equal(p.run('copiedPrompt'),s.command+'\n\n'+s.example);
- assert.match(p.node('#copy-status-'+s.id).textContent,/Copied/);assert.equal(p.run('view'),'config','copying does not navigate away from the front page');
+ assert.match(p.node('#copy-status-'+s.id).textContent,/Copied/);assert.equal(p.run('view'),'home','copying does not navigate away from the front page');
 });
 
 test('the person can ask for twenty-one shipped workflows; internal procedures remain references',()=>{

@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 import { resolveAssetFile, assetMime } from '../lib/assets.mjs';
 import { dashboardRefreshState } from '../lib/dashboard-refresh.mjs';
 import { listDocuments, BODY_MAX } from '../lib/documents.mjs';
+import { createMemoryReader } from './memory-reader.mjs';
 const lib = await import(new URL("../lib/brain.mjs", import.meta.url));
 
 const args = process.argv.slice(2);
@@ -81,6 +82,23 @@ function serve() {
   const readNoFollow = rel => { let fd; try { const path = join(root, rel); if (!realpathSync(path).startsWith(realpathSync(root) + '/')) return null; fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK); return fstatSync(fd).isFile() ? readFileSync(fd) : null; } catch { return null; } finally { if (fd !== undefined) closeSync(fd); } };
   const runDocument = argv => new Promise(done => execFile(process.execPath, [fileURLToPath(new URL("../scripts/gtm-brain-documents/document.mjs", import.meta.url)), root, ...argv], { cwd: root, env: process.env, encoding: "utf8", timeout: 120000, maxBuffer: 1 << 22 },
     (error, stdout, stderr) => done({ code: error ? (typeof error.code === "number" ? error.code : 1) : 0, stdout: String(stdout || "").trim(), stderr: String(stderr || "").trim() })));
+  // The search box's notes: the memory index's own ranked search (stemmed words, one letter off), run in the
+  // reader's worker so a large brain never holds up the page. A read: the query and the count are capped.
+  const memoryReader = createMemoryReader({ idleMs: 30000, timeoutMs: 15000, maxPending: 8 });
+  const SEARCH_MAX = 200, SEARCH_NOTES = 20;
+  async function searchNotes(req, res, url) {
+    if (req.headers["sec-fetch-site"] === "cross-site") return json(res, 403, { ok: false, note: "Search from this dashboard's own page." });
+    const q = String(url.searchParams.get("q") || "").replace(/\s+/g, " ").trim();
+    if (!q) return json(res, 400, { ok: false, note: "Type something to search for." });
+    if (q.length > SEARCH_MAX) return json(res, 400, { ok: false, note: `A search is at most ${SEARCH_MAX} characters.` });
+    const limit = Math.max(1, Math.min(SEARCH_NOTES, Number.parseInt(url.searchParams.get("limit"), 10) || 6));
+    try {
+      const text = String(await memoryReader.read(root, "search", { search: q, limit }));
+      const notes = [];
+      for (const line of text.split("\n")) { if (!line.startsWith("{")) continue; try { const m = JSON.parse(line); if (m && typeof m.id === "string" && typeof m.content === "string") notes.push({ id: m.id, at: m.at, kind: m.kind || "note", context: m.context, authors: (m.authors || []).slice(0, 3), content: m.content.length > 1200 ? m.content.slice(0, 1200) + "…" : m.content, people: (m.people || []).slice(0, 12), tags: (m.tags || []).slice(0, 12), source: (Array.isArray(m.source) ? m.source : []).slice(0, 3) }); } catch {} }
+      return json(res, 200, { ok: true, query: q, notes: notes.slice(0, limit), more: Number(text.match(/^(\d+) more match/m)?.[1] || 0) });
+    } catch (e) { return json(res, 503, { ok: false, note: "The notes could not be searched just now. Try again in a moment." }); }
+  }
   let saving = false;
   async function saveDocument(req, res, host) {
     const refuse = (code, note, more = {}) => { req.resume(); return json(res, code, { ok: false, note, ...more }); };
@@ -150,6 +168,7 @@ function serve() {
     }
     if (req.method === "GET" && url.pathname === "/data.json") lastSeen = Date.now();
     if (req.method === "POST" && url.pathname === "/document") return saveDocument(req, res, host);
+    if (req.method === "GET" && url.pathname === "/search") return searchNotes(req, res, url);
     if (req.method !== "GET" && req.method !== "HEAD") return json(res, 405, { ok: false, note: "GET only" });
     if (url.pathname === '/file') {
       // Open a brain file the front page links to, as text. Only a path the last render listed
@@ -215,6 +234,6 @@ function serve() {
   server.listen(port, "127.0.0.1");
   // Leave when the brain is gone or a newer server took over.
   setInterval(() => { const s = readState(); if (!lib.isBrain(root) || (s && s.pid && s.pid !== process.pid && alive(s))) process.exit(0); }, 60000).unref();
-  const bye = () => { watcher.close(); clearInterval(heartbeat); for (const res of clients) res.end(); const s = readState(); if (s && s.pid === process.pid) remember({ port }); process.exit(0); };
+  const bye = () => { try { Promise.resolve(memoryReader.close()).catch(() => {}); } catch {} watcher.close(); clearInterval(heartbeat); for (const res of clients) res.end(); const s = readState(); if (s && s.pid === process.pid) remember({ port }); process.exit(0); };
   process.on("SIGTERM", bye); process.on("SIGINT", bye);
 }
