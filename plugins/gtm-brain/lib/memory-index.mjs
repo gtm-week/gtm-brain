@@ -1,6 +1,6 @@
 // Disposable disk-backed memory projection. The MCP host uses this API in a worker.
 import { sourceMembers } from './pointers.mjs';
-import { openSync, closeSync, readSync } from 'node:fs';
+import { openSync, closeSync, readSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
@@ -12,7 +12,7 @@ import { relationsToUs } from './relation-to-us.mjs';
 import { readSchema } from './schema.mjs';
 import { shortId } from './layout.mjs';
 import { meetingAnchors, anchorOf } from './meeting-entities.mjs';
-import { hasMemoryIndex, indexPath, openDatabase, cacheLock, retireCache, cacheResetPending } from './memory-index-store.mjs';
+import { hasMemoryIndex, indexPath, openDatabase, cacheLock, readerLock, retireCache, cacheResetPending } from './memory-index-store.mjs';
 export { hasMemoryIndex };
 export const MAX_RECORD_BYTES = 4 * 1024 * 1024;
 export const MAX_RESULT_BYTES = 2 * 1024 * 1024;
@@ -102,14 +102,15 @@ const SCHEMA = `
  END;
 `;
 export class MemoryIndex {
-  constructor(root, { rebuild = false, lockTimeoutMs = 1000 } = {}) {
+  constructor(root, { rebuild = false, lockTimeoutMs = 1000, pinned = false } = {}) {
     this.root = resolve(root);
     if (!lib.readAdmin(this.root)) throw new Error('no brain here');
     // Snapshot identities before taking the cache gate. Entity writers can use the
     // index while holding their own lock without an inverse lock order in readers.
     lib.withEntityLock(this.root, () => {
       this.identityRevision = entityStamp(this.root);
-      const names = this.entries = lib.readNames(this.root);   // the full entries, for an answer's entity card (lib/memory-search.mjs)
+      // the full entries, for an answer's entity card (lib/memory-search.mjs): the shared, frozen registry, never changed here
+      const names = this.entries = lib.readNamesShared(this.root);
       // a meeting entity also carries its anchors: notes with that meeting id link to it
       this.identitySnapshot = names.map(e => { const { id, name, aliases, emails, previous_ids } = e, meetings = meetingAnchors(e); return { id, name, aliases, emails, previous_ids, ...(meetings.length ? { meetings } : {}) }; });
       // what query entities filters on: identity, the SCHEMA.md fields compiled on the page, and the page's dates
@@ -117,9 +118,10 @@ export class MemoryIndex {
       this.entitySnapshot = names.map(e => ({ id: e.id, name: e.name, kind: e.kind || 'person', subtype: e.subtype ?? null, status: e.status || 'active', aliases: e.aliases || [], emails: e.emails || [], previous_ids: e.previous_ids || [],
         path: e._path || null, last_mentioned: e._fm?.latest_evidence_at || null, fields: Object.fromEntries(compiled(e).map(f => [f.field, f.text])) }));
     });
-    this.release = cacheLock(this.root, lockTimeoutMs);
     this.path = indexPath(this.root);
     this.stats = { recordsRead: 0, filesRead: 0, rebuiltFiles: 0, hashedBytes: 0, trustedAppends: 0, relinkedRecords: 0, visibilityRows: 0, checkpoints: 0 };
+    if (pinned) { this.pinIfCurrent(); return; }
+    this.release = cacheLock(this.root, lockTimeoutMs);
     try {
       if (cacheResetPending(this.root)) retireCache(this.root);
       try {
@@ -139,12 +141,55 @@ export class MemoryIndex {
           this.setMeta('rebuilding', '1'); this.setMeta('started_at', new Date().toISOString()); this.db.exec('COMMIT');
         } catch (e) { this.db.exec('ROLLBACK'); throw e; }
       }
-      this.db.exec('CREATE TEMP TABLE touched(memory INTEGER PRIMARY KEY);');
-      this.db.function('extra_matches', (text, filters) => matches(JSON.parse(text), JSON.parse(filters)) ? 1 : 0);
-      this.db.function('text_matches', (text, terms) => JSON.parse(terms).some(t => text.toLowerCase().includes(t)) ? 1 : 0);
+      this.prepareConnection();
     } catch (e) { this.close(); throw e; }
   }
-  close() { try { this.db?.close(); this.db = null; } finally { this.release?.(); this.release = null; } }
+  prepareConnection() {
+    this.db.exec('CREATE TEMP TABLE touched(memory INTEGER PRIMARY KEY);');
+    this.db.function('extra_matches', (text, filters) => matches(JSON.parse(text), JSON.parse(filters)) ? 1 : 0);
+    this.db.function('text_matches', (text, terms) => JSON.parse(terms).some(t => text.toLowerCase().includes(t)) ? 1 : 0);
+  }
+  // Without the cache lock: a read snapshot of a cache that already matches every source
+  // file and the registry. Anything else (missing, old version, being replaced, behind)
+  // leaves this index not ready and closed; openForRead then takes the lock and refreshes.
+  pinIfCurrent() {
+    this.ready = false;
+    try { this.readers = readerLock(this.root, 200); } catch { return; }
+    try {
+      if (cacheResetPending(this.root) || !existsSync(this.path)) return this.close();
+      this.db = openDatabase(this.path);
+      if (this.db.prepare('PRAGMA user_version').get().user_version !== VERSION) return this.close();
+      this.db.exec('BEGIN'); this.pinned = true;
+      // current also means the entity rows match the pages and SCHEMA.md: a snapshot cannot rebuild them
+      const before = this.sourceState();
+      if (!this.current(before, JSON.stringify(this.identitySnapshot)) || this.meta('entity_rows') !== this.entityRowsKey(before)) return this.close();
+      this.prepareConnection();
+      this.names = JSON.parse(this.meta('registry')); this.ready = true;
+    } catch (e) { this.close(); if (![5, 11, 26].includes(e.errcode & 255)) throw e; }
+  }
+  // After sync, still holding the cache lock: take a read snapshot, then let the lock go.
+  // Later refreshes by other sessions commit beside this snapshot (WAL); none is visible here.
+  pinSnapshot() {
+    this.requireReady();
+    this.readers = readerLock(this.root);
+    this.db.exec('BEGIN'); this.pinned = true;
+    // Resolve aliases against the same snapshot as the records this read returns.
+    this.names = JSON.parse(this.meta('registry'));
+    this.release?.(); this.release = null;
+    return this;
+  }
+  close() {
+    try {
+      if (this.pinned && this.db) { this.pinned = false; try { this.db.exec('ROLLBACK'); } catch {} }
+      this.db?.close(); this.db = null;
+    } finally {
+      try { this.release?.(); this.release = null; } finally { this.readers?.(); this.readers = null; }
+    }
+  }
+  current(before, registry) {
+    const db = this.db, file = db.prepare('SELECT stamp FROM files WHERE file=?');
+    return this.meta('registry') === registry && this.meta('ready') === '1' && before.length === db.prepare('SELECT count(*) AS n FROM files').get().n && before.every(f => file.get(f.file)?.stamp === (f.state?.key || 'missing'));
+  }
   meta(key) { return this.db.prepare('SELECT value FROM meta WHERE key=?').get(key)?.value; }
   setMeta(key, value) { this.db.prepare('INSERT OR REPLACE INTO meta VALUES (?,?)').run(key, value); }
   sourceState() {
@@ -209,8 +254,8 @@ export class MemoryIndex {
     const project = r => ({ ...r, entities: [...new Set(mention(r))].map(n => byName.get(n)).filter(Boolean).sort((a, b) => a.order - b.order).map(n => n.id) });
     const asset = r => r.asset && !validateAsset(r.asset).length ? [lib.canonicalName(this.names, r.asset.entity) || r.asset.entity, r.asset.role, r.asset.status] : [null, null, null];
     const before = this.sourceState();
-    const unchanged = this.meta('registry') === registry && this.meta('ready') === '1' && before.length === db.prepare('SELECT count(*) AS n FROM files').get().n && before.every(f => db.prepare('SELECT stamp FROM files WHERE file=?').get(f.file)?.stamp === (f.state?.key || 'missing'));
-    if (unchanged) { this.refreshEntities(before); this.ready = true; return this; }
+    if (this.current(before, registry)) { this.refreshEntities(before); this.ready = true; return this; }
+    if (!this.release) throw new Error('A pinned memory index snapshot cannot refresh the cache.');
     const exhausted = () => Date.now() - started >= budgetMs || this.stats.recordsRead + this.stats.relinkedRecords >= maxRecords;
     let transaction = false;
     const savedFiles = new Map();
@@ -297,9 +342,11 @@ export class MemoryIndex {
   }
   /* The entity rows query entities filters on, rebuilt when an identity or a memory file changed: relation to
      us (lib/relation-to-us.mjs) from the visible relation and customer notes, and each compiled SCHEMA.md field. */
+  entityRowsKey(before) { return JSON.stringify([this.identityRevision, before.map(f => f.state?.key || 'missing'), readSchema(this.root).schema?.hash || null]); }
   refreshEntities(before) {
-    const db = this.db, key = JSON.stringify([this.identityRevision, before.map(f => f.state?.key || 'missing'), readSchema(this.root).schema?.hash || null]);
+    const db = this.db, key = this.entityRowsKey(before);
     if (this.meta('entity_rows') === key) return;
+    if (!this.release) throw new Error('A pinned memory index snapshot cannot refresh the cache.');
     const notes = db.prepare(`SELECT m.raw FROM memories m WHERE ${visible('m')} AND (json_extract(m.raw,'$.relation') IS NOT NULL OR json_extract(m.raw,'$.customer') IS NOT NULL)`).all().map(r => JSON.parse(r.raw));
     const relation = relationsToUs({ registry: this.entitySnapshot, memories: notes, admin: lib.readAdmin(this.root), schema: readSchema(this.root).schema || null });
     db.exec('BEGIN IMMEDIATE');
@@ -449,16 +496,25 @@ export class MemoryIndex {
     return rows;
   }
 }
+// A read never reports a busy cache to the model. A current cache is read at once, without
+// the lock. Otherwise short lock attempts with backoff, each followed by another look for a
+// cache another session has just refreshed, for up to READ_WAIT_MS; then one long wait for
+// the lock and a fresh refresh here. A session sees its own write: its save changed a
+// source stamp, so a snapshot older than the save is never current.
+export const READ_WAIT_MS = 5000;
+export function openForRead(root, { waitMs = READ_WAIT_MS, finalWaitMs = 25000 } = {}) {
+  const deadline = Date.now() + waitMs;
+  for (let step = 25; ; step = Math.min(step * 2, 400)) {
+    const current = new MemoryIndex(root, { pinned: true });
+    if (current.ready) return current;
+    const left = deadline - Date.now();
+    let index;
+    try { index = new MemoryIndex(root, { lockTimeoutMs: left > 0 ? Math.min(step, left) : finalWaitMs }); }
+    catch (e) { if (left > 0 && /Memory index is busy/.test(e.message)) continue; throw e; }
+    try { index.sync(); return index.pinSnapshot(); } catch (e) { index.close(); throw e; }
+  }
+}
 export function withMemoryIndex(root, fn) {
-  const index = new MemoryIndex(root);
-  try {
-    index.sync(); index.requireReady();
-    index.db.exec('BEGIN');
-    try {
-      // Another MCP process may have refreshed the cache after sync committed. Resolve
-      // aliases against the same SQL snapshot as the records returned by this read.
-      index.names = JSON.parse(index.db.prepare("SELECT value FROM meta WHERE key='registry'").get().value);
-      return fn(index);
-    } finally { index.db.exec('ROLLBACK'); }
-  } finally { index.close(); }
+  const index = openForRead(root);
+  try { return fn(index); } finally { index.close(); }
 }

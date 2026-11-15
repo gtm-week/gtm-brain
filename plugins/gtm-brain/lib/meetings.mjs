@@ -124,7 +124,7 @@ const recordedNewest = (a, b) => Date.parse(b.at) - Date.parse(a.at) || b.id.loc
 const evidenceRow = m => ({ id: m.id, context: m.context, at: m.at, content: m.content, sources: m.source, ...metadata(m) });
 const unique = values => [...new Map(values.map(v => [JSON.stringify(v), v])).values()];
 
-export function meetingOverview(root, { by, meeting_id, entity, from, to, state, contexts, registry = lib.readNames(root) } = {}) {
+export function meetingOverview(root, { by, meeting_id, entity, from, to, state, contexts, registry = lib.readNamesShared(root) } = {}) {
   if (by && !lib.teamHandle(root, by)) throw new Error('Unknown person for meeting overview');
   const person = by ? lib.teamHandle(root, by) : null, rows = contexts ? contexts.flatMap(c => c.memories) : allRows(root), current = contexts ? contexts.flatMap(c => lib.effectiveMemories(c.memories)).filter(m => !lib.isForkCopy(m)) : effective(root);
   const observations = current.filter(m => m.meeting && !m.retracts), groups = new Map();
