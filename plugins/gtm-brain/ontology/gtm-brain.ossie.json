@@ -2403,21 +2403,25 @@
             "tool_name": "merge_entities",
             "title": "Merging entities",
             "returns": "Opaque",
-            "description": "Join two existing identities only when the person has confirmed they are the same. First omit as_of to preview source into target: target ID and name survive. Review affected contexts and conflicts; resolve differences explicitly and preview again. Then apply with the returned as_of, same resolution, and by. Preserves retired IDs, source file notes and memory history. Returns a durable merge_id for undo_entity_merge.",
+            "description": "Join two existing identities. When the person has already said they are the same, pass confirmed true: this one call merges source into target (target ID, name and kind survive) and returns one line saying what was kept; the merge record carries who confirmed it, so save no note about it and do not read again to verify. When something needs the person's choice (two different records in the same tool, or the two were marked as different earlier), nothing is merged and the reply carries the one question to ask and the call for its answer. Without confirmed it is a read-only preview; apply that with its as_of, the same resolution, and by. Preserves retired IDs, source file notes and memory history. Returns a durable merge_id for undo_entity_merge.",
             "input_schema": {
               "type": "object",
               "properties": {
                 "source": {
                   "type": "string",
-                  "description": "Current stable entity ID from query entities. Resolve retired IDs before writing."
+                  "description": "Current stable entity ID, or the exact name when only one entity has it. The source is merged away."
                 },
                 "target": {
                   "type": "string",
-                  "description": "Current stable entity ID from query entities. Resolve retired IDs before writing."
+                  "description": "Current stable entity ID, or the exact name when only one entity has it. The target survives."
                 },
                 "by": {
                   "type": "string",
-                  "description": "Team member handle recording the change; required when applying."
+                  "description": "Team member handle recording the change; required when applying with as_of. With confirmed, omit to use the person in this chat."
+                },
+                "confirmed": {
+                  "type": "boolean",
+                  "description": "true when the person has said these two are the same: preview and merge in this one call. Never set it on a guess or a similarity."
                 },
                 "as_of": {
                   "type": "string",

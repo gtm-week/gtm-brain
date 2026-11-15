@@ -423,7 +423,8 @@ Facts stay in context memories; narrative sections are compiled with citations. 
 when only one person has it.
 
 Tools: `who_is`, `add_name` (aliases, emails, kind, external references and identity sources),
-`update_entity` (explicit set/add/remove by stable ID), `merge_entities` (preview then apply),
+`update_entity` (explicit set/add/remove by stable ID), `merge_entities` (one call with `confirmed: true` once the person has confirmed; otherwise preview then apply),
+`answer_question` (closes an open question with the person's answer as the note that retracts it, and carries out same or different for two names; without a question it lists the open ones),
 `archive_entity` (`undo: true` restores), `undo_entity_merge` (preview then reverse a recorded merge),
 `entity_facts` and `compile_entity` (a cited brief from current evidence). Writes:
 `brain/entities/*.md` and `brain/entities/.history/`, through the library. Aliases cannot
