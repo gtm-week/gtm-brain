@@ -196,8 +196,14 @@ const stubCalls = (x, tool) => (x.stub || []).filter(c => c.tool === tool && !c.
 const called = (x, tool, ok, why) => need(stubCalls(x, tool).some(c => ok(c.arguments || {}, c)), (x.stub || []).some(c => c.tool === tool) ? `${tool}: ${why}` : `${tool} was not called`);
 const savedFromStub = (x, re, why) => need(x.added.some(m => fromStub(m) && re.test(JSON.stringify(m))), why);
 const STUB_TOOL_NAMES = /gtm.?test.?tools|company.?search|company.?enrich|buying.?signals|keyword.?research|content.?score/i;
-const listedAsUsed = x => need(Object.entries(x.toolsList || {}).some(([k, s]) => s && STUB_TOOL_NAMES.test(`${k} ${s.tool || ""} ${s.plugin || ""}`) && (s.test === "ok" || !!s.used)), "the brain's tools list does not show the stub tools as used (work/tools.json)");
-const sentNothing = x => all(noSend(x), need(!x.commands.some(c => /\b(curl|wget|sendmail|mailx?|nc)\b/.test(c)), "a shell command could reach the network or send mail"));
+// The list has one row per server, so after the first step that put it there the row alone proves nothing about
+// a later step: the turn must add its own evidence, a note that names the tool and cites it (what connect.mjs
+// counts) or a read test recorded with mark_tool.
+const creditsStub = m => fromStub(m) && (m.tools || []).some(t => STUB_TOOL_NAMES.test(String(t)));
+const listedAsUsed = x => all(need(Object.entries(x.toolsList || {}).some(([k, s]) => s && STUB_TOOL_NAMES.test(`${k} ${s.tool || ""} ${s.plugin || ""}`) && (s.test === "ok" || !!s.used)), "the brain's tools list does not show the stub tools as used (work/tools.json)"),
+  need(x.added.some(creditsStub) || x.calls.some(c => c.tool === "mark_tool" && STUB_TOOL_NAMES.test(JSON.stringify(c.arguments || {}))), "nothing saved in this turn names the stub tool in tools with its source, and no read test was recorded: the tools list shows it from an earlier step only"));
+// a command that runs one of these, not a file name or a search that contains the word
+const sentNothing = x => all(noSend(x), need(!x.commands.some(c => /(^|[;&|(`'"]\s*)(curl|wget|sendmail|mailx?|nc)(\s|$)/.test(c)), "a shell command could reach the network or send mail"));
 const viaStub = (x, ...checks) => all(...checks, listedAsUsed(x), sentNothing(x));
 const ICP_COUNTRIES = /germany|\bde\b|austria|\bat\b|poland|\bpl\b|dach/i;
 const fromIcp = a => { const countries = (a.countries || []).filter(c => ICP_COUNTRIES.test(c)).length, text = JSON.stringify(a);
@@ -205,10 +211,12 @@ const fromIcp = a => { const countries = (a.countries || []).filter(c => ICP_COU
 const names = list => (list || []).map(s => String(s).toLowerCase());
 // a failure played by the stub (--fail): Codex says what happened and saves no data the tool did not return
 const FAIL_SAYS = { expired_key: /expired|api key|\bkey\b|401|unauthori[sz]ed|sign(ed)? in|reconnect/i, empty: /no (results?|data|keywords?|match|companies|signals)|nothing (came back|was returned|returned|found)|found nothing|returned (nothing|no)|empty|not found|did not return|didn't return/i, rate_limit: /rate limit|429|too many|try again|retry/i };
-export const failureCheck = (mode, tool, invented) => x => all(need((x.stub || []).some(c => c.tool === tool), `${tool} was not called`),
+// The step names its tool and what only the tool could have told (never what the seeded brain already holds); the
+// failure judged is the one the run played (--fail), so every step can be run with every failure.
+export const failureCheck = (tool, invented) => Object.assign(mode => x => all(need((x.stub || []).some(c => c.tool === tool), `${tool} was not called`),
   need((x.stub || []).filter(c => c.tool === tool).length <= 3, `${tool} asked ${(x.stub || []).filter(c => c.tool === tool).length} times after it failed: a failure is an answer, not a reason to keep asking`),
   need(FAIL_SAYS[mode].test(x.reply), `the reply does not tell the person the tool failed (${mode})`),
-  need(!x.added.some(m => invented.test(JSON.stringify(m))), "saved data the tool did not return"), sentNothing(x));
+  need(!x.added.some(m => invented.test(JSON.stringify(m))), "saved data the tool did not return"), sentNothing(x)), { tool });
 
 const STUB = {
   "o1-pick": { say: "Check the prospects we saved with the buying signals tool and tell me which two accounts to contact first, and why. Name the person to write to if we know one. Save the signals you used.",
@@ -216,14 +224,14 @@ const STUB = {
     check: x => viaStub(x, called(x, "buying_signals", a => names(a.companies).some(c => c.includes("fernbrook")) && names(a.companies).some(c => /heron|juniper/.test(c)) && !names(a.companies).some(c => /umber|kestrel|glade/.test(c)), "not asked for the prospects saved in the brain"),
       need(has(x.reply, /Fernbrook/), "Fernbrook Outdoor (ICP fit, ready now) not picked"), need(!/Umber Pharma[^.\n]{0,80}(first|contact|pick)/i.test(x.reply) || /not a fit|pharmac/i.test(x.reply), "picked Umber Pharma, which the ICP rules out"),
       savedFromStub(x, /Head of Returns|in-store returns|returned in all 85 stores|Reverse Logistics/i, "the signals are not saved with a source pointing at the tool")),
-    fail: failureCheck("rate_limit", "buying_signals", /ready (to buy )?now|Head of Returns job|Reverse Logistics Lead/i) },
+    fail: failureCheck("buying_signals", /Reverse Logistics|returned in all 85 stores|from 1 December/i) },
   "o2-enrich": { say: "Enrich Fernbrook Outdoor with the company enrichment tool and save what it found, including the person to write to.",
     shows: "enrichment called and saved with its source, the contact registered",
     check: x => viaStub(x, called(x, "company_enrich", a => /fernbrook/i.test(a.company || ""), "not asked for Fernbrook Outdoor"),
       savedFromStub(x, /Lea Hoffmann/, "no note from the tool names Lea Hoffmann"), saved(x, /85/, "store count not saved"),
       need(x.names.some(n => n.name === "Lea Hoffmann" && n.kind === "person"), "Lea Hoffmann is not a person in the registry"),
       need(x.names.some(n => n.name === "Lea Hoffmann" && n.emails.includes("lea.hoffmann@fernbrook-outdoor.example")) || x.added.some(m => m.content.includes("lea.hoffmann@fernbrook-outdoor.example")), "her email is kept nowhere")),
-    fail: failureCheck("expired_key", "company_enrich", /Lea Hoffmann|85 stores|1,?400 employees/i) },
+    fail: failureCheck("company_enrich", /Lea Hoffmann|85 stores|1,?400 employees/i) },
   "o3-draft": { say: "Draft the first outreach email to Lea, tied to her company's buying signal, in our tone of voice. Draft only: do not send anything. Put the draft as a Markdown file in the outbound project folder." },
   "c1-topics": { say: "Plan our blog. Read our strategy, the market notes and what customers said on calls. Get keyword numbers for our content pillars from the keyword research tool. Propose three posts for the landing page blog, each with its keyword and the customer words it uses. Save the keyword numbers you used as one note, with where they came from.",
     shows: "topics from strategy, market and calls, keywords from the research tool, the numbers saved with their source",
@@ -231,7 +239,7 @@ const STUB = {
       called(x, "keyword_research", a => /pickup|cost|peak|black friday/i.test(JSON.stringify(a.seeds || [])), "the seeds are not the content pillars from the strategy"),
       need(["returns automation for retailers", "reduce return rate retail", "store pickup returns", "buy online return in store", "black friday returns", "cost of processing returns", "retail returns process"].filter(k => x.reply.toLowerCase().includes(k)).length >= 2, "fewer than two keywords from the tool used"),
       need(has(x.reply, /drown|Black Friday|return online orders in the store/i), "no customer words from the calls"), savedFromStub(x, /\b(320|1,?900|880|1,?300|2,?400|390|720)\b/, "the keyword numbers are not saved with a source pointing at the tool")),
-    fail: failureCheck("empty", "keyword_research", /\b(\d[\d,]*)\s*(monthly )?(searches|volume)|volume[^.]{0,20}\d|\b(320|1,?900|880)\b/i) },
+    fail: failureCheck("keyword_research", /\b(\d[\d,]*)\s*(monthly )?(searches|volume)|volume[^.]{0,20}\d|\b(320|1,?900|880)\b/i) },
   "c2-draft": { say: "Go with 'store pickup returns' first; save that as a decision. Then draft the post in our tone of voice: about 600 words, an SEO title under 60 characters, a meta description under 155 characters, one H1, the keyword in the title and in the first paragraph. Put the draft in the website project folder as Markdown, with title and description in its front matter. Score the draft with the content score tool, fix what it flags, and save the final score as a note with where it came from.",
     shows: "the choice saved as a decision, the post drafted, scored by the tool and the score saved",
     check: x => { const told = STEPS.find(s => s.id === "c2-draft").check(x); return viaStub(x, told,
@@ -243,10 +251,11 @@ const SEARCH = { loop: "outreach", id: "o0-search", stub: true, shows: "companie
   check: x => viaStub(x, saw(x, SEEN.icp, "did not read the ICP document"), called(x, "company_search", fromIcp, "the criteria are not the ICP's (regions, industries, store count)"),
     savedFromStub(x, /Fernbrook Outdoor/, "Fernbrook Outdoor is not saved from the search"), savedFromStub(x, /Heron Home|Juniper Haus/, "the other fits are not saved from the search"),
     need(!x.added.some(m => /Umber Pharma|Kestrel Sports|Glade Market|Larkspur Garden/.test(m.content) && !/not a fit|rule[sd]? out|excluded|too small/i.test(m.content)), "saved a company the ICP rules out as a prospect")),
-  fail: failureCheck("expired_key", "company_search", /Juniper Haus|Pinewood Living/) };
+  fail: failureCheck("company_search", /Juniper Haus|Pinewood Living/) };
 // the told steps, with the stub variants and the search step in front of the outreach loop
 export const STUB_STEPS = STEPS.flatMap(s => [...(s.id === "o1-pick" ? [SEARCH] : []), STUB[s.id] ? { ...s, ...STUB[s.id], stub: !!STUB[s.id].check } : s]);
-export const stepsFor = stub => stub ? STUB_STEPS : STEPS;
+// a failure run asks only the steps that can be judged: those that call a stub tool, and with --fail-tool that tool's
+export const stepsFor = (stub, fail = "", failTool = "") => (stub ? STUB_STEPS : STEPS).filter(s => !fail || (s.fail && (!failTool || s.fail.tool === failTool)));
 
 /* ---------- running ---------- */
 const readJSONL = p => existsSync(p) ? readFileSync(p, "utf8").split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean) : [];
@@ -281,6 +290,8 @@ export function parseArgs(args) {
 async function main() {
   const o = parseArgs(process.argv.slice(2));
   if (o.error) { console.error(`${o.error}\n${USAGE}`); process.exitCode = 2; return; }
+  const steps = stepsFor(o.stub, o.fail, o.failTool).filter(s => (!o.steps.length || o.steps.includes(s.id)) && (!o.loops.length || o.loops.includes(s.loop)));
+  if (!steps.length) { console.error(`no step to run${o.fail ? `: a failure run asks only the steps that call ${o.failTool || "a stub tool"}` : o.stub ? "" : " (o0-search needs --stub)"}\n${USAGE}`); process.exitCode = 2; return; }
   const lib = await import(`${P}/lib/brain.mjs`), { customerOverview } = await import(`${P}/lib/customers.mjs`);
   const base = resolve(process.env.GTM_BRAIN_EVAL_DIR || tmpdir()), artifacts = mkdtempSync(join(base, "gtm-demo-loops-"));
   // the generator gives the brain a scratch profile (never the real one); the server keeps using it, codex keeps the person's sign-in
@@ -307,7 +318,6 @@ async function main() {
     .flatMap(([k, v]) => ["-c", `mcp_servers.gtm_brain_eval.env.${k}=${JSON.stringify(v)}`]);
   const stubArgs = [`${P}/test/live/stub-gtm-tools.mjs`, "--log", stubLog, ...(o.fail ? ["--fail", o.fail] : []), ...(o.failTool ? ["--fail-tool", o.failTool] : [])];
   const results = [];
-  const steps = stepsFor(o.stub).filter(s => !o.steps.length || o.steps.includes(s.id));
   for (const loop of ["outreach", "content"].filter(l => !o.loops.length || o.loops.includes(l))) {
     const trace = join(artifacts, `${loop}-mcp.jsonl`); let session = null, seen = [];   // seen: the texts the resumed session has read so far, still in its context
     const preamble = `This is a synthetic GTM Brain company brain at ${root}, used for a workshop demo. You work for Marta Nowak, confirmed handle ${by}. Use only this synthetic brain and the plugin's workflow instructions; do not read real account data or other company files. ${o.stub ? `Nothing is ever sent or published from this chat: Gmail and Vercel are not connected, and what they returned is told to you. The company data, buying signals and SEO tools are the ${STUB_SERVER} tools in this chat.` : "Nothing is ever sent or published from this chat: Clay, Surfer, Gmail and Vercel are not connected, and what they returned is told to you."} The plugin build under test is ${pluginPath}; use its skills/gtm-brain-use-brain/SKILL.md and the procedures it references.\n\n`;
@@ -350,7 +360,7 @@ async function main() {
       const skill = context.some(t => /^name: gtm-brain-use-brain/m.test(t));   // without it the turn ran on the tool descriptions alone
       const x = { reply, calls, stub, toolsList, commands, added, files, names, idOf, customers: customerOverview(root).customers, saw: re => context.some(t => re.test(t)), sawBrain: re => fromBrain.some(t => re.test(t)) };
       // a played failure is judged by what Codex told the person and saved, on the steps that call a stub tool
-      const check = o.fail ? step.fail : step.check;
+      const check = o.fail ? step.fail && step.fail(o.fail) : step.check;
       let verdict; try { verdict = !check ? "no failure check for this step" : run.code === 0 && !run.timedOut ? check(x) : `codex ${run.timedOut ? "timed out" : `exited ${run.code}`}`; } catch (e) { verdict = `check threw: ${e.message}`; }
       const r = { loop, id: step.id, shows: step.shows, pass: verdict === true, why: verdict === true ? "" : verdict, ...(verdict !== true && step.known_gap ? { known_gap: step.known_gap } : {}), seconds: Math.round((Date.now() - started) / 1000),
         skill_read: skill, brain_calls: calls.length, stub_calls: stub.length, tools: calls.map(c => c.tool), stub_tools: stub.map(c => `${c.tool}${c.isError ? " (error)" : ""}`), saved: added.map(m => `${m.context} [${m.kind}] ${m.content.slice(0, 160)}`), files: files.map(f => f.path), reply: reply.slice(0, 1200), events, trace };

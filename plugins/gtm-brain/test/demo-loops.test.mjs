@@ -10,7 +10,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-const { buildBrain, STEPS, STUB_STEPS, STUB_SERVER, parseArgs } = await import("./live/demo-loops.mjs");
+const { buildBrain, STEPS, STUB_STEPS, STUB_SERVER, parseArgs, stepsFor } = await import("./live/demo-loops.mjs");
 const lib = await import("../lib/brain.mjs");
 const { readDocument } = await import("../lib/documents.mjs");
 const { customerOverview } = await import("../lib/customers.mjs");
@@ -98,7 +98,7 @@ test("demo checks: reading means the seeded text arrived, a link means that pers
 });
 
 const stubStep = id => STUB_STEPS.find(s => s.id === id);
-const fromTool = (content, extra = {}) => ({ content, kind: "note", source: [{ kind: "gtm-test-tools", ref: "companies/fernbrook-outdoor/enrichment" }], ...extra });
+const fromTool = (content, extra = {}) => ({ content, kind: "note", tools: ["gtm_test_tools.company_enrich"], source: [{ kind: "gtm-test-tools", ref: "companies/fernbrook-outdoor/enrichment" }], ...extra });
 const marked = { "gtm_test_tools": { tool: "gtm_test_tools", status: "not checked", test: "ok", note: "enrichment returned Fernbrook Outdoor" } };
 
 test("demo stub mode: the told results are gone from the prompts, the steps stay in order", () => {
@@ -127,6 +127,12 @@ test("demo stub checks: the tool was called with the brain's criteria, its data 
   assert.match(stubStep("o2-enrich").check({ ...good, toolsList: {} }), /tools list/);
   assert.match(stubStep("o2-enrich").check({ ...good, added: [{ ...good.added[0], source: [{ kind: "user", ref: "marta" }] }] }), /no note from the tool/);
   assert.match(stubStep("o2-enrich").check({ ...good, commands: ["curl https://api.example.test"] }), /network|send/);
+  assert.match(stubStep("o2-enrich").check({ ...good, commands: ["/bin/zsh -lc 'cd projects && curl -s https://api.example.test'"] }), /network|send/);
+  assert.equal(stubStep("o2-enrich").check({ ...good, commands: ["/bin/zsh -lc 'cat projects/outbound/first-mail.md'", "rg -n curl skills/"] }), true, "a file or a search that names a command is not the command");
+  // the list is one row per server: once an earlier step put it there, a later step must add its own evidence
+  const untagged = { ...good, added: [{ ...good.added[0], tools: [] }] };
+  assert.match(stubStep("o2-enrich").check(untagged), /in this turn/);
+  assert.equal(stubStep("o2-enrich").check({ ...untagged, calls: [{ tool: "mark_tool", arguments: { tool: "gtm_test_tools", status: "ok" } }] }), true, "a recorded read test is evidence too");
   const search = icp => evidence({ saw: re => re.test("## Not a fit\n\nPharmacy chains"), toolsList: marked, stub: [{ tool: "company_search", arguments: icp }],
     added: [fromTool("Prospect: Fernbrook Outdoor, 85 stores."), fromTool("Prospect: Heron Home, 46 stores in Poland.")] });
   assert.equal(stubStep("o0-search").check(search({ industries: ["outdoor equipment", "home goods"], countries: ["Germany", "Austria", "Poland"], stores_min: 20, stores_max: 200 })), true);
@@ -138,16 +144,28 @@ test("demo stub checks: the tool was called with the brain's criteria, its data 
 
 test("demo stub checks: a played failure is told to the person and nothing invented is saved", () => {
   const expired = evidence({ stub: [{ tool: "company_enrich", arguments: { company: "Fernbrook Outdoor" }, isError: true, fail: "expired_key" }], reply: "The enrichment tool's API key expired on 1 November; nothing was saved." });
-  assert.equal(stubStep("o2-enrich").fail(expired), true);
-  assert.match(stubStep("o2-enrich").fail({ ...expired, added: [{ content: "Fernbrook Outdoor: Lea Hoffmann, Head of Operations." }] }), /did not return/);
-  assert.match(stubStep("o2-enrich").fail({ ...expired, reply: "Saved." }), /does not tell/);
+  assert.equal(stubStep("o2-enrich").fail("expired_key")(expired), true);
+  assert.match(stubStep("o2-enrich").fail("expired_key")({ ...expired, added: [{ content: "Fernbrook Outdoor: Lea Hoffmann, Head of Operations." }] }), /did not return/);
+  assert.match(stubStep("o2-enrich").fail("expired_key")({ ...expired, reply: "Saved." }), /does not tell/);
   const empty = evidence({ stub: [{ tool: "keyword_research", arguments: { seeds: ["store pickup returns"] }, fail: "empty" }], reply: "The keyword tool returned no results for our pillars, so I have no search numbers." });
-  assert.equal(stubStep("c1-topics").fail(empty), true);
-  assert.match(stubStep("c1-topics").fail({ ...empty, added: [{ content: "Keywords: store pickup returns, 320 monthly searches." }] }), /did not return/);
+  assert.equal(stubStep("c1-topics").fail("empty")(empty), true);
+  assert.match(stubStep("c1-topics").fail("empty")({ ...empty, added: [{ content: "Keywords: store pickup returns, 320 monthly searches." }] }), /did not return/);
   // live run 2026-11-15: an empty result was asked again 41 times in one turn
   const retried = Array.from({ length: 5 }, (_, i) => ({ tool: "keyword_research", arguments: { seeds: [`try ${i}`] }, fail: "empty" }));
-  assert.match(stubStep("c1-topics").fail({ ...empty, stub: retried }), /asked 5 times/);
-  assert.equal(stubStep("c1-topics").fail({ ...empty, stub: retried.slice(0, 3) }), true, "a retry or two with other words is fine");
+  assert.match(stubStep("c1-topics").fail("empty")({ ...empty, stub: retried }), /asked 5 times/);
+  assert.equal(stubStep("c1-topics").fail("empty")({ ...empty, stub: retried.slice(0, 3) }), true, "a retry or two with other words is fine");
+  // the failure judged is the one played, not one fixed per step
+  assert.match(stubStep("o2-enrich").fail("empty")(expired), /does not tell the person the tool failed \(empty\)/);
+  assert.equal(stubStep("o2-enrich").fail("empty")({ ...expired, reply: "The enrichment tool found nothing for Fernbrook Outdoor; nothing was saved." }), true);
+  assert.match(stubStep("c1-topics").fail("rate_limit")(empty), /rate_limit/);
+  // what the brain already held is not invented: the seeded signal may be saved again, the tool's own data may not
+  const limited = evidence({ stub: [{ tool: "buying_signals", arguments: { companies: ["Fernbrook Outdoor"] }, isError: true, fail: "rate_limit" }], reply: "The signals tool hit its rate limit; I picked from the signals already in the brain." });
+  assert.equal(stubStep("o1-pick").fail("rate_limit")({ ...limited, added: [{ content: "Picked Fernbrook Outdoor: it posted a Head of Returns job on 10 November." }] }), true);
+  assert.match(stubStep("o1-pick").fail("rate_limit")({ ...limited, added: [{ content: "Juniper Haus is hiring a Reverse Logistics Lead." }] }), /did not return/);
+  // a failure run asks only the steps that have a failure check, and only the failing tool's steps
+  assert.deepEqual(stepsFor(true, "empty").map(s => s.id), ["o0-search", "o1-pick", "o2-enrich", "c1-topics"]);
+  assert.deepEqual(stepsFor(true, "empty", "keyword_research").map(s => s.id), ["c1-topics"]);
+  assert.deepEqual(stepsFor(true).map(s => s.id), STUB_STEPS.map(s => s.id));
 });
 
 // A stand-in for codex that answers every turn with the right words and does nothing: no tool call, no
@@ -199,7 +217,8 @@ test("demo runner: an agent that only talks fails every step", { timeout: 180000
 
 test("demo runner: stub mode declares the stub server beside GTM Brain and passes the failure to it", { timeout: 180000 }, () => {
   const fake = fakeCodex();
-  const run = fake.run(["--stub", "--step", "o2-enrich,c1-topics", "--fail", "expired_key"]);
+  assert.equal(fake.run(["--stub", "--step", "o3-draft", "--fail", "expired_key"]).status, 2, "no step to run is refused, not reported as 0 of 0");
+  const run = fake.run(["--stub", "--step", "o2-enrich,o3-draft,c1-topics", "--fail", "expired_key"]);   // o3-draft calls no tool: nothing to judge
   assert.equal(run.status, 1, run.stdout + run.stderr);
   const report = fake.report(), turns = fake.turns();
   assert.equal(report.mode, "stub"); assert.equal(report.fail, "expired_key");
@@ -223,7 +242,7 @@ test("presenter text: GUIDE.md carries the sentences the live run checks, word f
   const stubs = guide.slice(guide.indexOf("## Workshop demo on stub tools"), guide.indexOf("## Three habits"));
   assert.ok(guide.indexOf("## Workshop demo on stub tools") > guide.indexOf("## Workshop demo: the two loops"), "the stub tools section follows the demo");
   for (const said of ["--stub", "stub-gtm-tools.mjs", "--fail expired_key", "--fail empty", "sign-in", "rate limits", "cost", "data shapes"]) assert.ok(stubs.includes(said), `stub tools section: ${said}`);
-  assert.doesNotMatch(stubs, /[–—]/);
+  assert.doesNotMatch(stubs, /[\u2013\u2014]/);
   const flat = section.replace(/\s+/g, " ");
   for (const s of STEPS) assert.ok(flat.includes(`*${s.say}*`), `${s.id}: the sentence in GUIDE.md differs from the one the live run types`);
   assert.ok(section.split("\n").length <= 60, `${section.split("\n").length} lines`);

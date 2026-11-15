@@ -40,7 +40,7 @@ test("stub tools: listed as read-only test doubles with neutral names", async ()
     assert.match(t.description, /test double/i, t.name);
     assert.doesNotMatch(t.name + t.description, /clay|zynt|surfer/i, `${t.name}: neutral, no vendor name`);
     assert.equal(t.annotations.readOnlyHint, true); assert.equal(t.annotations.openWorldHint, false);
-    assert.doesNotMatch(t.description, /[–—]/);
+    assert.doesNotMatch(t.description, /[\u2013\u2014]/);
   }
 });
 
