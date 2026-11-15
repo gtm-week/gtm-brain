@@ -166,5 +166,13 @@
     "title": "Set up ZYNT",
     "description": "Paste the prompt ZYNT gives you, and the brain fills ZYNT in from what it already knows.",
     "example": "Set up ZYNT for me."
+  },
+  {
+    "id": "gtm-brain-freckle-setup",
+    "group": "setup",
+    "featured": false,
+    "title": "Set up Freckle",
+    "description": "Connect Freckle and build its first list of target companies and people from what the brain already knows.",
+    "example": "Set up Freckle for me."
   }
 ]
