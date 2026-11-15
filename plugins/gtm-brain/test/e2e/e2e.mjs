@@ -7,7 +7,7 @@
 // Each check: id, section, pass or fail, ms, bytes. A check that fails because of a gap main is
 // known to have is marked known_gap, so a fix shows up as a check that turns to pass.
 import { spawn, spawnSync } from "node:child_process";
-import { appendFileSync, cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createInterface } from "node:readline";
@@ -268,6 +268,26 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
   if (gold.hub) await check("rules.typed_link_current_only", "rules", async () => { const r = await q({ object: "rules", search: gold.hub.name, filters: { when: "drafting" } }); const current = gold.hub.partnership.history.at(-1)?.status === "current"; return { pass: !r.isError && r.text.includes("partner tier") === current, text: r.text, note: `partnership ${current ? "current" : "ended"}` }; });
   await check("rules.typed_refused", "rules", async () => { const w = await call("remember", { by, context: "icp", content: "E2E Rules Co is now a customer (e2erulesrefused).", companies: ["E2E Rules Co"], sources: [`user:${by}`] }); const s = await q({ object: "memories", search: "e2erulesrefused" }); return { pass: w.isError && /refused by Our rules "Never call a company a customer before a signed contract\."/.test(w.text) && !rowIds(s.text).length, text: w.text }; });
   if (gold.hub) await check("rules.typed_once", "rules", async () => { const a = await call("remember", { by, context: "icp", content: `E2E rules probe: ${gold.hub.name} moved its office (e2erulesonce1).`, companies: [gold.hub.name], sources: [`user:${by}`] }), b = await call("remember", { by, context: "icp", content: `E2E rules probe: ${gold.hub.name} hired (e2erulesonce2).`, companies: [gold.hub.name], sources: [`user:${by}`] }); const shown = t => /Our rules for organization[^\n]*when saving[^\n]*\n- Never call a company a customer/.test(t.text); return { pass: !a.isError && !b.isError && shown(a) && !shown(b), text: `${a.text}\n---\n${b.text}`, bytes: Buffer.byteLength(a.text) }; });
+
+  /* ---------- the nightly chat capture: a chat in the brain's folder, a stand-in model run, remember, undo ---------- */
+  {
+    const real = realpathSync(brain), d = new Date(), id = "0e2e0000-0000-4000-8000-00000000ca97";
+    const day = join(profile, "sessions", String(d.getFullYear()), String(d.getMonth() + 1).padStart(2, "0"), String(d.getDate()).padStart(2, "0"));
+    mkdirSync(day, { recursive: true });
+    const said = "We agreed the reseller tier launches on 2027-02-01 (e2ecapture).";
+    writeFileSync(join(day, `rollout-${d.toISOString().slice(0, 19).replace(/:/g, "-")}-${id}.jsonl`), [{ type: "session_meta", payload: { id, cwd: real, source: "vscode", thread_source: "user" } },
+      { timestamp: d.toISOString(), type: "response_item", payload: { type: "message", role: "user", content: [{ type: "input_text", text: said }] } },
+      { timestamp: d.toISOString(), type: "response_item", payload: { type: "message", role: "assistant", content: [{ type: "output_text", text: "Understood." }] } }].map(l => JSON.stringify(l)).join("\n") + "\n");
+    const stand = join(scratch, "capture-model.mjs");
+    writeFileSync(stand, `import { readFileSync } from "node:fs"; const p = readFileSync(0, "utf8"); process.stdout.write(JSON.stringify({ notes: p.includes(${JSON.stringify(id)}) ? [{ chat: ${JSON.stringify(id)}, context: "offer", kind: "decision", content: "The reseller tier launches on 2027-02-01 (e2ecapture).", quote: ${JSON.stringify(said)} }] : [] }));`);
+    const pass = () => { const r = spawnSync(process.execPath, [join(P, "scripts/gtm-brain-schedule/capture.mjs"), brain, "--run", "--by", by], { cwd: brain, env: { ...env, GTM_BRAIN_CAPTURE_MODEL: stand }, encoding: "utf8" }); return { text: `${r.stdout}${r.stderr}`, code: r.status }; };
+    await check("capture.pass_saves_through_remember", "capture", async () => { const r = pass(); const s = await q({ object: "memories", search: "e2ecapture" }); const m = lib.readMemories(brain, "offer").find(x => x.content.includes("e2ecapture"));
+      return { pass: r.code === 0 && rowIds(s.text).length === 1 && !!m && m.tags.includes("captured") && m.source.some(x => x.kind === "codex" && x.ref === id), text: r.text, note: r.text.trim().slice(0, 160) }; });
+    await check("capture.second_pass_reads_nothing", "capture", async () => { const r = pass(); return { pass: r.code === 0 && /read 0 chats/.test(r.text), text: r.text, note: r.text.trim().slice(0, 120) }; });
+    await check("capture.status_heartbeat", "capture", async () => { const r = await call("capture_chats", { mode: "status" }); return { pass: !r.isError && /chat capture: last pass .* UTC, 0 notes saved, 0 tokens/.test(r.text) && /cap 200,000 tokens per pass/.test(r.text), text: r.text }; });
+    await check("capture.undo", "capture", async () => { const cap = await import(`${P}/lib/capture.mjs`); const line = cap.captureNotice(brain); const r = await call("capture_chats", { mode: "undo" }); const s = await q({ object: "memories", search: "e2ecapture" });
+      return { pass: /1 note captured from your recent chats/.test(line) && !r.isError && /withdrew 1 captured note/.test(r.text) && rowIds(s.text).length === 0, text: `${line}\n${r.text}\n${s.text}`, note: r.text.trim().slice(0, 120) }; });
+  }
 
   /* ---------- messy traps ---------- */
   const T = gold.traps || {};

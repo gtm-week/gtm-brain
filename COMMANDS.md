@@ -629,6 +629,20 @@ Writes: covers and a commit `scheduled: compile ...` (covers only; anything else
 left uncommitted and listed), `work/hooks.log`.
 `bash $PLUGIN_ROOT/scripts/gtm-brain-schedule/scheduled-run.sh /path/to/brain`
 
+### chat capture
+*"undo captured"*, *"run the chat capture"*, *"turn off chat capture"*
+
+Before it compiles, the scheduled run reads this brain's chats (brain folder and linked project folders
+only) changed since the last pass and saves, through `remember`, the outcomes nobody saved, each resting on
+an exact sentence of its chat (see [MANUAL.md](plugins/gtm-brain/MANUAL.md#chat-capture)). Capped at
+200,000 input tokens per pass and 50,000 per chat; what a cap leaves is read next time.
+
+Tool: `capture_chats` (`mode` run | undo | status | off | on, optional `cap`, `chat_cap`). Writes: notes
+tagged `captured` and `capture:<pass>` with the chat as source (committed; shared by the next commit in the brain), retractions on
+undo (via codex, pushed at once), `work/capture.json` (settings, heartbeat, cursors), `work/capture-runs.jsonl` (one record per pass,
+with its tokens), `work/hooks.log`.
+`node $PLUGIN_ROOT/scripts/gtm-brain-schedule/capture.mjs /path/to/brain --run | --start | --undo | --status | --off | --on | --cap <tokens> | --chat-cap <tokens>`
+
 ### gtm-brain-configure
 *"update GTM Brain"*, *"check the installed GTM Brain version"*
 

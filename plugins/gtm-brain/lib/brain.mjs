@@ -987,7 +987,8 @@ export function commit(root, paths, message, { always = false, push = true, allo
     // failed push is retried by the next commit and by the session start.
     let sending = false;
     const last = pushFailure(root);
-    try { const remote = push && pushRemote(git("remote")); if (remote) { pushInBackground(root, remote); sending = true; } } catch {}
+    // GTM_BRAIN_NO_PUSH: the nightly chat capture commits and leaves sharing to the next ordinary save (lib/capture.mjs).
+    try { const remote = push && !process.env.GTM_BRAIN_NO_PUSH && pushRemote(git("remote")); if (remote) { pushInBackground(root, remote); sending = true; } } catch {}
     if (!sending) return { ok: true, note: "kept" };
     return { ok: true, note: `${NOT_SHARED_YET}${last ? `; the last push failed: ${last.error}` : ""}` };
   } catch (e) {
@@ -1500,7 +1501,7 @@ export function validateMemoriesFile(path, context = null) {
 export const INTERACTIONS_PATH = "brain/ontology.ossie.json";
 // every name the plugin serves; server.test.mjs holds this equal to the live catalog, so a company
 // interaction can never shadow a tool
-export const RESERVED_TOOLS = new Set(["memory_index", "update_plugin", "where_we_are", "list_contexts", "load_context", "recall", "compile_facts", "compile_apply", "render_dashboard", "open_dashboard", "new_context", "fork_context", "edit_context", "archive_context", "advise", "who_is", "why_here", "check_rules", "add_name", "check_tools", "mark_tool", "propose_admin_change", "approve_change", "keep_approved_file", "save", "check_environment", "setup_brain", "upgrade_brain", "list_objects", "describe_object", "query", "remember", "interact", "propose_interaction", "link_project", "unlink_project", "list_projects", "list_brains", "customer_overview", "meeting_overview", "entity_facts", "compile_entity", "update_entity", "merge_entities", "archive_entity", "undo_entity_merge", "skill", "guideline", "document", "workflow", "share_brain"]);
+export const RESERVED_TOOLS = new Set(["memory_index", "capture_chats", "update_plugin", "where_we_are", "list_contexts", "load_context", "recall", "compile_facts", "compile_apply", "render_dashboard", "open_dashboard", "new_context", "fork_context", "edit_context", "archive_context", "advise", "who_is", "why_here", "check_rules", "add_name", "check_tools", "mark_tool", "propose_admin_change", "approve_change", "keep_approved_file", "save", "check_environment", "setup_brain", "upgrade_brain", "list_objects", "describe_object", "query", "remember", "interact", "propose_interaction", "link_project", "unlink_project", "list_projects", "list_brains", "customer_overview", "meeting_overview", "entity_facts", "compile_entity", "update_entity", "merge_entities", "archive_entity", "undo_entity_merge", "skill", "guideline", "document", "workflow", "share_brain"]);
 const LONG_DASH = /[\u2013\u2014\u2015\u2212]/;
 const interactionOf = (raw, parsed) => ({
   name: parsed.name, title: String(raw.title || parsed.name), tool: String(raw.tool || "").trim(), operation: String(raw.operation || "").trim(), description: String(raw.description || "").trim(),
