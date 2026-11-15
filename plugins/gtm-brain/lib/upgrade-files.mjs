@@ -186,12 +186,26 @@ export function layoutStep(root, confirmed) {
   // Anyone else upgrades to layout 2 at most, and the rest of the upgrade goes on.
   const target = !owner || me === owner ? writesLayout() : Math.min(writesLayout(), 2);
   const on = diskLayout(root), flat = on < 2 ? pagePaths(root).filter(p => !isKindPagePath(p)).length : 0;
-  const kinds = on < 2 ? `It moves ${flat} entity page${flat === 1 ? "" : "s"} into a folder per kind (brain/entities/people/, organizations/, ...), where a GTM Brain from before 0.35 does not find them; 0.34 does not check the layout yet, so it keeps saving and writes flat pages of its own, which the next write here folds in.` : "";
+  const kinds = on < 2 ? `It moves ${flat} entity page${flat === 1 ? "" : "s"} into a folder per kind (brain/entities/people/, organizations/, ...). A teammate still on GTM Brain 0.34 gets no warning: their notes keep saving, but their GTM Brain no longer finds these pages (a known person or company looks unknown to it) and writes a flat page of its own for each name it saves, which the next save from an updated GTM Brain folds back in. No note is lost.` : "";
   const config = target >= 3 && !inConfigFolders(root) ? configMoveWhat(root) : "";
-  const plan = layoutPlan(root, { me, names, on, target, what: [kinds, config].filter(Boolean).join(" "), older: config ? "they will need to update GTM Brain: until then their GTM Brain does not find this brain." : "" });
-  if (!plan.changes) return target < writesLayout() && on < writesLayout() && on >= target ? `NOTE\tMoving the base files into about-us/ and config/ (layout 3) is the owner's (${names[owner] || owner}) to say yes to; nothing of it was asked or moved.` : "";
+  const plan = layoutPlan(root, { me, names, on, target, what: [kinds, config].filter(Boolean).join(" "), older: config ? "they will need to update GTM Brain: until then their GTM Brain does not find this brain." : kinds ? "they should update GTM Brain before you say yes: until they do, their GTM Brain keeps saving notes but does not find the entity pages." : "" });
+  if (!plan.changes) return target < writesLayout() && on < writesLayout() && on >= target ? `NOTE\tOne more move is waiting: the base documents into about-us/ and the rules, schema and settings into config/. It is the owner's (${names[owner] || owner}) to say yes to, in their own chat ("upgrade this brain"); nothing of it was asked or moved here.` : "";
   if (process.env.GTM_BRAIN_RUN) return `ASK\t${plan.summary} A scheduled or background run never changes the layout: the person says "upgrade the brain" in a chat.`;
   return confirmed ? `CHANGE\t${plan.from}\t${plan.to}` : `ASK\t${plan.line}`;
+}
+
+/* The chat start's line for a brain whose files are still arranged as an older GTM Brain kept them, when the
+   person in this checkout is the one who can say yes to the move (anyone for the entity pages, only the owner for
+   about-us/ and config/): the brain needs an upgrade, Codex offers it and asks before anything moves, and
+   upgrade_brain does it. "" for a brain that is current, a brain this plugin must not write, a teammate whose
+   only pending move is the owner's, and a scheduled or background run. Nothing is read beyond what layoutStep reads. */
+export function layoutOffer(root) {
+  if (process.env.GTM_BRAIN_RUN) return "";
+  let step; try { step = layoutStep(root, false); } catch { return ""; }
+  if (!step.startsWith("ASK\t")) return "";
+  const pages = diskLayout(root) < 2, base = step.includes("about-us/");
+  const what = [pages && "the entity pages into a folder per kind", base && "the base documents into about-us/ and the rules, schema and settings into config/"].filter(Boolean).join(", and ");
+  return `GTM Brain: this brain needs an upgrade. Its files are still arranged as an older GTM Brain kept them, and this version can move ${what}. Nothing has moved, and reading and saving work as before. Offer the upgrade once, in one line at the end of your first reply ("This brain can be upgraded to the 0.35 file arrangement. Say: upgrade this brain."), and never start it unasked. On yes, call upgrade_brain: it changes nothing and returns what would move and which teammates must update GTM Brain first; put that to the person as one yes/no question, and only on their yes call upgrade_brain again with confirm: true.`;
 }
 
 /* upgrade.sh: what a brain lacks, as three lines: the starters added, RULES.md and SCHEMA.md written, and

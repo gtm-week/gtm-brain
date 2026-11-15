@@ -100,8 +100,8 @@ export function layoutPlan(root, { target = writesLayout(), me = null, names = {
   const r = readLayout(root), from = r.layout === null ? null : Math.max(r.layout, on);
   const changes = from !== null && target > from;
   const teammates = changes ? recentTeammates(root, { me, names, now }) : [];
-  const who = teammates.length ? `${teammates.length} teammate${teammates.length === 1 ? "" : "s"} saved here in the last 14 days (${teammates.map(t => `${t.name}, last ${t.last}`).join("; ")}); ${older ? `${teammates.length === 1 ? "they" : "each"} ${older.replace(/^they /, "")}` : `${teammates.length === 1 ? "they" : "each"} will need to update GTM Brain before saving here again: a GTM Brain that checks brain/layout.json reads this brain but writes nothing until then.`}` : "Nobody else saved here in the last 14 days.";
+  const who = teammates.length ? `${teammates.length} teammate${teammates.length === 1 ? "" : "s"} saved here in the last 14 days (${teammates.map(t => `${t.name}, last ${t.last}`).join("; ")}); ${older ? `${teammates.length === 1 ? "they" : "each"} ${older.replace(/^they /, "")}` : `${teammates.length === 1 ? "they" : "each"} will need to update GTM Brain before saving here again: a GTM Brain that checks brain/layout.json reads this brain but writes nothing until then.`}` : "Nobody else saved here in the last 14 days; anyone who still opens this brain with an older GTM Brain updates it first.";
   const summary = changes ? `This upgrade changes the brain's file layout from ${from} to ${target}. ${what ? `${what} ` : ""}${who}` : "";
-  const line = changes ? `${summary} Ask the person one yes/no question: Yes, upgrade the layout / No, not now. Only on yes, run upgrade_brain again with confirm: true.` : "";
+  const line = changes ? `${summary} Say in plain words what moves and who must update GTM Brain first (the folders, not the layout numbers), then ask the person one yes/no question: Yes, upgrade the layout / No, not now. Only on yes, run upgrade_brain again with confirm: true. On no, nothing changes and the brain keeps working as it is.` : "";
   return { from, to: target, changes, teammates, summary, line };
 }
