@@ -174,5 +174,13 @@
     "title": "Set up Freckle",
     "description": "Connect Freckle and build its first list of target companies and people from what the brain already knows.",
     "example": "Set up Freckle for me."
+  },
+  {
+    "id": "gtm-brain-clay-setup",
+    "group": "setup",
+    "featured": false,
+    "title": "Set up Clay",
+    "description": "Connect Clay and find the target companies and people the brain already names; enrichment asks first.",
+    "example": "Set up Clay for me."
   }
 ]

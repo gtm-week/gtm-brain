@@ -97,9 +97,9 @@ plugins/gtm-brain/
   .mcp.json  server/          the operations as MCP tools (Remembering, Searching the brain, ...);
                               dash.mjs serves the read-only dashboard and revision events
   lib/                        the file format: read, append, write covers, commit; no dependencies
-  skills/                     the twenty-two workflows a person can ask for (all prefixed gtm-brain-): start,
+  skills/                     the twenty-three workflows a person can ask for (all prefixed gtm-brain-): start,
                               todo, sync, workflow, deepdive, strategy, unit-economics, define-icp,
-                              market-desk-research, voice, zynt-setup, freckle-setup,
+                              market-desk-research, voice, zynt-setup, freckle-setup, clay-setup,
                               project, design-system, add-section,
                               build-landing-page, publish-website, configure, skill, rules, schema,
                               use-brain; what

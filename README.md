@@ -92,7 +92,7 @@ called out. The review makes a recommendation; budget and campaign changes remai
 > Make this research process a skill I can reuse in our other projects.
 
 Keep your own skills in the brain and use them from linked project folders. Plugin updates
-preserve them. See the [command reference](COMMANDS.md) for all twenty-two workflows, including
+preserve them. See the [command reference](COMMANDS.md) for all twenty-three workflows, including
 strategy, source sync, documents and project setup.
 
 ## How GTM Brain works
@@ -277,7 +277,7 @@ does not mean offline AI processing.
 
 ## Built-in workflows
 
-Ask for an outcome in ordinary language, or invoke one of the twenty-two shipped skills:
+Ask for an outcome in ordinary language, or invoke one of the twenty-three shipped skills:
 
 | Command | Use it for |
 | --- | --- |
@@ -291,6 +291,7 @@ Ask for an outcome in ordinary language, or invoke one of the twenty-two shipped
 | `/gtm-brain-voice` | Draft a tone of voice: whose it is first (company, person or team), then from writing that fits, tested on one fresh piece; the company's is `voice.md`. |
 | `/gtm-brain-zynt-setup` | Set up ZYNT buying signals from the brain when you paste ZYNT's setup prompt; ZYNT then shows in the brain's tools. |
 | `/gtm-brain-freckle-setup` | Connect Freckle (lead enrichment) on your yes and build its first list of target companies and people from the brain; runs that spend credits ask first. |
+| `/gtm-brain-clay-setup` | Connect Clay on your yes and find the brain's target companies and people in it (search is free); enrichment that spends credits asks first. |
 | `/gtm-brain-workflow` | Create a playbook, start a run and advance through its steps and gates. |
 | `/gtm-brain-sync` | Pull relevant updates from connected sources and retain useful findings. |
 | `/gtm-brain-todo` | Review what is waiting on you across the brain and connected tools. |
@@ -379,9 +380,9 @@ plugins/gtm-brain/
   .mcp.json  server/          the operations as MCP tools (Remembering, Searching the brain, ...);
                               dash.mjs serves the read-only dashboard and revision events
   lib/                        shared readers, validators, writers, search and identity logic; Node built-ins
-  skills/                     the twenty-two workflows a person can ask for (all prefixed gtm-brain-): start,
+  skills/                     the twenty-three workflows a person can ask for (all prefixed gtm-brain-): start,
                               todo, sync, workflow, deepdive, strategy, unit-economics, define-icp,
-                              market-desk-research, voice, zynt-setup, freckle-setup,
+                              market-desk-research, voice, zynt-setup, freckle-setup, clay-setup,
                               project, design-system, add-section,
                               build-landing-page, publish-website, configure, skill, rules, schema,
                               use-brain; what

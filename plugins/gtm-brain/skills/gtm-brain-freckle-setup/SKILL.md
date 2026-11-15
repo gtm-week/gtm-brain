@@ -28,7 +28,7 @@ this chat uses:
 
 1. **Freckle's tools are listed in this chat** (`workspace_context` among them): use them.
 2. **Not listed**: ask "Connect Freckle so the brain can build lists in it?" with Yes, connect
-   Freckle and No, not now. On yes, run the add yourself (it writes the host's own config, so the
+   Freckle and No, not now, both named as numbered choices. On yes, run the add yourself (it writes the host's own config, so the
    host asks the person to approve the command):
 
    ```
