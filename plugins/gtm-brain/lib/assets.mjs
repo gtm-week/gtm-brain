@@ -6,7 +6,9 @@ import { readFileSync, writeFileSync, mkdirSync, realpathSync, statSync, existsS
 import { resolve, relative, isAbsolute, join, extname, basename, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import * as lib from './brain.mjs';
-import { assetFolder, movedAsset, kindFolders, ENTITIES_DIR } from './layout.mjs';
+import { assetFolder, movedAsset, kindFolders, entitiesDir } from './layout.mjs';
+import { underEntities, herePath, workName } from './brain-paths.mjs';
+import { workDir } from './brain-paths.mjs';
 
 const text = v => typeof v === 'string' && v.trim().length > 0 && !/[\x00-\x1f]/.test(v);
 const within = (base, path) => { const r = relative(base, path); return r !== '' && !isAbsolute(r) && r !== '..' && !r.startsWith('../'); };
@@ -26,10 +28,10 @@ export function validateAsset(a) {
   return errors;
 }
 function machine(root, create = false) {
-  const path = join(root, 'work', 'asset-machine.json');
+  const path = join(workDir(root), 'asset-machine.json');
   try { return JSON.parse(readFileSync(path, 'utf8')).id; } catch {}
   if (!create) return null;
-  mkdirSync(join(root, 'work'), { recursive: true });
+  mkdirSync(workDir(root), { recursive: true });
   const id = randomUUID(); writeFileSync(path, JSON.stringify({ id }), { flag: 'wx', mode: 0o600 }); return id;
 }
 function projectRoot(root, slug) {
@@ -53,17 +55,17 @@ export function resolveAssetFile(root, asset) {
    memory keeps the path it was saved with (memories are never edited), the file is found where its owner's
    folder is now. By the short id in the path, else by the owner named on the attachment. */
 function relocated(root, asset) {
-  const p = asset.file.path;
-  if (!p.startsWith(`${ENTITIES_DIR}/`) || existsSync(join(root, p))) return p;
+  const p = herePath(root, asset.file.path);   // layout 4: a note that says brain/entities/... means entities/...
+  if (underEntities(p) === null || existsSync(join(root, p))) return p;
   const byId = movedAsset(root, p);
   if (byId) return byId;
   const e = lib.resolveEntity(lib.readNames(root), asset.entity);
-  const m = p.match(/^brain\/entities\/([a-z0-9-]+)\/(?:[a-z0-9-]+-[0-9a-f]{6}\/)?(.+)$/);
+  const m = p.match(/^(?:brain\/)?entities\/([a-z0-9-]+)\/(?:[a-z0-9-]+-[0-9a-f]{6}\/)?(.+)$/);
   if (e?._path && m) { for (const rest of [m[2], basename(p)]) { const next = `${assetFolder(e._path)}/${rest}`; if (existsSync(join(root, next))) return next; } }
   return p;
 }
 /* A file sitting loose among the pages (brain/entities/ or a kind folder), not in anyone's own folder. */
-const loosePage = (root, path) => { const real = realpathSync(root), dir = dirname(path); return dir === join(real, ENTITIES_DIR) || kindFolders(root).some(k => dir === join(real, ENTITIES_DIR, k)); };
+const loosePage = (root, path) => { const real = realpathSync(root), dir = dirname(path); return dir === join(real, entitiesDir(root)) || kindFolders(root).some(k => dir === join(real, entitiesDir(root), k)); };
 export function prepareAsset(root, input, project = null, previous = null) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('asset must be an object');
   if (Object.keys(input).some(k => !['entity', 'label', 'role', 'status', 'path'].includes(k))) throw new Error('unknown asset input field');
@@ -78,7 +80,7 @@ export function prepareAsset(root, input, project = null, previous = null) {
     let path = realpathSync(resolve(base, input.path));
     if (!statSync(path).isFile()) throw new Error('Attach a file, not a directory.');
     if (!isAbsolute(input.path) && !within(base, path)) throw new Error('Relative attachment escapes its folder. Use its explicit absolute path.');
-    if (within(join(realpathSync(root), 'work'), path)) path = toOwnerFolder(root, entity, path);
+    if (within(join(realpathSync(root), workName(root)), path)) path = toOwnerFolder(root, entity, path);
     // A file dropped loose in brain/entities/ (beside the pages) moves into its owner's folder.
     else if (loosePage(root, path)) path = toOwnerFolder(root, entity, path, { move: true });
     file = within(base, path) ? { base: project ? 'project' : 'brain', path: relative(base, path), ...(project ? { project } : {}) }
@@ -114,7 +116,7 @@ export function ownerCopy(root, entity, input) {
   let path; try { path = realpathSync(isAbsolute(input) ? input : join(real, input)); } catch { throw new Error(`no file at ${input}`); }
   if (!statSync(path).isFile()) throw new Error('Keep a file, not a folder.');
   const loose = loosePage(root, path);
-  if (within(real, path) && !within(join(real, 'work'), path) && !loose) return relative(real, path);
+  if (within(real, path) && !within(join(real, workName(root)), path) && !loose) return relative(real, path);
   return relative(real, toOwnerFolder(root, entity, path, { move: loose }));
 }
 /* The current approved file for an entity and role: the one a new approved attachment replaces. */

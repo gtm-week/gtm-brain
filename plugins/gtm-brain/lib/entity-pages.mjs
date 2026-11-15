@@ -20,10 +20,10 @@ function recent(list, memory, limit) {
 }
 
 export function refreshIndexedPages(root, registry, publish, { readOnly = false } = {}) {
-  const path = join(root, 'work', 'entity-pages.json');
+  const path = join(lib.workDir(root), 'entity-pages.json');
   let saved; try { saved = JSON.parse(readFileSync(path, 'utf8')); } catch {}
   const contexts = lib.listContexts(root, { includeMemories: false });
-  const sources = () => digest(contexts.map(c => [c.slug, memoryStamp(join(c.dir, 'context.md'))?.key, memoryStamp(join(c.dir, 'memories.jsonl'))?.key]));
+  const sources = () => digest([...contexts.map(c => [c.slug, memoryStamp(c.path)?.key]), ...lib.noteSources(root).map(f => [f.file, memoryStamp(f.path)?.key])]);
   const sourceRevision = sources(), schemaRevision = readSchema(root).schema?.hash || readSchema(root).error?.message || null, askRevision = askSourceRevision(root);
   if (!readOnly && saved?.format === 1 && saved.sources === sourceRevision && saved.identities === entityStamp(root) && (saved.schema ?? null) === schemaRevision && saved.ask === askRevision) return [];
   // A pinned snapshot: the cache lock is held only while the cache catches up, not while

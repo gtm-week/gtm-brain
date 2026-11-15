@@ -21,6 +21,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as lib from "../lib/brain.mjs";
 import { readSchema, fieldsFor, relationType, checkRelation, brainKinds, US } from "../lib/schema.mjs";
+import { workDir } from '../lib/brain-paths.mjs';
 
 export const ENTITY_EDIT_MAX = 16 * 1024;
 export const ENTITY_EDIT_OPS = ["create", "update", "merge", "archive", "set_fields", "add_relation", "end_relation", "retract_relation", "set_customer"];
@@ -48,8 +49,8 @@ export function createEntityEdit({ root, token, json, log = () => {} }) {
   };
   // one remember call: the entries go in a batch file, as the MCP tool passes them
   const remember = async (by, entries) => {
-    mkdirSync(join(root, "work"), { recursive: true });
-    const batch = join(root, "work", `remember-${randomUUID()}.json`);
+    mkdirSync(workDir(root), { recursive: true });
+    const batch = join(workDir(root), `remember-${randomUUID()}.json`);
     try {
       writeFileSync(batch, JSON.stringify(entries));
       const out = await run("gtm-brain-remember/remember.mjs", ["--by", by, "--batch", batch]);

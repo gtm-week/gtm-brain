@@ -14,6 +14,7 @@ import { homedir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { SHORT } from "../../lib/pointers.mjs";   // the connector short forms, shared with source kinds
+import { workDir } from '../../lib/brain-paths.mjs';
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
 const admin = lib.readAdmin(root); if (!admin) { console.error("no brain here"); process.exit(1); }
@@ -21,7 +22,7 @@ const key = t => t.toLowerCase().replace(/\s*\(.*\)\s*$/, "").trim();
 // A name the model passes as a plugin id (google-calendar) finds the entry the check wrote (google calendar).
 const flatName = s => String(s || "").toLowerCase().replace(/\s*\(.*\)\s*$/, "").replace(/[^a-z0-9]/g, "");
 const entryKey = (state, t) => Object.keys(state).find(k => k === key(t)) || Object.keys(state).find(k => [k, state[k] && state[k].plugin, state[k] && state[k].tool].some(x => x && flatName(x) === flatName(t))) || key(t);
-const wf = join(root, "work", "tools.json"); mkdirSync(join(root, "work"), { recursive: true });
+const wf = join(workDir(root), "tools.json"); mkdirSync(workDir(root), { recursive: true });
 let state = {}; try { state = JSON.parse(readFileSync(wf, "utf8")); } catch {}
 // A twin written by a skip or test under the plugin id (google-calendar beside google calendar, 0.33.9 and earlier):
 // its decline or test result moves to the real entry and the twin goes, so the page lists the tool once.

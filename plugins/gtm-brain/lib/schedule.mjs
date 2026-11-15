@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { today } from "./dots.mjs";
 import { activeContexts } from "./brain.mjs";
 import { host } from "./host.mjs";
+import { workDir } from './brain-paths.mjs';
 
 const git = (root, ...a) => { try { return execFileSync("git", ["--no-optional-locks", "-C", root, ...a], { encoding: "utf8", stdio: "pipe" }).trim(); } catch { return ""; } };
 const DAY = 864e5;
@@ -26,9 +27,9 @@ export function scheduleNotice(root, now = today()) {
   const last = git(root, "log", "-1", "-E", "--format=%cs", "--grep=^scheduled: ", "--grep=by schedule\\)?$");
   const days = last ? Math.floor((now - new Date(`${last}T00:00:00`)) / DAY) : null;
   if (days !== null && days <= 8) return "";
-  const memo = join(root, "work", "schedule-notice.json");
+  const memo = join(workDir(root), "schedule-notice.json");
   try { if (now - new Date(JSON.parse(readFileSync(memo, "utf8")).at) < 7 * DAY) return ""; } catch {}
-  try { if (!existsSync(join(root, "work"))) mkdirSync(join(root, "work")); writeFileSync(memo, JSON.stringify({ at: now.toISOString() }) + "\n"); } catch {}
+  try { if (!existsSync(workDir(root))) mkdirSync(workDir(root)); writeFileSync(memo, JSON.stringify({ at: now.toISOString() }) + "\n"); } catch {}
   const what = behind.map(({ c }) => `${c.title || c.slug} ${c.compiledAt ? `(last compiled ${c.compiledAt.slice(0, 10)})` : "(never compiled)"}`).join(", ");
   const why = last ? `the weekly summary run last ran on ${last}` : "no weekly summary run is set up";
   const where = host().nativeQuestions?.() ? "in Codex's question box (request_user_input)" : "as plain chat text with the two numbered options, then end the turn";

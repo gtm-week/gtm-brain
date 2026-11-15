@@ -10,7 +10,10 @@ import { join, dirname, basename, relative, sep } from "node:path";
 import { execFileSync } from "node:child_process";
 import { handleFor, parseFrontmatter, renderFrontmatter, readProjects } from "./brain.mjs";
 import { HOST_DIRS } from "./host.mjs";
-import { ROOT_KEEP as KEEP_AT_TOP, ENGINE_DIRS, ABOUT_DIR, baseDir, engineDirs } from "./brain-paths.mjs";
+import { ROOT_KEEP as KEEP_AT_TOP, ENGINE_DIRS, ABOUT_DIR, ABOUT_DIR4, baseDir, engineDirs, inLayout4 } from "./brain-paths.mjs";
+/* In the base files' folder: about-us/ (layout 3) or configuration/about-us/ (layout 4), or a folder below it. */
+const inAbout = folder => [ABOUT_DIR, ABOUT_DIR4].some(d => folder === d || String(folder).startsWith(`${d}/`));
+import { workDir } from './brain-paths.mjs';
 
 export const KIND = "document";
 export const STATUSES = ["draft", "approved"];
@@ -43,7 +46,9 @@ export function validateDocument({ slug, title, applies_to, body, status, folder
     if (!/^[a-z0-9][a-z0-9-]*$/.test(slug || "")) return `the title must give a slug of lowercase letters, digits and hyphens; got ${slug || "(nothing)"}`;
     if (slug.length > 64) return `${slug} is longer than 64 characters`;
     const f = String(folder || "").replace(/^\/+|\/+$/g, "");
-    if (f && (!FOLDER.test(f) || (SKIP_DIRS.has(f.split("/")[0]) || (root && engineDirs(root).includes(f.split("/")[0]))))) return `folder must be one or two lowercase names outside the brain's own folders (brand, market/battle-cards); got ${f}`;
+    // layout 4: the base files' folder is configuration/about-us, the one place inside the engine's folders a document lives
+    const about = root && inLayout4(root) && (f === ABOUT_DIR4 || (f.startsWith(`${ABOUT_DIR4}/`) && FOLDER.test(f.slice(ABOUT_DIR4.length + 1)) && !f.slice(ABOUT_DIR4.length + 1).includes("/")));
+    if (f && !about && (!FOLDER.test(f) || (SKIP_DIRS.has(f.split("/")[0]) || (root && engineDirs(root).includes(f.split("/")[0]))))) return `folder must be one or two lowercase names outside the brain's own folders (brand, market/battle-cards); got ${f}`;
     if (f && root && projectDirs(root).has(f.split("/")[0])) return `${f.split("/")[0]} is a linked project folder; a document lives at the brain root or in a folder of its own`;
   }
   const applies = normalizeAppliesTo(applies_to);
@@ -87,7 +92,9 @@ export function markdownFiles(root) {
       else if (e.isFile() && e.name.endsWith(".md") && !(depth === 0 && ROOT_KEEP.has(e.name))) out.push(posix(relative(root, path)));
     }
   };
-  walk(root, 0); return out.sort();
+  walk(root, 0);
+  if (inLayout4(root)) walk(join(root, ABOUT_DIR4), 1);   // as deep as about-us/ is in layout 3
+  return out.sort();
 }
 
 /* The starters setup writes (strategy, icp, voice, design-system, market): a document whose body is still the shipped
@@ -118,7 +125,7 @@ function isStarterBody(slug, body) {
    not a base file: the dashboard lists it apart and the move to about-us/ leaves it where it is. */
 export function isBase(slug, folder, fm = {}) {
   if (fm.type === "workflow") return false;
-  if (folder === ABOUT_DIR || folder.startsWith(`${ABOUT_DIR}/`)) return true;
+  if (inAbout(folder)) return true;
   if (/^(true|yes)$/i.test(String(fm.base ?? "").trim())) return true;
   if (/^(false|no)$/i.test(String(fm.base ?? "").trim())) return false;
   return (folder === "" || folder === slug) && (STARTERS.includes(slug) || BASE_STARTERS.includes(slug));
@@ -220,16 +227,16 @@ export function appendSection(root, doc, section, fields) {
 /* Markdown dropped at the brain root by hand that is not a document yet: the brain does not read it before work. */
 export function unadoptedFiles(root) {
   const base = baseDir(root);   // layout 3: the base files' folder counts as the top
-  return markdownFiles(root).filter(p => (!p.includes("/") || (base && p.startsWith(`${base}/`) && p.split("/").length === 2)) && !parseDocument(root, p));
+  return markdownFiles(root).filter(p => (!p.includes("/") || (base && posix(dirname(p)) === base)) && !parseDocument(root, p));
 }
 export const unadoptedText = files => files.map(f => `${f} is here but the brain does not use it yet`).join("; ");
 
 /* The health line's part for them, said once per set: the set is remembered in work/ and the part returns only when a new file appears. */
 export function unadoptedPart(root) {
-  const files = unadoptedFiles(root), memo = join(root, "work", "unadopted-seen.json");
+  const files = unadoptedFiles(root), memo = join(workDir(root), "unadopted-seen.json");
   let seen = []; try { seen = JSON.parse(readFileSync(memo, "utf8")).files || []; } catch {}
   const fresh = files.filter(f => !seen.includes(f));
-  try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(memo, JSON.stringify({ files, at: new Date().toISOString() })); } catch {}
+  try { mkdirSync(workDir(root), { recursive: true }); writeFileSync(memo, JSON.stringify({ files, at: new Date().toISOString() })); } catch {}
   return fresh.length ? `base files: ${unadoptedText(fresh)}` : "";
 }
 
@@ -302,17 +309,17 @@ export function savePaths(root) {
 /* Folders at the top GTM Brain does not use: not the engine's, not a project's, not a document's home. A brain
    migrated from an older layout brings company/, assets/, output/; nothing here touches them, the hint names them. */
 export function strayFolders(root) {
-  const skip = new Set([...SKIP_DIRS, ...engineDirs(root), ...projectDirs(root), ...(baseDir(root) ? [ABOUT_DIR] : [])]), homes = new Set(listDocuments(root).map(d => d.folder.split("/")[0]).filter(Boolean));
+  const skip = new Set([...SKIP_DIRS, ...engineDirs(root), ...projectDirs(root), ...(baseDir(root) ? [baseDir(root).split("/")[0]] : [])]), homes = new Set(listDocuments(root).map(d => d.folder.split("/")[0]).filter(Boolean));
   let entries; try { entries = readdirSync(root, { withFileTypes: true }); } catch { return []; }
   return entries.filter(e => e.isDirectory() && !e.name.startsWith(".") && !skip.has(e.name) && !homes.has(e.name)).map(e => e.name).sort();
 }
 
 /* The session line for them, said once per set: the set is remembered in work/ and the line returns only when it changes. */
 export function strayFoldersHint(root) {
-  const stray = strayFolders(root), memo = join(root, "work", "stray-folders.json");
+  const stray = strayFolders(root), memo = join(workDir(root), "stray-folders.json");
   let seen = []; try { seen = JSON.parse(readFileSync(memo, "utf8")).folders || []; } catch {}
   if (JSON.stringify(stray) === JSON.stringify(seen)) return "";
-  try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(memo, JSON.stringify({ folders: stray, at: new Date().toISOString() })); } catch {}
+  try { mkdirSync(workDir(root), { recursive: true }); writeFileSync(memo, JSON.stringify({ folders: stray, at: new Date().toISOString() })); } catch {}
   if (!stray.length) return "";
   // the adopt example names a folder that actually holds Markdown, when one does
   const holdsMarkdown = f => { try { return readdirSync(join(root, f), { recursive: true }).some(p => String(p).endsWith(".md")); } catch { return false; } };

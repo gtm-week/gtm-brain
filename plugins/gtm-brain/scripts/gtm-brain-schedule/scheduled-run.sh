@@ -9,13 +9,14 @@ BY="${GTM_BRAIN_COMPILE_BY:-schedule}"   # schedule (launchd, cron) or backgroun
 BRAIN="${1:-.}"; cd "$BRAIN" || exit 1
 . "$P/session/resolve.sh"
 [ -f AGENTS.md ] && gtm_brain_is . || { echo "not a brain: $BRAIN"; exit 1; }
-mkdir -p work
-printf '%s  scheduled-run  start\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log
+W="$(gtm_brain_work .)"   # work, or .gtm-brain in layout 4 (session/resolve.sh)
+mkdir -p "$W"
+printf '%s  scheduled-run  start\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> "$W/hooks.log"
 # Workflow steps whose gate date passed become a due step and a gate question (lib/workflows.mjs): deterministic, no model.
 if due_out="$(node --disable-warning=ExperimentalWarning "$P/scripts/gtm-brain-workflow/workflow.mjs" . --due --by schedule 2>&1)"; then
-  printf '%s  scheduled-run  workflows: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$(printf '%s' "$due_out" | tr '\n' ';')" >> work/hooks.log
+  printf '%s  scheduled-run  workflows: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$(printf '%s' "$due_out" | tr '\n' ';')" >> "$W/hooks.log"
 else
-  printf '%s  scheduled-run  workflows: due check failed: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$(printf '%s' "$due_out" | tr '\n' ';')" >> work/hooks.log
+  printf '%s  scheduled-run  workflows: due check failed: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$(printf '%s' "$due_out" | tr '\n' ';')" >> "$W/hooks.log"
 fi
 # The nightly chat capture (lib/capture.mjs): outcomes said in this brain's chats and never saved, before the
 # compile so the summaries include them. Only the scheduled run, never the run a saved note kicks; it logs and
@@ -23,39 +24,39 @@ fi
 if [ "$BY" = "schedule" ]; then
   node --disable-warning=ExperimentalWarning "$P/scripts/gtm-brain-schedule/capture.mjs" . --run >/dev/null 2>&1 || true
 fi
-PENDING="$(node "$P/scripts/gtm-brain-compile/compile-status.mjs" .)" || { printf '%s  scheduled-run  failed: cannot inspect pending compilation\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log; exit 1; }
+PENDING="$(node "$P/scripts/gtm-brain-compile/compile-status.mjs" .)" || { printf '%s  scheduled-run  failed: cannot inspect pending compilation\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> "$W/hooks.log"; exit 1; }
 STALE="${PENDING%%|*}"; ENTITIES="${PENDING#*|}"
 # Summaries paused by a hand edit are skipped on purpose; the log names them every run, so "nothing stale" never hides them.
 PAUSED="$(node --disable-warning=ExperimentalWarning -e 'const l=await import(process.argv[1]);console.log(l.pausedCovers(process.argv[2]).map(p=>p.slug).join(" "))' "$P/lib/brain.mjs" . 2>/dev/null)"
-[ -n "$PAUSED" ] && printf '%s  scheduled-run  skipped, paused by a hand edit until reviewed: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$PAUSED" >> work/hooks.log
+[ -n "$PAUSED" ] && printf '%s  scheduled-run  skipped, paused by a hand edit until reviewed: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$PAUSED" >> "$W/hooks.log"
 if [ -z "$STALE$ENTITIES" ]; then
-  printf '%s  scheduled-run  nothing stale\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log; echo "nothing stale"; exit 0
+  printf '%s  scheduled-run  nothing stale\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> "$W/hooks.log"; echo "nothing stale"; exit 0
 fi
 echo "stale contexts: $STALE; entity briefs: $ENTITIES"
 # The run tells its own chat start what it is (GTM_BRAIN_RUN): the hook then records this run's
 # thread on work/compile.json for the page to link, and leaves the person's chat in work/session.json alone.
 export GTM_BRAIN_RUN="$BY"
 HEAD_BEFORE="$(git rev-parse -q --verify HEAD 2>/dev/null)"
-RUN_DIR="$(mktemp -d work/compile-run.XXXXXX)" || { printf '%s  scheduled-run  failed: cannot prepare compilation prompt\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log; exit 1; }
+RUN_DIR="$(mktemp -d "$W/compile-run.XXXXXX")" || { printf '%s  scheduled-run  failed: cannot prepare compilation prompt\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> "$W/hooks.log"; exit 1; }
 trap 'rm -f "$RUN_DIR/args" "$RUN_DIR/prompt"; rmdir "$RUN_DIR"' EXIT
 if ! node "$P/scripts/gtm-brain-compile/run-args.mjs" --files "$RUN_DIR/args" "$RUN_DIR/prompt" "$P" "$BY" "$STALE" "$ENTITIES"; then
-  printf '%s  scheduled-run  failed: cannot generate compilation arguments and prompt\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log
+  printf '%s  scheduled-run  failed: cannot generate compilation arguments and prompt\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> "$W/hooks.log"
   exit 1
 fi
 if [ ! -f "$RUN_DIR/args" ] || [ ! -f "$RUN_DIR/prompt" ]; then
-  printf '%s  scheduled-run  failed: invalid compilation arguments or prompt\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log
+  printf '%s  scheduled-run  failed: invalid compilation arguments or prompt\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> "$W/hooks.log"
   exit 1
 fi
 RUN_ARGS=(); while IFS= read -r -d '' a; do RUN_ARGS+=("$a"); done < "$RUN_DIR/args"
 RUN_LAST=""; for a in "${RUN_ARGS[@]}"; do RUN_LAST="$a"; done
 if [ "${RUN_ARGS[0]:-}" != "exec" ] || [ "$RUN_LAST" != "-" ] || [ ! -s "$RUN_DIR/prompt" ]; then
-  printf '%s  scheduled-run  failed: invalid compilation arguments or prompt\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log
+  printf '%s  scheduled-run  failed: invalid compilation arguments or prompt\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> "$W/hooks.log"
   exit 1
 fi
 node "$P/scripts/gtm-brain-compile/run-bounded.mjs" --prompt-file "$RUN_DIR/prompt" codex "${RUN_ARGS[@]}" 2>&1 | node "$P/scripts/gtm-brain-compile/run-usage.mjs" . "$BY" \
-  || { printf '%s  scheduled-run  failed: codex exec exited with an error or timed out (%s)\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$STALE" >> work/hooks.log; echo "codex exec failed; any completed compilations remain saved"; exit 1; }
+  || { printf '%s  scheduled-run  failed: codex exec exited with an error or timed out (%s)\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$STALE" >> "$W/hooks.log"; echo "codex exec failed; any completed compilations remain saved"; exit 1; }
 # Verify the scan again before reporting success, even when the model exited normally.
-AFTER="$(node "$P/scripts/gtm-brain-compile/compile-status.mjs" .)" || { printf '%s  scheduled-run  failed: cannot verify compilation\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log; exit 1; }
+AFTER="$(node "$P/scripts/gtm-brain-compile/compile-status.mjs" .)" || { printf '%s  scheduled-run  failed: cannot verify compilation\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> "$W/hooks.log"; exit 1; }
 # A run that compiled nothing is a failure, never "done": exit 3 tells the worker to stop instead of
 # retrying (2026-10-01: compile tools hidden from the run, 34 runs in a day, 8M tokens, no summary).
 # Progress is a compile commit by this run ("compile: ..." or "compile entity: ..."): a note saved
@@ -66,9 +67,9 @@ compiled() {
   else node "$P/scripts/gtm-brain-compile/compile-status.mjs" --progress "$PENDING" "$AFTER"; fi
 }
 if [ "$AFTER" != '|' ] && ! compiled; then
-  printf '%s  scheduled-run  failed: no progress, the run compiled nothing (%s)\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$STALE" >> work/hooks.log
+  printf '%s  scheduled-run  failed: no progress, the run compiled nothing (%s)\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$STALE" >> "$W/hooks.log"
   echo "the run compiled nothing; still behind: $STALE"; exit 3
 fi
 node "$P/scripts/gtm-brain-render/render.mjs" . >/dev/null 2>&1 || true
 # Compilation tools keep their own changes through lib.commit. No separate commit path.
-printf '%s  scheduled-run  done: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$STALE" >> work/hooks.log
+printf '%s  scheduled-run  done: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$STALE" >> "$W/hooks.log"

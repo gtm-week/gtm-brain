@@ -5,6 +5,7 @@
 // Reads the brain only. Since 0.35.0 a topic summary behind its notes is normal (it is written when asked), so it is no finding.
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { workDir } from '../../lib/brain-paths.mjs';
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const us = await import(new URL("../../lib/user-skills.mjs", import.meta.url));
 const rc = await import(new URL("../../lib/rules-check.mjs", import.meta.url));
@@ -17,7 +18,7 @@ const words = s => String(s || "").trim().split(/\s+/).filter(Boolean).length;
 const admin = lib.readAdmin(root) || {};
 const contexts = lib.listContexts(root), active = contexts.filter(c => c.status === "active");
 const names = lib.readNames(root);
-let tools = {}; try { tools = JSON.parse(readFileSync(join(root, "work", "tools.json"), "utf8")); } catch {}
+let tools = {}; try { tools = JSON.parse(readFileSync(join(workDir(root), "tools.json"), "utf8")); } catch {}
 const compile = lib.readCompileState(root), gaveUp = lib.compileGaveUp(root);
 const personal = c => /^personal-/.test(c.slug);   // a teammate's own context: never archived, never a finding about quiet
 
@@ -36,7 +37,7 @@ if (lastRun && !gaveUp) add(90, "summary-failed", `The last summary${lastRun.con
 // 2. open questions nobody answered
 for (const c of active) for (const m of lib.effectiveMemories(c.memories).filter(m => m.kind === "question" && m.tags.includes("brain-question"))) if (days(m.at) >= 14) add(80, "old-question", `A question in ${c.title} is ${days(m.at)} days old: "${m.content.slice(0, 90)}${m.content.length > 90 ? "..." : ""}"`, "Open questions are the work the brain is waiting on; old ones are either answered elsewhere or dead.", "Review it in its context; answer or drop it in Codex.");
 // 2b. a newer plugin where this install came from (work/plugin-version.json, written by the hook's daily check)
-let pv = null; try { pv = JSON.parse(readFileSync(join(root, "work", "plugin-version.json"), "utf8")); } catch {}
+let pv = null; try { pv = JSON.parse(readFileSync(join(workDir(root), "plugin-version.json"), "utf8")); } catch {}
 if (pv && pv.status === "newer") add(85, "plugin-outdated", `GTM Brain ${pv.latest} is available; this install is ${pv.installed}.`, "Fixes and new skills arrive only with the update; the brain itself does not change.", "Say in Codex: update GTM Brain. Then quit and reopen Codex.");
 // 3. tools listed but not reachable; the floor (email, calendar, the CRM) is suggested by the connect check
 //    before anyone names it: not connected and not declined is a finding once, never after a decline
@@ -90,7 +91,7 @@ if (load > 2000) add(15, "heavy-load", `Every chat starts by loading about ${loa
 // 9. how the brain is actually used: the GTM Brain calls the MCP server logs (work/tool-usage.jsonl), and the
 //    actions memories record. An interaction that keeps recurring, a tool nobody listed. GTM Brain has no hooks,
 //    so calls to other connectors and what people typed are not seen here.
-let usage = []; try { usage = readFileSync(join(root, "work", "tool-usage.jsonl"), "utf8").split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(u => u && days(u.at) <= 30); } catch {}
+let usage = []; try { usage = readFileSync(join(workDir(root), "tool-usage.jsonl"), "utf8").split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(u => u && days(u.at) <= 30); } catch {}
 const screen = usage.filter(u => u.computer);
 if (screen.length) { const titles = [...new Set(screen.map(u => u.title).filter(Boolean))].slice(0, 3); const failedFirst = usage.filter(u => u.server === "gtm_brain" && u.error).length; add(75, "computer-use", `Computer Use was used ${screen.length} time${screen.length === 1 ? "" : "s"} in the last 30 days${titles.length ? ` (${titles.join("; ")})` : ""}${failedFirst ? `, and ${failedFirst} GTM Brain call${failedFirst === 1 ? "" : "s"} failed in the same period` : ""}.`, "Each one is a GTM Brain operation that was missing, failed, or not chosen; the screen is the fallback the policy allows only with approval for that step.", "Say what you were doing when it happened. If a GTM Brain tool should have done it, that is a gap for the plugin's review; if the dashboard tab, nothing."); }
 const recentAll = active.flatMap(c => lib.effectiveMemories(c.memories).map(m => ({ m, c }))).filter(({ m }) => days(m.at) <= 30);
@@ -101,7 +102,7 @@ for (const { m, c } of recentAll) for (const x of m.actions || []) { if (!x || !
 // inputs and connector are what a skill keeps. A brain check is read-only and never writes a skill or
 // a proposal (ALL-210). An interaction is made only when the person asks for one; a proposal they asked
 // for counts as pending only while it is still valid, the same rule the dashboard uses.
-const PROPI = join(root, "work", "interaction.proposed.json");
+const PROPI = join(workDir(root), "interaction.proposed.json");
 const company = lib.readInteractions(root);
 let pendingProposal = null; try { const p = JSON.parse(readFileSync(PROPI, "utf8")); if (!company.error && !lib.validateInteraction(root, p, { existing: company.actions }).length) pendingProposal = p; } catch {}
 const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");

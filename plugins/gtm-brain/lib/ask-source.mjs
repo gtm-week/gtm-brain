@@ -16,6 +16,7 @@ import { fileURLToPath } from "node:url";
 import { readAdmin, toolKey } from "./brain.mjs";
 import { rulesFile } from "./brain-paths.mjs";
 import { daysSince, nowMs } from "./staleness.mjs";
+import { workDir } from './brain-paths.mjs';
 
 export const HEADING = "Ask the source";
 const HEAD = /^##\s+Ask the source\s*$/im;
@@ -116,7 +117,7 @@ export function readAskSource(root) {
 
 /* The connected tools, from work/tools.json: [{key, tool}]. */
 export function connectedTools(root) {
-  let t = {}; try { t = JSON.parse(readFileSync(join(root, "work", "tools.json"), "utf8")); } catch { return []; }
+  let t = {}; try { t = JSON.parse(readFileSync(join(workDir(root), "tools.json"), "utf8")); } catch { return []; }
   return Object.entries(t || {}).filter(([, s]) => s && s.status === "installed" && !s.declined && s.test !== "fail")
     .map(([k, s]) => ({ key: k, tool: s.tool || k, ids: [k, s.tool, s.plugin].map(flat).filter(x => x.length >= 3) }));
 }

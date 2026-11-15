@@ -13,6 +13,7 @@ import { listCodexProjects } from "../../lib/codex-projects.mjs";
 import { listDocuments } from "../../lib/documents.mjs";
 import { HOST_DIRS } from "../../lib/host.mjs";
 import { WEB_STARTER, preparedStarter, createStarterProject, finishStarterProject, readStarterProject } from "../../lib/web-starter.mjs";
+import { workDir } from '../../lib/brain-paths.mjs';
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const us = await import(new URL("../../lib/user-skills.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = resolve(args[0] && !args[0].startsWith("--") ? args.shift() : ".");
@@ -91,9 +92,9 @@ if (opt.link) {
   if (same(path, root)) refuse(`${path} is the brain itself: the brain is never a project.`);
   const rootReal = realpathSync(root), effectivePath = prospectivePath(path);
   if (below(effectivePath, rootReal)) refuse(`${path} contains the brain; a brain workspace cannot be linked as a project.`);
-  const reserved = new Set(["brain", "work", ".git", ...HOST_DIRS, ".agents"]);
+  const reserved = new Set(["brain", "work", ...lib.engineDirs(root), ".git", ...HOST_DIRS, ".agents"]);
   for (const [base, target] of [[root, path], [rootReal, effectivePath]]) {
-    if (reserved.has(relative(base, target).split(sep)[0].toLowerCase())) refuse(`${path} is GTM Brain internal storage; choose a project folder beside brain/ and work/.`);
+    if (reserved.has(relative(base, target).split(sep)[0].toLowerCase())) refuse(`${path} is GTM Brain internal storage; choose a project folder beside the brain's own folders.`);
   }
   let resume = null;
   if (opt.create && opt.starter && existsSync(path)) {
@@ -201,7 +202,7 @@ if (opt.unlink) {
     elsewhere = ` · pointer at ${p.path} now belongs to ${ptr.brain}; left in place`;
   }
   us.removeProjectSkillLinks(root, p.path);
-  rmSync(join(root, "work", "projects", slug), { recursive: true, force: true });
+  rmSync(join(workDir(root), "projects", slug), { recursive: true, force: true });
   lib.writeProjects(root, projects.filter(x => x.slug !== slug));
   lib.logActivity(root, "project", `unlinked ${slug}`);
   console.log(`unlinked ${slug} (${p.path}); its notes keep the tag project:${slug}.${elsewhere}`); lib.rerender(root); process.exit(0);

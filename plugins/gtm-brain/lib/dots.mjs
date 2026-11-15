@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ownRules } from "./where.mjs";
 import { startRules } from "./our-rules.mjs";
+import { workDir } from './brain-paths.mjs';
 /* Connecting the dots on a note (2026-11-12, new-brain test): what the brain can settle by itself it
    settles and says in one line; what has two answers it asks, all in one question. Nothing here guesses.
    - dates: "Thursday", "tomorrow", "next week" mean nothing a week later, so a note never keeps them bare.
@@ -129,11 +130,11 @@ export function rulebookText(root) {
   const own = startRules(root) ?? ownRules(root, new URL("../templates", import.meta.url).pathname);
   return `--- The saving rules for this chat (a refusal quotes them by number) ---\n${page}${own ? `\n\n## This brain's own rules (Our rules in RULES.md, written by its people; they win over the rules above)\n\n${own}` : ""}\n---`;
 }
-const sentFile = root => join(root, "work", "rulebook-sent.json");
+const sentFile = root => join(workDir(root), "rulebook-sent.json");
 const readSent = root => { try { return JSON.parse(readFileSync(sentFile(root), "utf8")); } catch { return {}; } };
 export function markRulebookSent(root, chat) {
   if (!chat) return; const sent = readSent(root); sent[chat] = new Date().toISOString();
-  try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(sentFile(root), JSON.stringify(sent, null, 2) + "\n"); } catch {}
+  try { mkdirSync(workDir(root), { recursive: true }); writeFileSync(sentFile(root), JSON.stringify(sent, null, 2) + "\n"); } catch {}
 }
 /* the fallback: a chat whose start did not print it (no chat start ran) gets it with its first save */
 export function rulebookOnce(root, chat) {

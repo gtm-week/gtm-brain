@@ -19,7 +19,8 @@ import { hasMemoryIndex, indexPath, openDatabase, cacheLock, readerLock, retireC
 export { hasMemoryIndex };
 export const MAX_RECORD_BYTES = 4 * 1024 * 1024;
 export const MAX_RESULT_BYTES = 2 * 1024 * 1024;
-export const MEMORY_INDEX_VERSION = 10;   // 5: source pointers as members (field source); 6: entity rows with relation to us and SCHEMA.md fields; 7: meeting ids as identity refs; 8: stemmed keywords, word list for typos; 9: relations, relation events and entity events (lib/relation-log.mjs)
+export const MEMORY_INDEX_VERSION = 11;   // 11: a source file is a context (layouts 1 to 3) or a month (layout 4); corrections and keyword order go by the record's context
+// earlier:   // 5: source pointers as members (field source); 6: entity rows with relation to us and SCHEMA.md fields; 7: meeting ids as identity refs; 8: stemmed keywords, word list for typos; 9: relations, relation events and entity events (lib/relation-log.mjs)
 const VERSION = MEMORY_INDEX_VERSION;
 const normalizeMention = s => foldLatin(s).replace(/[^a-z0-9]+/g, ' ').trim();
 function hashFile(path, size) {
@@ -207,7 +208,9 @@ export class MemoryIndex {
     const contexts = lib.listContexts(this.root, { includeMemories: false });
     const order = new Map(contexts.map((c, i) => [c.slug, i]));
     this.db.function('context_order', file => order.get(file) ?? order.size);
-    return contexts.map(c => { const path = join(c.dir, 'memories.jsonl'); return { file: c.slug, path, state: stamp(path) }; });
+    // layouts 1 to 3: one file per context, named by it. Layout 4: one file per month, any context on any line.
+    this.monthly = lib.monthly(this.root);
+    return lib.noteSources(this.root).map(f => ({ ...f, state: stamp(f.path) }));
   }
   registry() {
     if (entityStamp(this.root) !== this.identityRevision) throw new Error('Entity registry changed while indexing. Retry the read.');
@@ -242,7 +245,7 @@ export class MemoryIndex {
   refreshVisibility() {
     const db = this.db;
     db.exec(`INSERT OR IGNORE INTO touched SELECT m.rowid FROM forks f JOIN memories m ON m.id=f.target WHERE f.memory IN (SELECT memory FROM touched);
-      UPDATE memories AS m SET effective=NOT EXISTS(SELECT 1 FROM corrections c WHERE c.file=m.file AND c.target=m.id) WHERE rowid IN (SELECT memory FROM touched);`);
+      UPDATE memories AS m SET effective=NOT EXISTS(SELECT 1 FROM corrections c WHERE c.file=m.context AND c.target=m.id) WHERE rowid IN (SELECT memory FROM touched);`);
     this.stats.visibilityRows += db.prepare('SELECT count(*) AS n FROM touched').get().n;
     db.exec(`INSERT INTO entity_versions SELECT DISTINCT v.value,1 FROM members v JOIN touched t ON t.memory=v.memory WHERE v.field='entities'
       ON CONFLICT(id) DO UPDATE SET version=version+1;`);
@@ -254,6 +257,8 @@ export class MemoryIndex {
   }
   removeFile(file) {
     this.db.prepare('INSERT OR IGNORE INTO touched SELECT m.rowid FROM memories m JOIN forks f ON f.target=m.id JOIN memories c ON c.rowid=f.memory WHERE c.file=?').run(file);
+    // a correction in this file may have hidden a note kept in another file (layout 4: another month)
+    this.db.prepare('INSERT OR IGNORE INTO touched SELECT t.rowid FROM corrections c JOIN memories s ON s.rowid=c.memory JOIN memories t ON t.id=c.target AND t.context=c.file WHERE s.file=? AND t.file<>?').run(file, file);
     this.db.prepare('DELETE FROM memories WHERE file=?').run(file);
     this.db.prepare('DELETE FROM files WHERE file=?').run(file);
   }
@@ -287,7 +292,7 @@ export class MemoryIndex {
       const insert = db.prepare('INSERT INTO memories(file,line,id,context,kind,via,at,time,raw,entities,authors,people,tools,content,asset_entity,asset_role,asset_status,mention_text) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
       const member = db.prepare('INSERT INTO members VALUES (?,?,?)'), correction = db.prepare('INSERT INTO corrections VALUES (?,?,?)'), fork = db.prepare('INSERT INTO forks VALUES (?,?)');
       const touch = db.prepare('INSERT OR IGNORE INTO touched VALUES (?)');
-      const touchTarget = db.prepare('INSERT OR IGNORE INTO touched SELECT rowid FROM memories WHERE file=? AND id=?');
+      const touchTarget = db.prepare('INSERT OR IGNORE INTO touched SELECT rowid FROM memories WHERE context=? AND id=?');
       const saveFile = db.prepare('INSERT OR REPLACE INTO files VALUES (?,?,?,?,?,?,?)');
       for (const f of before) {
         const old = db.prepare('SELECT * FROM files WHERE file=?').get(f.file), size = f.state?.size || 0, key = f.state?.key || 'missing';
@@ -306,14 +311,14 @@ export class MemoryIndex {
             let r;
             try { r = JSON.parse(entry.text); } catch { throw new Error(`Invalid memory JSON: ${f.path}:${line}. Fix this source before indexing.`); }
             const errors = lib.validateMemory(r);
-            if (errors.length || r.context !== f.file) throw new Error(`Invalid memory: ${f.path}:${line}. ${errors.join('; ') || 'Context does not match the source folder.'}`);
+            if (errors.length || (!this.monthly && r.context !== f.file)) throw new Error(`Invalid memory: ${f.path}:${line}. ${errors.join('; ') || 'Context does not match the source folder.'}`);
             const row = project(r);
             const rowid = insert.run(f.file, line, r.id, r.context, r.kind, r.via, r.at, Date.parse(r.at) || 0, JSON.stringify(r), JSON.stringify(row.entities), r.authors.join(' '), r.people.join(' '), r.tools.join(' '), r.content, ...asset(r), normalizeMention(r.content)).lastInsertRowid;
             for (const field of ['authors', 'people', 'tools', 'tags', 'entities']) for (const value of row[field]) member.run(rowid, field, JSON.stringify(value));
             for (const ref of new Set([...(r.entities || []), ...r.people, ...(r.asset ? [r.asset.entity] : []), ...(anchorOf(r) ? [`meeting:${anchorOf(r)}`] : [])])) member.run(rowid, 'identity_ref', String(ref).trim().toLowerCase());
             for (const key of sourceMembers(r.source)) member.run(rowid, 'source', JSON.stringify(key));
             touch.run(rowid);
-            for (const target of [r.supersedes, r.retracts].filter(Boolean)) { correction.run(rowid, f.file, target); touchTarget.run(f.file, target); }
+            for (const target of [r.supersedes, r.retracts].filter(Boolean)) { correction.run(rowid, r.context, target); touchTarget.run(r.context, target); }
             if (lib.isForkCopy(r)) for (const source of r.source.filter(s => s.kind === 'memory')) fork.run(rowid, source.ref);
             this.stats.recordsRead++;
           }
@@ -487,7 +492,7 @@ export class MemoryIndex {
       const suffix = own === null ? '' : ` AND ${own ? '' : 'NOT '}${membership}`;
       const params = own === null ? [q] : [q, JSON.stringify('project:' + project)];
       counts.push(this.db.prepare(`SELECT count(*) AS n ${from}${suffix}`).get(...params).n);
-      groups.push(this.bounded(this.db.prepare(`SELECT m.raw,rank AS score ${from}${suffix} ORDER BY rank,context_order(m.file),m.line LIMIT 40`), params, 'raw'));
+      groups.push(this.bounded(this.db.prepare(`SELECT m.raw,rank AS score ${from}${suffix} ORDER BY rank,context_order(m.context),m.file,m.line LIMIT 40`), params, 'raw'));
     }
     return { total: counts.reduce((a, b) => a + b, 0), groups, counts };
   }

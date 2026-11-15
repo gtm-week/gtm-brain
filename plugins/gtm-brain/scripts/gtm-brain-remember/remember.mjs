@@ -29,16 +29,17 @@ import { meetingOverview, meetingSourceKey } from '../../lib/meetings.mjs';
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 import { isChatSource, host } from "../../lib/host.mjs";
+import { workDir } from '../../lib/brain-paths.mjs';
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const dots = await import(new URL("../../lib/dots.mjs", import.meta.url));
 const checks = await import(new URL("../../lib/note-checks.mjs", import.meta.url));
 const ourRules = await import(new URL("../../lib/our-rules.mjs", import.meta.url));   // RULES.md Our rules tagged check (S4)
 // One-word names held under P3, so a later new_names for the same word is the person's answer, not a guess.
-const ASKED_DAYS = 7, askedFile = () => join(root, "work", "asked-names.json"), fold = n => String(n).trim().toLowerCase();
+const ASKED_DAYS = 7, askedFile = () => join(workDir(root), "asked-names.json"), fold = n => String(n).trim().toLowerCase();
 const readAsked = () => { try { return JSON.parse(readFileSync(askedFile(), "utf8")); } catch { return {}; } };
 const wasAsked = (name, days = ASKED_DAYS) => { const at = readAsked()[fold(name)]; return !!at && Date.now() - Date.parse(at) < days * 86400000; };
 const foldName = fold;
-const noteAsked = names => { if (!names.length) return; const m = readAsked(); for (const n of names) m[fold(n)] = new Date().toISOString(); try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(askedFile(), JSON.stringify(m, null, 2) + "\n"); } catch {} };
+const noteAsked = names => { if (!names.length) return; const m = readAsked(); for (const n of names) m[fold(n)] = new Date().toISOString(); try { mkdirSync(workDir(root), { recursive: true }); writeFileSync(askedFile(), JSON.stringify(m, null, 2) + "\n"); } catch {} };
 // Save, then ask (0.35.0): a note naming someone by a bare first name nobody known has (P3), or one several
 // known people have (P2), is saved with the name as written, and the brain keeps the question "Who is Anna?"
 // as a brain-question memory tagged about:<note id>. The answer retracts that question; the brain then writes a
@@ -119,7 +120,7 @@ const personText = chat && !process.env.GTM_BRAIN_RUN ? (host().lastPersonText?.
 const askIn = host().nativeQuestions?.() ? "in Codex's question box (request_user_input), numbered parts as its options" : "in Codex's question box (request_user_input) when that tool is available in this chat (Plan mode, or a Codex where it is on by default), otherwise as plain chat text with numbered parts, then end the turn";
 // what the held entries of this message waited on: only a resend of one of those waits for the person's reply (Q3),
 // an unrelated note in the same turn is written (s09: three outcomes refused while one name was asked about)
-const heldFile = () => join(root, "work", "held-replies.json");
+const heldFile = () => join(workDir(root), "held-replies.json");
 const readHeld = () => { try { return JSON.parse(readFileSync(heldFile(), "utf8")); } catch { return {}; } };
 const fresh = h => h && Date.now() - Date.parse(h.at) < 3600000;
 const heldBefore = personText && fresh(readHeld()[personText]) ? readHeld()[personText] : null;   // read once, before this call holds anything
@@ -128,7 +129,7 @@ const markHeld = (words, text) => {
   const all = readHeld(), h = fresh(all[personText]) ? all[personText] : { words: [], texts: [] };
   all[personText] = { at: new Date().toISOString(), words: [...new Set([...h.words, ...words.filter(Boolean)])], texts: [...new Set([...h.texts, ...(text ? [String(text)] : [])])] };
   const keep = Object.entries(all).sort((a, b) => Date.parse(b[1].at) - Date.parse(a[1].at)).slice(0, 20);
-  try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(heldFile(), JSON.stringify(Object.fromEntries(keep), null, 1) + "\n"); } catch {}
+  try { mkdirSync(workDir(root), { recursive: true }); writeFileSync(heldFile(), JSON.stringify(Object.fromEntries(keep), null, 1) + "\n"); } catch {}
 };
 const FORGET = /\b(forget|scratch|withdraw|never ?mind|disregard|ignore that|delete that|remove that|drop that|undo that)\b/i;
 // the saving rules ride along once per chat, on whichever reply comes first (saving-rules.md)
@@ -162,11 +163,11 @@ const guessed = new Map();   // entry index -> why its context was a best guess
 const droppedRelation = new Map();   // entry index -> why its relationship block was left out
 const filledRelation = new Map();   // entry index -> the relation fields the plugin filled in
 // "looks already recorded" is said once per content: work/restated-shown.json holds a hash and a time for an hour
-const shownFile = () => join(root, "work", "restated-shown.json");
+const shownFile = () => join(workDir(root), "restated-shown.json");
 const hashOf = text => { let h = 5381; for (const ch of String(text).replace(/\s+/g, " ").trim().toLowerCase()) h = ((h * 33) ^ ch.codePointAt(0)) >>> 0; return h.toString(16); };
 const readShown = () => { try { const all = JSON.parse(readFileSync(shownFile(), "utf8")) || {}; return Object.fromEntries(Object.entries(all).filter(([, at]) => Date.now() - Date.parse(at) < 3600000)); } catch { return {}; } };
 const shownBefore = text => !!readShown()[hashOf(text)];
-const noteShown = text => { try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(shownFile(), JSON.stringify({ ...readShown(), [hashOf(text)]: new Date().toISOString() }) + "\n"); } catch {} };
+const noteShown = text => { try { mkdirSync(workDir(root), { recursive: true }); writeFileSync(shownFile(), JSON.stringify({ ...readShown(), [hashOf(text)]: new Date().toISOString() }) + "\n"); } catch {} };
 if (entries.some(e => e?.meeting_coverage) && entries.some(e => e?.meeting || e?.meeting_id)) die("Record meeting coverage in a separate call after checking kept, held and failed entries.");
 const preparedAssets = new Map(), changedAssets = new Set();
 const sourceOf = e => lib.parseSources(e.sources);
@@ -208,7 +209,7 @@ const problems = entries.map((e, i) => {
     placeless.set(i, { n, why: `which context is this for: ${pool.map(s => `${titleOf(s)} (${s})`).join(" or ")}? ${candidates.length > 1 ? (loaded.length > 1 ? "Several contexts are loaded" : "The people in it have notes in each") : "Nothing in the note points at one"}; send it again with context: the slug that fits what the person said, and ask them only when two fit equally`, mentions: [], ask: false });
     return null;
   }
-  if (!existsSync(join(root, "brain", "contexts", ctx, "context.md"))) return `${at(n)}no such context: ${ctx}`;
+  if (!lib.hasContext(root, ctx)) return `${at(n)}no such context: ${ctx}`;
   try { entries[i] = e = lib.prepareMeetingMemory(root, ctx, { ...e, authors, source: sourceOf(e) }); }
   catch (err) { return `${at(n)}${err.message}`; }
   const customerErrors = lib.validateCustomerEvidence({ ...e, source: sourceOf(e) });
@@ -486,10 +487,10 @@ for (let i = 0; i < entries.length; i++) {
   const closedIn = closed && lib.readOnboarding(root).context;
   if (closed) lines.push(`${at(n)}all onboarding steps saved: recorded "${closed.content}" in ${closedIn} (${closed.id}); do not write another completion marker. Onboarding just finished in this chat: end this reply with the closing gtm-brain-start describes (what connected, what was learned, the first task).`);
   // one commit per memory: git history stays readable as one commit, one memory
-  const closedPath = closed ? [`brain/contexts/${closedIn}/memories.jsonl`] : [];
-  lines.push(`${at(n)}${lib.commit(root, [`brain/contexts/${ctx}/memories.jsonl`, ...closedPath, ...lib.ENTITIES_PATHS], `remember: ${ctx} ${rec.kind} by ${rec.authors.join(",")}`).note}`);
+  const closedPath = closed ? lib.notesPaths(root, closedIn) : [];
+  lines.push(`${at(n)}${lib.commit(root, [...lib.notesPaths(root, ctx), ...closedPath, ...lib.entitiesPaths(root)], `remember: ${ctx} ${rec.kind} by ${rec.authors.join(",")}`).note}`);
   kept.push({ n, id: rec.id, ctx }); toolsNamed.push(...(rec.tools || []), ...(rec.source || []).filter(s => s && !isChatSource(s)).map(s => s.kind));
-  const memPaths = [`brain/contexts/${ctx}/memories.jsonl`, ...lib.ENTITIES_PATHS];
+  const memPaths = () => [...lib.notesPaths(root, ctx), ...lib.entitiesPaths(root)];
   const sharing = w => { const s = lib.readNames(root).filter(x => x.kind === "person" && [x.name, ...(x.aliases || [])].some(a => fold(a).split(/\s+/)[0] === fold(w))).map(x => x.name); return s.length > 1 ? s : []; };
   // the question about a saved note, kept in the brain until the person answers it: on the first save, for the
   // names an answer left out, and for a correction that named nobody
@@ -498,7 +499,7 @@ for (let i = 0; i < entries.length; i++) {
     const quote = String(about.content).replace(/\s+/g, " ").trim(), several = list.some(u => u.candidates.length);
     const { rec: q } = lib.appendMemory(root, ctx, { authors, via: e.via || opt.via || "codex", kind: "question", tools: [], people: [], content: `${ask} (about ${about.id}: "${quote.length > 120 ? quote.slice(0, 117) + "..." : quote}")`, source: rec.source, actions: [], supersedes: null, retracts: null,
       tags: ["brain-question", NAME_Q, `about:${about.id}`, ...list.map(u => `${u.candidates.length ? "pick" : "name"}:${u.mention}`), ...about.tags.filter(t => t.startsWith("project:"))] });
-    lines.push(`${at(n)}${lib.commit(root, memPaths, `remember: ${ctx} question by ${q.authors.join(",")}`).note}`);
+    lines.push(`${at(n)}${lib.commit(root, memPaths(), `remember: ${ctx} question by ${q.authors.join(",")}`).note}`);
     noteAsked([...list.map(u => u.mention), ...list.flatMap(u => u.candidates.map(c => `pick:${c}`))]); markHeld(list.map(u => u.mention), null);
     // the person's line, right under "saved in ...": the question follows the confirmation
     const savedAt = lines.findIndex(l => l.startsWith(`${at(n)}saved in `));
@@ -532,7 +533,7 @@ for (let i = 0; i < entries.length; i++) {
         }
         const { rec: linked } = lib.appendMemory(root, ctx, { authors: note.authors, via: note.via, kind: note.kind, tools: note.tools, people: [...note.people, ...attach], mentions: [...kept0, ...said], content, source: note.source, actions: note.actions, supersedes: note.id, retracts: null, tags: note.tags });
         lines.push(`${at(n)}linked ${answered.map(x => `"${x.w}"`).join(", ")} in ${note.id} to ${attach.join(", ")}: ${linked.id} replaces it, now reading "${String(linked.content).replace(/\s+/g, " ").slice(0, 160)}". Say so in one line; nothing else to save for this answer.`);
-        lines.push(`${at(n)}${lib.commit(root, memPaths, `remember: ${ctx} ${linked.kind} by ${linked.authors.join(",")}`).note}`);
+        lines.push(`${at(n)}${lib.commit(root, memPaths(), `remember: ${ctx} ${linked.kind} by ${linked.authors.join(",")}`).note}`);
         // a name the answer left out is still asked, now about the note that replaced the first one
         const rest = words.filter(w => !answered.some(x => x.w === w));
         if (rest.length) askNames(linked, rest.map(w => ({ mention: w, candidates: picks.includes(w) ? sharing(w) : [] })));
@@ -548,7 +549,7 @@ for (let i = 0; i < entries.length; i++) {
     const again = wordsOf(q).some(w => unclear.some(u => fold(u.mention) === fold(w)));
     const { rec: closedQ } = lib.appendMemory(root, ctx, { authors, via: e.via || opt.via || "codex", kind: "decision", tools: [], people: rec.people.filter(p => names.find(x => x.name === p)?.kind === "person"), content: e.retracts ? `Not asked any more: ${e.retracts} was withdrawn (${rec.id}).` : again ? `Asked again about ${rec.id}, which replaces ${e.supersedes}.` : `Answered by ${rec.id}, which replaces ${e.supersedes}${rec.people.length ? ` and names ${rec.people.join(", ")}` : ""}.`, source: rec.source, actions: [], supersedes: null, retracts: q.id, tags: [] });
     lines.push(`${at(n)}closed the name question ${q.id} (${closedQ.id}).`);
-    lines.push(`${at(n)}${lib.commit(root, memPaths, `remember: ${ctx} ${closedQ.kind} by ${closedQ.authors.join(",")}`).note}`);
+    lines.push(`${at(n)}${lib.commit(root, memPaths(), `remember: ${ctx} ${closedQ.kind} by ${closedQ.authors.join(",")}`).note}`);
   }
   // saved with the name as written: the question is kept in the brain until the person answers it
   if (unclear.length && !heldAnyway) askNames(rec, unclear);
@@ -577,7 +578,7 @@ if (!held.length && rules()) console.log(rules().trim());
 // A note from a tool the brain's tools list does not know yet (MagicPath, ZYNT): check the tools in the
 // background, so the dashboard lists it without waiting for someone to ask (connect.mjs: "a memory came from it").
 if (!process.env.GTM_BRAIN_NO_TOOLS_CHECK && !process.env.GTM_BRAIN_NO_COMMIT && !process.env.NODE_TEST_CONTEXT) {   // never from tests or dry runs
-  let known = []; try { known = Object.entries(JSON.parse(readFileSync(join(root, "work", "tools.json"), "utf8"))).flatMap(([k, s]) => [k, s && s.tool, s && s.plugin, s && s.display]); } catch {}
+  let known = []; try { known = Object.entries(JSON.parse(readFileSync(join(workDir(root), "tools.json"), "utf8"))).flatMap(([k, s]) => [k, s && s.tool, s && s.plugin, s && s.display]); } catch {}
   const flat = s => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
   const has = new Set(known.map(flat).filter(Boolean)), NEVER = new Set(["memory", "file", "url", "web", "person", "manual", "document"]);
   if (toolsNamed.map(flat).some(x => x.length >= 3 && !NEVER.has(x) && !has.has(x))) spawn(process.execPath, [new URL("../gtm-brain-connect/connect.mjs", import.meta.url).pathname, root, "--check"], { detached: true, stdio: "ignore", env: { ...process.env, GTM_BRAIN_CODEX_TIMEOUT: "20000" } }).unref();

@@ -11,6 +11,7 @@ import { join, dirname } from "node:path";
 import { rulesFile, OLD_WHERE, TEMPLATES, ROOT_KEEP, ABOUT_DIR, inConfigFolders } from "./brain-paths.mjs";
 import { readAdmin, commit } from "./brain.mjs";
 import { layoutBlock } from "./layout-version.mjs";
+import { workDir } from './brain-paths.mjs';
 
 export { OLD_WHERE };
 /* The rules file of this brain: RULES.md at the root, config/rules.md in layout 3 (lib/brain-paths.mjs). */
@@ -113,7 +114,7 @@ export function whereLine(root) {
    the brain, no second store). whyHere reads those lines back; unplacedHint names new files that
    arrived without one. Rows are cited by number and their What text, so a reordered table still reads right. */
 export const WHY_TRAILER = "gtm-brain-why";
-export const MANAGED = p => /^(brain|work|config|\.githooks|\.agents)\//.test(p) || [...ROOT_KEEP, ".gitignore", ".gitattributes"].includes(p);
+export const MANAGED = p => /^(?:(?:brain|work|config|entities|memories|\.gtm-brain|\.githooks|\.agents)\/|configuration\/(?!about-us\/))/.test(p) || [...ROOT_KEEP, ".gitignore", ".gitattributes"].includes(p);
 const clean = p => String(p || "").trim().replace(/^\.\//, "").replace(/\/+$/, "");
 const oneLine = s => String(s || "").replace(/\s+/g, " ").trim();
 
@@ -162,14 +163,14 @@ export function whyHere(root, asked) {
 /* New files since the last chat, outside what GTM Brain keeps itself, with no recorded reason: named once per set. */
 export function unplacedHint(root, { limit = 10 } = {}) {
   if (!gitOut(root, "rev-parse", "--git-dir").trim()) return "";
-  const memo = join(root, "work", "placed-check.json"), head = gitOut(root, "rev-parse", "HEAD").trim();
+  const memo = join(workDir(root), "placed-check.json"), head = gitOut(root, "rev-parse", "HEAD").trim();
   let state = {}; try { state = JSON.parse(readFileSync(memo, "utf8")); } catch {}
   const added = new Set(gitOut(root, "status", "--short", "--untracked-files=all").split("\n").filter(l => /^(\?\?|A )/.test(l)).map(l => l.slice(3)));
   if (state.head && head && state.head !== head) for (const f of gitOut(root, "log", "--diff-filter=A", "--name-only", "--format=", `${state.head}..${head}`).split("\n")) if (f) added.add(f);
   const reasons = recordedReasons(root);
   const loose = [...added].filter(f => !MANAGED(f) && !f.startsWith(".") && existsSync(join(root, f)) && !reasons.some(r => covers(r, f))).sort();
   const known = state.said || [], fresh = loose.filter(f => !known.includes(f));
-  try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(memo, JSON.stringify({ head, said: loose, at: new Date().toISOString() })); } catch {}
+  try { mkdirSync(workDir(root), { recursive: true }); writeFileSync(memo, JSON.stringify({ head, said: loose, at: new Date().toISOString() })); } catch {}
   if (!fresh.length) return "";
   return `New files with no recorded reason for where they are: ${fresh.slice(0, limit).join(", ")}${fresh.length > limit ? ` and ${fresh.length - limit} more` : ""}. When the RULES.md row is plain, record it with save (placed: path, row, why) in this chat; when it is not, ask the person once where each belongs. Never move one unasked.`;
 }

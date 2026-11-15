@@ -8,6 +8,7 @@ import * as lib from "../lib/brain.mjs";
 import { hasMemoryIndex, withMemoryIndex } from "../lib/memory-index.mjs";
 import { brainRelationsToUs } from "../lib/relation-to-us.mjs";
 import { shortId } from "../lib/layout.mjs";
+import { workDir } from '../lib/brain-paths.mjs';
 
 const brainRoot = ctx => {
   const root = ctx?.brain;
@@ -119,8 +120,8 @@ export function createFilesBackend({ run, memoryRead }) {
       if (memories && typeof one.content === "string" && one.content.trim()) return { outcome: "error", message: "one note (content) or a batch (memories), not both: nothing was kept. Put the note inside the batch." };
       const entries = memories || [one];
       if (!Array.isArray(entries) || !entries.length || !entries.every(e => e && typeof e.content === "string" && e.content.trim())) return { outcome: "error", message: "every memory needs content" };
-      mkdirSync(join(root, "work"), { recursive: true });
-      const batch = join(root, "work", `remember-${randomUUID()}.json`);
+      mkdirSync(workDir(root), { recursive: true });
+      const batch = join(workDir(root), `remember-${randomUUID()}.json`);
       try {
         writeFileSync(batch, JSON.stringify(entries));
         // by is optional: remember takes the person in this chat when it is left out

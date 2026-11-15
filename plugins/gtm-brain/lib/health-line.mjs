@@ -11,9 +11,10 @@ import { populationPart, SYNC_WINDOW_DAYS } from "./population.mjs";
 import { unadoptedPart } from "./documents.mjs";
 import { explainFailure } from "./summaries.mjs";
 import { captureHealth } from "./capture.mjs";
+import { workDir } from './brain-paths.mjs';
 
 const readJson = f => { try { return JSON.parse(readFileSync(f, "utf8")); } catch { return null; } };
-const readRuns = root => { try { return readFileSync(join(root, "work", "runs.jsonl"), "utf8").split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(r => r && r.at); } catch { return []; } };
+const readRuns = root => { try { return readFileSync(join(workDir(root), "runs.jsonl"), "utf8").split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(r => r && r.at); } catch { return []; } };
 const when = at => { const t = Date.parse(at); return Number.isFinite(t) ? new Date(t).toISOString().slice(0, 16).replace("T", " ") + " UTC" : null; };
 const newest = list => list.filter(x => x && Number.isFinite(Date.parse(x.at))).sort((a, b) => Date.parse(b.at) - Date.parse(a.at))[0] || null;
 
@@ -21,7 +22,7 @@ const newest = list => list.filter(x => x && Number.isFinite(Date.parse(x.at))).
    summary written in a chat (foreground, with its context); a background or scheduled run still writes its own.
    The error carries what failed in the person's words and what to do (lib/summaries.mjs explainFailure). */
 export function summaryRuns(root) {
-  const runs = readRuns(root), state = readJson(join(root, "work", "compile.json"));
+  const runs = readRuns(root), state = readJson(join(workDir(root), "compile.json"));
   const good = newest([...runs.filter(r => r.turns > 0 && !r.error), ...(state?.state === "done" ? [state] : [])]);
   const bad = newest([...runs.filter(r => r.error || !r.turns).map(r => ({ at: r.at, why: r.error || "the run did no work", context: r.context || null, said: r.what && r.todo ? { what: r.what, todo: r.todo } : null })),
     ...(["failed", "blocked"].includes(state?.state) ? [{ at: state.at, why: `${state.state === "blocked" ? "compiled nothing" : "failed"}${state.contexts ? ` (${state.contexts})` : ""}` }] : [])]);
@@ -34,7 +35,7 @@ export function summaryRuns(root) {
      {"at": "<last run that read every source>", "tools": [...], "sources": {"gmail": {"at": "..."}, "hubspot:12345": {"at": "...", "window_days": 2}}}
    A brain from before has only the global at and tools: each listed tool reads as synced at that time. */
 export function syncCheckpoints(root) {
-  const sync = readJson(join(root, "work", "sync.json")); if (!sync || typeof sync !== "object") return [];
+  const sync = readJson(join(workDir(root), "sync.json")); if (!sync || typeof sync !== "object") return [];
   const out = [], seen = new Set();
   for (const [key, v] of Object.entries(sync.sources && typeof sync.sources === "object" && !Array.isArray(sync.sources) ? sync.sources : {})) {
     const at = typeof v === "string" ? v : v?.at; if (!Number.isFinite(Date.parse(at))) continue;
@@ -55,7 +56,7 @@ export function syncCheckpoint(root, kind, account = null) {
   const k = normalizeKind(kind), a = account ? String(account).trim().toLowerCase() : null, list = syncCheckpoints(root);
   const own = list.find(c => c.kind === k && c.account === a && !c.legacy) || list.find(c => c.kind === k && !c.account && !c.legacy);
   if (own) return own.at;
-  const sync = readJson(join(root, "work", "sync.json"));
+  const sync = readJson(join(workDir(root), "sync.json"));
   return Number.isFinite(Date.parse(sync?.at)) ? sync.at : null;
 }
 

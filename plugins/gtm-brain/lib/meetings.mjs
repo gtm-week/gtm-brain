@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import * as lib from './brain.mjs';
+import { workDir } from './brain-paths.mjs';
 
 export const MEETING_FIELDS = ['meeting', 'meeting_id', 'meeting_capture', 'meeting_policy', 'meeting_coverage'];
 export const MEETING_EVIDENCE = ['transcript', 'recording', 'notes', 'summary', 'recollection', 'calendar', 'pending'];
@@ -184,14 +185,14 @@ export function meetingOverview(root, { by, meeting_id, entity, from, to, state,
 /* Why meetings may be missing from this brain, or null when sync and capture are both set up.
    An empty list must not read as "no meetings happened". */
 export function meetingCaptureStatus(root, overview) {
-  if (!overview.coverage.length && !existsSync(join(root, 'work/sync.json'))) return 'No sync has finished in this brain, so meetings appear only when you ask for one. Say: set up the daily sync.';
+  if (!overview.coverage.length && !existsSync(join(workDir(root), 'sync.json'))) return 'No sync has finished in this brain, so meetings appear only when you ask for one. Say: set up the daily sync.';
   if (!overview.policies.length) return 'Sync skips meetings until capture is set up for you. Say: capture my meetings.';
   if (!overview.coverage.some(c => c.status !== 'unavailable')) return 'Meeting capture is set up, but no meeting source has been read yet, so meetings may be missing.';
   return null;
 }
 
 export function meetingSourceSuggestions(root) {
-  let states; try { states = JSON.parse(readFileSync(join(root, 'work/tools.json'), 'utf8')); } catch { return []; }
+  let states; try { states = JSON.parse(readFileSync(join(workDir(root), 'tools.json'), 'utf8')); } catch { return []; }
   return Object.entries(states).filter(([, s]) => s?.status === 'installed' && s.test === 'ok' && !s.declined).flatMap(([key, s]) => {
     const tool = s.tool || key;
     const role = /granola|wispr|fireflies|otter|fathom|pocket|transcript|meeting|recorder/i.test(tool) ? 'meeting evidence'

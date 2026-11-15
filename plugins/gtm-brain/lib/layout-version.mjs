@@ -9,30 +9,36 @@
 //      before 0.35 until its person says yes to the move. A brain without the file is layout 1.
 //   2  entity pages in a folder per kind (brain/entities/people/max-jendral-3f9a2c.md, lib/layout.mjs): what
 //      setup makes since 0.35.0 and what "upgrade the brain" moves a flat brain to, after asking.
+//   4  the folders are the dashboard's tabs (lib/brain-paths.mjs): configuration/ (about-us/, rules.md, schema.md,
+//      settings.yaml, interactions.json), entities/, memories/ (one file of notes per month, topics/<slug>.md
+//      for what a context cover was), layout.json at the top, .gtm-brain/ for this computer. No brain/ folder,
+//      so every plugin older than this one finds no brain there: it neither reads nor writes.
 //   3  layout 2, and the base files in about-us/, rules.md, schema.md and settings.yaml in config/ (settings.yaml
 //      replaces brain/admin.md; lib/brain-paths.mjs): what setup makes since this release and what "upgrade the
 //      brain" moves a layout 1 or 2 brain to, after asking the owner. A plugin that looks for brain/admin.md
 //      (0.34, and 0.35 releases before this one) does not find a brain there at all, so it neither reads nor writes.
-// 0.35 reads and writes all three, so an un-upgraded brain keeps working. The number follows the files:
+// This plugin reads and writes all four, so an un-upgraded brain keeps working. The number follows the files:
 // whatever makes kind folders records 2 with them (lib/layout.mjs recordKindLayout), and nothing lowers it.
 // Its only import is lib/brain-paths.mjs, which imports nothing of the lib either: a small older plugin can carry both.
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { isBrain } from "./brain-paths.mjs";
+import { isBrain, layoutFile, noteFiles, LAYOUT_FILE_OLD } from "./brain-paths.mjs";
 
-export const LAYOUT_FILE = "brain/layout.json";
+/* brain/layout.json in layouts 1 to 3, layout.json at the top in layout 4 (lib/brain-paths.mjs layoutFile). */
+export const LAYOUT_FILE = LAYOUT_FILE_OLD;
+export { layoutFile };
 // The newest layout this plugin understands, and the one its upgrade moves a brain to. Tests set
-// GTM_BRAIN_TEST_LAYOUT to play another plugin (4: a newer one, 2: one from before about-us/ and config/, 1: before kind folders); nothing
+// GTM_BRAIN_TEST_LAYOUT to play another plugin (5: a newer one, 3: one from before layout 4, 2: one from before about-us/ and config/, 1: before kind folders); nothing
 // else reads it.
 const testLayout = () => Number(process.env.GTM_BRAIN_TEST_LAYOUT) || 0;
-export const LAYOUT = 3;
+export const LAYOUT = 4;
 export const writesLayout = () => testLayout() || LAYOUT;
 export const understandsLayout = () => testLayout() || LAYOUT;
 
 /* {layout, starters, error}: layout 1 when the file is missing. A file that cannot be read (a merge conflict,
    a hand edit) gives layout null and the error: nothing is written until it is fixed, reads go on. */
 export function readLayout(root) {
-  const path = join(root, LAYOUT_FILE);
+  const LAYOUT_FILE = layoutFile(root), path = join(root, LAYOUT_FILE);
   let text;
   try { text = readFileSync(path, "utf8"); } catch { return { layout: 1, starters: null, missing: true }; }
   try {
@@ -63,7 +69,7 @@ export function assertWritable(root) {
    follows the files, so only what changes the files raises it, and nothing lowers it. Returns true when the
    file changed. The caller commits it. */
 export function writeLayout(root, { layout, starters } = {}) {
-  const current = readLayout(root), path = join(root, LAYOUT_FILE);
+  const current = readLayout(root), path = join(root, layoutFile(root));
   if (current.error) throw new LayoutError(layoutBlock(root));
   layout = Math.max(current.layout, Number.isInteger(layout) ? layout : 0);
   const given = [...new Set([...(current.starters || []), ...(starters || [])])].sort();
@@ -79,9 +85,8 @@ export function writeLayout(root, { layout, starters } = {}) {
    update. Read from the note authors, the current person left out. names: handle -> display name. */
 export function recentTeammates(root, { me = null, days = 14, now = Date.now(), names = {} } = {}) {
   const since = now - days * 86400000, seen = new Map();
-  let dirs = []; try { dirs = readdirSync(join(root, "brain", "contexts"), { withFileTypes: true }).filter(d => d.isDirectory()).map(d => d.name); } catch {}
-  for (const slug of dirs) {
-    let text; try { text = readFileSync(join(root, "brain", "contexts", slug, "memories.jsonl"), "utf8"); } catch { continue; }
+  for (const file of noteFiles(root)) {
+    let text; try { text = readFileSync(join(root, file), "utf8"); } catch { continue; }
     for (const line of text.split("\n")) {
       if (!line) continue;
       let m; try { m = JSON.parse(line); } catch { continue; }

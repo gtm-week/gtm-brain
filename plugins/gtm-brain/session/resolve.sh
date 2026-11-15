@@ -8,11 +8,17 @@
 # bash, grep and sed only: this runs inside the shell hooks before node is known to exist.
 # gtm_brain_is <dir>: a brain folder, either settings file there. Mirrors lib/brain-paths.mjs isBrain (layouts 1
 # and 2 keep brain/admin.md, layout 3 config/settings.yaml); every shell script asks here, never the path itself.
-gtm_brain_is() { [ -f "$1/brain/admin.md" ] || [ -f "$1/config/settings.yaml" ]; }
-# gtm_brain_layout3 <dir>: about-us/ and config/ (lib/brain-paths.mjs inConfigFolders).
-gtm_brain_layout3() { [ -f "$1/config/settings.yaml" ]; }
+gtm_brain_is() { [ -f "$1/brain/admin.md" ] || [ -f "$1/config/settings.yaml" ] || [ -f "$1/configuration/settings.yaml" ]; }
+# gtm_brain_layout4 <dir>: configuration/, entities/, memories/ at the top (lib/brain-paths.mjs inLayout4).
+gtm_brain_layout4() { [ -f "$1/configuration/settings.yaml" ]; }
+# gtm_brain_layout3 <dir>: settings.yaml, base files in their folder (layout 3 or 4; lib/brain-paths.mjs inConfigFolders).
+gtm_brain_layout3() { [ -f "$1/config/settings.yaml" ] || gtm_brain_layout4 "$1"; }
 # gtm_brain_settings <dir>: the settings file, relative to the brain (lib/brain-paths.mjs settingsFile).
-gtm_brain_settings() { if gtm_brain_layout3 "$1"; then echo config/settings.yaml; else echo brain/admin.md; fi; }
+gtm_brain_settings() { if gtm_brain_layout4 "$1"; then echo configuration/settings.yaml; elif gtm_brain_layout3 "$1"; then echo config/settings.yaml; else echo brain/admin.md; fi; }
+# gtm_brain_work <dir>: this computer's own folder, relative to the brain (lib/brain-paths.mjs workName).
+gtm_brain_work() { if gtm_brain_layout4 "$1"; then echo .gtm-brain; else echo work; fi; }
+# gtm_brain_layout_file <dir>: the layout file, relative to the brain (lib/brain-paths.mjs layoutFile).
+gtm_brain_layout_file() { if gtm_brain_layout4 "$1" || { [ ! -d "$1/brain" ] && [ -f "$1/layout.json" ]; }; then echo layout.json; else echo brain/layout.json; fi; }
 gtm_brain_resolve() {
   local d="$1" b p
   [ -d "$d" ] || return 1

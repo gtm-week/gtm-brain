@@ -23,6 +23,7 @@
 // An automatic check (--by schedule or session) writes with via schedule and that word as the author.
 import { existsSync, realpathSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { workDir } from '../../lib/brain-paths.mjs';
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const wf = await import(new URL("../../lib/workflows.mjs", import.meta.url));
 const tr = await import(new URL("../../lib/workflow-triggers.mjs", import.meta.url));
@@ -51,7 +52,7 @@ const stepRecord = (w, step, state, id, note, extra = {}, depth = 1, more = []) 
   content: `Step ${step.n} of ${w.steps.length}, ${step.title}: ${stateLine(state)}. ${note}`.trim(),
   tags: [...baseTags(w.slug, id, depth), `step:${step.n}`, `step-status:${state.status}`, ...(state.due && (state.status === "pending" || state.status === "due") ? [`due:${state.due}`] : []), ...more], ...extra });
 const gateQuestion = (w, step, id, condition, depth = 1) => write(w.context, { kind: "question", content: `Run ${id}, step ${step.n} (${step.title}): ${condition}? Answer this to move the run on.`, tags: [...baseTags(w.slug, id, depth), `step:${step.n}`, "gate", "brain-question"] });
-const finish = (ctx, message, line) => { const c = lib.commit(root, [`brain/contexts/${ctx}/memories.jsonl`, ...lib.ENTITIES_PATHS], message); lib.logActivity(root, "workflow", message); lib.rerender(root); console.log(`${line} (${c.note})`); };
+const finish = (ctx, message, line) => { const c = lib.commit(root, [...lib.notesPaths(root, ctx), ...lib.entitiesPaths(root)], message); lib.logActivity(root, "workflow", message); lib.rerender(root); console.log(`${line} (${c.note})`); };
 const loaded = (slug, ctx) => { const w = wf.readWorkflow(root, slug); if (!w) refuse(`no workflow "${slug}"; workflows: ${slugs()}`); if (!w.ok) refuse(`${w.path} does not parse: ${w.problems.join("; ")}. Fix the file by hand.`); return { ...w, context: ctx }; };
 const milestoneTag = def => def?.milestone?.kind === "tag" ? [def.milestone.tag] : [];
 
@@ -332,13 +333,13 @@ if (opt.due) {
   needBy();
   const today = String(opt.today || wf.localDate()); if (!/^\d{4}-\d{2}-\d{2}$/.test(today)) refuse("--today must be YYYY-MM-DD");
   if (wf.workflowsOff(root)) { console.log("workflows are off (workflows: off in brain/admin.md): nothing checked"); process.exit(0); }
-  const lines = [], touched = new Set(), commitRun = (ctx, msg) => { const c = lib.commit(root, [`brain/contexts/${ctx}/memories.jsonl`, ...lib.ENTITIES_PATHS], msg); lib.logActivity(root, "workflow", msg); touched.add(ctx); return c; };
+  const lines = [], touched = new Set(), commitRun = (ctx, msg) => { const c = lib.commit(root, [...lib.notesPaths(root, ctx), ...lib.entitiesPaths(root)], msg); lib.logActivity(root, "workflow", msg); touched.add(ctx); return c; };
   // steps the automatic check closed in this run on this machine's day: the day the notes were written, whatever
   // --today says, and only the closing notes (the note that opens the next step is not a step moved)
   const realDay = wf.localDate();
   const stepsToday = r => lib.readMemories(root, r.context).filter(m => (m.tags || []).includes(`run:${r.id}`) && wf.localDate(new Date(m.at)) === realDay && m.authors?.some(a => AUTOMATIC.has(a)) && (m.tags || []).includes("step-status:done")).length;
   const wfCache = new Map(), wfOf = slug => { if (!wfCache.has(slug)) wfCache.set(slug, wf.readWorkflow(root, slug)); return wfCache.get(slug); };
-  const raisedPath = join(root, "work", "workflow-raised.json"); let raised = {}; try { raised = JSON.parse(readFileSync(raisedPath, "utf8")); } catch {}
+  const raisedPath = join(workDir(root), "workflow-raised.json"); let raised = {}; try { raised = JSON.parse(readFileSync(raisedPath, "utf8")); } catch {}
   for (const start of wf.listRuns(root).filter(wf.isMoving)) {
     const w = wfOf(start.workflow); if (!w?.ok) { if (start.current) lines.push(`skipped ${start.id}: ${w ? w.problems.join("; ") : "workflow file missing"}`); continue; }
     const eff = tr.effectiveStatus(root, w); if (eff.status === "paused") { if (start.current) lines.push(`held ${start.id}: ${w.slug} is paused${eff.flag ? ` (${eff.flag})` : ""}`); continue; }
@@ -376,7 +377,7 @@ if (opt.due) {
       break;
     }
   }
-  try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(raisedPath, JSON.stringify(raised) + "\n"); } catch {}
+  try { mkdirSync(workDir(root), { recursive: true }); writeFileSync(raisedPath, JSON.stringify(raised) + "\n"); } catch {}
   for (const o of tr.pendingOffers(root)) lines.push(`offer: ${o.workflow.slug}, ${o.events.length} event${o.events.length === 1 ? "" : "s"} waiting${o.events[0] ? ` (newest ${o.events[0].id})` : ""}${o.held ? `, held: ${o.held}` : ""}; offered at the next chat start, never started here`);
   if (touched.size) lib.rerender(root);
   console.log(lines.length ? lines.join("\n") : "no step due");

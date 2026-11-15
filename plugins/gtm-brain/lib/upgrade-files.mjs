@@ -9,6 +9,7 @@ import { ensureRules } from "./where.mjs";
 import { ensureSchema } from "./schema.mjs";
 import { basePath, rulesFile, schemaFile, inConfigFolders } from "./brain-paths.mjs";
 import { configMoveWhat, layoutReadme } from "./config-folders.mjs";
+import { workDir } from './brain-paths.mjs';
 
 // Shared with the upgrade matrix tests. Aliases point to the same immutable snapshot.
 export const legacyTemplates = JSON.parse(readFileSync(new URL("../templates/legacy/manifest.json", import.meta.url), "utf8"));
@@ -118,7 +119,7 @@ export function prepareUpgrade(root, templates) {
       ? expected.trimEnd().split("\n").some(line => !existing.split("\n").includes(line))
       : existing !== expected;
   });
-  const folder = join(root, "work", "upgrades");
+  const folder = join(workDir(root), "upgrades");
   let backup;
   if (needsChange) {
     mkdirSync(folder, { recursive: true });
