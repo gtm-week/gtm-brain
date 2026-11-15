@@ -4,6 +4,9 @@
 #   bash upgrade.sh [/path/to/brain] [--confirm]
 # --confirm: the person said yes to a change of the brain's file layout (brain/layout.json), which the run
 # without it described: how many teammates saved in the last 14 days and that they will need to update.
+# In 0.35 that change is the move of a flat brain's entity pages into a folder per kind (layout 1 to 2):
+# without --confirm the run says how many pages would move and changes nothing; with it the pages move and
+# brain/layout.json says 2 in the same commit. A scheduled or background run (GTM_BRAIN_RUN) never moves them.
 set -euo pipefail
 # Resolve the plugin before entering the brain: a relative script path is relative to the caller's cwd.
 HERE="$(cd "$(dirname "$0")" && pwd)"; PLUGIN="$(cd "$HERE/../.." && pwd)"; T="$PLUGIN/templates"
@@ -51,10 +54,20 @@ if [ "$entity_change" = "changed" ]; then
   changed=1; paths="$paths brain/entities brain/entities.md brain/names.md"
 fi
 # 0.35.0: entity pages move to a folder per kind (people/max-jendral-3f9a2c.md), files folders with them, in this commit.
-kind_out="$(node --input-type=module -e 'const lib=await import(process.argv[1]); const r=lib.migrateToKindFolders("."); for(const m of r.moves)console.log(`${m.from}\t${m.to}`); if(!r.moves.length&&r.indexes.length)console.log("indexes")' "$PLUGIN/lib/brain.mjs")"
+# A flat brain reaches this line only after the person's yes (the layout step above); the move records layout 2 in
+# brain/layout.json itself, kept in the same commit. A brain a 0.35 pre-release moved while the file still said 1,
+# or had none, gets its 2 here too, with nothing moved.
+layout_said=0
+kind_out="$(node --input-type=module -e 'const lib=await import(process.argv[1]); const r=lib.migrateToKindFolders("."); for(const m of r.moves)console.log(`${m.from}\t${m.to}`); if(!r.moves.length&&r.indexes.length)console.log("indexes"); if(r.layout)console.log(`layout ${r.layout}`)' "$PLUGIN/lib/brain.mjs")"
 if [ -n "$kind_out" ]; then
   kind_n="$(printf '%s\n' "$kind_out" | grep -c "$(printf '\t')" || true)"
+  kind_layout="$(printf '%s\n' "$kind_out" | sed -n 's/^layout //p')"
   [ "$kind_n" -gt 0 ] && echo "moved $kind_n entity page$([ "$kind_n" = 1 ] || echo s) into a folder per kind (brain/entities/people/, organizations/, ...), each named with its short id"
+  if [ -n "$kind_layout" ]; then
+    if [ "$kind_n" -gt 0 ]; then echo "changed the brain's file layout to $kind_layout (brain/layout.json): a teammate's older GTM Brain needs an update before it saves here again"
+    else echo "recorded the brain's file layout as $kind_layout (brain/layout.json): the entity pages were already in kind folders"; fi
+    layout_said=1; paths="$paths brain/layout.json"
+  fi
   changed=1; paths="$paths brain/entities"
 fi
 # 0.35.0: a meeting is an entity; meetings captured before get theirs (their notes are not rewritten).
@@ -87,10 +100,10 @@ fi
 # files the person edits: a brain from before them gets them as setup writes them, an edited one stays; each is
 # kept in a commit of its own by lib (where.mjs ensureRules, schema.mjs ensureSchema). brain/layout.json, the file
 # layout every GTM Brain reads before it writes, is recorded last, after the starters it lists as given; a layout
-# change happens only with --confirm. One node process for the three: one line each.
+# change happens only with --confirm, and a flat brain keeps layout 1. One node process for the three: one line each.
 PLUGIN_VERSION="$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$PLUGIN/.codex-plugin/plugin.json" | head -1)"
 had_rules=0; [ -f RULES.md ] && had_rules=1; had_schema=0; [ -f SCHEMA.md ] && had_schema=1
-delivered="$(node --input-type=module -e 'const u = await import(process.argv[1]); console.log(u.deliverMissing(".", process.argv[2], process.argv[3]))' "$PLUGIN/lib/upgrade-files.mjs" "$T" "$PLUGIN_VERSION")"
+delivered="$(node --input-type=module -e 'const u = await import(process.argv[1]); console.log(u.deliverMissing(".", process.argv[2], process.argv[3], process.argv[4] === "1"))' "$PLUGIN/lib/upgrade-files.mjs" "$T" "$PLUGIN_VERSION" "$layout_said")"
 starters="$(sed -n 1p <<< "$delivered")"; ensured="$(sed -n 2p <<< "$delivered")"; layout_change="$(sed -n 3p <<< "$delivered")"
 added_strategy=0; other_starters=""
 for f in $starters; do

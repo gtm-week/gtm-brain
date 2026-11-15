@@ -10,7 +10,8 @@ import { refreshIndexedPages } from './entity-pages.mjs';
 import { hasMemoryIndex } from './memory-index-store.mjs';
 import { readSchema, fieldsFor, requiredRelations, kindHash, US, brainKinds } from './schema.mjs';
 import { DEFAULT_KINDS, KIND_NAME, NOT_KINDS } from './kinds.mjs';
-import { pagePaths, isPagePath, linkFrom, layout, kindPagePath, isKindPagePath, assetFolder, ENTITIES_DIR, HISTORY_DIR, flatPagePath, flatKinds } from './layout.mjs';
+import { pagePaths, isPagePath, linkFrom, layout, recordKindLayout, kindPagePath, isKindPagePath, assetFolder, ENTITIES_DIR, HISTORY_DIR, flatPagePath, flatKinds } from './layout.mjs';
+import { understandsLayout } from './layout-version.mjs';
 import { writeKindIndexes } from './entity-index.mjs';
 import { MemoryIndex } from './memory-index.mjs';
 import { meetingAttendees } from './meeting-entities.mjs';
@@ -854,15 +855,20 @@ function refreshBriefs(root, registry) {
   return changed;
 }
 
-/* A new brain (setup) starts with a folder and an index per default kind: from then on pages go there. */
+/* A new brain (setup) starts with a folder and an index per default kind: from then on pages go there, and
+   brain/layout.json says 2 from its first commit (layout.recordKindLayout). */
 export function startKindLayout(root) {
-  return withEntityLock(root, () => writeKindIndexes(root, readEntityFiles(root), new Map(), { kinds: ENTITY_KINDS }));
+  return withEntityLock(root, () => { const made = writeKindIndexes(root, readEntityFiles(root), new Map(), { kinds: ENTITY_KINDS }); recordKindLayout(root); return made; });
 }
-/* upgrade_brain: every flat page moves to its kind folder under its readable name plus short id, its own files
-   folder with it, redirects of merged identities too (they keep their redirect id). Ids, aliases, merge
-   history and memories are untouched; links inside the moved redirects are rewritten. Returns the moves. */
+/* upgrade_brain, after the person's yes: every flat page moves to its kind folder under its readable name plus
+   short id, its own files folder with it, redirects of merged identities too (they keep their redirect id). Ids,
+   aliases, merge history and memories are untouched; links inside the moved redirects are rewritten. The move
+   records layout 2 in brain/layout.json itself, so the caller commits that file with the pages. A scheduled or
+   background run never turns a flat brain into kind folders: nobody is there to say yes. Returns the moves,
+   the indexes written and the layout recorded (0 when the file already said it). */
 export function migrateToKindFolders(root) {
-  return withEntityLock(root, () => moveFlatPages(root));
+  if (layout(root) !== "kinds" && (process.env.GTM_BRAIN_RUN || understandsLayout() < 2)) return { moves: [], indexes: [], layout: 0 };
+  return withEntityLock(root, () => { const moved = moveFlatPages(root); return { ...moved, layout: recordKindLayout(root) }; });
 }
 /* Flat pages in a brain already in kind folders: written by a teammate still on 0.34. Each write folds them in:
    a new identity moves to its kind folder like an upgrade would; a twin of an existing page (same id) gives the

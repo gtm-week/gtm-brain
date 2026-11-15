@@ -350,8 +350,8 @@ const TOOLS = [
       return result(await run(brain, "gtm-brain-approve/approve.mjs", apply, { env: { GTM_BRAIN_APPROVAL_TICKET: lib.issueApproval(brain, admin ? "admin" : "interaction") } }));
     } },
   { name: "upgrade_brain", title: "Refreshing the brain's rules", readOnly: false,
-    description: "After a plugin update: refresh managed rules, preserving local edits; add RULES.md, SCHEMA.md and the starter documents a brain lacks, never replacing a file the person has. Migrate legacy identity registries into permanent entity files, backing up originals and leaving memories unchanged. When the upgrade would change the brain's file layout it changes nothing and says which teammates must update; ask the person yes or no, and only on yes call it again with confirm: true.",
-    inputSchema: schema({ confirm: { type: "boolean", description: "true only after the person said yes to the layout change the previous run described" } }),
+    description: "After a plugin update: refresh managed rules, preserving local edits; add RULES.md, SCHEMA.md and the starter documents a brain lacks, never replacing a file the person has. Migrate legacy identity registries into permanent entity files, backing up originals and leaving memories unchanged. When the upgrade would change the brain's file layout (a brain from before 0.35: its flat entity pages move into a folder per kind, layout 1 to 2) it changes nothing and says how many pages would move and which teammates must update; ask the person yes or no, and only on yes call it again with confirm: true. Never pass confirm in a scheduled or background run.",
+    inputSchema: schema({ confirm: { type: "boolean", description: "true only after the person said yes, in this chat, to the layout change the previous run described" } }),
     call: ({ brain, confirm }) => run(brain, "gtm-brain-upgrade/upgrade.sh", confirm === true ? ["--confirm"] : []).then(result) },
 ];
 // Tools that write only work/ (gitignored, this machine): they go on in a brain on a newer file layout.
