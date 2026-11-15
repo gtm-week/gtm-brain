@@ -112,6 +112,7 @@ if (!process.env.GTM_BRAIN_RUN) for (const e of entries) if (e && e.meeting?.bas
 const batched = entries.length > 1;
 if (entries.some(e => e?.customer) && entries.some(e => e?.customer_coverage)) die("Record customer coverage in a separate call after checking which customer entries were kept or held.");
 const kept = [], held = [], failed = [], lines = [], asks = [];
+const keptRecords = []; // the records written in this call, for the moved-note line (R2)
 const toolsNamed = []; // the tools and source kinds of the notes kept in this call, for the tools check below
 const esc = t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const personText = chat && !process.env.GTM_BRAIN_RUN ? (host().lastPersonText?.(chat) || "") : "";
@@ -227,7 +228,9 @@ const problems = entries.map((e, i) => {
     const id = e[field]; if (!id) continue;
     const home = lib.listContexts(root).find(c => c.memories.some(m => m.id === id));
     if (!home) return `${at(n)}no memory ${id} to ${verb}`;
-    if (home.slug !== ctx) return `${at(n)}${id} is in ${home.slug}, not ${ctx}: a correction lives with the note it corrects; remember it in ${home.slug}`;
+    if (home.slug !== ctx) return field === "supersedes"
+      ? `${at(n)}${id} is in ${home.slug}, not ${ctx}. To move it to ${ctx} ("that should go to ..."), send both in one call: an entry in ${home.slug} with retracts ${id}, and the note as a new entry in ${ctx}. A correction that stays in ${home.slug} supersedes it there`
+      : `${at(n)}${id} is in ${home.slug}, not ${ctx}: withdraw it in ${home.slug}`;
   }
   if (e.asset !== undefined) {
     try {
@@ -337,8 +340,10 @@ for (let i = 0; i < entries.length; i++) {
   const dated = e.retracts ? [] : dots.relativeDates(e.content), sourced = !!e.meeting || lib.parseSources(e.sources).some(s => !isChatSource(s));
   if (similar.length || unnamed.length || dated.length) {
     noteAsked(unnamed);
-    if (similar.length || unnamed.length || dated.some(d => d.ask)) markHeld([...similar.map(s => s.mention), ...unnamed, ...dated.filter(d => d.ask).map(d => d.word)], e.content);
-    held.push({ n, why: [...similar.map(s => `"${s.mention}" looks like ${s.matches.map(x => `${x.name}${x.kind !== "person" ? ` (${x.kind})` : ""}`).join(" or ")} (P4)`), ...unnamed.map(u => `"${u}" is one word and nobody known has it (rule P3: a first name alone is never a new person)`), ...(dated.length ? [dots.datesHold(dated, { sourced })] : [])].join("; "), mentions: [...similar.map(s => s.mention), ...unnamed], unnamed, ask: similar.length + unnamed.length > 0 || dated.some(d => d.ask) });
+    // a clearly different surname is no open question (P4, "No question needed"): resending it with new_names must go through
+    const asked = similar.filter(s => !s.matches.every(x => surnameGap(s.mention, x) > 2)).map(s => s.mention);
+    if (asked.length || unnamed.length || dated.some(d => d.ask)) markHeld([...asked, ...unnamed, ...dated.filter(d => d.ask).map(d => d.word)], e.content);
+    held.push({ n, why: [...similar.map(s => `"${s.mention}" looks like ${s.matches.map(x => `${x.name}${x.kind !== "person" ? ` (${x.kind})` : ""}${surnameGap(s.mention, x) > 2 ? `, same first name, surname ${surnameGap(s.mention, x)} letters apart` : ""}`).join(" or ")} (P4)`), ...unnamed.map(u => `"${u}" is one word and nobody known has it (rule P3: a first name alone is never a new person)`), ...(dated.length ? [dots.datesHold(dated, { sourced })] : [])].join("; "), mentions: [...similar.map(s => s.mention), ...unnamed], unnamed, otherSurname: similar.filter(s => s.matches.every(x => surnameGap(s.mention, x) > 2)).map(s => s.mention), ask: similar.length + unnamed.length > 0 || dated.some(d => d.ask) });
     continue;
   }
   // a note about known people whose notes all sit in one project belongs there too; several: ask
@@ -458,7 +463,7 @@ for (let i = 0; i < entries.length; i++) {
   // one commit per memory: git history stays readable as one commit, one memory
   const closedPath = closed ? [`brain/contexts/${closedIn}/memories.jsonl`] : [];
   lines.push(`${at(n)}${lib.commit(root, [`brain/contexts/${ctx}/memories.jsonl`, ...closedPath, ...lib.ENTITIES_PATHS], `remember: ${ctx} ${rec.kind} by ${rec.authors.join(",")}`).note}`);
-  kept.push({ n, id: rec.id, ctx }); toolsNamed.push(...(rec.tools || []), ...(rec.source || []).filter(s => s && !isChatSource(s)).map(s => s.kind));
+  kept.push({ n, id: rec.id, ctx }); keptRecords.push(rec); toolsNamed.push(...(rec.tools || []), ...(rec.source || []).filter(s => s && !isChatSource(s)).map(s => s.kind));
   const memPaths = [`brain/contexts/${ctx}/memories.jsonl`, ...lib.ENTITIES_PATHS];
   const sharing = w => { const s = lib.readNames(root).filter(x => x.kind === "person" && [x.name, ...(x.aliases || [])].some(a => fold(a).split(/\s+/)[0] === fold(w))).map(x => x.name); return s.length > 1 ? s : []; };
   // the question about a saved note, kept in the brain until the person answers it: on the first save, for the
@@ -526,12 +531,25 @@ for (let i = 0; i < entries.length; i++) {
 
 /* what the brain cannot settle by itself, for one question with numbered parts */
 /* the look-alike names, in one place, so only the entries that need an answer are re-sent */
+// P4 stays Codex's call (13 Nov): the tool only says how far the surnames are, so a clearly different one
+// ("Florian Kim", "Florian Weber") is not pushed towards a question (live scenario new-surname, 15 Nov).
+function surnameGap(mention, x) {
+  if (!x || x.kind !== "person") return 0;
+  const w = s => fold(s).split(/\s+/).filter(Boolean), a = w(mention), b = w(x.name);
+  if (a.length < 2 || b.length < 2 || a[0] !== b[0]) return 0;
+  const s = a[a.length - 1], u = b[b.length - 1], d = Array.from({ length: s.length + 1 }, (_, i) => [i, ...Array(u.length).fill(0)]);
+  for (let j = 1; j <= u.length; j++) d[0][j] = j;
+  for (let i = 1; i <= s.length; i++) for (let j = 1; j <= u.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (s[i - 1] === u[j - 1] ? 0 : 1));
+  return d[s.length][u.length];
+}
 const holdReport = () => { const loose = held.flatMap(h => h.unnamed || []), alike = held.flatMap(h => h.mentions.filter(m => !(h.unnamed || []).includes(m)));
+  const apart = held.flatMap(h => h.otherSurname || []), unsure = alike.filter(m => !apart.includes(m));
   const decide = [
-    alike.length ? `${alike.map(m => `"${m}"`).join(", ")}: decide by P4. One or two letters off a known name: ask "same as X?" (yes: add_name with aliases [this spelling]; no: new_names). A clearly different surname: someone else, send it in new_names without asking` : "",
+    apart.length ? `${apart.map(m => `"${m}"`).join(", ")}: a clearly different surname from everyone it looks like; by P4 that is someone else: send it in new_names, no question` : "",
+    unsure.length ? `${unsure.map(m => `"${m}"`).join(", ")}: decide by P4. One or two letters off a known name: ask "same as X?" (yes: add_name with aliases [this spelling]; no: new_names). A clearly different surname: someone else, send it in new_names without asking` : "",
     loose.length ? `${loose.map(m => `"${m}"`).join(", ")}: decide by P3. A company, product or team the note plainly names goes in companies (or new_names with add_name for its kind); a person: ask for the full name ("${loose[0]} who?")` : "",
   ].filter(Boolean);
-  return `${batched ? `not kept (${held.length} of ${entries.length})` : "not remembered yet"}: ${held.map(h => `${at(h.n)}${h.why}`).join(batched ? "\n" : "; ")}.${decide.length ? ` ${decide.join(". ")}.` : ""} ${held.some(h => h.ask) || alike.length || loose.length ? `Whatever is still unclear: one question (Q2), ${askIn} (Q1), and wait for the reply (Q3).` : "No question needed: change the note as the rule says and send it again."} Then remember ${batched ? "the held-back entries" : "again"}.${rules()}`; };
+  return `${batched ? `not kept (${held.length} of ${entries.length})` : "not remembered yet"}: ${held.map(h => `${at(h.n)}${h.why}`).join(batched ? "\n" : "; ")}.${decide.length ? ` ${decide.join(". ")}.` : ""} ${held.some(h => h.ask && (h.mentions.some(m => !apart.includes(m)) || !h.mentions.length)) || unsure.length || loose.length ? `Whatever is still unclear: one question (Q2), ${askIn} (Q1), and wait for the reply (Q3).` : "No question needed: change the note as the rule says and send it again."} Then remember ${batched ? "the held-back entries" : "again"}.${rules()}`; };
 
 if (!kept.length) { console.error(held.length ? holdReport() : lines.join("\n") + rules()); process.exit(2); }
 
@@ -542,7 +560,15 @@ if (asks.length) console.log(`Ask the person once, ${askIn}, after quoting the n
 
 // 0.35.0: no summary is promised after a save; a topic's summary is written when someone asks (lib/summaries.mjs)
 // a plain save needs one line back, not this output repeated (replies were as long as before, benchmark 2026-11-15)
-if (kept.length && !held.length && !failed.length && !asks.length && !process.env.GTM_BRAIN_RUN) console.log("Reply to the person in one line: what was saved. Do not repeat this output or add offers.");
+// R2: a note withdrawn from one context and written into another in the same call was moved because the person
+// questioned where it was saved ("that should go to Strategy"): the rule they named is offered, not left to memory.
+let movedNote = null;
+{ const words = s => String(s || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const moved = keptRecords.filter(r => r.retracts).flatMap(r => { const home = lib.listContexts(root).find(c => c.memories.some(m => m.id === r.retracts)); const old = home && home.memories.find(m => m.id === r.retracts);
+    return old ? keptRecords.filter(x => !x.retracts && x.context !== home.slug && (words(x.content).includes(words(old.content)) || words(old.content).includes(words(x.content)))).map(x => ({ from: home.slug, to: x.context })) : []; });
+  if (moved.length) movedNote = `moved from ${moved[0].from} to ${moved[0].to}: the person questioned where it was saved. After fixing it, offer once to keep the rule in RULES.md under "## Our rules" (R2), in their words, for example "Keynote speakers go to Strategy", with Yes, add the rule and No, just this once.`; }
+if (movedNote) console.log(movedNote + " Apart from that offer, reply in one line and do not repeat this output.");
+else if (kept.length && !held.length && !failed.length && !asks.length && !process.env.GTM_BRAIN_RUN) console.log("Reply to the person in one line: what was saved. Do not repeat this output or add offers.");
 if (!held.length && rules()) console.log(rules().trim());
 // A note from a tool the brain's tools list does not know yet (MagicPath, ZYNT): check the tools in the
 // background, so the dashboard lists it without waiting for someone to ask (connect.mjs: "a memory came from it").

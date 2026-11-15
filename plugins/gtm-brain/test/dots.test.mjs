@@ -248,3 +248,35 @@ test("the rulebook: another company's brand rule goes to partner-brands.md, not 
   assert.match(text, /keeps `# Partner brands` as the only top heading;\s+each company is a `## <Company>` heading under it/);
   assert.match(text, /A file whose top heading is a company \(an older layout\) is\s+put right in the same update/);
 });
+
+test("R2 in the tool: a note moved to another context in one call asks for the RULES.md offer instead of no offers", () => {
+  const root = mkdtempSync(join(tmpdir(), "gtm-brain-r2-")); execFileSync("git", ["init", "-q", root]);
+  execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "X", "--one-liner", "y", "--owner", "Ann Lee <ann@b.c>"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P } });
+  const env = { ...process.env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_NO_WATCH: "1" };
+  const rem = (...a) => spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann-lee", ...a], { cwd: root, env, encoding: "utf8" });
+  assert.equal(rem("--context", "company", "--content", "The sponsor deck is due in December.").status, 0);
+  const old = lib.readMemories(root, "company").find(m => m.content === "The sponsor deck is due in December.");
+  const batch = join(root, "work", "move.json");
+  writeFileSync(batch, JSON.stringify([{ context: "company", content: "Moved to Our offer: the sponsor deck is due in December.", retracts: old.id }, { context: "offer", content: "The sponsor deck is due in December." }]));
+  const moved = rem("--batch", batch);
+  assert.equal(moved.status, 0, moved.stderr);
+  assert.match(moved.stdout, /moved from company to offer: .*RULES\.md under "## Our rules" \(R2\)/);
+  assert.doesNotMatch(moved.stdout, /or add offers/);
+  assert.match(rem("--context", "company", "--content", "Globex wants a booth.").stdout, /Do not repeat this output or add offers\./, "an ordinary save keeps the one-line reply");
+});
+
+test("P4 stays Codex's call, with the facts: a surname more than two letters apart says no question; a near one still asks", () => {
+  const root = mkdtempSync(join(tmpdir(), "gtm-brain-p4-")); execFileSync("git", ["init", "-q", root]);
+  execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "X", "--one-liner", "y", "--owner", "Ann Lee <ann@b.c>"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P } });
+  const env = { ...process.env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_NO_WATCH: "1" };
+  const rem = (...a) => spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann-lee", "--context", "company", ...a], { cwd: root, env, encoding: "utf8" });
+  rem("--content", "Florian Weber is our keynote speaker.", "--people", "Florian Weber", "--new", "Florian Weber");
+  rem("--content", "Lena Dumos joined the events team.", "--people", "Lena Dumos", "--new", "Lena Dumos");
+  const kim = rem("--content", "Florian Kim joined Globex as head of sales.", "--people", "Florian Kim");
+  assert.equal(kim.status, 2, "still held: Codex decides (13 Nov)");
+  assert.match(kim.stderr, /looks like Florian Weber, same first name, surname 5 letters apart \(P4\)/);
+  assert.match(kim.stderr, /someone else: send it in new_names, no question/); assert.match(kim.stderr, /No question needed/);
+  assert.doesNotMatch(kim.stderr, /Whatever is still unclear/);
+  const dumas = rem("--content", "Lena Dumas will host the panel.", "--people", "Lena Dumas");
+  assert.match(dumas.stderr, /"Lena Dumas": decide by P4/); assert.match(dumas.stderr, /Whatever is still unclear: one question/);
+});

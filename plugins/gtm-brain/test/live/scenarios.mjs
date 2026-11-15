@@ -5,7 +5,7 @@
 //   node test/live/scenarios.mjs [case ids, comma] [--brain <folder>]   (default: a clean brain built here)
 // codex exec has no question box: a question shows as text ending in "?". The box itself stays a manual check.
 import { execFileSync, spawn } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync, openSync } from "node:fs";
 import { join } from "node:path";
 import { homedir, tmpdir } from "node:os";
 
@@ -64,7 +64,9 @@ async function run(c) {
   c.setup?.(root);
   const before = new Set(notes(root).map(m => m.id)), ctxBefore = new Set(readdirSync(join(root, "brain", "contexts")));
   const out = join(root, "..", `${c.id}-reply.txt`);
-  await new Promise(res => { const p = spawn("codex", ["exec", "--skip-git-repo-check", "-s", "workspace-write", "-o", out, c.say], { cwd: root, stdio: ["ignore", "ignore", "ignore"] }); p.on("close", res); });
+  // the steps Codex took go next to the reply (<id>-steps.jsonl), so a failure can be read, not guessed
+  const steps = openSync(join(root, "..", `${c.id}-steps.jsonl`), "w");
+  await new Promise(res => { const p = spawn("codex", ["exec", "--json", "--skip-git-repo-check", "-s", "workspace-write", "-o", out, c.say], { cwd: root, stdio: ["ignore", steps, "ignore"] }); p.on("close", res); });
   const reply = existsSync(out) ? readFileSync(out, "utf8").trim() : "";
   const added = notes(root).filter(m => !before.has(m.id)), newContexts = readdirSync(join(root, "brain", "contexts")).filter(d => !ctxBefore.has(d));
   const asked = /\?\s*(\n|$)|\?\s*\n\s*1[.)]/.test(reply) || /\n\s*1[.)] /.test(reply);
