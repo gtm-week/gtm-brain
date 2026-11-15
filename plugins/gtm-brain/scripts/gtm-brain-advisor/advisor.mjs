@@ -10,7 +10,7 @@ const us = await import(new URL("../../lib/user-skills.mjs", import.meta.url));
 const rc = await import(new URL("../../lib/rules-check.mjs", import.meta.url));
 const { summaryRuns } = await import(new URL("../../lib/health-line.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
-if (!existsSync(join(root, "brain", "admin.md"))) { console.error("no brain here"); process.exit(1); }
+if (!lib.isBrain(root)) { console.error("no brain here"); process.exit(1); }
 const now = Date.parse(process.env.GTM_BRAIN_NOW || new Date().toISOString());
 const days = iso => Math.floor((now - Date.parse(iso)) / 86400000);
 const words = s => String(s || "").trim().split(/\s+/).filter(Boolean).length;

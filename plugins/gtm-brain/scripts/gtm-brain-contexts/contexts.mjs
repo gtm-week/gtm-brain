@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { lastNoteAgo, quietBrainLine } from "../../lib/staleness.mjs";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
-if (!existsSync(join(root, "brain", "admin.md"))) { console.error("no brain here (brain/admin.md missing). Run setup."); process.exit(1); }
+if (!lib.isBrain(root)) { console.error("no brain here (brain/admin.md missing). Run setup."); process.exit(1); }
 // --project <slug>: this chat runs in a linked folder; its loaded set is its own (lib.readLoaded(root, project))
 let project = null; { const pi = args.indexOf("--project"); if (pi >= 0) { project = args[pi + 1] || ""; args.splice(pi, 2); const known = lib.readProjects(root).map(p => p.slug); if (!known.includes(project)) { console.error(`no project ${project}; projects: ${known.join(", ") || "none"}`); process.exit(2); } } }
 

@@ -10,6 +10,7 @@ import { join, dirname, basename, relative, sep } from "node:path";
 import { execFileSync } from "node:child_process";
 import { handleFor, parseFrontmatter, renderFrontmatter, readProjects } from "./brain.mjs";
 import { HOST_DIRS } from "./host.mjs";
+import { ROOT_KEEP as KEEP_AT_TOP, ENGINE_DIRS, ABOUT_DIR, baseDir, engineDirs } from "./brain-paths.mjs";
 
 export const KIND = "document";
 export const STATUSES = ["draft", "approved"];
@@ -20,8 +21,8 @@ export const HEADER_LINE = "Made with GTM Brain. This document lives in the brai
 // What the course expects first; said by the hook while there are none.
 export const SUGGESTED = ["strategy", "tone of voice", "design system", "target customer definition", "pricing"];
 // The engine and the machine's own folders: never a document's home.
-export const SKIP_DIRS = new Set(["brain", "work", "files", ".agents", ".githooks", ".git", ".obsidian", ...HOST_DIRS, "node_modules"]);
-const ROOT_KEEP = new Set(["AGENTS.md", "CLAUDE.md", "README.md", "WHERE.md", "RULES.md", "SCHEMA.md"]);
+export const SKIP_DIRS = new Set([...ENGINE_DIRS, "files", ".agents", ".githooks", ".git", ".obsidian", ...HOST_DIRS, "node_modules"]);
+const ROOT_KEEP = new Set(KEEP_AT_TOP);
 const posix = p => p.split(sep).join("/");
 const FOLDER = /^[a-z0-9][a-z0-9-]*(\/[a-z0-9][a-z0-9-]*)?$/;
 
@@ -42,7 +43,7 @@ export function validateDocument({ slug, title, applies_to, body, status, folder
     if (!/^[a-z0-9][a-z0-9-]*$/.test(slug || "")) return `the title must give a slug of lowercase letters, digits and hyphens; got ${slug || "(nothing)"}`;
     if (slug.length > 64) return `${slug} is longer than 64 characters`;
     const f = String(folder || "").replace(/^\/+|\/+$/g, "");
-    if (f && (!FOLDER.test(f) || SKIP_DIRS.has(f.split("/")[0]))) return `folder must be one or two lowercase names outside the brain's own folders (brand, market/battle-cards); got ${f}`;
+    if (f && (!FOLDER.test(f) || (SKIP_DIRS.has(f.split("/")[0]) || (root && engineDirs(root).includes(f.split("/")[0]))))) return `folder must be one or two lowercase names outside the brain's own folders (brand, market/battle-cards); got ${f}`;
     if (f && root && projectDirs(root).has(f.split("/")[0])) return `${f.split("/")[0]} is a linked project folder; a document lives at the brain root or in a folder of its own`;
   }
   const applies = normalizeAppliesTo(applies_to);
@@ -76,7 +77,7 @@ export function projectDirs(root) {
 
 /* Every Markdown file at the root and up to MAX_DEPTH folders down, outside the engine, the projects and dotfolders. */
 export function markdownFiles(root) {
-  const skip = new Set([...SKIP_DIRS, ...projectDirs(root)]); const out = [];
+  const skip = new Set([...SKIP_DIRS, ...engineDirs(root), ...projectDirs(root)]); const out = [];
   const walk = (dir, depth) => {
     let entries; try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return; }
     for (const e of entries.sort((a, b) => a.name.localeCompare(b.name))) {
@@ -205,7 +206,8 @@ export function appendSection(root, doc, section, fields) {
 
 /* Markdown dropped at the brain root by hand that is not a document yet: the brain does not read it before work. */
 export function unadoptedFiles(root) {
-  return markdownFiles(root).filter(p => !p.includes("/") && !parseDocument(root, p));
+  const base = baseDir(root);   // layout 3: the base files' folder counts as the top
+  return markdownFiles(root).filter(p => (!p.includes("/") || (base && p.startsWith(`${base}/`) && p.split("/").length === 2)) && !parseDocument(root, p));
 }
 export const unadoptedText = files => files.map(f => `${f} is here but the brain does not use it yet`).join("; ");
 
@@ -287,7 +289,7 @@ export function savePaths(root) {
 /* Folders at the top GTM Brain does not use: not the engine's, not a project's, not a document's home. A brain
    migrated from an older layout brings company/, assets/, output/; nothing here touches them, the hint names them. */
 export function strayFolders(root) {
-  const skip = new Set([...SKIP_DIRS, ...projectDirs(root)]), homes = new Set(listDocuments(root).map(d => d.folder.split("/")[0]).filter(Boolean));
+  const skip = new Set([...SKIP_DIRS, ...engineDirs(root), ...projectDirs(root), ...(baseDir(root) ? [ABOUT_DIR] : [])]), homes = new Set(listDocuments(root).map(d => d.folder.split("/")[0]).filter(Boolean));
   let entries; try { entries = readdirSync(root, { withFileTypes: true }); } catch { return []; }
   return entries.filter(e => e.isDirectory() && !e.name.startsWith(".") && !skip.has(e.name) && !homes.has(e.name)).map(e => e.name).sort();
 }

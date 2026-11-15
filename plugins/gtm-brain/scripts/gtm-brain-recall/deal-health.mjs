@@ -7,7 +7,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
-if (!existsSync(join(root, "brain", "admin.md"))) { console.error("no brain here"); process.exit(1); }
+if (!lib.isBrain(root)) { console.error("no brain here"); process.exit(1); }
 if (String(lib.readAdmin(root)?.deal_scoring ?? "on").toLowerCase() === "off") {
   console.log("Deal scoring is off in this brain (deal_scoring: off in brain/admin.md). Do not score by hand. To turn it on, change that line through the workplace-change procedure.");
   process.exit(0);

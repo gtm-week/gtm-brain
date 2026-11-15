@@ -4,6 +4,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { homedir } from "node:os";
+import { isBrain as isBrainDir } from "../../lib/brain-paths.mjs";
 import { pluginVersion, olderVersion, verifyRuntime } from "../../lib/plugin-runtime.mjs";
 import { sourceVersion, retiredSource, SHIPPING_SOURCE } from "../../lib/plugin-source.mjs";
 
@@ -107,7 +108,7 @@ try {
     // One step for the person: the brain they updated from gets the new rules and migrations at once, run by the
     // version just installed (the old one does not know them). Other brains get the one-line offer when opened.
     if (brainArg) {
-      if (!existsSync(join(brainArg, "brain", "admin.md"))) console.log(`${brainArg} is not a brain, rules not refreshed.`);
+      if (!isBrainDir(brainArg)) console.log(`${brainArg} is not a brain, rules not refreshed.`);
       else {
         console.log("Refreshing this brain's rules with the new version:");
         const up = spawnSync("bash", [join(cached(after.version), "scripts/gtm-brain-upgrade/upgrade.sh"), brainArg], { cwd: brainArg, encoding: "utf8", timeout: 120000 });

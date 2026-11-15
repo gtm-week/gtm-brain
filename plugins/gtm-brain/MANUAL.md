@@ -253,6 +253,34 @@ Do not edit `AGENTS.md`, `CLAUDE.md`, `admin.md`, `memories.jsonl` or `ontology.
 hand: a direct edit of a protected file is put back at the next chat start and your version is kept
 in `work/manual-edits/protected/`.
 
+## Who can change the base files
+
+A brain set up or upgraded with this release keeps its base files in `about-us/` (strategy, ICP,
+market, voice, the design system and its files, and any base file the team added) and its
+configuration in `config/`: `rules.md` (where things go, Ask the source, Our rules), `schema.md`
+(what the brain keeps) and `settings.yaml` (company, one-liner, owner, team with handles and
+emails, tools and settings; it replaces `brain/admin.md`). An older brain keeps them at the top
+and in `brain/admin.md` until its owner says yes to "upgrade the brain", which moves them in one
+commit, word for word.
+
+Only the brain's owner (`owner` in `config/settings.yaml`; the first owner is whoever ran setup)
+changes anything under `about-us/` or `config/`. When a teammate asks for a change there, or
+edits a file there by hand, nothing there changes: the change is kept as a proposal in
+`brain/proposals/`, a note tagged for the owner says who asked and what, and the owner sees it in
+one line at their next chat start. Only the owner's APPROVE applies it. The owner's own hand edit
+is kept and recorded. Every approval is recorded as a decision note: who asked, who approved,
+which file, a one-line summary and the commit. "Show the approvals" lists them (`query`, object
+approvals) with the proposals still waiting.
+
+How far this goes: GTM Brain enforces it, in every write it makes, in every save and at every
+chat start. It does not stop git. A teammate with write access to the repository can still
+change these files and push with git directly, and who is "the owner" on a machine is the
+checkout's own identity (the git email, or the name given there), not a sign-in. GitHub can
+block such a push only with a push rule (a ruleset that restricts file paths), which needs a paid
+plan for a private repository. The paths to protect: `about-us/**`, `config/**`,
+`brain/ontology.ossie.json`, and, for brains not yet upgraded, `brain/admin.md`, `RULES.md` and
+`SCHEMA.md`.
+
 ## What it does not do
 
 - Copy your CRM, mail or calendar into the brain: it reads them live and keeps what happened and

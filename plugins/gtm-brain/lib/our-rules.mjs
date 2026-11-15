@@ -22,6 +22,7 @@ import { readSchema, brainKinds, BUILT_IN } from "./schema.mjs";
 import { CUSTOMER_STATUSES } from "./customers.mjs";
 import { CHAT_KINDS } from "./host.mjs";
 import * as lib from "./brain.mjs";
+import { TEMPLATES as TEMPLATE_FILES } from "./brain-paths.mjs";
 
 export const VERBS = ["saving", "drafting", "reading"];
 export const MODES = ["check", "guidance"];
@@ -43,7 +44,7 @@ const verbOf = w => VERB_WORDS.find(([re]) => re.test(String(w).toLowerCase().tr
 /* The intro paragraphs GTM Brain shipped under "## Our rules" (the current template and every snapshot): they
    are not rules, even in a file whose other text the person edited. */
 function shippedIntros() {
-  const texts = [read(join(TEMPLATES, "RULES.md"))];
+  const texts = [read(join(TEMPLATES, TEMPLATE_FILES.rules))];
   try { for (const f of readdirSync(join(TEMPLATES, "legacy", "rules"))) if (f.endsWith(".md")) texts.push(read(join(TEMPLATES, "legacy", "rules", f))); } catch {}
   const out = new Set();
   for (const t of texts.filter(Boolean)) {
@@ -167,12 +168,12 @@ export function parseOurRules(text, vocab, { first = 1 } = {}) {
    rule) is read the same way. Missing file or section: no rules. */
 let readCache = null;
 export function readOurRules(root) {
-  let key = null; try { const st = statSync(join(root, "RULES.md")), sc = (() => { try { const x = statSync(join(root, "SCHEMA.md")); return `${x.mtimeMs}|${x.size}`; } catch { return ""; } })(); key = `${root}|${st.mtimeMs}|${st.size}|${sc}`; } catch { return { rules: [], problems: [] }; }
+  let key = null; try { const st = statSync(join(root, lib.rulesFile(root))), sc = (() => { try { const x = statSync(join(root, lib.schemaFile(root))); return `${x.mtimeMs}|${x.size}`; } catch { return ""; } })(); key = `${root}|${st.mtimeMs}|${st.size}|${sc}`; } catch { return { rules: [], problems: [] }; }
   if (readCache?.key === key) return readCache.value;
   const value = readOurRulesNow(root); readCache = { key, value }; return value;
 }
 function readOurRulesNow(root) {
-  const text = read(join(root, "RULES.md")); if (!text) return { rules: [], problems: [] };
+  const text = read(join(root, lib.rulesFile(root))); if (!text) return { rules: [], problems: [] };
   const lines = text.split("\n");
   let start = lines.findIndex(l => OWN.test(l));
   if (start < 0 && !/^\|\s*-{3,}/m.test(text)) start = lines.findIndex(l => OLD_OWN.test(l));

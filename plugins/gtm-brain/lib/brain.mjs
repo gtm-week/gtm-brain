@@ -1,6 +1,6 @@
 // gtm-brain v0: the file format. Everything else (skills, hooks, render) goes through this file.
 //
-//   brain/admin.md                          workplace info, frontmatter + prose
+//   brain/admin.md                          workplace info, frontmatter + prose (config/settings.yaml in layout 3, lib/brain-paths.mjs)
 //   brain/contexts/<slug>/context.md        the cover: frontmatter + "## When loaded"
 //   brain/contexts/<slug>/memories.jsonl    one JSON record per line, append-only
 //
@@ -38,6 +38,9 @@ export { ensureMeetingEntities, deriveMeetingEntities, meetingEntityId, meetingA
 import { ensureMeetingEntities as meetingEntitiesFor, meetingAnchors, anchorOf } from './meeting-entities.mjs';
 export { layout as entityLayout, pagePaths as entityPagePaths, kindFolder, kindPagePath, assetFolder, findPage } from './layout.mjs';
 import { ENTITIES_DIR, recordKindLayout } from './layout.mjs';
+import { isBrain, settingsFile, settingsPathOf, PROTECTED_FILES, SETTINGS_PROPOSAL, SETTINGS_FILE } from './brain-paths.mjs';
+import { divertCommit, proposalLine, guardOwnerEdits, ownerEditNotice, recordApproval } from './owner.mjs';
+export { isBrain, settingsFile, rulesFile, schemaFile, baseDir, basePath, inConfigFolders, isOwnerPath, engineDirs } from './brain-paths.mjs';
 
 /* The machine-wide GTM Brain preferences file. */
 export const preferencesPath = () => join(process.env.CODEX_HOME || join(homedir(), ".codex"), "gtm-brain", "preferences.json");
@@ -59,14 +62,14 @@ function writePreferences(preferences) {
 }
 export function knownBrains() {
   let list = []; try { list = readPreferences().brains || []; } catch { return []; }
-  return list.filter(b => b && typeof b.path === "string" && existsSync(join(b.path, "brain", "admin.md")));
+  return list.filter(b => b && typeof b.path === "string" && isBrain(b.path));
 }
 export function registerBrain(root) {
   const resolved = resolve(root); let path; try { path = realpathSync(resolved); } catch { path = resolved; }
   const admin = readAdmin(path); if (!admin) return null;
   let prefs = {}; try { prefs = readPreferences(); } catch {}
   const entry = { path, company: admin.company || basename(path), lastOpened: new Date().toISOString() };
-  const brains = [...(prefs.brains || []).filter(b => b && b.path !== path && existsSync(join(String(b.path), "brain", "admin.md"))), entry];
+  const brains = [...(prefs.brains || []).filter(b => b && b.path !== path && isBrain(String(b.path))), entry];
   writePreferences({ ...prefs, brains }); return entry;
 }
 export function currentPerson(root, who) {
@@ -131,11 +134,69 @@ export function teamHandle(root, who) {
 }
 const section = (body, name) => { const r = body.match(new RegExp(`^##\\s+${name}\\s*\\n([\\s\\S]*?)(?=^##\\s|$(?![\\s\\S]))`, "m")); return r ? r[1].trim() : ""; };
 
-/* ---------- admin ---------- */
+/* ---------- admin: the workplace settings ----------
+   brain/admin.md (layouts 1 and 2: frontmatter and prose) or config/settings.yaml (layout 3: the same keys, the
+   one-liner, and the prose as a notes block). lib/brain-paths.mjs says which; every reader comes here. */
 export function readAdmin(root) {
-  const f = join(root, "brain", "admin.md"); if (!existsSync(f)) return null;
-  const { fm, body } = parseFrontmatter(readFileSync(f, "utf8"));
-  return { ...fm, body: body.trim(), path: f };
+  const f = settingsPathOf(root); if (!f) return null;
+  const { fm, body } = f.endsWith(".yaml") ? parseSettings(readFileSync(f, "utf8")) : parseFrontmatter(readFileSync(f, "utf8"));
+  return { ...fm, body: body.trim(), path: f, file: settingsFile(root) };
+}
+/* The settings file as text: what a proposal replaces whole. */
+export function adminText(root) {
+  const f = settingsPathOf(root); return f ? readFileSync(f, "utf8") : null;
+}
+/* config/settings.yaml: the frontmatter subset without the fences, comment lines, and one block scalar,
+   "notes: |", that carries the prose word for word (indented two spaces). */
+const NOTES = /^notes:\s*\|\s*$/;
+function splitNotes(text) {
+  const lines = String(text).replace(/\r\n/g, "\n").split("\n"), at = lines.findIndex(l => NOTES.test(l));
+  if (at < 0) return { head: lines, notes: null };
+  let end = at + 1; while (end < lines.length && (lines[end] === "" || /^ {2}/.test(lines[end]))) end++;
+  const block = lines.slice(at + 1, end); while (block.length && block[block.length - 1] === "") block.pop();
+  return { head: [...lines.slice(0, at), ...lines.slice(end)], notes: block.map(l => l.slice(2)).join("\n") };
+}
+export function parseSettings(text) {
+  const { head, notes } = splitNotes(text);
+  const { fm } = parseFrontmatter(`---\n${head.filter(l => !/^\s*#/.test(l)).join("\n")}\n---\n`);
+  return { fm, body: notes || "" };
+}
+const SETTINGS_HEAD = "# GTM Brain settings: the company, its owner, the team and the tools. Only the owner approves a change\n# (approve_change). notes is the workplace prose, kept as written.\n";
+const notesBlock = prose => { const p = String(prose || "").replace(/^\n+/, "").replace(/\s+$/, ""); return p ? `notes: |\n${p.split("\n").map(l => (l ? `  ${l}` : "")).join("\n")}\n` : ""; };
+/* brain/admin.md as config/settings.yaml: the frontmatter lines as they are, the one-liner from the prose when
+   the file has none, and the prose itself as notes, byte for byte. */
+export function settingsFromAdmin(adminMd) {
+  const text = String(adminMd).replace(/\r\n/g, "\n"), m = text.match(/^---\n([\s\S]*?)\n---\n?/);
+  const head = m ? m[1].trimEnd() : "", body = m ? text.slice(m[0].length) : text;
+  const fm = m ? parseFrontmatter(m[0]).fm : {};
+  const one = body.match(/^\*\*What we sell, to whom\.\*\*[ \t]*(.+)$/m);
+  const lines = [head, fm.one_liner === undefined && one ? `one_liner: ${JSON.stringify(one[1].trim())}` : ""].filter(Boolean);
+  return `${SETTINGS_HEAD}${lines.join("\n")}\n${notesBlock(body)}`;
+}
+/* A new brain's settings: the keys, then the prose as notes. */
+export function renderSettings(fm, notes = "") {
+  return `${SETTINGS_HEAD}${renderFrontmatter(fm).replace(/^---\n/, "").replace(/---\n$/, "")}${notesBlock(notes)}`;
+}
+/* Setup: a new brain's config/settings.yaml (layout 3). Refuses to replace a brain's settings. */
+export function writeNewSettings(root, fm, notes = "") {
+  if (isBrain(root)) throw new Error("this folder already has a brain");
+  mkdirSync(join(root, dirname(SETTINGS_FILE)), { recursive: true });
+  writeFileSync(join(root, SETTINGS_FILE), renderSettings(fm, notes));
+  return SETTINGS_FILE;
+}
+/* One key: value line set in the settings text (either format), the rest kept as it is. */
+function setSettingLine(text, file, key, value) {
+  const line = `${key}: ${value}`, has = new RegExp(`^${key}:.*$`, "m");
+  if (file.endsWith(".yaml")) {
+    const lines = String(text).split("\n"), notesAt = lines.findIndex(l => NOTES.test(l));
+    const i = lines.findIndex((l, k) => (notesAt < 0 || k < notesAt) && has.test(l));
+    if (i >= 0) lines[i] = line; else lines.splice(notesAt >= 0 ? notesAt : lines.length - (lines[lines.length - 1] === "" ? 1 : 0), 0, line);
+    return lines.join("\n");
+  }
+  const m = text.match(/^---\n([\s\S]*?)\n---/); if (!m) throw new Error(`${file} has no frontmatter`);
+  const fm = m[1];
+  const next = has.test(fm) ? fm.replace(has, line) : (/^protected:/m.test(fm) ? fm.replace(/^protected:/m, `${line}\nprotected:`) : fm + "\n" + line);
+  return text.replace(m[0], `---\n${next}\n---`);
 }
 
 /* The dashboard's word for how summaries are kept; an old `compile:` line in admin.md is ignored. Since 0.35.0
@@ -147,12 +208,9 @@ export function compileMode(root) { return "background"; }
 export function setAdminSetting(root, key, value) {
   const allowed = { dashboard: ["always", "on-demand"] };
   if (!allowed[key] || !allowed[key].includes(value)) throw new Error(`no such setting: ${key}: ${value}`);
-  const f = join(root, "brain", "admin.md"); let text = readFileSync(f, "utf8");
-  const m = text.match(/^---\n([\s\S]*?)\n---/); if (!m) throw new Error("admin.md has no frontmatter");
-  const fm = m[1]; const line = `${key}: ${value}`;
-  const next = new RegExp(`^${key}:.*$`, "m").test(fm) ? fm.replace(new RegExp(`^${key}:.*$`, "m"), line) : (/^protected:/m.test(fm) ? fm.replace(/^protected:/m, `${line}\nprotected:`) : fm + "\n" + line);
-  text = text.replace(m[0], `---\n${next}\n---`); writeFileSync(f, text);
-  return commit(root, ["brain/admin.md"], `admin: ${key} ${value} (from the dashboard)`);
+  const file = settingsFile(root), f = join(root, file);
+  writeFileSync(f, setSettingLine(readFileSync(f, "utf8"), file, key, value));
+  return commit(root, [file], `admin: ${key} ${value} (from the dashboard)`);
 }
 /* background: what the separate run is doing now (work/compile.json), for the dashboard and the chat */
 export function readCompileState(root) {
@@ -558,7 +616,7 @@ export { ENTITY_KINDS as NAME_KINDS } from "./entities.mjs";
 const registries = new Map();
 const fileKey = path => { try { const s = statSync(path, { bigint: true }); return `${s.dev}:${s.ino}:${s.size}:${s.mtimeNs}:${s.ctimeNs}`; } catch (e) { if (e.code === "ENOENT") return "missing"; throw e; } };
 function sharedRegistry(root) {
-  const scan = sharedEntityFiles(root), key = [scan.key, ...[join(root, "brain", "entities.md"), join(root, "brain", "names.md"), join(root, "brain", "admin.md")].map(fileKey)].join("|");
+  const scan = sharedEntityFiles(root), key = [scan.key, ...[join(root, "brain", "entities.md"), join(root, "brain", "names.md"), settingsPathOf(root) || join(root, settingsFile(root))].map(fileKey)].join("|");
   const hit = registries.get(resolve(root));
   if (scan.key !== null && hit?.key === key) return hit.names;
   const names = deepFreeze(readRegistry(root, scan.entries.map(e => thaw(e))));
@@ -871,7 +929,7 @@ export function readPointer(dir) {
   if (!text.includes(POINTER_START) && !text.includes("<!-- gtm-os project -->")) return null;
   const brain = (text.match(/^GTM (?:Brain|OS) brain: (.+)$/m) || [])[1]?.trim(), slug = (text.match(/^GTM (?:Brain|OS) project: (.+)$/m) || [])[1]?.trim();
   if (!brain || !slug) return null;
-  return { brain, slug, missing: !existsSync(join(brain, "brain", "admin.md")) };
+  return { brain, slug, missing: !isBrain(brain) };
 }
 /* A block alone is not a working link: all project readers use the same check. */
 export function projectPointerStatus(root, project) {
@@ -922,7 +980,7 @@ export function removePointer(dir) {
 export function resolveBrain(cwd) {
   let dir = resolve(cwd);
   for (;;) {
-    if (existsSync(join(dir, "brain", "admin.md"))) return { root: dir, project: null };
+    if (isBrain(dir)) return { root: dir, project: null };
     const p = readPointer(dir);
     if (p) return p.missing ? { missing: true, brain: p.brain, project: p.slug, dir } : { root: resolve(p.brain), project: p.slug, dir };
     if (existsSync(join(dir, ".git"))) return null;
@@ -965,19 +1023,25 @@ export function commit(root, paths, message, options = {}) {
   // Here because every writer ends here: no commit by this plugin leaves a kind-folder brain saying 1, with or
   // without a chat start before it (a scheduled run, a script). Said once, in the note every writer prints.
   let healed = 0; try { healed = readAdmin(root) ? recordKindLayout(root) : 0; } catch {}
+  // Layout 3: a change under about-us/ or config/ by someone other than the owner is a proposal, never committed
+  // (lib/owner.mjs). options.system: the plugin's own housekeeping (setup, the layout move, shipped files).
+  let proposal = null;
+  try { const d = divertCommit(root, paths, message, options); paths = d.paths; proposal = d.proposal; } catch (e) { return { ok: false, note: `not kept: ${e.message}` }; }
   const kept = keep(root, healed ? [...paths, LAYOUT_FILE] : paths, message, options);
-  return healed ? { ...kept, note: `${kept.note}; ${layoutHealed(healed)}` } : kept;
+  const out = healed ? { ...kept, note: `${kept.note}; ${layoutHealed(healed)}` } : kept;
+  if (!proposal) return out;
+  return { ...out, ok: true, proposal, note: `${proposalLine(root, proposal)}${out.note && out.note !== "nothing to commit" ? ` The rest: ${out.note}` : ""}` };
 }
 // Housekeeping, for the model only: said to the person it came out as "your plugin needs updating", which is false
 // (live benchmark, 2026-11-15, two answers). This plugin is current; the file only protects teammates on older ones.
-const layoutHealed = (n, kept = "") => `recorded file layout ${n} in ${LAYOUT_FILE}${kept && ` (${kept})`}: the entity pages were already in kind folders. Housekeeping only: this GTM Brain is up to date and nothing was moved`;
+const layoutHealed = (n, kept = "") => `recorded file layout ${n} in ${LAYOUT_FILE}${kept && ` (${kept})`}: ${n >= 3 ? "the base files were already in about-us/ and config/" : "the entity pages were already in kind folders"}. Housekeeping only: this GTM Brain is up to date and nothing was moved`;
 /* The chat start's part of the same repair, for a chat that only reads: the file in a commit of its own, and
    the one line to say. "" when the file was right (every later call). */
 export function healLayout(root) {
   if (!readAdmin(root) || layoutBlock(root)) return "";
   let n = 0; try { n = recordKindLayout(root); } catch {}
   if (!n) return "";
-  const kept = keep(root, [LAYOUT_FILE], `layout: ${LAYOUT_FILE} says ${n}, the entity pages were already in kind folders`);
+  const kept = keep(root, [LAYOUT_FILE], `layout: ${LAYOUT_FILE} says ${n}, the files were already in that layout`);
   return `GTM Brain: ${layoutHealed(n, kept.note)}. Do not mention it to the person and do not say anything needs updating.`;
 }
 function keep(root, paths, message, { always = false, push = true, allowEmpty = false } = {}) {
@@ -1095,7 +1159,7 @@ export const BIG_FILES_GUIDE = "gtm-brain-use-brain/references/big-files.md";
 /* The one instruction for a file too big for git, shared by save, the chat start and add-file. */
 export function bigFileAdvice(root) {
   const { mode, folder } = bigFiles(root);
-  if (mode === "local") return `This brain keeps big files on this computer (big_files: local in brain/admin.md): follow the big-files walk-through (${BIG_FILES_GUIDE}): offer to move each to ${folder}, outside git (add-file.mjs --big copies it and checks the copy), and save the pointer file:${folder}/<name> on the note that says what it is; delete the original only after the person says yes and the copy is verified. That folder is not shared: say once that teammates will not get the file.`;
+  if (mode === "local") return `This brain keeps big files on this computer (big_files: local in ${settingsFile(root)}): follow the big-files walk-through (${BIG_FILES_GUIDE}): offer to move each to ${folder}, outside git (add-file.mjs --big copies it and checks the copy), and save the pointer file:${folder}/<name> on the note that says what it is; delete the original only after the person says yes and the copy is verified. That folder is not shared: say once that teammates will not get the file.`;
   return `Follow the big-files walk-through (${BIG_FILES_GUIDE}): offer to move each to the shared drive (Google Drive), in the folder "${bigFilesDriveFolder(root)}", with the Drive connector, and save its pointer {kind: google-drive, account, ref, url} on the note that says what it is; the bytes are never committed. Delete the local copy only after the person says yes and the upload is verified. If Google Drive is not connected in this Codex, say so and ask for the file's Drive link instead (connect my tools connects it); without a link the file stays on this computer only: say once that teammates will not get it.`;
 }
 export function largeNote(large, root) {
@@ -1108,9 +1172,22 @@ export function largeNote(large, root) {
 /* The person's save: commit what unsavedChanges lists, push when there is a remote. */
 export function save(root, message, { covers = false, trailers = [] } = {}) {
   const blocked = layoutBlock(root); if (blocked) return { ok: false, note: blocked, files: [] };
-  if (!covers && existsSync(join(root, "work", "admin.proposed.md"))) return { ok: false, note: "a change to brain/admin.md is waiting for APPROVE; ask for APPROVE or a drop, then save" };
-  // A direct edit of a protected file is never saved: it is put back first (guardProtected).
-  if (!covers) { const back = restoredNotice(guardProtected(root)); if (back) logActivity(root, "save", back.split(".")[0]); }
+  if (!covers && existsSync(join(root, SETTINGS_PROPOSAL))) return { ok: false, note: `a change to ${settingsFile(root)} is waiting for APPROVE; ask for APPROVE or a drop, then save` };
+  // A direct edit of a protected file is never saved: it is put back first (guardProtected). Layout 3: a hand edit
+  // under about-us/ or config/ by someone other than the owner becomes a proposal; the owner's own is kept and recorded.
+  let own = { accepted: [], proposal: null, restored: [] };
+  if (!covers) {
+    const back = restoredNotice(guardProtected(root)); if (back) logActivity(root, "save", back.split(".")[0]);
+    try { own = guardOwnerEdits(root); } catch {}
+  }
+  const ownNote = ownerEditNotice(root, own);
+  const r = saveCommitted(root, message, { covers, trailers });
+  if (own.accepted.length && r.ok && r.hash) {
+    try { const me = currentPerson(root); recordApproval(root, { asked: me, approved: me, files: own.accepted.map(c => c.path), summary: "an edit made by hand", hash: r.hash, outcome: "own edit" }); } catch {}
+  }
+  return ownNote ? { ...r, note: `${r.note}\n${ownNote}`, proposal: own.proposal } : r;
+}
+function saveCommitted(root, message, { covers = false, trailers = [] } = {}) {
   const paths = covers ? COVER_PATHS : savePathsFor(root);
   const files = unsavedChanges(root, paths);
   if (!files.length && !trailers.length) { const large = covers ? [] : largeUnsaved(root); return { ok: true, note: covers ? "nothing to save: no cover changed" : large.length ? `nothing else to save\n${largeNote(large, root)}` : "nothing to save: everything is committed", files, large }; }
@@ -1155,7 +1232,7 @@ export function takeApproval(root, kind, secret) {
   let t; try { t = JSON.parse(readFileSync(file, "utf8")); unlinkSync(file); } catch { return false; }
   return t.brain === realRoot(root) && t.kind === kind && Date.now() - t.at < 120000;
 }
-export const PROTECTED_PATHS = ["brain/admin.md", "brain/ontology.ossie.json", ":(glob)brain/contexts/*/memories.jsonl"];
+export const PROTECTED_PATHS = [...PROTECTED_FILES, ":(glob)brain/contexts/*/memories.jsonl"];
 export function guardProtected(root) {
   if (process.env.GTM_BRAIN_NO_COMMIT) return [];
   const git = (...a) => execFileSync("git", ["--no-optional-locks", "-C", root, ...a], { encoding: "utf8", stdio: "pipe" });
@@ -1179,7 +1256,16 @@ export function guardProtected(root) {
   }
   return restored;
 }
-export const restoredNotice = restored => restored.length ? `PROTECTED FILES RESTORED: ${restored.map(r => `${r.path}${r.backup ? ` (the edit is kept in ${r.backup})` : " (it had been deleted)"}`).join("; ")}. These change only through GTM Brain: admin.md and the company's interactions through a proposal and APPROVE (approve_change), notes through remember. Tell the person in one line; if the edit was wanted, propose it that way.` : "";
+export const restoredNotice = restored => restored.length ? `PROTECTED FILES RESTORED: ${restored.map(r => `${r.path}${r.backup ? ` (the edit is kept in ${r.backup})` : " (it had been deleted)"}`).join("; ")}. These change only through GTM Brain: the workplace settings and the company's interactions through a proposal and APPROVE (approve_change), notes through remember. Tell the person in one line; if the edit was wanted, propose it that way.` : "";
+/* The chat start's guard: protected files put back, and (layout 3) someone else's hand edit under about-us/ or
+   config/ kept as a proposal for the owner. The owner's own edit stays for save to keep and record. */
+export function guardAtStart(root) {
+  const lines = [restoredNotice(guardProtected(root))];
+  try { lines.push(ownerEditNotice(root, guardOwnerEdits(root))); } catch {}
+  return lines.filter(Boolean).join("\n");
+}
+/* The owner's chat start: one line while teammates' proposals wait (lib/owner.mjs). */
+export { ownerLine as ownerStartLine } from './owner.mjs';
 /* The Codex chat a brain folder was last opened in: the chat start records it (session/session.mjs),
    the dashboard sends its buttons there. Input is JSON with session_id and cwd. */
 function landingSession(root, input) {

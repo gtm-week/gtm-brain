@@ -12,7 +12,8 @@ import { listDocuments, STARTERS } from "./documents.mjs";
 import { readSchema, brainKinds, US } from "./schema.mjs";
 import { ruleFindings } from "./rules-check.mjs";
 import { readAskSource } from "./ask-source.mjs";
-import { whereRows, RULES } from "./where.mjs";
+import { whereRows } from "./where.mjs";
+import { rulesFile, schemaFile, settingsFile } from "./brain-paths.mjs";
 import { population } from "./population.mjs";
 import { healthLine } from "./health-line.mjs";
 import { listWorkflows, listRuns, TYPE as WORKFLOW_TYPE } from "./workflows.mjs";
@@ -72,7 +73,7 @@ function configuration(root, admin, { documents, commits, findings, tools, plugi
   for (const slug of STARTERS) if (!rows.some(r => r.slug === slug)) rows.push({ slug, title: slug === "icp" ? "ICP" : slug.split("-").map(w => w[0].toUpperCase() + w.slice(1)).join(" "), path: null, state: "not written", applies_to: [], changed: null, by: null, base: true });
   rows.sort((a, b) => (b.base - a.base) || (a.base ? STARTERS.indexOf(a.slug) - STARTERS.indexOf(b.slug) : a.title.localeCompare(b.title)));
 
-  let rulesText = ""; try { rulesText = readFileSync(join(root, RULES), "utf8"); } catch {}
+  const RULES = rulesFile(root); let rulesText = ""; try { rulesText = readFileSync(join(root, RULES), "utf8"); } catch {}
   const ask = readAskSource(root), placement = whereRows(root), own = ourRules(rulesText);
   const byRule = {}; for (const f of findings) byRule[f.rule] = (byRule[f.rule] || 0) + 1;
   const rules = { path: rulesText ? RULES : null, changed: rulesText ? changedAt(root, RULES, commits) : null,
@@ -81,14 +82,14 @@ function configuration(root, admin, { documents, commits, findings, tools, plugi
     ask: { defaults: ask.defaults, rows: ask.rows.map(r => ({ topic: r.topic, source: r.source, good_for: r.good_for })), problems: ask.problems.map(p => ({ line: p.line, problem: cut(p.problem, 200) })) } };
 
   const s = readSchema(root);
-  const schema = { path: s.missing ? null : "SCHEMA.md", changed: s.missing ? null : changedAt(root, "SCHEMA.md", commits), error: s.error ? cut(s.error.message, 400) : null, kinds: [], relations: [] };
+  const schema = { path: s.missing ? null : schemaFile(root), changed: s.missing ? null : changedAt(root, schemaFile(root), commits), error: s.error ? cut(s.error.message, 400) : null, kinds: [], relations: [] };
   if (s.schema) {
     schema.kinds = Object.entries(s.schema.kinds).map(([kind, k]) => ({ kind, fields: k.fields.map(f => ({ name: f.name, required: f.required })),
       subtypes: Object.entries(k.subtypes || {}).map(([name, v]) => ({ name, fields: (v.fields || []).map(f => ({ name: f.name, required: f.required })) })) }));
     schema.relations = Object.entries(s.schema.relations).map(([type, r]) => ({ type, from: r.from, to: r.to, required: !!r.required, built_in: !!r.built_in, about: cut(r.about, 160) }));
   } else schema.kinds = brainKinds(root).map(kind => ({ kind, fields: [], subtypes: [] }));
 
-  const settings = { path: "brain/admin.md", changed: changedAt(root, "brain/admin.md", commits), company: admin.company || null, owner: admin.owner || null,
+  const settings = { path: settingsFile(root), changed: changedAt(root, settingsFile(root), commits), company: admin.company || null, owner: admin.owner || null,
     team: (admin.team || []).length, tools: tools.map(t => ({ tool: t.tool, status: t.status })), dashboard: admin.dashboard === "on-demand" ? "on-demand" : "always",
     compile: compileMode, plugin: plugin?.installed || null };
   return { documents: rows, rules, schema, settings };
@@ -184,7 +185,7 @@ function workflows(root, documents, runs, commits) {
 export function pillarData(root, { registry = lib.readNames(root), admin = lib.readAdmin(root) || {}, contexts = null, meetings = null, tools = [], plugin = null, compileMode = null, findings = null } = {}) {
   const full = contexts || lib.listContexts(root);
   const documents = listDocuments(root);
-  const paths = [...documents.map(d => d.path), RULES, "SCHEMA.md", "brain/admin.md"];
+  const paths = [...documents.map(d => d.path), rulesFile(root), schemaFile(root), settingsFile(root)];
   const commits = lastCommits(root, paths.filter(p => exists(root, p)));
   let ruleList = findings; if (!ruleList) { try { ruleList = ruleFindings(root); } catch { ruleList = []; } }
   // Each tab is read on its own: a file one reader cannot handle empties that tab and names it in `unread`,

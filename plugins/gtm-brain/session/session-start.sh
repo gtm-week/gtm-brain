@@ -46,7 +46,7 @@ brain_interaction_policy() {
     interaction_policy
   fi
 }
-if [ -z "$where" ] || [ ! -f "$root/brain/admin.md" ]; then
+if [ -z "$where" ] || ! gtm_brain_is "$root"; then
   # An almost empty folder is ready for the person's explicit start request: only there does setup
   # need the question policy. Any other folder (someone's code repo) gets no GTM Brain rules at all.
   # Preserve this real hook session before setup; never infer it from an inherited env.
@@ -70,15 +70,16 @@ fi
 # did not record it): the file is set to 2 in a commit of its own and said in one line, once (lib.healLayout).
 # lib.commit does the same with the first write; here a chat that only reads repairs it too. Node starts only
 # for a brain that looks like that, so a healthy chat start pays nothing.
-if ! grep -qs '"layout": *[2-9]' "$root/brain/layout.json" && ls "$root"/brain/entities/*/index.md >/dev/null 2>&1; then
+if { ! grep -qs '"layout": *[2-9]' "$root/brain/layout.json" && ls "$root"/brain/entities/*/index.md >/dev/null 2>&1; } || { gtm_brain_layout3 "$root" && ! grep -qs '"layout": *[3-9]' "$root/brain/layout.json"; }; then
   node -e 'const l=await import(process.argv[1]);const t=l.healLayout(process.argv[2]);if(t)console.log(t)' "$(dirname "${BASH_SOURCE[0]}")/../lib/brain.mjs" "$root" 2>/dev/null || true
 fi
 # Remember which Codex chat this is (work/session.json): the dashboard shows which chat is linked.
 [ -n "${PLUGIN_ROOT:-}" ] && printf '%s' "$input" | node "$PLUGIN_ROOT/session/session.mjs" "$root" "$project" 2>/dev/null || true
 # This machine has opened this brain: known to /gtm-brain-project when it offers the skill elsewhere.
 node -e 'const l=await import(process.argv[1]);l.registerBrain(process.argv[2])' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
-# A direct edit of a protected file is put back before anything reads or commits it (lib.guardProtected).
-node -e 'const l=await import(process.argv[1]);const t=l.restoredNotice(l.guardProtected(process.argv[2]));if(t)console.log(t)' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
+# A direct edit of a protected file is put back before anything reads or commits it (lib.guardProtected); in layout 3
+# a hand edit under about-us/ or config/ by someone other than the owner becomes a proposal for the owner (lib/owner.mjs).
+node -e 'const l=await import(process.argv[1]);const t=l.guardAtStart(process.argv[2]);if(t)console.log(t)' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
 # Every change in the brain is kept: a project folder an older version kept out of git is shared now; the
 # background maintenance then keeps what changed since the last save (lib.save covers the whole brain).
 node "$P/skills/gtm-brain-project/project.mjs" "$root" --share >/dev/null 2>&1 || true
@@ -112,7 +113,7 @@ elif [ -n "$url" ]; then
 fi
 # Which brain, said whole: the first call of a chat is no longer a status call, so the name and the folder to pass are here.
 company="${company:-$(node -e 'const l=await import(process.argv[1]);console.log((l.readAdmin(process.argv[2])||{}).company||"")' "$P/lib/brain.mjs" "$root" 2>/dev/null)}"
-echo "brain: $(basename "$root")${company:+ ($company)} at $root  ·  admin: brain/admin.md (always loaded)"
+echo "brain: $(basename "$root")${company:+ ($company)} at $root  ·  admin: $(gtm_brain_settings "$root") (always loaded)"
 # Sharing, said honestly: a failed last push, or a teammate merge that conflicted (lib.syncNotice).
 # Node starts only when one of the two state files records a problem, so a healthy chat start pays nothing.
 if grep -qs '"ok": *false' "$root/work/push.json" || grep -qs '"status": *"conflict"' "$root/work/teammates.json"; then
@@ -125,7 +126,7 @@ node "$H" text foreign
 # Claude Code reads CLAUDE.md: without its AGENTS.md import (a brain from before 0.30) the rulebook is named here.
 rules_dir="$root"; [ -n "$project" ] && rules_dir="$cwd"
 node "$H" rulebook "$rules_dir" 2>/dev/null || node "$H" text rulebook "$root"
-node -e 'const l=await import(process.argv[1]);const p=l.currentPerson(process.argv[2]);if(p)console.log("Current person: "+p+" (resolved from this checkout and validated against the team). Reuse this as by; do not ask who the user is again.")' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
+node -e 'const l=await import(process.argv[1]);const p=l.currentPerson(process.argv[2]);if(p)console.log("Current person: "+p+" (resolved from this checkout and validated against the team). Reuse this as by; do not ask who the user is again.");const o=l.ownerStartLine(process.argv[2]);if(o)console.log(o)' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
 brain_interaction_policy
 node -e 'const d=await import(process.argv[1]);console.log(d.datesLine())' "$P/lib/dots.mjs" 2>/dev/null || true
 node -e 'const s=await import(process.argv[1]);const t=s.scheduleNotice(process.argv[2]);if(t)console.log(t)' "$P/lib/schedule.mjs" "$root" 2>/dev/null || true

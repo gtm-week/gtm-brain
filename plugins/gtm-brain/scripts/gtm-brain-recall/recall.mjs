@@ -10,7 +10,7 @@ import { nowMs } from "../../lib/staleness.mjs";
 import { askSourceLines } from "../../lib/ask-source.mjs";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
-if (!existsSync(join(root, "brain", "admin.md"))) { console.error("no brain here"); process.exit(1); }
+if (!lib.isBrain(root)) { console.error("no brain here"); process.exit(1); }
 // --project <slug>: this chat runs in a linked folder; recall sees the whole brain; this project's hits come first
 let project = null; { const pi = args.indexOf("--project"); if (pi >= 0) { project = args[pi + 1] || ""; args.splice(pi, 2); const known = lib.readProjects(root).map(p => p.slug); if (!known.includes(project)) { console.error(`no project ${project}; projects: ${known.join(", ") || "none"}`); process.exit(2); } } }
 if (args[0] !== "--person" && args[0] !== "--entity") {
