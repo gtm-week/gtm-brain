@@ -6,6 +6,18 @@ during sync. Meeting evidence is ordinary context memories, with existing entity
 Do not create meeting entities or contexts per meeting. General company observations can
 remain ordinary memories without an invented conversation.
 
+## A conversation the person tells you
+
+When the person tells you in chat what came of a call or meeting, read nothing first and save no
+separate observation. Call `remember` once, one entry per outcome (what was offered, agreed,
+decided, declined or learned), each with its own people and the same `meeting` block: `title`,
+`reference: {kind: "user", account: <handle>, ref: <a short id you choose for this conversation>}`,
+`evidence: recollection`, `occurrence: happened`, `basis: user`, `observed_at` now, `occurred_at`
+the day, `participants` and `capture: partial`. The brain makes the first outcome the meeting
+anchor, links the others to it and adds the user source. One statement about one event is one
+entry, even with several clauses. An entry that only says the conversation happened is refused
+when the person said what came of it. The rest of this procedure is for connector evidence.
+
 ## Read and select
 
 1. Read `query` (meetings) with the confirmed person's `by`. It returns existing anchors,

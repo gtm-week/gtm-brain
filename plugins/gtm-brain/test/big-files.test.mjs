@@ -172,7 +172,9 @@ test('save itself leaves a new recording uncommitted, keeps the rest, and still 
   writeFileSync(join(f.root, 'projects/acme/discovery.m4a'), 'audio');
   writeFileSync(join(f.root, 'projects/acme/notes.md'), '# Notes\n');
   assert.deepEqual(lib.largeUnsaved(f.root), [{ path: 'projects/acme/discovery.m4a', size: 5 }], 'only the recording git does not hold yet');
-  const r = lib.save(f.root, 'notes and the new cut');
+  // save honours GTM_BRAIN_NO_COMMIT (0.35.0): this test is about what a real save commits, so the flag is lifted for it
+  delete process.env.GTM_BRAIN_NO_COMMIT;
+  let r; try { r = lib.save(f.root, 'notes and the new cut'); } finally { process.env.GTM_BRAIN_NO_COMMIT = '1'; }
   assert.ok(r.ok, r.note);
   assert.match(r.note, /Recordings stay out of git, not kept: projects\/acme\/discovery\.m4a/);
   assert.doesNotMatch(r.note.split('Recordings stay out of git')[1], /jingle/);

@@ -56,7 +56,7 @@ test("the answer links back: a superseding note carries the full name, the old l
   assert.equal(b.pending().length, 0, "the question is answered");
   const linked = b.live().find(m => m.supersedes === note.id);
   assert.ok(linked, "a note supersedes the first one");
-  assert.equal(linked.content, note.content);
+  assert.equal(linked.content, note.content.replace("Anna from", "Anna Kowalska from"), "the note reads with the full name");
   assert.deepEqual(linked.people, ["Castorama", "Anna Kowalska"]);
   const anna = lib.readNames(b.root).find(e => e.name === "Anna Kowalska");
   assert.ok(anna, "the full name is a person now");
@@ -180,7 +180,7 @@ test("an answer that also names someone else attaches only the person asked abou
   const [q] = b.pending();
   const a = b.remember("--content", "Anna is Anna Kowalska, she reports to Piotr Nowak.", "--kind", "decision", "--retracts", q.id, "--people", "Anna Kowalska,Piotr Nowak");
   assert.equal(a.status, 0, a.stderr);
-  assert.deepEqual(b.live().find(m => m.content === "Anna signed off.").people, ["Anna Kowalska"]);
+  assert.deepEqual(b.live().find(m => m.content === "Anna Kowalska signed off.").people, ["Anna Kowalska"]);
 });
 
 test("two notes in one call about the same unknown name: the person is asked once", () => {

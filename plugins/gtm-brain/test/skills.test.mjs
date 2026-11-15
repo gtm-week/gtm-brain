@@ -459,7 +459,7 @@ test("remember holds a note whose name looks like a known one until the person a
   const out = run(root, "remember", "remember.mjs", "--by", "marta", "--context", "icp", "--people", "Pierre Aubart", "--new", "Pierre Aubart", "--content", "Pierre Aubart joined the call.");
   assert.match(out, /people: Pierre Aubart/); assert.match(out, /new person in entities\/: Pierre Aubart/);
   const missed = run(root, "remember", "remember.mjs", "--by", "marta", "--context", "icp", "--people", "Pierre Aubart", "--content", "Pierre Aubart said Castorama will sign the NDA with ByteDance next Monday (2026-11-16).");
-  assert.match(missed, /words in this note not linked to anything in the brain: "Castorama", "ByteDance"\. Decide what each is, by connect-dots\.md: a person, company or product/);
+  assert.match(missed, /words in this note not linked to anything in the brain: "Castorama", "ByteDance"\. Only one that is a person, company or product the note is about gets add_name/);
   assert.match(run(root, "entities", "entities.mjs", "--add", "Pierre Aubirt"), /looks like Pierre Aub[ae]rt, Pierre Aub[ae]rt already in the registry/);
   run(root, "entities", "entities.mjs", "--add", "Nestle", "--kind", "company"); run(root, "entities", "entities.mjs", "--add", "Nestle Poland", "--kind", "company");
   assert.match(run(root, "entities", "entities.mjs"), /Might be the same: Nestle and Nestle Poland\. Ask the person; then "Nestle Poland is Nestle"/);
@@ -672,7 +672,7 @@ test("remember attaches the chat it was called from as a codex: source, and only
   const b = mkdtempSync(join(tmpdir(), "gtm-brain-thread-src-")); execFileSync("git", ["init", "-q", b]); execFileSync("git", ["-C", b, "config", "commit.gpgsign", "false"]);
   run(b, "setup", "setup.sh", "--company", "X", "--one-liner", "y", "--owner", "Ann Lee <ann@x.io>");
   const env = { ...process.env, PLUGIN_ROOT: P, GTM_BRAIN_NO_COMPILE: "1" };
-  const rem = (extra, e = env) => { execFileSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann", "--context", "icp", "--content", "A fact.", ...extra], { cwd: b, encoding: "utf8", env: e }); return lib.readMemories(b, "icp").at(-1).source; };
+  let k = 0; const rem = (extra, e = env) => { execFileSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann", "--context", "icp", "--content", `Fact number ${++k}: the buyer asked about returns.`, ...extra], { cwd: b, encoding: "utf8", env: e }); return lib.readMemories(b, "icp").at(-1).source; };
   assert.deepEqual(rem([]), [], "no chat recorded yet: nothing is guessed");
   lib.writeSession(b, { session_id: "01a0-chat", cwd: b });
   assert.deepEqual(rem([]), [{ kind: "codex", ref: "01a0-chat" }], "the chat from work/session.json is the source");

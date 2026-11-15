@@ -123,7 +123,8 @@ export function createFilesBackend({ run, memoryRead }) {
       const batch = join(root, "work", `remember-${randomUUID()}.json`);
       try {
         writeFileSync(batch, JSON.stringify(entries));
-        const result = await run(root, "gtm-brain-remember/remember.mjs", ["--by", by, "--batch", batch, ...(project ? ["--project", project] : [])]);
+        // by is optional: remember takes the person in this chat when it is left out
+        const result = await run(root, "gtm-brain-remember/remember.mjs", [...(by ? ["--by", by] : []), "--batch", batch, ...(project ? ["--project", project] : [])]);
         const message = [result.out, result.err].filter(Boolean).join("\n").trim();
         if (result.code === 0) return { outcome: "ok", result: message };
         return { outcome: result.code === 2 ? "refused" : "error", message };
