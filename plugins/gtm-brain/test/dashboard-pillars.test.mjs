@@ -125,7 +125,7 @@ test("page: opens on Overview, a base document row opens in the page, every prep
   const chats = [...html(p).matchAll(/class="pl-chat" href="(codex:\/\/threads\/new[^"]*)"/g)].map(m => new URL(m[1].replace(/&amp;/g, "&")));
   assert.ok(chats.length > 10); for (const u of chats) { assert.equal(u.searchParams.get("path"), D.brain); assert.match(u.searchParams.get("prompt"), /^Use GTM Brain\. /); }
   assert.match(p.node("#cfg-rules").innerHTML, /Always ask before tagging a client/); assert.match(p.node("#cfg-rules").innerHTML, /Deal stage and amount/);
-  assert.match(p.node("#cfg-schema").innerHTML, /SCHEMA\.md/); assert.match(p.node("#cfg-settings").innerHTML, /Reflow/);
+  assert.match(p.node("#cfg-schema").innerHTML, /SCHEMA\.md/); assert.match(p.node("#cfg-about").innerHTML, /About the company.*Reflow.*Marta Nowak/s, "who the company is sits in Configuration, above the base documents"); assert.doesNotMatch(p.node("#settings-preferences").innerHTML, /Reflow/, "Settings holds only what the brain needs to work");
   assert.doesNotMatch(html(p), /<form|data-say=|>Edit<|>Save<|>Approve<|>Delete</);
 });
 

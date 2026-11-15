@@ -142,3 +142,8 @@ to companies before stay in `files/` and their links keep working.
   not fit it.
 - The `README.md` at the top of the brain folder says what goes where: documents and their
   files, project folders, `brain/`. Nothing else belongs at that level.
+- A document can also be read and edited in the dashboard: click it under Configuration (base
+  documents) or at the end of Memories (other documents). Save there writes the file the way
+  `document.mjs --update` does, with the same checks and commit; if the file changed since you
+  opened it, nothing is overwritten and both versions are shown. COMMANDS.md lists what the
+  dashboard server checks before a save.

@@ -222,8 +222,10 @@ touched keep everything that was learned about them.
   source" table in `RULES.md` allows and the CRM is connected; otherwise the brain answers and says
   how old its note is. A row applies only when its tool is connected; without the section, the
   shipped rows apply.
-- "Open the dashboard" shows contexts, notes, entities, questions and search, read-only. To change
-  anything, use "Chat about this" on a card, or say it in chat.
+- "Open the dashboard" shows what needs you, the base documents, rules, entities, notes and workflows,
+  with one search box. It is for reading, with one exception: a document (a base document or another
+  document) opens in an editor and Save writes it the way Codex does, through the document script. To
+  change anything else, use "Chat about this", or say it in chat.
 
 "Is the brain too full or too empty?" is `query` (population): counted from the files, with no
 model: notes saved in the last 7 days against the weekly average of the 4 weeks before, exact

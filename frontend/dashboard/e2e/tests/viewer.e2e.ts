@@ -15,7 +15,7 @@ async function visitAll({ app, screen, browser }: any, f: ReturnType<typeof fixt
   const nav = screen.getByRole('navigation', 'Main navigation');
   for (const place of PLACES) { await nav.getByRole('button', place).tap(); await expect(screen.getByRole('heading', place, { level: 1 })).toBeVisible(); await each(place); }
   await nav.getByRole('button', 'Configuration').tap();
-  for (const part of [/^Rules/, /^What the brain records/, /^Company and team/]) { await screen.getByRole('tablist', 'Parts of the configuration').getByRole('tab', part).tap(); await each(`Configuration ${part}`); }
+  for (const part of [/^Rules/, /^What the brain records/]) { await screen.getByRole('tablist', 'Parts of the configuration').getByRole('tab', part).tap(); await each(`Configuration ${part}`); }
   await screen.getByRole('button', 'Help').tap(); await expect(screen.getByRole('heading', 'Help', { level: 1 })).toBeVisible(); await each('Help');
   await screen.getByRole('button', 'Settings').tap(); await expect(screen.getByRole('heading', 'Settings', { level: 1 })).toBeVisible(); await each('Settings');
   await nav.getByRole('button', 'Entities').tap();

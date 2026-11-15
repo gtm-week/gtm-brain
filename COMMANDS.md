@@ -39,7 +39,7 @@ run a sequence of memory commands.
 
 The sections below document the underlying operations, tools, and script paths for reference.
 They are not additional discoverable skills. Tools show outcomes such as "Remembering" or
-"Searching the brain" in chat. Review proposals on the read-only dashboard. APPROVE is a choice in the form `approve_change` shows; in a chat nothing else applies it.
+"Searching the brain" in chat. Review proposals on the dashboard (it changes nothing but a document you edit and save there). APPROVE is a choice in the form `approve_change` shows; in a chat nothing else applies it.
 Scripts retain their paths for terminal use with
 `export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.35.0`.
 
@@ -279,6 +279,8 @@ pill with the note's date and author: hover for the note, click to jump to it in
 A grey pill is an ID that no longer resolves (withdrawn, or in a context this dashboard does not
 hold). A sentence with no pill has no source note, so the summary itself is what is wrong.
 Correcting a wrong sentence means forgetting the note behind its pill, not editing the summary.
+
+The dashboard server answers reads only, except `POST /document`: saving a document edited on the page runs `document.mjs --update <path> --body` (the same validation, header and commit as in chat; on layout 3 a teammate's change to a base file becomes a proposal). It asks for the page's own Origin and Host, a token made at each server start and served only inside the page, JSON, a text within the 64 KB document limit, a path `lib/documents` lists, and the hash of the version that was opened (a file changed meanwhile is not overwritten); never during a scheduled run. `GET /search?q=` reads the memory index for the search box.
 
 Tools: `render_dashboard` (rebuild), `open_dashboard` (rebuild, start the server, open the browser). Writes: `work/home/` (local); `work/dash.json`, `work/session.json`
 (the chat recorded at chat start).

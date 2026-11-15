@@ -149,6 +149,9 @@ test("page: the search forgives typos, missing letters, part words and word orde
   const p = page(D), match = (q, fields) => p.run(`fzMatch(${JSON.stringify(q)},${JSON.stringify(fields)})`);
   for (const [q, text] of [["amdal", "Amdahl Systems"], ["jon smi", "John Smith"], ["smith john", "John Smith"], ["berln workshp", "Notes from the Berlin workshop"], ["AMDAHL", "amdahl systems"], ["zielinski", "Tomek Zieliński"]])
     assert.ok(match(q, [[text, 1]]), `${q} finds ${text}`);
+  // letters with and without their marks are the same letter, both ways, and the mark lands on the name as written
+  for (const [q, text] of [["lukasz", "Łukasz Jakubowski"], ["Łukasz", "Lukasz Jakubowski"], ["soren", "Søren Holm"], ["strasse", "Straße 5"], ["zolty", "żółty"], ["żółty", "zolty"], ["dordevic", "Đorđević"]]) assert.ok(match(q, [[text, 1]]), `${q} finds ${text}`);
+  assert.equal(p.run(`fzMark("Łukasz Jakubowski",fzMatch("lukasz",[["Łukasz Jakubowski",1]]).marks)`), "<mark>Łukasz</mark> Jakubowski");
   for (const [q, text] of [["xyz", "John Smith"], ["john brown", "John Smith"], ["am", "Tomek"]]) assert.equal(match(q, [[text, 1]]), null, `${q} does not find ${text}`);
   assert.ok(match("john smith", [["John Smith", 1]]).score > match("jon smi", [["John Smith", 1]]).score, "an exact name ranks above a near one");
   assert.equal(p.run(`fzMark("John Smith",fzMatch("jon smi",[["John Smith",1]]).marks)`), "<mark>John</mark> <mark>Smi</mark>th");
