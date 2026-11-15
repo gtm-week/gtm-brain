@@ -34,7 +34,7 @@ class Refusal extends Error { constructor(code, note) { super(note); this.code =
 const no = (code, note) => { throw new Refusal(code, note); };
 
 export function createEntityEdit({ root, token, json, log = () => {} }) {
-  const run = (file, argv) => new Promise(done => execFile(process.execPath, [script(file), root, ...argv], { cwd: root, env: process.env, encoding: "utf8", timeout: 120000, maxBuffer: 1 << 22 },
+  const run = (file, argv) => new Promise(done => execFile(process.execPath, [script(file), root, ...argv], { cwd: root, env: { ...process.env, NODE_NO_WARNINGS: "1" }, encoding: "utf8", timeout: 120000, maxBuffer: 1 << 22 },
     (error, stdout, stderr) => done({ code: error ? (typeof error.code === "number" ? error.code : 1) : 0, stdout: String(stdout || "").trim(), stderr: String(stderr || "").trim() })));
   // what a script said, without the lines written for the model
   const said = out => { const text = out.stderr || out.stdout || ""; try { const j = JSON.parse(text); if (j && typeof j.error === "string") return j.error; } catch {} return text.split("\n").filter(l => l.trim() && !/^(Reply to the person|kept$)/.test(l.trim())).slice(0, 3).join(" ").replace(/^not remembered:\s*/, "").slice(0, 600); };
