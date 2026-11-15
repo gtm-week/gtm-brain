@@ -27,7 +27,7 @@ async function visitAll({ app, screen, browser }: any, f: ReturnType<typeof fixt
 
 // The page edits in three places only, each on the person's own click: a document, an entity and its connections,
 // and a rule written for Codex. Looking around must write nothing and must lead nowhere outside the page.
-test('looking around writes nothing, and every link stays in the page, a file, Codex or the web', async ({ app, screen, browser }) => {
+test('looking around writes nothing, and every link stays in the page, a file, Codex, the web or an email address', async ({ app, screen, browser }) => {
   const f = fixture(app.baseUrl);
   const writes: string[] = [];
   await browser.route('**/*', async route => {
@@ -41,7 +41,7 @@ test('looking around writes nothing, and every link stays in the page, a file, C
       const name = (el: Element) => ((el.getAttribute('aria-label') || (el as HTMLElement).innerText || el.textContent || '').trim());
       for (const el of document.querySelectorAll('a[href]')) {
         const href = el.getAttribute('href') || '';
-        if (shown(el) && !/^(#|\/file\?path=|\/assets\/|\/entity\?|codex:\/\/threads\/new\?|https?:)/.test(href)) out.push(`link to ${href.slice(0, 60)}`);
+        if (shown(el) && !/^(#|\/file\?path=|\/assets\/|\/entity\?|codex:\/\/threads\/new\?|https?:|mailto:)/.test(href)) out.push(`link to ${href.slice(0, 60)}`);
       }
       return out;
     }, ACTION.source);
