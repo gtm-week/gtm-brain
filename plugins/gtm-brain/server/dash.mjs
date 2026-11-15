@@ -16,6 +16,7 @@ import { resolveAssetFile, assetMime } from '../lib/assets.mjs';
 import { dashboardRefreshState } from '../lib/dashboard-refresh.mjs';
 import { listDocuments, BODY_MAX } from '../lib/documents.mjs';
 import { createMemoryReader } from './memory-reader.mjs';
+import { createEntityEdit } from './entity-edit.mjs';   // POST /entity-edit: the Entities tab's forms
 const lib = await import(new URL("../lib/brain.mjs", import.meta.url));
 
 const args = process.argv.slice(2);
@@ -32,9 +33,11 @@ const requestedPort = configuredPort === undefined ? undefined : Number(configur
 const project = args.find(a => a.startsWith("--project="))?.slice(10) || "";
 if (project && !lib.readProjects(root).some(p => p.slug === project)) { console.error(`Unknown dashboard project: ${project}`); process.exit(1); }
 const viewingUrl = url => project ? `${url}#view=home&project=${encodeURIComponent(project)}` : url;
+// A second write, for the Entities tab's forms: POST /entity-edit (server/entity-edit.mjs), a fixed list of named
+// operations, each one call of the entity or remember script, behind the same guard and token. 6 added it.
 // The server's protocol: a start replaces a running server of another one. 4 added /file, so a server an
 // older plugin left running (no /file) is retired on the first start after an upgrade. 5 added POST /document.
-const PROTOCOL = 5;
+const PROTOCOL = 6;
 // The plugin version that started this server: after an update an old server would go on serving the old
 // code from a cache folder Codex replaced, so --start retires a server from another version.
 const VERSION = (() => { try { return JSON.parse(readFileSync(new URL("../.codex-plugin/plugin.json", import.meta.url), "utf8")).version || null; } catch { return null; } })();
@@ -136,6 +139,9 @@ function serve() {
       return json(res, 200, { ok: true, status: proposal ? "proposal" : "saved", note: out.stdout, hash: after ? sha(after) : null, body: fresh ? fresh.body : null });
     } finally { saving = false; }
   }
+  // ---------- Entities tab forms: POST /entity-edit (server/entity-edit.mjs), behind the document save's guard and token ----------
+  const entityEdit = createEntityEdit({ root, token: EDIT_TOKEN, json, log });
+  // ---------- end of the Entities tab forms ----------
   // The renderer publishes data.json last, using an atomic rename. Notify only complete renders.
   mkdirSync(home, { recursive: true });
   const clients = new Set();
@@ -168,6 +174,7 @@ function serve() {
     }
     if (req.method === "GET" && url.pathname === "/data.json") lastSeen = Date.now();
     if (req.method === "POST" && url.pathname === "/document") return saveDocument(req, res, host);
+    if (req.method === "POST" && url.pathname === "/entity-edit") return entityEdit(req, res, host);
     if (req.method === "GET" && url.pathname === "/search") return searchNotes(req, res, url);
     if (req.method !== "GET" && req.method !== "HEAD") return json(res, 405, { ok: false, note: "GET only" });
     if (url.pathname === '/file') {
