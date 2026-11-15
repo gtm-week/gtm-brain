@@ -1237,12 +1237,16 @@ export function guardProtected(root) {
   if (process.env.GTM_BRAIN_NO_COMMIT) return [];
   const git = (...a) => execFileSync("git", ["--no-optional-locks", "-C", root, ...a], { encoding: "utf8", stdio: "pipe" });
   let changed;
-  try { git("rev-parse", "--verify", "-q", "HEAD"); changed = git("diff", "--name-only", "HEAD", "--", ...PROTECTED_PATHS).split("\n").filter(Boolean); }
+  // Layout 3: config/settings.yaml is the marker every reader asks for (lib/brain-paths.mjs). Deleted by hand, the
+  // brain would read as an older layout, where nobody is the owner: it comes back like a protected file. An edit
+  // of it is the owner rules' to judge (lib/owner.mjs guardOwnerEdits), not this guard's.
+  try { git("rev-parse", "--verify", "-q", "HEAD"); changed = git("diff", "--name-only", "HEAD", "--", ...PROTECTED_PATHS, SETTINGS_FILE).split("\n").filter(Boolean); }
   catch { return []; }
   const restored = [];
   for (const path of changed) {
     let committed; try { committed = git("show", `HEAD:${path}`); } catch { continue; }
     const file = join(root, path), now = existsSync(file) ? readFileSync(file, "utf8") : null;
+    if (path === SETTINGS_FILE && now !== null) continue;
     if (/memories\.jsonl$/.test(path) && now !== null && now.startsWith(committed)) continue;
     let backup = null;
     if (now !== null) {

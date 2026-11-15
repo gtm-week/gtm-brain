@@ -11,8 +11,8 @@
 // kept as a proposal and the committed version comes back, as lib.guardProtected does for protected files;
 // the owner's own hand edit is accepted and recorded), and approve.mjs. A teammate who pushes with git directly
 // is not stopped by the plugin (MANUAL.md, Who can change the base files).
-import { existsSync, readFileSync, writeFileSync, mkdirSync, rmSync, readdirSync, copyFileSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, rmSync, readdirSync, copyFileSync, lstatSync } from "node:fs";
+import { join, dirname, posix } from "node:path";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readAdmin, currentPerson, appendMemory, commit, listContexts, logActivity, lineDiff, teamHandle, parseSettings } from "./brain.mjs";
@@ -26,9 +26,12 @@ const nameOf = (root, handle) => (readAdmin(root)?.team || []).find(p => p && p.
 
 /* The owner's handle, or null when the settings name none. */
 export function ownerOf(root) {
-  let o = null; try { o = readAdmin(root)?.owner; } catch {}
-  // a settings file broken by hand still has an owner: the committed one
-  if (!o && inConfigFolders(root)) { try { o = parseSettings(git(root, "show", `HEAD:${SETTINGS_FILE}`)).fm.owner; } catch {} }
+  let o = null;
+  // The committed owner decides. The file on disk may be a hand edit nobody approved yet: a teammate who writes
+  // their own handle there is not the owner until the owner's save or approval commits it. The file on disk
+  // answers only where nothing is committed (setup before its first commit, a brain outside git).
+  if (inConfigFolders(root)) { try { o = parseSettings(git(root, "show", `HEAD:${SETTINGS_FILE}`)).fm.owner; } catch {} }
+  if (!o) { try { o = readAdmin(root)?.owner; } catch {} }
   return o ? String(o) : null;
 }
 /* The person in this checkout (work/person.json, else the brain's git email), or by when that is unknown. */
@@ -44,10 +47,11 @@ export const isOwner = (root, who) => !ownerRules(root) || (!!who && who === own
    inside `within` when given (a commit's own paths: "." or a folder covers what is inside it). */
 export function ownerChanges(root, within = null) {
   if (!inConfigFolders(root) || gitOK(root, "rev-parse", "--verify", "-q", "HEAD") === null) return [];
-  const out = gitOK(root, "status", "--porcelain", "--untracked-files=all", "--no-renames", "--", ...OWNER_DIRS) || "";
+  // -z: paths as they are (a space, a non-ASCII letter), never quoted or escaped
+  const out = gitOK(root, "status", "--porcelain", "-z", "--untracked-files=all", "--no-renames", "--", ...OWNER_DIRS) || "";
   const covers = p => !within || within.some(w => { const x = String(w).replace(/^\.\//, "").replace(/\/+$/, ""); return x === "." || x === "" || p === x || p.startsWith(`${x}/`); });
-  return out.split("\n").filter(Boolean).map(l => {
-    const code = l.slice(0, 2), path = l.slice(3).replace(/^"|"$/g, "");
+  return out.split("\0").filter(Boolean).map(l => {
+    const code = l.slice(0, 2), path = l.slice(3);
     const inHead = gitOK(root, "cat-file", "-e", `HEAD:${path}`) !== null;
     return { path, state: !existsSync(join(root, path)) ? "delete" : inHead ? "edit" : "add", code };
   }).filter(c => isOwnerPath(root, c.path) && covers(c.path) && !(c.state === "delete" && gitOK(root, "cat-file", "-e", `HEAD:${c.path}`) === null));
@@ -106,9 +110,10 @@ export const proposalLine = (root, p) => `NOT APPLIED: ${p.files.map(f => f.path
    left to commit and the proposal made (null when none). system: plugin housekeeping (shipped rules and schema
    refreshed, the layout move, setup), never a person's change. */
 export function divertCommit(root, paths, message, { system = false } = {}) {
-  if (system || !ownerRules(root) || process.env.GTM_BRAIN_NO_COMMIT) return { paths, proposal: null };
+  if (system || process.env.GTM_BRAIN_NO_COMMIT || !inConfigFolders(root)) return { paths, proposal: null };
+  const owner = ownerOf(root); if (!owner) return { paths, proposal: null };
   const who = personHere(root);
-  if (who && who === ownerOf(root)) return { paths, proposal: null };
+  if (who && who === owner) return { paths, proposal: null };
   const changes = ownerChanges(root, paths);
   if (!changes.length) return { paths, proposal: null };
   const proposal = proposeChange(root, { by: who, changes, summary: String(message || "").split("\n")[0] });
@@ -160,11 +165,25 @@ export function recordApproval(root, { asked, approved, files, summary, hash = c
   return rec.id;
 }
 
-/* The proposals waiting, oldest first. */
+/* The proposals waiting, oldest first. brain/proposals/ is shared through git, so a proposal is read as data a
+   teammate wrote: it names only files under about-us/ and config/ (never a path that climbs out, never the
+   brain's other files), its proposed files are plain files (not links), and its summary is one short line.
+   One that does not hold to that is not a proposal: never offered to the owner, never applied. */
+const CHANGES = ["add", "edit", "delete"];
+function validProposal(root, id, p) {
+  if (!p || typeof p !== "object" || !Array.isArray(p.files) || !p.files.length) return null;
+  for (const f of p.files) {
+    if (!f || typeof f.path !== "string" || !CHANGES.includes(f.change)) return null;
+    if (f.path.startsWith("/") || f.path.includes("\\") || posix.normalize(f.path) !== f.path || f.path.split("/").includes("..") || !isOwnerPath(root, f.path) || OWNER_DIRS.includes(f.path)) return null;
+    if (f.change !== "delete") { try { if (!lstatSync(join(root, PROPOSALS_DIR, id, "files", f.path)).isFile()) return null; } catch { return null; } }
+  }
+  return { id, by: typeof p.by === "string" && /^[a-z0-9][a-z0-9-]*$/.test(p.by) ? p.by : null, at: String(p.at || ""), owner: p.owner ? String(p.owner) : null,
+    summary: plain(p.summary).slice(0, 200) || "a change", files: p.files.map(f => ({ path: f.path, change: f.change, base: typeof f.base === "string" ? f.base : null })) };
+}
 export function listProposals(root) {
   const dir = join(root, PROPOSALS_DIR); let ids = [];
   try { ids = readdirSync(dir).filter(n => /^p_[0-9a-f]{10}$/.test(n)).sort(); } catch { return []; }
-  return ids.map(id => { try { return JSON.parse(readFileSync(join(dir, id, "proposal.json"), "utf8")); } catch { return null; } }).filter(Boolean).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+  return ids.map(id => { try { return validProposal(root, id, JSON.parse(readFileSync(join(dir, id, "proposal.json"), "utf8"))); } catch { return null; } }).filter(Boolean).sort((a, b) => String(a.at).localeCompare(String(b.at)));
 }
 export const readProposal = (root, id) => listProposals(root).find(p => p.id === id) || null;
 
@@ -173,7 +192,9 @@ export function proposalDiff(root, p) {
   return p.files.map(f => {
     const now = existsSync(join(root, f.path)) ? readFileSync(join(root, f.path), "utf8") : "";
     if (f.change === "delete") return `${f.path}: removed`;
-    const next = readFileSync(join(root, PROPOSALS_DIR, p.id, "files", f.path), "utf8");
+    const raw = readFileSync(join(root, PROPOSALS_DIR, p.id, "files", f.path));
+    if (raw.includes(0)) return `${f.path}${f.change === "add" ? " (new)" : ""}: a file that is not text, ${raw.length} bytes`;
+    const next = raw.toString("utf8");
     const d = lineDiff(now, next), changed = d.filter(l => /^[-+] /.test(l));
     const moved = f.base && (gitOK(root, "rev-parse", `HEAD:${f.path}`) || "").trim() !== f.base ? " (changed since it was proposed; this replaces that)" : "";
     return `${f.path}${f.change === "add" ? " (new)" : ""}${moved}:\n${changed.slice(0, 40).join("\n")}${changed.length > 40 ? `\n... ${changed.length - 40} more lines` : ""}`;
