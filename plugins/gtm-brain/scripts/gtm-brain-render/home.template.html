@@ -260,6 +260,14 @@ h1,h2,h3{font-family:var(--display);margin:0;letter-spacing:-.01em}
 .ent-note{padding:12px 0;border-top:1px solid var(--soft)}.ent-note:first-of-type{border-top:0;padding-top:2px}.ent-note-head{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:12px;color:var(--muted)}.ent-note-when{color:var(--ink);font-weight:600}.ent-note p{margin:5px 0 6px;font-size:14px;line-height:1.55;max-width:74ch;overflow-wrap:anywhere}.ent-note-src{font-size:12px}
 .ent-more{display:block;margin:10px 0 2px}.ent-foot{margin:28px 0 0;padding-top:14px;border-top:1px solid var(--rule);font-size:12.5px;color:var(--muted)}.ent-foot .linkbtn{font-size:12.5px}
 .ent-start{max-width:62ch}.ent-start h2{font-family:var(--display);font-size:22px;font-weight:650;color:var(--ink);margin:0 0 8px;text-transform:none;letter-spacing:0}.ent-start p{font-size:14px;margin:0 0 8px}.ent-start h3{margin:24px 0 10px;font:500 10.5px var(--label);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.ent-flash{margin:14px 0 0;padding:9px 12px;border-left:3px solid var(--green);background:var(--green-soft);color:var(--ink);font-size:13px;border-radius:0 4px 4px 0}
+.ent-acts{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0 0}.ent-act{font:500 12.5px var(--body);color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:4px;padding:6px 11px;cursor:pointer}.ent-act:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}.ent-act:disabled,.ent-mini:disabled{opacity:.45;cursor:default}.ent-act:focus-visible,.ent-mini:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ent-mini{font:500 11px var(--body);color:var(--muted);background:none;border:0;padding:2px 8px 2px 0;margin-left:-3px;cursor:pointer;text-decoration:underline;text-underline-offset:2px}.ent-mini:hover:not(:disabled){color:var(--accent)}
+.ent-form{margin:16px 0 0;padding:16px 18px;border:1px solid var(--accent);border-radius:6px;background:var(--paper)}.ent-form h3{margin:0 0 12px;font-family:var(--display);font-size:16px;font-weight:650;color:var(--ink)}.ent-form h4{margin:16px 0 4px;font-size:13px;font-weight:600}.ent-form p{margin:0 0 10px;font-size:13.5px;max-width:70ch}
+.ent-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px 16px;margin-bottom:10px}.ent-f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);min-width:0}.ent-f input,.ent-f select{font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:8px 10px;min-width:0;width:100%;box-sizing:border-box}.ent-f input:focus-visible,.ent-f select:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}.ent-f input[hidden]{display:none}
+.ent-form-foot{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.ent-form-foot .btn{margin-left:0;padding:7px 14px;font-size:13px}.ent-form-foot .btn:disabled{opacity:.6}
+.ent-err{margin:10px 0 0;padding:9px 12px;border-left:3px solid var(--red);background:var(--red-soft);color:var(--ink);font-size:13px;border-radius:0 4px 4px 0;outline:0}
+.ent-cands{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.ent-link-new{border-style:dashed;padding-left:11px}.ent-picked{margin:2px 0 0;display:flex;gap:10px;align-items:center}.ent-preview{margin-top:12px;padding-top:12px;border-top:1px solid var(--rule)}.ent-preview li{margin-bottom:5px}
 @media(max-width:900px){.ent-wrap{grid-template-columns:1fr;height:auto;min-height:0}.ent-side{border-right:0}.ent-list{max-height:62vh}.ent-detail{border-top:1px solid var(--rule);padding:20px}.ent-wrap.ent-open .ent-side{display:none}.ent-wrap.ent-open .ent-detail{border-top:0}.ent-wrap.ent-open .ent-back{display:inline-block}.ent-head{flex-wrap:wrap}}
 @media(prefers-reduced-motion:no-preference){.ent-row,.ent-chip,.ent-link{transition:background-color .12s,border-color .12s,color .12s}}
 @media(max-width:900px){.pl-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.pl-row{flex-direction:column}}
@@ -1216,12 +1224,12 @@ function entLoadDetails(){
  if(exDetails||exDetailsState||!PL)return;const file=PL.entities.file;
  if(!LIVE||!/^entities-[a-f0-9-]{36}\/entity-details\.json$/.test(file||"")){exDetailsState="none";return}
  exDetailsState="loading";
- fetch(file).then(r=>{if(!r.ok)throw Error("unavailable");return r.json()}).then(j=>{if(!j||typeof j.details!=="object"||!j.details)throw Error("invalid");exDetails=j.details;exDetailsState="ok"}).catch(()=>{exDetailsState="none"}).finally(()=>{entDrawDetail()});
+ fetch(file).then(r=>{if(!r.ok)throw Error("unavailable");return r.json()}).then(j=>{if(!j||typeof j.details!=="object"||!j.details)throw Error("invalid");exDetails=j.details;exDetailsState="ok"}).catch(()=>{exDetailsState="none"}).finally(()=>{entSoftDraw()});
 }
 /* The whole note list once it is here (the Memories tab's loader fetches it), else the page's first notes. */
 function entNoteList(){
  if(pmAll)return {notes:pmAll,all:true};
- if(LIVE&&!pmError){const p=pmLoad();if(p&&!p.entWaiting){p.entWaiting=true;p.then(()=>{entDrawDetail()})}return {notes:PL.memories.first||[],all:false,loading:true}}
+ if(LIVE&&!pmError){const p=pmLoad();if(p&&!p.entWaiting){p.entWaiting=true;p.then(()=>{entSoftDraw()})}return {notes:PL.memories.first||[],all:false,loading:true}}
  return {notes:PL.memories.first||[],all:false};
 }
 const entChip=(o,extra="",cls="")=>o?.id&&entById().has(o.id)?`<button type="button" class="ent-link${cls}" data-ent-id="${esc(o.id)}">${entAvatar(entById().get(o.id))}<span>${esc(o.name)}</span>${extra}</button>`:`<span class="ent-link ent-link-flat${cls}"><span>${esc(o?.kind==="us"||o?.name==="us"?(PL.configuration?.settings?.company||"Our company"):o?.name||"Unknown")}</span>${extra}</span>`;
@@ -1240,12 +1248,16 @@ function entDrawDetail(){
  const box=$("#ent-detail");if(!PL)return;
  const e=exSel?entById().get(exSel):null;
  $("#ent-wrap").className="ent-wrap"+(e?" ent-open":"");
- if(!e){box.innerHTML=entStartHtml();return}
+ if(!e){box.innerHTML=(exFlash&&!exFlash.id?`<p class="ent-flash" role="status">${esc(exFlash.text)}</p>`:"")+entStartHtml();return}
  entLoadDetails();
  const d=exDetails?.[e.id]||null,kind=entKindWord(e),rels=(e.rel||[]).map(r=>ENT_REL[r]||entCap(r));
  const sec=(title,body,count)=>`<section class="ent-sec"><h3>${esc(title)}${count?` <span class="ent-n">${count}</span>`:""}</h3>${body}</section>`;
  let html=`<button type="button" class="linkbtn ent-back" data-ent-back>← ${esc("Back to the list")}</button><header class="ent-head">${entAvatar(e,true)}<div class="ent-head-main"><p class="ent-eyebrow">${esc(kind)}${rels.map(r=>` <span class="ent-badge ent-badge-strong">${esc(r)}</span>`).join("")}</p><h2 id="ent-title" tabindex="-1">${esc(e.name)}</h2>${e.described?`<p class="ent-lead">${esc(e.line)}</p>`:""}<p class="ent-ident">${[e.aliases?.length?esc("Also known as "+e.aliases.join(", ")):"",...(e.emails||(e.email?[e.email]:[])).map(m=>`<a href="mailto:${esc(m)}">${esc(m)}</a>`)].filter(Boolean).join(" · ")}</p></div>${rowLinks(e.path,`Let's discuss ${e.name} (${kind.toLowerCase()}). Read the entity page and its notes first.`,e.name)}</header>`;
  html+=`<p class="ent-facts"><span><b>${e.notes}</b> ${esc(e.notes===1?"note":"notes")}</span>${e.last?`<span>${esc("last mentioned")} <b>${entAgo(e.last)}</b></span>`:""}${e.links?`<span><b>${e.links}</b> ${esc(e.links===1?"link":"links")}</span>`:""}</p>`;
+ if(exFlash&&(!exFlash.id||exFlash.id===e.id))html+=`<p class="ent-flash" role="status">${esc(exFlash.text)}</p>`;
+ const can=entCanEdit()&&!!d,act=(mode,label)=>`<button type="button" class="ent-act" data-ent-open="${mode}"${exEdit?" disabled":""}>${esc(label)}</button>`;
+ if(can)html+=`<div class="ent-acts" role="group" aria-label="${esc("Change "+e.name)}">${act("edit","Edit")}${entLinkOptions(e).length?act("link","Add a connection"):""}${entUsOptions(e,d).length?act("us","Set relation to us"):""}${act("merge","Merge with...")}${act("archive","Archive")}</div>`;
+ if(exEdit&&exEdit.id===e.id)html+=`<section class="ent-form" id="ent-form" aria-labelledby="ent-form-title">${entFormHtml()}</section>`;
  // in short: the first lines of the brief
  if(d?.brief?.length)html+=sec("In short",`<ul class="ent-brief">${d.brief.map(t=>`<li>${esc(t)}</li>`).join("")}</ul>${d.compiled?`<p class="ent-dim ent-small">${esc("Summary written")} ${entAgo(d.compiled)} ${esc("from the notes below.")}</p>`:""}`);
  else if(!d&&e.line&&!e.described)html+=sec("In short",`<p>${esc(e.line)}</p>`);
@@ -1265,7 +1277,7 @@ function entDrawDetail(){
  const N=entNoteList(),mine=N.notes.filter(n=>n.state==="in force"&&n.entities.includes(e.id));
  const together=new Map();for(const n of mine)for(const id of n.entities)if(id!==e.id&&entById().has(id))together.set(id,(together.get(id)||0)+1);
  const near=[...together].sort((a,b)=>b[1]-a[1]||entById().get(a[0]).name.localeCompare(entById().get(b[0]).name)).slice(0,14);
- html+=sec("Connections",(groups.size?[...groups].map(([label,ls])=>`<div class="ent-group"><h4>${esc(label)}</h4><div class="ent-links">${ls.slice(0,40).map(l=>entChip(l.other,l.status==="ended"?`<i>${esc("ended")}</i>`:"",l.status==="ended"?" ent-link-ended":"")).join("")}${ls.length>40?`<span class="ent-dim ent-small">${esc("and")} ${ls.length-40} ${esc("more")}</span>`:""}</div></div>`).join(""):`<p class="ent-dim">${esc("No named links recorded, such as where someone works or who uses what.")}</p>`)
+ html+=sec("Connections",(groups.size?[...groups].map(([label,ls])=>`<div class="ent-group"><h4>${esc(label)}</h4><div class="ent-links">${ls.slice(0,40).map(l=>entChip(l.other,l.status==="ended"?`<i>${esc("ended")}</i>`:"",l.status==="ended"?" ent-link-ended":"")+(can&&l.type!=="attended"?`<button type="button" class="ent-mini" data-ent-open="change" data-ent-i="${d.links.indexOf(l)}" aria-label="${esc("Change the connection with "+l.other.name)}"${exEdit?" disabled":""}>${esc("Change")}</button>`:"")).join("")}${ls.length>40?`<span class="ent-dim ent-small">${esc("and")} ${ls.length-40} ${esc("more")}</span>`:""}</div></div>`).join(""):`<p class="ent-dim">${esc("No named links recorded, such as where someone works or who uses what.")}</p>`)
   +(near.length?`<div class="ent-group"><h4>${esc("Often mentioned together with")} <span class="ent-dim ent-small">${esc("(notes in common)")}</span></h4><div class="ent-links">${near.map(([id,c])=>entChip(entById().get(id),`<i title="${esc(noteCount(c)+" in common")}">${c}</i>`)).join("")}</div></div>`:""));
  // history: the dated events behind the links
  const events=(d?.links||[]).flatMap(l=>(l.events||[]).map(ev=>({...ev,l}))).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
@@ -1277,6 +1289,155 @@ function entDrawDetail(){
   +(missing&&!N.loading?`<p class="ent-dim ent-small">${esc(LIVE?"Older notes could not be loaded. Refresh the dashboard.":"This saved copy holds only the newest notes. Open the live dashboard for all of them.")}</p>`:""),e.notes||mine.length);
  html+=`<p class="ent-foot">${esc("Something wrong or missing?")} <a class="pl-chat" href="${esc(askLink(`Let's correct or add to what we know about ${e.name} (${kind.toLowerCase()}). Read the entity page and its notes first.`))}">${esc("Tell Codex in a chat")} <span aria-hidden="true">↗</span></a> · <button type="button" class="linkbtn" data-entity="${esc(e.name)}" data-entity-context="">${esc("Evidence by topic and files")}</button></p>`;
  box.innerHTML=html;
+}
+/* ---------- Entities: changing things from the pane. Every save is one named operation of POST /entity-edit
+   (server/entity-edit.mjs), which runs the script the chat tools run; the page writes nothing itself. The forms
+   show only on the live dashboard, which alone carries the save token. ---------- */
+const entToken=()=>{try{const t=document.querySelector('meta[name="gtm-brain-edit"]')?.getAttribute?.("content")||"";return /^[a-f0-9]{64}$/.test(t)?t:""}catch{return ""}};
+const entCanEdit=()=>LIVE&&!!entToken();
+let exEdit=null,exFlash=null,exPendingRefresh=null,exRedrawLater=false;
+try{const f=JSON.parse(sessionStorage.getItem("gtm-ent-flash")||"null");if(f&&typeof f.text==="string"){exFlash=f;sessionStorage.removeItem("gtm-ent-flash")}}catch{}
+const entNewer=newer;newer=r=>{if(exEdit&&r&&r!==D.generatedAt){exPendingRefresh=r;return}entNewer(r)};
+const entSoftDraw=()=>{if(exEdit)exRedrawLater=true;else entDrawDetail()};
+const entList=s=>String(s||"").split(",").map(t=>t.trim()).filter(Boolean);
+const entKindChoice=k=>k==="organization"?"Company or organization":(ENT_KINDS[k]?.[1]||entCap(k));
+const entFieldLabel=f=>ENT_FIELD[f.name]||entCap(f.name);
+async function entSend(body){
+ let status=0,j=null;
+ try{const r=await fetch("/entity-edit",{method:"POST",cache:"no-store",headers:{"content-type":"application/json","x-gtm-brain-token":entToken()},body:JSON.stringify(body)});status=r.status;j=await r.json()}catch{}
+ return j&&typeof j==="object"&&typeof j.ok==="boolean"?j:{ok:false,note:status?"The dashboard could not save this. Try again.":"The dashboard is not answering. Check that it is still open, then try again."};
+}
+/* The connections this entity can have, from the schema: as the first end ("Works at") or as the other end ("People who work here"). */
+function entLinkOptions(e){
+ const out=[];
+ for(const r of PL.configuration?.schema?.relations||[]){
+  if(r.built_in||r.type==="attended")continue;const others=r.to.filter(k=>k!=="us");
+  if(r.from.includes(e.kind)&&others.length)out.push({type:r.type,out:true,label:ENT_LINK[r.type]?.[0]||entCap(r.type),kinds:others});
+  if(r.to.includes(e.kind)&&!(r.from.includes(e.kind)&&ENT_LINK[r.type]?.[0]===ENT_LINK[r.type]?.[1]))out.push({type:r.type,out:false,label:ENT_LINK[r.type]?.[1]||entCap(r.type)+" (the other way round)",kinds:r.from});
+ }
+ return out;
+}
+function entUsOptions(e,d){
+ const out=["person","organization"].includes(e.kind)?[["c:customer","Customer"],["c:prospect","Prospect"],["c:former_customer","Former customer"],["c:not_customer","Not a customer"]]:[];
+ for(const r of PL.configuration?.schema?.relations||[]){
+  if(r.built_in||!r.to.includes("us")||!r.from.includes(e.kind))continue;const label=r.type==="partner_of"?"Partner":entCap(r.type)+" us";
+  out.push(["r:"+r.type,label]);if((d?.links||[]).some(l=>!l.other.id&&l.type===r.type&&l.status==="current"))out.push(["x:"+r.type,"No longer: "+label.toLowerCase()]);
+ }
+ return out;
+}
+function entCandidates(q,kinds,skip){
+ const rows=PL.entities.rows.filter(r=>r.id!==skip&&(!kinds||kinds.includes(r.kind)));if(!q.trim())return [];
+ if(typeof fzRank==="function")return fzRank(q,rows,r=>[[r.name,3],[[...(r.aliases||[]),...(r.emails||[]),r.company||""].join(" "),1]],6).map(x=>x.item);
+ return rows.filter(r=>entHay(r).includes(q.trim().toLowerCase())).slice(0,6);
+}
+function entOpen(mode,i){
+ const e=entById().get(exSel),d=exDetails?.[exSel];if(!e||!d||!entCanEdit())return;
+ const v={};
+ if(mode==="edit"){Object.assign(v,{name:e.name,aliases:(d.aliases||e.aliases||[]).join(", "),emails:(d.emails||e.emails||[]).join(", "),kind:e.kind});for(const f of d.fields)v["f_"+f.name]=f.value||""}
+ if(mode==="link"){const o=entLinkOptions(e);if(!o.length)return;Object.assign(v,{opt:"0",q:"",other:"",otherName:"",date:"",note:""})}
+ if(mode==="change")Object.assign(v,{i:String(i),date:""});
+ if(mode==="us"){const o=entUsOptions(e,d);if(!o.length)return;Object.assign(v,{status:o[0][0],date:"",note:""})}
+ if(mode==="merge")Object.assign(v,{q:"",other:"",otherName:""});
+ exEdit={mode,id:e.id,v,busy:false,error:"",preview:null,o:{name:e.name,kind:e.kind,aliases:entList(v.aliases),emails:entList(v.emails)}};
+ entDrawDetail();entDrawForm();try{document.querySelector("#ent-form input:not([type=hidden]),#ent-form select")?.focus?.()}catch{}
+}
+function entClose(){exEdit=null;exRedrawLater=false;entDrawDetail();if(exPendingRefresh){const r=exPendingRefresh;exPendingRefresh=null;entNewer(r)}}
+function entPickHtml(){
+ const x=exEdit;if(!x)return"";const e=entById().get(x.id),v=x.v;
+ if(v.other)return `<p class="ent-picked"><span class="ent-link ent-link-flat"><span>${esc(v.otherName)}</span></span> <button type="button" class="linkbtn" data-ent-do="unpick">${esc("Choose another")}</button></p>`;
+ const o=x.mode==="link"?entLinkOptions(e)[Number(v.opt)||0]:null,kinds=o?o.kinds:null,q=v.q.trim();if(!q)return"";
+ const found=entCandidates(q,kinds,e.id),exact=found.some(r=>r.name.toLowerCase()===q.toLowerCase());
+ return `<div class="ent-cands" role="group" aria-label="${esc("Matches")}">${found.map(r=>`<button type="button" class="ent-link" data-ent-pick="${esc(r.id)}">${entAvatar(r)}<span>${esc(r.name)}</span><i>${esc(entKindWord(r))}</i></button>`).join("")||`<span class="ent-dim ent-small">${esc(x.mode==="merge"?"Nothing in the brain matches.":"Nobody by that name yet.")}</span>`}${o&&!exact&&q.length>1?(PL.configuration?.schema?.kinds||[]).map(k=>k.kind).filter(k=>o.kinds.includes(k)).slice(0,3).map(k=>`<button type="button" class="ent-link ent-link-new" data-ent-new="${esc(k)}"><span>${esc(`Add "${q}" as a new ${entKindChoice(k).toLowerCase()}`)}</span></button>`).join(""):""}</div>`;
+}
+function entFormHtml(){
+ const x=exEdit,e=entById().get(x.id),d=exDetails?.[x.id]||{fields:[],links:[]},v=x.v,dis=x.busy?" disabled":"";
+ const input=(key,label,extra="",type="text")=>`<label class="ent-f"><span>${esc(label)}</span><input type="${type}" data-ent-f="${esc(key)}" value="${esc(v[key]??"")}" autocomplete="off"${extra}${dis}></label>`;
+ const select=(key,label,options)=>`<label class="ent-f"><span>${esc(label)}</span><select data-ent-f="${esc(key)}"${dis}>${options.map(([val,text])=>`<option value="${esc(val)}"${String(v[key])===String(val)?" selected":""}>${esc(text)}</option>`).join("")}</select></label>`;
+ const buttons=(label,act="save",more="")=>`<div class="ent-form-foot"><button type="button" class="btn" data-ent-do="${act}"${dis}>${esc(x.busy?"Saving...":label)}</button>${more}<button type="button" class="btn quiet" data-ent-do="cancel"${dis}>${esc("Cancel")}</button></div>`;
+ const error=x.error?`<p class="ent-err" id="ent-err" role="alert" tabindex="-1">${esc(x.error)}</p>`:"",today=localDate(new Date().toISOString());
+ const date=label=>input("date",label,` max="${esc(today)}"`,"date");
+ let title="",body="";
+ if(x.mode==="edit"){
+  title="Edit "+e.name;const kinds=(PL.configuration?.schema?.kinds||[]).map(k=>k.kind);if(!kinds.includes(e.kind))kinds.push(e.kind);
+  body=`<div class="ent-form-grid">${input("name","Name")}${select("kind","Kind",kinds.map(k=>[k,entKindChoice(k)]))}${input("aliases","Other names, separated by commas")}${input("emails","Emails, separated by commas")}</div>`
+   +(d.fields.length?`<h4>${esc("Details")}</h4><p class="ent-dim ent-small">${esc("Saved as a note, so the brain remembers who said it. A detail shows here after the next summary run.")}</p><div class="ent-form-grid">${d.fields.map(f=>input("f_"+f.name,entFieldLabel(f)+(f.required?" (needed)":""))).join("")}</div>`:"")+error+buttons("Save");
+ }else if(x.mode==="link"){
+  const opts=entLinkOptions(e),o=opts[Number(v.opt)||0];title="Add a connection for "+e.name;
+  body=`<div class="ent-form-grid">${select("opt","What kind of connection",opts.map((p,i)=>[i,p.label]))}<label class="ent-f"><span>${esc(o.out?"With whom or what":"Who or what")}</span><input type="search" data-ent-f="q" value="${esc(v.q)}" autocomplete="off" placeholder="${esc("Type a name")}"${v.other?" hidden":""}${dis}><div id="ent-pick">${entPickHtml()}</div></label>${date("Since when (optional)")}${input("note","A note in one line (optional)",' maxlength="400"')}</div><p class="ent-dim ent-small">${esc("Saved as a note with your name on it, so the brain remembers who said it.")}</p>`+error+buttons("Add the connection");
+ }else if(x.mode==="change"){
+  const l=d.links[Number(v.i)];title=l?`${entLinkLabel(l)}: ${l.other.id?l.other.name:"us"}`:"This connection";
+  body=!l?error+`<div class="ent-form-foot"><button type="button" class="btn quiet" data-ent-do="cancel"${dis}>${esc("Cancel")}</button></div>`:`<p>${esc(l.status==="ended"?"This connection has ended. If it never was true, withdraw it.":"If it stopped being true, end it and say when. If it never was true, withdraw it. Either way the brain keeps a record of the change.")}</p>${l.status==="ended"?"":`<div class="ent-form-grid">${date("When it ended (optional, today if empty)")}</div>`}${error}${buttons(l.status==="ended"?"This was wrong":"End it",l.status==="ended"?"wrong":"end",l.status==="ended"?"":`<button type="button" class="btn quiet" data-ent-do="wrong"${dis}>${esc("This was wrong")}</button>`)}`;
+ }else if(x.mode==="us"){
+  title="How "+e.name+" relates to us";
+  body=`<div class="ent-form-grid">${select("status","Relation to us",entUsOptions(e,d))}${date("Since when (optional)")}${input("note","A note in one line (optional)",' maxlength="400"')}</div><p class="ent-dim ent-small">${esc("Saved as a note with your name on it, so the brain remembers who said it.")}</p>`+error+buttons("Save");
+ }else if(x.mode==="merge"){
+  title="Merge another entry into "+e.name;const p=x.preview;
+  body=`<p>${esc(`Use this when two entries are the same ${entKindWord(e).toLowerCase()}. ${e.name} stays; the other one is folded into it.`)}</p><label class="ent-f"><span>${esc("The other entry")}</span><input type="search" data-ent-f="q" value="${esc(v.q)}" autocomplete="off" placeholder="${esc("Type a name")}"${v.other?" hidden":""}${dis}><div id="ent-pick">${entPickHtml()}</div></label>`
+   +(p?`<div class="ent-preview"><h4>${esc("What will happen")}</h4><ul class="ent-plain"><li>${esc(`${p.keep.name} stays, with ${noteCount(p.keep.notes+p.fold.notes)} (${p.fold.notes} from ${p.fold.name}).`)}</li><li>${esc(`${p.fold.name} leaves the list and becomes another name for ${p.keep.name}.`)}</li><li>${esc("Names it will answer to: "+([p.keep.name,...p.names].join(", ")))}</li>${p.emails.length?`<li>${esc("Emails: "+p.emails.join(", "))}</li>`:""}${p.kind_differs?`<li>${esc(`They are of different kinds; it stays a ${entKindWord(e).toLowerCase()}.`)}</li>`:""}<li>${esc("No note is changed. It can be undone in a chat.")}</li></ul>${p.blocked?`<p class="ent-err" role="alert">${esc(p.blocked)}</p>`:""}</div>`:"")
+   +error+(p&&!p.blocked?buttons("Merge them"):`<div class="ent-form-foot"><button type="button" class="btn quiet" data-ent-do="cancel"${dis}>${esc("Cancel")}</button></div>`);
+ }else if(x.mode==="archive"){
+  title="Archive "+e.name+"?";body=`<p>${esc("It leaves this list and the search. Its notes stay, and it can be brought back in a chat.")}</p>`+error+buttons("Archive");
+ }
+ return `<h3 id="ent-form-title">${esc(title)}</h3>${body}`;
+}
+const entDrawForm=()=>{const box=$("#ent-form");if(box&&exEdit)box.innerHTML=entFormHtml()};
+async function entRun(x,action){
+ const e=entById().get(x.id),d=exDetails?.[x.id]||{fields:[],links:[]},v=x.v,opt=k=>v[k]?v[k]:undefined;
+ if(x.mode==="edit"){
+  const body={op:"update",entity:e.id},said=[];
+  if(!v.name.trim())return {ok:false,note:"A name is needed."};
+  if(v.name.trim()!==x.o.name)body.name=v.name.trim();if(v.kind!==x.o.kind)body.kind=v.kind;
+  if(entList(v.aliases).join("\n")!==x.o.aliases.join("\n"))body.aliases=entList(v.aliases);if(entList(v.emails).join("\n")!==x.o.emails.join("\n"))body.emails=entList(v.emails);
+  const fields={};for(const f of d.fields){const val=String(v["f_"+f.name]||"").trim();if(val&&val!==(f.value||"")&&val!==x.o["f_"+f.name])fields[f.name]=val}
+  if(Object.keys(body).length===2&&!Object.keys(fields).length)return {ok:false,note:"Nothing was changed."};
+  if(Object.keys(body).length>2){const r=await entSend(body);if(!r.ok)return r;said.push(r.note);Object.assign(x.o,{name:v.name.trim(),kind:v.kind,aliases:entList(v.aliases),emails:entList(v.emails)})}
+  if(Object.keys(fields).length){const r=await entSend({op:"set_fields",entity:e.id,fields});if(!r.ok)return {ok:false,note:(said.length?"The name and contact details were saved. The details were not: ":"")+r.note};said.push(r.note);for(const k of Object.keys(fields))x.o["f_"+k]=fields[k]}
+  return {ok:true,note:said.join(" ")};
+ }
+ if(x.mode==="link"){
+  const o=entLinkOptions(e)[Number(v.opt)||0];if(!v.other)return {ok:false,note:"Choose who or what it is with: type a name and pick one."};
+  return entSend({op:"add_relation",from:o.out?e.id:v.other,type:o.type,to:o.out?v.other:e.id,date:opt("date"),note:opt("note")});
+ }
+ if(x.mode==="change"){
+  const l=d.links[Number(v.i)];if(!l)return {ok:false,note:"This connection is not there any more."};
+  const ends={from:l.out?e.id:l.other.id,type:l.type,to:l.out?(l.other.id||"us"):e.id};
+  return entSend(action==="wrong"?{op:"retract_relation",...ends}:{op:"end_relation",...ends,date:opt("date")});
+ }
+ if(x.mode==="us"){
+  const [how,what]=String(v.status).split(":");
+  if(how==="c")return entSend({op:"set_customer",entity:e.id,status:what,date:opt("date"),note:opt("note")});
+  return entSend({op:how==="x"?"end_relation":"add_relation",from:e.id,type:what,to:"us",date:opt("date"),note:opt("note")});
+ }
+ if(x.mode==="merge"){
+  if(!v.other)return {ok:false,note:"Choose the other entry: type a name and pick one."};
+  if(action==="preview"||!x.preview){const r=await entSend({op:"merge",source:v.other,target:e.id});if(!r.ok)return r;x.preview=r;return {ok:true,keep:true}}
+  return entSend({op:"merge",source:v.other,target:e.id,as_of:x.preview.as_of});
+ }
+ if(x.mode==="archive")return entSend({op:"archive",entity:e.id});
+ return {ok:false,note:"Nothing to save."};
+}
+async function entDo(action){
+ const x=exEdit;if(!x||x.busy)return;
+ if(action==="cancel"){entClose();return}
+ if(action==="unpick"){x.v.other="";x.v.otherName="";x.preview=null;entDrawForm();return}
+ x.busy=true;x.error="";entDrawForm();
+ let r;try{r=await entRun(x,action)}catch{r={ok:false,note:"Something went wrong on this page. Nothing was saved."}}
+ if(exEdit!==x)return;x.busy=false;
+ if(r.keep){entDrawForm();return}
+ if(!r.ok){x.error=r.note||"This was not saved.";entDrawForm();try{$("#ent-err")?.focus?.()}catch{}return}
+ exFlash={id:x.mode==="archive"?"":x.id,text:(r.note||"Saved.")+" The page updates in a moment."};
+ try{sessionStorage.setItem("gtm-ent-flash",JSON.stringify({id:exFlash.id,text:r.note||"Saved."}))}catch{}
+ entClose();
+}
+async function entPick(id,kind){
+ const x=exEdit;if(!x||x.busy)return;
+ if(kind){   // a name nobody has yet: add it first, then it is picked
+  x.busy=true;x.error="";entDrawForm();const r=await entSend({op:"create",name:x.v.q.trim(),kind});if(exEdit!==x)return;x.busy=false;
+  if(!r.ok){x.error=r.note;entDrawForm();return}
+  x.v.other=r.entity;x.v.otherName=x.v.q.trim();entDrawForm();return;
+ }
+ const r=entById().get(id);if(!r)return;x.v.other=r.id;x.v.otherName=r.name;x.preview=null;entDrawForm();
+ if(x.mode==="merge")entDo("preview");
 }
 function renderEntitiesTab(){
  if(!PL){$("#pe-groups").innerHTML=plEmpty;return}
@@ -1305,7 +1466,7 @@ function entFit(){
 const entShow=show;show=v=>{entShow(v);if(v==="entities"&&PL&&exReady)entFit()};
 if(typeof addEventListener==="function")addEventListener("resize",()=>{if(view==="entities"&&PL&&exReady)entFit()});
 function entSelect(id,focus){
- exSel=entById().has(id)?id:"";exNotesLimit=ENT_NOTES;const i=exRows.findIndex(e=>e.id===exSel);if(i>=0)exActive=i;
+ exSel=entById().has(id)?id:"";exNotesLimit=ENT_NOTES;if(exEdit&&exEdit.id!==exSel){exEdit=null;exRedrawLater=false}if(exFlash&&exFlash.id&&exFlash.id!==exSel)exFlash=null;const i=exRows.findIndex(e=>e.id===exSel);if(i>=0)exActive=i;
  entDrawList(true);entDrawDetail();entReveal();const pane=$("#ent-detail");if(pane)pane.scrollTop=0;
  const say=$("#ent-say");if(say)say.textContent=exSel?`Showing ${entById().get(exSel).name}.`:"";
  if(focus)$("#ent-title")?.focus?.({preventScroll:true});
@@ -1318,13 +1479,18 @@ function entMove(to){
 }
 document.addEventListener("click",e=>{
  const t=e.target;if(!t?.closest)return;
+ const open=t.closest("[data-ent-open]");if(open){if(!exEdit)entOpen(open.dataset.entOpen,open.dataset.entI);return}
+ const act=t.closest("[data-ent-do]");if(act){entDo(act.dataset.entDo);return}
+ const pick=t.closest("[data-ent-pick],[data-ent-new]");if(pick){entPick(pick.dataset.entPick||"",pick.dataset.entNew||"");return}
  const k=t.closest("[data-ent-kind]");if(k){exKind=k.dataset.entKind||"";exActive=0;$("#ent-list").scrollTop=0;renderEntitiesTab();return}
  if(t.closest("[data-ent-reset]")){exQ="";exKind="";exRel="";exActive=0;$("#ent-q").value="";$("#ent-rel").value="";renderEntitiesTab();$("#ent-q").focus?.();return}
  if(t.closest("[data-ent-back]")){entSelect("",false);$("#ent-list").focus?.();return}
  if(t.closest("[data-ent-more]")){exNotesLimit+=ENT_NOTES*2;entDrawDetail();return}
  const row=t.closest("[data-ent-id]");if(row){if(view!=="entities")show("entities");entSelect(row.dataset.entId,!row.classList?.contains?.("ent-row"))}
 });
-document.addEventListener("input",e=>{if(e.target?.id!=="ent-q")return;exQ=e.target.value;exActive=0;$("#ent-list").scrollTop=0;renderEntitiesTab()});
+document.addEventListener("input",e=>{
+ const f=e.target?.dataset?.entF;if(f&&exEdit){exEdit.v[f]=e.target.value;if(f==="q"){const box=$("#ent-pick");if(box)box.innerHTML=entPickHtml()}else if(f==="opt"){exEdit.v.other="";exEdit.v.otherName="";entDrawForm()}return}
+ if(e.target?.id!=="ent-q")return;exQ=e.target.value;exActive=0;$("#ent-list").scrollTop=0;renderEntitiesTab()});
 document.addEventListener("change",e=>{const id=e.target?.id;if(id==="ent-rel")exRel=e.target.value;else if(id==="ent-sort")exSort=e.target.value;else return;exActive=0;$("#ent-list").scrollTop=0;renderEntitiesTab()});
 document.addEventListener("keydown",e=>{
  const t=e.target;if(view!=="entities"||!t||(t.id!=="ent-q"&&t.id!=="ent-list")||e.altKey||e.metaKey||e.ctrlKey)return;

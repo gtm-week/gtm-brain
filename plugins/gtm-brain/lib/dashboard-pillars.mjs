@@ -185,7 +185,7 @@ function entityCards(root, registry, admin, notes, contexts) {
     // one line of who or what it is: the role and the company, else what the schema says it is, else the brief's first sentence
     const what = known.get(kind === "person" ? "role" : kind === "organization" ? "industry" : kind === "offering" ? "what_it_is" : kind === "meeting" || kind === "event" ? "date" : "category") || null;
     const line = kind === "person" ? (what && company ? `${cut(what, 60)} at ${company}` : what ? cut(what, 90) : company ? `Works at ${company}` : null) : what ? cut(what, 90) : null;
-    details[e.id] = { fields: all, links: mine, brief, compiled: e._fm?.compiled_at || null };
+    details[e.id] = { fields: all, links: mine, brief, compiled: e._fm?.compiled_at || null, aliases: e.aliases || [], emails: e.emails || [] };   // every other name and email: the edit form sends the whole list
     return { id: e.id, name: e.name, kind, subtype: e.subtype || null, aliases: (e.aliases || []).slice(0, 6), email: (e.emails || [])[0] || null, emails: (e.emails || []).slice(0, 4),
       fields: key, relation: [us, ...(toUs.get(e.id) || [])].filter(Boolean).join(", ") || null, rel: [...new Set([us === "our team" ? "team" : us, ...(keys.get(e.id) || [])].filter(Boolean))],
       line: line || (brief[0] ? firstSentence(brief[0], 120) : null), described: !!line, company, missing: all.filter(f => f.required && !f.value).length, links: mine.length,
