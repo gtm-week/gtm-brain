@@ -114,7 +114,8 @@ function answerName(root, q, { answer, who, people, companies }) {
     writeFileSync(batch, JSON.stringify([{ context: q.context, retracts: q.id, kind: "decision", content: answer, people, companies, ...(fresh.length ? { new_names: fresh } : {}) }]));
     const r = spawnSync(process.execPath, ["--disable-warning=ExperimentalWarning", fileURLToPath(new URL("../gtm-brain-remember/remember.mjs", import.meta.url)), root, "--by", who, "--batch", batch], { cwd: root, encoding: "utf8", timeout: 120000, maxBuffer: 1 << 22 });
     const said = [r.stdout, r.stderr].map(s => String(s || "").trim()).filter(Boolean).join("\n");
-    if (r.status !== 0) { const e = new Error(said || "the answer could not be saved"); e.code = r.status === 2 ? 2 : 1; throw e; }
+    // held by the saving rules (a one-word name, say): the question stays open, and its answer comes back here, not to remember
+    if (r.status !== 0) { const e = new Error(`${said || "the answer could not be saved"}${r.status === 2 ? `\nNot answered yet: ${q.id} is still open and nothing was written. When the person has replied, call answer_question again with question ${q.id} (not remember).` : ""}`); e.code = r.status === 2 ? 2 : 1; throw e; }
     return { text: said, changed: true };
   } finally { try { rmSync(batch, { force: true }); } catch {} }
 }
@@ -122,11 +123,20 @@ function answerName(root, q, { answer, who, people, companies }) {
 function settle(root, { outcome, name, other, kind, subtype, resolution, who }) {
   const registry = lib.readNames(root), a = entityOf(registry, name), b = entityOf(registry, other);
   const said = { a: a?.name || one(name), b: b?.name || one(other) };
+  // one entity under both names: "different" would need a split, which no answer does by itself
+  if (outcome === "different" && a && b && a.id === b.id && one(name).toLowerCase() !== one(other).toLowerCase()) {
+    const alias = [name, other].map(one).find(n => n.toLowerCase() !== a.name.toLowerCase() && n !== a.id) || one(name);
+    throw new Error(`"${alias}" is saved as another name of "${a.name}" (${a.id}), so there are not two entries to keep apart. Nothing written. Next: update_entity with entity ${a.id}, by and remove {"aliases":["${alias}"]}, then answer_question again with the same arguments.`);
+  }
   if (said.a.toLowerCase() === said.b.toLowerCase() && !(a && b && a.id !== b.id)) throw new Error("name and other are the same name: pass the two names the question compares");
   if (outcome === "different") {
-    const typed = a ? {} : { kind: kind || b?.kind || "person", ...(subtype !== undefined ? { subtype } : !kind && b?.subtype ? { subtype: b.subtype } : {}) };
-    const e = lib.addName(root, said.a, { ...typed, not: [said.b] });
-    return { people: [e.name, ...(b ? [b.name] : [])], line: `${a ? `"${e.name}"` : `"${e.name}" is now its own ${e.subtype || e.kind}`} and "${said.b}" are kept separate and will not be suggested as one again.` };
+    // Whichever of the two is not an entity yet becomes one, of the known one's kind: a name left out of the
+    // registry is asked about again ("looks like ...") the next time a note names it.
+    const typed = known => ({ kind: kind || known?.kind || "person", ...(subtype !== undefined ? { subtype } : !kind && known?.subtype ? { subtype: known.subtype } : {}) });
+    const first = lib.addName(root, said.a, { ...(a ? {} : typed(b)), not: [said.b] });
+    const second = b || lib.addName(root, said.b, { ...typed(a), not: [first.name] });
+    const made = [a ? null : first, b ? null : second].filter(Boolean).map(e => `"${e.name}" is now its own ${e.subtype || e.kind}. `).join("");
+    return { people: [first.name, second.name], line: `${made}"${first.name}" and "${second.name}" are kept separate and will not be suggested as one again.` };
   }
   if (a && b && a.id === b.id) return { people: [b.name], line: `"${one(name)}" already is "${b.name}".` };
   if (a && b) {
@@ -155,7 +165,10 @@ export function answerQuestion(root, args) {
   if (outcome && (!one(name) || !one(other))) throw new Error("outcome needs name and other: the two names the question compares");
   if (!object(resolution)) throw new Error("resolution is an object");
   const people = strings(args.people, "people"), companies = strings(args.companies, "companies");
-  const { all, closedBy, open } = questions(root), q = all.find(m => m.id === question);
+  const { all, closedBy, open } = questions(root);
+  let q = all.find(m => m.id === question);
+  // a question that was reworded (the new wording supersedes it) is answered through the wording in force
+  for (let next; q?.kind === "question" && (next = closedBy.get(q.id)) && next.kind === "question" && next.supersedes === q.id && !next.retracts;) q = next;
   if (!q) throw new Error(`no note ${question} in this brain; answer_question without arguments lists the open questions`);
   if (q.kind !== "question") throw new Error(`${question} is a ${q.kind || "note"}, not a question; answer_question without arguments lists the open questions`);
   const closer = closedBy.get(q.id);

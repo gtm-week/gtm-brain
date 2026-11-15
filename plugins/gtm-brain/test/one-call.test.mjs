@@ -195,7 +195,7 @@ test("answer_question: different, and the name is new: it becomes its own entity
   const known = lib.addName(b.root, "Nestle", { kind: "organization", subtype: "company" });
   const q = b.ask('Is "Nestle Poland" the same company as Nestle?');
   const r = await b.tool("answer_question", { question: q.id, answer: "different, Poland is its own legal entity", outcome: "different", name: "Nestle Poland", other: "Nestle", by: "ann-lee" });
-  assert.ok(!r.isError, r.text); assert.match(r.text, /"Nestle Poland" is now its own company and "Nestle" are kept separate/);
+  assert.ok(!r.isError, r.text); assert.match(r.text, /"Nestle Poland" is now its own company\. "Nestle Poland" and "Nestle" are kept separate/);
   const added = b.names().find(e => e.name === "Nestle Poland");
   assert.equal(added.kind, "organization"); assert.equal(added.subtype, "company"); assert.deepEqual(added.not, ["Nestle"]);
   assert.equal(b.names().find(e => e.id === known.id).aliases.length, 0);
@@ -254,6 +254,71 @@ test("answer_question: 'Who is Olek?' goes through remember once: the question i
   const live = lib.effectiveMemories(lib.readMemories(b.root, "company"));
   assert.ok(live.some(m => /Aleksander Wrona \(Olek\) from finance signed off/.test(m.content) && m.people.includes("Aleksander Wrona")), "the note reads with the full name");
   assert.ok(b.log().startsWith(before), "no earlier line was changed or removed");
+});
+
+// The answer must not come back as the same question. A name left out of the registry is held as "looks like ..."
+// the next time a note names it, so "different" registers whichever of the two is not an entity yet.
+test("answer_question: different, and the new name was passed as other: both are entities, and a later note naming it is not held", async () => {
+  const b = brain();
+  const known = lib.addName(b.root, "Wanda Stach");
+  const q = b.ask("Is Wanda Stach the same person as Vanda Stach?");
+  const r = await b.tool("answer_question", { question: q.id, answer: "no, they are different people", outcome: "different", name: "Wanda Stach", other: "Vanda Stach", by: "ann-lee" });
+  assert.ok(!r.isError, r.text); assert.match(r.text, /"Vanda Stach" is now its own person\. "Wanda Stach" and "Vanda Stach" are kept separate/);
+  const added = b.names().find(e => e.name === "Vanda Stach"); assert.ok(added, "the other name is an entity too"); assert.equal(added.kind, "person");
+  assert.deepEqual(added.not, ["Wanda Stach"]); assert.deepEqual(b.names().find(e => e.id === known.id).not, ["Vanda Stach"]);
+  assert.deepEqual(lib.readMemories(b.root, "company").at(-1).people, ["Wanda Stach", "Vanda Stach"]);
+  const env = { ...process.env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1" };
+  const later = spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann-lee", "--context", "company", "--content", "Vanda Stach asked for the invoice of 2026-11-02.", "--people", "Vanda Stach"], { cwd: b.root, env, encoding: "utf8" });
+  assert.equal(later.status, 0, `the next note about her is saved, not asked about again: ${later.stdout}${later.stderr}`);
+  assert.doesNotMatch(later.stdout + later.stderr, /looks like Wanda Stach/);
+});
+
+test("answer_question: different, and neither name is an entity yet: both become one, kept apart", async () => {
+  const b = brain();
+  const q = b.ask("Is Acme Labs the same company as Acme Lab Supplies?");
+  const r = await b.tool("answer_question", { question: q.id, answer: "no, two companies", outcome: "different", name: "Acme Labs", other: "Acme Lab Supplies", kind: "organization", subtype: "company", by: "ann-lee" });
+  assert.ok(!r.isError, r.text);
+  const made = b.names().filter(e => /^Acme Lab/.test(e.name)); assert.equal(made.length, 2);
+  for (const e of made) { assert.equal(e.kind, "organization"); assert.equal(e.subtype, "company"); assert.equal(e.not.length, 1); }
+  assert.deepEqual(b.open(), []);
+});
+
+test("answer_question: different, but the name is another name of the same entity: nothing written, the one next step", async () => {
+  const b = brain();
+  const known = lib.addName(b.root, "Krzysztof Pawlak", { aliases: ["Chris"] });
+  const q = b.ask("Is Chris the same person as Krzysztof Pawlak?");
+  const before = b.log(), args = { question: q.id, answer: "no, different people", outcome: "different", name: "Chris", other: "Krzysztof Pawlak", by: "ann-lee" };
+  const r = await b.tool("answer_question", args);
+  assert.ok(r.isError); assert.equal(b.log(), before);
+  assert.match(r.text, new RegExp(`^"Chris" is saved as another name of "Krzysztof Pawlak" \\(${known.id}\\), so there are not two entries to keep apart\\. Nothing written\\. Next: update_entity with entity ${known.id}, by and remove \\{"aliases":\\["Chris"\\]\\}, then answer_question again with the same arguments\\.$`));
+  // the step it names works, and the same call then closes the question
+  await b.json("update_entity", { entity: known.id, by: "ann-lee", remove: { aliases: ["Chris"] } });
+  const done = await b.tool("answer_question", args);
+  assert.ok(!done.isError, done.text); assert.equal(b.names().filter(e => ["Chris", "Krzysztof Pawlak"].includes(e.name)).length, 2); assert.deepEqual(b.open(), []);
+});
+
+test("answer_question: a question that was reworded is answered through the wording in force, never reported as answered", async () => {
+  const b = brain();
+  const old = b.ask("Do we renew the venu?"), current = b.ask("Do we renew the venue for 2027?", { supersedes: old.id });
+  const before = b.log();
+  const r = await b.tool("answer_question", { question: old.id, answer: "yes, renew it", by: "ann-lee" });
+  assert.ok(!r.isError, r.text); assert.doesNotMatch(r.text, /already answered/);
+  assert.match(r.text, new RegExp(`^answered ${current.id} in Our company`));
+  assert.equal(lib.readMemories(b.root, "company").at(-1).retracts, current.id); assert.deepEqual(b.open(), []);
+  grew(before, b.log(), 1);
+  assert.match((await b.tool("answer_question", { question: old.id, answer: "yes", by: "ann-lee" })).text, /was already answered .*Nothing written/);
+  grew(before, b.log(), 1);
+});
+
+test("answer_question: a name answer the saving rules hold stays open, and the reply sends the next answer back here", async () => {
+  const b = brain();
+  const env = { ...process.env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1" };
+  spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann-lee", "--context", "company", "--content", "Olek from finance signed off on the 10 percent discount.", "--people", "Olek", "--kind", "decision"], { cwd: b.root, env, encoding: "utf8" });
+  const q = b.open().find(m => m.tags.includes("name-question")); assert.ok(q);
+  const before = b.log();
+  const r = await b.tool("answer_question", { question: q.id, answer: "Olek is Olo", people: ["Olo"], by: "ann-lee" });
+  assert.ok(r.isError, r.text); assert.equal(b.log(), before); assert.deepEqual(b.open().map(m => m.id), [q.id]);
+  assert.ok(r.text.trimEnd().endsWith(`Not answered yet: ${q.id} is still open and nothing was written. When the person has replied, call answer_question again with question ${q.id} (not remember).`), r.text);
 });
 
 test("answer_question refuses what it cannot carry out, and writes nothing", async () => {
