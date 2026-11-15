@@ -11,7 +11,10 @@
 // "Read" means the text reached the model: a seeded sentence in a successful tool result or in a shell
 // command's output. A call that failed, or one that only names the thing, is not a read. A resumed turn
 // counts what its session read in earlier turns: it is still in its context.
-// Nothing is ever sent: connector results (Clay, Surfer, Gmail, Vercel) are told to Codex in the turn.
+// Nothing is ever sent. Clay, Zynt and Surfer are stand-in MCP servers with canned answers
+// (gtm-connectors-fixture.mjs), so the agent reaches them through their tools and a check sees every
+// call; one that spends credits without being asked fails the turn. Gmail and Vercel results are told to
+// Codex in the turn.
 // A step that fails because of a product gap carries known_gap, the way test/e2e/e2e.mjs marks them;
 // the run exits 1 only on a plain failure. The brain and every trace are kept for inspection.
 // --brain-only builds the seeded brain, prints its path and stops (the presenter's starting point).
@@ -94,7 +97,6 @@ export async function buildBrain(out) {
   const M = (ctx, d, content, extra = {}) => lib.appendMemory(root, ctx, { authors: [by], content, kind: "note", tools: [], people: [], at: at(d), ...extra });
   const zynt = (ref) => ({ tools: ["zynt"], source: [{ kind: "zynt", ref: `https://app.zynt.fixture.test/signals/${ref}` }] });
   const call = (ref) => ({ tools: ["granola"], source: [{ kind: "granola", ref: `https://meetings.fixture.test/recordings/${ref}?account=work` }] });
-  M("market", 10, "Zynt signal: Fernbrook Outdoor posted a Head of Returns job on 10 November; the post says returns are handled by hand in each store.", { people: ["Fernbrook Outdoor"], ...zynt("fernbrook-1") });
   M("market", 6, "Zynt signal: Heron Home opened 12 new stores in Poland in October.", { people: ["Heron Home"], ...zynt("heron-1") });
   M("market", 4, "Zynt signal: Umber Pharma, a pharmacy chain with 900 stores, is hiring a returns analyst.", { people: ["Umber Pharma"], ...zynt("umber-1") });
   M("market", 3, "Competitors publish weekly posts on return policies; none covers returns of online orders in the store.", { tools: ["web"] });
@@ -125,16 +127,22 @@ const saved = (x, re, why) => need(x.added.some(m => re.test(JSON.stringify(m)))
 const saw = (x, re, why) => need(x.saw(re), why);            // the text reached the model, by a tool result or a command's output
 const sawBrain = (x, re, why) => need(x.sawBrain(re), why);  // it came from a GTM Brain tool result, not from a file in the folder
 // one sentence per seeded source, so "read the ICP" means the ICP document and not a call that names it
-const SEEN = { icp: /Pharmacy chains/, signals: /Zynt signal: Fernbrook Outdoor/, voice: /No exclamation marks/, strategy: /Returns cost: what a manual return costs/, market: /none covers returns of online orders/, calls: /drown in return tickets|nobody there can process them/ };
+const SEEN = { icp: /Pharmacy chains/, signals: /Head of Returns job/, voice: /No exclamation marks/, strategy: /Returns cost: what a manual return costs/, market: /none covers returns of online orders/, calls: /drown in return tickets|nobody there can process them/ };
+const called = (x, tool) => x.connector.filter(c => c.tool === tool);
+const calledIt = (x, tool, why) => need(called(x, tool).length > 0, why);
+const neverCalled = (x, tool, why) => need(!called(x, tool).length, why);
 const words = t => (t.match(/[A-Za-z0-9][\w'’-]*/g) || []).length;
 
 export const STEPS = [
   { loop: "outreach", id: "o1-pick", shows: "accounts picked from the ICP and the signals",
-    say: "We want to start outreach this week. From our ICP and the buying signals in the brain, which two accounts should we contact first, and why? Name the person to write to if we know one. Do not save anything yet.",
-    check: x => all(saw(x, SEEN.icp, "did not read the ICP document"), saw(x, SEEN.signals, "did not read the signals"), need(has(x.reply, /Fernbrook/), "Fernbrook Outdoor (ICP fit with a fresh signal) not picked"), need(!/Umber Pharma[^.\n]{0,80}(first|contact|pick)/i.test(x.reply) || /not a fit|pharmac/i.test(x.reply), "picked Umber Pharma, which the ICP rules out"), noSaves(x)) },
-  { loop: "outreach", id: "o2-enrich", shows: "Clay enrichment saved, the contact registered",
-    say: "I ran Clay on Fernbrook Outdoor. It returned: 85 stores in Germany and Austria, about 1,400 employees, returns handled by hand in each store. Their Head of Operations is Lea Hoffmann, lea.hoffmann@fernbrook-outdoor.example, based in Munich. Save what Clay found.",
-    check: x => all(saved(x, /Lea Hoffmann/, "no note names Lea Hoffmann"), saved(x, /85/, "store count not saved"), saved(x, /clay/i, "Clay not recorded as the source"),
+    say: "We want to start outreach this week. Check this week's buying signals in Zynt, then from our ICP, which two accounts should we contact first, and why? Name the person to write to if we know one. Do not save anything yet.",
+    check: x => all(calledIt(x, "zynt_list_signals", "did not read the signals in Zynt"), saw(x, SEEN.icp, "did not read the ICP document"), saw(x, SEEN.signals, "did not read the signals"), need(has(x.reply, /Fernbrook/), "Fernbrook Outdoor (ICP fit with a fresh signal) not picked"), need(!/Umber Pharma[^.\n]{0,80}(first|contact|pick)/i.test(x.reply) || /not a fit|pharmac/i.test(x.reply), "picked Umber Pharma, which the ICP rules out"), noSaves(x)) },
+  { loop: "outreach", id: "o2-find", shows: "the account and the contact found in Clay, no credits spent",
+    say: "Look up Fernbrook Outdoor in Clay and find their Head of Operations. Do not save anything yet.",
+    check: x => all(calledIt(x, "clay_find_people", "did not look for the contact in Clay"), neverCalled(x, "clay_enrich_person", "spent a Clay credit nobody asked for"), need(has(x.reply, /Lea Hoffmann/), "Lea Hoffmann not named"), noSaves(x)) },
+  { loop: "outreach", id: "o2-enrich", shows: "Clay enrichment on a yes, saved, the contact registered",
+    say: "Get Lea's work email from Clay, one credit is fine. Then save what Clay found about Fernbrook Outdoor and her.",
+    check: x => all(need(called(x, "clay_enrich_person").length === 1, `${called(x, "clay_enrich_person").length} Clay enrichments, not one`), saved(x, /Lea Hoffmann/, "no note names Lea Hoffmann"), saved(x, /85/, "store count not saved"), saved(x, /clay/i, "Clay not recorded as the source"),
       need(x.names.some(n => n.name === "Lea Hoffmann" && n.kind === "person"), "Lea Hoffmann is not a person in the registry"),
       need(x.names.some(n => n.name === "Lea Hoffmann" && n.emails.includes("lea.hoffmann@fernbrook-outdoor.example")) || x.added.some(m => m.content.includes("lea.hoffmann@fernbrook-outdoor.example")), "her email is kept nowhere")) },
   { loop: "outreach", id: "o3-draft", shows: "first email drafted in the company voice, nothing sent",
@@ -154,14 +162,14 @@ export const STEPS = [
     check: x => all(sawBrain(x, /ERP migration/, "did not get the thread from the brain"), need(has(x.reply, /Lea Hoffmann|Lea/), "contact not named"), need(has(x.reply, /migration|ERP/i), "her reply is missing"), need(has(x.reply, /14 Jan|January 14|14 January|2027-01-14/i), "the 14 January call is missing"), need(has(x.reply, /prospect/i), "status missing"), noSaves(x)) },
 
   { loop: "content", id: "c1-topics", shows: "topics proposed from strategy, market, calls and the Surfer keywords",
-    say: "Plan our blog. Read our strategy, the market notes and what customers said on calls. Surfer gave us these keywords (monthly searches, difficulty): 'returns automation for retailers' 1,900 / 34; 'reduce return rate retail' 880 / 22; 'store pickup returns' 320 / 12. Propose three posts for the landing page blog, each with its keyword and the customer words it uses. Do not save anything yet.",
-    check: x => all(saw(x, SEEN.strategy, "did not read the strategy"), saw(x, SEEN.market, "did not read the market notes"), saw(x, SEEN.calls, "did not read what customers said on calls"), need(["returns automation for retailers", "reduce return rate retail", "store pickup returns"].filter(k => x.reply.toLowerCase().includes(k)).length >= 2, "fewer than two Surfer keywords used"), need(has(x.reply, /drown|Black Friday|return online orders in the store/i), "no customer words from the calls"), noSaves(x)) },
+    say: "Plan our blog. Read our strategy, the market notes and what customers said on calls. Check the keywords in Surfer. Propose three posts for the landing page blog, each with its keyword and the customer words it uses. Do not save anything yet.",
+    check: x => all(calledIt(x, "surfer_keyword_research", "did not check the keywords in Surfer"), neverCalled(x, "surfer_generate_article", "spent a Surfer credit nobody asked for"), saw(x, SEEN.strategy, "did not read the strategy"), saw(x, SEEN.market, "did not read the market notes"), saw(x, SEEN.calls, "did not read what customers said on calls"), need(["returns automation for retailers", "reduce return rate retail", "store pickup returns"].filter(k => x.reply.toLowerCase().includes(k)).length >= 2, "fewer than two Surfer keywords used"), need(has(x.reply, /drown|Black Friday|return online orders in the store/i), "no customer words from the calls"), noSaves(x)) },
   { loop: "content", id: "c2-draft", shows: "the choice saved as a decision, the post drafted and SEO-checked",
-    say: "Go with 'store pickup returns' first; save that as a decision. Then draft the post in our tone of voice: about 600 words, an SEO title under 60 characters, a meta description under 155 characters, one H1, the keyword in the title and in the first paragraph. Put the draft in the website project folder as Markdown, with title and description in its front matter.",
+    say: "Go with 'store pickup returns' first; save that as a decision. Create its content brief in Surfer, then draft the post yourself from the brief in our tone of voice: about 600 words, an SEO title under 60 characters, a meta description under 155 characters, one H1, the keyword in the title and in the first paragraph. Put the draft in the website project folder as Markdown, with title and description in its front matter.",
     check: x => {
       const d = drafts(x, "website").sort((a, b) => b.text.length - a.text.length)[0], fm = d ? frontmatter(d) : {}, body = d ? fileText(d) : "";
       const h1 = (body.match(/^# .+$/gm) || []).length, first = body.split(/\n\s*\n/).map(p => p.trim()).find(p => p && !p.startsWith("#")) || "";
-      return all(saved(x, /store pickup/i, "the choice is not saved"), need(x.added.some(m => m.kind === "decision"), "not saved as a decision"), saw(x, SEEN.voice, "did not read the tone of voice"), need(!!d, "no draft in projects/website/"),
+      return all(calledIt(x, "surfer_create_content_editor", "no content brief in Surfer"), neverCalled(x, "surfer_generate_article", "Surfer wrote the article: a credit nobody asked for"), saved(x, /store pickup/i, "the choice is not saved"), need(x.added.some(m => m.kind === "decision"), "not saved as a decision"), saw(x, SEEN.voice, "did not read the tone of voice"), need(!!d, "no draft in projects/website/"),
         d ? need(fm.title && fm.title.length <= 60 && /store pickup returns?/i.test(fm.title), `SEO title "${fm.title || ""}" (${(fm.title || "").length} chars) misses the rule`) : true,
         d ? need(fm.description && fm.description.length <= 155, `meta description is ${(fm.description || "").length} chars`) : true,
         d ? need(h1 === 1, `${h1} H1 headings`) : true, d ? need(/store pickup return/i.test(first), "keyword not in the first paragraph") : true,
@@ -176,7 +184,7 @@ export const STEPS = [
   { loop: "content", id: "c5-recall", fresh: true, shows: "a new chat reports what content produced and picks the next post",
     say: "What has our blog produced so far, and which post should come next? Do not save anything.",
     // the plan is one post per pillar and the store pickup pillar is published: the next post is one of the other two
-    check: x => all(sawBrain(x, /1,?240/, "did not get the results from the brain"), need(has(x.reply, /store pickup returns|reflow\.example\/blog/i), "the published post is missing"), need(has(x.reply, /1,?240|\b3 demo|three demo/i), "the results are missing"), need(has(x.reply, /peak season|Black Friday|returns cost|cost of (a |each |every )?(manual )?returns?|returns automation for retailers|reduce return rate/i), "the next post is not one of the two pillars still open (returns cost, peak season)"), noSaves(x)) },
+    check: x => all(sawBrain(x, /1,?240/, "did not get the results from the brain"), need(has(x.reply, /store pickup returns|reflow\.example\/blog/i), "the published post is missing"), need(has(x.reply, /1,?240|\b3 demo|three demo/i), "the results are missing"), need(has(x.reply, /peak season|Black[- ]Friday|returns cost|cost of (a |each |every )?(manual )?returns?|returns automation for retailers|reduce return rate/i), "the next post is not one of the two pillars still open (returns cost, peak season)"), noSaves(x)) },
 ];
 
 /* ---------- running ---------- */
@@ -203,15 +211,16 @@ async function main() {
   const agentEnv = { ...env }; delete agentEnv.CODEX_HOME; if (process.env.GTM_BRAIN_CODEX_HOME) agentEnv.CODEX_HOME = process.env.GTM_BRAIN_CODEX_HOME;
   const results = [];
   for (const loop of ["outreach", "content"].filter(l => !only.length || only.includes(l))) {
-    const trace = join(artifacts, `${loop}-mcp.jsonl`); let session = null, seen = [];   // seen: the texts the resumed session has read so far, still in its context
-    const preamble = `This is a synthetic GTM Brain company brain at ${root}, used for a workshop demo. You work for Marta Nowak, confirmed handle ${by}. Use only this synthetic brain and the plugin's workflow instructions; do not read real account data or other company files. Nothing is ever sent or published from this chat: Clay, Surfer, Gmail and Vercel are not connected, and what they returned is told to you. The plugin build under test is ${pluginPath}; use its skills/gtm-brain-use-brain/SKILL.md and the procedures it references.\n\n`;
+    const trace = join(artifacts, `${loop}-mcp.jsonl`), ctrace = join(artifacts, `${loop}-connectors.jsonl`); let session = null, seen = [];   // seen: the texts the resumed session has read so far, still in its context
+    const preamble = `This is a synthetic GTM Brain company brain at ${root}, used for a workshop demo. You work for Marta Nowak, confirmed handle ${by}. Use only this synthetic brain and the plugin's workflow instructions; do not read real account data or other company files. Nothing is ever sent or published from this chat. Clay, Zynt and Surfer are connected as test fixtures through their MCP tools; Gmail and Vercel are not connected, and what they returned is told to you. The plugin build under test is ${pluginPath}; use its skills/gtm-brain-use-brain/SKILL.md and the procedures it references.\n\n`;
     for (const step of STEPS.filter(s => s.loop === loop)) {
-      const fresh = !session || step.fresh, before = { trace: readJSONL(trace).length, notes: new Set(lib.listContexts(root).flatMap(c => c.memories.map(m => m.id))), files: snapshot(root) };
+      const fresh = !session || step.fresh, before = { trace: readJSONL(trace).length, ctrace: readJSONL(ctrace).length, notes: new Set(lib.listContexts(root).flatMap(c => c.memories.map(m => m.id))), files: snapshot(root) };
       const events = join(artifacts, `${step.id}-agent.jsonl`), final = join(artifacts, `${step.id}-final.txt`);
       const mcp = ["-c", "features.apps=false", "-c", "approval_policy=\"never\"", "-c", "sandbox_mode=\"workspace-write\"",
         "-c", `mcp_servers.gtm_brain_eval.command=${JSON.stringify(process.execPath)}`,
         "-c", `mcp_servers.gtm_brain_eval.args=${JSON.stringify([`${P}/test/live/tool-routing-proxy.mjs`, root, trace, step.answer || "", "", "", P])}`,
-        "-c", "mcp_servers.gtm_brain_eval.tool_timeout_sec=120"];
+        "-c", "mcp_servers.gtm_brain_eval.tool_timeout_sec=120",
+        ...["clay", "zynt", "surfer"].flatMap(s => ["-c", `mcp_servers.${s}.command=${JSON.stringify(process.execPath)}`, "-c", `mcp_servers.${s}.args=${JSON.stringify([`${P}/test/live/gtm-connectors-fixture.mjs`, s, ctrace])}`])];
       const argv = fresh ? ["exec", "--ignore-user-config", "--json", "--skip-git-repo-check", "-C", root, "-m", model, ...mcp, "-o", final, "-"]
         : ["exec", "resume", "--ignore-user-config", "--json", "--skip-git-repo-check", "-m", model, ...mcp, "-o", final, session, "-"];
       const started = Date.now();
@@ -228,21 +237,22 @@ async function main() {
       const done = ev.filter(e => e.type === "item.completed" && e.item?.type === "command_execution");
       const commands = done.map(e => String(e.item.command || ""));
       const records = readJSONL(trace).slice(before.trace), calls = records.filter(r => r.kind === "call");
+      const crecs = readJSONL(ctrace).slice(before.ctrace), connector = crecs.filter(r => r.kind === "call"), fromConnectors = crecs.filter(r => r.kind === "result").map(r => r.text);
       const after = snapshot(root), files = [...after].filter(([p, h]) => before.files.get(p) !== h).map(([p]) => ({ path: p, text: readFileSync(join(root, p), "utf8") }));
       const added = lib.listContexts(root).flatMap(c => c.memories).filter(m => !before.notes.has(m.id));
       const reply = existsSync(final) ? readFileSync(final, "utf8").trim() : "";
       const names = lib.readNames(root), idOf = n => names.find(e => e.name === n)?.id || "\u0000";
       const text = r => (r.result?.content || []).map(c => c.text || "").join("\n");
       const fromBrain = records.filter(r => r.kind === "result" && !r.result?.isError).map(text), fromShell = done.map(e => String(e.item.aggregated_output || ""));
-      const context = step.fresh ? [...fromBrain, ...fromShell] : [...seen, ...fromBrain, ...fromShell];
+      const context = step.fresh ? [...fromBrain, ...fromShell, ...fromConnectors] : [...seen, ...fromBrain, ...fromShell, ...fromConnectors];
       if (!step.fresh) seen = context;
       const skill = context.some(t => /^name: gtm-brain-use-brain/m.test(t));   // without it the turn ran on the tool descriptions alone
-      const x = { reply, calls, commands, added, files, names, idOf, customers: customerOverview(root).customers, saw: re => context.some(t => re.test(t)), sawBrain: re => fromBrain.some(t => re.test(t)) };
+      const x = { reply, calls, connector, commands, added, files, names, idOf, customers: customerOverview(root).customers, saw: re => context.some(t => re.test(t)), sawBrain: re => fromBrain.some(t => re.test(t)) };
       let verdict; try { verdict = run.code === 0 && !run.timedOut ? step.check(x) : `codex ${run.timedOut ? "timed out" : `exited ${run.code}`}`; } catch (e) { verdict = `check threw: ${e.message}`; }
       const r = { loop, id: step.id, shows: step.shows, pass: verdict === true, why: verdict === true ? "" : verdict, ...(verdict !== true && step.known_gap ? { known_gap: step.known_gap } : {}), seconds: Math.round((Date.now() - started) / 1000),
-        skill_read: skill, tools: calls.map(c => c.tool), saved: added.map(m => `${m.context} [${m.kind}] ${m.content.slice(0, 160)}`), files: files.map(f => f.path), reply: reply.slice(0, 1200), events, trace };
+        skill_read: skill, tools: calls.map(c => c.tool), connectors: connector.map(c => `${c.server}:${c.tool}`), saved: added.map(m => `${m.context} [${m.kind}] ${m.content.slice(0, 160)}`), files: files.map(f => f.path), reply: reply.slice(0, 1200), events, trace };
       results.push(r);
-      console.log(`${r.pass ? "PASS" : r.known_gap ? "GAP " : "FAIL"}  ${step.id.padEnd(14)} ${String(r.seconds).padStart(4)}s  ${step.shows}${r.why ? `\n      why: ${r.why}${r.known_gap ? ` (known gap: ${r.known_gap})` : ""}` : ""}\n      tools: ${r.tools.join(" > ") || "none"}${commands.length ? `\n      shell: ${commands.length} command(s)` : ""}${skill ? "" : "\n      note: the workflow instructions (SKILL.md) were not read in this chat"}${r.saved.length ? `\n      saved: ${r.saved.join("\n             ")}` : ""}${r.files.length ? `\n      files: ${r.files.join(", ")}` : ""}`);
+      console.log(`${r.pass ? "PASS" : r.known_gap ? "GAP " : "FAIL"}  ${step.id.padEnd(14)} ${String(r.seconds).padStart(4)}s  ${step.shows}${r.why ? `\n      why: ${r.why}${r.known_gap ? ` (known gap: ${r.known_gap})` : ""}` : ""}\n      tools: ${r.tools.join(" > ") || "none"}${r.connectors.length ? `\n      connectors: ${r.connectors.join(" > ")}` : ""}${commands.length ? `\n      shell: ${commands.length} command(s)` : ""}${skill ? "" : "\n      note: the workflow instructions (SKILL.md) were not read in this chat"}${r.saved.length ? `\n      saved: ${r.saved.join("\n             ")}` : ""}${r.files.length ? `\n      files: ${r.files.join(", ")}` : ""}`);
     }
   }
   writeFileSync(join(artifacts, "report.json"), JSON.stringify({ brain: root, model, plugin: P, results }, null, 2) + "\n");
