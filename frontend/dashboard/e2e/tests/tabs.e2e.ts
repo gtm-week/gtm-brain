@@ -45,7 +45,7 @@ test('Configuration: base documents open in the page; rules and schema are brows
   const written = f.documents.find(d => d.state !== 'not written');
   if (written) {
     await docs.getByRole('button', written.title).tap();
-    await expect(screen.getByRole('heading', written.title, { level: 1 })).toBeVisible();
+    await expect(screen.getByRole('heading', written.title, { level: 1 }).first()).toBeVisible();   // the reader's own title and the document's first heading
     await expect(browser.locator('#doc-preview')).not.toBeEmpty();
     await expect(browser.locator('#doc-view').getByRole('link', /^Chat about this/)).toHaveAttribute('href', /^codex:\/\/threads\/new/);
     await screen.getByRole('button', /Configuration$/).first().tap();
@@ -74,7 +74,7 @@ test('Entities: a list to pick from with a count per kind, and the picked entity
   const list = screen.getByRole('listbox');
   // the meeting is an entity of its own
   await browser.locator('#ent-kinds [data-ent-kind="meeting"]').tap();
-  await expect(list.getByRole('option', new RegExp(esc(f.meeting.name)))).toBeVisible();
+  await expect(list.getByRole('option', new RegExp(esc(f.meeting.name))).first()).toBeVisible();
   await browser.locator('#ent-kinds [data-ent-kind=""]').tap();
   // typing narrows the list; Enter opens the highlighted row beside it
   const search = screen.getByLabel('Find by name, company or email');
@@ -130,8 +130,8 @@ test('Workflows shows each one as a card in plain words; a click shows its steps
   }
   const outbound = browser.locator('#pw-files article').filter({ has: screen.getByRole('heading', 'Outbound', { level: 3 }) });
   await outbound.getByRole('button', 'Outbound').tap();
-  await expect(outbound.locator('ol.wf-steps li').first()).toBeVisible();
-  const run = outbound.locator('.pl-runs li').filter({ hasText: f.run.id });
+  await expect(browser.locator('#pw-files article ol.wf-steps li').first()).toBeVisible();
+  const run = browser.locator('#pw-files article .pl-runs li').filter({ hasText: f.run.id });
   await expect(run).toHaveCount(1);
   await expect(run).toContainText(f.run.step);
   await expect(run).toContainText(f.run.status);

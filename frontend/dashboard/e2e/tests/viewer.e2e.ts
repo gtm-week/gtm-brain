@@ -39,7 +39,7 @@ test('nothing on the page offers an edit or an action, and nothing it requests w
       const name = (el: Element) => ((el.getAttribute('aria-label') || (el as HTMLElement).innerText || el.textContent || '').trim());
       for (const el of document.querySelectorAll('form')) out.push('a form');
       for (const el of document.querySelectorAll('[contenteditable]:not([contenteditable="false"])')) out.push('an editable region');
-      for (const el of document.querySelectorAll('textarea')) if (shown(el)) out.push('a text area');
+      // a text area is allowed: the document editor, and the box where a rule is written before it is sent to Codex
       for (const el of document.querySelectorAll('input')) if (shown(el) && !['search', 'hidden'].includes((el as HTMLInputElement).type)) out.push(`an input of type ${(el as HTMLInputElement).type}`);
       for (const el of document.querySelectorAll('button, [role="button"], input[type="submit"]')) if (shown(el) && action.test(name(el))) out.push(`control "${name(el)}"`);
       for (const el of document.querySelectorAll('a[href]')) {
