@@ -100,7 +100,7 @@ node -e 'const l=await import(process.argv[1]);l.ensureRulebookShim(".")' "$PLUG
 PLUGIN_VERSION="$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$T/../.codex-plugin/plugin.json" | head -1)"
 # Layout 3 (lib/brain-paths.mjs): the root README says what goes where (lib/config-folders.mjs layoutReadme); the
 # rules (where things go, the person's own rules) and the schema (what the brain keeps) in config/, as rules.md and
-# schema.md; the five starter documents in about-us/ (strategy waits for the strategic intake; voice, design system,
+# schema.md; the five starter documents in about-us/, the design system with its page design-system.html (strategy waits for the strategic intake; voice, design system,
 # ICP and market are offered at the end of onboarding and can wait; GTM week sync, 2026-11-13).
 node --input-type=module -e '
   const fs = await import("node:fs"), l = await import(process.argv[1]), c = await import(process.argv[2]), u = await import(process.argv[3]), w = await import(process.argv[4]);
@@ -112,7 +112,7 @@ node --input-type=module -e '
 # brain/layout.json: the file layout this brain uses, read by every GTM Brain before it writes; the starters
 # are recorded as given, so an upgrade never brings back one the person deleted (lib/layout-version.mjs). The
 # layout number is the 3 startKindLayout recorded above; this adds the starters and never lowers it.
-node -e 'const v=await import(process.argv[1]),u=await import(process.argv[2]);v.writeLayout(".",{starters:u.STARTERS})' "$PLUGIN/lib/layout-version.mjs" "$PLUGIN/lib/upgrade-files.mjs"
+node -e 'const v=await import(process.argv[1]),u=await import(process.argv[2]);v.writeLayout(".",{starters:u.GIVEN})' "$PLUGIN/lib/layout-version.mjs" "$PLUGIN/lib/upgrade-files.mjs"
 # workflows/ from day one (0.28.0): the two shipped workflow documents as drafts; a folder already there is the person's.
 if [ ! -d workflows ]; then
   mkdir -p workflows
@@ -136,7 +136,11 @@ OWNER_EMAIL="$(printf '%s' "$PEOPLE_JSON" | node -e 'const p=JSON.parse(require(
 [ -n "$OWNER_NAME" ] && git config user.name "$OWNER_NAME"; [ -n "$OWNER_EMAIL" ] && git config user.email "$OWNER_EMAIL"
 # Parallel branches (worktrees) merge notes as lines and keep the newer summary: .gitattributes, post-merge.
 node -e 'const l=await import(process.argv[1]);l.ensureMergeSetup(".")' "$PLUGIN/lib/brain.mjs" 2>/dev/null || true
+<<<<<<< HEAD
 if git add -- AGENTS.md CLAUDE.md README.md $(for f in brain configuration entities memories layout.json config about-us RULES.md SCHEMA.md strategy.md icp.md voice.md design-system.md market.md; do [ -e "$f" ] && printf "%s " "$f"; done) workflows .gitignore .gitattributes .githooks && git -c commit.gpgsign=false commit -q -m "setup: $COMPANY brain (gtm-brain v0)"; then
+=======
+if git add -- brain AGENTS.md CLAUDE.md README.md $(for f in config about-us RULES.md SCHEMA.md strategy.md icp.md voice.md design-system.md design-system.html market.md; do [ -e "$f" ] && printf "%s " "$f"; done) workflows .gitignore .gitattributes .githooks && git -c commit.gpgsign=false commit -q -m "setup: $COMPANY brain (gtm-brain v0)"; then
+>>>>>>> origin/integration/pass-four
   echo "gtm-brain: brain created for $COMPANY  ·  committed"
 else
   echo "gtm-brain: brain created for $COMPANY  ·  written to disk, NOT committed (git is read-only here): say save"

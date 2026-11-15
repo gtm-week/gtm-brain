@@ -8,7 +8,7 @@ import { execFileSync } from "node:child_process";
 import { statSync, readFileSync, lstatSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import * as lib from "./brain.mjs";
-import { listDocuments, STARTERS } from "./documents.mjs";
+import { listDocuments, STARTERS, PAGE_DOCS, documentPage, isStarterPage } from "./documents.mjs";
 import { readSchema, brainKinds, fieldsFor, US } from "./schema.mjs";
 import { ruleFindings } from "./rules-check.mjs";
 import { readAskSource } from "./ask-source.mjs";
@@ -73,6 +73,16 @@ function configuration(root, admin, { documents, commits, findings, tools, plugi
   const docs = documents.filter(d => d.extra?.type !== WORKFLOW_TYPE);
   const state = d => !d.filled ? "not written" : d.status === "approved" ? "approved" : "draft";
   const rows = docs.map(d => ({ slug: d.slug, title: d.title, path: d.path, state: state(d), applies_to: d.applies_to, changed: changedAt(root, d.path, commits, d.updated), by: d.by, changed_by: changedBy(d.path, commits), base: !!d.base, starter: STARTERS.includes(d.slug) }));
+  // The design system is a page as well as a text (design-system.html beside the Markdown): its row says when the
+  // page is missing or still the shipped starter, with the message for Codex that makes it.
+  for (const r of rows) {
+    const d = PAGE_DOCS.includes(r.slug) && docs.find(x => x.path === r.path); if (!d) continue;
+    const at = documentPage(root, d); let starter = false;
+    if (at.exists) { try { starter = isStarterPage(readFileSync(join(root, at.path), "utf8")); } catch {} }
+    r.page = !at.exists ? { path: null, state: "none", label: "No page yet", action: "Make the page with Codex", ask: `Make our ${r.title} page: write ${at.path} from our website and brand files, beside ${r.path}, show it to me, and bring ${r.path} in step with it.` }
+      : starter ? { path: at.path, state: "starter", label: "Page not filled in yet", action: "Fill it in with Codex", ask: `Fill in our ${r.title.toLowerCase()}: write the page ${at.path} from our website and brand files, show it to me, and bring ${r.path} in step with it.` }
+      : { path: at.path, state: "written", label: "", action: "", ask: "" };
+  }
   // A base document nobody has made yet is a row too: the team sees what is missing.
   for (const slug of STARTERS) if (!rows.some(r => r.slug === slug)) rows.push({ slug, title: slug === "icp" ? "ICP" : slug.split("-").map(w => w[0].toUpperCase() + w.slice(1)).join(" "), path: null, state: "not written", applies_to: [], changed: null, by: null, base: true, starter: true });
   const rank = r => (r.starter ? STARTERS.indexOf(r.slug) : STARTERS.length);
@@ -232,7 +242,9 @@ export function designSystem(root, documents) {
   if (!doc) return { doc: null, visual: null, files: [] };
   const plain = rel => { try { const st = lstatSync(join(root, rel)); return st.isFile() ? st : null; } catch { return null; } };
   const beside = dirname(doc) === "." ? "" : dirname(doc) + "/", places = [...new Set([beside, `${ABOUT_DIR}/`, `${ABOUT_DIR4}/`])];
-  const visual = places.map(d => d + "design-system.html").find(plain) || null;
+  // beside the Markdown; a document that moved into its own folder may have left the page beside that folder
+  const own = documents.find(d => d.path === doc), page = own && own.slug ? documentPage(root, own) : null;
+  const visual = (page?.exists && page.path) || places.map(d => d + "design-system.html").find(plain) || null;
   const files = [], walk = (rel, depth) => {
     let entries = []; try { if (!lstatSync(join(root, rel)).isDirectory()) return; entries = readdirSync(join(root, rel)).sort(); } catch { return; }
     for (const name of entries) {

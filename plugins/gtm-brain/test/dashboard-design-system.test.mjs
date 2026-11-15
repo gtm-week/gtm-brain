@@ -36,6 +36,8 @@ const BODY = ["# Design system", "", "## Colours", "", "- Ink: #14161A", "", "##
 const SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><script>alert(1)</script><rect width="10" height="10" fill="#E4572E"/></svg>';
 const HTML = '<!doctype html><html><body><h1>Design system</h1><script>document.title="ran"</script></body></html>';
 
+// setup writes the starter page beside the document (test/design-system-page.test.mjs); this file starts without one
+rmSync(at("design-system.html"), { force: true });
 const BARE = render();
 test("without a design-system folder or HTML file the document has no files and no Visual tab", () => {
   const D = BARE;

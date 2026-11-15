@@ -17,7 +17,7 @@ import { createInterface } from "node:readline";
 import * as lib from "../lib/brain.mjs";
 import { readLayout, layoutBlock, layoutPlan, recentTeammates, LayoutError, LAYOUT_FILE, LAYOUT } from "../lib/layout-version.mjs";
 import { diskLayout } from "../lib/layout.mjs";
-import { legacyTemplates, STARTERS } from "../lib/upgrade-files.mjs";
+import { legacyTemplates, STARTERS, GIVEN } from "../lib/upgrade-files.mjs";
 import { ensureRules } from "../lib/where.mjs";
 import { ensureSchema } from "../lib/schema.mjs";
 import { removeBrain } from "./helpers/dash-cleanup.mjs";
@@ -70,7 +70,7 @@ test("a brain made by setup is layout 2 (kind folders), with the five starters a
   assert.equal(LAYOUT, 3); assert.equal(process.env.GTM_BRAIN_TEST_LAYOUT, "2", "this file plays a plugin that writes layout 2");
   assert.equal(lib.entityLayout(root), "kinds");
   assert.equal(diskLayout(root), 2);
-  assert.deepEqual(readLayout(root), { layout: 2, starters: [...STARTERS].sort() });
+  assert.deepEqual(readLayout(root), { layout: 2, starters: [...GIVEN].sort() });   // the five documents and the design system page
   assert.equal(layoutBlock(root), "");
   const files = git("show", "--name-only", "--format=", "HEAD");
   assert.match(files, /^brain\/layout\.json$/m);
@@ -247,7 +247,7 @@ test("a 0.32-era brain gets RULES.md, SCHEMA.md, the starters it lacks and the l
   assert.equal(readFileSync(join(root, "voice.md"), "utf8"), voice, "the person's voice.md is never replaced");
   assert.equal(readFileSync(join(root, "strategy.md"), "utf8"), strategy);
   assert.doesNotMatch(first.stdout, /added (voice|strategy)\.md/);
-  assert.deepEqual(readLayout(root), { layout: 2, starters: [...STARTERS].sort() });
+  assert.deepEqual(readLayout(root), { layout: 2, starters: [...GIVEN].sort() });   // the five documents and the design system page
   assert.match(first.stdout, /changed the brain's file layout to 2/);
   assert.equal(git("status", "--porcelain").trim(), "", "everything the upgrade wrote is kept");
   const after = tree(root), head = git("rev-parse", "HEAD");

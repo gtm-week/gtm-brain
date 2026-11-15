@@ -5,7 +5,7 @@
 // scan never writes. The rulebook's rule 11 makes Codex read the matching one before that kind of work; the
 // session hook and the status read list them every chat (documentsLine). This file is the format; the script,
 // the server, the hook, add-file and save go through it.
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync, rmdirSync, renameSync, statSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync, rmdirSync, renameSync, statSync } from "node:fs";
 import { join, dirname, basename, relative, sep } from "node:path";
 import { execFileSync } from "node:child_process";
 import { handleFor, parseFrontmatter, renderFrontmatter, readProjects } from "./brain.mjs";
@@ -105,18 +105,51 @@ export const STARTERS = ["strategy", "icp", "voice", "design-system", "market"];
    for when the brain holds nothing. A document whose body is still one of them is not filled either. */
 export const BASE_STARTERS = ["pricing", "positioning", "competitors", "objections"];
 const templateUrl = slug => new URL(BASE_STARTERS.includes(slug) ? `../templates/base-files/${slug}.md` : `../templates/${slug}.md`, import.meta.url);
+/* A starter's text changes between releases, and a brain keeps the one its setup wrote: the earlier shipped texts
+   are kept whole in templates/legacy/starters/<slug>-<version>.md and count as not filled too. Never edit or
+   remove one; add the outgoing file there before changing a starter under templates/. */
+const LEGACY_STARTERS = new URL("../templates/legacy/starters/", import.meta.url);
 const starterBody = new Map();
+const starterPattern = text => new RegExp(`^${parseFrontmatter(text).body.trim().split("{{COMPANY}}").map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".+?")}$`, "s");
 function isStarterBody(slug, body) {
   if (!STARTERS.includes(slug) && !BASE_STARTERS.includes(slug)) return false;
   if (!starterBody.has(slug)) {
-    let re = null;
-    try {
-      const shipped = parseFrontmatter(readFileSync(templateUrl(slug), "utf8")).body.trim();
-      re = new RegExp(`^${shipped.split("{{COMPANY}}").map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".+?")}$`, "s");
-    } catch {}
-    starterBody.set(slug, re);
+    const res = [];
+    try { res.push(starterPattern(readFileSync(templateUrl(slug), "utf8"))); } catch {}
+    try { for (const f of readdirSync(LEGACY_STARTERS).sort()) if (f.startsWith(`${slug}-`) && f.endsWith(".md")) res.push(starterPattern(readFileSync(new URL(f, LEGACY_STARTERS), "utf8"))); } catch {}
+    starterBody.set(slug, res);
   }
-  const re = starterBody.get(slug); return !!re && re.test(String(body || "").trim());
+  const text = String(body || "").trim(); return starterBody.get(slug).some(re => re.test(text));
+}
+
+/* A document's page: <slug>.html beside the Markdown, the version people look at (the design system's is shown on
+   the dashboard's Visual tab). A document that moved into a folder of its own name may have left the page beside
+   that folder: it is found there too. A new page goes beside the Markdown. Returns { path, exists }. */
+export const PAGE_DOCS = ["design-system"];
+export function documentPage(root, doc) {
+  const name = `${doc.slug}.html`, beside = doc.folder ? `${doc.folder}/${name}` : name;
+  const up = inOwnFolder(doc) ? (dirname(doc.folder) === "." ? name : `${posix(dirname(doc.folder))}/${name}`) : null;
+  const found = [beside, up].find(p => { try { return !!p && lstatSync(join(root, p)).isFile(); } catch { return false; } });
+  return { path: found || beside, exists: !!found };
+}
+/* The shipped starter page says so itself in a meta tag; a page written for the company does not carry it. */
+export const STARTER_PAGE_MARK = '<meta name="gtm-brain-starter"';
+export const isStarterPage = html => String(html || "").includes(STARTER_PAGE_MARK);
+/* What a page must not hold. The dashboard shows it in a sandboxed frame with no network and no scripts, and it
+   travels with the brain, so everything it needs is inside it: inline CSS, inline SVG, data: images, fonts by
+   name. Returns the problems in words, [] for a page that can be saved. */
+export function pageProblems(html) {
+  const text = String(html || ""), out = [];
+  if (!/^\s*<!doctype html/i.test(text)) out.push("it does not start with <!DOCTYPE html>");
+  if (/<script\b/i.test(text)) out.push("it has a <script> (a page runs no scripts)");
+  if (/<(iframe|object|embed|frame|base)\b/i.test(text)) out.push("it embeds another page or sets a base address (iframe, object, embed, base)");
+  if (/<link\b/i.test(text)) out.push("it has a <link> (styles are inline, in one <style> block)");
+  if (/@import\b/i.test(text)) out.push("it has an @import (no stylesheet or font is loaded from elsewhere)");
+  if (/url\(\s*(?!["']?(?:data:|#))/i.test(text)) out.push("it has a url() that is not a data: address");
+  if (/\b(?:src|srcset|poster|background|action|formaction)\s*=\s*["']?(?!data:|["']?\s*>)[^\s"'>]/i.test(text)) out.push("it loads a file by address (src, srcset, poster): images are inline SVG or data: addresses");
+  if (/<meta[^>]+http-equiv\s*=\s*["']?refresh/i.test(text)) out.push("it redirects (meta refresh)");
+  if (/[\u2013\u2014]/.test(text)) out.push("it has an en or em dash (plain hyphens only)");
+  return out;
 }
 
 /* A base file is what the company's work must follow, not every document a team keeps: one of the shipped

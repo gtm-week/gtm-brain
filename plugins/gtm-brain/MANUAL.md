@@ -19,6 +19,7 @@ editor opens it.
 | Where files go, your own rules | `RULES.md` | you; Codex follows it |
 | What the brain keeps per person, organization and product, and relationship types | `SCHEMA.md` | you; Codex fills the fields from notes |
 | Your documents (strategy, ICP, tone of voice, design system, pricing) | `<name>.md` at the top (the first four from day one), files in a folder of the same name | you or Codex |
+| The design system as a page | `design-system.html` beside `design-system.md`: one self-contained HTML file (no scripts, nothing loaded from the network) shown on the dashboard's Visual tab. The page is the source for how things look; the Markdown says the same in words for Codex, and the two are kept in step | Codex, on your yes ("fill in our design system") |
 | Projects (an event, a campaign, a client) | `projects/<project>/` | you or Codex |
 | Rules Codex follows in this folder (six core rules first, also sent with every GTM Brain chat, then one line per rule; the detail of each is a rule page that ships with the plugin) | `AGENTS.md`, `CLAUDE.md` | GTM Brain; refreshed on update, never edit; your own lines stay at the end under "This brain's own additions" |
 | This computer's working files | `work/` | GTM Brain; not in git, never a deliverable |
