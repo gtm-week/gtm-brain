@@ -43,7 +43,8 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   const dinner = remember("--content", "The speaker dinner moved to Thursday.");
   assert.equal(dinner.status, 2);
   assert.match(dinner.stderr, /"Thursday" can be Thu 2026-11-12 or Thu 2026-11-19: ask which/);
-  assert.match(dinner.stderr, /Whatever is still unclear: one question \(Q2\), in Codex's question box \(request_user_input\) when that tool is available in this chat .*otherwise as plain chat text with numbered parts, then end the turn \(Q1\), and wait for the reply \(Q3\)/);
+  assert.match(dinner.stderr, /Ask one question, in Codex's question box \(request_user_input\) when this chat has it, otherwise as numbered chat text, and wait for the reply\./);
+  assert.ok(dinner.stderr.split("\n")[0].length < 420, "a refusal is one or two short lines");
   // the person turned Codex's question box on: the question goes there (new-brain rerun: plain text although it was on)
   writeFileSync(join(process.env.CODEX_HOME, "config.toml"), "[features]\ndefault_mode_request_user_input = true\n");
   assert.match(remember("--content", "The speaker dinner moved to Thursday.").stderr, /in Codex's question box \(request_user_input\)/);
@@ -52,7 +53,8 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   const deck = remember("--content", "Ola Nowak will send the deck on Friday.", "--people", "Ola Nowak");
   assert.equal(deck.status, 2);
   assert.match(deck.stderr, /"Friday" is Fri 2026-11-13 \(or Fri 2026-11-06 if it already happened; take it from the person's words/);
-  assert.match(deck.stderr, /write it into the note, no question \(D1\)\. No question needed: change the note as the rule says and send it again/);
+  assert.match(deck.stderr, /write it into the note, no question \(D1\)\. No question needed: fix it and resend\./);
+  assert.doesNotMatch(deck.stderr, /Ask one question|ask the person/i, "a refusal the model fixes never tells it to ask");
   assert.equal(remember("--content", "Ola Nowak will send the deck on Friday (2026-11-13).", "--people", "Ola Nowak").status, 0);
   // from an email: counted from the email's date, not today
   assert.match(remember("--content", "Acme will sign next week.", "--source", "gmail:msg-1").stderr, /counted from the source's own date/);
@@ -78,7 +80,7 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   assert.equal(remember("--content", "The speaker dinner moved to Thursday.").status, 2);
   const guessed = remember("--content", "The speaker dinner moved to Thursday 2026-11-19.");
   assert.equal(guessed.status, 2);
-  assert.match(guessed.stderr, /the person has not answered the question yet .* never pick the answer yourself/);
+  assert.match(guessed.stderr, /the person has not answered the question yet: ask it once and end the turn, do not resend this before their reply/);
   say("the 19th");
   assert.equal(remember("--content", "The speaker dinner moved to Thursday 2026-11-19.").status, 0);
   // "forget that" withdraws: a supersedes with the opposite claim is held (scenario run, 2026-11-12)
@@ -86,14 +88,14 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   say("Forget the speaker dinner");
   const flipped = remember("--content", "There is no speaker dinner.", "--supersedes", dinner19);
   assert.equal(flipped.status, 2);
-  assert.match(flipped.stderr, new RegExp(`asked to forget it, not to correct it: send retracts: ${dinner19} \\(not supersedes\\).*\\(F1\\)\\. No question needed: change the note as the rule says and send it again`));
+  assert.match(flipped.stderr, new RegExp(`asked to forget it: resend with retracts: ${dinner19} \\(not supersedes\\) and content saying what was withdrawn, in their words\\. No question needed: fix it and resend\\.`));
   assert.equal(remember("--content", "Withdrawn: the speaker dinner note (the person said forget it).", "--retracts", dinner19).status, 0);
   // two Florians: Codex may not pick one from the chat so far ("lorian called me", saved as Florian Kim; new-brain, 2026-11-12)
   lib.addName(root, "Florian Kim");
   say("lorian called me about the venue.");
   const pick = remember("--content", "Florian Kim called about the venue.", "--people", "Florian Kim");
   assert.equal(pick.status, 2);
-  assert.match(pick.stderr, /the person did not write which Florian: Florian (Weber|Kim) or Florian (Weber|Kim) \(W1, P2/);
+  assert.match(pick.stderr, /the person did not write which Florian: Florian (Weber|Kim) or Florian (Weber|Kim)\. Ask which one\. Ask one question, /);
   // Codex asked in its own question box before saving: the picked answer counts as the person's words, no second question
   writeFileSync(join(day, `rollout-2026-11-12T10-18-48-${id}.jsonl`), [{ type: "session_meta", payload: { cwd: root } },
     { type: "response_item", payload: { type: "message", role: "user", content: [{ type: "input_text", text: "lorian sent the agenda." }] } },

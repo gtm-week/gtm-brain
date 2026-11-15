@@ -701,6 +701,29 @@ export function similarNames(names, mention) {
   const fuzzy = new Set(rankEntityCandidates(names, mention, { limit: 10 }).matches.map(m => m.entry));
   return names.filter(n => (fuzzy.has(n) || [n.name, ...n.aliases].some(x => nameLetters(x) === letters || nameWords(x).some(w => words.has(w))))).map(n => ({ name: n.name, kind: n.kind }));
 }
+/* P4, second sentence: the same first name with a clearly different surname is someone else, never a look-alike
+   ("Borys Zielony" beside "Borys Nowicki": a manual run on 2026-11-15 was refused for it and asked the
+   person). Only between two full personal names: one or two letters off the same name, a first name alone, a
+   shared surname or a company word is still asked about. entry: {name, aliases, kind}. */
+const nameDistance = (a, b) => { let row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) { const next = [i]; for (let j = 1; j <= b.length; j++) next[j] = Math.min(next[j - 1] + 1, row[j] + 1, row[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); row = next; }
+  return row[b.length]; };
+export function otherPerson(mention, entry) {
+  if (!entry || (entry.kind && entry.kind !== "person")) return false;
+  const parts = s => foldName(s).split(/[\s-]+/).map(w => w.replace(/[^a-z0-9]/g, "")).filter(Boolean);
+  const mine = parts(mention); if (mine.length < 2) return false;
+  let other = false;
+  for (const x of [entry.name, ...(entry.aliases || [])]) {
+    const theirs = parts(x); if (!theirs.length) continue;
+    const shared = mine.filter(w => theirs.includes(w));
+    if (nameDistance(mine.join(""), theirs.join("")) <= 2) return false;                          // a spelling of the same name
+    if (theirs.length < 2) { if (shared.length) return false; continue; }                       // a first name alone
+    if (shared.some(w => w !== mine[0] || w !== theirs[0])) return false;                       // a shared surname or middle name
+    if (nameDistance(mine[mine.length - 1], theirs[theirs.length - 1]) <= 2) return false;      // surnames a letter or two apart
+    if (mine[0] === theirs[0]) other = true;
+  }
+  return other;
+}
 /* add a person, or merge aliases/emails into an existing one (matched by name, alias or email) */
 export function addName(root, name, options = {}) {
   if (typeof name !== "string" || !name.trim() || /[\r\n]/.test(name)) throw new Error("Entity name must be a non-empty single line");
@@ -888,7 +911,7 @@ export function normalisePeople(root, mentions, { confirmedNew = [], companies =
     const guess = inferredName(names, t); if (guess) { inferred.push({ mention: t, name: guess }); take(guess); note(t, guess, "inferred_first_name", "P2"); continue; }
     const one = !/\s/.test(t) && !plain.has(foldName(t));
     if (saveUnclear && one) { const several = sharing(t); if (several.length > 1) { askLater(t, several); continue; } }
-    const like = similarNames(names, t);
+    const like = similarNames(names, t).filter(x => !otherPerson(t, names.find(n => n.name === x.name) || x));
     if (like.length) { similar.push({ mention: t, matches: like }); continue; }
     if (one) { if (saveUnclear) askLater(t, []); else unnamed.push(t); continue; }
     names.push({ name: t, aliases: [], emails: [], kind: "person" }); fresh.push(t); take(t); note(t, t, "new", plain.has(foldName(t)) ? "C1" : "P1");

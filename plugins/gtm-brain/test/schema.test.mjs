@@ -35,7 +35,14 @@ test("the shipped template parses: five kinds with fields, organization subtypes
   assert.deepEqual(Object.keys(s.kinds.organization.subtypes), ["company", "team", "investor", "partner", "community"]);
   assert.deepEqual(schema.fieldsFor(s, "organization", "investor").map(f => f.name), ["website", "industry", "size", "hq", "stage"]);
   assert.deepEqual(schema.fieldsFor(s, "organization", "company").map(f => f.name), ["website", "industry", "size", "hq"]);
-  assert.deepEqual(Object.keys(s.relations), ["works_at", "reports_to", "partner_of", "investor_in", "uses", "speaker_at", "attended", "integrates_with", "customer_of"]);
+  assert.deepEqual(Object.keys(s.relations), ["works_at", "reports_to", "partner_of", "investor_in", "uses", "speaker_at", "attended", "integrates_with", "customer_of", "sponsor_of"]);
+  // sponsor_of is known without a row in the file, as an ordinary relation (organization to us), never the customer block
+  assert.deepEqual([s.relations.sponsor_of.from, s.relations.sponsor_of.to, s.relations.sponsor_of.built_in, s.relations.sponsor_of.one], [["organization"], ["us"], undefined, false]);
+  assert.equal(schema.checkRelation(s, { type: "sponsor_of", fromKind: "organization", toKind: "us" }).type, "sponsor_of");
+  assert.throws(() => schema.checkRelation(s, { type: "sponsor_of", fromKind: "person", toKind: "us" }), /sponsor_of goes from organization, not person/);
+  // the brain's own row of that name wins, and so does a type renamed from it
+  const own = schema.parseSchema(readFileSync(join(T, "SCHEMA.md"), "utf8").replace("| partner_of | organization | us |", "| sponsor_of | person, organization | us | Our sponsors | no | no |\n| partner_of | organization | us |"));
+  assert.deepEqual([own.relations.sponsor_of.from, own.relations.sponsor_of.about], [["person", "organization"], "Our sponsors"]);
   assert.deepEqual(Object.keys(s.kinds), ["person", "organization", "product", "event", "tool", "meeting", "offering"]);
   assert.deepEqual(s.relations.investor_in.to, ["organization", "us"]);
   assert.equal(s.relations.customer_of.built_in, true);

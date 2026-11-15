@@ -31,7 +31,12 @@ export const MEETING_FIELDS = [
   { name: "title", about: "What the meeting was called", required: false },
   { name: "organizer", about: "Who set it up", required: false },
   { name: "source", about: "Where the transcript or recording is, as a link or tool:id; it stays there", required: false }];
-export const BUILT_IN = { customer_of: { from: ["person", "organization"], to: [US], about: "Customer status, kept by the customer notes", required: false, one: true, formerly: [], built_in: true } };
+// sponsor_of is known in every brain, like partner_of in the shipped SCHEMA.md, without a row in the file (a
+// shipped SCHEMA.md changes only with a legacy snapshot). It is an ordinary relation saved with remember's
+// relation block; a row of that name in the brain's own file, or a type renamed from it, wins.
+export const BUILT_IN = {
+  sponsor_of: { from: ["organization"], to: [US], about: "A sponsor of ours: pays for or backs an event, a programme or the company", required: false, one: false, formerly: [] },
+  customer_of: { from: ["person", "organization"], to: [US], about: "Customer status, kept by the customer notes", required: false, one: true, formerly: [], built_in: true } };
 // One at a time: a new current link of the type ends the previous one from the same entity (lib/relation-log.mjs).
 // SCHEMA.md says it per type in its One at a time column; a file without the column (0.34, early 0.35), or a row
 // that leaves the cell empty, gets these: one employer, one manager. Every other type allows many.
@@ -136,7 +141,10 @@ export function parseSchema(text) {
   if (problems.length) throw new SchemaFormatError(problems);
   if (!kinds.meeting.fields.length) kinds.meeting.fields = MEETING_FIELDS.map(f => ({ ...f }));
   if (relations.attended && !relations.attended.to.includes("meeting")) relations.attended.to.push("meeting");
-  for (const [type, def] of Object.entries(BUILT_IN)) relations[type] = { ...def, about: relations[type]?.about || def.about, built_in: true };
+  for (const [type, def] of Object.entries(BUILT_IN)) {
+    if (def.built_in) relations[type] = { ...def, about: relations[type]?.about || def.about, built_in: true };
+    else if (!relations[type] && !Object.values(relations).some(r => r.formerly?.includes(type))) relations[type] = { ...def };
+  }
   const shape = { kinds, relations };
   return { ...shape, hash: digest(shape) };
 }
