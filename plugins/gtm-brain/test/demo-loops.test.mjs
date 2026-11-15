@@ -144,6 +144,10 @@ test("demo stub checks: a played failure is told to the person and nothing inven
   const empty = evidence({ stub: [{ tool: "keyword_research", arguments: { seeds: ["store pickup returns"] }, fail: "empty" }], reply: "The keyword tool returned no results for our pillars, so I have no search numbers." });
   assert.equal(stubStep("c1-topics").fail(empty), true);
   assert.match(stubStep("c1-topics").fail({ ...empty, added: [{ content: "Keywords: store pickup returns, 320 monthly searches." }] }), /did not return/);
+  // live run 2026-11-15: an empty result was asked again 41 times in one turn
+  const retried = Array.from({ length: 5 }, (_, i) => ({ tool: "keyword_research", arguments: { seeds: [`try ${i}`] }, fail: "empty" }));
+  assert.match(stubStep("c1-topics").fail({ ...empty, stub: retried }), /asked 5 times/);
+  assert.equal(stubStep("c1-topics").fail({ ...empty, stub: retried.slice(0, 3) }), true, "a retry or two with other words is fine");
 });
 
 // A stand-in for codex that answers every turn with the right words and does nothing: no tool call, no

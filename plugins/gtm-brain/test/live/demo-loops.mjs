@@ -206,6 +206,7 @@ const names = list => (list || []).map(s => String(s).toLowerCase());
 // a failure played by the stub (--fail): Codex says what happened and saves no data the tool did not return
 const FAIL_SAYS = { expired_key: /expired|api key|\bkey\b|401|unauthori[sz]ed|sign(ed)? in|reconnect/i, empty: /no (results?|data|keywords?|match|companies|signals)|nothing (came back|was returned|returned|found)|found nothing|returned (nothing|no)|empty|not found|did not return|didn't return/i, rate_limit: /rate limit|429|too many|try again|retry/i };
 export const failureCheck = (mode, tool, invented) => x => all(need((x.stub || []).some(c => c.tool === tool), `${tool} was not called`),
+  need((x.stub || []).filter(c => c.tool === tool).length <= 3, `${tool} asked ${(x.stub || []).filter(c => c.tool === tool).length} times after it failed: a failure is an answer, not a reason to keep asking`),
   need(FAIL_SAYS[mode].test(x.reply), `the reply does not tell the person the tool failed (${mode})`),
   need(!x.added.some(m => invented.test(JSON.stringify(m))), "saved data the tool did not return"), sentNothing(x));
 
