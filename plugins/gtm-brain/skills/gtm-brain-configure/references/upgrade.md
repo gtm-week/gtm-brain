@@ -26,6 +26,13 @@ word, in one commit. Say what the tool lists as moving and that teammates on an 
 will not find the brain until they update, then ask the same one question. A teammate who is not
 the owner is never asked about it.
 
+Order matters: everyone on the team updates GTM Brain before the owner's yes. A teammate still on
+0.34 is not warned by their plugin: after the first move it no longer finds the entity pages, and
+after the second it no longer finds the brain. When the tool names teammates, say that they update
+first and offer to wait. The plugin's MANUAL.md, "Updating to 0.35", has the order, what each
+person sees, how to go back (`git revert` of the move's commit) and what to do when something
+looks wrong; answer "how do I update?" from it.
+
 The refresh recognizes current rules and every shipped template in
 `templates/legacy/manifest.json`, including skipped releases. Before replacing files it
 validates editable entity files and saves previous instructions under `work/upgrades/before-*`. Company data and

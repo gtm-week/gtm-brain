@@ -727,6 +727,12 @@ moves pages. A brain already in kind folders whose file says 1 or is missing is 
 upgrade, the next chat start or the next save, with nothing moved. What a teammate on an older
 version sees is in [MANUAL.md](plugins/gtm-brain/MANUAL.md#saving-what-you-say-what-it-keeps).
 
+For the owner the same question also covers layout 3: the base files into `about-us/`, `RULES.md`,
+`SCHEMA.md` and `brain/admin.md` into `config/`, in a commit of its own. A teammate's yes moves the
+entity pages only. The chat start offers the upgrade in one line to whoever can say yes to a move
+still waiting. The order for a team, what a 0.34 teammate sees and how to go back are in
+[MANUAL.md, Updating to 0.35](plugins/gtm-brain/MANUAL.md#updating-to-035).
+
 Tool: `upgrade_brain` (`confirm`). Writes: `AGENTS.md`, `.githooks/pre-commit`, `.gitignore`,
 `RULES.md`, `SCHEMA.md`, missing starter documents, `brain/layout.json`, upgrade backups, and
 identity files only when migration is needed.
