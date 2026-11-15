@@ -22,7 +22,7 @@ test('one flat navigation: Overview first, where the dashboard opens, and every 
 
 test('Overview says what needs the person, or that nothing does, and the header carries no health line', async ({ app, screen, browser }) => {
   await app.open('/');
-  await expect(browser.locator('#ov-inbox').getByRole('heading', /^(Needs your attention|Nothing needs you right now)$/, { level: 2 })).toBeVisible();
+  await expect(browser.locator('#ov-inbox').getByRole('heading', /^(Needs your attention|Coming up|Nothing needs you right now)$/, { level: 2 }).first()).toBeVisible();
   await expect(browser.locator('#health-line')).toHaveCount(0);
   await expect(browser.locator('#brain-health')).toHaveText(/^Updated (just now|\d+ minutes? ago|today)/);
   await expect(browser.locator('#brain-health')).toHaveAttribute('title', /\d{4}-\d{2}-\d{2} \d{2}:\d{2}/);

@@ -164,10 +164,11 @@ test('Contexts opens a searchable directory with more rows, archived filtering a
 test('recent references use recorded entity evidence and tools, with working exploration links',async()=>{
  const D=fixture(),m={...memory('m_aaaaaa','Customer research'),tools:['CRM'],source:[{kind:'url',ref:'https://example.com/record'}]};D.recent=[m];
  D.entityGraph={nodes:[{name:'Acme',contexts:[{context:'market',evidence:[{id:m.id}]}]},{name:'Unrelated',contexts:[]}],links:[]};
- const p=page(D),html=p.node('#h-recent').innerHTML;
+ const p=page(D),html=p.run('recentReferences(D.recent[0])')+p.run('sourcesHtml(D.recent[0].source)');
  assert.match(html,/data-entity="Acme" data-entity-context="market"/);assert.doesNotMatch(html,/Unrelated/);
  assert.match(html,/data-recent-tool="CRM"/);assert.match(html,/https:\/\/example.com\/record/);
- assert.match(html,/<article class="recent-item"/);
+ // Overview carries no list of recent notes: one quiet sentence, and Memories is where notes are read
+ const recent=p.node('#h-recent').innerHTML;assert.doesNotMatch(recent,/<article|Customer research/);assert.match(recent,/^<p class="ov-activity">The last note was saved <time[^>]*>[^<]+<\/time>\. <button class="linkbtn" data-v="notes">Read them in Memories/);
  await click(p,'[data-recent-tool]',{dataset:{recentTool:'CRM'}});
  assert.equal(p.run('view'),'search');assert.equal(p.node('#gq').value,'CRM');
 });

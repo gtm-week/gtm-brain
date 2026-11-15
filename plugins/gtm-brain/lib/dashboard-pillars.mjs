@@ -136,7 +136,17 @@ export function noteIndex(contexts) {
    entity (name, one line of who or what it is, relation to us, counts); the detail (schema fields with the missing
    ones, links grouped by the other end, dated link history, the first lines of the brief) goes to a side file. */
 const firstSentence = (s, n) => { const t = String(s ?? "").replace(/\s+/g, " ").trim(), m = t.match(/^.{20,}?[.!?](?=\s|$)/); return cut(m ? m[0] : t, n); };
-function entityCards(root, registry, admin, notes, contexts) {
+/* What the rules check found about a name, per entity: known by a first name only, or may be the same as another one. */
+export function identityFlags(registry, findings) {
+  const flags = new Map(), push = (id, f) => { if (id) flags.set(id, [...(flags.get(id) || []), f]); }, byName = new Map(registry.map(e => [e.name, e]));
+  for (const f of findings || []) if (f.rule === "P3" && byName.has(f.subject)) push(byName.get(f.subject).id, { is: "first_name" });
+  const pairs = new Set((findings || []).filter(f => f.rule === "P4").map(f => f.subject));
+  if (pairs.size) { let merges = []; try { merges = lib.suggestMerges(registry); } catch {}
+    for (const m of merges) { const a = byName.get(m.a), b = byName.get(m.b); if (!a || !b || !pairs.has(`${m.a} / ${m.b}`)) continue; push(a.id, { is: "same_as", id: b.id, name: b.name }); push(b.id, { is: "same_as", id: a.id, name: a.name }); } }
+  return flags;
+}
+function entityCards(root, registry, admin, notes, contexts, findings = []) {
+  const flags = identityFlags(registry, findings);
   const last = new Map(), count = new Map();
   for (const n of notes) { if (n.state !== "in force") continue; for (const id of n.entities) { count.set(id, (count.get(id) || 0) + 1); if (!last.has(id)) last.set(id, n.at); } }
   const { schema = null } = (() => { try { return readSchema(root); } catch { return {}; } })();
@@ -185,10 +195,10 @@ function entityCards(root, registry, admin, notes, contexts) {
     // one line of who or what it is: the role and the company, else what the schema says it is, else the brief's first sentence
     const what = known.get(kind === "person" ? "role" : kind === "organization" ? "industry" : kind === "offering" ? "what_it_is" : kind === "meeting" || kind === "event" ? "date" : "category") || null;
     const line = kind === "person" ? (what && company ? `${cut(what, 60)} at ${company}` : what ? cut(what, 90) : company ? `Works at ${company}` : null) : what ? cut(what, 90) : null;
-    details[e.id] = { fields: all, links: mine, brief, compiled: e._fm?.compiled_at || null };
+    details[e.id] = { fields: all, links: mine, brief, compiled: e._fm?.compiled_at || null, aliases: e.aliases || [], emails: e.emails || [] };   // every other name and email: the edit form sends the whole list
     return { id: e.id, name: e.name, kind, subtype: e.subtype || null, aliases: (e.aliases || []).slice(0, 6), email: (e.emails || [])[0] || null, emails: (e.emails || []).slice(0, 4),
       fields: key, relation: [us, ...(toUs.get(e.id) || [])].filter(Boolean).join(", ") || null, rel: [...new Set([us === "our team" ? "team" : us, ...(keys.get(e.id) || [])].filter(Boolean))],
-      line: line || (brief[0] ? firstSentence(brief[0], 120) : null), described: !!line, company, missing: all.filter(f => f.required && !f.value).length, links: mine.length,
+      line: line || (brief[0] ? firstSentence(brief[0], 120) : null), described: !!line, flags: (flags.get(e.id) || []).slice(0, 3), company, missing: all.filter(f => f.required && !f.value).length, links: mine.length,
       last: last.get(e.id) || e._fm?.latest_evidence_at || null, notes: count.get(e.id) || 0, path: e._path || null };
   }).sort((a, b) => String(b.last || "").localeCompare(String(a.last || "")) || a.name.localeCompare(b.name));
   return { rows, details };
@@ -294,7 +304,7 @@ export function pillarData(root, { registry = lib.readNames(root), admin = lib.r
     without_source: p.sources.without, without_source_flag: p.notes >= R.min_notes && p.sources.without_share > R.no_source_max }; } catch { pop = null; }
   let summaryError = null; try { const e = summaryRuns(root).error; if (e) summaryError = { at: e.at, context: e.context || null, what: cut(e.what || e.why, 200), todo: cut(e.todo, 200) }; } catch {}
   const entities = section("entities", () => {
-    const kinds = [...new Set([...brainKinds(root), ...registry.map(e => e.kind || "person")])], { rows, details } = entityCards(root, registry, admin, notes, full);
+    const kinds = [...new Set([...brainKinds(root), ...registry.map(e => e.kind || "person")])], { rows, details } = entityCards(root, registry, admin, notes, full, ruleList);
     return { kinds: kinds.map(k => ({ kind: k, count: rows.filter(e => e.kind === k).length })), rows, details };
   }, { kinds: [], rows: [], details: {} });
   const tagCount = new Map(); for (const n of notes) for (const t of n.tags) tagCount.set(t, (tagCount.get(t) || 0) + 1);

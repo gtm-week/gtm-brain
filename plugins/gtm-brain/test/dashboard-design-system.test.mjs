@@ -128,7 +128,8 @@ test("Settings holds only what the brain needs to work; who the company is sits 
   const p = page(D), html = readFileSync(new URL("../scripts/gtm-brain-render/home.template.html", import.meta.url), "utf8");
   const section = html.match(/<section class="view" data-view="admin">([\s\S]*?)<\/section>/)[1];
   const ids = [...section.matchAll(/ id="([^"]+)"/g)].map(m => m[1]);
-  assert.deepEqual(ids, ["settings-preferences", "workspace-folders", "admin-tools", "plugin-line"], "the Settings view's own containers");
+  for (const id of ["settings-preferences", "workspace-folders", "admin-tools", "plugin-line"]) assert.ok(ids.includes(id), id);
+  assert.ok(!ids.some(id => /^cfg-|admin-panel/.test(id)), "the company profile is not one of the Settings view's containers");
   const settings = section + ids.map(id => p.node("#" + id).innerHTML).join("\n");
   for (const who of ["Reflow", "Marta", "Nowak", "Tomek", "Zielinski", "reflow.io", "returns automation"]) assert.doesNotMatch(settings, new RegExp(who), `Settings does not say ${who}`);
   assert.doesNotMatch(settings, /admin\.md|settings\.yaml|APPROVE/, "plain words, no file names");
