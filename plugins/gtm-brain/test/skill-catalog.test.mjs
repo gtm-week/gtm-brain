@@ -11,7 +11,7 @@ const plugin=fileURLToPath(new URL('../',import.meta.url));
 
 test('the real renderer publishes the skill catalog in both page and data',t=>{
  const scratch=mkdtempSync(join(tmpdir(),'gtm-skill-render-')),root=join(scratch,'brain-workspace');mkdirSync(root);
- t.after(()=>rmSync(scratch,{recursive:true,force:true,maxRetries:5,retryDelay:100}));
+ t.after(()=>{ try { rmSync(scratch,{recursive:true,force:true,maxRetries:5,retryDelay:100}); } catch {} });
  const env={...process.env,CODEX_HOME:join(scratch,'profile'),PLUGIN_ROOT:plugin,GTM_BRAIN_NO_OPEN:'1',GTM_BRAIN_NO_COMPILE:'1',GTM_BRAIN_NO_WATCH:'1',GTM_BRAIN_NO_VERSION_CHECK:'1'};
  execFileSync('git',['init','-q',root],{env});
  execFileSync('bash',[join(plugin,'scripts/gtm-brain-setup/setup.sh'),'--company','Skill Fixture','--one-liner','Test workflows','--owner','Alex Example <alex@example.invalid>','--language','en','--dashboard','on-demand'],{cwd:root,env,stdio:'pipe'});
@@ -33,7 +33,7 @@ test('the catalog covers exactly the shipped user skills',()=>{
  }
 });
 test('missing workflows and internal script folders are never advertised',t=>{
- const root=mkdtempSync(join(tmpdir(),'gtm-skill-catalog-'));t.after(()=>rmSync(root,{recursive:true,force:true}));
+ const root=mkdtempSync(join(tmpdir(),'gtm-skill-catalog-'));t.after(()=>{ try { rmSync(root,{recursive:true,force:true}); } catch {} });
  mkdirSync(join(root,'skills/gtm-brain-sync'),{recursive:true});writeFileSync(join(root,'skills/gtm-brain-sync/SKILL.md'),'name: gtm-brain-sync');
  mkdirSync(join(root,'skills/gtm-brain-project'),{recursive:true});writeFileSync(join(root,'skills/gtm-brain-project/project.mjs'),'');
  assert.deepEqual(skillCatalog(root).map(s=>s.id),['gtm-brain-sync']);

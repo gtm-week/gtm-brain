@@ -301,7 +301,7 @@ test("upgrade pulls a document into the folder of its own name that sits beside 
 });
 
 test("setup refuses a folder too broad for a brain, before writing anything, and says where to go", t => {
-  const home = mkdtempSync(join(tmpdir(), "gtm-broad-home-")); t.after(() => rmSync(home, { recursive: true, force: true }));
+  const home = mkdtempSync(join(tmpdir(), "gtm-broad-home-")); t.after(() => { try { rmSync(home, { recursive: true, force: true }); } catch {} });
   const desktop = join(home, "Desktop"), fine = join(home, "Documents", "Reflow Brain"); mkdirSync(desktop); mkdirSync(fine, { recursive: true });
   const setup = cwd => spawnSync("bash", [join(plugin, "scripts/gtm-brain-setup/setup.sh"), "--company", "Reflow", "--one-liner", "Testing", "--owner", "Ann Lee <ann@example.test>"], { cwd, env: { ...process.env, HOME: home, CODEX_HOME: join(home, "profile"), GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_COMPILE: "1" }, encoding: "utf8" });
   for (const [cwd, name] of [[home, "your home folder"], [desktop, "Desktop"], [join(home, "Documents"), "Documents"]]) {

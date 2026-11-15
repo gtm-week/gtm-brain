@@ -8,7 +8,7 @@ import { spawnSync } from "node:child_process";
 import { healthLine, summaryRuns, lastSyncs, openGaps } from "../lib/health-line.mjs";
 const plugin = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 
-const bare = t => { const root = mkdtempSync(join(tmpdir(), "gtm-health-")); t.after(() => rmSync(root, { recursive: true, force: true })); mkdirSync(join(root, "work")); return root; };
+const bare = t => { const root = mkdtempSync(join(tmpdir(), "gtm-health-")); t.after(() => { try { rmSync(root, { recursive: true, force: true }); } catch {} }); mkdirSync(join(root, "work")); return root; };
 const none = { coverage: [], policies: [], meetings: [] };
 const runs = (root, ...rows) => writeFileSync(join(root, "work/runs.jsonl"), rows.map(r => JSON.stringify(r)).join("\n") + "\n");
 
@@ -53,7 +53,7 @@ test("one line, with every part, and nothing when nothing is known", t => {
 });
 
 test("the chat start prints the health line once", t => {
-  const root = mkdtempSync(join(tmpdir(), "gtm-health-start-")); t.after(() => rmSync(root, { recursive: true, force: true }));
+  const root = mkdtempSync(join(tmpdir(), "gtm-health-start-")); t.after(() => { try { rmSync(root, { recursive: true, force: true }); } catch {} });
   const env = { ...process.env, CODEX_HOME: join(root, "profile"), GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_COMPILE: "1" };
   assert.equal(spawnSync("bash", [join(plugin, "scripts/gtm-brain-setup/setup.sh"), "--company", "Health Co", "--one-liner", "Testing", "--owner", "Ann Lee <ann@example.test>"], { cwd: root, env, encoding: "utf8" }).status, 0);
   runs(root, { at: "2026-11-10T08:00:00Z", turns: 2 });

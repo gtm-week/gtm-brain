@@ -19,7 +19,7 @@ function fixture(t) {
   mkdirSync(join(root, "brain"), { recursive: true });
   writeFileSync(join(root, "brain/admin.md"), lib.renderFrontmatter({ company: "Starter Fixture", team: [{ name: "Starter Test", handle: "starter", email: "starter@example.invalid" }] }));
   execFileSync("git", ["init", "-q", root]);
-  t.after(() => rmSync(scratch, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }));
+  t.after(() => { try { rmSync(scratch, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); } catch {} });
   return { scratch, root, path: join(root, "website"), env: { ...env, CODEX_HOME: join(scratch, "profile"), GTM_BRAIN_NO_RENDER: "1" } };
 }
 function run(f, ...args) {

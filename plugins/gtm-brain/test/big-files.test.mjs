@@ -18,7 +18,7 @@ const LINK = 'https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQ/view?usp=sharin
 
 function fixture(t, { admin = {} } = {}) {
   const scratch = realpathSync(mkdtempSync(join(tmpdir(), 'gtm-big-files-')));
-  t.after(() => rmSync(scratch, { recursive: true, force: true }));
+  t.after(() => { try { rmSync(scratch, { recursive: true, force: true }); } catch {} });
   const root = join(scratch, 'brain'), outside = join(scratch, 'downloads'), big = join(scratch, 'big');
   for (const d of [join(root, 'brain'), join(root, 'work'), outside]) mkdirSync(d, { recursive: true });
   const write = extra => writeFileSync(join(root, 'brain/admin.md'), lib.renderFrontmatter({ company: 'Reflow', owner: 'alex', dashboard: 'on-demand', tools: [], team: [{ name: 'Alex Example', handle: 'alex', email: 'alex@reflow.invalid' }], ...admin, ...extra }) + '\n# Reflow\n');
@@ -89,7 +89,7 @@ test('google-drive: --big names the Drive folder and copies nothing; --drive tur
 
 test('local: --big copies into the big-files folder, checks it, prints the file pointer and never touches the original', t => {
   const f = fixture(t, { admin: {} }); f.admin({ big_files: 'local', big_files_folder: join(realpathSync(tmpdir()), `gtm-big-local-${process.pid}-${Date.now()}`) });
-  const folder = lib.bigFiles(f.root).folder; t.after(() => rmSync(folder, { recursive: true, force: true }));
+  const folder = lib.bigFiles(f.root).folder; t.after(() => { try { rmSync(folder, { recursive: true, force: true }); } catch {} });
   writeFileSync(join(f.outside, 'call.mp4'), 'video one');
   const first = f.run('--file', join(f.outside, 'call.mp4'), '--big');
   assert.equal(first.mode, 'local'); assert.equal(first.copied, true);

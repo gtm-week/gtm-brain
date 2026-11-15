@@ -78,7 +78,7 @@ test('MCP E2E: transcript -> anchor -> findings -> correction -> refresh -> dash
   assert.ok(readFileSync(join(brain, 'brain/contexts/offer/memories.jsonl'), 'utf8').startsWith(before));
 });
 test('daily run closes prompt input without reading an open caller stdin',async t=>{
-  const root=mkdtempSync(join(tmpdir(),'gtm-daily-input-')),bin=join(root,'bin');t.after(()=>rmSync(root,{recursive:true,force:true}));
+  const root=mkdtempSync(join(tmpdir(),'gtm-daily-input-')),bin=join(root,'bin');t.after(()=>{ try { rmSync(root,{recursive:true,force:true}); } catch {} });
   mkdirSync(join(root,'brain'));mkdirSync(join(root,'work'));mkdirSync(bin);
   writeFileSync(join(root,'brain/admin.md'),lib.renderFrontmatter({company:'Daily Fixture',team:[{name:'Ann Lee',handle:'ann',email:'ann@fixture.test'}]}));
   writeFileSync(join(bin,'codex'),`#!${process.execPath}\nconst fs=require('node:fs');fs.writeFileSync('work/daily-invocation.json',JSON.stringify({args:process.argv.slice(2),prompt:fs.readFileSync(0,'utf8')}));`,{mode:0o755});

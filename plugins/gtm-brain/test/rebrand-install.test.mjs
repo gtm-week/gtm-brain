@@ -12,7 +12,7 @@ const oldId='gtm-os@gtm-os', nextId='gtm-brain@gtm-brain';
 // The version this checkout ships: the migration verifies the installed files against it.
 const VERSION=JSON.parse(readFileSync(join(plugin,'.codex-plugin/plugin.json'),'utf8')).version;
 async function migration(t, host, fault) {
-  const dir=mkdtempSync(join(tmpdir(),'brain-install-rename-')); t.after(()=>rmSync(dir,{recursive:true,force:true}));
+  const dir=mkdtempSync(join(tmpdir(),'brain-install-rename-')); t.after(()=>{ try { rmSync(dir,{recursive:true,force:true}); } catch {} });
   const cache=join(dir,'plugins/cache/gtm-brain/gtm-brain');mkdirSync(cache,{recursive:true});symlinkSync(plugin,join(cache,VERSION),'dir');
   const state={old:true,next:false,market:false,events:[]};
   const command=(name,args)=>{
@@ -48,7 +48,7 @@ for(const fault of ['install','runtime'])test(`migration keeps the existing plug
 });
 
 for(const scope of ['project','local']) test(`Claude executable migrates ${scope} in its original project and preserves plugin data`, t => {
-  const dir=realpathSync(mkdtempSync(join(tmpdir(),'brain-migration-cwd-')));t.after(()=>rmSync(dir,{recursive:true,force:true}));
+  const dir=realpathSync(mkdtempSync(join(tmpdir(),'brain-migration-cwd-')));t.after(()=>{ try { rmSync(dir,{recursive:true,force:true}); } catch {} });
   const bin=join(dir,'bin'), project=join(dir,'company');mkdirSync(bin);mkdirSync(project);
   writeFileSync(join(bin,'claude'),`#!${process.execPath}
 const fs=require('node:fs');const args=process.argv.slice(2);const stateFile=${JSON.stringify(join(dir,'state.json'))};
@@ -73,7 +73,7 @@ fs.writeFileSync(stateFile,JSON.stringify(state));console.log(out);
 
 test('Claude does not retire the old project plugin because a replacement exists in another project', async t=>{
   const {migrateInstallation}=await import(moduleUrl);
-  const dir=realpathSync(mkdtempSync(join(tmpdir(),'brain-migration-scope-')));t.after(()=>rmSync(dir,{recursive:true,force:true}));
+  const dir=realpathSync(mkdtempSync(join(tmpdir(),'brain-migration-scope-')));t.after(()=>{ try { rmSync(dir,{recursive:true,force:true}); } catch {} });
   const project=join(dir,'current'), other=join(dir,'other');mkdirSync(project);mkdirSync(other);
   const events=[];
   await assert.rejects(()=>migrateInstallation({host:'claude',cwd:project,command:(host,args)=>{

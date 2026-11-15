@@ -102,7 +102,7 @@ test("only lib/host.mjs knows which host it is", () => {
 // A fake `claude plugin`: the marketplace is a folder whose plugins/gtm-brain is this checkout, the install a JSON file.
 function fakeClaude(t, state) {
   const dir = mkdtempSync(join(tmpdir(), "gtm-brain-fake-claude-")), market = join(dir, "market");
-  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  t.after(() => { try { rmSync(dir, { recursive: true, force: true }); } catch {} });
   mkdirSync(join(market, "plugins"), { recursive: true }); execFileSync("ln", ["-s", P, join(market, "plugins", "gtm-brain")]);
   writeFileSync(join(dir, "state.json"), JSON.stringify(state)); writeFileSync(join(dir, "calls"), "");
   writeFileSync(join(dir, "claude"), `#!/usr/bin/env node

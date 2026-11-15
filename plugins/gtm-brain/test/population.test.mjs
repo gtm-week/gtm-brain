@@ -24,7 +24,7 @@ const health = await import(`${P}/lib/health-line.mjs`);
 
 function brain(t) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "gtm-pop-")));
-  t.after(() => rmSync(root, { recursive: true, force: true }));
+  t.after(() => { try { rmSync(root, { recursive: true, force: true }); } catch {} });
   execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "Demo Co", "--one-liner", "events", "--owner", "Marta Nowak <marta@demo.co>"], { cwd: root, env, stdio: "ignore" });
   return root;
 }

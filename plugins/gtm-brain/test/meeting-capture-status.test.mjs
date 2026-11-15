@@ -10,7 +10,7 @@ import { wholeRulebook } from "../lib/rule-pages.mjs";
 const plugin = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 
 function brain(t) {
-  const root = mkdtempSync(join(tmpdir(), "gtm-capture-")); t.after(() => rmSync(root, { recursive: true, force: true }));
+  const root = mkdtempSync(join(tmpdir(), "gtm-capture-")); t.after(() => { try { rmSync(root, { recursive: true, force: true }); } catch {} });
   const env = { ...process.env, CODEX_HOME: join(root, "profile"), GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_COMPILE: "1" };
   const setup = spawnSync("bash", [join(plugin, "scripts/gtm-brain-setup/setup.sh"), "--company", "Capture Co", "--one-liner", "Testing", "--owner", "Ann Lee <ann@example.test>"], { cwd: root, env, encoding: "utf8" });
   assert.equal(setup.status, 0, setup.stderr);

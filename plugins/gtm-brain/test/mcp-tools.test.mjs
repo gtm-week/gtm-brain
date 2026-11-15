@@ -11,7 +11,7 @@ const connect = join(plugin, "scripts/gtm-brain-connect/connect.mjs");
 const ID = "app-6a3d93e966b8819198c93780c2577383";
 
 function brain(t, tools = ["HubSpot", "ZYNT"], list = "") {
-  const outer = mkdtempSync(join(tmpdir(), "gtm-mcp-")); t.after(() => rmSync(outer, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }));
+  const outer = mkdtempSync(join(tmpdir(), "gtm-mcp-")); t.after(() => { try { rmSync(outer, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch {} });
   const root = join(outer, "brain"), home = join(outer, "codex-home"), bin = join(outer, "bin"); mkdirSync(root); mkdirSync(home); mkdirSync(bin);
   writeFileSync(join(bin, "codex"), `#!/bin/sh\nprintf '%s\\n' "${list}"\n`); chmodSync(join(bin, "codex"), 0o755);
   const env = { ...process.env, CODEX_HOME: home, PATH: `${bin}:${process.env.PATH}`, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_CATALOG_DIR: join(outer, "none") };
