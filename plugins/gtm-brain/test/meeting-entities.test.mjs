@@ -80,3 +80,15 @@ test("meetings saved before meeting entities get theirs at the upgrade; their no
   assert.ok(lib.readNames(root).some(n => n.id === lib.meetingEntityId(anchor.id)));
   assert.deepEqual(lib.listContexts(root).map(c => readFileSync(join(c.dir, "memories.jsonl"), "utf8")), bytes);
 });
+
+test("the index status is ready, not stale, in a brain that has a meeting entity", async () => {
+  const { memoryIndexMaintenance } = await import("../lib/memory-maintenance.mjs");
+  const root = brain();
+  const r = remember(root, [{ context: "sales", content: "Acme discovery call with Max Jendral.", tools: ["granola"], people: ["Max Jendral"], sources: source, meeting: meeting() }]);
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.ok(lib.readNames(root).some(e => e.kind === "meeting"), "the save made a meeting entity");
+  assert.equal(memoryIndexMaintenance(root, { mode: "rebuild", budget_ms: 5000 }).status, "ready");
+  const status = memoryIndexMaintenance(root);
+  assert.equal(status.identities_changed, false, "the status reads the registry the way the index stores it, meeting anchors included");
+  assert.equal(status.status, "ready");
+});
