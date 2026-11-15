@@ -13,6 +13,7 @@ import { askSourceLines } from './ask-source.mjs';
 const capSetting = Number(process.env.GTM_BRAIN_SEARCH_MAX_BYTES);
 export const SEARCH_MAX_BYTES = Number.isInteger(capSetting) && capSetting >= 2048 && capSetting <= 2 * 1024 * 1024 ? capSetting : 12 * 1024;
 export const ANSWER_NOTES = 8;               // notes an answer shows when no limit is given
+export const ANSWER_CARDS = 5;                // entity cards an answer shows; more are read with query entities and a list
 const PER_NOTE_BYTES = 1536;                  // a larger limit raises the cap by this much per note
 const FULL_NOTE_CHARS = 1800, SHORT_NOTE_CHARS = 700;   // the first three notes nearly whole, the rest shorter
 const TYPO_MIN = 5;
@@ -500,7 +501,14 @@ export function answerText(index, root, question, { filters = {}, limit, project
   if (r.literal) out.push('No word matched; these notes contain the text as typed (an id, a tag or a source).');
   if (q.entities.length) {
     const registry = index.entries || lib.readNames(root);
-    for (const e of q.entities.slice(0, 2)) { const card = entityCard(index, root, e, now, registry, relationsFor); if (card) out.push('', card); }
+    // a question that names several ("who are A, B and C") gets a card for each, so no read per person follows
+    for (const e of q.entities.slice(0, ANSWER_CARDS)) { const card = entityCard(index, root, e, now, registry, relationsFor); if (card) out.push('', card); }
+    // several named: say what is not recorded, so the next call is not a brief or a search per person
+    if (q.entities.length > 2) {
+      const none = q.entities.slice(0, ANSWER_CARDS).map(e => registry.find(x => x.id === e.id)).filter(e => e && (e.kind || 'person') === 'person' && !relationsFor(e.id).some(r => r.type === 'works_at' && r.from.id === e.id && r.status === 'current')).map(e => e.name);
+      out.push('', `Each one named has its card above${none.length ? `; no employer is recorded as a relationship for ${none.join(', ')} (a brief or a note below may name one: say it as written, else say it is not recorded)` : ''}. The cards and the notes below are what the brain holds on them: no brief or search per person is needed.`);
+    }
+    if (q.entities.length > ANSWER_CARDS) out.push('', `${q.entities.length - ANSWER_CARDS} more named (${q.entities.slice(ANSWER_CARDS, ANSWER_CARDS + 8).map(e => e.name).join(', ')}): their cards in one call, query object entities with filters.name as a list.`);
   }
   let bytes = Buffer.byteLength(out.join('\n')), shown = 0;
   const notes = [];

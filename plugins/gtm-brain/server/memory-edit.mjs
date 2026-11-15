@@ -41,7 +41,7 @@ const no = (code, note) => { throw new Refusal(code, note); };
 const short = (s, n = 80) => { const t = String(s || "").replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n - 3) + "..." : t; };
 
 export function createMemoryEdit({ root, token, json, log = () => {} }) {
-  const run = argv => new Promise(done => execFile(process.execPath, [script("gtm-brain-remember/remember.mjs"), root, ...argv], { cwd: root, env: process.env, encoding: "utf8", timeout: 120000, maxBuffer: 1 << 22 },
+  const run = argv => new Promise(done => execFile(process.execPath, [script("gtm-brain-remember/remember.mjs"), root, ...argv], { cwd: root, env: { ...process.env, NODE_NO_WARNINGS: "1" }, encoding: "utf8", timeout: 120000, maxBuffer: 1 << 22 },
     (error, stdout, stderr) => done({ code: error ? (typeof error.code === "number" ? error.code : 1) : 0, stdout: String(stdout || "").trim(), stderr: String(stderr || "").trim() })));
   // what the script said, without the part written for the model
   const said = out => (out.stderr || out.stdout || "").split("\n").filter(l => l.trim() && !/^(Reply to the person|kept )/.test(l.trim())).slice(0, 2).join(" ")
