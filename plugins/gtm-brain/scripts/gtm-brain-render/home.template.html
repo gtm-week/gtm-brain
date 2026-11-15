@@ -216,7 +216,7 @@ h1,h2,h3{font-family:var(--display);margin:0;letter-spacing:-.01em}
 .settings-about #plugin-line{color:var(--ink)}
 @media(max-width:900px){.setting-row{grid-template-columns:1fr auto;gap:10px}.setting-row>div{grid-column:1/-1}}
 /* The front page: four tabs by pillar under one health line; More holds the earlier views. */
-.health-line{margin:0 0 4px;font-size:12px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere}.health-line b{font-family:var(--label);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);margin-right:6px}
+.pl-rowlink{cursor:pointer}.pl-rowlink:hover th,.pl-rowlink:focus th{text-decoration:underline}.health-line{margin:0 0 4px;font-size:12px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere}.health-line b{font-family:var(--label);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);margin-right:6px}
 .subnav{display:flex;gap:18px;padding:2px 0 10px}.subnav[hidden]{display:none}.subnav button{border:0;background:none;color:var(--muted);font:inherit;font-size:13px;padding:4px 0;cursor:pointer;border-bottom:1px solid transparent}.subnav button.on{color:var(--ink);border-bottom-color:var(--accent)}.subnav button:hover{color:var(--ink)}
 .pl-card{background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:18px 20px;margin-bottom:16px}.pl-card h2{font-size:17px;display:flex;align-items:baseline;gap:10px;margin-bottom:6px}.pl-card h3{font-size:14px;margin:16px 0 6px}.pl-card-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .pl-count{font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:400}.pl-age{color:var(--muted);font-size:12px}.pl-warn{color:var(--amber)}.pl-req{color:var(--amber);margin-left:1px}.pl-big{margin:4px 0 8px;font-size:14px}
@@ -309,14 +309,14 @@ document.addEventListener("click",e=>{const x=e.target.closest("[data-exact]");i
 const stale=D.contexts.filter(c=>c.stale&&c.status==="active"&&!c.updating);const updating=D.contexts.filter(c=>c.updating&&c.status==="active");const active=D.contexts.filter(c=>c.status==="active"),archived=D.contexts.filter(c=>c.status!=="active");
 /* The front page is four tabs by pillar; the earlier Overview, the evidence views and the activity feed sit behind More. */
 const PILLARS=["config","entities","notes","workflows"];
-const VIEWS=[["config","Configuration"],["entities","Entities"],["notes","Memories"],["workflows","Workflows"],["home","More"]];let view="config";
+const VIEWS=[["home","Overview"],["config","Configuration"],["entities","Entities"],["notes","Memories"],["workflows","Workflows"]];let view="home";
 const MORE=[["home","Overview"],["explore","Explore"],["skills","Help"]];
 const viewLabel=v=>({config:"Configuration",entities:"Entities",notes:"Memories",workflows:"Workflows",home:"Overview",contexts:"Contexts",explore:"Explore",search:"Search",people:"People & organizations",customers:"Customers",meetings:"Meetings",memories:"Memories",questions:"Needs your attention",projects:"Working folders",admin:"Settings",skills:"Help"})[v]||v;
 function nav(){
  const sub=["contexts","people","customers","meetings","memories","search"].includes(view)?"explore":["questions","decisions","projects"].includes(view)?"home":view;
  const group=PILLARS.includes(view)?view:view==="admin"?"admin":"home";
  $("#nav").innerHTML=VIEWS.map(([k,label])=>`<button data-v="${k}" class="${group===k?"on":""}" ${group===k?'aria-current="page"':''}><span>${esc(label)}</span></button>`).join("");
- $("#subnav").hidden=group!=="home";
+ $("#subnav").hidden=true;/* Explore duplicated the Entities and Memories tabs; search and those tabs replace it */
  $("#subnav").innerHTML=group==="home"?MORE.map(([k,label])=>`<button data-v="${k}" class="${sub===k?"on":""}" ${sub===k?'aria-current="page"':''}>${esc(label)}</button>`).join(""):"";
  $("#workspace-link").classList.toggle("on",view==="admin");
  $("#workspace-link").setAttribute("aria-current",view==="admin"?"page":"false");
@@ -548,7 +548,7 @@ let projectSlug="";
 const selectedProject=()=>(D.projects||[]).find(p=>p.slug===projectSlug)||null;
 function renderProject(){
  const projects=D.projects||[];
- $("#project-picker").hidden=false;
+ /* the project picker is no longer a header control */
  if(!projects.some(p=>p.slug===projectSlug))projectSlug="";
  $("#project-label").textContent="Project";
  $("#project-select").innerHTML=`<option value="">${esc("All company")}</option>`+projects.map(p=>`<option value="${esc(p.slug)}">${esc(p.title)}</option>`).join("");
@@ -1001,14 +1001,14 @@ const kindTitle=k=>({person:"People",organization:"Organizations",product:"Produ
 const plUnreadMsg=`<p class="empty pl-warn">${esc("This tab could not be read from the brain's files. The other tabs and More still work. Ask Codex to check the brain.")}</p>`;
 const plEmpty=D.pillarsUnread?plUnreadMsg:`<p class="empty">${esc("Refresh the dashboard in Codex to see this tab: it was made by an older version.")}</p>`;
 const plUnread=s=>Array.isArray(PL?.unread)&&PL.unread.includes(s);
-function renderHealthLine(){const el=$("#health-line");if(!el)return;el.hidden=!PL;if(!PL){el.innerHTML="";return}/* no tabs' data: nothing is known, so nothing is claimed */el.innerHTML=`<b>${esc("Health")}</b> `+(PL?.health?esc(PL.health):`<span class="pl-age">${esc("Nothing to report yet: no meeting capture, summary run or sync recorded.")}</span>`)}
+function renderHealthLine(){const el=$("#health-line");if(!el)return;el.hidden=true;return;if(!PL){el.innerHTML="";return}/* no tabs' data: nothing is known, so nothing is claimed */el.innerHTML=`<b>${esc("Health")}</b> `+(PL?.health?esc(PL.health):`<span class="pl-age">${esc("Nothing to report yet: no meeting capture, summary run or sync recorded.")}</span>`)}
 function renderConfig(){
  if(!PL){$("#cfg-docs").innerHTML=plEmpty;return}
  if(plUnread("configuration")){$("#cfg-docs").innerHTML=plUnreadMsg;return}
  const C=PL.configuration,R=C.rules,S=C.schema,T=C.settings;
  const baseDocs=C.documents.filter(d=>d.base),otherDocs=C.documents.filter(d=>!d.base);
- const docRow=d=>`<tr><th scope="row">${esc(d.title)}${d.base&&!d.starter?` <span class="pl-age">${esc("added by the team")}</span>`:""}</th><td>${stateBadge(d.state)}</td><td>${d.applies_to.length?d.applies_to.map(a=>`<span class="tag">${esc(a)}</span>`).join(" "):`<span class="pl-age">${esc("not set")}</span>`}</td><td>${d.changed?whenText(d.changed):`<span class="pl-age">${esc("not made yet")}</span>`}</td><td>${rowLinks(d.path,d.state!=="not written"?`Let's discuss our ${d.title} document (${d.path}). Read it first, then tell me what is missing or out of date.`:`Help me write our ${d.title} document.`,d.title)}</td></tr>`;
- $("#cfg-docs").innerHTML=`<section class="sec pl-card"><h2>${esc("Base documents")} <span class="pl-count">${baseDocs.filter(d=>d.state!=="not written").length} / ${baseDocs.length}</span></h2><p class="m">${esc("What the work must follow. Codex reads the matching one before that kind of work.")}</p><div class="pl-table-wrap"><table class="pl-table"><thead><tr><th>${esc("Document")}</th><th>${esc("State")}</th><th>${esc("Applies to")}</th><th>${esc("Last changed")}</th><th><span class="sr-only">${esc("Links")}</span></th></tr></thead><tbody>${baseDocs.map(docRow).join("")}</tbody></table></div></section>`+(otherDocs.length?`<section class="sec pl-card"><details class="fold"><summary>${esc("Other documents")} · ${otherDocs.length}</summary><p class="m">${esc("Documents the team keeps that are not base files. To make one a base file, ask Codex to mark it as one.")}</p><div class="pl-table-wrap"><table class="pl-table"><thead><tr><th>${esc("File")}</th><th>${esc("State")}</th><th>${esc("Applies to")}</th><th>${esc("Last changed")}</th><th><span class="sr-only">${esc("Links")}</span></th></tr></thead><tbody>${otherDocs.map(docRow).join("")}</tbody></table></div></details></section>`:"");
+ const docRow=d=>`<tr${d.path?` class="pl-rowlink" data-open="/file?path=${encodeURIComponent(d.path)}" tabindex="0"`:""}><th scope="row">${esc(d.title)}${d.base&&!d.starter?` <span class="pl-age">${esc("added by the team")}</span>`:""}</th><td>${stateBadge(d.state)}</td><td>${d.changed?whenText(d.changed):`<span class="pl-age">${esc("not made yet")}</span>`}</td><td>${rowLinks(d.path,d.state!=="not written"?`Let's discuss our ${d.title} document (${d.path}). Read it first, then tell me what is missing or out of date.`:`Help me write our ${d.title} document.`,d.title)}</td></tr>`;
+ $("#cfg-docs").innerHTML=`<section class="sec pl-card"><h2>${esc("Base documents")} <span class="pl-count">${baseDocs.filter(d=>d.state!=="not written").length} / ${baseDocs.length}</span></h2><p class="m">${esc("What the work must follow. Codex reads the matching one before that kind of work.")}</p><div class="pl-table-wrap"><table class="pl-table"><thead><tr><th>${esc("Document")}</th><th>${esc("State")}</th><th>${esc("Last changed")}</th><th><span class="sr-only">${esc("Links")}</span></th></tr></thead><tbody>${baseDocs.map(docRow).join("")}</tbody></table></div></section>`;
  const byRule=Object.entries(R.by_rule||{}).map(([k,n])=>`<span class="tag">${esc(k)} · ${n}</span>`).join(" ");
  $("#cfg-rules").innerHTML=`<section class="sec pl-card"><div class="pl-card-head"><h2>RULES.md</h2>${rowLinks(R.path,R.path?"Let's go through RULES.md and the rules check: what should I fix first?":"Set up RULES.md for this brain.","RULES.md")}</div>`+
   `<p class="pl-big">${R.path?`<b>${R.count}</b> ${esc(R.count===1?"rule":"rules")} <span class="pl-age">(${R.placement} ${esc("where things go")}, ${R.own.length} ${esc("of our rules")})</span>`:esc("No RULES.md yet: the built-in Ask the source rows apply.")} · <b class="${R.problems?"pl-warn":""}">${R.problems}</b> ${esc(R.problems===1?"problem":"problems")} ${esc("from the rules check")}${R.path&&R.changed?` · ${esc("changed")} ${whenText(R.changed)}`:""}</p>${byRule?`<p>${byRule}</p>`:""}`+
@@ -1091,11 +1091,12 @@ function plObserve(){
  plObserver=new IntersectionObserver(entries=>{for(const e of entries)if(e.isIntersecting)e.target.click()},{rootMargin:"200px"});
  for(const b of document.querySelectorAll("[data-pe-more],[data-pm-more]"))plObserver.observe(b);
 }
+document.addEventListener("click",e=>{const r=e.target.closest?.("tr[data-open]");if(r&&!e.target.closest("a,button"))window.open(r.dataset.open,"_blank","noopener")});document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.matches?.("tr[data-open]"))window.open(e.target.dataset.open,"_blank","noopener")});
 document.addEventListener("click",e=>{const b=e.target.closest?.("[data-pe-more],[data-pm-more]");if(!b)return;if(b.hasAttribute("data-pm-more")){pmLimit+=PM_PAGE;renderNotesTab()}else{const k=b.dataset.peMore;peLimits[k]=(peLimits[k]||PE_PAGE)+PE_PAGE*2;renderEntitiesTab()}});
 document.addEventListener("input",e=>{if(e.target?.id==="pe-q"){peQuery=e.target.value;peLimits={};renderEntitiesTab()}else if(e.target?.id==="pm-entity"){pmF.entity=e.target.value;pmLimit=PM_PAGE;renderNotesTab()}});
 document.addEventListener("change",e=>{const id=e.target?.id;if(!["pm-kind","pm-tag","pm-period","pm-state"].includes(id))return;pmF[id.slice(3)]=e.target.value;pmLimit=PM_PAGE;renderNotesTab()});
 renderHealthLine();renderConfig();renderEntitiesTab();renderNotesTab();renderWorkflowsTab();
-(function(){let v="config";try{v=sessionStorage.getItem("gtm-view")||"config"}catch{}if(v==="search"||!document.querySelector(`.view[data-view="${v}"]`))v="config";show(v)})();
+(function(){let v="home";try{v=sessionStorage.getItem("gtm-view")||"home"}catch{}if(v==="search"||!document.querySelector(`.view[data-view="${v}"]`))v="config";show(v)})();
 const _show=show;show=v=>{_show(v);try{sessionStorage.setItem("gtm-view",v)}catch{}};
 renderSkills();
 const contextRow=c=>`<button class="context-row" data-v="contexts" data-ch="${esc(c.slug)}"><span class="context-name"><strong>${esc(contextTitle(c))}</strong></span><span class="context-excerpt">${esc((c.summaryPlaceholder?c.rule:firstSentence(summaryText(c)))||"No notes yet.")}</span><span class="context-meta">${esc(noteCount(c.totalMemories??c.memories.length))}<span aria-hidden="true">↗</span></span></button>`;
@@ -1351,7 +1352,7 @@ if(typeof history!=='undefined'&&typeof addEventListener==='function'){
 updateChatLink();
 function freshness(ok){$("#freshness").classList.toggle("stale",!ok);$("#freshness").textContent=(ok?"Dashboard refreshed: ":"Connection lost. Dashboard last refreshed: ")+localDateTime(D.generatedAt)}
 freshness(true);
-(function renderBrainHealth(){var el=$("#brain-health");if(!el)return;var staleCount=stale.length;var ago=D.generatedAt?localDateTime(D.generatedAt):"";var syncLabel="synced ";var staleLabel=" stale";el.innerHTML=(ago?'<span class="health-sync">● '+esc(syncLabel+ago)+'</span>':"")+(staleCount?'<span class="health-stale">'+staleCount+esc(staleLabel)+'</span>':"")})();
+(function renderBrainHealth(){var el=$("#brain-health");if(!el)return;var staleCount=stale.length;var ago=D.generatedAt?localDateTime(D.generatedAt):"";var mins=D.generatedAt?Math.max(0,Math.round((Date.now()-Date.parse(D.generatedAt))/60000)):null;var rel=mins===null?"":mins<1?"just now":mins<60?mins+(mins===1?" minute ago":" minutes ago"):mins<1440?Math.round(mins/60)+(Math.round(mins/60)===1?" hour ago":" hours ago"):Math.round(mins/1440)+(Math.round(mins/1440)===1?" day ago":" days ago");el.innerHTML=rel?'<span class="health-sync" title="'+esc(ago)+'">● '+esc("Updated "+rel)+'</span>':""})();
 let refreshing=false;
 function refreshStatus(state){if(["pending","running","failed"].includes(state?.status))$("#freshness").textContent=(state.status==="failed"?"Dashboard refresh failed. Your saved records are safe; retry in Codex.":"Saved changes are being added to this dashboard.")}
 function newer(revision){if(revision&&revision!==D.generatedAt&&!refreshing){refreshing=true;refreshPage()}}
