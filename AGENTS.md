@@ -183,8 +183,13 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
   commit path is one activity path; `lib.save()` is the person's save (commit of `BRAIN_PATHS`,
   push when there is a remote). `readContext` exposes `rule` and `now` (learned working guidance, possibly empty); nobody splits
   "When loaded" by hand.
-- The dashboard is a read-only viewer. Its server serves files and revision events only, never
-  actions or background jobs. Chat about this uses a codex://threads/new link with the absolute
+- The dashboard is a viewer with two writes, both accepted only from the page itself (this
+  server's own Origin and Host, a token made at each server start, JSON only, never under
+  `GTM_BRAIN_RUN`). A document can be edited and saved (`POST /document`, which runs
+  `document.mjs --update`). An entity or a relation can be changed through a fixed list of nine
+  operations (`POST /entity-edit`, `server/entity-edit.mjs`), each of which runs the script
+  Codex's tools run. Everything else stays view-only: its server serves files, search reads and
+  revision events, never other actions or background jobs. Chat about this uses a codex://threads/new link with the absolute
   selected project folder (or brain folder for brain-wide views) and a prepared prompt; the person presses Send in Codex. Saved answers link to
   the question ID through retracts and refresh the viewer without waiting for compilation.
   Only questions tagged brain-question enter the pending brain-question list; CRM tasks and

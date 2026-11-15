@@ -82,7 +82,8 @@ Everything that ships is under `plugins/gtm-brain/`. The layers, from the outsid
   direct edit of a protected file (`admin.md`, `memories.jsonl`, the company ontology) and keeps
   the edit in `work/manual-edits/protected/`.
 - **Dashboard**: `scripts/gtm-brain-render/render.mjs` builds `work/home/index.html` from the brain
-  files; `server/dash.mjs` serves it on 127.0.0.1, read-only, with revision events. The React
+  files; `server/dash.mjs` serves it on 127.0.0.1 with revision events; it is read-only except for the two guarded
+  writes named in AGENTS.md (a document save and the entity operations). The React
   Overview is built from `frontend/dashboard/` into `scripts/gtm-brain-render/ui/` and committed, so
   users never run npm. The legacy HTML client remains as the fallback and hosts the evidence views.
 
