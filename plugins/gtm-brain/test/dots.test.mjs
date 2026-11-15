@@ -114,14 +114,15 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   // Codex tagged the project's slug without "project:": it is the project all the same
   assert.equal(remember("--content", "Booth plan drafted.", "--tags", "berlin-event-2026,booth").status, 0);
   assert.deepEqual(lib.readMemories(root, "company").at(-1).tags, ["project:berlin-event-2026", "booth"]);
-  // a new company: saved as a company under C1, and its website asked in the one question
+  // a new company: saved as a company under C1. Its website is no longer asked on a save (benchmark 2026-11-15:
+  // the question ended 5 of 14 replies and set off extra reads); it stays a gap on the entity's page.
   const acme = remember("--content", "Acme wants a booth at the Berlin event.", "--companies", "Acme", "--project", "berlin-event-2026");
   assert.equal(acme.status, 0, acme.stderr);
-  assert.match(acme.stdout, /Ask the person once, in Codex's question box \(request_user_input\) when that tool is available in this chat .*otherwise as plain chat text with numbered parts, then end the turn, after quoting the note, one numbered part each: 1\) Acme's website, so the brain knows which Acme this is/);
+  assert.doesNotMatch(acme.stdout, /website/);
   assert.deepEqual(lib.readMemories(root, "company").at(-1).entity_mentions.map(x => [x.mention, x.rule]), [["Acme", "C1"]]);
   // Codex adds the company first and saves the note second (new-brain rerun, 2026-11-12): still asked, once
   lib.addName(root, "Initech", { kind: "company" });
-  assert.match(remember("--content", "Initech wants a booth.", "--companies", "Initech").stdout, /1\) Initech's website/);
+  assert.doesNotMatch(remember("--content", "Initech wants a booth.", "--companies", "Initech").stdout, /website/);
   assert.doesNotMatch(remember("--content", "Initech confirmed the booth.", "--companies", "Initech").stdout, /website/);   // asked already
   assert.doesNotMatch(remember("--content", "X hired two people.", "--companies", "X").stdout, /website/);   // our own company
   // known with a website: never asked again

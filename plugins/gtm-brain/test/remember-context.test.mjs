@@ -38,41 +38,43 @@ test("no context loaded or named: the one context where the people already have 
   assert.doesNotMatch(r.stdout + r.stderr, /Load a context first/);
 });
 
-test("evidence in two contexts: held with both candidates, nothing written", () => {
+// Since the live benchmark of 2026-11-15 a save is never sent back to ask which context: 7 of 10 refused first
+// calls were that question. The best guess is used and named, so the person can move the note in one sentence.
+test("evidence in two contexts: saved where the people have most notes, and the reply says it is a best guess", () => {
   run(root, "load", "load.mjs", "--clear");
   assert.equal(remember(root, "--context", "icp", "--people", "Pierre Aubert", "--content", "Pierre Aubert fits the ICP.").status, 0);
   const before = lib.readMemories(root, "market").length + lib.readMemories(root, "icp").length;
   const r = remember(root, "--people", "Pierre Aubert", "--content", "Pierre Aubert called again.");
-  assert.equal(r.status, 2, r.stdout);
-  assert.match(r.stderr, /which context is this for: .*\(icp\) or .*\(market\)|which context is this for: .*\(market\) or .*\(icp\)/);
-  assert.equal(lib.readMemories(root, "market").length + lib.readMemories(root, "icp").length, before);
+  assert.equal(r.status, 0, r.stderr + r.stdout);
+  assert.match(r.stdout, /saved in /);
+  assert.match(r.stdout, /filed under .* as the best guess \(its people have notes in .* and .*\)\. Do not ask about it/);
+  assert.equal(lib.readMemories(root, "market").length + lib.readMemories(root, "icp").length, before + 1, "one note, in one of the two");
 });
 
-test("no evidence and nothing loaded: held with the contexts listed, no guess", () => {
+test("no evidence and nothing loaded: saved in Our company as the best guess, never held", () => {
   run(root, "load", "load.mjs", "--clear");
+  const before = lib.readMemories(root, "company").length;
   const r = remember(root, "--content", "The returns market grows in Poland.");
-  assert.equal(r.status, 2, r.stdout);
-  assert.match(r.stderr, /which context is this for: .*\(market\).*Nothing in the note points at one/);
-  assert.match(r.stderr, /send it again with context: the slug/);
-  assert.doesNotMatch(r.stderr, /wait for the reply/, "naming the context is the model's step, not a question for the person every time");
-  const again = remember(root, "--context", "market", "--content", "The returns market grows in Poland.");
-  assert.equal(again.status, 0, again.stderr + again.stdout);
+  assert.equal(r.status, 0, r.stderr + r.stdout);
+  assert.match(r.stdout, /filed under .* as the best guess \(nothing in the note points at one context\)/);
+  assert.equal(lib.readMemories(root, "company").length, before + 1);
+  assert.doesNotMatch(r.stdout + r.stderr, /which context is this for/);
 });
 
-test("a batch keeps the entries that have a home and holds the one that has none", () => {
+test("a batch keeps every entry: the one with no home is filed under the best guess", () => {
   run(root, "load", "load.mjs", "--clear");
   const file = join(root, "work", "batch.json");
   execFileSync(process.execPath, ["-e", `require("fs").writeFileSync(${JSON.stringify(file)}, JSON.stringify([{ content: "Offer note one.", context: "offer" }, { content: "Unplaced note." }]))`]);
   const r = remember(root, "--batch", file);
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /kept 1 of 2/);
   assert.match(r.stdout, /#1 saved in .*: Offer note one\./);
-  assert.match(r.stdout, /#2 which context is this for/);
+  assert.match(r.stdout, /#2 saved in .*: Unplaced note\./);
+  assert.match(r.stdout, /#2 filed under .* as the best guess/);
 });
 
-test("several loaded contexts still ask which one", () => {
+test("several loaded contexts: saved in the first loaded one as the best guess", () => {
   run(root, "load", "load.mjs", "icp", "--only"); run(root, "load", "load.mjs", "market");
   const r = remember(root, "--content", "A loose note.");
-  assert.equal(r.status, 2);
-  assert.match(r.stderr, /which context is this for: .*Several contexts are loaded/);
+  assert.equal(r.status, 0, r.stderr + r.stdout);
+  assert.match(r.stdout, /filed under .* as the best guess/);
 });

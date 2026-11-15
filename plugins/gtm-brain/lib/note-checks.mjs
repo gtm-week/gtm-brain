@@ -76,7 +76,7 @@ export function restatement(pool, note, { speakers = [], cache = new Map() } = {
   // another project's note with the same words is that project's fact, never this one's
   const project = projectOf(note.tags);
   const plain = m => (m.kind === "note" || m.kind === "decision") && !m.retracts && !(m.tags || []).includes("brain-question") && projectOf(m.tags) === project;
-  let best = null;
+  let best = null, cand = null;
   const codes = mine.values.get("code");
   for (const m of pool) {
     if (!plain(m)) continue;
@@ -93,6 +93,12 @@ export function restatement(pool, note, { speakers = [], cache = new Map() } = {
     // kept note's: "invoiced EUR 600" is not "agreed to EUR 600"
     const quiet = same(mine.neg, f.neg) && subset(new Set(ours), new Set(evidence(m.source)));
     if (covered && quiet && (sharedCode ? types.length > 0 || ov >= 0.6 : ov >= 0.85)) return { kept: m };
+    // said in other words: the same people, no value the kept note lacks, the same denials, and enough of the
+    // words (more when the note has no value to compare). Not decided here: the caller shows the kept note once
+    // and the model, which reads both, says whether anything is new.
+    // Only in the band where wording really differs: nearly the same words with one changed ("invoiced EUR 600"
+    // after "agreed to EUR 600") is another fact and is saved as it is.
+    if (covered && quiet && sameWho && ov >= (mine.values.size ? 0.34 : 0.6) && ov < (mine.values.size ? 0.7 : 0.85) && (!cand || ov > cand.ov)) cand = { m, ov };
     // the same fact with another value: one type whose values all differ from the kept note's
     const changable = !m.meeting && !m.meeting_id && !m.asset && !m.customer && !m.relation;
     // the same fact, not two of a kind: a shared code, most of the words, or another value in common with all
@@ -107,8 +113,10 @@ export function restatement(pool, note, { speakers = [], cache = new Map() } = {
     if (!best || score > best.score || (score === best.score && Date.parse(m.at) > Date.parse(best.m.at))) best = { m, score, type: differs, was: [...f.values.get(differs)], now: [...mine.values.get(differs)] };
   }
   // a note that rests on a source (an email, a CRM record) stays true of its moment: the new note is saved beside it, and the reply names it
-  return best ? { changed: best.m, type: best.type, was: best.was, now: best.now, auto: !evidence(best.m.source).length } : null;
+  if (best) return { changed: best.m, type: best.type, was: best.was, now: best.now, auto: !evidence(best.m.source).length };
+  return cand ? { candidate: cand.m } : null;
 }
+export const candidateLine = (m, title) => `not saved yet: this looks already recorded in ${title}, ${m.id}: "${shown(m.content)}". If it adds nothing, tell the person it is already recorded and save nothing. If it adds or changes something, call remember again with the same content (it is saved then), or with supersedes: ${m.id} when it corrects that note.`;
 
 export const keptLine = (m, title) => `already kept in ${title}, ${m.id}: "${shown(m.content)}". Nothing written; tell the person it was already there.`;
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];

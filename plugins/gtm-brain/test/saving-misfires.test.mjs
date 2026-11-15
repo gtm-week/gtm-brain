@@ -265,3 +265,28 @@ test("nobody selected in this checkout: a team of one saves as that person; a la
   rmSync(join(root, "work", "person.json"), { force: true });
   assert.match(lines(root), /saving as: not known in this checkout yet\. On the first save pass by = the handle of the person speaking \((artur-wala, eva-nowak|eva-nowak, artur-wala)\)/);
 });
+
+test("said in other words: shown the kept note once, saved when sent again; another source shape and an incomplete relationship do not cost the note", () => {
+  const b = brain();
+  assert.equal(b.remember("--context", "company", "--content", "Maksim Pertsev agreed to shoot the opening night for EUR 600, photos only.", "--people", "Maksim Pertsev").status, 0);
+  const n = b.live().length;
+  const again = b.remember("--context", "company", "--content", "Photos of the opening night: Maksim Pertsev does them, EUR 600 is the price we settled.", "--people", "Maksim Pertsev");
+  assert.match(again.stdout + again.stderr, /not saved yet: this looks already recorded in .*, m_[0-9a-f]+: "Maksim Pertsev agreed to shoot/);
+  assert.equal(b.live().length, n, "nothing written the first time");
+  const sure = b.remember("--context", "company", "--content", "Photos of the opening night: Maksim Pertsev does them, EUR 600 is the price we settled.", "--people", "Maksim Pertsev");
+  assert.equal(sure.status, 0, sure.stderr + sure.stdout);
+  assert.equal(b.live().length, n + 1, "the same content sent again is saved");
+  // a new value is news, never held
+  const more = b.remember("--context", "company", "--content", "Maksim Pertsev will also shoot the closing night for EUR 400.", "--people", "Maksim Pertsev");
+  assert.equal(more.status, 0, more.stderr + more.stdout);
+  assert.doesNotMatch(more.stdout, /looks already recorded/);
+  // a source object with keys it does not take is read, not refused
+  const src = b.batch([{ context: "company", content: "The venue confirmed load-in at 14:00 on 16 November 2026.", sources: [{ kind: "gmail", ref: "msg-77", text: "load-in mail", title: "Re: load-in" }] }]);
+  assert.equal(src.status, 0, src.stderr + src.stdout);
+  assert.deepEqual(b.live().at(-1).source.filter(s => s.kind === "gmail").map(s => s.ref), ["msg-77"]);
+  // a relationship block that is incomplete: the note is saved, the relationship is not, and the line says so
+  const rel = b.batch([{ context: "company", content: "Nina Vogel joined Circuit as head of events.", people: ["Nina Vogel"], relation: { type: "works_at" } }]);
+  assert.equal(rel.status, 0, rel.stderr + rel.stdout);
+  assert.match(rel.stdout, /the note is saved; its relationship was not recorded/);
+  assert.match(b.live().at(-1).content, /Nina Vogel joined Circuit/);
+});

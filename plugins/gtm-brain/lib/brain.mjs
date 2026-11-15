@@ -1241,8 +1241,9 @@ export function parseSources(input = []) {
     if (typeof value === "string" && /^\s*\{/.test(value)) { try { value = JSON.parse(value); } catch { throw new Error("source object is not valid JSON: use {\"kind\": ..., \"ref\": ...} or provider:reference"); } }
     let kind, ref, account, url;
     if (value && typeof value === "object" && !Array.isArray(value)) {
-      const extra = Object.keys(value).filter(k => !["kind", "account", "ref", "url"].includes(k));
-      if (extra.length) throw new Error(`source object takes kind, account, ref and url, not ${extra.join(", ")}`);
+      // keys it does not take are left out, not refused (a save cost five calls on them, live benchmark 2026-11-15);
+      // a text, title, id or name stands in for a missing ref
+      if (typeof value.ref !== "string" || !value.ref.trim()) { const stand = ["id", "title", "name", "text"].map(k => value[k]).find(v => typeof v === "string" && v.trim()); if (stand) value = { ...value, ref: stand.trim().slice(0, 200) }; }
       if (typeof value.kind !== "string" || typeof value.ref !== "string") throw new Error("source object needs a non-empty kind and ref");
       kind = value.kind.trim(); ref = value.ref.trim();
       if (value.account !== undefined && value.account !== null) { if (!accountOK(value)) throw new Error("source account must be a non-empty string when given"); account = value.account; }

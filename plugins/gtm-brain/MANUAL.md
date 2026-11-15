@@ -45,7 +45,8 @@ cannot settle (an unclear name is asked right after the note is saved). It asks 
 - **Dates.** "Thursday" said on a Thursday can be today or next week: Codex asks. A date with one
   reading is written into the note ("Friday (2026-11-13)"). "Next Saturday" in any request, not only
   a note, is asked when it has two readings. Every chat starts with today's date.
-- **Companies.** A new company is asked for its website once.
+- **Companies.** A new company is saved as a company. Its website is not asked on a save; give it
+  any time ("Northwind is northwind.com") and it is kept on the company's page.
 - **Projects.** A note about someone whose notes all sit in one project is tagged with it; when
   they are in several, Codex asks which.
 - **Your reply first.** A held question waits for your answer; Codex never picks it for you.

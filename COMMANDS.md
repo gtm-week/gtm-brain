@@ -79,7 +79,8 @@ descriptive source pointer is enough; duplicate reads add nothing.
 Tool: `remember`. Writes: `brain/contexts/<slug>/memories.jsonl` (append), `brain/entities/` (new
 people). Kept at once. `context` is optional: the single loaded context, else the active context
 where the note's people or companies have their notes (most of them, when it clearly holds most);
-with no unique answer the entry is held with the candidate contexts in one line. Each kept note
+with no unique answer it is saved under the best guess (where its people have most notes, else
+Our company) and the reply says so, so the person can move it in one sentence. Each kept note
 starts with `saved in <Context title>: ...`. `by` is optional too: it defaults to the person
 selected in this brain (`work/person.json`, else the brain's git identity in the team).
 

@@ -34,9 +34,9 @@ says ask, ask once, everything in one question.
 - **P4** A name that looks like a known one is never merged on a guess. A spelling one or two letters
   off ("Lena Dumas", "Lena Dumos") is asked: same as X? The same first name with a clearly different
   surname ("Florian Kim", "Florian Weber") is someone else: send it in `new_names`, no question.
-- **C1** A company the note plainly names is saved as a company (`companies`); a new one is asked for
-  its website once, unless the person already gave it ("Northwind (northwind.com)"): then that is
-  its website, no question. Our own company is never asked.
+- **C1** A company the note plainly names is saved as a company (`companies`). Do not ask for its
+  website on a save. When the person gives it ("Northwind (northwind.com)"), that is its website:
+  keep it with add_name and references.
 
 ## Dates
 

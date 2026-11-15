@@ -148,6 +148,14 @@ const ctxOf = e => e.context || opt.context || (loaded.length === 1 ? loaded[0] 
 const titleOf = slug => { try { return lib.readContext(root, slug, { includeMemories: false })?.title || slug; } catch { return slug; } };
 // entries with no context to go to: held with the candidates named; the rest of the call is still written
 const placeless = new Map();
+const guessed = new Map();   // entry index -> why its context was a best guess
+const droppedRelation = new Map();   // entry index -> why its relationship block was left out
+// "looks already recorded" is said once per content: work/restated-shown.json holds a hash and a time for an hour
+const shownFile = () => join(root, "work", "restated-shown.json");
+const hashOf = text => { let h = 5381; for (const ch of String(text).replace(/\s+/g, " ").trim().toLowerCase()) h = ((h * 33) ^ ch.codePointAt(0)) >>> 0; return h.toString(16); };
+const readShown = () => { try { const all = JSON.parse(readFileSync(shownFile(), "utf8")) || {}; return Object.fromEntries(Object.entries(all).filter(([, at]) => Date.now() - Date.parse(at) < 3600000)); } catch { return {}; } };
+const shownBefore = text => !!readShown()[hashOf(text)];
+const noteShown = text => { try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(shownFile(), JSON.stringify({ ...readShown(), [hashOf(text)]: new Date().toISOString() }) + "\n"); } catch {} };
 if (entries.some(e => e?.meeting_coverage) && entries.some(e => e?.meeting || e?.meeting_id)) die("Record meeting coverage in a separate call after checking kept, held and failed entries.");
 const preparedAssets = new Map(), changedAssets = new Set();
 const sourceOf = e => lib.parseSources(e.sources);
@@ -172,7 +180,17 @@ const problems = entries.map((e, i) => {
   if (/[\u2013\u2014\u2015\u2212]/.test(e.content)) return `${at(n)}contains a long dash; use a plain hyphen`;
   if (e.kind && !lib.KINDS.includes(e.kind)) return `${at(n)}kind must be one of ${lib.KINDS.join(", ")}`;
   try { lib.parseSources(e.sources); } catch (err) { return `${at(n)}${err.message}`; }
-  const ctx = ctxOf(e);
+  let ctx = ctxOf(e);
+  if (!ctx && !process.env.GTM_BRAIN_ASK_CONTEXT) {
+    // Never sent back to ask which context (live benchmark, 2026-11-15: 7 of 10 refused first calls were this
+    // question, each a second round trip). A context is a tag on the note: the best guess is used and named in
+    // the reply, so the person can move it in one sentence. The guess: where the note's people have most notes,
+    // else the first loaded context, else Our company, else the first active context.
+    const { candidates } = loaded.length > 1 ? { candidates: loaded } : evidenceOf(e);
+    const active = lib.listContexts(root, { includeMemories: false }).filter(c => c.status === "active" && !c.personal_owner).map(c => c.slug);
+    const guess = candidates[0] || (active.includes("company") ? "company" : active[0]) || null;
+    if (guess) { e.context = ctx = guess; entries[i] = e; guessed.set(i, candidates.length > 1 ? `its people have notes in ${candidates.map(titleOf).join(" and ")}` : candidates.length ? "its people have notes there" : "nothing in the note points at one context"); }
+  }
   if (!ctx) {
     const { candidates } = loaded.length > 1 ? { candidates: loaded } : evidenceOf(e);
     const pool = candidates.length ? candidates : lib.listContexts(root, { includeMemories: false }).filter(c => c.status === "active").map(c => c.slug);
@@ -187,7 +205,9 @@ const problems = entries.map((e, i) => {
   try { lib.guardCustomerCorrection(root, ctx, { ...e, source: sourceOf(e) }); }
   catch (err) { return `${at(n)}${err.message}`; }
   const relationErrors = lib.validateRelationEvidence({ ...e, source: sourceOf(e) }, { stored: false });
-  if (relationErrors.length) return `${at(n)}${relationErrors.join("; ")}`;
+  // a relationship block that is incomplete does not cost the note: the note is saved, the relationship is not, and the line says what it needs
+  if (relationErrors.length && e.relation && !e.customer) { droppedRelation.set(i, relationErrors.join("; ")); const { relation, ...rest } = e; entries[i] = e = rest; }
+  else if (relationErrors.length) return `${at(n)}${relationErrors.join("; ")}`;
   try { lib.guardRelationCorrection(root, ctx, { ...e, source: sourceOf(e) }); }
   catch (err) { return `${at(n)}${err.message}`; }
   const ruled = ourRules.saveRefusals(root, e, { siblings: entries }); if (ruled.length) return `${at(n)}${ruled.join("; ")}`;
@@ -346,6 +366,11 @@ for (let i = 0; i < entries.length; i++) {
     let found = checks.restatement(poolOf(), { content: e.content, people, sources: lib.parseSources(e.sources), tags: [...list(e.tags), ...(project ? [`project:${project}`] : []), ...(where.one ? [`project:${where.one}`] : [])] }, { speakers, cache: factsCache });
     if (e.meeting && (found?.changed || String(found?.kept?.content || "").trim() === String(e.content).trim())) found = null;
     if (found?.kept) { kept.push({ n, id: found.kept.id, ctx: found.kept.context }); lines.push(`${at(n)}${checks.keptLine(found.kept, titleOf(found.kept.context))}`); continue; }
+    // the same thing in other words: shown once; the same content sent again within the hour is saved
+    if (found?.candidate) {
+      if (!shownBefore(e.content)) { noteShown(e.content); held.push({ n, why: checks.candidateLine(found.candidate, titleOf(found.candidate.context)), mentions: [], ask: false }); continue; }
+      found = null;
+    }
     if (found?.changed && found.auto && (!(e.meeting || e.meeting_id) || found.changed.context === ctx)) { changes = found; e.supersedes = found.changed.id; ctx = found.changed.context; }
     else if (found?.changed) changes = { ...found, beside: true };
   }
@@ -379,6 +404,8 @@ for (let i = 0; i < entries.length; i++) {
   if (replacing.has(i)) lines.push(`${at(n)}replaced the approved ${replacing.get(i).role} of ${replacing.get(i).entity} (${replacing.get(i).label}, ${replacing.get(i).id}): every chat now uses the new file`);
   // one short line for the person; the detail line after it is for the model
   lines.push(`${at(n)}saved in ${titleOf(ctx)}: ${shown.length > 100 ? shown.slice(0, 97) + "..." : shown}`);
+  if (droppedRelation.has(i)) lines.push(`${at(n)}the note is saved; its relationship was not recorded (${droppedRelation.get(i)}). Record it only if the person stated it: remember again with the relation block complete.`);
+  if (guessed.has(i)) lines.push(`${at(n)}filed under ${titleOf(ctx)} as the best guess (${guessed.get(i)}). Do not ask about it; if the person says it belongs elsewhere, remember a correction with that context.`);
   if (changes) lines.push(`${at(n)}${changes.beside ? checks.mayChangeLine(changes, titleOf(changes.changed.context)) : checks.changedLine(changes, titleOf(ctx), rec.id)}`);
   else if (!e.context && !opt.context && !(loaded.length === 1 && loaded[0] === ctx) && evidenceOf(e).why) lines.push(`${at(n)}put in ${titleOf(ctx)}: ${evidenceOf(e).why}.`);
   lines.push(`${at(n)}remembered ${rec.id} in ${ctx} · ${rec.kind} · ${rec.authors.join(", ")}${rec.people.length ? " · people: " + rec.people.join(", ") : ""} · "${shown}"`);
@@ -391,10 +418,8 @@ for (let i = 0; i < entries.length; i++) {
   }
   if (where.one) lines.push(`${at(n)}tagged project:${where.one}: ${known.join(", ")}'s notes are all in that project. Say so in your reply; if this note is not about it, remember a correction.`);
   if (where.several.length) asks.push(`which project is "${shown.slice(0, 60)}" about: ${where.several.join(" or ")}, or none? (then remember a correction with the project tag)`);
-  // every company in the note with no website is asked once, however it was added (add_name first or here);
-  // our own company and one already asked ("don't know") are not asked again
-  const own = foldName(lib.readAdmin(root)?.company || "");
-  for (const a of rec.people) { const ent = names.find(x => x.name === a); if (ent && ent.kind === "organization" && foldName(a) !== own && !dots.hasWebsite(ent) && !wasAsked(`website:${a}`, Infinity)) { noteAsked([`website:${a}`]); asks.push(`${a}'s website, so the brain knows which ${a} this is ("don't know" is a fine answer; with a website: add_name ${a} with references [{kind: "website", ref: the URL}], then offer a short look-up)`); } }
+  // A company with no website is no longer asked about on a save (live benchmark, 2026-11-15: the question
+  // ended 5 of 14 replies and set off extra reads). It stays a gap on the entity's page and in the rules check.
   // facts for Codex to judge (connect-dots.md): what this note may answer, the meetings around it, what changed
   // one sentence from the person, not a batch of meeting notes or a background run: those would be noise
   const curious = !batched && !e.meeting && !process.env.GTM_BRAIN_RUN;
@@ -501,6 +526,8 @@ if (held.length) console.log(holdReport());
 if (asks.length) console.log(`Ask the person once, ${askIn}, after quoting the note${held.some(h => h.ask) ? ", in the same question as the held entries" : ""}, one numbered part each: ${asks.map((a, k) => `${k + 1}) ${a}`).join(" ")}. Never more than this one question.`);
 
 // 0.35.0: no summary is promised after a save; a topic's summary is written when someone asks (lib/summaries.mjs)
+// a plain save needs one line back, not this output repeated (replies were as long as before, benchmark 2026-11-15)
+if (kept.length && !held.length && !failed.length && !asks.length && !process.env.GTM_BRAIN_RUN) console.log("Reply to the person in one line: what was saved. Do not repeat this output or add offers.");
 if (!held.length && rules()) console.log(rules().trim());
 // A note from a tool the brain's tools list does not know yet (MagicPath, ZYNT): check the tools in the
 // background, so the dashboard lists it without waiting for someone to ask (connect.mjs: "a memory came from it").
