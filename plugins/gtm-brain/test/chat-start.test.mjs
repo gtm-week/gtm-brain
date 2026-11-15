@@ -1,3 +1,6 @@
+// These tests read and write the root files of a layout 2 brain: setup and the lib play a plugin that writes layout 2 at most
+// (lib/layout-version.mjs GTM_BRAIN_TEST_LAYOUT). Layout 3 (about-us/, config/) is covered by config-folders.test.mjs.
+process.env.GTM_BRAIN_TEST_LAYOUT = "2";
 // GTM Brain declares no Codex hooks. What they did now happens in the MCP server: the chat's opening lines
 // come with its first GTM Brain call, the server logs its own calls, the chat id comes from the host's own
 // session files, and APPROVE is a form only the person answers (approve_change).
@@ -92,7 +95,7 @@ test("approve_change applies admin.md only on the person's APPROVE in the form",
   assert.ok(!applied.isError, applied.text);
   assert.match(applied.text, /applied brain\/admin\.md, approved by marta-nowak/);
   assert.match(readFileSync(join(root, "brain", "admin.md"), "utf8"), /for retailers/);
-  assert.match(execFileSync("git", ["-C", root, "log", "-1", "--format=%s"], { encoding: "utf8" }), /^admin: change approved by marta-nowak/);
+  assert.match(execFileSync("git", ["-C", root, "log", "-2", "--format=%s"], { encoding: "utf8" }), /^approval recorded: brain\/admin\.md\nadmin: change approved by marta-nowak/, "the change, then its record");
   assert.equal(existsSync(join(root, "work", "admin.proposed.md")), false);
 });
 
