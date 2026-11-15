@@ -208,7 +208,8 @@ test("Workflows and Entities on a brain with runs, its own skill and a customer:
     const skills = p.node("#pw-skills").innerHTML, own = skills.split("This brain's own")[1] || "";
     assert.match(own, /Weekly pipeline.*\/gtm-brain-weekly-pipeline.*Go through the open deals every Monday\./s, "the brain's own skill is listed with its one line");
     assert.doesNotMatch(skills.split("This brain's own")[0], /weekly-pipeline/, "and not among the shipped ones");
-    p.run('show("entities")'); assert.match(p.node("#pe-groups").innerHTML, /Northwind.*class="pl-rel">customer</s);
+    p.run('show("entities")'); assert.match(p.node("#ent-list").innerHTML, /Northwind.*class="ent-badge ent-rel-customer">Customer</s);
+    assert.deepEqual(B.pillars.entities.rows.find(e => e.name === "Northwind")?.rel, ["customer"]); assert.match(p.node("#ent-rel").innerHTML, /<option value="customer">Customer \(1\)/);
   } finally { rmSync(b, { recursive: true, force: true }); }
 });
 

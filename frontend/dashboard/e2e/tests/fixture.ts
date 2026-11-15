@@ -31,3 +31,5 @@ export const TABS = ['Configuration', 'Entities', 'Memories', 'Workflows'] as co
 
 export const KIND_TITLE: Record<string, string> = { person: 'People', organization: 'Organizations', product: 'Products', event: 'Events', tool: 'Tools' };
 export const kindTitle = (k: string) => KIND_TITLE[k] ?? k.charAt(0).toUpperCase() + k.slice(1).replace(/_/g, ' ') + 's';
+// The Entities tab's own words for a kind: plain plurals on its chips.
+export const ENTITY_KIND: Record<string, string> = { person: 'People', organization: 'Companies', product: 'Products', event: 'Events', meeting: 'Meetings', tool: 'Tools', offering: 'Offerings' };
