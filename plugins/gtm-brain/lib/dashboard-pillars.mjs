@@ -13,6 +13,7 @@ import { readSchema, brainKinds, US } from "./schema.mjs";
 import { ruleFindings } from "./rules-check.mjs";
 import { readAskSource } from "./ask-source.mjs";
 import { whereRows } from "./where.mjs";
+import { readOurRules } from "./our-rules.mjs";
 import { rulesFile, schemaFile, settingsFile } from "./brain-paths.mjs";
 import { population, POPULATION_RANGES } from "./population.mjs";
 import { healthLine, summaryRuns } from "./health-line.mjs";
@@ -78,18 +79,29 @@ function configuration(root, admin, { documents, commits, findings, tools, plugi
 
   const RULES = rulesFile(root); let rulesText = ""; try { rulesText = readFileSync(join(root, RULES), "utf8"); } catch {}
   const ask = readAskSource(root), placement = whereRows(root), own = ourRules(rulesText);
+  // Our rules with what each applies to, as the rules reader understands them; the plain lines when it cannot read them
+  let ownParsed = own.map(text => ({ text: cut(text, 600), applies: null, when: null, mode: null }));
+  try {
+    const parsed = readOurRules(root).rules; const list = v => (Array.isArray(v) ? v : v ? [v] : []);
+    if (parsed.length) ownParsed = parsed.map(r => ({ text: cut(r.text, 600),
+      applies: r.tag ? list(r.tag.applies).map(a => (a && typeof a === "object" ? String(Object.values(a).find(v => typeof v === "string") || "") : String(a)).replace(/_/g, " ")).filter(Boolean).join(", ") || null : null,
+      when: r.tag?.when ? list(r.tag.when).join(", ") : null, mode: r.tag?.mode || null }));
+  } catch {}
   const byRule = {}; for (const f of findings) byRule[f.rule] = (byRule[f.rule] || 0) + 1;
   const rules = { path: rulesText ? RULES : null, changed: rulesText ? changedAt(root, RULES, commits) : null, changed_by: rulesText ? changedBy(RULES, commits) : null,
     count: placement.length + own.length, placement: placement.length, own: own.map(r => cut(r, 200)),
     problems: findings.length, by_rule: byRule, findings: findings.slice(0, 12).map(f => ({ rule: f.rule, what: cut(f.what, 240) })),
+    // the rules browser: every rule as a row a person can read, and every finding of the rules check with its choices
+    placement_rows: placement.map(r => ({ what: cut(r.what, 300), where: cut(r.where, 400) })), own_rules: ownParsed,
+    all_findings: findings.slice(0, 500).map(f => ({ rule: f.rule, kind: f.kind || null, subject: f.subject ? cut(f.subject, 120) : null, what: cut(f.what, 400), choices: (f.choices || []).slice(0, 4).map(c => cut(c, 300)) })),
     ask: { defaults: ask.defaults, rows: ask.rows.map(r => ({ topic: r.topic, source: r.source, good_for: r.good_for })), problems: ask.problems.map(p => ({ line: p.line, problem: cut(p.problem, 200) })) } };
 
   const s = readSchema(root);
   const schema = { path: s.missing ? null : schemaFile(root), changed: s.missing ? null : changedAt(root, schemaFile(root), commits), changed_by: s.missing ? null : changedBy(schemaFile(root), commits), error: s.error ? cut(s.error.message, 400) : null, kinds: [], relations: [] };
   if (s.schema) {
-    schema.kinds = Object.entries(s.schema.kinds).map(([kind, k]) => ({ kind, fields: k.fields.map(f => ({ name: f.name, required: f.required })),
-      subtypes: Object.entries(k.subtypes || {}).map(([name, v]) => ({ name, fields: (v.fields || []).map(f => ({ name: f.name, required: f.required })) })) }));
-    schema.relations = Object.entries(s.schema.relations).map(([type, r]) => ({ type, from: r.from, to: r.to, required: !!r.required, built_in: !!r.built_in, about: cut(r.about, 160) }));
+    schema.kinds = Object.entries(s.schema.kinds).map(([kind, k]) => ({ kind, fields: k.fields.map(f => ({ name: f.name, required: f.required, about: cut(f.about, 240) })),
+      subtypes: Object.entries(k.subtypes || {}).map(([name, v]) => ({ name, about: cut(v.about, 200), fields: (v.fields || []).map(f => ({ name: f.name, required: f.required, about: cut(f.about, 240) })) })) }));
+    schema.relations = Object.entries(s.schema.relations).map(([type, r]) => ({ type, from: r.from, to: r.to, required: !!r.required, one: !!r.one, built_in: !!r.built_in, about: cut(r.about, 160) }));
   } else schema.kinds = brainKinds(root).map(kind => ({ kind, fields: [], subtypes: [] }));
 
   const settings = { path: settingsFile(root), changed: changedAt(root, settingsFile(root), commits), company: admin.company || null, owner: admin.owner || null,
