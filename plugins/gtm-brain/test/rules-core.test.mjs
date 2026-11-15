@@ -111,7 +111,7 @@ test("the server's instructions carry the core once, on either host", async () =
     // holds that sentence), here and in the opening: two names for one job cost a round of choosing
     assert.match(readFileSync(join(plugin, "server/server.mjs"), "utf8"), /query\.description = "To answer a question from the brain, call query with object answer and search/);
     assert.match(head, /query answer with search for a question, remember for a save/);
-    assert.doesNotMatch(text.slice(0, text.indexOf("Questions: GTM Brain shows no question forms")), /query memories with search|object: "memories"/);
+    assert.doesNotMatch(text.slice(0, text.indexOf("\nQuestions: ")), /query memories with search|object: "memories"/);
     for (const [i, re] of [/^- Answer from the brain: query \{object: "answer", search: "<the question as asked>"\}$/,/^- Save a note: remember \{content, people: \[names\], sources\}.*answer_question/,
       /^- Read several people or companies in one call: query \{object: "entities", filters: \{name: \["A", "B"\]\}\} \(or filters\.id\)/,
       /^- Housekeeping, only when the person asks for it: query \{object: "housekeeping"\}, then the first item only, asked with ask_person/,
@@ -120,7 +120,7 @@ test("the server's instructions carry the core once, on either host", async () =
     // Codex keeps the whole text; on Claude Code the shapes start right at the 2048 cut, after the core and the
     // approved-file rule, and before everything else the instructions say
     assert.ok(text.indexOf("Call shapes") > text.indexOf("keep_approved_file, in the same turn") && text.indexOf("Call shapes") < 2200, `the shapes start at ${text.indexOf("Call shapes")}`);
-    assert.ok(text.indexOf("Call shapes") < text.indexOf("Questions: GTM Brain shows no question forms"), "before the question line and the catalog");
+    assert.ok(text.indexOf("Call shapes") < text.indexOf("\nQuestions: "), "before the question line and the catalog");
     assert.match(text, /Never read a skill file, a references file or a rule page in the middle of a save, a read or a confirmed action/);
     assert.doesNotMatch(text, /query \(object rules, search: a topic\) returns one rule page/, "no invitation to fetch rule pages");
     assert.doesNotMatch(text, /[\u2013\u2014]/);
