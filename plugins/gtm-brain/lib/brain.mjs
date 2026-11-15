@@ -306,8 +306,9 @@ export function adoptGeneratedCover(root, slug) {
 export function compileSnapshot(root, slug) {
   const c = readContext(root, slug);
   // the names' identity only: a page's brief, stamps and handwritten text change when any topic is saved or
-  // summarised, and hashing them made one topic's summary refuse another's (demo loops, 2026-11-15)
-  const names = readNames(root).map(n => [n.id, n.name, n.kind, n.subtype ?? null, n.status, n.aliases, n.emails, n.merge_ids, n.previous_ids]);
+  // summarised, and hashing them made one topic's summary refuse another's (demo loops, 2026-11-15).
+  // Identity is everything mentionsIn reads to decide which notes are about whom, "not the same as" and meeting anchors included.
+  const names = readNames(root).map(n => [n.id, n.name, n.kind, n.subtype ?? null, n.status, n.aliases, n.emails, n.merge_ids, n.previous_ids, n.not, meetingAnchors(n)]);
   return "s_" + coverHash(JSON.stringify({ cover: readFileSync(c.path, "utf8"), memories: effectiveMemories(c.memories), names })).slice(0, 12);
 }
 /* A summary paused by a manual edit is released from a chat once the person has reviewed it:
