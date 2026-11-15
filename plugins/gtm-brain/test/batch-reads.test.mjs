@@ -173,7 +173,7 @@ test('housekeeping: the work list in three groups with counts, and for the first
   const r = housekeepingText(root);
   const lines = r.split('\n');
   assert.match(lines[0], /^Housekeeping: \d+ things to settle \(7 people known by a first name only, 7 pairs of names that may be the same, \d+ other findings?\)\. Reads only; nothing was changed\.$/);
-  assert.match(lines[1], /the first 5 items with their evidence\. This reply is all that is needed to ask about them: no skill file, rule page, health or status read and no notes lookup first\./);
+  assert.match(lines[1], /the first 5 items with their evidence\. This reply is all that is needed to ask about them: no skill file, rule page \(the questions page included\), health or status read and no notes lookup first\. Ask with the question box when the chat has one, else in plain text with numbered choices, and end the turn; preview or change nothing \(no merge preview either\) before the person answers\./);
   assert.ok(lines.includes('People known by a first name only (7; shown 1-5):'));
   assert.ok(lines.includes('Names that may be the same person or company (7; shown 1-5):'));
   // a first-name person: id, the notes that mention them (id, date, age, text), the company and email in those notes, a full name it could be
