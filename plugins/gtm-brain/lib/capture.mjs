@@ -74,9 +74,33 @@ export function chatHome(root, cwd, folders = captureFolders(root)) {
   return { project: where.project || hit.project || null };
 }
 
+/* ---------- secrets: a key pasted into a chat never reaches the model run or a note ---------- */
+// A person pastes a key to set a tool up (gtm-brain-zynt-setup reads one from the chat). The chat file keeps it,
+// and this pass rereads chats, so every turn is cleaned before it is counted, sent or quoted.
+const SECRET_SHAPES = [
+  /\b(?:sk|pk|rk)-[A-Za-z0-9_-]{16,}\b/g,                                   // sk-..., pk-..., rk-...
+  /\b(?:sk|pk|rk)_(?:live|test)_[A-Za-z0-9]{16,}\b/g,                       // sk_live_...
+  /\bgh[pousr]_[A-Za-z0-9]{20,}\b/g, /\bgithub_pat_[A-Za-z0-9_]{20,}\b/g,  // GitHub tokens
+  /\bxox[abprs]-[A-Za-z0-9-]{10,}\b/g,                                      // Slack tokens
+  /\bAKIA[0-9A-Z]{16}\b/g,                                                  // AWS access key ids
+  /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g,       // JWTs
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g,
+];
+// "api key: abc...", "token = abc...", "Bearer abc...": the value after the word, when it is long enough to be one
+const SECRET_AFTER_WORD = /\b((?:api[ _-]?key|access[ _-]?key|secret(?:[ _-]?key)?|token|password|passwd|pwd|bearer|authorization)\b["']?\s*(?:is|[:=])?\s*["']?)([A-Za-z0-9_\-.+/=]{12,})/gi;
+// a long unbroken run of letters and digits mixed (40 or more): a key, not a word, a path or an id the brain uses
+const LONG_RUN = /\b(?=[A-Za-z0-9_-]*[0-9])(?=[A-Za-z0-9_-]*[A-Za-z])[A-Za-z0-9_-]{40,}\b/g;
+export const SECRET_MARK = "[secret removed]";
+export function redactSecrets(text) {
+  let s = String(text || "");
+  for (const shape of SECRET_SHAPES) s = s.replace(shape, SECRET_MARK);
+  s = s.replace(SECRET_AFTER_WORD, (m, word, value) => /[0-9]/.test(value) || value.length >= 20 ? `${word}${SECRET_MARK}` : m);
+  return s.replace(LONG_RUN, SECRET_MARK);
+}
+
 /* ---------- a chat, compactly: words only, code and pasted dumps cut ---------- */
 export function compactText(text, role) {
-  let s = String(text || "").replace(/```[^\n]*\n[\s\S]*?```/g, m => { const n = m.split("\n").length - 2; return n > 6 ? `[code, ${n} lines]` : m; });
+  let s = redactSecrets(text).replace(/```[^\n]*\n[\s\S]*?```/g, m => { const n = m.split("\n").length - 2; return n > 6 ? `[code, ${n} lines]` : m; });
   s = s.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
   const max = role === "person" ? PERSON_MAX : ASSISTANT_MAX;
   if (s.length > max) s = `${s.slice(0, Math.floor(max * 2 / 3))} [...] ${s.slice(-Math.floor(max / 3))}`;
@@ -197,8 +221,10 @@ export function readCandidates(text, plan, root) {
   let raw = String(text || "").replace(/^\s*```(?:json)?\s*|\s*```\s*$/g, "");
   const a = raw.indexOf("{"), b = raw.lastIndexOf("}");
   let parsed; try { parsed = JSON.parse(a >= 0 && b > a ? raw.slice(a, b + 1) : raw); } catch { return null; }
-  const notes = Array.isArray(parsed) ? parsed : parsed?.notes;
+  let notes = Array.isArray(parsed) ? parsed : parsed?.notes;
   if (!Array.isArray(notes)) return null;
+  // belt and braces: a note whose text holds a secret (or the mark left where one was) is not a note to keep
+  notes = notes.filter(n => { const t = typeof n?.content === "string" ? n.content : ""; return !t.includes(SECRET_MARK) && redactSecrets(t) === t; });
   const byId = new Map(plan.chats.map(c => [c.id, c]));
   const active = new Set(listContexts(root, { includeMemories: false }).filter(c => c.status === "active").map(c => c.slug));
   const have = new Set(listContexts(root).flatMap(c => effectiveMemories(c.memories || []).filter(m => !m.retracts).map(m => fold(m.content))));

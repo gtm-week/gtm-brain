@@ -19,7 +19,7 @@ delete process.env.GTM_BRAIN_HOST; delete process.env.GTM_BRAIN_RUN; delete proc
 const lib = await import(`${P}/lib/brain.mjs`);
 const capture = await import(`${P}/lib/capture.mjs`);
 const { healthLine } = await import(`${P}/lib/health-line.mjs`);
-test.after(() => rmSync(scratch, { recursive: true, force: true }));
+test.after(() => { try { rmSync(scratch, { recursive: true, force: true }); } catch {} });
 
 /* the stand-in for the model run: records each prompt, answers with FAKE_REPLY or fails like a host would */
 const fake = join(scratch, "fake-model.mjs");
@@ -405,4 +405,25 @@ test("the pass leaves sharing to the next commit; the person's undo is shared at
   assert.equal(withdrawn.via, "codex", "the person's own withdrawal, not the schedule's");
   let shared = ""; for (let i = 0; i < 50 && !/Withdrawn: a note the chat capture/.test(shared = execFileSync("git", ["-C", remote, "log", "--all", "-p", "--format=%s"], { encoding: "utf8" })); i++) await wait(200);
   assert.match(shared, /Withdrawn: a note the chat capture saved/, "the withdrawal reaches the team without waiting for another save");
+});
+
+test("a key pasted into a chat is removed before the pass counts, sends or quotes the turn", async () => {
+  const { redactSecrets, compactText, SECRET_MARK } = await import("../lib/capture.mjs");
+  // built from parts, so no line of this file is itself shaped like a real key (hosts refuse a push that holds one)
+  const j = (...parts) => parts.join("");
+  const cases = [
+    j("here is the key s", "k-proj-", "A1b2C3d4E5f6", "G7h8I9j0K1l2M3n4 use it"),
+    j("ZYNT api key: zk_", "9f8e7d6c5b4a", "39281706f5e4d3c2b1a0"),
+    j("Authorization: Bearer ey", "JhbGci", "OiJIUzI1NiJ9.", "eyJzdWIiOiIxMjM0NTY3ODkwIn0", ".abcDEF123456ghiJKL"),
+    j("token = gh", "p_", "0123", "456789abcdefghijklmnopqrstuvwxyzAB"),
+    j("slack xo", "xb-", "1234", "56789012-abcdefghijklmnop"),
+    j("raw ", "9f8e7d6c5b4a", "39281706f5e4d3c2b1a09f8e7d6c5b4a3928 pasted"),
+  ];
+  for (const c of cases) {
+    const out = compactText(c, "person");
+    assert.ok(out.includes(SECRET_MARK), c);
+    assert.doesNotMatch(out, /A1b2C3d4E5f6|9f8e7d6c5b4a|JhbGci|p_0123|xb-1234/, c);
+  }
+  // ordinary text, ids the brain uses and file paths are left alone
+  for (const plain of ["Max will send the token gesture budget by Tuesday.", "see m_6cc01aba36bf and e_0123456789abcdef", "open plugins/gtm-brain/skills/gtm-brain-use-brain/references/documents.md", "the password policy is reviewed in March"]) assert.equal(redactSecrets(plain), plain);
 });
