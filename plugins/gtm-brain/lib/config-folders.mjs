@@ -12,7 +12,7 @@
 import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync, statSync } from "node:fs";
 import { join, dirname, basename } from "node:path";
 import { execFileSync } from "node:child_process";
-import { listDocuments, inOwnFolder } from "./documents.mjs";
+import { listDocuments, inOwnFolder, SKIP_DIRS, projectDirs } from "./documents.mjs";
 import { readLayout, writeLayout, understandsLayout, LAYOUT_FILE } from "./layout-version.mjs";
 import { diskLayout } from "./layout.mjs";
 import { settingsFromAdmin, logActivity, rerender, readAdmin } from "./brain.mjs";
@@ -32,12 +32,15 @@ export function configMovePlan(root) {
     moves.push([from, to]); taken.add(to);
   };
   let top = []; try { top = readdirSync(root, { withFileTypes: true }); } catch {}
+  // Never a document's files folder, whatever a document at the top is called: the engine's folders (a document
+  // titled Brain or Work would take brain/ or work/ with it), the projects, the workflows.
+  const own = new Set([...SKIP_DIRS, ...projectDirs(root), "projects", "workflows", ABOUT_DIR, CONFIG_DIR]);
   for (const d of listDocuments(root)) {
     if (d.folder === "") {
       add(d.path, `${ABOUT_DIR}/${d.path}`);
-      if (isDir(join(root, d.slug))) add(d.slug, `${ABOUT_DIR}/${d.slug}`);
+      if (isDir(join(root, d.slug)) && !own.has(d.slug)) add(d.slug, `${ABOUT_DIR}/${d.slug}`);
       for (const e of top) if (e.isFile() && e.name !== `${d.slug}.md` && e.name.startsWith(`${d.slug}.`) && !e.name.endsWith(".md")) add(e.name, `${ABOUT_DIR}/${e.name}`);
-    } else if (inOwnFolder(d) && !d.folder.includes("/")) add(d.folder, `${ABOUT_DIR}/${d.folder}`);
+    } else if (inOwnFolder(d) && !d.folder.includes("/") && !own.has(d.folder)) add(d.folder, `${ABOUT_DIR}/${d.folder}`);
   }
   for (const [from, to] of FIXED_MOVES) add(from, to);
   return { moves, kept, settings: existsSync(join(root, ADMIN_FILE)) && !existsSync(join(root, SETTINGS_FILE)) };

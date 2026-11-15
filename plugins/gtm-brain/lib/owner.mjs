@@ -17,11 +17,12 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readAdmin, currentPerson, appendMemory, commit, listContexts, logActivity, lineDiff, teamHandle, parseSettings } from "./brain.mjs";
 import { inConfigFolders, isOwnerPath, OWNER_DIRS, PROPOSALS_DIR, SETTINGS_FILE } from "./brain-paths.mjs";
+import { readLayout } from "./layout-version.mjs";
 
 export const PROPOSAL_TAG = "owner-proposal", APPROVAL_TAG = "approval";
 const git = (root, ...a) => execFileSync("git", ["--no-optional-locks", "-C", root, ...a], { encoding: "utf8", stdio: "pipe" });
 const gitOK = (root, ...a) => { try { return git(root, ...a); } catch { return null; } };
-const plain = s => String(s || "").replace(/[–—―−]/g, "-").replace(/\s+/g, " ").trim();
+const plain = s => String(s || "").replace(/[\u2013\u2014\u2015\u2212]/g, "-").replace(/\s+/g, " ").trim();
 const nameOf = (root, handle) => (readAdmin(root)?.team || []).find(p => p && p.handle === handle)?.name || handle || "someone";
 
 /* The owner's handle, or null when the settings name none. */
@@ -110,7 +111,14 @@ export const proposalLine = (root, p) => `NOT APPLIED: ${p.files.map(f => f.path
    left to commit and the proposal made (null when none). system: plugin housekeeping (shipped rules and schema
    refreshed, the layout move, setup), never a person's change. */
 export function divertCommit(root, paths, message, { system = false } = {}) {
-  if (system || process.env.GTM_BRAIN_NO_COMMIT || !inConfigFolders(root)) return { paths, proposal: null };
+  if (process.env.GTM_BRAIN_NO_COMMIT) return { paths, proposal: null };
+  // config/settings.yaml is the marker of layout 3 (lib/brain-paths.mjs). Gone from a brain recorded as layout 3,
+  // every rule here would be off and the commit would carry the removal to the team: the committed file comes
+  // back first. brain/layout.json is read before git is asked, so a layout 1 or 2 brain pays nothing.
+  if (!inConfigFolders(root) && readLayout(root).layout >= 3) {
+    try { const committed = execFileSync("git", ["-C", root, "show", `HEAD:${SETTINGS_FILE}`], { stdio: "pipe" }); mkdirSync(dirname(join(root, SETTINGS_FILE)), { recursive: true }); writeFileSync(join(root, SETTINGS_FILE), committed); logActivity(root, "restored", `${SETTINGS_FILE}: it had been deleted; the committed version is back`); } catch {}
+  }
+  if (system || !inConfigFolders(root)) return { paths, proposal: null };
   const owner = ownerOf(root); if (!owner) return { paths, proposal: null };
   const who = personHere(root);
   if (who && who === owner) return { paths, proposal: null };
@@ -205,6 +213,12 @@ export function proposalDiff(root, p) {
 export function applyProposal(root, id, approver) {
   const p = readProposal(root, id); if (!p) throw new Error(`no proposal ${id} waiting`);
   if (!isOwner(root, approver)) throw new Error(`only the owner, ${nameOf(root, ownerOf(root))}, approves a change to ${p.files.map(f => f.path).join(", ")}`);
+  // The settings name the owner and are the marker of this layout: a yes never removes them or leaves them
+  // without a company, an owner or a team (the form shows 500 characters; this does not rest on them being read).
+  for (const f of p.files.filter(f => f.path === SETTINGS_FILE)) {
+    let fm = null; if (f.change !== "delete") { try { fm = parseSettings(readFileSync(join(root, PROPOSALS_DIR, id, "files", f.path), "utf8")).fm; } catch {} }
+    if (!fm || !fm.company || !fm.owner || !Array.isArray(fm.team) || !fm.team.length) throw new Error(`proposal ${id} would leave ${SETTINGS_FILE} without a company, an owner or a team. Decline it; the change can be proposed again with those kept`);
+  }
   for (const f of p.files) {
     const to = join(root, f.path);
     if (f.change === "delete") { rmSync(to, { force: true }); continue; }

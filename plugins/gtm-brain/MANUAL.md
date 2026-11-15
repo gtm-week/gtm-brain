@@ -272,6 +272,12 @@ is kept and recorded. Every approval is recorded as a decision note: who asked, 
 which file, a one-line summary and the commit. "Show the approvals" lists them (`query`, object
 approvals) with the proposals still waiting.
 
+The owner is whoever the committed `config/settings.yaml` names. Writing another handle on the
+`owner` line by hand is itself a change that waits for the owner, so the brain changes hands only
+when the current owner edits that line or approves it. A proposal is applied only to files under
+`about-us/` and `config/`, whatever its own file claims. Every chat start in such a brain says in
+one line where the files are that older text calls `RULES.md`, `SCHEMA.md` and `brain/admin.md`.
+
 How far this goes: GTM Brain enforces it, in every write it makes, in every save and at every
 chat start. It does not stop git. A teammate with write access to the repository can still
 change these files and push with git directly, and who is "the owner" on a machine is the
