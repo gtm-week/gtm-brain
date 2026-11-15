@@ -72,6 +72,33 @@ function codexConfig(home) {
   return { slim: !provider || /^"(openai)?"$/.test(provider), keys: ["model", "model_reasoning_effort", "service_tier"].map(k => [k, key(k)]).filter(([, v]) => v) };
 }
 
+/* Asking the person, in order: ask_person (the server's native form, server/ask-person.mjs), the host's own
+   question box, plain chat text. box names the host's box; when says in which chats it is there. */
+const askTexts = (box, when) => ({
+  askPerson: () => `Ask the person one question in a native form with choices to click; their answer comes back as this call's result. Use it for every question to the person, before ${box} and before numbered chat text. question: one sentence. why: one line on why the answer matters. choices: two to four, each a whole answer, recommended first; omit them only when the answer is a name, a link or other free text. The form lets the person type their own answer, so never add Other or Something else. An answer is the person's reply to this one question: act on it and do not ask again. No answer (the form was closed, timed out or not shown) is neither an answer nor a refusal: ask once as plain chat text and end the turn. It records nothing, needs no brain and applies nothing, and it never stands in for APPROVE: a workplace or interaction change goes only through approve_change.`,
+  questions: ({ form = true, boxOn = false } = {}) => "\nQuestions: " + (form
+    ? "ask every question with ask_person: a native form with choices to click, the answer comes back as the call's result. One question per call, one line on why it matters, two to four choices that are each a whole answer, recommended first. The form takes a typed answer itself, so never add Other or Something else; where several can apply, offer the likely combinations as choices. When it returns no answer, ask once as plain chat text and end the turn. Only where ask_person is not available, "
+    : "this host cannot show the ask_person form, so ")
+    + `ask with ${box}${when(boxOn)}; without that, ask as plain chat text and end the turn: one question, one line on why it matters, then two or three numbered options with the recommended first. The person answers with a number or in their own words. In Plan mode use the host's own planning question tool. APPROVE still goes only through approve_change.`,
+});
+
+/* The answer the person gave in ask_person's form, read back from the tool result a host keeps in its chat
+   file: it is the person's words as much as a typed message. The marker is server/ask-person.mjs answerText;
+   a host may keep the result as text, as text parts, or as either inside a JSON string. */
+const FORM_ANSWER = /The person's answer \((?:picked|typed) in the form\): ("(?:[^"\\]|\\.)*")/g;
+export function formAnswers(output) {
+  const texts = v => typeof v === "string" ? [v] : Array.isArray(v) ? v.flatMap(texts) : v && typeof v === "object" ? texts(v.text ?? v.content ?? "") : [];
+  const out = [];
+  for (const t of texts(output)) {
+    if (!t.includes("The person's answer (")) continue;
+    for (const text of [t, t.replace(/\\(["\\])/g, "$1")]) {
+      const found = [...text.matchAll(FORM_ANSWER)].map(m => { try { return JSON.parse(m[1]); } catch { return null; } }).filter(Boolean);
+      if (found.length) { out.push(...found); break; }
+    }
+  }
+  return out;
+}
+
 const ADAPTERS = {
   codex: {
     projectSkillsDir: ".agents/skills",
@@ -96,7 +123,9 @@ const ADAPTERS = {
       let last = "";
       try { for (const line of readFileSync(file, "utf8").split("\n")) { try { const p = JSON.parse(line).payload || {}; if (p.type === "message" && p.role === "user") { const t = (p.content || []).map(c => c?.text || "").join(" "); if (t && !/^\s*<(environment_context|user_instructions|permissions)/.test(t) && !/AGENTS\.md instructions/.test(t.slice(0, 300))) last = t; }
         // an answer picked in the question box is the person's words too ("Florian Kim" picked, not typed; new-brain, 2026-11-12)
-        else if (p.type === "function_call_output" && /"answers"/.test(String(p.output).slice(0, 40))) { const a = JSON.parse(p.output).answers || {}; const picked = Object.values(a).flatMap(x => x?.answers || []).join(" "); if (picked) last = `${last} ${picked}`.trim(); } } catch {} } } catch {}
+        else if (p.type === "function_call_output" && /"answers"/.test(String(p.output).slice(0, 40))) { const a = JSON.parse(p.output).answers || {}; const picked = Object.values(a).flatMap(x => x?.answers || []).join(" "); if (picked) last = `${last} ${picked}`.trim(); }
+        // and so is an answer given in ask_person's form
+        else if (/_output$/.test(p.type || "")) { const picked = formAnswers(p.output).join(" "); if (picked) last = `${last} ${picked}`.trim(); } } catch {} } } catch {}
       return last;
     },
     capture: {
@@ -124,6 +153,8 @@ const ADAPTERS = {
             out.push({ role: p.role === "user" ? "person" : "assistant", text: unwrap(t), at });
           } else if (r.type === "response_item" && p.type === "function_call_output" && /"answers"/.test(String(p.output).slice(0, 40))) {
             try { const picked = Object.values(JSON.parse(p.output).answers || {}).flatMap(x => x?.answers || []).join("; "); if (picked) out.push({ role: "person", text: `(picked) ${picked}`, at }); } catch {}
+          } else if (r.type === "response_item" && /_output$/.test(p.type || "")) {
+            const picked = formAnswers(p.output).join("; "); if (picked) out.push({ role: "person", text: `(picked) ${picked}`, at });
           }
         }
         return out;
@@ -170,6 +201,7 @@ const ADAPTERS = {
       return /^\s*default_mode_request_user_input\s*=\s*true\s*(#.*)?$/m.test(features);
     },
     texts: {
+      ...askTexts("request_user_input", on => on ? " (this Codex has its question box on)" : " when this chat has it (Plan mode, or a Codex where the question box is on by default)"),
       dashboardAlways: url => `Dashboard: ${url} (saved view in the Codex pane; open only when asked using open_in_codex, never as a prerequisite to answering; no login or Chrome needed).`,
       dashboardOnDemand: url => `Dashboard: ${url} (this brain opens it on demand in the Codex pane; only when someone asks; admin.md dashboard: on-demand).`,
       dashboardOpened: url => `Dashboard: ${url}  Open it in the in-app browser using open_in_codex with target {type: "browser", url: this exact address}, reusing the dashboard tab. This local page needs no login. If the host cannot open the pane, give the URL as a link. Never use Computer Use, Chrome, shell open or web search for the dashboard.`,
@@ -202,7 +234,8 @@ const ADAPTERS = {
       let file = null; try { for (const d of readdirSync(join(home, "projects"))) { const f = join(home, "projects", d, `${id}.jsonl`); if (existsSync(f)) { file = f; break; } } } catch {}
       if (!file) return "";
       let last = "";
-      try { for (const line of readFileSync(file, "utf8").split("\n")) { try { const r = JSON.parse(line); if (r.type === "user" && typeof r.message?.content === "string") last = r.message.content; } catch {} } } catch {}
+      try { for (const line of readFileSync(file, "utf8").split("\n")) { try { const r = JSON.parse(line); if (r.type === "user" && typeof r.message?.content === "string") last = r.message.content;
+        else if (r.type === "user" && Array.isArray(r.message?.content)) { const picked = r.message.content.filter(c => c?.type === "tool_result").flatMap(c => formAnswers(c.content)).join(" "); if (picked) last = `${last} ${picked}`.trim(); } } catch {} } } catch {}
       return last;
     },
     capture: {
@@ -224,6 +257,7 @@ const ADAPTERS = {
         for (const r of jsonLines(file) || []) {
           if ((r.type !== "user" && r.type !== "assistant") || r.isMeta || r.isSidechain || r.isCompactSummary) continue;   // a compaction summary is the host's text, not the person's
           const c = r.message?.content;
+          if (r.type === "user" && Array.isArray(c)) { const picked = c.filter(x => x?.type === "tool_result").flatMap(x => formAnswers(x.content)).join("; "); if (picked) out.push({ role: "person", text: `(picked) ${picked}`, at: r.timestamp || null }); }
           const t = typeof c === "string" ? c : Array.isArray(c) ? c.filter(x => x?.type === "text").map(x => x.text || "").join("\n") : "";
           if (!t.trim() || (r.type === "user" && SCAFFOLD.test(t))) continue;
           const text = unwrap(t); if (text) out.push({ role: r.type === "user" ? "person" : "assistant", text, at: r.timestamp || null });
@@ -256,6 +290,7 @@ const ADAPTERS = {
     nativeQuestions: () => false,
     rulebookLoaded: dir => { try { return /^@AGENTS\.md\s*$/m.test(readFileSync(join(dir, "CLAUDE.md"), "utf8")); } catch { return false; } },
     texts: {
+      ...askTexts("AskUserQuestion", () => " when this session has it"),
       dashboardAlways: url => `Dashboard: ${url} (open only when asked: give this address as a link for the browser; no login needed; never as a prerequisite to answering).`,
       dashboardOnDemand: url => `Dashboard: ${url} (this brain opens it on demand: only when someone asks, as a link for the browser; admin.md dashboard: on-demand).`,
       dashboardOpened: url => `Dashboard: ${url}  Give the person this exact address as a link to open in their browser. This local page needs no login. Open it yourself (open on macOS) only when they ask you to. Never use Computer Use or web search for the dashboard.`,

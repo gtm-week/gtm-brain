@@ -20,7 +20,8 @@ export function questionInput(send, now = Date.now) {
       catch (error) { pending = null; reject(error); }
     });
     if (result?.client && /^(decline|cancel)$/.test(result.result?.action) && (byHost(result.result) || (first && now() - sentAt < NOT_SHOWN_MS))) { hidden = true; return NOT_SHOWN; }
-    return readAnswer(args, result?.client ? result.result : result);
+    const answer = result?.client ? result.result : result;
+    return args ? readAnswer(args, answer) : answer;
   }
   return {
     initialize(capabilities = {}) {
@@ -38,6 +39,14 @@ export function questionInput(send, now = Date.now) {
       // The person picked Something else: ask for their own words in the same call. They have just seen
       // a form, so a quick close here is their answer, not a host that hides forms.
       return withFollowUp(args, first, await form(buildFollowUp(args), parentId, { question: args.question }, false));
+    },
+    // One form as given, its result as the host returned it (or NOT_SHOWN): for a caller that builds and
+    // reads its own form (ask-person.mjs). first: a quick close can be the host's, as in ask.
+    async raw(params, parentId, first = true) {
+      if (!supported) throw Error('This client does not support MCP input forms.');
+      if (pending) throw Error('A question is already pending. Wait for its answer or cancellation.');
+      if (first && hidden) return NOT_SHOWN;
+      return form(params, parentId, null, first);
     },
     receive(message) {
       if (message.method || !pending || message.id !== pending.id) return false;

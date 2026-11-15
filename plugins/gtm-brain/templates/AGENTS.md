@@ -48,9 +48,10 @@ is older than these rules: say so once ("update GTM Brain") and work from the li
 ## Questions and identity
 
 Reuse the current person resolved by the opening lines or the saved `work/person.json` handle
-validated against the team. Ask only when unresolved; never assume the owner. Ask with the host's
-own question box when it has one; otherwise in plain chat text that ends the turn: the question,
-one line on why it matters, two or three numbered options, recommended first. Keep one question
+validated against the team. Ask only when unresolved; never assume the owner. Ask with `ask_person`
+(a native form with choices to click); without it, the host's own question box; last, and when
+the form returns no answer, plain chat text that ends the turn: the question, one line on why it
+matters, two or three numbered options, recommended first. Keep one question
 pending; an unanswered question authorizes nothing, and a chosen option never stands in for
 APPROVE. No slop: no filler, no preamble, the person's exact words when capturing their thinking.
 The whole policy is the questions page. Do the work through the tools: Computer Use (driving an
