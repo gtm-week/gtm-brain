@@ -160,6 +160,7 @@ const titleOf = slug => { try { return lib.readContext(root, slug, { includeMemo
 const placeless = new Map();
 const guessed = new Map();   // entry index -> why its context was a best guess
 const droppedRelation = new Map();   // entry index -> why its relationship block was left out
+const filledRelation = new Map();   // entry index -> the relation fields the plugin filled in
 // "looks already recorded" is said once per content: work/restated-shown.json holds a hash and a time for an hour
 const shownFile = () => join(root, "work", "restated-shown.json");
 const hashOf = text => { let h = 5381; for (const ch of String(text).replace(/\s+/g, " ").trim().toLowerCase()) h = ((h * 33) ^ ch.codePointAt(0)) >>> 0; return h.toString(16); };
@@ -214,6 +215,13 @@ const problems = entries.map((e, i) => {
   if (customerErrors.length) return `${at(n)}${customerErrors.join("; ")}`;
   try { lib.guardCustomerCorrection(root, ctx, { ...e, source: sourceOf(e) }); }
   catch (err) { return `${at(n)}${err.message}`; }
+  // a relationship needs only from, type and to: the plugin fills status, observed_at and basis from the note (ALL-711)
+  if (e.relation && typeof e.relation === "object" && !Array.isArray(e.relation) && !e.customer) {
+    const src = sourceOf(e), done = lib.completeRelation(e.relation, { content: String(e.content), sources: src, author: authors[0] });
+    if (done.filled.length) filledRelation.set(i, done.filled);
+    if (done.sources !== src) e.sources = [...(Array.isArray(e.sources) ? e.sources : e.sources ? [e.sources] : []), `user:${authors[0]}`];
+    entries[i] = e = { ...e, relation: done.relation };
+  }
   const relationErrors = lib.validateRelationEvidence({ ...e, source: sourceOf(e) }, { stored: false });
   // a relationship block that is incomplete does not cost the note: the note is saved, the relationship is not, and the line says what it needs
   if (relationErrors.length && e.relation && !e.customer) { droppedRelation.set(i, relationErrors.join("; ")); const { relation, ...rest } = e; entries[i] = e = rest; }
@@ -364,7 +372,7 @@ for (let i = 0; i < entries.length; i++) {
   if (relation) {
     const reg = lib.readNames(root), id = v => v === "us" ? "us" : lib.resolveEntity(reg, v)?.id;
     const prior = lib.effectiveMemories(lib.readMemories(root, ctx)).find(m => m.relation && !m.retracts && m.content === e.content.trim() && m.relation.type === relation.type &&
-      id(m.relation.from) === id(relation.from) && id(m.relation.to) === id(relation.to) && ["status", "basis", "observed_at"].every(k => m.relation[k] === relation[k]) && !e.supersedes && !e.retracts);
+      id(m.relation.from) === id(relation.from) && id(m.relation.to) === id(relation.to) && ["status", "basis", "observed_at"].filter(k => !(filledRelation.get(i) || []).includes(k)).every(k => m.relation[k] === relation[k]) && !e.supersedes && !e.retracts);
     if (prior) { kept.push({ n, id: prior.id, ctx }); lines.push(`${at(n)}already recorded ${prior.id} in ${ctx}`); continue; }
   }
   // the same fact said again, anywhere in the brain: "already kept", nothing written; the same fact with another
@@ -410,6 +418,9 @@ for (let i = 0; i < entries.length; i++) {
     }));
   } catch (err) { failed.push({ n, why: err.message }); lines.push(`${at(n)}not remembered: ${err.message}`); continue; }
   if (alreadyRecorded) { kept.push({ n, id: rec.id, ctx }); lines.push(`${at(n)}already recorded ${rec.id} in ${ctx}`); continue; }
+  // one current link at a time where SCHEMA.md says so: the previous one gets an ended note dated to this one
+  let endedBefore = [];
+  if (rec.relation) { try { endedBefore = lib.endPreviousRelations(root, ctx, rec); } catch (err) { endedBefore = []; lines.push(`${at(n)}warning: the earlier ${rec.relation.type} was not ended (${err.message})`); } }
   if (rec.meeting) anchors.set(meetingSourceKey(rec.meeting.reference), rec.meeting_id || rec.id);
   if (pool) { pool = pool.filter(m => m.id !== rec.supersedes); pool.push(rec); }
   if (e.customer?.reference) lib.addName(root, rec.customer.entity, { references: [e.customer.reference], sources: sourceOf(e) });
@@ -419,6 +430,8 @@ for (let i = 0; i < entries.length; i++) {
   if (replacing.has(i)) lines.push(`${at(n)}replaced the approved ${replacing.get(i).role} of ${replacing.get(i).entity} (${replacing.get(i).label}, ${replacing.get(i).id}): every chat now uses the new file`);
   // one short line for the person; the detail line after it is for the model
   lines.push(`${at(n)}saved in ${titleOf(ctx)}: ${shown.length > 100 ? shown.slice(0, 97) + "..." : shown}`);
+  if (endedBefore.length) { const reg = lib.readNames(root), nm = v => v === "us" ? "us" : reg.find(x => x.id === v || x.previous_ids?.includes(v))?.name || v;
+    for (const x of endedBefore) lines.push(`${at(n)}ended ${nm(x.relation.from)} ${x.relation.type} ${nm(x.relation.to)} (${x.id}): one current ${x.relation.type} at a time, so that one ended on ${String(x.relation.observed_at).slice(0, 10)}. Nothing to do.`); }
   if (droppedRelation.has(i)) lines.push(`${at(n)}the note is saved and says it in words; its relationship block was left out (${droppedRelation.get(i)}). Do not save the note again and do not add a second note for it.`);
   if (guessed.has(i)) lines.push(`${at(n)}filed under ${titleOf(ctx)} as the best guess (${guessed.get(i)}). Do not ask about it; if the person says it belongs elsewhere, remember a correction with that context.`);
   if (changes) lines.push(`${at(n)}${changes.beside ? checks.mayChangeLine(changes, titleOf(changes.changed.context)) : checks.changedLine(changes, titleOf(ctx), rec.id)}`);

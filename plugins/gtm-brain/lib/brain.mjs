@@ -30,7 +30,7 @@ import { host, hostId, HOST_DIRS } from "./host.mjs";
 export { customerOverview, customerIdentity, validateCustomerEvidence, guardCustomerCorrection } from "./customers.mjs";
 import { validateRelationEvidence, guardRelationCorrection } from "./relations.mjs";
 import { readSchema, checkRelation, brainKinds, US } from "./schema.mjs";
-export { validateRelationEvidence, guardRelationCorrection, relationOverview, relationsText } from "./relations.mjs";
+export { validateRelationEvidence, guardRelationCorrection, relationOverview, relationsText, endPreviousRelations, completeRelation, relationId, buildRelationLog, statusAt } from "./relations.mjs";
 export { updateEntity, mergeEntities, archiveEntity, undoEntityMerge } from "./entity-lifecycle.mjs";
 export { entityFacts, entityBrief, entityRecords, compileEntity, resolveEntity, refreshEntityPages, staleEntities, entityEvidenceIndex, entityType, ENTITY_FORMAT } from "./entities.mjs";
 export { withEntityLock, startKindLayout, migrateToKindFolders } from './entities.mjs';

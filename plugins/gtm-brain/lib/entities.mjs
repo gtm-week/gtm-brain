@@ -18,6 +18,8 @@ import { meetingAttendees } from './meeting-entities.mjs';
 import { brainRelationsToUs } from './relation-to-us.mjs';
 import { oldFact, daysSince, agoText } from './staleness.mjs';
 import { toolPageLine } from './ask-source.mjs';
+import { identityEvents, appendEntityEvents, readEntityEvents, eventsOf } from './entity-events.mjs';
+import { buildRelationLog, historyLines } from './relation-log.mjs';
 
 export const ENTITY_FORMAT = "gtm-brain-entity-v2";
 // Brains written before the GTM OS -> GTM Brain rename carry the gtm-os names; migration rewrites them.
@@ -237,6 +239,9 @@ export function applyEntityChange(root, record) {
     }
     const folder = historyFolder(root); mkdirSync(folder, { recursive: true });
     const rec = { ...record, id: record.id || `ec_${randomUUID()}`, at: stamp(), frontmatter_only: true, changes: changes.map(storedChange) };
+    // what changed, for the entity log: a new name or kind on a page, or the merge itself (lib/entity-events.mjs)
+    const logged = changes.flatMap(c => { try { const b = parseEntityText(c.before, c.from || c.path).fm, a = parseEntityText(c.after, c.path).fm; return b.redirect || a.redirect ? [] : identityEvents(b, a); } catch { return []; } });
+    if (record.event) logged.push(record.event);
     if (!/^ec_[a-f0-9-]{36}$/.test(rec.id)) throw new Error("Invalid entity change ID");
     if (existsSync(join(folder, rec.id + ".json"))) throw new Error("Entity change ID already exists");
     const pending = join(folder, rec.id + ".pending");
@@ -248,6 +253,7 @@ export function applyEntityChange(root, record) {
         else atomic(join(root, c.path), c.after);
       }
       renameSync(pending, join(folder, rec.id + ".json"));
+      appendEntityEvents(root, logged.map(e => ({ ...e, change_id: rec.id })), { by: record.by || null, at: rec.at });
     } catch (error) {
       // Preserve a racing human edit. Recovery reports it for review on the next read.
       let restored = true;
@@ -404,7 +410,7 @@ export function writeEntityFiles(root, names) {
   if (existsSync(dir) && lstatSync(dir).isSymbolicLink()) throw new Error("brain/entities must not be a symbolic link");
   mkdirSync(dir, { recursive: true });
   const perKind = layout(root) === "kinds";
-  const old = readEntityFiles(root), used = new Set(readdirSync(dir)), changed = [];
+  const old = readEntityFiles(root), used = new Set(readdirSync(dir)), changed = [], logged = [];
   let readable = null;
   const legacy = old.filter(e => e._fm.format !== ENTITY_FORMAT);
   if (legacy.length) {
@@ -445,6 +451,7 @@ export function writeEntityFiles(root, names) {
     const body = previous?._body ?? e._body ?? `\n# ${md(e.name)}\n\nNo compiled brief yet. Facts are kept in context memories.\n`;
     if (!previous && e._body === undefined) e._fm.rendered_body_hash = hash(body);
     const text = entityText(previous, e._fm, body);
+    if (previous) logged.push(...identityEvents(previous, e));
     if (from) { movePage(root, from, e._path, text); changed.push(from, e._path); }
     else { mkdirSync(dirname(join(root, e._path)), { recursive: true }); if (atomic(join(root, e._path), text)) changed.push(e._path); }
   }
@@ -454,6 +461,8 @@ export function writeEntityFiles(root, names) {
     if (!winner) throw new Error(`Refusing to remove ${e.name} without a confirmed identity merge`);
     if (atomic(join(root, e._path), entityText(e, { ...e._fm, redirect: winner.id }, `\n# ${md(e.name)}\n\nMerged into ${link(winner.name, linkFrom(e._path, winner._path))}.\n` + (editedBody(e) ? e._body : "")))) changed.push(e._path);
   }
+  // a rename or a kind change (add_name, the meeting and upgrade writers) joins the entity log (lib/entity-events.mjs)
+  if (logged.length) appendEntityEvents(root, logged, { by: lib.currentPerson(root) || null });
   return changed;
 }
 
@@ -614,7 +623,7 @@ function applyCompilation(root, name, { as_of, by, brief }) {
   return { path: saved._path, note: lib.commit(root, lib.ENTITIES_PATHS, `compile entity: ${saved.name} by ${author}`).note };
 }
 
-const BRIEF_TIMELINE = 50, BRIEF_WITHDRAWALS = 10, BRIEF_SOURCES = 30;
+const BRIEF_TIMELINE = 50, BRIEF_WITHDRAWALS = 10, BRIEF_SOURCES = 30, BRIEF_HISTORY = 30;
 /* A brief behind its evidence keeps the claims and fields whose every cited note is still in force (0.35.0):
    no background run rewrites the overview after each save any more, and hiding the whole synthesis at the
    first new note left nearly every page with none. A claim resting on a withdrawn or replaced note drops out
@@ -624,6 +633,15 @@ export function carriedBrief(facts) {
   const inForce = new Set(facts.evidence.map(m => m.id)), keep = list => (list || []).filter(c => c.memories.every(id => inForce.has(id)));
   const contexts = (brief.contexts || []).filter(c => facts.contexts.some(f => f.context === c.context)).map(c => ({ ...c, summary: keep(c.summary), open_threads: keep(c.open_threads) })).filter(c => c.summary.length || c.open_threads.length);
   return { overview: keep(brief.overview), contexts, relationships: keep(brief.relationships) };
+}
+/* The page's History: the relation log over this entity's notes (lib/relation-log.mjs) and its renames, merges and
+   kind changes (lib/entity-events.mjs); the same events query relations reads from the index. */
+function entityHistory(root, facts, registry) {
+  const byRef = new Map(registry.flatMap(e => [e.id, ...(e.previous_ids || [])].map(id => [id, e])));
+  const resolve = v => { const e = byRef.get(v) || resolveEntity(registry, v); return e ? { id: e.id, kind: e.kind } : null; };
+  const { relations } = buildRelationLog(facts.evidence.filter(m => m.relation || m.customer), { resolve, schema: readSchema(root).schema || null });
+  const id = facts.entity.id;
+  return { relations: relations.filter(r => r.from === id || r.to === id), events: eventsOf(readEntityEvents(root), facts.entity) };
 }
 const moreLine = (n, id) => `${n} more: query memories with filters.entities=${id}`;
 export function entityBrief(root, name, options = {}) {
@@ -636,7 +654,8 @@ export function entityBrief(root, name, options = {}) {
   const timeline = scoped ? scoped.slice(0, BRIEF_TIMELINE) : facts.timeline;
   // a tool's page points at its rows in RULES.md's Ask the source table (never a copy of them)
   const ask = facts.entity.kind === "tool" ? toolPageLine(root, facts.entity, { category: (facts.stale ? [] : facts.previous_fields || []).find(f => f.field === "category")?.text }) : "";
-  let markdown = renderBrief({ ...facts, timeline, ...(scoped ? { timeline_total: scoped.length } : {}), ...(ask ? { ask_source: ask } : {}) }, compilation, evidence, registry, options.context, options.now ?? null);
+  const history = options.context ? null : entityHistory(root, facts, registry);
+  let markdown = renderBrief({ ...facts, timeline, history, ...(scoped ? { timeline_total: scoped.length } : {}), ...(ask ? { ask_source: ask } : {}) }, compilation, evidence, registry, options.context, options.now ?? null);
   if (facts.file_notes && !options.context) markdown += `\n## Saved Markdown\n\nThis text was preserved from the editable file. It is not automatically treated as context evidence.\n\n${facts.file_notes.markdown}`;
   if (options.absoluteLinks) markdown = markdown.replace(/\]\(((?:\.\.\/)+contexts\/[^)]+|(?:\.\.\/)?(?:[a-z0-9-]+\/)?[a-z0-9-]+\.md)\)/g,
     (_, path) => `](${dest(resolve(root, dirname(e?._path || `${ENTITIES_DIR}/page.md`), decodeURI(path)))})`);
@@ -775,6 +794,12 @@ function renderBrief(facts, brief, evidence, registry, scope, now = null) {
   const relationships = brief?.relationships.filter(c => !scope || c.memories.every(id => all.get(id).context === scope)) || [];
   if (relationships.length) out.push(recorded.length ? "\nAlso stated in notes:\n\n" + claims(relationships) : "\n" + claims(relationships));
   if (!recorded.length && !relationships.length) out.push("\nNo recorded or compiled relationships. Shared mentions alone do not establish a relationship.");
+  if (facts.history && (facts.history.relations.length || facts.history.events.length)) {
+    const nameOf = id => id === US ? "us" : registry.find(e => e.id === id || e.previous_ids?.includes(id))?.name || id;
+    const lines = historyLines(facts.history.relations, facts.history.events, { nameOf, citation: id => all.has(id) ? citation(id) : "", words, md });
+    out.push("\n## History", "\nRelationships started, changed and ended, and renames, merges and kind changes, newest first.", "\n" + lines.slice(0, BRIEF_HISTORY).join("\n"));
+    if (lines.length > BRIEF_HISTORY) out.push(`\n${lines.length - BRIEF_HISTORY} earlier events: query relations with search ${facts.entity.id}.`);
+  }
   // a meeting's page: who attended (they link to it as attended), from its latest meeting record
   if (facts.entity.kind === "meeting") {
     const a = meetingAttendees(facts.evidence), who = n => { const e = lib.resolveEntity(registry, n); return e?._path ? link(e.name, linkFrom(page, e._path)) : md(n); };
