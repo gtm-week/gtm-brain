@@ -174,6 +174,35 @@ error asking for a narrower query if that bound would be exceeded. No partial re
 as complete. There are at most 32 pending indexed reads per server, with 64 KiB per query input.
 `node $PLUGIN_ROOT/scripts/gtm-brain-recall/recall.mjs . "<query>"`, `... --person "<name>"`
 
+### answer
+*"what did Zak want?"*, *"how many sign-ups did the Merantix opening have?"*, *"what did we decide last week?"*
+
+One call for a question: `query` with object `answer` and `search` set to the question as asked
+(`lib/memory-search.mjs`, run in the memory worker). Names, aliases, first names and emails resolve
+through the entity registry and narrow to that entity's notes; a product also brings the
+organization it currently belongs to; a first name two entities share is named in the reply, not
+guessed. A period (today, yesterday, tomorrow, last or next week, this month, in October, since
+October, Q3, last quarter, 3 November, a date, a weekday, next Thursday; a calendar word also finds
+notes that mention it, and "night" or "morning" after a weekday ranks notes with such a time
+first), a kind (decisions,
+questions) and `#tag` narrow too. When no narrowed note has the question's words, the period, then
+the kind, then the tags are dropped and the reply says so; a name stays (its notes follow, newest
+first) unless it was only taken from one word. A month word that is a known name (Jan, April) is
+the person unless written as a month (in April, April 2026).
+The words then rank what is left: stemmed (porter, so invoice finds invoicing and sign-ups finds
+signups), a word no note has (five letters or more) tried as the spellings one letter off in the
+brain's word list, ranked below exact matches and named in one line; more of the words, the
+question's own phrases, words near each other, then newer first. Superseded and retracted notes
+never appear. A note recording a relationship or customer status that a later note contradicts
+sinks, says "no longer current" with the later note's id, and that note follows it; a
+relationship word in the question (partner, works, customer) brings the named entity's notes of
+that type. The reply carries each note's text, date, age, id and source, the card of each named
+entity (kind, aliases, compiled overview, fields, current relationships, note count and age), and
+`Not found:` plainly when nothing matches. It stays under 12 KB (the environment variable
+`GTM_BRAIN_SEARCH_MAX_BYTES` changes that) and ends with how many more matched and the limit that
+shows the next few. A long note is cut, with the SQL that reads the rest. An id, a tag or a source ref typed as-is comes first. `query` with object `memories` and `search`
+uses the same engine and cap, as JSON rows. Reads only.
+
 ### memory_index
 *"is search up to date?"*, *"finish indexing this import"*, *"rebuild the search index"*
 

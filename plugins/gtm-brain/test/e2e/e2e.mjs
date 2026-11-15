@@ -16,6 +16,8 @@ import { fileURLToPath } from "node:url";
 const P = fileURLToPath(new URL("../../", import.meta.url)).replace(/\/$/, "");
 const KiB = 1024;
 // note ids anywhere in a text (Markdown escapes the underscore), and the ids of the rows query returns
+// a JSON reply may end with a trailer line the server adds (the save nudge after a few reads)
+const jsonOf = s => { const t = String(s), end = t.lastIndexOf("}"); try { return JSON.parse(t.slice(0, end + 1)); } catch { return null; } };
 const ids = s => [...new Set(String(s).replace(/m\\_/g, "m_").match(/\bm_[0-9a-f]{6,}\b/g) || [])];
 const rowIds = s => [...new Set([...String(s).matchAll(/"id":"(m_[0-9a-f]{6,})"/g)].map(m => m[1]))];
 const hasAll = (s, list) => list.every(x => s.includes(x));
@@ -63,8 +65,16 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
   const N = gold.needles;
   await check("search.single_word", "search", async () => found((await q({ object: "memories", search: N.single.query })).text, N.single.ids));
   await check("search.multi_word", "search", async () => found((await q({ object: "memories", search: N.multi.query })).text, N.multi.ids));
-  await check("search.stemmed", "search", async () => found((await q({ object: "memories", search: N.stem.query })).text, N.stem.ids), { known_gap: "unstemmed search: invoice does not find invoicing or invoiced" });
-  await check("search.typo", "search", async () => found((await q({ object: "memories", search: N.typo.query })).text, N.typo.ids), { known_gap: "memory search has no typo tolerance" });
+  await check("search.stemmed", "search", async () => found((await q({ object: "memories", search: N.stem.query })).text, N.stem.ids));
+  await check("search.typo", "search", async () => found((await q({ object: "memories", search: N.typo.query })).text, N.typo.ids));
+  // one call for a question (query object answer): the notes with their ids, the named entity's card, Not found plainly, under the cap
+  await check("answer.question", "search", async () => found((await q({ object: "answer", search: `What do we know about the ${N.multi.query}?` })).text, N.multi.ids, ids));
+  await check("answer.stemmed_typo", "search", async () => { const a = await q({ object: "answer", search: `Who mentioned invoices?` }), b = await q({ object: "answer", search: `anything on the ${N.typo.query}` }); const x = found(a.text, N.stem.ids, ids), y = found(b.text, N.typo.ids, ids); return { pass: x.pass && y.pass && /searched "heliograph" instead/.test(b.text), text: a.text + "\n" + b.text, note: [x.note, y.note].filter(Boolean).join("; ") }; });
+  await check("answer.entity_card", "search", async () => { const r = await q({ object: "answer", search: `What is going on with ${gold.busiest.name}?` }); return { pass: !r.isError && r.text.includes(gold.busiest.id) && ids(r.text).length > 0, text: r.text }; });
+  await check("answer.not_found", "search", async () => { const r = await q({ object: "answer", search: "Did anyone talk about zqxjvbnonsenseword?" }); return { pass: !r.isError && /^Not found: /.test(r.text) && ids(r.text).length === 0 && Buffer.byteLength(r.text) < 1024, text: r.text }; });
+  // current over superseded: a relationship that changed later brings the note that changed it, never only the old state
+  if (gold.hub?.partnership?.history?.length > 1) await check("answer.current_state", "search", async () => { const p = gold.hub.partnership, last = p.history.at(-1).memory, r = await q({ object: "answer", search: `Is ${gold.hub.name} a partner of ours?` }); const got = ids(r.text); return { pass: !r.isError && got.includes(last), text: r.text, note: `latest ${p.history.at(-1).status} note ${last} at rank ${got.indexOf(last) + 1 || "none"}` }; });
+  await check("answer.capped", "search", async () => { const r = await q({ object: "answer", search: gold.busiest.name }), s = await q({ object: "memories", search: gold.busiest.name }); const a = Buffer.byteLength(r.text), b = Buffer.byteLength(s.text); return { pass: !r.isError && !s.isError && a <= 13 * KiB && b <= 13 * KiB, text: r.text + "\n" + s.text, note: `answer ${a} B, memories search ${b} B` }; });
   await check("search.recall_tool", "search", async () => { const r = await call("recall", { query: N.single.query }); return { pass: !r.isError && new RegExp(`${N.single.ids.length} memor(y|ies) match`).test(r.text), text: r.text }; });
   await check("search.name", "search", async () => { const r = await q({ object: "memories", search: gold.busiest.name }); return { pass: ids(r.text).length > 0, text: r.text }; });
   if (N.alias) await check("search.alias", "search", async () => { const r = await q({ object: "memories", search: N.alias.query }); const got = ids(r.text); return { pass: N.alias.ids.some(x => got.includes(x)), text: r.text, note: `${N.alias.query} -> ${N.alias.name}` }; });
@@ -78,7 +88,7 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
   await check("search.sql_subtypes", "entities", async () => { const r = await q({ sql: "SELECT subtype, count(*) AS n FROM entities WHERE kind = 'organization' GROUP BY subtype" }); const bad = Object.entries(gold.counts.subtypes).filter(([, n]) => n > 0).filter(([k, n]) => { const m = r.text.match(new RegExp(`^${k} \\| (\\d+)$`, "m")); return !m || Number(m[1]) < n; }); return { pass: !bad.length, text: r.text, note: bad.map(b => b[0]).join(",") }; });
 
   /* ---------- entities ---------- */
-  const whoIs = async name => { const r = await q({ object: "entities", search: name }); let j = null; try { j = JSON.parse(r.text); } catch {} return { r, j }; };
+  const whoIs = async name => { const r = await q({ object: "entities", search: name }); return { r, j: jsonOf(r.text) }; };
   const resolvesTo = async (name, id) => { const { r, j } = await whoIs(name); return { pass: j?.status === "resolved" && (j.entity?.id === id || j.id === id || r.text.includes(id)), text: r.text, note: j?.status || "unparsed" }; };
   await check("entities.by_name", "entities", () => resolvesTo(gold.busiest.name, gold.busiest.id));
   await check("entities.by_id", "entities", () => resolvesTo(gold.busiest.id, gold.busiest.id));
@@ -240,7 +250,7 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
   await check("loops.sent_recorded", "loops", async () => { const w = await call("remember", { by, context: "icp", content: "E2E loop: sent the first outreach email (e2eloopsent).", actions: ["gmail:send:e2e-draft-1"], sources: [`user:${by}`] }); const s = await q({ object: "memories", search: "e2eloopsent" }); return { pass: !w.isError && rowIds(s.text).length > 0 && /gmail/.test(s.text) && /send/.test(s.text), text: w.isError ? w.text : s.text }; });
   // the step "update the customer status": a prospect the person confirms as a customer, the overview follows
   const prospect = gold.customers.find(c => c.status === "prospect");
-  if (prospect) await check("loops.customer_status", "loops", async () => { const w = await call("remember", { by, context: "icp", content: `E2E loop: ${prospect.name} signed the pilot and is now a customer (e2eloopstatus).`, people: [prospect.name], companies: [prospect.name], sources: [`user:${by}`], customer: { entity: prospect.name, status: "customer", basis: "user", observed_at: "2026-11-14T09:00:00Z" } }); const r = await q({ object: "customers" }); let row = null; try { row = JSON.parse(r.text).customers.find(c => c.name === prospect.name); } catch {} return { pass: !w.isError && row?.status === "customer" && row?.basis === "user", text: w.isError ? w.text : r.text, note: `${prospect.name}: ${row?.status || "absent"}` }; });
+  if (prospect) await check("loops.customer_status", "loops", async () => { const w = await call("remember", { by, context: "icp", content: `E2E loop: ${prospect.name} signed the pilot and is now a customer (e2eloopstatus).`, people: [prospect.name], companies: [prospect.name], sources: [`user:${by}`], customer: { entity: prospect.name, status: "customer", basis: "user", observed_at: "2026-11-14T09:00:00Z" } }); const r = await q({ object: "customers" }); const row = jsonOf(r.text)?.customers?.find(c => c.name === prospect.name) || null; return { pass: !w.isError && row?.status === "customer" && row?.basis === "user", text: w.isError ? w.text : r.text, note: `${prospect.name}: ${row?.status || "absent"}` }; });
 
   /* ---------- messy traps ---------- */
   const T = gold.traps || {};
