@@ -45,7 +45,11 @@ test("six rules: fewest calls, a list to tidy one item at a time, nothing about 
   assert.match(web, /Nothing about a person or company is looked up on the web unless the person asks for exactly that/);
   assert.match(web, /what the notes do not say is unknown/);
   // APPROVE and the protected files stay, in one rule
-  assert.match(one(/approve_change/), /Never edit it, `brain\/ontology\.ossie\.json` or a `memories\.jsonl` directly/);
+  assert.match(one(/approve_change/), /Workplace \(`brain\/admin\.md`\).*Never edit that file, `brain\/ontology\.ossie\.json` or a `memories\.jsonl` directly/);
+  // no pronoun and no word that reads two ways in the rules every chat starts with: "Never edit it" did not say
+  // which of the form, the change or the file, and "state that changes" read as an order to state something
+  assert.doesNotMatch(rules.join(" "), /Never edit it\b|state that changes/);
+  assert.match(one(/as of .*days ago/), /what may have changed is checked in its tool before acting on it/);
   assert.ok(Buffer.byteLength(core) <= 1200, `${Buffer.byteLength(core)} bytes: the core stays a screenful`);
 });
 
@@ -103,7 +107,12 @@ test("the server's instructions carry the core once, on either host", async () =
     const shapes = text.slice(text.indexOf("Call shapes for the common jobs"), text.indexOf("Files you create, edit, move or delete")).trimEnd().split("\n");
     assert.equal(shapes.length, 6, "a lead line and five shapes");
     assert.match(shapes[0], /Use them as written: no list_objects, describe_object, status or rule page first/);
-    for (const [i, re] of [/^- Answer from the brain: query \{object: "memories", search: /, /^- Save a note: remember \{content, people: \[names\], sources\}.*answer_question/,
+    // the read named for a question is the one the query tool's description opens with (memory-search.test.mjs
+    // holds that sentence), here and in the opening: two names for one job cost a round of choosing
+    assert.match(readFileSync(join(plugin, "server/server.mjs"), "utf8"), /query\.description = "To answer a question from the brain, call query with object answer and search/);
+    assert.match(head, /query answer with search for a question, remember for a save/);
+    assert.doesNotMatch(text.slice(0, text.indexOf("Questions: GTM Brain shows no question forms")), /query memories with search|object: "memories"/);
+    for (const [i, re] of [/^- Answer from the brain: query \{object: "answer", search: "<the question as asked>"\}$/,/^- Save a note: remember \{content, people: \[names\], sources\}.*answer_question/,
       /^- Read several people or companies in one call: query \{object: "entities", filters: \{name: \["A", "B"\]\}\} \(or filters\.id\)/,
       /^- Housekeeping, only when the person asks for it: query \{object: "housekeeping"\}, then the first item only, asked with ask_person/,
       /^- Merge two entities the person confirmed are one: merge_entities \{source, target, confirmed: true\}/].entries()) assert.match(shapes[i + 1], re);
