@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 import { resolveAssetFile, assetMime } from '../lib/assets.mjs';
 import { dashboardRefreshState } from '../lib/dashboard-refresh.mjs';
 import { listDocuments, BODY_MAX } from '../lib/documents.mjs';
+import { DESIGN_IMAGES } from '../lib/dashboard-pillars.mjs';
 import { createMemoryReader } from './memory-reader.mjs';
 const lib = await import(new URL("../lib/brain.mjs", import.meta.url));
 
@@ -185,6 +186,31 @@ function serve() {
         const stat = fstatSync(fd); if (!stat.isFile() || stat.size > 4 * 1024 * 1024) throw new Error('Not a file');
         const body = readFileSync(fd); closeSync(fd); fd = undefined;
         res.writeHead(200, { ...HDR, 'content-type': 'text/plain; charset=utf-8', 'content-security-policy': "default-src 'none'; sandbox", 'cross-origin-resource-policy': 'same-origin', 'x-gtm-brain-hash': sha(body) });
+        return res.end(req.method === 'HEAD' ? undefined : body);
+      } catch { if (fd !== undefined) closeSync(fd); return json(res, 404, { ok: false, note: 'File unavailable. It may have moved since this dashboard was refreshed.' }); }
+    }
+    if (url.pathname === '/design-file' || url.pathname === '/design-visual') {
+      // The Design system document's pictures and its one HTML version, read-only. Only what the last render listed
+      // (data.json pillars.design): /design-file a png, jpg, svg or webp from the design-system folder, by its exact
+      // listed path; /design-visual takes no path and serves the one listed design-system.html. Both go out
+      // sandboxed with nosniff, so nothing in an SVG or in the HTML runs script or reads this origin; the page shows
+      // an image through <img> and the HTML in an <iframe sandbox>.
+      if (req.headers['sec-fetch-site'] === 'cross-site') return json(res, 403, { ok: false, note: 'Open this file from its dashboard.' });
+      let fd;
+      try {
+        let design = null; try { design = JSON.parse(readFileSync(join(home, 'data.json'), 'utf8')).pillars?.design || null; } catch {}
+        const visual = url.pathname === '/design-visual';
+        const rel = visual ? String(design?.visual || '') : String(url.searchParams.get('path') || '');
+        const type = visual ? (/(^|\/)design-system\.html$/.test(rel) ? 'text/html; charset=utf-8' : null) : DESIGN_IMAGES[extname(rel).toLowerCase()];
+        const listed = visual ? !!rel : (design?.files || []).some(f => f && f.image && f.path === rel);
+        if (!rel || !type || !listed || rel.includes('\0') || rel.split('/').includes('..') || rel.startsWith('/')) throw new Error('Unknown file');
+        const path = join(root, rel);
+        if (!path.startsWith(root + '/') || realpathSync(path) !== join(realpathSync(root), rel)) throw new Error('Unknown file');
+        fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+        const stat = fstatSync(fd); if (!stat.isFile() || stat.size > (visual ? 2 : 8) * 1024 * 1024) throw new Error('Not a file');
+        const body = readFileSync(fd); closeSync(fd); fd = undefined;
+        res.writeHead(200, { ...HDR, 'content-type': type, 'cross-origin-resource-policy': 'same-origin',
+          'content-security-policy': visual ? "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:" : "sandbox; default-src 'none'; style-src 'unsafe-inline'" });
         return res.end(req.method === 'HEAD' ? undefined : body);
       } catch { if (fd !== undefined) closeSync(fd); return json(res, 404, { ok: false, note: 'File unavailable. It may have moved since this dashboard was refreshed.' }); }
     }

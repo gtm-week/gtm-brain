@@ -5,8 +5,8 @@
 // workflows, relations), never from a hard-coded path, so entity pages can move without this file knowing.
 // The renderer writes the result into the page (and the full note list into a side file); nothing here writes.
 import { execFileSync } from "node:child_process";
-import { statSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { statSync, readFileSync, lstatSync, readdirSync } from "node:fs";
+import { join, dirname } from "node:path";
 import * as lib from "./brain.mjs";
 import { listDocuments, STARTERS } from "./documents.mjs";
 import { readSchema, brainKinds, fieldsFor, US } from "./schema.mjs";
@@ -194,6 +194,32 @@ function entityCards(root, registry, admin, notes, contexts) {
   return { rows, details };
 }
 
+/* The Design system document's visual side: design-system.html beside the Markdown (the Visual tab) and the files in
+   a design-system/ folder beside it (or under about-us/). Names and sizes only; the dashboard server serves the
+   images and the one HTML file through their own narrow routes (dash.mjs /design-file, /design-visual) and nothing
+   else from here. Links and dot files are left out, so a listed path is always a plain file inside the brain. */
+export const DESIGN_IMAGES = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".svg": "image/svg+xml", ".webp": "image/webp" };
+const DESIGN_FILES_MAX = 80;
+export function designSystem(root, documents) {
+  const doc = documents.find(d => /(^|\/)design-system\.md$/.test(d.path))?.path || null;
+  if (!doc) return { doc: null, visual: null, files: [] };
+  const plain = rel => { try { const st = lstatSync(join(root, rel)); return st.isFile() ? st : null; } catch { return null; } };
+  const beside = dirname(doc) === "." ? "" : dirname(doc) + "/", places = [...new Set([beside, "about-us/"])];
+  const visual = places.map(d => d + "design-system.html").find(plain) || null;
+  const files = [], walk = (rel, depth) => {
+    let entries = []; try { if (!lstatSync(join(root, rel)).isDirectory()) return; entries = readdirSync(join(root, rel)).sort(); } catch { return; }
+    for (const name of entries) {
+      if (files.length >= DESIGN_FILES_MAX || name.startsWith(".")) continue;
+      const path = rel + "/" + name; let st; try { st = lstatSync(join(root, path)); } catch { continue; }
+      if (st.isDirectory()) { if (depth < 3) walk(path, depth + 1); }
+      else if (st.isFile()) files.push({ path, name: path.slice(folder.length + 1), size: st.size, image: Object.hasOwn(DESIGN_IMAGES, (name.match(/\.[^.]+$/)?.[0] || "").toLowerCase()) });
+    }
+  };
+  const folder = places.map(d => d + "design-system").find(rel => { try { return lstatSync(join(root, rel)).isDirectory(); } catch { return false; } }) || "";
+  if (folder) walk(folder, 0);
+  return { doc, visual, files };
+}
+
 /* A trigger, from whatever a workflow file says today: a frontmatter trigger or schedule, or a "## Trigger"
    section. Another version may add more; anything not understood is shown as written, and none is "manual". */
 const flat = (v, depth = 0) => {
@@ -280,6 +306,7 @@ export function pillarData(root, { registry = lib.readNames(root), admin = lib.r
       kinds: [...new Set(notes.map(n => n.kind))].sort(), tags: [...tagCount].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 60).map(([t, n]) => ({ tag: t, n })),
       population: pop },
     workflows: section("workflows", () => workflows(root, documents, runs, commits), { files: [], orphans: [] }),
+    design: (() => { try { return designSystem(root, documents); } catch { return { doc: null, visual: null, files: [] }; } })(),
     unread,
   };
 }
