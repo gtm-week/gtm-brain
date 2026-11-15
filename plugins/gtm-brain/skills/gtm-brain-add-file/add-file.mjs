@@ -95,7 +95,9 @@ else {
   while (existsSync(join(root, folder, name)) && !same(join(root, folder, name))) name = `${stem}-${++n}${ext}`;
   path = join(folder, name);
   if (same(join(root, path))) note = "already in the brain";
-  else { copyFileSync(real, join(root, path)); copied = true; const mv = owner?.moved; lib.commit(root, mv ? [path, mv.from, mv.to] : [path], mv ? `file: ${name}; ${mv.from} -> ${mv.to}` : `file: ${name}`); }
+  else { copyFileSync(real, join(root, path)); copied = true; const mv = owner?.moved; const kept = lib.commit(root, mv ? [path, mv.from, mv.to] : [path], mv ? `file: ${name}; ${mv.from} -> ${mv.to}` : `file: ${name}`);
+    // layout 3, someone other than the owner: the file waits in a proposal and nothing is under about-us/; say only that
+    if (kept.proposal) { console.log(JSON.stringify({ base, path, copied: false, proposal: kept.proposal.id, note: kept.note })); process.exit(0); } }
 }
 
 // what it says, for the notes: derived text under work/, never in git

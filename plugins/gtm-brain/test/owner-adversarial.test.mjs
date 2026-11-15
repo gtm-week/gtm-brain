@@ -4,12 +4,14 @@ process.env.GTM_BRAIN_NO_WATCH = "1";
 process.env.GTM_BRAIN_NO_COMPILE = "1";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync, mkdtempSync, cpSync } from "node:fs";
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import * as lib from "../lib/brain.mjs";
 import * as owner from "../lib/owner.mjs";
 import { spawnSync } from "node:child_process";
 import { ensureRules } from "../lib/where.mjs";
+import { configMovePlan } from "../lib/config-folders.mjs";
 import { makeBrain, actAs, toLayout2, exists, P } from "./helpers/layouts.mjs";
 
 const clean = git => git("status", "--porcelain", "--", ".", ":!profile").trim();
@@ -175,6 +177,97 @@ test("the where row for documents names about-us/ in layout 3: a new brain's rul
   writeFileSync(join(root, "config/rules.md"), edited); lib.save(root, "save");
   assert.equal(ensureRules(root, join(P, "templates")), false);
   assert.equal(readFileSync(join(root, "config/rules.md"), "utf8"), edited);
+});
+
+test("a teammate's file for a base document is a proposal, and add-file does not report it as added", t => {
+  const { root, git, run } = makeBrain(t);
+  const away = mkdtempSync(join(tmpdir(), "gtm-layout3-outside-")), outside = join(away, "logo.svg");
+  t.after(() => { try { rmSync(away, { recursive: true, force: true }); } catch {} });
+  writeFileSync(outside, "<svg/>\n");
+  actAs(root, "bo-chen");
+  const r = run("skills/gtm-brain-add-file/add-file.mjs", ["--file", outside, "--document", "design-system"]);
+  assert.equal(r.status, 0, r.stderr);
+  const out = JSON.parse(r.stdout);
+  assert.equal(out.copied, false); assert.match(out.proposal, /^p_[0-9a-f]{10}$/);
+  assert.match(out.note, /^NOT APPLIED: [^\n]*logo\.svg[^\n]* the owner's to change \(Ann Lee\)/);
+  assert.equal(git("status", "--porcelain", "--", "about-us", "config").trim(), "");
+  assert.ok(!exists(root, "about-us/design-system/logo.svg") && !exists(root, "about-us/design-system/design-system.md"), "nothing moved or added under about-us/");
+  untouched(git);
+  // the owner's yes puts the file there
+  actAs(root, null);
+  owner.applyProposal(root, out.proposal, "ann-lee");
+  assert.equal(readFileSync(join(root, "about-us/design-system/logo.svg"), "utf8"), "<svg/>\n");
+  assert.equal(clean(git), "");
+});
+
+test("the layout move never takes one of the brain's own folders because a root document shares its name", t => {
+  const { root, git, upgrade } = makeBrain(t);
+  toLayout2(root, git);
+  const doc = title => `---\nkind: document\ntitle: ${title}\napplies_to: [planning]\nstatus: draft\n---\n# ${title}\n`;
+  for (const name of ["workflows", "brain", "work", "projects"]) writeFileSync(join(root, `${name}.md`), doc(name));
+  mkdirSync(join(root, "projects/site"), { recursive: true }); writeFileSync(join(root, "projects/site/README.md"), "A site.\n");
+  git("add", "-A"); git("-c", "commit.gpgsign=false", "commit", "-qm", "documents named like the brain's folders");
+  const plan = configMovePlan(root);
+  for (const dir of ["workflows", "brain", "work", "projects"]) assert.ok(!plan.moves.some(([f]) => f === dir), `${dir}/ stays`);
+  assert.ok(plan.moves.some(([f, to]) => f === "projects.md" && to === "about-us/projects.md"), "the document itself is a base file");
+  const up = upgrade("--confirm");
+  assert.equal(up.status, 0, up.stderr);
+  // (the upgrade's own tidy-up pulls workflows.md into workflows/ and projects.md into projects/ first: each is
+  // then a document in a folder of its own name, which the move must leave where it is too)
+  for (const f of ["brain/contexts/company/memories.jsonl", "workflows", "projects/site/README.md", "config/settings.yaml", "about-us/strategy.md"]) assert.ok(exists(root, f), f);
+  assert.ok(!exists(root, "about-us/brain") && !exists(root, "about-us/workflows") && !exists(root, "about-us/projects") && !exists(root, "about-us/work"));
+  assert.equal(lib.readAdmin(root).company, "Layout Co");
+});
+
+test("the owner's yes never applies settings that would leave the brain without a company, an owner or a team", t => {
+  const { root, git, run } = makeBrain(t);
+  const file = join(root, "config/settings.yaml"), settings = readFileSync(file, "utf8");
+  actAs(root, "bo-chen");
+  // through approve: settings with the owner line gone
+  writeFileSync(join(root, "work/admin.proposed.md"), settings.replace(/^owner: .*\n/m, ""));
+  assert.equal(run("scripts/gtm-brain-approve/approve.mjs", ["--propose", "--by", "bo-chen"]).status, 0);
+  // through a writer's commit, the file removed: it is back before anything is committed, and no commit carries the removal
+  rmSync(file);
+  const c = lib.commit(root, ["config", "brain"], "tidy up");
+  assert.equal(readFileSync(file, "utf8"), settings, "the settings are back");
+  assert.ok(!c.proposal); assert.equal(git("log", "--format=%s", "--diff-filter=D", "--", "config/settings.yaml").trim(), "");
+  // and written by hand into the shared proposals folder: a proposal that removes the settings
+  const [first] = owner.listProposals(root), other = "p_0123456789";
+  cpSync(join(root, "brain/proposals", first.id), join(root, "brain/proposals", other), { recursive: true });
+  writeFileSync(join(root, "brain/proposals", other, "proposal.json"), JSON.stringify({ ...first, id: other, files: [{ path: "config/settings.yaml", change: "delete", base: null }] }));
+  lib.commit(root, ["brain"], "a proposal by hand");
+  actAs(root, null);
+  const waiting = owner.listProposals(root);
+  assert.equal(waiting.length, 2);
+  for (const p of waiting) {
+    const r = run("scripts/gtm-brain-approve/approve.mjs", ["--proposal", p.id, "--apply", "--by", "ann-lee"], { GTM_BRAIN_APPROVAL_TICKET: lib.issueApproval(root, "proposal") });
+    assert.notEqual(r.status, 0);
+    assert.match(r.stderr, /^not applied: [^\n]*without a company, an owner or a team/);
+    assert.doesNotMatch(r.stderr, /\n\s+at /, "one line, no stack");
+    assert.equal(readFileSync(file, "utf8"), settings);
+  }
+  assert.equal(owner.ownerOf(root), "ann-lee"); assert.equal(clean(git), "");
+  assert.equal(owner.listProposals(root).length, 2, "still there to decline");
+});
+
+test("settings proposed in the old admin.md shape, or without an owner, are refused at the diff: no form, nothing applied", t => {
+  const { root, run } = makeBrain(t);
+  const file = join(root, "config/settings.yaml"), settings = readFileSync(file, "utf8");
+  const fenced = `---\ncompany: Layout Co\nowner: ann-lee\nteam:\n  - name: Ann Lee\n    email: ann@example.test\n    handle: ann-lee\ntools: ["HubSpot"]\nprotected: true\n---\n# Layout Co\n`;
+  for (const bad of [fenced, settings.replace(/^owner: .*\n/m, "")]) {
+    writeFileSync(join(root, "work/admin.proposed.md"), bad);
+    const shown = run("scripts/gtm-brain-approve/approve.mjs", ["--diff"]);
+    assert.equal(shown.status, 1);
+    assert.match(shown.stderr, /^not a settings file: config\/settings\.yaml is plain "key: value" lines with no --- fences, and keeps company, owner and team/);
+    assert.ok(!exists(root, "work/admin.proposed.md"), "the bad proposal does not stay to block the next save");
+    writeFileSync(join(root, "work/admin.proposed.md"), bad);
+    const applied = run("scripts/gtm-brain-approve/approve.mjs", ["--apply", "--by", "ann-lee"], { GTM_BRAIN_APPROVAL_TICKET: lib.issueApproval(root, "admin") });
+    assert.equal(applied.status, 1);
+    assert.equal(readFileSync(file, "utf8"), settings);
+  }
+  // the real shape still applies
+  writeFileSync(join(root, "work/admin.proposed.md"), settings.replace("tools: []", 'tools: ["HubSpot"]'));
+  assert.equal(run("scripts/gtm-brain-approve/approve.mjs", ["--diff"]).status, 0);
 });
 
 test("before layout 3 nobody owns the root files: a teammate's edit of strategy.md and RULES.md saves", t => {

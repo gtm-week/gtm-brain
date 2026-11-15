@@ -56,7 +56,7 @@ if (opt.proposal) {
   if (!owner.isOwner(root, by)) { console.error(`not applied: only the owner (${owner.ownerOf(root)}) decides on proposal ${p.id}.`); process.exit(5); }
   if (!(await personApproved())) { console.error(NOT_APPROVED); process.exit(4); }
   audit(`${p.id}\t${opt.drop ? "declined" : "approved"} by ${by}\t${p.files.map(f => f.path).join(",")}`);
-  const r = opt.drop ? owner.dropProposal(root, p.id, by) : owner.applyProposal(root, p.id, by);
+  let r; try { r = opt.drop ? owner.dropProposal(root, p.id, by) : owner.applyProposal(root, p.id, by); } catch (e) { console.error(`not applied: ${e.message}.`); process.exit(1); }
   lib.rerender(root);
   console.log(`${opt.drop ? "declined" : "applied"} proposal ${p.id} (${p.files.map(f => f.path).join(", ")}), asked by ${p.by || "someone"}, ${opt.drop ? "declined" : "approved"} by ${by} · ${r.note}${r.record ? ` · recorded as ${r.record}` : ""}`);
   process.exit(0);
@@ -99,7 +99,14 @@ if (!existsSync(ADMIN)) { console.error(`no ${SETTINGS} here`); process.exit(1);
 if (!existsSync(PROP)) { console.error(`no proposal at ${paths.SETTINGS_PROPOSAL}. Write the full proposed ${SETTINGS} there first.`); process.exit(1); }
 const before = readFileSync(ADMIN, "utf8"), after = readFileSync(PROP, "utf8");
 if (before === after) { console.error(`proposal is identical to ${SETTINGS}; nothing to approve`); unlinkSync(PROP); process.exit(1); }
-if (/[–—―−]/.test(after)) { console.error("proposal contains a long dash; use a plain hyphen"); process.exit(1); }
+if (/[\u2013\u2014\u2015\u2212]/.test(after)) { console.error("proposal contains a long dash; use a plain hyphen"); process.exit(1); }
+// Layout 3: the settings are plain key: value lines, and they name the owner. A proposal in the old admin.md
+// shape (--- fences) or without a company, an owner or a team would leave a brain nobody can read: refused here,
+// at the diff, before any form.
+if (paths.inConfigFolders(root)) {
+  let fm = {}; try { fm = lib.parseSettings(after).fm; } catch {}
+  if (/^---\s*$/m.test(after) || !fm.company || !fm.owner || !Array.isArray(fm.team) || !fm.team.length) { console.error(`not a settings file: ${SETTINGS} is plain "key: value" lines with no --- fences, and keeps company, owner and team. Write the complete file again, starting from ${SETTINGS} as it is now.`); unlinkSync(PROP); process.exit(1); }
+}
 
 const d = diff(before, after); const changed = d.filter(l => /^[-+] /.test(l));
 
