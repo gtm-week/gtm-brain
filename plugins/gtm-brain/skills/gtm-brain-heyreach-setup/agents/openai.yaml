@@ -1,0 +1,4 @@
+interface:
+  display_name: "GTM Brain: Set up HeyReach"
+  short_description: "Connect HeyReach and draft LinkedIn messages from the brain"
+  default_prompt: "Use $gtm-brain-heyreach-setup to set up HeyReach from what the brain already knows."
