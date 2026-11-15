@@ -9,7 +9,7 @@ import { statSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as lib from "./brain.mjs";
 import { listDocuments, STARTERS } from "./documents.mjs";
-import { readSchema, brainKinds, US } from "./schema.mjs";
+import { readSchema, brainKinds, fieldsFor, US } from "./schema.mjs";
 import { ruleFindings } from "./rules-check.mjs";
 import { readAskSource } from "./ask-source.mjs";
 import { whereRows } from "./where.mjs";
@@ -18,6 +18,7 @@ import { population } from "./population.mjs";
 import { healthLine } from "./health-line.mjs";
 import { listWorkflows, listRuns, TYPE as WORKFLOW_TYPE } from "./workflows.mjs";
 import { relationOverview } from "./relations.mjs";
+import { buildRelationLog } from "./relation-log.mjs";
 
 export const NOTES_PAGE = 40;
 const EXCERPT = 320, SHORT = 90;
@@ -117,28 +118,66 @@ export function noteIndex(contexts) {
   return out.sort((a, b) => String(b.at).localeCompare(String(a.at)) || a.id.localeCompare(b.id));
 }
 
+/* One entity's row for the list and its detail for the reading pane. The row is what the page carries for every
+   entity (name, one line of who or what it is, relation to us, counts); the detail (schema fields with the missing
+   ones, links grouped by the other end, dated link history, the first lines of the brief) goes to a side file. */
+const firstSentence = (s, n) => { const t = String(s ?? "").replace(/\s+/g, " ").trim(), m = t.match(/^.{20,}?[.!?](?=\s|$)/); return cut(m ? m[0] : t, n); };
 function entityCards(root, registry, admin, notes, contexts) {
   const last = new Map(), count = new Map();
   for (const n of notes) { if (n.state !== "in force") continue; for (const id of n.entities) { count.set(id, (count.get(id) || 0) + 1); if (!last.has(id)) last.set(id, n.at); } }
-  // relation to us: the customer status and any current relationship whose other end is our company
-  const toUs = new Map();
+  const { schema = null } = (() => { try { return readSchema(root); } catch { return {}; } })();
+  const byRef = new Map(registry.flatMap(e => [e.id, ...(e.previous_ids || [])].map(id => [id, e])));
+  const resolve = v => { let e = byRef.get(v); if (!e) { try { e = lib.resolveEntity(registry, v); } catch { e = null; } } return e ? { id: e.id, kind: e.kind } : null; };
+  // the dated events behind each link (started, changed, ended), from the relation log
+  const events = new Map();
+  try {
+    const linked = lib.hideForkCopies(contexts.flatMap(c => lib.effectiveMemories(c.memories || []))).filter(m => m.relation || m.customer);
+    for (const r of buildRelationLog(linked, { resolve, schema }).relations)
+      events.set(`${r.from}|${r.type}|${r.to}`, { since: r.since || null, until: r.until || null,
+        events: r.events.filter(e => !e.disputed).map(e => ({ at: e.at, event: e.event, by: e.basis === "user" ? "person" : "source", ...(e.customer_status ? { customer: e.customer_status } : {}) })) });
+  } catch {}
+  // relation to us (the customer status and any link whose other end is our company) and every link, seen from both ends
+  const toUs = new Map(), keys = new Map(), links = new Map();
+  const push = (map, id, v) => { if (id) map.set(id, [...(map.get(id) || []), v]); };
   try {
     for (const r of relationOverview(root, { registry, contexts }).relations) {
-      const mine = r.to?.kind === US || r.to?.name === US ? r.from : r.from?.kind === US ? r.to : null;
-      if (!mine?.id) continue;
-      const label = r.customer_status ? r.customer_status.replace(/_/g, " ") : `${r.type.replace(/_/g, " ")}${r.status === "ended" ? " (ended)" : ""}`;
-      toUs.set(mine.id, [...(toUs.get(mine.id) || []), label]);
+      const usTo = r.to?.kind === US || r.to?.name === US, usFrom = r.from?.kind === US;
+      const mine = usTo ? r.from : usFrom ? r.to : null;
+      if (mine?.id) {
+        const label = r.customer_status ? r.customer_status.replace(/_/g, " ") : `${r.type.replace(/_/g, " ")}${r.status === "ended" ? " (ended)" : ""}`;
+        push(toUs, mine.id, label);
+        push(keys, mine.id, r.customer_status || (r.status === "ended" ? null : r.type === "partner_of" ? "partner" : null));
+      }
+      const log = events.get(`${r.from?.id || US}|${r.type}|${r.to?.id || US}`) || { since: null, until: null, events: [] };
+      const link = (out, other) => ({ type: r.type, out, other: other?.id ? { id: other.id, name: other.name, kind: other.kind } : { id: null, name: US, kind: US },
+        status: r.status === "ended" ? "ended" : "current", at: r.observed_at || null, ...(r.customer_status ? { customer: r.customer_status } : {}), since: log.since, until: log.until, events: log.events });
+      if (r.from?.id) push(links, r.from.id, link(true, r.to));
+      if (r.to?.id) push(links, r.to.id, link(false, r.from));
     }
   } catch {}
   const team = new Set((admin.team || []).map(p => String(p.name || "").toLowerCase())), ours = String(admin.company || "").trim().toLowerCase();
-  return registry.filter(e => e.status !== "archived").map(e => {
+  const details = {};
+  const rows = registry.filter(e => e.status !== "archived").map(e => {
     let fields = []; try { fields = JSON.parse(e._fm?.compiled_fields || "[]"); } catch {}
-    const key = (Array.isArray(fields) ? fields : []).filter(f => f && f.field && f.text).slice(0, 4).map(f => [f.field.replace(/_/g, " "), cut(f.text, 80)]);
+    const known = new Map((Array.isArray(fields) ? fields : []).filter(f => f && f.field && f.text).map(f => [f.field, String(f.text)]));
+    const key = [...known].slice(0, 4).map(([f, t]) => [f.replace(/_/g, " "), cut(t, 80)]);
     const us = team.has(e.name.toLowerCase()) ? "our team" : ours && [e.name, ...(e.aliases || [])].some(n => String(n).toLowerCase() === ours) ? "us" : null;
-    return { id: e.id, name: e.name, kind: e.kind || "person", subtype: e.subtype || null, aliases: (e.aliases || []).slice(0, 6), email: (e.emails || [])[0] || null,
-      fields: key, relation: [us, ...(toUs.get(e.id) || [])].filter(Boolean).join(", ") || null,
+    const kind = e.kind || "person", mine = links.get(e.id) || [];
+    const wanted = fieldsFor(schema, kind, e.subtype || null), names = new Set(wanted.map(f => f.name));
+    const all = [...wanted.map(f => ({ name: f.name, required: !!f.required, value: known.has(f.name) ? cut(known.get(f.name), 240) : null })),
+      ...[...known].filter(([f]) => !names.has(f)).map(([f, t]) => ({ name: f, required: false, value: cut(t, 240) }))];
+    const brief = (e._compilation?.overview || []).map(c => cut(c?.text, 400)).filter(Boolean).slice(0, 3);
+    const company = mine.find(l => l.type === "works_at" && l.out && l.status === "current" && l.other.id)?.other.name || null;
+    // one line of who or what it is: the role and the company, else what the schema says it is, else the brief's first sentence
+    const what = known.get(kind === "person" ? "role" : kind === "organization" ? "industry" : kind === "offering" ? "what_it_is" : kind === "meeting" || kind === "event" ? "date" : "category") || null;
+    const line = kind === "person" ? (what && company ? `${cut(what, 60)} at ${company}` : what ? cut(what, 90) : company ? `Works at ${company}` : null) : what ? cut(what, 90) : null;
+    details[e.id] = { fields: all, links: mine, brief, compiled: e._fm?.compiled_at || null };
+    return { id: e.id, name: e.name, kind, subtype: e.subtype || null, aliases: (e.aliases || []).slice(0, 6), email: (e.emails || [])[0] || null, emails: (e.emails || []).slice(0, 4),
+      fields: key, relation: [us, ...(toUs.get(e.id) || [])].filter(Boolean).join(", ") || null, rel: [...new Set([us === "our team" ? "team" : us, ...(keys.get(e.id) || [])].filter(Boolean))],
+      line: line || (brief[0] ? firstSentence(brief[0], 120) : null), described: !!line, company, missing: all.filter(f => f.required && !f.value).length, links: mine.length,
       last: last.get(e.id) || e._fm?.latest_evidence_at || null, notes: count.get(e.id) || 0, path: e._path || null };
   }).sort((a, b) => String(b.last || "").localeCompare(String(a.last || "")) || a.name.localeCompare(b.name));
+  return { rows, details };
 }
 
 /* A trigger, from whatever a workflow file says today: a frontmatter trigger or schedule, or a "## Trigger"
@@ -198,9 +237,9 @@ export function pillarData(root, { registry = lib.readNames(root), admin = lib.r
   try { const p = population(root); pop = { at: p.at, saved_this_week: p.saved.last_7_days, average_week: p.saved.average_4_weeks_before, duplicates: p.duplicates.exact + p.duplicates.near,
     entities_without_notes: p.entities.without_notes, entities_total: p.entities.total, missing_required: p.entities.missing_required, notes: p.notes }; } catch { pop = null; }
   const entities = section("entities", () => {
-    const kinds = [...new Set([...brainKinds(root), ...registry.map(e => e.kind || "person")])], rows = entityCards(root, registry, admin, notes, full);
-    return { kinds: kinds.map(k => ({ kind: k, count: rows.filter(e => e.kind === k).length })), rows };
-  }, { kinds: [], rows: [] });
+    const kinds = [...new Set([...brainKinds(root), ...registry.map(e => e.kind || "person")])], { rows, details } = entityCards(root, registry, admin, notes, full);
+    return { kinds: kinds.map(k => ({ kind: k, count: rows.filter(e => e.kind === k).length })), rows, details };
+  }, { kinds: [], rows: [], details: {} });
   const tagCount = new Map(); for (const n of notes) for (const t of n.tags) tagCount.set(t, (tagCount.get(t) || 0) + 1);
   return {
     health: healthText(root, meetings),
