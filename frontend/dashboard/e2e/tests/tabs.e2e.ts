@@ -30,6 +30,8 @@ test('Configuration lists the base files with their state, RULES.md and SCHEMA.m
   const f = fixture(app.baseUrl);
   await app.open('/');
   const docs = screen.getByRole('table').filter({ has: screen.getByRole('columnheader', 'Document') });
+  // every base file has a row, filled or not
+  await expect(docs.getByRole('rowheader')).toHaveCount(f.documents.length);
   for (const d of f.documents) {
     const row = docs.getByRole('row').filter({ has: screen.getByRole('rowheader', new RegExp(`^${esc(d.title)}`)) });
     await expect(row).toContainText(d.state);
@@ -93,6 +95,8 @@ test('Workflows shows each file with its status and trigger, and the run in prog
   const f = fixture(app.baseUrl);
   await app.open('/');
   await screen.getByRole('navigation', 'Main navigation').getByRole('button', 'Workflows').tap();
+  // every file under workflows/ has a card, and only those
+  await expect(browser.locator('#pw-files article')).toHaveCount(f.workflows.length);
   for (const w of f.workflows) {
     const row = browser.locator('#pw-files article').filter({ has: screen.getByRole('heading', w.title, { level: 3 }) });
     await expect(row).toHaveCount(1);

@@ -6,7 +6,7 @@ import { fixture, TABS } from './fixture.ts';
 
 // A button's words that would change the brain from the page. Links are judged by where they go instead: a
 // prepared chat (codex://threads/new, the person presses Send in Codex), a brain file or a source, read-only.
-const ACTION = /^(edit|save|delete|remove|approve|apply|submit|send|run|start|update|create|add|archive|merge|rename|reset|undo|resolve|connect|sync|compile|write|accept|reject)\b/i;
+const ACTION = /^(edit|save|delete|remove|approve|apply|submit|send|run|start|update|create|add|archive|merge|rename|reset|undo|resolve|connect|sync|compile|write|accept|reject|mark|dismiss|confirm|retry|refresh|publish|import|upload|complete|cancel|enable|disable|pause|resume|activate|advance|skip|change|set|new|fix|install|upgrade|restore|retract|correct|remember|forget)\b/i;
 
 // Every page a person can reach from the navigation, and an entity page.
 async function visitAll({ app, screen, browser }: any, f: ReturnType<typeof fixture>, each: (where: string) => Promise<void>) {
@@ -53,6 +53,14 @@ test('nothing on the page offers an edit or an action, and nothing it requests w
     expect({ where, found }).toEqual({ where, found: [] });
   });
   expect(writes).toEqual([]);
+});
+
+test('the server behind the page refuses anything but a read', async ({ app, browser }) => {
+  await app.open('/');
+  for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) for (const path of ['/', '/data.json', '/file?path=RULES.md', '/entity?id=x']) {
+    const status = await browser.evaluate(([m, p]: string[]) => fetch(p, { method: m, body: m === 'DELETE' ? undefined : '{}' }).then(r => r.status), [method, path]);
+    expect({ method, path, status }).toEqual({ method, path, status: 405 });
+  }
 });
 
 test('the page shows no console errors on any tab', async ({ app, screen, browser }) => {
