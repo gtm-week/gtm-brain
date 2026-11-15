@@ -190,6 +190,22 @@ in this brain were never compiled, so Codex may end its first answer by offering
 5. In a **new chat**: *What has our blog produced so far, and which post should come next? Do not
    save anything.* The results, and a post from a pillar still open: returns cost or peak season.
 
+## Workshop demo on stub tools
+
+`node plugins/gtm-brain/test/live/demo-loops.mjs --stub` runs the same loops, but Codex calls the
+outside tools instead of being told what they returned. `test/live/stub-gtm-tools.mjs` stands in for
+them: a company search and an enrichment (what Clay does), buying signals (Zynt), keyword research
+and a content score (Surfer). It is declared to Codex beside GTM Brain for that run only, never in
+your own Codex configuration. The outreach loop gains a first step, the company search by the ICP.
+After every step the check also asks: was the right tool called with criteria from the brain (the ICP
+document, the saved prospects), was what came back saved with a source pointing at the tool, does
+the brain's tools list show the tool as used, and was nothing sent. Every call is logged in
+`stub-calls.jsonl` beside the brain. Add `--fail expired_key`, `--fail empty` or `--fail rate_limit`
+(with `--step o2-enrich`, for example) to see what Codex tells the person when a tool fails.
+
+What the stubs do not prove: real sign-in and keys, the real tools' rate limits and cost per call,
+and the real tools' data shapes and quality. The fixture data is small and fits the demo brain.
+
 ## Three habits that make it work
 
 1. **Say where you are.** Load the context before you start; Codex keeps you there.
