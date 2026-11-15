@@ -1,3 +1,6 @@
+// The harness reads and writes the root files of a layout 2 brain: setup and the lib play a plugin that writes layout 2 at
+// most (lib/layout-version.mjs GTM_BRAIN_TEST_LAYOUT). Layout 3 (about-us/, config/) is covered by config-folders.test.mjs.
+process.env.GTM_BRAIN_TEST_LAYOUT = "2";
 process.env.GTM_BRAIN_NO_WATCH = "1";
 process.env.GTM_BRAIN_NO_COMPILE = "1";
 // The deterministic end-to-end harness on the small shape: a generated brain, every check scored

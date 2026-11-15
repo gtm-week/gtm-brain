@@ -1,3 +1,6 @@
+// These tests read and write the root files of a layout 2 brain: setup and the lib play a plugin that writes layout 2 at most
+// (lib/layout-version.mjs GTM_BRAIN_TEST_LAYOUT). Layout 3 (about-us/, config/) is covered by config-folders.test.mjs.
+process.env.GTM_BRAIN_TEST_LAYOUT = "2";
 // RULES.md "Our rules", typed (ticket: enforce rules deterministically): a rule in the person's words with an optional
 // tag line under it. The parser on the owner's form, hand edits and broken lines; the scope match; each supported
 // check, at save (remember refuses, quoting the rule) and in a draft; the filing proposal for an untagged rule; the

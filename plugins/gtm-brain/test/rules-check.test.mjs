@@ -1,3 +1,6 @@
+// These tests read and write the root files of a layout 2 brain: setup and the lib play a plugin that writes layout 2 at most
+// (lib/layout-version.mjs GTM_BRAIN_TEST_LAYOUT). Layout 3 (about-us/, config/) is covered by config-folders.test.mjs.
+process.env.GTM_BRAIN_TEST_LAYOUT = "2";
 // The rules check on an old brain (Artur, 2026-11-11): a bare Max, a look-alike pair, a folder no RULES.md
 // row names, files with no recorded reason, a name with capitals. Each finding names its rule, the person
 // or path and fixed choices; fixing one through the named tool makes it go away; nothing is changed by the check.

@@ -1,3 +1,6 @@
+// These tests read and write the root files of a layout 2 brain: setup and the lib play a plugin that writes layout 2 at most
+// (lib/layout-version.mjs GTM_BRAIN_TEST_LAYOUT). Layout 3 (about-us/, config/) is covered by config-folders.test.mjs.
+process.env.GTM_BRAIN_TEST_LAYOUT = "2";
 // Eager saving and staleness (owner, 2026-11-14: "we need more eager saving, or an indication of staleness").
 // The nudge: a chat that made three reads and saved nothing gets one line with the third read's reply, once per
 // stretch, never in a separate run, off with save_nudge: off. Staleness: when the last note was saved, on the

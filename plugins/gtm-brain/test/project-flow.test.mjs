@@ -1,3 +1,6 @@
+// These tests read and write the root files of a layout 2 brain: setup and the lib play a plugin that writes layout 2 at most
+// (lib/layout-version.mjs GTM_BRAIN_TEST_LAYOUT). Layout 3 (about-us/, config/) is covered by config-folders.test.mjs.
+process.env.GTM_BRAIN_TEST_LAYOUT = "2";
 // Project integration from fresh MCP sessions through hooks, storage, HTTP, revision events,
 // and the actual dashboard client. Capture consent is assumed submitted before link_project;
 // native question widgets, OS deep-link dispatch and model compilation remain manual checks.
