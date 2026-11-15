@@ -351,6 +351,27 @@ test("resolveThread: an unknown id or a missing Codex home still gives the link"
   assert.equal(lib.resolveThread("01a0-gone", root, { codexHome: join(tmpdir(), "no-such-codex-home") }).url, "codex://threads/01a0-gone");
   assert.equal(lib.resolveThread("bad/../id", root, { codexHome: codexHome([]) }), null, "an id that is not a thread id resolves to nothing");
 });
+// Demo loops 2026-11-15 (c1-topics): a summary written for one topic made the other topic's as_of stale, because the
+// snapshot hashed every entity page whole (brief text, stamps). Identity changes still count; page text does not.
+test("compileSnapshot moves with a topic's notes and the names' identity, not with an entity page's text", () => {
+  const root = brain(); lib.writeContext(root, "icp", { title: "Target customers" });
+  lib.addName(root, "Fernbrook Outdoor", { kind: "organization", subtype: "company" });
+  const before = lib.compileSnapshot(root, "icp");
+  const page = join(root, lib.readNames(root).find(n => n.name === "Fernbrook Outdoor")._path);
+  writeFileSync(page, readFileSync(page, "utf8") + "\nHandwritten: met them at a trade fair.\n");
+  assert.equal(lib.compileSnapshot(root, "icp"), before, "a page's own text is not the topic's evidence");
+  lib.addName(root, "Heron Home", { kind: "organization", subtype: "company" });
+  assert.notEqual(lib.compileSnapshot(root, "icp"), before, "a new name still counts");
+  const named = lib.compileSnapshot(root, "icp");
+  lib.appendMemory(root, "icp", { authors: ["marta-nowak"], content: "Heron Home fits.", kind: "note", tools: [], people: [], at: "2026-11-15T09:00:00Z", source: [{ kind: "user", ref: "marta-nowak" }] });
+  assert.notEqual(lib.compileSnapshot(root, "icp"), named, "a new note counts");
+  // everything that decides which notes mention whom is identity: a "not the same as" and a meeting's anchor too
+  const change = (why, edit) => { const was = lib.compileSnapshot(root, "icp"), names = lib.readNames(root); edit(names.find(n => n.name === "Heron Home")); lib.writeNames(root, names); assert.notEqual(lib.compileSnapshot(root, "icp"), was, why); };
+  change("a new alias counts", n => n.aliases.push("Heron"));
+  change("a not-the-same-as counts", n => n.not.push("Fernbrook Outdoor"));
+  change("a meeting anchor counts", n => n.references.push({ kind: "meeting", ref: "m_0123456789ab" }));
+});
+
 test("resolveThread reads CODEX_HOME by default", () => {
   const root = brain(); const home = codexHome([{ id: "01a0-env", name: "From env" }]);
   const prev = process.env.CODEX_HOME; process.env.CODEX_HOME = home;
