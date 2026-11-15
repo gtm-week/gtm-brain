@@ -92,7 +92,7 @@ called out. The review makes a recommendation; budget and campaign changes remai
 > Make this research process a skill I can reuse in our other projects.
 
 Keep your own skills in the brain and use them from linked project folders. Plugin updates
-preserve them. See the [command reference](COMMANDS.md) for all twenty-four workflows, including
+preserve them. See the [command reference](COMMANDS.md) for all twenty-six workflows, including
 strategy, source sync, documents and project setup.
 
 ## How GTM Brain works
@@ -277,7 +277,7 @@ does not mean offline AI processing.
 
 ## Built-in workflows
 
-Ask for an outcome in ordinary language, or invoke one of the twenty-four shipped skills:
+Ask for an outcome in ordinary language, or invoke one of the twenty-six shipped skills:
 
 | Command | Use it for |
 | --- | --- |
@@ -293,6 +293,8 @@ Ask for an outcome in ordinary language, or invoke one of the twenty-four shippe
 | `/gtm-brain-freckle-setup` | Connect Freckle (lead enrichment) on your yes and build its first list of target companies and people from the brain; runs that spend credits ask first. |
 | `/gtm-brain-clay-setup` | Connect Clay on your yes and find the brain's target companies and people in it (search is free); enrichment that spends credits asks first. |
 | `/gtm-brain-woodpecker-setup` | Connect Woodpecker on your yes, see how your campaigns perform, and save one email sequence written from the brain as a draft; it never starts a campaign. |
+| `/gtm-brain-surfer-setup` | Connect Surfer on your yes, get topics from the brain's strategy, market and call notes, and brief the first article; a full article asks first, nothing is published. |
+| `/gtm-brain-heyreach-setup` | Connect HeyReach with your workspace's Connection URL, see how your LinkedIn campaigns do, and get a connection note and follow-ups from the brain to paste in; nothing is sent. |
 | `/gtm-brain-workflow` | Create a playbook, start a run and advance through its steps and gates. |
 | `/gtm-brain-sync` | Pull relevant updates from connected sources and retain useful findings. |
 | `/gtm-brain-todo` | Review what is waiting on you across the brain and connected tools. |
@@ -381,10 +383,10 @@ plugins/gtm-brain/
   .mcp.json  server/          the operations as MCP tools (Remembering, Searching the brain, ...);
                               dash.mjs serves the read-only dashboard and revision events
   lib/                        shared readers, validators, writers, search and identity logic; Node built-ins
-  skills/                     the twenty-four workflows a person can ask for (all prefixed gtm-brain-): start,
+  skills/                     the twenty-six workflows a person can ask for (all prefixed gtm-brain-): start,
                               todo, sync, workflow, deepdive, strategy, unit-economics, define-icp,
                               market-desk-research, voice, zynt-setup, freckle-setup, clay-setup,
-                              woodpecker-setup,
+                              woodpecker-setup, surfer-setup, heyreach-setup,
                               project, design-system, add-section,
                               build-landing-page, publish-website, configure, skill, rules, schema,
                               use-brain; what
