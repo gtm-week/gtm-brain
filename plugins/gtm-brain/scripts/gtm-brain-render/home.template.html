@@ -1823,8 +1823,7 @@ function housekeeping(){
  const base=(PL?.configuration?.documents||[]).filter(d=>d.base),unwritten=base.filter(d=>d.state==="not written");
  if(unwritten.length)add(unwritten.length,`${unwritten.length===1?"base document is":"base documents are"} not written yet: ${unwritten.map(d=>d.title).join(", ")}`,chat(unwritten.length===1?"Write the "+unwritten[0].title:"Write the first one",`Help me write our ${unwritten[0].title} document.`));
  if(PL?.entities?.rows?.length&&!(customerData.customers||[]).some(c=>["customer","prospect","former_customer"].includes(c.status)))add(null,"Nobody is marked as a customer yet",go("Choose your customers","entities"));
- if(P?.schema_untouched)add(null,"Decide what you want to know about each person and company",go("See what is recorded now","config",' data-cfg-open="schema"'));
- else if(P?.missing_required)add(P.missing_required,`of ${many(P.entities_total,"person or company","people and companies")} ${P.missing_required===1?"misses":"miss"} a detail you marked as required`,chat("Fill the gaps with Codex","Entities are missing required fields. Show me which fields are missing most and fill what you can from our notes and tools."));
+ /* nothing is said while the schema is still the shipped one: there is nothing for the person to act on here */ if(!P?.schema_untouched&&P?.missing_required)add(P.missing_required,`of ${many(P.entities_total,"person or company","people and companies")} ${P.missing_required===1?"misses":"miss"} a detail you marked as required`,chat("Fill the gaps with Codex","Entities are missing required fields. Show me which fields are missing most and fill what you can from our notes and tools."));
  return rows;
 }
 function renderInbox(){
