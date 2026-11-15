@@ -3,6 +3,7 @@
 // once more as the nearest spelling in the brain's own word list (one letter off, words of five
 // letters or more), ranked below exact matches and said in one line. One reply stays under a byte
 // cap and ends with how many more matched. Used by query (object answer, and memories with search).
+import { foldLatin } from './fold.mjs';
 import * as lib from './brain.mjs';
 import { MAX_RESULT_BYTES, withMemoryIndex } from './memory-index.mjs';
 import { relationOverview } from './relations.mjs';
@@ -105,7 +106,7 @@ export function parsePeriod(question, now = nowDate(), isName = () => false) {
 
 // Words as typed (letters, digits, @ . ' - _ inside a word), with their original case.
 const words = s => (String(s).match(/[\p{L}\p{N}][\p{L}\p{N}@._'’-]*/gu) || []).map(w => w.replace(/[._'’-]+$/u, '').replace(/['’]s$/iu, '')).filter(Boolean);
-const fold = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const fold = foldLatin;   // also the letters NFD does not split (ł, ø, ß): lib/fold.mjs
 const ftsWord = w => `"${w.replace(/"/g, '')}"`;
 
 /* Optimal string alignment distance, stopping early past 1. */
@@ -200,11 +201,24 @@ export function searchIndex(index, question, { filters = {}, project = null, now
   const visibleCount = expr => db.prepare('SELECT count(*) AS n FROM keywords WHERE keywords MATCH ?').get(expr).n;
   let vocab = null;
   const vocabulary = () => vocab ??= db.prepare('SELECT term, doc FROM identity_vocab').all().map(r => ({ term: r.term, doc: r.doc }));
+  let spelled = null;
+  const spellings = () => {
+    if (spelled) return spelled; spelled = new Map();
+    try { for (const { term } of db.prepare('SELECT term FROM keywords_vocab').all()) { if (/^[\x00-\x7f]*$/.test(term)) continue; const f = foldLatin(term); if (f !== term) spelled.set(f, [...(spelled.get(f) || []), term]); } } catch {}
+    return spelled;
+  };
   // each word: its forms; a word no visible note has (five letters or more) gets its nearest spellings
   const groups = q.terms.map(w => {
     const exact = forms(w).join(' OR ');
     const g = { word: w, exact, fuzzy: null, weight: 1 };
     let n = 0; try { n = visibleCount(exact); } catch { g.exact = ftsWord(parts(w).join(' ')); n = visibleCount(g.exact); }
+    // the same word written with other letters ("lukasz" for "Łukasz", "soren" for "Søren"): the index keeps a note's
+    // own spelling, so the spellings that fold to this word are searched with it, as exact matches
+    if (/^[a-z]+$/.test(w)) {
+      // the index stems its words, so a folded spelling may be the word less its ending ("invalidenstrass" for "invalidenstrasse")
+      const other = [...spellings()].filter(([f]) => f === w || (f.length >= 5 && w.startsWith(f) && w.length - f.length <= 3)).flatMap(([, terms]) => terms);
+      if (other.length) { g.exact = `${g.exact} OR ${other.map(ftsWord).join(' OR ')}`; try { n = visibleCount(g.exact); } catch {} }
+    }
     g.df = n;
     // a word no note has is searched as the spellings one letter off that notes have; ranked below exact
     // matches, said in one line

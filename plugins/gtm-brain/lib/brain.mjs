@@ -6,6 +6,7 @@
 //
 // No dependencies. Node built-ins only.
 
+import { foldLatin } from "./fold.mjs";
 import { readFileSync, writeFileSync, appendFileSync, existsSync, readdirSync, statSync, lstatSync, realpathSync, mkdirSync , unlinkSync, rmSync, renameSync, linkSync, chmodSync} from "node:fs";
 import { join, isAbsolute, resolve, relative, basename, dirname } from "node:path";
 import { homedir } from "node:os";
@@ -690,7 +691,7 @@ export function inferredName(names, mention) {
    in the registry: a shared word (a first name, a surname, a company word; accents ignored, company
    suffixes and short words skipped), or the same letters without spaces ("Open AI" and "OpenAI").
    Exact matches are canonicalName's job; this is only about near misses. Never merges by itself. */
-const foldName = s => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const foldName = s => foldLatin(s);
 const NAME_STOP = new Set(["the", "and", "for", "inc", "gmbh", "ltd", "llc", "plc", "corp", "group", "team", "sp.", "o.o.", "s.a.", "a.g."]);
 const nameWords = s => foldName(s).split(/[\s,/&()]+/).map(w => w.replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, "")).filter(w => w.length >= 3 && !NAME_STOP.has(w));
 const nameLetters = s => foldName(s).replace(/[^a-z0-9]/g, "");
