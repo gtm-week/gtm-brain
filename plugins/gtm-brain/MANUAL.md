@@ -62,14 +62,21 @@ prospect, other) is derived from the notes: the team in admin.md, customer statu
 investor_in, and a person's employer. "Show the customers' VPs of Sales" filters on it and on the
 SCHEMA.md fields without opening pages. A captured meeting becomes a page in `meetings/` that
 collects the notes saved with its meeting id and lists who attended; the transcript stays in its
-tool. A brain from before 0.35 keeps its flat `brain/entities/*.md` until "upgrade the brain"
-moves the pages into the kind folders in one commit; meeting pages, and offerings when SCHEMA.md
-has no Offering section, wait for that move, so a flat brain never holds a page 0.34 cannot read.
-Update every teammate first: GTM Brain 0.34 reads only the flat pages, so after the move it sees no
-people or companies (its saves still work) and writes its own flat pages for the names it adds.
-At the next write on 0.35 each one folds into the page that holds the same id, a merged id, or the
-same name, alias or email (its text is kept in `work/manual-edits/entities/`); one that matches
-nothing moves into its kind folder as a new entity.
+tool. A brain from before 0.35 keeps its flat `brain/entities/*.md` (file layout 1) and works as
+before until "upgrade the brain" moves the pages into the kind folders. The move asks first: the
+upgrade says how many pages would move and which teammates saved in the last 14 days, and changes
+nothing until you say yes; an update of the plugin and a scheduled run never move them. On yes the
+pages move and `brain/layout.json` records layout 2 in the same commit (a brain made by setup starts
+there). Meeting pages, and offerings when SCHEMA.md has no Offering section, wait for that move, so
+a flat brain never holds a page 0.34 cannot read. Update every teammate first. A teammate's older
+GTM Brain that checks `brain/layout.json` then reads the brain, says "this brain was upgraded to
+file layout 2 ... update GTM Brain" and saves nothing until it is updated. GTM Brain 0.34 does not
+check it yet: it reads only the flat pages, so after the move it sees no people or companies, its
+saves still work, and it writes its own flat pages for the names it adds. At the next write on 0.35
+each one folds into the page that holds the same id, a merged id, or the same name, alias or email
+(its text is kept in `work/manual-edits/entities/`); one that matches nothing moves into its kind
+folder as a new entity. A brain whose pages an early 0.35 moved without recording it is set to
+layout 2 at the next chat start or save, said in one line.
 
 A chat that keeps reading the brain and saves nothing is reminded once, with the third read, to save
 what the turn established; `save_nudge: off` in `brain/admin.md` turns the reminder off.
@@ -266,7 +273,7 @@ in `work/manual-edits/protected/`.
 | A summary that looks old | its "as of" date; "update the summary now"; `work/compile.json` shows queued, running, done or failed |
 | Summaries never update | `work/hooks.log` lines `scheduled-run ... failed`; `work/runs.jsonl` has one line per compile run with its tokens; no lines at all means no run started |
 | A file in the wrong place | "why is this here?"; fix the `RULES.md` row |
-| "this brain was upgraded ... update GTM Brain", and nothing saves | a teammate's newer GTM Brain changed the brain's file layout (`brain/layout.json`); yours reads it but writes nothing until you say "update GTM Brain" and start a new chat |
+| "this brain was upgraded ... update GTM Brain", and nothing saves | a teammate's newer GTM Brain changed the brain's file layout (`brain/layout.json`; layout 2 is entity pages in kind folders); yours reads what it can find but writes nothing until you say "update GTM Brain" and start a new chat |
 | Codex did something you did not ask | `work/tool-usage.jsonl` lists every GTM Brain call with time and title; `git log` lists every change with who made it |
 | A question where none of the options fits | type your own answer in the box's "Or write your own response" field, then Send. The main message field below waits until the question is answered or skipped. Skip closes it, and Codex asks again in plain text. |
 

@@ -683,11 +683,17 @@ refresh commits only its own file.
 The upgrade also adds `RULES.md`, `SCHEMA.md` and the starter documents (`strategy.md`, `icp.md`,
 `voice.md`, `design-system.md`, `market.md`) a brain lacks, at the root or in a folder of their own
 name, and never replaces a file that is there. `brain/layout.json` records the brain's file layout
-(a missing file is layout 1) and the starters already given, so a starter the person deleted is not
-brought back. A GTM Brain that meets a newer layout than it understands reads the brain with one line
-on top and refuses every write ("update GTM Brain"). An upgrade that changes the layout changes nothing
-until the person says yes: it names the teammates who saved notes in the last 14 days, and
-`upgrade_brain` with `confirm: true` (`--confirm`) applies it.
+(1: flat entity pages, also a missing file; 2: entity pages in a folder per kind, what setup makes)
+and the starters already given, so a starter the person deleted is not brought back. A GTM Brain
+that meets a newer layout than it understands reads the brain with one line on top and refuses every
+write ("update GTM Brain"). An upgrade that changes the layout changes nothing until the person says
+yes. For a flat brain that change is the move of its entity pages into kind folders: the run without
+the yes says how many pages would move and names the teammates who saved notes in the last 14 days;
+`upgrade_brain` with `confirm: true` (`--confirm`) moves them and records layout 2 in the same
+commit. `update_plugin` runs the upgrade without the yes, and a scheduled or background run never
+moves pages. A brain already in kind folders whose file says 1 or is missing is set to 2 by the
+upgrade, the next chat start or the next save, with nothing moved. What a teammate on an older
+version sees is in [MANUAL.md](plugins/gtm-brain/MANUAL.md#saving-what-you-say-what-it-keeps).
 
 Tool: `upgrade_brain` (`confirm`). Writes: `AGENTS.md`, `.githooks/pre-commit`, `.gitignore`,
 `RULES.md`, `SCHEMA.md`, missing starter documents, `brain/layout.json`, upgrade backups, and
