@@ -121,6 +121,7 @@ test("page: opens on Overview, a base document row opens in the page, every prep
   assert.doesNotMatch(p.node("#ov-inbox").innerHTML + p.node("#ov-more").innerHTML + p.node("#h-recent").innerHTML, /In this brain|<article class="recent-item"|Sync and capture/, "Overview carries no count tiles, no list of recent notes and no status fold");
   const asked = structuredClone(D); asked.questions = [{ id: "m_q00001", at: day(2), kind: "question", context: "company", content: "Is Acme Retail renewing in March or in June?", people: ["Acme Retail"], authors: ["marta"], tags: ["brain-question"], source: [], tools: [], actions: [] }]; asked.totals = { ...(asked.totals || {}), questions: 1 };
   const inbox = page(asked).node("#ov-inbox").innerHTML;
+  assert.match(inbox, /Needs your attention<\/h2><span class="ov-badge"[^>]*>1<\/span>/, "the heading carries a count"); assert.match(page(asked).node("#ov-more").innerHTML, /<details class="ov-house" id="ov-house" open><summary><h2>Housekeeping<\/h2><span class="ov-badge calm">\d+<\/span>/, "Housekeeping is a section of its own, open, with a count");
   assert.match(inbox, /<h3>Is Acme Retail renewing in March or in June\?<\/h3><p>Codex asked this 2 days ago/, "an open question is written out, with how long it has waited");
   assert.match(inbox, /data-entity="Acme Retail"/); assert.match(decodeURIComponent(inbox.match(/class="ov-act" href="([^"]+)"/)[1]), /Is Acme Retail renewing in March or in June/, "its link carries that question");
   const cfg = p.node("#cfg-docs").innerHTML;
