@@ -47,7 +47,8 @@ export function configMovePlan(root) {
    commit false (GTM_BRAIN_NO_COMMIT, a brain outside git) leaves the result staged on disk. */
 export function migrateToConfigFolders(root, { commit = !process.env.GTM_BRAIN_NO_COMMIT } = {}) {
   const none = { moves: [], kept: [], layout: 0, committed: false, note: "" };
-  if (inConfigFolders(root) || process.env.GTM_BRAIN_RUN || understandsLayout() < 3) return none;
+  // after the kind folders only (diskLayout 2): flat pages are asked about and moved first (upgrade.sh)
+  if (inConfigFolders(root) || process.env.GTM_BRAIN_RUN || understandsLayout() < 3 || diskLayout(root) !== 2) return none;
   const recorded = readLayout(root); if (recorded.error) return none;
   const plan = configMovePlan(root);
   const git = (...a) => execFileSync("git", ["-C", root, ...a], { encoding: "utf8", stdio: "pipe" });

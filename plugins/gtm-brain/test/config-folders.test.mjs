@@ -92,6 +92,20 @@ test("a layout 1 brain upgrades to 3 in one yes: pages into kind folders, then t
   assert.equal(git("status", "--porcelain", "--", ".", ":!profile").trim(), "");
 });
 
+test("flat entity pages in a brain already in about-us/ and config/ are asked about before they move", t => {
+  const { root, git, upgrade } = makeBrain(t);
+  toLayout1(root, git);
+  assert.equal(diskLayout(root), 1, "flat pages are layout 1, whatever else moved");
+  const before = tree(root);
+  const ask = upgrade();
+  assert.match(ask.stdout, /not upgraded yet: This upgrade changes the brain's file layout from 1 to 3\. It moves 2 entity pages into a folder per kind/);
+  assert.doesNotMatch(ask.stdout, /into about-us\//, "nothing else is left to move");
+  assert.deepEqual(tree(root), before);
+  const yes = upgrade("--confirm");
+  assert.equal(yes.status, 0, yes.stderr);
+  assert.equal(lib.entityLayout(root), "kinds"); assert.equal(readLayout(root).layout, 3);
+});
+
 test("a teammate's upgrade never moves the base files: the move is the owner's to say yes to", t => {
   const { root, git, upgrade } = makeBrain(t);
   toLayout2(root, git); actAs(root, "bo-chen");

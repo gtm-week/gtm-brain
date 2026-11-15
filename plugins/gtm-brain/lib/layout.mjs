@@ -56,7 +56,7 @@ export function kindFolders(root) {
 export function layout(root) { return kindFolders(root).length ? "kinds" : "flat"; }
 /* The same as the number brain/layout.json records (lib/layout-version.mjs): 3 with about-us/ and config/
    (config/settings.yaml, lib/brain-paths.mjs), 2 with kind folders, 1 flat. */
-export const diskLayout = root => (inConfigFolders(root) ? 3 : layout(root) === "kinds" ? 2 : 1);
+export const diskLayout = root => (layout(root) !== "kinds" ? 1 : inConfigFolders(root) ? 3 : 2);   // flat pages are 1 whatever else moved
 /* brain/layout.json follows the files: a brain in kind folders is at least layout 2. Whatever makes kind
    folders calls this right after (setup's startKindLayout, the upgrade's migrateToKindFolders), and lib.commit
    and the chat start call it for a brain a 0.35 pre-release moved while the file still said 1 or was missing.

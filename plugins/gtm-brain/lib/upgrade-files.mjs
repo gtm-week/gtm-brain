@@ -7,7 +7,7 @@ import { readLayout, layoutBlock, layoutPlan, writeLayout, writesLayout } from "
 import { diskLayout, pagePaths, isKindPagePath } from "./layout.mjs";
 import { ensureRules } from "./where.mjs";
 import { ensureSchema } from "./schema.mjs";
-import { basePath, rulesFile, schemaFile } from "./brain-paths.mjs";
+import { basePath, rulesFile, schemaFile, inConfigFolders } from "./brain-paths.mjs";
 import { configMoveWhat, layoutReadme } from "./config-folders.mjs";
 
 // Shared with the upgrade matrix tests. Aliases point to the same immutable snapshot.
@@ -169,7 +169,7 @@ export function layoutStep(root, confirmed) {
   const target = !owner || me === owner ? writesLayout() : Math.min(writesLayout(), 2);
   const on = diskLayout(root), flat = on < 2 ? pagePaths(root).filter(p => !isKindPagePath(p)).length : 0;
   const kinds = on < 2 ? `It moves ${flat} entity page${flat === 1 ? "" : "s"} into a folder per kind (brain/entities/people/, organizations/, ...), where a GTM Brain from before 0.35 does not find them; 0.34 does not check the layout yet, so it keeps saving and writes flat pages of its own, which the next write here folds in.` : "";
-  const config = target >= 3 && on < 3 ? configMoveWhat(root) : "";
+  const config = target >= 3 && !inConfigFolders(root) ? configMoveWhat(root) : "";
   const plan = layoutPlan(root, { me, names, on, target, what: [kinds, config].filter(Boolean).join(" "), older: config ? "they will need to update GTM Brain: until then their GTM Brain does not find this brain." : "" });
   if (!plan.changes) return target < writesLayout() && on < writesLayout() && on >= target ? `NOTE\tMoving the base files into about-us/ and config/ (layout 3) is the owner's (${names[owner] || owner}) to say yes to; nothing of it was asked or moved.` : "";
   if (process.env.GTM_BRAIN_RUN) return `ASK\t${plan.summary} A scheduled or background run never changes the layout: the person says "upgrade the brain" in a chat.`;
