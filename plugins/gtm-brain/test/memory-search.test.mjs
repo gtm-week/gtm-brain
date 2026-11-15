@@ -166,7 +166,7 @@ test('the index is version 6 with a stemming tokenizer; a version 5 cache is reb
   assert.equal(MEMORY_INDEX_VERSION, 8);
   const i = new MemoryIndex(root); i.db.exec('PRAGMA user_version=5'); i.close();
   withMemoryIndex(root, index => {
-    assert.equal(index.db.prepare('PRAGMA user_version').get().user_version, 6);
+    assert.equal(index.db.prepare('PRAGMA user_version').get().user_version, 8);
     assert.match(index.db.prepare("SELECT sql FROM sqlite_master WHERE name='keywords'").get().sql, /porter/);
   });
   assert.deepEqual(ids(search(root, 'invoice')), [n.id]);
