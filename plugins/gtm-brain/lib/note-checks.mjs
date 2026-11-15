@@ -141,8 +141,8 @@ export function restatement(pool, note, { speakers = [], cache = new Map() } = {
   return null;
 }
 const CORRECTS = /\b(replac(?:es|ed|ing)|instead of|rather than|no longer|not anymore|chang(?:ed|es) (?:from|to)|mov(?:ed|es) (?:from|to)|push(?:ed)? (?:back|forward) (?:from|to)|correct(?:ion|ed|ing)|was wrong|it is now|is now|not .{1,40}? but)\b/i;
-export const correctsLine = (m, title) => `not saved yet: this reads as a correction of ${m.id} in ${title}: "${shown(m.content)}". Send it again with supersedes: ${m.id} so the old note stops being in force (it is saved in ${title}, where that note lives). If it is a separate fact and the old note stays true, send it again as it is.`;
-export const candidateLine = (m, title) => `not saved yet: this looks already recorded in ${title}, ${m.id}: "${shown(m.content)}". If it adds nothing, tell the person it is already recorded and save nothing. If it adds or changes something, call remember again with the same content (it is saved then), or with supersedes: ${m.id} when it corrects that note.`;
+export const correctsLine = (m, title) => `not saved yet: this reads as a correction of ${m.id} in ${title}: "${shown(m.content)}". Send it again with supersedes: ${m.id}; if the old note stays true, send it again as it is.`;
+export const candidateLine = (m, title) => `not saved yet: this looks already recorded in ${title}, ${m.id}: "${shown(m.content)}". Nothing new: say it is already recorded. Something new: send it again as it is, or with supersedes: ${m.id} when it corrects that note.`;
 
 export const keptLine = (m, title) => `already kept in ${title}, ${m.id}: "${shown(m.content)}". Nothing written; tell the person it was already there.`;
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -167,16 +167,36 @@ export function saidMore(personText, contents, names = []) {
   const have = new Set(contents.flatMap(c => [...meaningWords(c, names)]));
   return [...meaningWords(personText, names)].filter(w => !FILLED.has(w) && !have.has(w)).length >= 3;
 }
-export const noOutcomeLine = content => `says only that a conversation happened ("${shown(content)}"), not what came of it: write the outcome (what was offered, agreed, decided, declined or learned) into this entry's content and keep its meeting block; several outcomes of one conversation are one entry each, each with the same meeting block, and the brain links them to one meeting. If nothing came of it, leave the note out`;
+export const noOutcomeLine = content => `says only that a conversation happened ("${shown(content)}"), not what came of it: write the outcome (offered, agreed, decided, declined, learned) into content and keep the meeting block, one entry per outcome. If nothing came of it, leave it out`;
 
 /* What a held entry waited on, so only a resend of that entry waits for the person's reply (Q3), not an
    unrelated note in the same turn (s09: three outcomes refused while one name was asked about). */
 export function relatedToHeld(entry, held) {
   if (!held) return false;
+  const many = v => Array.isArray(v) ? v : String(v || "").split(",").map(x => x.trim()).filter(Boolean);
   const words = (held.words || []).map(fold).filter(Boolean);
-  const names = [...(entry.people || []), ...(entry.companies || []), ...(entry.meeting?.participants || []).map(p => p.name)].map(fold);
+  const companies = many(entry.companies).map(fold), persons = [...many(entry.people), ...many(entry.new_names)].map(fold);
+  const names = [...many(entry.people), ...many(entry.companies), ...(entry.meeting?.participants || []).map(p => p.name)].map(fold);
   const text = ` ${fold(entry.content).replace(/[^\p{L}\p{N}]+/gu, " ")} `;
-  if (words.some(w => text.includes(` ${w.replace(/[^\p{L}\p{N}]+/gu, " ").trim()} `) || names.some(n => n === w || n.split(/\s+/)[0] === w.split(/\s+/)[0]))) return true;
+  const hit = words.filter(w => text.includes(` ${w.replace(/[^\p{L}\p{N}]+/gu, " ").trim()} `) || names.some(n => n === w || n.split(/\s+/)[0] === w.split(/\s+/)[0]));
+  // the model's own repair: every held word in this entry is now filed as a company, none as a person
+  if (hit.length && hit.every(w => companies.includes(w) && !persons.includes(w))) return false;
+  if (hit.length) return true;
   const mine = meaningWords(entry.content);
   return (held.texts || []).some(t => { const other = meaningWords(t), both = [...mine].filter(w => other.has(w)).length; return both / Math.max(1, new Set([...mine, ...other]).size) >= 0.5; });
+}
+
+/* Whether a name sent under people reads as a company, not a person: a digit, an inner capital or all capitals
+   ("Shift4", "HubSpot", "IBM"), a domain or an ampersand, a company word at its end ("Acme Labs"), or the note
+   saying so about a single word ("joined Tidio", "at Tidio"). Used only beside a full personal name;
+   a known name never reaches it. */
+const ORG_END = /\s(inc|llc|ltd|gmbh|ag|plc|corp|corporation|company|group|holdings|labs|technologies|technology|systems|solutions|software|payments|capital|ventures|partners|bank|studio|studios|media|agency|consulting|university|foundation|institute)\.?$/i;
+export function looksLikeCompany(name, content = "") {
+  const t = String(name || "").trim(); if (!t) return false;
+  if (/\d/.test(t) || /&|@|\.(com|io|ai|co|pl|de|org|net|eu)$/i.test(t) || ORG_END.test(t)) return true;
+  if (/\s/.test(t)) return false;
+  if (/^\p{Lu}{2,}$/u.test(t)) return true;
+  if (/^\p{L}+\p{Ll}\p{Lu}/u.test(t) && !/^(Mc|Mac|De|Di|Le|La|Van|O)\p{Lu}/u.test(t)) return true;
+  const w = t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`\\b(?:at|joined|works for|works at|employed by)\\s+${w}(?![\\p{L}\\p{N}])`, "u").test(String(content));
 }

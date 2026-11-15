@@ -332,3 +332,134 @@ test("answering a held identity question saves at once: the names come from the 
   const p = b.batch([{ context: "icp", content: "Wojciech Niemiec called about the venue.", people: ["Wojciech Niemiec"] }]);
   assert.match(p.stdout + p.stderr, /did not write which Wojciech/);
 });
+
+// One answer settles its question, and what the model got wrong on the way is the model's to repair (manual run in
+// the Codex app, 2026-11-15: an answer refused twice, the same question asked again, a third prompt for a company
+// listed under people).
+test("a refusal the model can fix leaves no hold: the corrected resend in the same turn is saved", () => {
+  const b = brain();
+  assert.equal(b.batch([{ context: "icp", content: "Wojciech Niemiec registered for the Berlin workshop.", people: ["Wojciech Niemiec"] }]).status, 0);
+  assert.equal(b.batch([{ context: "icp", kind: "question", content: "Is Wojciech Stach the same person as Wojciech Niemiec?", people: ["Wojciech Niemiec"] }]).status, 0);
+  const question = b.live().find(m => m.kind === "question");
+  b.say("no they are different?");
+  // the model misspells a name the question spells out: refused, and nothing the person has to answer
+  const first = b.batch([{ context: "icp", kind: "decision", retracts: question.id, content: "Wojciech Stach and Wojciech Niemiecc are different people.", people: ["Wojciech Stach", "Wojciech Niemiecc"] }]);
+  assert.equal(first.status, 2);
+  assert.match(first.stderr, /"Wojciech Niemiecc" looks like Wojciech Niemiec \(P4\)/);
+  const before = b.all().length;
+  const again = b.batch([{ context: "icp", kind: "decision", retracts: question.id, content: "Wojciech Stach and Wojciech Niemiec are different people.", people: ["Wojciech Stach", "Wojciech Niemiec"] }]);
+  assert.doesNotMatch(again.stdout + again.stderr, /has not answered the question yet/, again.stdout + again.stderr);
+  assert.equal(again.status, 0, again.stderr + again.stdout);
+  assert.equal(b.all().length, before + 1, "the answer is saved by the resend");
+  assert.ok(!b.live().some(m => m.id === question.id), "the question is closed by the one answer");
+
+  // a one-word name saved as written, with its question kept under this message
+  b.say("Bo called about the venue");
+  assert.equal(b.batch([{ context: "icp", content: "Bo called about the venue.", people: ["Bo"] }]).status, 0);
+  const who = b.live().find(m => m.kind === "question" && /Who is Bo/.test(m.content));
+  // the model may not answer that question for the person in the same turn (Q3 stays)
+  const guess = b.batch([{ context: "icp", kind: "decision", retracts: who.id, content: "Bo Lindqvist.", people: ["Bo Lindqvist"], new_names: ["Bo Lindqvist"] }]);
+  assert.equal(guess.status, 2);
+  assert.match(guess.stderr, /the person has not answered the question yet/);
+  // the person answers; the model lists a company under people, is refused, and files it as the company: saved
+  b.say("Bo Lindqvist, the Globex one");
+  const held = b.batch([{ context: "icp", kind: "decision", retracts: who.id, content: "Bo Lindqvist, the Globex one.", people: ["Bo Lindqvist", "Globex"], new_names: ["Bo Lindqvist"] }]);
+  assert.equal(held.status, 2);
+  assert.match(held.stderr, /"Globex" is one word and nobody known has it \(rule P3\)\. "Globex": a company, product or team goes in companies, no question/);
+  const fixed = b.batch([{ context: "icp", kind: "decision", retracts: who.id, content: "Bo Lindqvist, the Globex one.", people: ["Bo Lindqvist"], companies: ["Globex"], new_names: ["Bo Lindqvist"] }]);
+  assert.equal(fixed.status, 0, fixed.stderr + fixed.stdout);
+  assert.equal(lib.readNames(b.root).find(n => n.name === "Globex")?.kind, "organization");
+  // the check itself: a held word filed as a company is the model's repair, the same word as a person is not
+  const mark = { words: ["Globex"], texts: [] };
+  assert.equal(checks.relatedToHeld({ content: "Bo Lindqvist, the Globex one.", people: ["Bo Lindqvist"], companies: ["Globex"] }, mark), false);
+  assert.equal(checks.relatedToHeld({ content: "Bo Lindqvist, the Globex one.", people: ["Bo Lindqvist", "Globex"] }, mark), true);
+  assert.equal(checks.relatedToHeld({ content: "Bo Lindqvist, the Globex one.", people: "Bo Lindqvist", new_names: "Globex", companies: "Globex" }, mark), true);
+});
+
+test("a company listed under people is the company it is: never a new person, never a question", () => {
+  // known as an organization
+  const b = brain();
+  lib.addName(b.root, "Shift4", { kind: "company" });
+  assert.equal(b.batch([{ context: "icp", content: "Wojciech Niemiec registered for the Berlin workshop.", people: ["Wojciech Niemiec"] }]).status, 0);
+  b.say("Wojciech Stach from Shift4 is not Wojciech Niemiec, they are different people");
+  const r = b.batch([{ context: "icp", content: "Wojciech Stach of Shift4 and Wojciech Niemiec are different people.", people: ["Wojciech Stach", "Shift4", "Wojciech Niemiec"] }]);
+  assert.equal(r.status, 0, r.stderr + r.stdout);
+  assert.match(r.stdout, /"Shift4" is a known organization: linked as that, not as a person\./);
+  assert.doesNotMatch((r.stdout + r.stderr).split("--- The saving rules")[0], /looks like|Who is Shift4|Ask the person/);
+  assert.deepEqual(b.live().at(-1).people, ["Wojciech Stach", "Shift4", "Wojciech Niemiec"]);
+  assert.equal(lib.readNames(b.root).find(n => n.name === "Shift4").kind, "organization");
+  assert.equal(lib.readNames(b.root).find(n => n.name === "Wojciech Stach").kind, "person", "a new full name beside a namesake needs no new_names");
+  assert.ok(!b.live().some(m => m.kind === "question"), "no question is kept");
+
+  // unknown, and it reads as a company beside full personal names: the note is saved and no person is made of it
+  const c = brain();
+  c.say("Wojciech Stach from Shift4 is not Wojciech Niemiec, they are different people");
+  const u = c.batch([{ context: "icp", content: "Wojciech Stach of Shift4 and Wojciech Niemiec are different people.", people: ["Wojciech Stach", "Shift4", "Wojciech Niemiec"] }]);
+  assert.equal(u.status, 0, u.stderr + u.stdout);
+  assert.match(u.stdout, /"Shift4" in people reads as a company: no person created, nothing to ask\./);
+  assert.deepEqual(c.live().at(-1).people, ["Wojciech Stach", "Wojciech Niemiec"]);
+  assert.ok(!lib.readNames(c.root).some(n => n.name === "Shift4"), "no entity is guessed for it");
+  assert.ok(!c.live().some(m => m.kind === "question"), "no question is kept");
+  assert.doesNotMatch((u.stdout + u.stderr).split("--- The saving rules")[0], /looks like|Who is Shift4|Ask the person/);
+  // also named in companies: the company, as before
+  const both = c.batch([{ context: "icp", content: "Ewa Lis of Tidio asked for the agenda.", people: ["Ewa Lis", "Tidio"], companies: ["Tidio"] }]);
+  assert.equal(both.status, 0, both.stderr + both.stdout);
+  assert.equal(lib.readNames(c.root).find(n => n.name === "Tidio").kind, "organization");
+  // a bare first name beside a full name is still a person to ask about
+  assert.equal(checks.looksLikeCompany("Anna", "Ewa Lis met Anna at the venue."), false);
+  for (const name of ["Shift4", "HubSpot", "IBM", "Acme Labs", "tidio.com"]) assert.equal(checks.looksLikeCompany(name), true, name);
+  assert.equal(checks.looksLikeCompany("Tidio", "Jakub Sadowski joined Tidio as VP Product."), true);
+  assert.equal(checks.looksLikeCompany("McDonald"), false);
+});
+
+test("P4: a shared first name with a clearly different surname is another person; a letter or two off, or a first name alone, is still asked", () => {
+  const known = { name: "Wojciech Niemiec", aliases: ["Wojtek"], kind: "person" };
+  assert.equal(lib.otherPerson("Wojciech Ozimek", known), true);
+  for (const near of ["Wojciech Niemiecc", "Wojciech Niemic", "Wojciech Niemiec-Stach", "Anna Niemiec", "Wojciech", "Wojtek Ozimek"]) assert.equal(lib.otherPerson(near, known), false, near);
+  assert.equal(lib.otherPerson("Lena Dumas", { name: "Lena", aliases: [], kind: "person" }), false, "a first name alone may be her");
+  assert.equal(lib.otherPerson("Acme Polska", { name: "Acme Labs", aliases: [], kind: "organization" }), false, "companies are still asked about");
+  const b = brain();
+  assert.equal(b.batch([{ context: "icp", content: "Wojciech Niemiec registered for the Berlin workshop.", people: ["Wojciech Niemiec"] }]).status, 0);
+  const r = b.batch([{ context: "icp", content: "Wojciech Ozimek asked for an invoice.", people: ["Wojciech Ozimek"] }]);
+  assert.equal(r.status, 0, r.stderr + r.stdout);
+  assert.doesNotMatch(r.stdout + r.stderr, /looks like/);
+  assert.ok(lib.readNames(b.root).some(n => n.name === "Wojciech Ozimek"));
+  const typo = b.batch([{ context: "icp", content: "Wojciech Ozimeck asked for a second invoice.", people: ["Wojciech Ozimeck"] }]);
+  assert.equal(typo.status, 2);
+  assert.match(typo.stderr, /"Wojciech Ozimeck" looks like Wojciech Ozimek \(P4\)/);
+});
+
+test("a relationship whose evidence is notes already in the brain is recorded from them; sponsor_of is a known type", () => {
+  const b = brain();
+  const run = (entries, extra = {}) => { const f = join(b.root, "work", `run-${Math.random()}.json`); writeFileSync(f, JSON.stringify(entries));
+    return spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "artur-wala", "--batch", f], { cwd: b.root, env: { ...process.env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1", ...extra }, encoding: "utf8" }); };
+  assert.equal(b.batch([{ context: "company", content: "Circuit signed as gold sponsor of the Berlin event.", companies: ["Circuit"], sources: ["gmail:msg-501"] }]).status, 0);
+  assert.equal(b.batch([{ context: "company", content: "Circuit paid the sponsorship invoice for the Berlin event.", companies: ["Circuit"], sources: ["gmail:msg-502"] }]).status, 0);
+  const [n1, n2] = b.live().filter(m => /Circuit/.test(m.content)).map(m => m.id);
+  const before = b.all().length;
+  // a backfill run: the relation rests on the two notes, nothing outside the brain is cited
+  const r = run([{ context: "company", content: "Circuit sponsors the Berlin event.", companies: ["Circuit"], relation: { from: "Circuit", type: "sponsor_of", to: "us", basis: "source" }, sources: [`memory:${n1}`, `memory:${n2}`] }], { GTM_BRAIN_RUN: "backfill" });
+  assert.equal(r.status, 0, r.stderr + r.stdout);
+  assert.doesNotMatch(r.stdout, /relationship block was left out/);
+  assert.match(r.stdout, new RegExp(`relationship recorded from notes ${n1}, ${n2}: say so in your one line\\.`));
+  assert.equal(b.all().length, before + 1, "saved once, with its relation");
+  const rec = b.live().at(-1), circuit = lib.readNames(b.root).find(n => n.name === "Circuit");
+  assert.deepEqual([rec.relation.from, rec.relation.type, rec.relation.to, rec.relation.status, rec.relation.basis], [circuit.id, "sponsor_of", "us", "current", "source"]);
+  // the cited notes stay as sources, and what they rest on is carried over: a released reader sees a sourced relation
+  assert.deepEqual(rec.source.filter(s => s.kind === "memory").map(s => s.ref), [n1, n2]);
+  assert.deepEqual(rec.source.filter(s => s.kind === "gmail").map(s => s.ref), ["msg-501", "msg-502"]);
+  assert.deepEqual(lib.validateRelationEvidence(rec), []);
+
+  // notes that rest on what a person said: the relation rests on that person's word, in a run with nobody in the chat too
+  assert.equal(b.batch([{ context: "company", content: "Nina Vogel runs events at Circuit.", people: ["Nina Vogel"], companies: ["Circuit"], sources: ["user:artur-wala"] }]).status, 0);
+  const said = b.live().at(-1).id;
+  const w = run([{ context: "company", content: "Nina Vogel works at Circuit.", people: ["Nina Vogel"], companies: ["Circuit"], relation: { from: "Nina Vogel", type: "works_at", to: "Circuit" }, sources: [`memory:${said}`] }], { GTM_BRAIN_RUN: "backfill" });
+  assert.equal(w.status, 0, w.stderr + w.stdout);
+  assert.match(w.stdout, new RegExp(`relationship recorded from notes ${said}`));
+  assert.equal(b.live().at(-1).relation.basis, "user");
+  // a cited note that does not exist proves nothing: the note is saved, the relationship is not
+  const none = run([{ context: "company", content: "Circuit backs the Warsaw event too.", companies: ["Circuit"], relation: { from: "Circuit", type: "sponsor_of", to: "us" }, sources: ["memory:m_000000"] }], { GTM_BRAIN_RUN: "backfill" });
+  assert.equal(none.status, 0, none.stderr + none.stdout);
+  assert.match(none.stdout, /its relationship block was left out/);
+  assert.equal(b.live().at(-1).relation, undefined);
+});
