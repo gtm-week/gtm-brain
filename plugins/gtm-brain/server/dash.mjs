@@ -33,6 +33,8 @@ const requestedPort = configuredPort === undefined ? undefined : Number(configur
 const project = args.find(a => a.startsWith("--project="))?.slice(10) || "";
 if (project && !lib.readProjects(root).some(p => p.slug === project)) { console.error(`Unknown dashboard project: ${project}`); process.exit(1); }
 const viewingUrl = url => project ? `${url}#view=home&project=${encodeURIComponent(project)}` : url;
+// A second write, for the Entities tab's forms: POST /entity-edit (server/entity-edit.mjs), a fixed list of named
+// operations, each one call of the entity or remember script, behind the same guard and token. 6 added it.
 // The server's protocol: a start replaces a running server of another one. 4 added /file, so a server an
 // older plugin left running (no /file) is retired on the first start after an upgrade. 5 added POST /document.
 const PROTOCOL = 6;

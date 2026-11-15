@@ -260,6 +260,7 @@ h1,h2,h3{font-family:var(--display);margin:0;letter-spacing:-.01em}
 .ent-note{padding:12px 0;border-top:1px solid var(--soft)}.ent-note:first-of-type{border-top:0;padding-top:2px}.ent-note-head{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:12px;color:var(--muted)}.ent-note-when{color:var(--ink);font-weight:600}.ent-note p{margin:5px 0 6px;font-size:14px;line-height:1.55;max-width:74ch;overflow-wrap:anywhere}.ent-note-src{font-size:12px}
 .ent-more{display:block;margin:10px 0 2px}.ent-foot{margin:28px 0 0;padding-top:14px;border-top:1px solid var(--rule);font-size:12.5px;color:var(--muted)}.ent-foot .linkbtn{font-size:12.5px}
 .ent-start{max-width:62ch}.ent-start h2{font-family:var(--display);font-size:22px;font-weight:650;color:var(--ink);margin:0 0 8px;text-transform:none;letter-spacing:0}.ent-start p{font-size:14px;margin:0 0 8px}.ent-start h3{margin:24px 0 10px;font:500 10.5px var(--label);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.ent-flag{font:500 11px var(--body);color:var(--amber);background:var(--amber-soft);border:0;border-radius:3px;padding:1px 7px;margin-right:7px;white-space:nowrap}button.ent-flag{cursor:pointer;font-size:12px;padding:3px 9px}button.ent-flag:hover{box-shadow:inset 0 0 0 1px var(--amber)}button.ent-flag:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.ent-row .ent-flag{cursor:pointer}.ent-flags{margin:14px 0 0;display:flex;flex-wrap:wrap;gap:6px}
 .ent-flash{margin:14px 0 0;padding:9px 12px;border-left:3px solid var(--green);background:var(--green-soft);color:var(--ink);font-size:13px;border-radius:0 4px 4px 0}
 .ent-acts{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0 0}.ent-act{font:500 12.5px var(--body);color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:4px;padding:6px 11px;cursor:pointer}.ent-act:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}.ent-act:disabled,.ent-mini:disabled{opacity:.45;cursor:default}.ent-act:focus-visible,.ent-mini:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .ent-mini{font:500 11px var(--body);color:var(--muted);background:none;border:0;padding:2px 8px 2px 0;margin-left:-3px;cursor:pointer;text-decoration:underline;text-underline-offset:2px}.ent-mini:hover:not(:disabled){color:var(--accent)}
@@ -1221,7 +1222,7 @@ function entFiltered(){
 }
 function entRowHtml(e,i,q){
  const rel=(e.rel||[])[0],line=e.line||e.email||(e.aliases?.length?"Also known as "+e.aliases.join(", "):"");
- return `<div class="ent-row${e.id===exSel?" ent-on":""}${i===exActive?" ent-active":""}" role="option" id="ent-o-${i}" aria-selected="${e.id===exSel}" aria-posinset="${i+1}" aria-setsize="${exRows.length}" data-ent-id="${esc(e.id)}">${entAvatar(e)}<span class="ent-row-main"><span class="ent-name"><span class="ent-name-text">${entMark(e.name,q)}</span>${rel?`<span class="ent-badge ent-rel-${esc(rel)}">${esc(ENT_REL[rel]||entCap(rel))}</span>`:""}</span><span class="ent-line">${line?esc(line):`<span class="ent-dim">${esc(entKindWord(e))}</span>`}</span></span><span class="ent-row-meta">${e.notes?`<span><b>${e.notes}</b> ${esc(e.notes===1?"note":"notes")}</span>`:e.last?"":`<span class="ent-dim">${esc("no notes yet")}</span>`}${e.last?`<span class="ent-ago">${e.notes?"":esc("mentioned ")}${entAgo(e.last)}</span>`:""}</span></div>`;
+ return `<div class="ent-row${e.id===exSel?" ent-on":""}${i===exActive?" ent-active":""}" role="option" id="ent-o-${i}" aria-selected="${e.id===exSel}" aria-posinset="${i+1}" aria-setsize="${exRows.length}" data-ent-id="${esc(e.id)}">${entAvatar(e)}<span class="ent-row-main"><span class="ent-name"><span class="ent-name-text">${entMark(e.name,q)}</span>${rel?`<span class="ent-badge ent-rel-${esc(rel)}">${esc(ENT_REL[rel]||entCap(rel))}</span>`:""}</span><span class="ent-line">${(e.flags||[]).slice(0,1).map((f,i)=>`<span class="ent-flag" data-ent-flag="${i}" title="${esc(entFlagHint(f))}">${esc(entFlagText(f))}</span>`).join("")}${line?esc(line):`<span class="ent-dim">${esc(entKindWord(e))}</span>`}</span></span><span class="ent-row-meta">${e.notes?`<span><b>${e.notes}</b> ${esc(e.notes===1?"note":"notes")}</span>`:e.last?"":`<span class="ent-dim">${esc("no notes yet")}</span>`}${e.last?`<span class="ent-ago">${e.notes?"":esc("mentioned ")}${entAgo(e.last)}</span>`:""}</span></div>`;
 }
 function entDrawList(force){
  const box=$("#ent-list"),n=exRows.length,q=exQ.trim().toLowerCase();
@@ -1244,7 +1245,7 @@ function entLoadDetails(){
  if(exDetails||exDetailsState||!PL)return;const file=PL.entities.file;
  if(!LIVE||!/^entities-[a-f0-9-]{36}\/entity-details\.json$/.test(file||"")){exDetailsState="none";return}
  exDetailsState="loading";
- fetch(file).then(r=>{if(!r.ok)throw Error("unavailable");return r.json()}).then(j=>{if(!j||typeof j.details!=="object"||!j.details)throw Error("invalid");exDetails=j.details;exDetailsState="ok"}).catch(()=>{exDetailsState="none"}).finally(()=>{entSoftDraw()});
+ fetch(file).then(r=>{if(!r.ok)throw Error("unavailable");return r.json()}).then(j=>{if(!j||typeof j.details!=="object"||!j.details)throw Error("invalid");exDetails=j.details;exDetailsState="ok"}).catch(()=>{exDetailsState="none"}).finally(()=>{entSoftDraw();if(exWantFlag&&exWantFlag.id===exSel)entFlagOpen(exWantFlag.id,exWantFlag.i)});
 }
 /* The whole note list once it is here (the Memories tab's loader fetches it), else the page's first notes. */
 function entNoteList(){
@@ -1273,6 +1274,7 @@ function entDrawDetail(){
  const d=exDetails?.[e.id]||null,kind=entKindWord(e),rels=(e.rel||[]).map(r=>ENT_REL[r]||entCap(r));
  const sec=(title,body,count)=>`<section class="ent-sec"><h3>${esc(title)}${count?` <span class="ent-n">${count}</span>`:""}</h3>${body}</section>`;
  let html=`<button type="button" class="linkbtn ent-back" data-ent-back>← ${esc("Back to the list")}</button><header class="ent-head">${entAvatar(e,true)}<div class="ent-head-main"><p class="ent-eyebrow">${esc(kind)}${rels.map(r=>` <span class="ent-badge ent-badge-strong">${esc(r)}</span>`).join("")}</p><h2 id="ent-title" tabindex="-1">${esc(e.name)}</h2>${e.described?`<p class="ent-lead">${esc(e.line)}</p>`:""}<p class="ent-ident">${[e.aliases?.length?esc("Also known as "+e.aliases.join(", ")):"",...(e.emails||(e.email?[e.email]:[])).map(m=>`<a href="mailto:${esc(m)}">${esc(m)}</a>`)].filter(Boolean).join(" · ")}</p></div>${rowLinks(e.path,`Let's discuss ${e.name} (${kind.toLowerCase()}). Read the entity page and its notes first.`,e.name)}</header>`;
+ if((e.flags||[]).length)html+=`<p class="ent-flags">${e.flags.map((f,i)=>entCanEdit()?`<button type="button" class="ent-flag" data-ent-flag="${i}" data-ent-flag-of="${esc(e.id)}" title="${esc(entFlagHint(f))}">${esc(entFlagText(f))}</button>`:`<span class="ent-flag">${esc(entFlagText(f))}</span>`).join("")}</p>`;
  html+=`<p class="ent-facts"><span><b>${e.notes}</b> ${esc(e.notes===1?"note":"notes")}</span>${e.last?`<span>${esc("last mentioned")} <b>${entAgo(e.last)}</b></span>`:""}${e.links?`<span><b>${e.links}</b> ${esc(e.links===1?"link":"links")}</span>`:""}</p>`;
  if(exFlash&&(!exFlash.id||exFlash.id===e.id))html+=`<p class="ent-flash" role="status">${esc(exFlash.text)}</p>`;
  const can=entCanEdit()&&!!d,act=(mode,label)=>`<button type="button" class="ent-act" data-ent-open="${mode}"${exEdit?" disabled":""}>${esc(label)}</button>`;
@@ -1310,13 +1312,23 @@ function entDrawDetail(){
  html+=`<p class="ent-foot">${esc("Something wrong or missing?")} <a class="pl-chat" href="${esc(askLink(`Let's correct or add to what we know about ${e.name} (${kind.toLowerCase()}). Read the entity page and its notes first.`))}">${esc("Tell Codex in a chat")} <span aria-hidden="true">↗</span></a></p>`;
  box.innerHTML=html;
 }
+/* What the rules check found about a name, in plain words; never its rule code. The marker opens the form that settles it. */
+const entFlagText=f=>f.is==="same_as"?"may be the same as "+f.name:"first name only";
+const entFlagHint=f=>f.is==="same_as"?"These two entries look alike. Open to see what merging them would do.":"Only a first name is known. Open to add the full name.";
+let exWantFlag=null;
+function entFlagOpen(id,i){
+ if(exSel!==id)entSelect(id,false);const f=(entById().get(id)?.flags||[])[Number(i)||0];if(!f||!entCanEdit()||exEdit)return;
+ if(!exDetails?.[id]){exWantFlag={id,i};return}
+ exWantFlag=null;entOpen(f.is==="same_as"?"merge":"edit",f.is==="same_as"?f.id:undefined);
+}
 /* ---------- Entities: changing things from the pane. Every save is one named operation of POST /entity-edit
    (server/entity-edit.mjs), which runs the script the chat tools run; the page writes nothing itself. The forms
    show only on the live dashboard, which alone carries the save token. ---------- */
 const entToken=()=>{try{const t=document.querySelector('meta[name="gtm-brain-edit"]')?.getAttribute?.("content")||"";return /^[a-f0-9]{64}$/.test(t)?t:""}catch{return ""}};
 const entCanEdit=()=>LIVE&&!!entToken();
 let exEdit=null,exFlash=null,exPendingRefresh=null,exRedrawLater=false;
-try{const f=JSON.parse(sessionStorage.getItem("gtm-ent-flash")||"null");if(f&&typeof f.text==="string"){exFlash=f;sessionStorage.removeItem("gtm-ent-flash")}}catch{}
+// what the last save said, kept across the page's own refreshes for half a minute (one save can bring two)
+try{const f=JSON.parse(sessionStorage.getItem("gtm-ent-flash")||"null");if(f&&typeof f.text==="string"&&Date.now()-Number(f.at)<30000)exFlash=f;else sessionStorage.removeItem("gtm-ent-flash")}catch{}
 const entNewer=newer;newer=r=>{if(exEdit&&r&&r!==D.generatedAt){exPendingRefresh=r;return}entNewer(r)};
 const entSoftDraw=()=>{if(exEdit)exRedrawLater=true;else entDrawDetail()};
 const entList=s=>String(s||"").split(",").map(t=>t.trim()).filter(Boolean);
@@ -1357,9 +1369,10 @@ function entOpen(mode,i){
  if(mode==="link"){const o=entLinkOptions(e);if(!o.length)return;Object.assign(v,{opt:"0",q:"",other:"",otherName:"",date:"",note:""})}
  if(mode==="change")Object.assign(v,{i:String(i),date:""});
  if(mode==="us"){const o=entUsOptions(e,d);if(!o.length)return;Object.assign(v,{status:o[0][0],date:"",note:""})}
- if(mode==="merge")Object.assign(v,{q:"",other:"",otherName:""});
+ if(mode==="merge"){const other=typeof i==="string"?entById().get(i):null;Object.assign(v,{q:"",other:other?other.id:"",otherName:other?other.name:""})}
  exEdit={mode,id:e.id,v,busy:false,error:"",preview:null,o:{name:e.name,kind:e.kind,aliases:entList(v.aliases),emails:entList(v.emails)}};
  entDrawDetail();entDrawForm();try{document.querySelector("#ent-form input:not([type=hidden]),#ent-form select")?.focus?.()}catch{}
+ if(mode==="merge"&&v.other)entDo("preview");
 }
 function entClose(){exEdit=null;exRedrawLater=false;entDrawDetail();if(exPendingRefresh){const r=exPendingRefresh;exPendingRefresh=null;entNewer(r)}}
 function entPickHtml(){
@@ -1446,7 +1459,7 @@ async function entDo(action){
  if(r.keep){entDrawForm();return}
  if(!r.ok){x.error=r.note||"This was not saved.";entDrawForm();try{$("#ent-err")?.focus?.()}catch{}return}
  exFlash={id:x.mode==="archive"?"":x.id,text:(r.note||"Saved.")+" The page updates in a moment."};
- try{sessionStorage.setItem("gtm-ent-flash",JSON.stringify({id:exFlash.id,text:r.note||"Saved."}))}catch{}
+ try{sessionStorage.setItem("gtm-ent-flash",JSON.stringify({id:exFlash.id,text:r.note||"Saved.",at:Date.now()}))}catch{}
  entClose();
 }
 async function entPick(id,kind){
@@ -1486,7 +1499,7 @@ function entFit(){
 const entShow=show;show=v=>{entShow(v);if(v==="entities"&&PL&&exReady)entFit()};
 if(typeof addEventListener==="function")addEventListener("resize",()=>{if(view==="entities"&&PL&&exReady)entFit()});
 function entSelect(id,focus){
- exSel=entById().has(id)?id:"";exNotesLimit=ENT_NOTES;if(exEdit&&exEdit.id!==exSel){exEdit=null;exRedrawLater=false}if(exFlash&&exFlash.id&&exFlash.id!==exSel)exFlash=null;const i=exRows.findIndex(e=>e.id===exSel);if(i>=0)exActive=i;
+ exSel=entById().has(id)?id:"";exNotesLimit=ENT_NOTES;if(exEdit&&exEdit.id!==exSel){exEdit=null;exRedrawLater=false}if(exFlash&&exFlash.id&&exFlash.id!==exSel){exFlash=null;try{sessionStorage.removeItem("gtm-ent-flash")}catch{}}const i=exRows.findIndex(e=>e.id===exSel);if(i>=0)exActive=i;
  entDrawList(true);entDrawDetail();entReveal();const pane=$("#ent-detail");if(pane)pane.scrollTop=0;
  const say=$("#ent-say");if(say)say.textContent=exSel?`Showing ${entById().get(exSel).name}.`:"";
  if(focus)$("#ent-title")?.focus?.({preventScroll:true});
@@ -1499,6 +1512,7 @@ function entMove(to){
 }
 document.addEventListener("click",e=>{
  const t=e.target;if(!t?.closest)return;
+ const flag=t.closest("[data-ent-flag]");if(flag){const id=flag.dataset.entFlagOf||t.closest("[data-ent-id]")?.dataset?.entId||"";if(id){if(view!=="entities")show("entities");entFlagOpen(id,flag.dataset.entFlag)}return}
  const open=t.closest("[data-ent-open]");if(open){if(!exEdit)entOpen(open.dataset.entOpen,open.dataset.entI);return}
  const act=t.closest("[data-ent-do]");if(act){entDo(act.dataset.entDo);return}
  const pick=t.closest("[data-ent-pick],[data-ent-new]");if(pick){entPick(pick.dataset.entPick||"",pick.dataset.entNew||"");return}

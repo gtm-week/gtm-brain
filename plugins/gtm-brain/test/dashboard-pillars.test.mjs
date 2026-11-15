@@ -23,7 +23,7 @@ execFileSync("git", ["init", "-q", root]); execFileSync("git", ["-C", root, "con
 const env = { ...process.env, PLUGIN_ROOT: P, GTM_BRAIN_NO_OPEN: "1" };
 execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "Reflow", "--one-liner", "returns automation", "--owner", "Marta Nowak <marta@reflow.io>"], { cwd: root, env });
 const lib = await import(`${P}/lib/brain.mjs`);
-const { workflowTrigger, ourRules, healthText } = await import(`${P}/lib/dashboard-pillars.mjs`);
+const { workflowTrigger, ourRules, healthText, identityFlags } = await import(`${P}/lib/dashboard-pillars.mjs`);
 let dashStarted = false;
 after(() => { if (dashStarted) try { execFileSync(process.execPath, [`${P}/server/dash.mjs`, root, "--stop"], { env }); } catch {} rmSync(root, { recursive: true, force: true }); });
 
@@ -284,6 +284,38 @@ test("page: the pane's forms send one named operation each, keep what was typed 
   sent.length = 0; open("archive"); assert.match(form(), /Its notes stay/); act("cancel"); assert.equal(sent.length, 0); assert.doesNotMatch(pane(), /id="ent-form"/);
   open("archive"); act("save"); await tick(); assert.deepEqual(sent[0].body, { op: "archive", entity: acme.id });
   assert.ok(sent.every(x => x.headers["x-gtm-brain-token"] === token));
+});
+
+test("an identity finding shows as a plain marker on the row and in the pane, and opens the form that settles it", async () => {
+  // the data: the rules check's findings, per entity, without its rule codes
+  const reg = lib.readNames(root), jan = reg.find(e => e.name === "Jan Zielinski"), ola = reg.find(e => e.name === "Ola Kowalska");
+  const pair = lib.suggestMerges([...reg, { ...jan, id: "e_00000000000000bb", name: "Janek Zielinski" }])[0];
+  assert.ok(pair, "two look-alike names are a suggestion");
+  const flags = identityFlags([...reg, { ...jan, id: "e_00000000000000bb", name: "Janek Zielinski" }], [{ rule: "P3", subject: "Ola Kowalska" }, { rule: "P4", subject: `${pair.a} / ${pair.b}` }, { rule: "P4", subject: "Nobody / Else" }, { rule: "N1", subject: "Jan Zielinski" }]);
+  assert.deepEqual(flags.get(ola.id), [{ is: "first_name" }]); assert.deepEqual(flags.get(jan.id), [{ is: "same_as", id: "e_00000000000000bb", name: "Janek Zielinski" }]);
+  assert.deepEqual(flags.get("e_00000000000000bb"), [{ is: "same_as", id: jan.id, name: "Jan Zielinski" }]); assert.equal(flags.size, 3);
+  assert.ok(D.pillars.entities.rows.every(e => Array.isArray(e.flags)));
+  // the page
+  const data = withDetails(D), row = name => data.pillars.entities.rows.find(e => e.name === name);
+  row("Ola Kowalska").flags = [{ is: "first_name" }]; row("Jan Zielinski").flags = [{ is: "same_as", id: row("Acme Retail").id, name: "Acme Retail" }];
+  const sent = [], fetcher = async (path, opts) => { if (path === "/entity-edit") { sent.push(JSON.parse(opts.body)); return { ok: true, status: 200, json: async () => ({ ok: true, status: "preview", as_of: "ecv_2", keep: { name: "Jan Zielinski", notes: 2 }, fold: { name: "Acme Retail", notes: 3 }, names: [], emails: [], kind_differs: true, blocked: null }) }; } return { ok: true, json: async () => ({ notes: allNotes() }) }; };
+  const p = page(data, { live: true, fetcher, route: "#view=entities" });
+  p.node('meta[name="gtm-brain-edit"]').setAttribute("content", "cd".repeat(32));
+  const list = p.node("#ent-list").innerHTML;
+  assert.match(list, /class="ent-flag" data-ent-flag="0"[^>]*>first name only</); assert.match(list, /class="ent-flag" data-ent-flag="0"[^>]*>may be the same as Acme Retail</); assert.doesNotMatch(list, /P3|P4/);
+  // the marker on a look-alike picks the entity and opens the merge preview with the other one chosen
+  fire(p, "click", { target: { closest: s => s === "[data-ent-flag]" ? { dataset: { entFlag: "0" } } : s === "[data-ent-id]" ? { dataset: { entId: row("Jan Zielinski").id } } : null } });
+  await new Promise(r => setTimeout(r, 5));
+  assert.match(p.node("#ent-detail").innerHTML, /<button type="button" class="ent-flag" data-ent-flag="0"[^>]*>may be the same as Acme Retail</);
+  assert.deepEqual(sent, [{ op: "merge", source: row("Acme Retail").id, target: row("Jan Zielinski").id }]);
+  assert.match(p.node("#ent-form").innerHTML, /What will happen/); assert.match(p.node("#ent-form").innerHTML, /They are of different kinds; it stays a person\./);
+  tap(p, "data-ent-do", { entDo: "cancel" });
+  // first name only: the edit form, whose first field is the name
+  fire(p, "click", { target: { closest: s => s === "[data-ent-flag]" ? { dataset: { entFlag: "0", entFlagOf: row("Ola Kowalska").id } } : null } });
+  assert.match(p.node("#ent-detail").innerHTML, />first name only</); assert.match(p.node("#ent-form").innerHTML, /^<h3 id="ent-form-title">Edit Ola Kowalska<\/h3><div class="ent-form-grid"><label class="ent-f"><span>Name<\/span>/);
+  // a saved copy shows the marker as plain words
+  const file = page(data, { route: "#view=entities&e=" + row("Ola Kowalska").id });
+  assert.match(file.node("#ent-detail").innerHTML, /<span class="ent-flag">first name only<\/span>/); assert.doesNotMatch(file.node("#ent-detail").innerHTML, /<button[^>]*ent-flag/);
 });
 
 test("page: Entities stays a window of rows with 2,000 entities, and an empty brain says what to do", () => {
