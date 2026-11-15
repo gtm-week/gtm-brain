@@ -40,7 +40,7 @@ test('Configuration lists the base files with their state, RULES.md and SCHEMA.m
   for (const file of ['RULES.md', 'SCHEMA.md']) {
     await expect(screen.getByRole('heading', file, { level: 2 })).toBeVisible();
     // a brain on layout 3 keeps the two files in config/ (config/rules.md); older layouts keep them at the top
-    await expect(screen.getByRole('link', `Open ${file}`)).toHaveAttribute('href', new RegExp(`^/file\\?path=(config(/|%2F))?${file.replace('.', '\\.')}$`, 'i'));
+    await expect(screen.getByRole('link', new RegExp(`^Open (config/)?${file.replace('.', '\\.')}$`, 'i'))).toHaveAttribute('href', new RegExp(`^/file\\?path=(config(/|%2F))?${file.replace('.', '\\.')}$`, 'i'));
   }
 });
 
