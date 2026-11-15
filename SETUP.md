@@ -256,6 +256,32 @@ work that needs existing logins; MCP connectors remain the first choice.
 Onboarding choices use native Codex forms. If multi-select is unavailable, offer concrete
 combinations in a single-select question. The progress card is view-only.
 
+### Checking the dashboard in a browser (contributors)
+
+The browser tests open the live dashboard of a generated brain in headless Chromium and check
+what a person sees: the four tabs and the health line, the base files with their state, entity
+counts per kind, an entity page with its notes, notes newest first with a replaced note, the
+workflows with their triggers and a run in progress, no edit or action anywhere, a saved note
+reaching the open page, and no console errors. They use the e2e framework
+(https://github.com/e2e-inc/e2e) with plain assertions only: no model, no API key. Node 22.22.3+
+or 24.8+.
+
+```bash
+npm ci --prefix frontend/dashboard
+npm run test:e2e:install --prefix frontend/dashboard   # once: the Chromium build the engine pins
+npm run test:e2e --prefix frontend/dashboard           # about 15 seconds
+```
+
+`frontend/dashboard/e2e/serve.mjs` makes the brain (`test/e2e/generate-brain.mjs`, small shape,
+plus an adopted document, a scheduled workflow and a run in progress) in a scratch folder under
+the system temp directory with its own `CODEX_HOME`, renders it and runs `server/dash.mjs` on a
+free port. The runner starts it and stops it when the run ends, passed or failed, and the scratch
+folder goes with it; no server or browser is left running. A failed test leaves its trace,
+screen and screenshot in `frontend/dashboard/.e2e/results/` (gitignored). Rebuild the dashboard
+(`npm run build --prefix frontend/dashboard`) before running them after a change under
+`frontend/dashboard/src`. They are not part of `node --test`; CI runs them in their own job,
+which does not block a merge.
+
 ## 8. Recall (step 5)
 
 Search across every context, loaded or not. Uses Node's built-in SQLite full-text index,

@@ -19,3 +19,8 @@ so they do not reset existing evidence views. Shared visual tokens also style th
 
 Browser verification must exercise the bundle, not just the legacy DOM harness. The
 existing harness continues to verify underlying data access and navigation behavior.
+
+Browser tests: `npm run test:e2e` (after `npm run test:e2e:install` once) opens the live
+dashboard of a generated brain in headless Chromium, with plain assertions and no model. The e2e
+framework and its Playwright engine are dev dependencies here only; the plugin ships none of
+them. See SETUP.md, "Checking the dashboard in a browser".
