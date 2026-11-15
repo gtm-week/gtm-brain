@@ -141,6 +141,13 @@ export function prepareUpgrade(root, templates) {
    the root or in a folder of their own name, and brain/layout.json records every starter as given, so one
    the person deleted afterwards is never brought back. A file already there is the person's. */
 export const STARTERS = ["strategy", "icp", "voice", "design-system", "market"];
+/* The design system is a page too (0.35): design-system.html beside design-system.md, the version people look at.
+   A new brain gets the starter page with the Markdown; an older one gets it once, beside its Markdown wherever that
+   lies, and only when no page is there: a page the team made is never touched. It is recorded as given under its
+   own name, so one the person deleted is not brought back. */
+export const STARTER_PAGES = [{ doc: "design-system", file: "design-system.html" }];
+export const GIVEN = [...STARTERS, ...STARTER_PAGES.map(p => p.file)];
+const escapeHtml = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 export function addStarters(root, templates, { version = "", date = new Date().toISOString().slice(0, 10) } = {}) {
   const company = readAdmin(root)?.company || "", given = new Set(readLayout(root).starters || []), added = [];
   for (const doc of STARTERS) {
@@ -148,6 +155,17 @@ export function addStarters(root, templates, { version = "", date = new Date().t
     if (given.has(doc) || !existsSync(template) || existsSync(join(root, at)) || existsSync(join(root, basePath(root, `${doc}/${doc}.md`)))) continue;
     mkdirSync(dirname(join(root, at)), { recursive: true });
     writeFileSync(join(root, at), readFileSync(template, "utf8").replaceAll("{{COMPANY}}", company).replaceAll("{{DATE}}", date).replaceAll("{{VERSION}}", version));
+    added.push(at);
+  }
+  for (const { doc, file } of STARTER_PAGES) {
+    const template = join(templates, file);
+    if (given.has(file) || !existsSync(template)) continue;
+    // beside the Markdown: at the base folder, or inside the document's own folder when it moved there
+    const md = [basePath(root, `${doc}.md`), basePath(root, `${doc}/${doc}.md`)].find(p => existsSync(join(root, p)));
+    if (!md) continue;
+    const at = `${dirname(md) === "." ? "" : `${dirname(md)}/`}${file}`;
+    if ([at, basePath(root, file), file].some(p => existsSync(join(root, p)))) continue;
+    writeFileSync(join(root, at), readFileSync(template, "utf8").replaceAll("{{COMPANY}}", escapeHtml(company)));
     added.push(at);
   }
   return added;
@@ -183,7 +201,7 @@ export function layoutStep(root, confirmed) {
 export function deliverMissing(root, templates, version, said = false) {
   const starters = addStarters(root, templates, { version });
   const files = [ensureRules(root, templates) && rulesFile(root), ensureSchema(root, templates) && schemaFile(root)].filter(Boolean);
-  const before = readLayout(root), written = writeLayout(root, { starters: STARTERS, layout: diskLayout(root) >= 2 ? diskLayout(root) : undefined }), after = readLayout(root).layout;
+  const before = readLayout(root), written = writeLayout(root, { starters: GIVEN, layout: diskLayout(root) >= 2 ? diskLayout(root) : undefined }), after = readLayout(root).layout;
   const layout = !written ? "" : before.layout !== after ? `changed the brain's file layout to ${after}` : said ? "" : "recorded the brain's file layout (brain/layout.json)";
   return [starters.join(" "), files.join(" "), layout].join("\n");
 }

@@ -1120,7 +1120,7 @@ function renderConfig(){
  const C=PL.configuration,R=C.rules,S=C.schema,T=C.settings;
  const baseDocs=C.documents.filter(d=>d.base);
  const docWho=d=>d.by||d.changed_by?` <span class="pl-age">${esc("by")} ${esc(authorName(d.by||d.changed_by))}</span>`:"";
- const docRow=d=>d.path?`<tr data-doc="${esc(d.path)}"><th scope="row"><button class="linkbtn pl-doc-open" data-doc="${esc(d.path)}">${esc(d.title)}</button>${d.base&&!d.starter?` <span class="pl-age">${esc("added by the team")}</span>`:""}</th><td>${stateBadge(d.state)}</td><td>${d.changed?whenText(d.changed)+docWho(d):`<span class="pl-age">${esc("not saved yet")}</span>`}</td><td class="pl-go">${d.state==="not written"?`<a class="pl-chat" href="${esc(askLink(`Help me write our ${d.title} document.`))}" aria-label="${esc("Write "+d.title+" with Codex")}">${esc("Write it with Codex")} <span aria-hidden="true">↗</span></a>`:`<span aria-hidden="true">${esc(LIVE&&EDIT_TOKEN?"Open and edit":"Open")} →</span>`}</td></tr>`
+ const docRow=d=>d.path?`<tr data-doc="${esc(d.path)}"><th scope="row"><button class="linkbtn pl-doc-open" data-doc="${esc(d.path)}">${esc(d.title)}</button>${d.base&&!d.starter?` <span class="pl-age">${esc("added by the team")}</span>`:""}${d.page&&d.page.label?` <span class="pl-age">${esc(d.page.label)}</span> <a class="pl-chat" href="${esc(askLink(d.page.ask))}">${esc(d.page.action)} <span aria-hidden="true">↗</span></a>`:""}</th><td>${stateBadge(d.state)}</td><td>${d.changed?whenText(d.changed)+docWho(d):`<span class="pl-age">${esc("not saved yet")}</span>`}</td><td class="pl-go">${d.state==="not written"?`<a class="pl-chat" href="${esc(askLink(`Help me write our ${d.title} document.`))}" aria-label="${esc("Write "+d.title+" with Codex")}">${esc("Write it with Codex")} <span aria-hidden="true">↗</span></a>`:`<span aria-hidden="true">${esc(LIVE&&EDIT_TOKEN?"Open and edit":"Open")} →</span>`}</td></tr>`
   :`<tr><th scope="row">${esc(d.title)}</th><td>${stateBadge(d.state)}</td><td><span class="pl-age">${esc("not written yet")}</span></td><td class="pl-go"><a class="pl-chat" href="${esc(askLink(`Help me write our ${d.title} document.`))}" aria-label="${esc("Write "+d.title+" with Codex")}">${esc("Write it with Codex")} <span aria-hidden="true">↗</span></a></td></tr>`;
  $("#cfg-docs").innerHTML=`<section class="sec pl-card"><h2>${esc("Base documents")} <span class="pl-count">${baseDocs.filter(d=>d.state!=="not written").length} / ${baseDocs.length} ${esc("written")}</span></h2><p class="m">${esc("What your company's work must follow: strategy, voice, who you sell to. Codex reads the matching one before it writes or plans. Click a document to read and edit it.")}</p><div class="pl-table-wrap"><table class="pl-table"><thead><tr><th>${esc("Document")}</th><th>${esc("State")}</th><th>${esc("Last changed")}</th><th><span class="sr-only">${esc("Open")}</span></th></tr></thead><tbody>${baseDocs.map(docRow).join("")}</tbody></table></div></section>`;
  renderRulesBrowser();renderSchemaBrowser();
@@ -1971,17 +1971,19 @@ function dsFilesHtml(){
  const F=PL?.design?.files||[];if(!F.length)return "";
  return `<section class="ds-files" aria-labelledby="ds-files-h"><h2 id="ds-files-h">${esc("Files")} <span class="pl-count">${F.length}</span></h2><p class="ds-files-note">${esc("What sits in the design-system folder beside this document: logos, templates and other files Codex can use.")}</p><ul class="ds-file-grid">${F.map(f=>`<li class="ds-file">${f.image?`<img src="${esc(dsFileSrc(f.path))}" alt="${esc(f.name)}" loading="lazy" decoding="async">`:`<span class="ds-file-kind" aria-hidden="true">${esc((f.name.match(/\.([A-Za-z0-9]{1,5})$/)||[,"file"])[1])}</span>`}<span class="ds-file-name">${esc(f.name)}</span><small>${esc(dsSize(f.size||0))}</small></li>`).join("")}</ul></section>`;
 }
-let dsTab="visual";
+let dsTab="visual",dsPicked=false;
 function dsShell(){
  const s=docState,tabs=$("#ds-tabs"),vis=$("#ds-visual"),body=$("#doc-body"),bar=document.querySelector(".doc-toolbar");if(!tabs||!vis)return;
  const on=!!s&&dsIs(s.path)&&!!PL.design.visual;
  if(!on){tabs.innerHTML="";vis.innerHTML="";vis.hidden=true;if(body)body.hidden=false;if(bar)bar.hidden=false;return}
+ /* A written Markdown beside a page that is still the shipped starter opens on Text: the starter says nothing yet. */
+ if(!dsPicked){const r=(PL.configuration?.documents||[]).find(d=>d.path===s.path);if(r?.page?.state==="starter"&&r.state!=="not written"){dsTab="text";dsPicked=true}}
  const visual=dsTab==="visual";
  tabs.innerHTML=[["visual","Visual"],["text","Text"]].map(([k,l])=>`<button type="button" role="tab" id="ds-tab-${k}" data-ds-tab="${k}" aria-selected="${dsTab===k}" aria-controls="${k==="visual"?"ds-visual":"doc-body"}" tabindex="${dsTab===k?0:-1}">${esc(l)}</button>`).join("");
  if(visual)vis.innerHTML=`<iframe class="ds-frame" sandbox="" referrerpolicy="no-referrer" title="${esc("The design system, visual version")}" src="${esc(LIVE?"/design-visual":fileHref(PL.design.visual))}"></iframe><p class="ds-visual-note">${esc("The page your team made for the design system. It is shown for reading only: nothing in it can run a script or change the brain. Codex reads the Text version.")}</p>`;
  vis.hidden=!visual;if(body)body.hidden=visual;if(bar)bar.hidden=visual;
 }
-document.addEventListener("click",e=>{const b=e.target?.closest?.("[data-ds-tab]");if(!b)return;dsTab=b.dataset.dsTab==="text"?"text":"visual";dsShell()});
+document.addEventListener("click",e=>{const b=e.target?.closest?.("[data-ds-tab]");if(!b)return;dsPicked=true;dsTab=b.dataset.dsTab==="text"?"text":"visual";dsShell()});
 document.addEventListener("keydown",e=>{const b=e.target?.closest?.("[data-ds-tab]");if(!b||!["ArrowRight","ArrowLeft"].includes(e.key))return;e.preventDefault();dsTab=dsTab==="visual"?"text":"visual";dsShell();document.getElementById("ds-tab-"+dsTab)?.focus?.()});
 
 const EDIT_TOKEN=(()=>{try{const t=document.querySelector('meta[name="gtm-brain-edit"]')?.getAttribute("content")||"";return /^[a-f0-9]{64}$/.test(t)?t:""}catch{return ""}})();
