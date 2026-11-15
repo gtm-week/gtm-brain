@@ -87,7 +87,7 @@ function serve() {
   const sha = buffer => createHash("sha256").update(buffer).digest("hex");
   const editable = () => listDocuments(root).filter(d => d.extra?.type !== "workflow");
   const readNoFollow = rel => { let fd; try { const path = join(root, rel); if (!realpathSync(path).startsWith(realpathSync(root) + '/')) return null; fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK); return fstatSync(fd).isFile() ? readFileSync(fd) : null; } catch { return null; } finally { if (fd !== undefined) closeSync(fd); } };
-  const runDocument = argv => new Promise(done => execFile(process.execPath, [fileURLToPath(new URL("../scripts/gtm-brain-documents/document.mjs", import.meta.url)), root, ...argv], { cwd: root, env: process.env, encoding: "utf8", timeout: 120000, maxBuffer: 1 << 22 },
+  const runDocument = argv => new Promise(done => execFile(process.execPath, [fileURLToPath(new URL("../scripts/gtm-brain-documents/document.mjs", import.meta.url)), root, ...argv], { cwd: root, env: { ...process.env, NODE_NO_WARNINGS: "1" }, encoding: "utf8", timeout: 120000, maxBuffer: 1 << 22 },
     (error, stdout, stderr) => done({ code: error ? (typeof error.code === "number" ? error.code : 1) : 0, stdout: String(stdout || "").trim(), stderr: String(stderr || "").trim() })));
   // The search box's notes: the memory index's own ranked search (stemmed words, one letter off), run in the
   // reader's worker so a large brain never holds up the page. A read: the query and the count are capped.
