@@ -21,6 +21,7 @@ export { normalizeKind, normalizeSource, normalizeSources, pointerKey, parsePoin
 import { checkSchema } from "./ontology/validation.mjs";
 import { sharedEntityFiles, thaw, deepFreeze, writeEntityFiles, entityId, entityType, ENTITY_FORMAT, refreshEntityPages, staleEntities, withEntityLock } from "./entities.mjs";
 import { appendMemoryBytes } from './memory-journal.mjs';
+import { assertWritable, layoutBlock } from "./layout-version.mjs";
 import { requestDashboardRefresh } from './dashboard-refresh.mjs';
 import { MEETING_FIELDS, validateMeetingEvidence, prepareMeetingMemory, duplicateMeetingMemory, meetingMetadata } from './meetings.mjs';
 export { meetingOverview, meetingCaptureStatus, meetingSourceSuggestions, validateMeetingEvidence, prepareMeetingMemory, meetingMetadata } from './meetings.mjs';
@@ -457,6 +458,7 @@ export function ensureMergeSetup(root) {
    Text goes through renderFrontmatter, so titles with colons or quotes survive. */
 const COVER_KEYS = ["title", "slug", "status", "created", "forked_from", "compiled_at", "compiled_by", "summary", "names", "people", "tools", "related", "last_active", "confidence"];
 export function writeContext(root, slug, { rule, now = "", ...fm }, { reviewedCover = null, expectedCover = null } = {}) {
+  assertWritable(root);   // a brain on a newer file layout is read-only here (lib/layout-version.mjs)
   if (!/^[a-z0-9-]+$/.test(slug)) throw new Error(`bad slug: ${slug}`);
   if (Object.hasOwn(fm, "scope")) throw new Error("scope is no longer a context field; include boundaries in rule");
   const dir = join(root, "brain", "contexts", slug); mkdirSync(dir, { recursive: true });
@@ -584,6 +586,7 @@ function readRegistry(root, out) {
   return out;
 }
 export function writeNames(root, names) {
+  assertWritable(root);
   return withEntityLock(root, () => writeRegistry(root, names));
 }
 export function migrateEntities(root) {
@@ -956,6 +959,7 @@ export function savePathsFor(root) { return [...[".", "brain"].filter(p => exist
    change. The message is also the activity line the dashboard shows. GTM_BRAIN_NO_COMMIT (tests,
    dry runs) turns committing off, for save as well. */
 export function commit(root, paths, message, { always = false, push = true, allowEmpty = false } = {}) {
+  const blocked = layoutBlock(root); if (blocked) return { ok: false, note: blocked, blocked: true };
   // Keep identity files and derived evidence views with every brain write.
   if (readAdmin(root) && paths.some(p => /brain(?:\/|$)|context\.md$|memories\.jsonl$/.test(p))) {
     withEntityLock(root, () => { if (!migrateEntities(root)) refreshEntityPages(root); });
@@ -1081,6 +1085,7 @@ export function largeNote(large, root) {
 }
 /* The person's save: commit what unsavedChanges lists, push when there is a remote. */
 export function save(root, message, { covers = false, trailers = [] } = {}) {
+  const blocked = layoutBlock(root); if (blocked) return { ok: false, note: blocked, files: [] };
   if (!covers && existsSync(join(root, "work", "admin.proposed.md"))) return { ok: false, note: "a change to brain/admin.md is waiting for APPROVE; ask for APPROVE or a drop, then save" };
   // A direct edit of a protected file is never saved: it is put back first (guardProtected).
   if (!covers) { const back = restoredNotice(guardProtected(root)); if (back) logActivity(root, "save", back.split(".")[0]); }
@@ -1422,6 +1427,7 @@ export function unknownTools(root, tools) {
   return tools.filter(t => !known.has(toolKey(t)));
 }
 export function appendMemory(root, slug, options) {
+  assertWritable(root);
   return withEntityLock(root, () => appendMemoryRecord(root, slug, prepareMeetingMemory(root, slug, options)));
 }
 function appendMemoryRecord(root, slug, { authors, via = "codex", kind = "note", tools = [], people = [], mentions = [], content, source = [], actions = [], supersedes = null, retracts = null, tags = [], at = null, asset, customer, customer_coverage, relation, ...meetingFields }) {

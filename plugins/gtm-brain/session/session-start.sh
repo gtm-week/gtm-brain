@@ -60,6 +60,12 @@ if [ -z "$where" ] || [ ! -f "$root/brain/admin.md" ]; then
   exit 0
 fi
 mkdir -p "$root/work"
+# A brain on a newer file layout than this plugin understands (brain/layout.json, lib/layout-version.mjs) is
+# read-only here: one line and nothing else, since every step below may write into it.
+if [ -f "$root/brain/layout.json" ]; then
+  blocked="$(node -e 'const v=await import(process.argv[1]);process.stdout.write(v.layoutBlock(process.argv[2]))' "$(dirname "${BASH_SOURCE[0]}")/../lib/layout-version.mjs" "$root" 2>/dev/null || true)"
+  [ -n "$blocked" ] && { echo "$blocked"; exit 0; }
+fi
 # Remember which Codex chat this is (work/session.json): the dashboard shows which chat is linked.
 [ -n "${PLUGIN_ROOT:-}" ] && printf '%s' "$input" | node "$PLUGIN_ROOT/session/session.mjs" "$root" "$project" 2>/dev/null || true
 # This machine has opened this brain: known to /gtm-brain-project when it offers the skill elsewhere.

@@ -273,7 +273,7 @@ test("upgrade moves brain/guidelines/*.md to root documents, keeps a slug the ro
 
 test("upgrade adds the strategy document a pre-0.27 brain lacks and ends with a report of what it did and what stays", t => {
   const { root, run } = fixture(t);
-  for (const f of ["strategy.md", "icp.md", "voice.md", "design-system.md"]) rmSync(join(root, f), { force: true }); // a pre-0.27 brain had no starters
+  for (const f of ["strategy.md", "icp.md", "voice.md", "design-system.md", "brain/layout.json"]) rmSync(join(root, f), { force: true }); // a pre-0.27 brain had no starters and no layout file
   mkdirSync(join(root, "brain", "guidelines"), { recursive: true });
   writeFileSync(join(root, "brain", "guidelines", "voice.md"), "---\ntitle: Voice\napplies_to: [copy]\nstatus: draft\n---\n# Voice\n\nShort.\n");
   mkdirSync(join(root, "files", "2026-08"), { recursive: true }); writeFileSync(join(root, "files", "2026-08", "deck.pdf"), "pdf"); writeFileSync(join(root, "files", "2026-08", "logo.svg"), "<svg/>");

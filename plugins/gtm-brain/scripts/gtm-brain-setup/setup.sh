@@ -85,6 +85,9 @@ PLUGIN_VERSION="$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$T/../.codex-plu
 for doc in strategy icp voice design-system market; do
   [ -f "$doc.md" ] || [ -f "$doc/$doc.md" ] || sed -e "s|{{COMPANY}}|$(esc "$COMPANY")|g" -e "s|{{DATE}}|$(date +%F)|g" -e "s|{{VERSION}}|$PLUGIN_VERSION|g" "$T/$doc.md" > "$doc.md"
 done
+# brain/layout.json: the file layout this brain uses, read by every GTM Brain before it writes; the starters
+# are recorded as given, so an upgrade never brings back one the person deleted (lib/layout-version.mjs).
+node -e 'const v=await import(process.argv[1]),u=await import(process.argv[2]);v.writeLayout(".",{starters:u.STARTERS})' "$PLUGIN/lib/layout-version.mjs" "$PLUGIN/lib/upgrade-files.mjs"
 # workflows/ from day one (0.28.0): the two shipped workflow documents as drafts; a folder already there is the person's.
 if [ ! -d workflows ]; then
   mkdir -p workflows

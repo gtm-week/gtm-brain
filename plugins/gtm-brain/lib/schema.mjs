@@ -12,6 +12,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from "
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 import { readAdmin, commit } from "./brain.mjs";
+import { layoutBlock } from "./layout-version.mjs";
 import { DEFAULT_KINDS, KIND_NAME, NOT_KINDS } from "./kinds.mjs";
 export { DEFAULT_KINDS, KIND_NAME, NOT_KINDS };
 
@@ -184,7 +185,7 @@ export function brainKinds(root) {
 
 /* Write SCHEMA.md when it is missing, refresh it when it is a shipped version nobody edited. */
 export function ensureSchema(root, templates) {
-  if (process.env.GTM_BRAIN_RUN || !readAdmin(root)) return false;
+  if (process.env.GTM_BRAIN_RUN || !readAdmin(root) || layoutBlock(root)) return false;   // never into a newer-layout brain
   const path = join(root, SCHEMA), next = readFileSync(join(templates, SCHEMA), "utf8"), had = existsSync(path);
   if (had) {
     const current = readFileSync(path, "utf8");

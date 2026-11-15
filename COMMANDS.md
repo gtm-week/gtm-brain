@@ -666,9 +666,19 @@ runs are offered "refresh the rules" instead; a refresh of edited rules pauses w
 to merge. It also refreshes `README.md`, silently, when that is exactly what a release wrote. Each
 refresh commits only its own file.
 
-Tool: `upgrade_brain`. Writes: `AGENTS.md`, `.githooks/pre-commit`, `.gitignore`, upgrade
-backups, and identity files only when migration is needed.
-`bash $PLUGIN_ROOT/scripts/gtm-brain-upgrade/upgrade.sh .`
+The upgrade also adds `RULES.md`, `SCHEMA.md` and the starter documents (`strategy.md`, `icp.md`,
+`voice.md`, `design-system.md`, `market.md`) a brain lacks, at the root or in a folder of their own
+name, and never replaces a file that is there. `brain/layout.json` records the brain's file layout
+(a missing file is layout 1) and the starters already given, so a starter the person deleted is not
+brought back. A GTM Brain that meets a newer layout than it understands reads the brain with one line
+on top and refuses every write ("update GTM Brain"). An upgrade that changes the layout changes nothing
+until the person says yes: it names the teammates who saved notes in the last 14 days, and
+`upgrade_brain` with `confirm: true` (`--confirm`) applies it.
+
+Tool: `upgrade_brain` (`confirm`). Writes: `AGENTS.md`, `.githooks/pre-commit`, `.gitignore`,
+`RULES.md`, `SCHEMA.md`, missing starter documents, `brain/layout.json`, upgrade backups, and
+identity files only when migration is needed.
+`bash $PLUGIN_ROOT/scripts/gtm-brain-upgrade/upgrade.sh . [--confirm]`
 
 ## What runs by itself
 

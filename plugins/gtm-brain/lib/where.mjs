@@ -9,6 +9,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, statSync, mkdirSy
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { readAdmin, commit } from "./brain.mjs";
+import { layoutBlock } from "./layout-version.mjs";
 
 export const RULES = "RULES.md", OLD_WHERE = "WHERE.md";
 export const WHERE = RULES; // the file the rows live in
@@ -23,7 +24,7 @@ const oldOwnLines = text => text.replace(/^#\s+Our rules\s*$/m, "").trim();
 /* Write RULES.md when it is missing, merge WHERE.md and an older RULES.md into it, refresh it when it is a
    shipped version nobody edited. WHERE.md is removed only when its content is in RULES.md. */
 export function ensureRules(root, templates) {
-  if (process.env.GTM_BRAIN_RUN || !readAdmin(root)) return false;
+  if (process.env.GTM_BRAIN_RUN || !readAdmin(root) || layoutBlock(root)) return false;   // never into a newer-layout brain
   const path = join(root, RULES), next = readFileSync(join(templates, RULES), "utf8");
   const current = read(path), where = read(join(root, OLD_WHERE));
   if (current !== null && (OWN.test(current) || hasTable(current))) {

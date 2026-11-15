@@ -25,6 +25,7 @@ import { askSourceLines } from "../lib/ask-source.mjs";
 import { readSchema, fieldsFor } from "../lib/schema.mjs";
 import { hasMemoryIndex } from "../lib/memory-index-store.mjs";
 import { createSaveNudge } from "../lib/save-nudge.mjs";
+import { layoutBlock } from "../lib/layout-version.mjs";
 import { relativeDates } from "../lib/dots.mjs";
 import { rulePageAnswer, pageForCall, rulePageText, rulePageIndex, rulePages } from "../lib/rule-pages.mjs";
 import { foldStatus as foldStatusText } from "../lib/opening.mjs";
@@ -345,10 +346,12 @@ const TOOLS = [
       return result(await run(brain, "gtm-brain-approve/approve.mjs", apply, { env: { GTM_BRAIN_APPROVAL_TICKET: lib.issueApproval(brain, admin ? "admin" : "interaction") } }));
     } },
   { name: "upgrade_brain", title: "Refreshing the brain's rules", readOnly: false,
-    description: "After a plugin update: refresh managed rules, preserving local edits. Migrate legacy identity registries into permanent entity files, backing up originals and leaving memories unchanged.",
-    inputSchema: schema({}),
-    call: ({ brain }) => run(brain, "gtm-brain-upgrade/upgrade.sh", []).then(result) },
+    description: "After a plugin update: refresh managed rules, preserving local edits; add RULES.md, SCHEMA.md and the starter documents a brain lacks, never replacing a file the person has. Migrate legacy identity registries into permanent entity files, backing up originals and leaving memories unchanged. When the upgrade would change the brain's file layout it changes nothing and says which teammates must update; ask the person yes or no, and only on yes call it again with confirm: true.",
+    inputSchema: schema({ confirm: { type: "boolean", description: "true only after the person said yes to the layout change the previous run described" } }),
+    call: ({ brain, confirm }) => run(brain, "gtm-brain-upgrade/upgrade.sh", confirm === true ? ["--confirm"] : []).then(result) },
 ];
+// Tools that write only work/ (gitignored, this machine): they go on in a brain on a newer file layout.
+const LOCAL_ONLY = new Set(["load_context", "render_dashboard", "open_dashboard", "memory_index"]);
 // Since 0.35.0 a summary is written on demand, in the chat that asks (lib/summaries.mjs): load_context and a
 // brief read give the notes and as_of, compile_apply and compile_entity write once, and compile_facts serves an
 // explicit "rewrite the summary". So a chat sees those three. entity_facts (all evidence, large) stays with the
@@ -604,13 +607,19 @@ async function handle(req) {
     if (!tool) return fail(id, -32602, `unknown tool ${params.name}`);
     const args = params.arguments || {};
     if (!tool.noBrain && !isBrain(args.brain)) return reply(id, brainError(args.brain));
+    // A brain on a newer file layout than this plugin understands (lib/layout-version.mjs): every write is
+    // refused before it starts, reads go on with the line on top, and the chat start (which writes) is skipped.
+    // load_context and the dashboard and index tools write only this machine's work/, never the shared brain.
+    const blocked = !tool.noBrain && layoutBlock(args.brain);
+    if (blocked && !tool.readOnly && !LOCAL_ONLY.has(tool.name)) { const r = text(blocked, true); logCall(args, tool.name, r); return reply(id, r); }
     // Every writer script logs its change (lib.commit) and re-renders the dashboard itself.
     // The chat start runs first: it pulls, refreshes the rules and re-loads contexts the call then reads.
-    const start = await opening(args).catch(() => null);
+    const start = blocked ? null : await opening(args).catch(() => null);
     let r; try { r = await tool.call(args, id); } catch (e) { r = text(`${tool.name} failed: ${e.message}`, true); }
     logCall(args, tool.name, r);
     r = foldStatus(tool.name, args, r, start);
     const extra = [saveNudge(args, tool.name, r), rulePageFor(args, tool.name, r), start].filter(Boolean).map(t => ({ type: "text", text: t }));
+    if (blocked) r = { ...r, content: [{ type: "text", text: blocked }, ...(r.content || [])] };
     return reply(id, extra.length ? { ...r, content: [...(r.content || []), ...extra] } : r);
   }
   if (method === "prompts/list") return reply(id, { prompts: [] });

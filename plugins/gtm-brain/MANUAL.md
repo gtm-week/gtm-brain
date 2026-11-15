@@ -225,6 +225,7 @@ in `work/manual-edits/protected/`.
 | A summary that looks old | its "as of" date; "update the summary now"; `work/compile.json` shows queued, running, done or failed |
 | Summaries never update | `work/hooks.log` lines `scheduled-run ... failed`; `work/runs.jsonl` has one line per compile run with its tokens; no lines at all means no run started |
 | A file in the wrong place | "why is this here?"; fix the `RULES.md` row |
+| "this brain was upgraded ... update GTM Brain", and nothing saves | a teammate's newer GTM Brain changed the brain's file layout (`brain/layout.json`); yours reads it but writes nothing until you say "update GTM Brain" and start a new chat |
 | Codex did something you did not ask | `work/tool-usage.jsonl` lists every GTM Brain call with time and title; `git log` lists every change with who made it |
 | A question where none of the options fits | type your own answer in the box's "Or write your own response" field, then Send. The main message field below waits until the question is answered or skipped. Skip closes it, and Codex asks again in plain text. |
 
