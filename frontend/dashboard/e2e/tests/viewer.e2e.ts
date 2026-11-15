@@ -25,7 +25,9 @@ async function visitAll({ app, screen, browser }: any, f: ReturnType<typeof fixt
   await each('an entity');
 }
 
-test('nothing on the page offers an edit or an action, and nothing it requests writes', async ({ app, screen, browser }) => {
+// The page edits in three places only, each on the person's own click: a document, an entity and its connections,
+// and a rule written for Codex. Looking around must write nothing and must lead nowhere outside the page.
+test('looking around writes nothing, and every link stays in the page, a file, Codex or the web', async ({ app, screen, browser }) => {
   const f = fixture(app.baseUrl);
   const writes: string[] = [];
   await browser.route('**/*', async route => {
@@ -37,11 +39,6 @@ test('nothing on the page offers an edit or an action, and nothing it requests w
       const action = new RegExp(pattern, 'i'), out: string[] = [];
       const shown = (el: Element) => !!(el as HTMLElement).offsetParent || (el as HTMLElement).getClientRects().length > 0;
       const name = (el: Element) => ((el.getAttribute('aria-label') || (el as HTMLElement).innerText || el.textContent || '').trim());
-      for (const el of document.querySelectorAll('form')) out.push('a form');
-      for (const el of document.querySelectorAll('[contenteditable]:not([contenteditable="false"])')) out.push('an editable region');
-      // a text area is allowed: the document editor, and the box where a rule is written before it is sent to Codex
-      for (const el of document.querySelectorAll('input')) if (shown(el) && !['search', 'hidden'].includes((el as HTMLInputElement).type)) out.push(`an input of type ${(el as HTMLInputElement).type}`);
-      for (const el of document.querySelectorAll('button, [role="button"], input[type="submit"]')) if (shown(el) && action.test(name(el))) out.push(`control "${name(el)}"`);
       for (const el of document.querySelectorAll('a[href]')) {
         const href = el.getAttribute('href') || '';
         if (shown(el) && !/^(#|\/file\?path=|\/assets\/|\/entity\?|codex:\/\/threads\/new\?|https?:)/.test(href)) out.push(`link to ${href.slice(0, 60)}`);

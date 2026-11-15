@@ -46,7 +46,7 @@ test('Configuration: base documents open in the page; rules and schema are brows
   if (written) {
     await docs.getByRole('button', written.title).tap();
     await expect(screen.getByRole('heading', written.title, { level: 1 }).first()).toBeVisible();   // the reader's own title and the document's first heading
-    await expect(browser.locator('#doc-preview')).not.toBeEmpty();
+    await expect(browser.locator('#doc-preview')).toContainText(/\S/);
     await expect(browser.locator('#doc-view').getByRole('link', /^Chat about this/)).toHaveAttribute('href', /^codex:\/\/threads\/new/);
     await screen.getByRole('button', /Configuration$/).first().tap();
   }
@@ -133,6 +133,6 @@ test('Workflows shows each one as a card in plain words; a click shows its steps
   await expect(browser.locator('#pw-files article ol.wf-steps li').first()).toBeVisible();
   const run = browser.locator('#pw-files article .pl-runs li').filter({ hasText: f.run.id });
   await expect(run).toHaveCount(1);
-  await expect(run).toContainText(f.run.step);
+  await expect(run).toContainText(new RegExp(esc(f.run.step), 'i'));   // the card writes it mid-sentence ("On step 1 of 4")
   await expect(run).toContainText(f.run.status);
 });
