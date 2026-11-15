@@ -312,3 +312,23 @@ test("a reworded fact anchored by a code is shown as already recorded; a note wo
   const other = b.remember("--context", "company", "--content", "The 9x workshop repeats on 24 November 2026, 10:00-14:00, in the main hall.");
   assert.equal(other.status, 0, other.stderr + other.stdout);
 });
+
+test("answering a held identity question saves at once: the names come from the question, not from the reply", () => {
+  const b = brain();
+  // two people share a first name already, and a question names one of them beside a new full name
+  for (const n of ["Wojciech Niemiec", "Wojciech Ozimek"]) { const r = b.batch([{ context: "icp", content: `${n} registered for the Berlin workshop.`, people: [n], new_names: [n] }]); assert.equal(r.status, 0, r.stderr + r.stdout); }
+  const q = b.batch([{ context: "icp", kind: "question", content: "Is Wojciech Stach from Shift4 the same person as Wojciech Niemiec?", people: ["Wojciech Niemiec"] }]);
+  assert.equal(q.status, 0, q.stderr + q.stdout);
+  const question = b.live().find(m => m.kind === "question");
+  b.say("no they are different?");
+  const before = b.all().length;
+  const a = b.batch([{ context: "icp", kind: "decision", retracts: question.id, content: "Wojciech Stach of Shift4 and Wojciech Niemiec are different people.", people: ["Wojciech Stach", "Wojciech Niemiec"], new_names: ["Wojciech Stach"] }]);
+  assert.doesNotMatch(a.stdout + a.stderr, /did not write which Wojciech|has not answered the question yet/, a.stdout + a.stderr);
+  assert.equal(a.status, 0, a.stderr + a.stdout);
+  assert.equal(b.all().length, before + 1, "the answer is saved in one call");
+  assert.ok(!b.live().some(m => m.id === question.id), "the question is closed");
+  // without a note to answer, a full name picked for a first name the person typed is still asked
+  b.say("Wojciech called about the venue");
+  const p = b.batch([{ context: "icp", content: "Wojciech Niemiec called about the venue.", people: ["Wojciech Niemiec"] }]);
+  assert.match(p.stdout + p.stderr, /did not write which Wojciech/);
+});

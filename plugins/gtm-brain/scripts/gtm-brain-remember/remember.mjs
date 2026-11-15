@@ -320,10 +320,14 @@ for (let i = 0; i < entries.length; i++) {
   const mapped = name => e.customer && name === e.customer.entity ? customerName : speaker(name) || typed(name);
   // Codex picked one of several people with that first name although the person never wrote the full name
   // or the surname ("lorian called me about the venue" saved as Florian Kim; Florian Weber is known too; new-brain, 2026-11-12)
+  // The note this one answers or replaces names its people in full: "no, they are different" to the question "is
+  // Wojciech Stach the same person as Wojciech Niemiec?" picks nobody (a manual run on 2026-11-15 was refused here,
+  // then refused again as unanswered, and Codex asked the person the question they had just answered).
+  let answered = ""; try { const t = e.retracts || e.supersedes; if (t) answered = lib.readMemories(root, ctx).find(m => m.id === t)?.content || ""; } catch {}
   const picked = !personText ? [] : list(e.people).filter(name => {
     if (speaker(name)) return false;
     const parts = String(name).trim().split(/\s+/); if (parts.length < 2) return false;
-    const said = new RegExp(`\\b${esc(name)}\\b|\\b${esc(parts[parts.length - 1])}\\b`, "i"); if (said.test(personText)) return false;
+    const said = new RegExp(`\\b${esc(name)}\\b|\\b${esc(parts[parts.length - 1])}\\b`, "i"); if (said.test(personText) || said.test(answered)) return false;
     return lib.readNames(root).filter(x => x.kind === "person" && x.name.split(/\s+/)[0].toLowerCase() === parts[0].toLowerCase()).length > 1 && !wasAsked(`pick:${name}`, 1 / 24);   // asked within the hour: the reply ("2", "Kim") is the answer
   });
   if (picked.length) {
