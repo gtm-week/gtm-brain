@@ -57,6 +57,13 @@ interview, and voice and design system are drafted from the website and what you
 chat. Each is filled where it lies, never as a second document. There is no separate documents
 skill since 0.33.10: these requests are part of everyday work (gtm-brain-use-brain).
 
+The design system is a page as well: setup writes `design-system.html` beside
+`design-system.md`, and an upgrade adds it once to a brain that has none (a page already there is
+never replaced). It is one self-contained HTML file, with no scripts and nothing loaded from the
+network, shown on the dashboard's Visual tab; the page is the source for how things look, and
+the Markdown lists the same tokens and rules in words for Codex. `fill in our design system`
+writes both from the website and your brand files, shows you the page and saves on your yes.
+
 ## Making one
 
 Say `add our tone of voice`, `save the pricing`, or `add pricing.md as a document`. A file you already wrote goes in as it is; one already at the top of the

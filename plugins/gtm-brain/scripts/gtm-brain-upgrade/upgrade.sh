@@ -107,10 +107,10 @@ PLUGIN_VERSION="$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$PLUGIN/.codex-p
 had_rules=0; [ -f "$RULES_F" ] && had_rules=1; had_schema=0; [ -f "$SCHEMA_F" ] && had_schema=1
 delivered="$(node --input-type=module -e 'const u = await import(process.argv[1]); console.log(u.deliverMissing(".", process.argv[2], process.argv[3], process.argv[4] === "1"))' "$PLUGIN/lib/upgrade-files.mjs" "$T" "$PLUGIN_VERSION" "$layout_said")"
 starters="$(sed -n 1p <<< "$delivered")"; ensured="$(sed -n 2p <<< "$delivered")"; layout_change="$(sed -n 3p <<< "$delivered")"
-added_strategy=0; other_starters=""
+added_strategy=0; other_starters=""; added_page=""
 for f in $starters; do
   echo "added $f"; changed=1; paths="$paths $f"
-  if [ "${f##*/}" = strategy.md ]; then added_strategy=1; else other_starters="$other_starters${other_starters:+, }$f"; fi
+  case "${f##*/}" in strategy.md) added_strategy=1 ;; *.html) added_page="$f" ;; *) other_starters="$other_starters${other_starters:+, }$f" ;; esac
 done
 added_rules=""
 for f in $ensured; do
@@ -138,11 +138,12 @@ echo "upgrade report:"
 [ "$kept_n" -gt 0 ] && echo "  kept $kept_n guideline$([ "$kept_n" = 1 ] || echo s) in brain/guidelines: a file of that name already sits at the root; adopt or merge by hand"
 [ "$added_strategy" = 1 ] && echo "  added strategy.md, waiting for the strategic intake (say: run the strategic intake)"
 [ -n "$other_starters" ] && echo "  added the starter documents $other_starters, as drafts to fill when it suits (say: list the documents)"
+[ -n "$added_page" ] && echo "  added the design system page $added_page beside its Markdown: a starter until you say: fill in our design system"
 [ -n "$added_rules" ] && echo "  added $added_rules: the brain's rules and what it keeps, yours to edit (say: show me the rules)"
 [ "$added_workflows" = 1 ] && echo "  added workflows/: outbound and ads-then-outbound, as drafts (say: start the outbound workflow)"
 [ "$old_files" -gt 0 ] && echo "  $old_files files in files/ from before 0.27 stay where they are; their links keep working. New files land beside a document or a company."
 [ -n "$stray" ] && echo "  folders at the top GTM Brain does not use: $stray. A Markdown in them can become a document where it lies (adopt the documents in <folder>/); the rest is yours to move or delete."
-[ "$moved_n" = 0 ] && [ "$kept_n" = 0 ] && [ "$added_strategy" = 0 ] && [ -z "$other_starters" ] && [ -z "$added_rules" ] && [ "$added_workflows" = 0 ] && [ "$old_files" = 0 ] && [ -z "$stray" ] && echo "  nothing to migrate"
+[ "$moved_n" = 0 ] && [ "$kept_n" = 0 ] && [ "$added_strategy" = 0 ] && [ -z "$other_starters" ] && [ -z "$added_page" ] && [ -z "$added_rules" ] && [ "$added_workflows" = 0 ] && [ "$old_files" = 0 ] && [ -z "$stray" ] && echo "  nothing to migrate"
 git config core.hooksPath .githooks 2>/dev/null || true
 git config gtm-brain.lib "$PLUGIN/lib/brain.mjs" 2>/dev/null || true
 # Team handles: the rule is the full name, lowercase, hyphenated. A brain set up before that rule

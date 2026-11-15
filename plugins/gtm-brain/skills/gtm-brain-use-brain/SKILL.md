@@ -44,7 +44,10 @@ read the document that applies (the opening lines and `query` (status) list the 
 brain root with what each applies to) and follow it, saying which one in one line; AGENTS.md
 rule 11. Adding, filling or changing one: follow [documents](references/documents.md). Setup
 writes `strategy.md`, `icp.md`, `voice.md`, `design-system.md` and `market.md` as starters; one shown as
-`[not filled]` holds no guidance yet.
+`[not filled]` holds no guidance yet. The design system is also a page, `design-system.html`
+beside the Markdown: the page is the source for how things look, the Markdown the same in
+words, and "fill in our design system" writes both
+([the design system page](references/documents.md#the-design-system-page)).
 
 What the brain keeps about each person, organization and product, and the relationship types,
 are in `SCHEMA.md` (the chat start lists them; `/gtm-brain-schema` changes them). A relationship
