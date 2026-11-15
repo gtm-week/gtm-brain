@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // The entity registry is parsed once per change, not on every save: saving stays fast as a brain
 // gains entities, and every kind of change (a lib write, a hand edit, a same-size edit, a deleted
 // file, a new kind in SCHEMA.md, the team in admin.md) is seen on the next read.

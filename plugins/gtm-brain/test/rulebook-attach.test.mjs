@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // Review of the slim rulebook (0.35.0), second pass: no shipped skill still demands a status call first, and every
 // topic page rides along with a tool, so its detail reaches a plain turn without the model having to ask for it.
 // Run: node --test plugins/gtm-brain/test/rulebook-attach.test.mjs

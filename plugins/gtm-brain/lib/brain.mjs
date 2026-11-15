@@ -571,7 +571,7 @@ export function writeContext(root, slug, { rule, now = "", ...fm }, { reviewedCo
     renameSync(`${stateFile}.${process.pid}.tmp`, stateFile);
   }
   // layouts 1 to 3: the context's own notes file from the start. Layout 4 has none: a note goes to its month's file.
-  if (!monthly(root) && !existsSync(join(dir, "memories.jsonl"))) writeFileSync(join(dir, "memories.jsonl"), "");
+  if (!monthly(root) && !existsSync(join(root, notesFileFor(root, slug)))) writeFileSync(join(root, notesFileFor(root, slug)), "");
   return path;
 }
 /* The contexts that are worked in: archived ones stay in listContexts (search, the dashboard) but
@@ -595,7 +595,7 @@ export function listContexts(root, options) {
    Files live in brain/entities/. Identity is metadata; facts stay in context memories.
    Legacy registry files remain readable until a write or upgrade migrates them. */
 // the literal, not layout.ENTITIES_DIR: this constant is evaluated while layout.mjs may still be loading (import cycle)
-export const ENTITIES_PATHS = ["brain/entities", "brain/entities.md", "brain/names.md"];   // layouts 1 to 3
+export const ENTITIES_PATHS = [paths.ENTITIES_OLD, "brain/entities.md", "brain/names.md"];   // layouts 1 to 3
 /* What an entity write commits. Layout 4 has no legacy registry files: only the pages' folder. */
 export const entitiesPaths = root => (inLayout4(root) ? [paths.ENTITIES_DIR4] : ENTITIES_PATHS);
 const entitiesFiles = root => (inLayout4(root) ? [] : [join(root, "brain", "entities.md"), join(root, "brain", "names.md")].filter(f => existsSync(f)));
@@ -1061,13 +1061,13 @@ export function commit(root, paths, message, options = {}) {
   let proposal = null;
   try { const d = divertCommit(root, paths, message, options); paths = d.paths; proposal = d.proposal; } catch (e) { return { ok: false, note: `not kept: ${e.message}` }; }
   const kept = keep(root, healed ? [...paths, layoutFile(root)] : paths, message, options);
-  const out = healed ? { ...kept, note: `${kept.note}; ${layoutHealed(healed)}` } : kept;
+  const out = healed ? { ...kept, note: `${kept.note}; ${layoutHealed(root, healed)}` } : kept;
   if (!proposal) return out;
   return { ...out, ok: true, proposal, note: `${proposalLine(root, proposal)}${out.note && out.note !== "nothing to commit" ? ` The rest: ${out.note}` : ""}` };
 }
 // Housekeeping, for the model only: said to the person it came out as "your plugin needs updating", which is false
 // (live benchmark, 2026-11-15, two answers). This plugin is current; the file only protects teammates on older ones.
-const layoutHealed = (n, kept = "") => `recorded file layout ${n} in the layout file${kept && ` (${kept})`}: ${n >= 3 ? "the base files were already in about-us/ and config/" : "the entity pages were already in kind folders"}. Housekeeping only: this GTM Brain is up to date and nothing was moved`;
+const layoutHealed = (root, n, kept = "") => `recorded file layout ${n} in ${layoutFile(root)}${kept && ` (${kept})`}: ${n >= 4 ? "the files were already in configuration/, entities/ and memories/" : n >= 3 ? "the base files were already in about-us/ and config/" : "the entity pages were already in kind folders"}. Housekeeping only: this GTM Brain is up to date and nothing was moved`;
 /* The chat start's part of the same repair, for a chat that only reads: the file in a commit of its own, and
    the one line to say. "" when the file was right (every later call). */
 export function healLayout(root) {
@@ -1075,7 +1075,7 @@ export function healLayout(root) {
   let n = 0; try { n = recordKindLayout(root); } catch {}
   if (!n) return "";
   const kept = keep(root, [layoutFile(root)], `layout: ${layoutFile(root)} says ${n}, the files were already in that layout`);
-  return `GTM Brain: ${layoutHealed(n, kept.note)}. Do not mention it to the person and do not say anything needs updating.`;
+  return `GTM Brain: ${layoutHealed(root, n, kept.note)}. Do not mention it to the person and do not say anything needs updating.`;
 }
 function keep(root, paths, message, { always = false, push = true, allowEmpty = false } = {}) {
   // Keep identity files and derived evidence views with every brain write.
@@ -1526,7 +1526,7 @@ export function validateMemory(r) {
 }
 export function readMemories(root, slug) {
   if (monthly(root)) return (monthlyLines(root).get(slug) || []).map(l => JSON.parse(l));
-  const f = join(root, CONTEXTS_DIR, slug, "memories.jsonl"); if (!existsSync(f)) return [];
+  const f = join(root, notesFileFor(root, slug)); if (!existsSync(f)) return [];
   return readFileSync(f, "utf8").split("\n").filter(l => l.trim()).map(l => JSON.parse(l));
 }
 /* Layout 4: every note is a line of memories/<YYYY-MM>.jsonl, and a topic's notes are the lines whose `context`
@@ -1554,7 +1554,7 @@ function monthlyLines(root) {
    append receipts use: the context in layouts 1 to 3 (one file each, in listContexts order), the month in layout 4. */
 export function noteSources(root) {
   if (monthly(root)) return noteFiles(root).map(f => ({ file: f.slice(NOTES_DIR.length + 1, -".jsonl".length), path: join(root, f) }));
-  return listContexts(root, { includeMemories: false }).map(c => ({ file: c.slug, path: join(c.dir, "memories.jsonl") }));
+  return listContexts(root, { includeMemories: false }).map(c => ({ file: c.slug, path: join(root, notesFileFor(root, c.slug)) }));
 }
 /* The notes file a context's commit names (lib/brain-paths.mjs notesCommitPaths), for every writer. */
 export const notesPaths = (root, slug) => paths.notesCommitPaths(root, slug);
@@ -1678,7 +1678,7 @@ export function validateMemoriesFile(path, context = null) {
 // by the engine's loader, so names and schemas are validated the same way as the plugin's; the
 // keys GTM Brain adds (tool, operation, record, refuse_when) come from the loaded file's raw. Nothing
 // here writes a memory: interactionMemory builds what the remember script is then called with.
-export const INTERACTIONS_PATH = "brain/ontology.ossie.json";   // layouts 1 to 3; interactionsFile(root) answers for a brain
+export const INTERACTIONS_PATH = paths.INTERACTIONS_OLD;   // layouts 1 to 3; interactionsFile(root) answers for a brain
 // every name the plugin serves; server.test.mjs holds this equal to the live catalog, so a company
 // interaction can never shadow a tool
 export const RESERVED_TOOLS = new Set(["memory_index", "capture_chats", "update_plugin", "where_we_are", "list_contexts", "load_context", "recall", "compile_facts", "compile_apply", "render_dashboard", "open_dashboard", "new_context", "fork_context", "edit_context", "archive_context", "advise", "who_is", "why_here", "check_rules", "add_name", "check_tools", "mark_tool", "propose_admin_change", "approve_change", "keep_approved_file", "save", "check_environment", "setup_brain", "upgrade_brain", "list_objects", "describe_object", "query", "remember", "interact", "propose_interaction", "link_project", "unlink_project", "list_projects", "list_brains", "customer_overview", "meeting_overview", "entity_facts", "compile_entity", "update_entity", "merge_entities", "archive_entity", "undo_entity_merge", "skill", "guideline", "document", "workflow", "share_brain"]);

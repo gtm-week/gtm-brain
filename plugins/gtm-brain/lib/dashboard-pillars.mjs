@@ -14,7 +14,7 @@ import { ruleFindings } from "./rules-check.mjs";
 import { readAskSource } from "./ask-source.mjs";
 import { whereRows } from "./where.mjs";
 import { readOurRules } from "./our-rules.mjs";
-import { rulesFile, schemaFile, settingsFile } from "./brain-paths.mjs";
+import { rulesFile, schemaFile, settingsFile, ABOUT_DIR, ABOUT_DIR4 } from "./brain-paths.mjs";
 import { population, POPULATION_RANGES, normalizedContent } from "./population.mjs";
 import { healthLine, summaryRuns } from "./health-line.mjs";
 import { listWorkflows, listRuns, TYPE as WORKFLOW_TYPE } from "./workflows.mjs";
@@ -231,7 +231,7 @@ export function designSystem(root, documents) {
   const doc = documents.find(d => /(^|\/)design-system\.md$/.test(d.path))?.path || null;
   if (!doc) return { doc: null, visual: null, files: [] };
   const plain = rel => { try { const st = lstatSync(join(root, rel)); return st.isFile() ? st : null; } catch { return null; } };
-  const beside = dirname(doc) === "." ? "" : dirname(doc) + "/", places = [...new Set([beside, "about-us/"])];
+  const beside = dirname(doc) === "." ? "" : dirname(doc) + "/", places = [...new Set([beside, `${ABOUT_DIR}/`, `${ABOUT_DIR4}/`])];
   const visual = places.map(d => d + "design-system.html").find(plain) || null;
   const files = [], walk = (rel, depth) => {
     let entries = []; try { if (!lstatSync(join(root, rel)).isDirectory()) return; entries = readdirSync(join(root, rel)).sort(); } catch { return; }

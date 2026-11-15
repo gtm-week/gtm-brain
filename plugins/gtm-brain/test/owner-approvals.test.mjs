@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawn, execFileSync } from "node:child_process";
 import { createInterface } from "node:readline";
+import * as lib from "../lib/brain.mjs";
 
 const P = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 const env = { ...process.env, PLUGIN_ROOT: P, CODEX_HOME: mkdtempSync(join(tmpdir(), "gtm-brain-owner-codex-")), HOME: mkdtempSync(join(tmpdir(), "gtm-brain-owner-home-")),
@@ -21,7 +22,7 @@ function brain() {
   execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "Reflow", "--one-liner", "returns automation", "--owner", "Marta Nowak <marta@reflow.io>", "--team", "Tomek Zielinski <tomek@reflow.io>"], { cwd: root, env, stdio: "ignore" });
   return root;
 }
-const as = (root, handle) => writeFileSync(join(root, "work", "person.json"), JSON.stringify({ handle }) + "\n");
+const as = (root, handle) => writeFileSync(join(lib.workDir(root), "person.json"), JSON.stringify({ handle }) + "\n");
 function client(answer) {
   const child = spawn(process.execPath, [`${P}/server/server.mjs`], { stdio: ["pipe", "pipe", "pipe"], env });
   const pending = new Map(); let seq = 0; const forms = [];
@@ -61,7 +62,7 @@ test("a teammate's settings change waits for the owner with no form; the owner's
   const yes = client(() => ({ action: "accept", content: { selection: "APPROVE" } })); await yes.init();
   const applied = await yes.call("approve_change", { brain: root, kind: "proposal", id, by: "marta-nowak" });
   assert.ok(!applied.isError, applied.text);
-  assert.match(applied.text, new RegExp(`applied proposal ${id} \\(config/settings\\.yaml\\), asked by tomek-zielinski, approved by marta-nowak`));
+  assert.match(applied.text, new RegExp(`applied proposal ${id} \\(configuration/settings\\.yaml\\), asked by tomek-zielinski, approved by marta-nowak`));
   assert.match(readFileSync(settings, "utf8"), /for retailers/);
   assert.ok(!existsSync(join(root, "brain", "proposals", id)));
   const listed = await yes.call("query", { brain: root, object: "approvals" });

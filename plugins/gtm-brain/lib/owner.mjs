@@ -16,7 +16,7 @@ import { join, dirname, posix } from "node:path";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readAdmin, currentPerson, appendMemory, commit, listContexts, logActivity, lineDiff, teamHandle, parseSettings } from "./brain.mjs";
-import { inConfigFolders, isOwnerPath, ownerDirs, proposalsDir, settingsFile, notesCommitPaths, SETTINGS_FILE, SETTINGS_FILE4 } from "./brain-paths.mjs";
+import { inConfigFolders, isOwnerPath, workName, ownerDirs, proposalsDir, settingsFile, notesCommitPaths, SETTINGS_FILE, SETTINGS_FILE4 } from "./brain-paths.mjs";
 import { readLayout } from "./layout-version.mjs";
 import { workDir } from './brain-paths.mjs';
 
@@ -159,7 +159,7 @@ function keepAside(root, changes) {
 /* The line for a chat start or a save: what happened to the hand edits. */
 export function ownerEditNotice(root, g) {
   if (g.proposal) return `${proposalLine(root, g.proposal)}`;
-  if (g.restored.length) return `${g.restored.join(", ")}: this edit leaves the settings unreadable (company, owner and team are needed), so the committed version is back and the edit is kept in work/manual-edits/protected/. Tell the person in one line.`;
+  if (g.restored.length) return `${g.restored.join(", ")}: this edit leaves the settings unreadable (company, owner and team are needed), so the committed version is back and the edit is kept in ${workName(root)}/manual-edits/protected/. Tell the person in one line.`;
   return "";
 }
 
@@ -248,7 +248,7 @@ export function ownerLine(root) {
   const who = personHere(root); if (!who || who !== ownerOf(root)) return "";
   const waiting = listProposals(root); if (!waiting.length) return "";
   const first = waiting[0];
-  return `Waiting for your approval (you own about-us/ and config/): ${waiting.length === 1 ? "" : `${waiting.length} proposals, the oldest: `}${nameOf(root, first.by)} proposes ${first.summary} (${first.files.map(f => f.path).join(", ")}, ${first.id}). Say it to the person in one line; approve_change with kind proposal and id ${first.id} shows them the change with an APPROVE choice${waiting.length > 1 ? "; query object approvals lists every one" : ""}.`;
+  return `Waiting for your approval (you own ${ownerDirs(root).map(d => `${d}/`).join(" and ")}): ${waiting.length === 1 ? "" : `${waiting.length} proposals, the oldest: `}${nameOf(root, first.by)} proposes ${first.summary} (${first.files.map(f => f.path).join(", ")}, ${first.id}). Say it to the person in one line; approve_change with kind proposal and id ${first.id} shows them the change with an APPROVE choice${waiting.length > 1 ? "; query object approvals lists every one" : ""}.`;
 }
 
 /* query (object approvals): the recorded approvals, newest first, then the proposals waiting. */

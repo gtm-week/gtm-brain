@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // The population of a brain (lib/population.mjs, query population) and the per-source sync checkpoints
 // (lib/health-line.mjs): every number on a small fixture brain with a fixed clock, the health-line part
 // only when a number is out of range, the old global checkpoint and the new per-source one, and the time

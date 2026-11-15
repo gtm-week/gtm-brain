@@ -23,7 +23,7 @@ const paths = await import(new URL("../../lib/brain-paths.mjs", import.meta.url)
 const diff = lib.lineDiff;
 
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
-const SETTINGS = paths.settingsFile(root), ADMIN = join(root, SETTINGS), PROP = join(root, paths.SETTINGS_PROPOSAL);
+const SETTINGS = paths.settingsFile(root), ADMIN = join(root, SETTINGS), PROP = join(root, paths.settingsProposal(root));
 const opt = {}; for (let i = 0; i < args.length; i++) if (args[i].startsWith("--")) { opt[args[i].slice(2)] = args[i + 1] && !args[i + 1].startsWith("--") ? args[++i] : true; }
 const kind = opt.proposal ? "proposal" : opt.interaction ? "interaction" : "admin";
 
@@ -65,7 +65,7 @@ if (opt.proposal) {
 
 // --propose: a teammate's settings change in layout 3, kept for the owner. Applies nothing, so it needs no APPROVE.
 if (opt.propose) {
-  if (!existsSync(PROP)) { console.error(`no proposal at ${paths.SETTINGS_PROPOSAL}.`); process.exit(1); }
+  if (!existsSync(PROP)) { console.error(`no proposal at ${paths.settingsProposal(root)}.`); process.exit(1); }
   const by = approver();
   if (owner.isOwner(root, by)) { console.error("you own this brain: approve the change with approve_change (kind admin) instead."); process.exit(1); }
   const before = readFileSync(ADMIN, "utf8"), after = readFileSync(PROP, "utf8"), n = diff(before, after).filter(l => /^[-+] /.test(l)).length;
@@ -80,7 +80,7 @@ if (writes && !(await personApproved())) { console.error(NOT_APPROVED); process.
 if (opt.interaction) {
   // --interaction: the only way a company's interaction enters brain/ontology.ossie.json
   const PROPI = join(workDir(root), "interaction.proposed.json");
-  if (!existsSync(PROPI)) { console.error("no proposal at work/interaction.proposed.json. propose_interaction writes one."); process.exit(1); }
+  if (!existsSync(PROPI)) { console.error(`no proposal at ${lib.workName(root)}/interaction.proposed.json. propose_interaction writes one.`); process.exit(1); }
   const by = approver();
   let proposal; try { proposal = JSON.parse(readFileSync(PROPI, "utf8")); } catch (e) { console.error(`the proposal is not valid JSON: ${e.message}`); process.exit(1); }
   const { actions, error } = lib.readInteractions(root); if (error) { console.error(error); process.exit(1); }
@@ -97,7 +97,7 @@ if (opt.interaction) {
   process.exit(0);
 }
 if (!existsSync(ADMIN)) { console.error(`no ${SETTINGS} here`); process.exit(1); }
-if (!existsSync(PROP)) { console.error(`no proposal at ${paths.SETTINGS_PROPOSAL}. Write the full proposed ${SETTINGS} there first.`); process.exit(1); }
+if (!existsSync(PROP)) { console.error(`no proposal at ${paths.settingsProposal(root)}. Write the full proposed ${SETTINGS} there first.`); process.exit(1); }
 const before = readFileSync(ADMIN, "utf8"), after = readFileSync(PROP, "utf8");
 if (before === after) { console.error(`proposal is identical to ${SETTINGS}; nothing to approve`); unlinkSync(PROP); process.exit(1); }
 if (/[\u2013\u2014\u2015\u2212]/.test(after)) { console.error("proposal contains a long dash; use a plain hyphen"); process.exit(1); }

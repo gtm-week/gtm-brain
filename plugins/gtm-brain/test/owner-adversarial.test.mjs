@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // Owner-only, attacked (layout 3, lib/owner.mjs): what a teammate could try so a change under about-us/ or
 // config/ lands without the owner's yes, and what a proposal shared through git could carry.
 process.env.GTM_BRAIN_NO_WATCH = "1";

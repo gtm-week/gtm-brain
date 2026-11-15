@@ -47,7 +47,7 @@ const text = (s, isError = false) => ({ content: [{ type: "text", text: s.trim()
 const result = r => text([r.out, r.err].filter(Boolean).join("\n"), r.code !== 0);
 const isBrain = p => lib.isBrain(p);
 const VERSION = (() => { try { return JSON.parse(readFileSync(join(P, ".codex-plugin", "plugin.json"), "utf8")).version || "0.0.0"; } catch { return "0.0.0"; } })();
-const brainError = p => text(`${p || "(no path)"} is not a brain: no brain/admin.md there. Pass the workspace folder you are in, or run setup_brain in an empty folder.`, true);
+const brainError = p => text(`${p || "(no path)"} is not a brain: no settings file there (configuration/settings.yaml; config/settings.yaml or brain/admin.md in an older brain). Pass the workspace folder you are in, or run setup_brain in an empty folder.`, true);
 const projectError = (brain, project) => { if (!project) return null; const known = lib.readProjects(brain).map(p => p.slug); return known.includes(project) ? null : text(`no project ${project}; projects: ${known.join(", ") || "none"}. The chat's opening lines name the project; omit it in the brain's own chat.`, true); };
 const list = a => (Array.isArray(a) ? a : String(a || "").split(",")).map(s => String(s).trim()).filter(Boolean);
 
@@ -124,7 +124,7 @@ const TOOLS = [
       const started = await run(brain, "../server/dash.mjs", ["--start", ...viewing]);
       const url = started.out.trim().split("\n").pop() || "";
       const r = await run(brain, "gtm-brain-render/render.mjs");
-      if (!/^http:/.test(url)) return text(`${r.out}${started.err}\nThe dashboard server did not start; the page is at work/home/index.html.`, true);
+      if (!/^http:/.test(url)) return text(`${r.out}${started.err}\nThe dashboard server did not start; the page is at ${lib.workName(brain)}/home/index.html.`, true);
       return text(`${r.out}\n${host().texts.dashboardOpened(url)}`);
     } },
   { name: "advise", title: "Checking how the brain is doing", readOnly: true,
@@ -354,7 +354,7 @@ const TOOLS = [
       // Layout 3: a settings change by anyone but the owner is kept for the owner, no form (nothing is applied).
       if (admin && own.ownerRules(brain) && !own.isOwner(brain, own.personHere(brain, by)) && existsSync(join(workDir(brain), "admin.proposed.md"))) return result(await run(brain, "gtm-brain-approve/approve.mjs", ["--propose", "--by", String(by || "")]));
       const file = join(workDir(brain), admin ? "admin.proposed.md" : "interaction.proposed.json");
-      if (!existsSync(file)) return text(`nothing to approve: no ${admin ? "work/admin.proposed.md (propose_admin_change writes it)" : "work/interaction.proposed.json (propose_interaction writes it)"}.`, true);
+      if (!existsSync(file)) return text(`nothing to approve: no ${lib.workName(brain)}/${admin ? "admin.proposed.md (propose_admin_change writes it)" : "interaction.proposed.json (propose_interaction writes it)"}.`, true);
       let what;
       if (admin) { const d = await run(brain, "gtm-brain-approve/approve.mjs", ["--diff"]); if (d.code) return result(d); what = d.out.replace(/\n*Apply it with approve_change[^\n]*\s*$/, "").trim(); }
       else { try { const i = JSON.parse(readFileSync(file, "utf8")); what = `Interaction ${i.name} (${i.external === false ? "no tool step: the note is recorded at once, without a tool confirming anything" : `${i.tool}: ${i.operation}`}). It records in ${i.record?.context}: ${i.record?.content}`; } catch (e) { return text(`the proposal is not valid JSON: ${e.message}`, true); } }

@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // Saving that does not misfire (0.35.0 round three, live benchmark on a real brain, 2026-11-14): a restated fact
 // is kept once (s08), a changed value corrects the kept note, a note that only says a call happened is refused while
 // its outcomes are written one note each (s09, s14), the speaker is never an unclear name (s07), a question held for

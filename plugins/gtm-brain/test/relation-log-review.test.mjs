@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // Review of the relationship log (ALL-711): the cases the first tests did not ask about. A note that names the old
 // employer and the new one, a past job, a date with an offset, a correction that withdraws the note which ended a
 // link, a resend, two teammates renaming on two branches, and what an older install reads.

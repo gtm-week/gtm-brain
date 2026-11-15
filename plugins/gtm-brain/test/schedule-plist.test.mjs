@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // The launchd example once hard-coded plugin version 0.3.0 in its path, so it pointed at a folder no install
 // has had since. It now runs the newest installed version, whatever its number.
 import { test } from "node:test";

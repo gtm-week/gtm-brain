@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // Search that answers in one call (0.35.0, lane R1): stemmed words, one typo, names and periods
 // narrowing first, ranking, the byte cap, and query object answer through the MCP server.
 // Each test fails on 0.34.5, where search matched the whole text literally and newest first.

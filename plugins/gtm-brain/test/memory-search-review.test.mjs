@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // Review of search that answers in one call (0.35.0, lane R1): the cases a question meets on a real
 // brain that the lane's own tests do not. Each one failed on the lane as delivered.
 import { test } from 'node:test';

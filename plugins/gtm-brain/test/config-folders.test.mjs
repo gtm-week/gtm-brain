@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // Layout 3: the base files in about-us/, rules, schema and settings in config/ (lib/brain-paths.mjs), the move that
 // asks first (lib/config-folders.mjs), owner-only changes there and the record of every approval (lib/owner.mjs).
 process.env.GTM_BRAIN_NO_WATCH = "1";

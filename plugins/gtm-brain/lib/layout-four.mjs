@@ -16,11 +16,11 @@
 // person's text stays and git records renames. Before anything is committed the notes are counted again: the same
 // lines, the same ids, the same order inside each context and month. A full copy of what moves is kept under
 // .gtm-brain/upgrades/, and the move is one commit: reverting it brings every old file back.
-import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync, statSync, renameSync, rmSync, cpSync, chmodSync, appendFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync, statSync, renameSync, rmSync, cpSync, chmodSync, appendFileSync, realpathSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { logActivity, rerender, readAdmin, readNames, commit as libCommit, entitiesPaths, stopBrainWatcher } from "./brain.mjs";   // first: the lib's modules import each other in a circle that starts here
+import { logActivity, rerender, readAdmin, readNames, commit as libCommit, entitiesPaths } from "./brain.mjs";   // first: the lib's modules import each other in a circle that starts here
 import { readLayout, writeLayout, understandsLayout } from "./layout-version.mjs";
 import { diskLayout, INDEX_FILE } from "./layout.mjs";
 import { layoutReadme, readmeInFolders } from "./config-folders.mjs";
@@ -33,6 +33,20 @@ const TEMPLATES = fileURLToPath(new URL("../templates/", import.meta.url));
    dashboard, the page cache, the append receipts (keyed by context before, by month now) and what a running
    server or lock left behind. Everything else in work/ moves as it is. */
 export const DISPOSABLE = [/^memory-index/, /^home$/, /^memory-appends$/, /^entity-pages\.json$/, /^population\.json$/, /^dash\.json$/, /^brain-watch\.(json|lock)$/, /^render-(lock\.sqlite.*|request\.json|state\.json)$/, /^entity-write\.lock$/];
+
+/* The dashboard server and the file watcher of this brain keep work/ open: stopped before the folder is renamed.
+   Only a process whose command line names this folder and that script: a brain copied from another folder carries
+   that folder's state files, and its servers are not this brain's to stop. */
+function stopServers(root) {
+  let real = root; try { real = realpathSync(root); } catch {}
+  for (const [file, script] of [["dash.json", "dash.mjs"], ["brain-watch.json", "brain-watch.mjs"]]) {
+    try {
+      const pid = JSON.parse(readFileSync(join(root, "work", file), "utf8")).pid; if (!Number.isInteger(pid)) continue;
+      const cmd = execFileSync("ps", ["-o", "command=", "-p", String(pid)], { encoding: "utf8", stdio: "pipe" });
+      if (cmd.includes(script) && (cmd.includes(root) || cmd.includes(real))) process.kill(pid);
+    } catch {}
+  }
+}
 
 /* The old files of notes, as they are: [{slug, file, lines}] with contexts in name order. Throws on a line that is
    no JSON, has no `at`, or names another context than its folder: nothing is moved for a brain like that. */
@@ -113,8 +127,7 @@ export function migrateToTabs(root, { commit = !process.env.GTM_BRAIN_NO_COMMIT 
   }
   const old = readOldNotes(root), months = monthBuckets(old);
   const idsBefore = new Set(readNames(root).map(e => e.id));
-  try { stopBrainWatcher(root); } catch {}
-  try { const s = JSON.parse(readFileSync(join(root, "work", "dash.json"), "utf8")); if (s?.pid) process.kill(s.pid); } catch {}
+  stopServers(root);
 
   // 1. the copy: everything that moves, as it was
   const stamp = new Date().toISOString().replace(/[:.]/g, "-"), backupRel = `upgrades/layout-4-${stamp}`, backup = join(root, "work", backupRel);
@@ -122,7 +135,6 @@ export function migrateToTabs(root, { commit = !process.env.GTM_BRAIN_NO_COMMIT 
   for (const p of [...MOVED, ".gitattributes", ".gitignore", ".githooks", "README.md"]) if (existsSync(join(root, p))) cpSync(join(root, p), join(backup, p), { recursive: true });
 
   const undo = () => {
-    try { stopBrainWatcher(root); } catch {}
     if (inGit) { try { git("reset", "-q", "HEAD", "--", ...TOUCHED); } catch {} }
     for (const p of [P.CONFIGURATION_DIR, P.ENTITIES_DIR4, P.NOTES_DIR, P.LAYOUT_FILE4]) rmSync(join(root, p), { recursive: true, force: true });
     for (const p of [...MOVED, ".gitattributes", ".gitignore", ".githooks", "README.md"]) if (existsSync(join(backup, p))) { rmSync(join(root, p), { recursive: true, force: true }); cpSync(join(backup, p), join(root, p), { recursive: true }); }

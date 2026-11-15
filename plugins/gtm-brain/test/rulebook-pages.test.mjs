@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // The slim rulebook (0.35.0): the brain's AGENTS.md keeps the core and one line per rule; each topic's detail is a
 // rule page under policies/ that query (object rules, search) returns and a tool attaches to its first reply. The
 // chat's first GTM Brain call, whatever it is, brings the opening lines: no status call first, no skill file read

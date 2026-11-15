@@ -281,3 +281,25 @@ test("layout 4: only the owner changes configuration/; a teammate's change is a 
   assert.match(readFileSync(voice, "utf8"), /The owner's own line/);
   assert.match(lib.layoutStartLine(root), /four folders: configuration\//);
 });
+
+test("the path module is the only place that names the notes, the covers, the entity folder and this computer's folder", () => {
+  const P = new URL("../", import.meta.url).pathname;
+  const roots = ["lib", "scripts", "server", "session", "skills"].map(d => join(P, d)), files = [];
+  const walk = dir => { for (const e of readdirSync(dir, { withFileTypes: true })) { const p = join(dir, e.name); if (e.isDirectory()) { if (e.name !== "ui" && e.name !== "node_modules") walk(p); } else if (/\.(mjs|js)$/.test(e.name)) files.push(p); } };
+  roots.forEach(walk);
+  // a quoted literal that is one of the paths, or a join that builds one (tool descriptions, which are prose, name
+  // the layout 1 to 3 places and are told apart at the chat start: lib/config-folders.mjs layoutStartLine)
+  const literal = /["']brain["'],\s*["'](?:contexts|entities|layout\.json|ontology\.ossie\.json|proposals)["']|["'`]brain\/(?:contexts|entities|layout\.json|ontology\.ossie\.json|proposals)(?:\/[^"'`]*)?["'`]|["'`](?:memories\.jsonl|context\.md)["'`]|["'`](?:memories\/topics|memories\/[a-z0-9.\/*-]+|configuration\/[a-z.\/-]*|\.gtm-brain|\.gtm-brain\/[a-z.\/-]*)["'`]|\(\s*(?:root|brain|args\.brain)\s*,\s*["']work["']|["'`]work\/[a-z][a-z.\/-]*["'`]/;
+  // brain-paths.mjs is the path module and layout-four.mjs the move between the two sets of paths; config-folders.mjs
+  // and where.mjs rewrite the README's and the rules' wording (text, not paths); web-starter.mjs names a project
+  // folder's own work/, never a brain's. ~/.gtm-brain (homedir) is the person's, not a brain's folder.
+  const allowed = new Set(["lib/brain-paths.mjs", "lib/layout-four.mjs", "lib/config-folders.mjs", "lib/where.mjs", "lib/web-starter.mjs"].map(f => join(P, f)));
+  const found = files.filter(f => !allowed.has(f)).flatMap(f => readFileSync(f, "utf8").split("\n").map((l, i) => [f, i + 1, l])).filter(([, , l]) => literal.test(l) && !/^\s*(\/\/|\*|\/\*)/.test(l) && !/homedir\(\)/.test(l));
+  assert.deepEqual(found.map(([f, n, l]) => `${f.slice(P.length)}:${n}: ${l.match(literal)[0]}`), []);
+  // the shell scripts ask session/resolve.sh where this computer's folder and the layout file are
+  const shells = [];
+  const walkSh = dir => { for (const e of readdirSync(dir, { withFileTypes: true })) { const p = join(dir, e.name); if (e.isDirectory()) walkSh(p); else if (e.name.endsWith(".sh")) shells.push(p); } };
+  roots.forEach(walkSh);
+  const sh = /(?:"\$root\/work|[ >"]work\/[a-z]|\$root\/brain\/layout\.json|brain\/contexts)/;
+  assert.deepEqual(shells.filter(f => !f.endsWith("session/resolve.sh")).flatMap(f => readFileSync(f, "utf8").split("\n").map((l, i) => `${f.slice(P.length)}:${i + 1}: ${l.trim().slice(0, 100)}`).filter(l => sh.test(l) && !/^\S+:\d+: (#|echo )/.test(l))), []);
+});

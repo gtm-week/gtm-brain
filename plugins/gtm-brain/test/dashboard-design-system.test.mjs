@@ -11,6 +11,7 @@ import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { page } from "./helpers/dashboard-page.mjs";
+import * as lib from "../lib/brain.mjs";
 
 const P = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 const env = { ...process.env, PLUGIN_ROOT: P, CODEX_HOME: mkdtempSync(join(tmpdir(), "gtm-brain-ds-codex-")), HOME: mkdtempSync(join(tmpdir(), "gtm-brain-ds-home-")),
@@ -19,7 +20,7 @@ for (const k of ["GTM_BRAIN_NO_COMMIT", "GTM_BRAIN_RUN", "GTM_BRAIN_APPROVAL_TIC
 const root = realpathSync(mkdtempSync(join(tmpdir(), "gtm-brain-ds-")));
 execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "Reflow", "--one-liner", "returns automation", "--owner", "Marta Nowak <marta@reflow.io>", "--team", "Tomek Zielinski <tomek@reflow.io>"], { cwd: root, env, stdio: "ignore" });
 const docs = await import(`${P}/lib/documents.mjs`), pillars = await import(`${P}/lib/dashboard-pillars.mjs`);
-const render = () => { execFileSync(process.execPath, [`${P}/scripts/gtm-brain-render/render.mjs`, root], { encoding: "utf8", env, cwd: root }); return JSON.parse(readFileSync(join(root, "work", "home", "data.json"), "utf8")); };
+const render = () => { execFileSync(process.execPath, [`${P}/scripts/gtm-brain-render/render.mjs`, root], { encoding: "utf8", env, cwd: root }); return JSON.parse(readFileSync(join(lib.workDir(root), "home", "data.json"), "utf8")); };
 let started = false;
 after(() => { if (started) { try { execFileSync(process.execPath, [`${P}/server/dash.mjs`, root, "--stop"], { env }); } catch {} } for (const r of [root, env.CODEX_HOME, env.HOME]) { try { rmSync(r, { recursive: true, force: true }); } catch {} } });
 

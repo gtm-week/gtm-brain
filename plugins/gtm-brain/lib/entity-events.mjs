@@ -6,8 +6,9 @@
 import { appendFileSync, mkdirSync, readFileSync, statSync, lstatSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { historyDir } from "./layout.mjs";
+import { ENTITIES_OLD } from "./brain-paths.mjs";
 
-export const EVENTS_FILE = "brain/entities/.history/events.jsonl";   // layouts 1 to 3; the literal, since layout.mjs may still be loading (import cycle)
+export const EVENTS_FILE = `${ENTITIES_OLD}/.history/events.jsonl`;   // layouts 1 to 3; the literal, since layout.mjs may still be loading (import cycle)
 export const eventsFile = root => `${historyDir(root)}/events.jsonl`;
 export const ENTITY_CHANGES = ["rename", "kind", "merge", "unmerge"];
 const ID = /^e_[0-9a-f]{16}$/;

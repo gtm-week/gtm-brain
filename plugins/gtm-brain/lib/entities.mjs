@@ -11,7 +11,7 @@ import { hasMemoryIndex } from './memory-index-store.mjs';
 import { readSchema, fieldsFor, requiredRelations, kindHash, US, brainKinds } from './schema.mjs';
 import { DEFAULT_KINDS, KIND_NAME, NOT_KINDS } from './kinds.mjs';
 import { pagePaths, isPagePath, linkFrom, layout, recordKindLayout, kindPagePath, isKindPagePath, isFlatPagePath, assetFolder, entitiesDir, historyDir, flatPagePath, flatKinds } from './layout.mjs';
-import { workPath, coverFile, monthFile, monthly, CONTEXTS_DIR } from './brain-paths.mjs';
+import { workPath, coverFile, monthFile, monthly, CONTEXTS_DIR, ENTITIES_OLD } from './brain-paths.mjs';
 import { understandsLayout } from './layout-version.mjs';
 import { writeKindIndexes } from './entity-index.mjs';
 import { MemoryIndex } from './memory-index.mjs';
@@ -750,7 +750,7 @@ function renderBrief(facts, brief, evidence, registry, scope, now = null, root =
   const all = new Map(facts.contexts.flatMap(c => c.memories).map(m => [m.id, m]));
   // links are relative to the page: ../contexts from a flat page, ../../contexts from a kind folder
   // layout 4: a note is in the file of its month, a topic's cover in memories/topics (lib/brain-paths.mjs)
-  const months = !!root && monthly(root), page = facts.entity.path || `${root ? entitiesDir(root) : "brain/entities"}/page.md`;
+  const months = !!root && monthly(root), page = facts.entity.path || `${root ? entitiesDir(root) : ENTITIES_OLD}/page.md`;
   const coverLink = slug => linkFrom(page, months ? coverFile(root, slug) : `${CONTEXTS_DIR}/${slug}/context.md`);
   const notesLink = m => linkFrom(page, months ? monthFile(m.at) : `${CONTEXTS_DIR}/${m.context}/memories.jsonl`);
   const citation = id => { const m = all.get(id); return link(`${m.context}, recorded ${lib.localDateTime(m.at).slice(0, 10)}, ${id}`, notesLink(m)); };
