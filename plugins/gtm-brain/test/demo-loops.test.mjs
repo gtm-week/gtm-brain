@@ -158,7 +158,7 @@ function fakeCodex() {
   writeFileSync(join(bin, "codex"), `#!${process.execPath}
 const fs = require("node:fs"), argv = process.argv.slice(2);
 let stdin = ""; process.stdin.on("data", d => { stdin += d; }); process.stdin.on("end", () => {
-  fs.appendFileSync(${JSON.stringify(log)}, JSON.stringify({ argv, stdin }) + "\\n");
+  fs.appendFileSync(${JSON.stringify(log)}, JSON.stringify({ argv, stdin, home: process.env.CODEX_HOME || null }) + "\\n");
   console.log(JSON.stringify({ type: "thread.started", thread_id: "thread-" + fs.readFileSync(${JSON.stringify(log)}, "utf8").split("\\n").filter(Boolean).length }));
   fs.writeFileSync(argv[argv.indexOf("-o") + 1], "Fernbrook Outdoor first, then Heron Home. Contact: Lea Hoffmann. ERP migration, call on 14 January, prospect. Posts: 'store pickup returns', 'reduce return rate retail'; customers say they drown after Black Friday. 1,240 visits, 3 demo requests. Next: peak season. Saved and drafted everything.");
 });
@@ -192,6 +192,8 @@ test("demo runner: an agent that only talks fails every step", { timeout: 180000
     // Codex filters an MCP server's environment: the proxy only sees what the env table passes
     assert.equal(config(t.argv, "mcp_servers.gtm_brain_eval.env.GTM_BRAIN_EVAL_ALLOW"), JSON.stringify("workflow"));
     assert.ok(config(t.argv, "mcp_servers.gtm_brain_eval.env.GTM_BRAIN_EVAL_PROFILE"), "the server keeps the scratch profile");
+    // codex exec records every folder it runs in as a trusted project in its config.toml: never the person's own
+    assert.ok(t.home && t.home.includes("gtm-demo-loops-") && t.home.endsWith("codex-home"), `codex runs on a scratch home beside the brain, not ${t.home}`);
   }
 });
 

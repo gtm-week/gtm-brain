@@ -291,7 +291,16 @@ async function main() {
   const pluginPath = join(artifacts, "plugin"); symlinkSync(P, pluginPath, "dir");
   // stub mode lets the model record that a tool returned data (mark_tool): the brain's tools list is part of the check
   const env = { ...process.env, CODEX_HOME: profile, GTM_BRAIN_EVAL_PROFILE: profile, PLUGIN_ROOT: P, GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_NO_WATCH: "1", GTM_BRAIN_EVAL_ALLOW: o.stub ? "workflow,mark_tool" : "workflow" };
-  const agentEnv = { ...env }; delete agentEnv.CODEX_HOME; if (process.env.GTM_BRAIN_CODEX_HOME) agentEnv.CODEX_HOME = process.env.GTM_BRAIN_CODEX_HOME;
+  // codex exec writes every folder it runs in into its config.toml as a trusted project, --ignore-user-config or not
+  // (15 Nov: eight demo brains landed in the person's ~/.codex/config.toml). It runs on a scratch home beside the
+  // brain that links only the person's sign-in.
+  const codexHome = process.env.GTM_BRAIN_CODEX_HOME || join(artifacts, "codex-home");
+  if (!process.env.GTM_BRAIN_CODEX_HOME) {
+    mkdirSync(codexHome, { recursive: true });
+    const auth = join(process.env.HOME || "", ".codex", "auth.json");
+    if (existsSync(auth)) symlinkSync(auth, join(codexHome, "auth.json"));
+  }
+  const agentEnv = { ...env, CODEX_HOME: codexHome };
   const stubLog = join(artifacts, "stub-calls.jsonl");
   // Codex filters the environment of an MCP server it starts: what the proxy and the server must see goes in its env table
   const serverEnv = Object.entries({ GTM_BRAIN_EVAL_PROFILE: profile, GTM_BRAIN_EVAL_ALLOW: env.GTM_BRAIN_EVAL_ALLOW, GTM_BRAIN_NO_WATCH: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_NO_OPEN: "1" }).filter(([, v]) => v)
