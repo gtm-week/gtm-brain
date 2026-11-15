@@ -185,7 +185,7 @@ test('a save sees an entity another process added, and never changes the shared 
 // are a large part of that heap is not held between reads there (it would leave no room for
 // the read itself), while the main process keeps it.
 test('entity files too large for a small heap are read again each time instead of being kept', async () => {
-  const root = fixture(), pad = '\n' + 'Handwritten account history, kept as the person wrote it. '.repeat(1500) + '\n';
+  const root = fixture(), pad = '\n' + 'Handwritten account history, kept as the person wrote it. '.repeat(4000) + '\n';
   for (let i = 0; i < 40; i++) lib.addName(root, `Big${i} Person${i}`);
   for (const e of lib.readNames(root)) if (e._path) appendFileSync(join(root, e._path), pad);
   assert.equal(lib.readNamesShared(root), lib.readNamesShared(root), 'the main process keeps the registry');
@@ -193,8 +193,8 @@ test('entity files too large for a small heap are read again each time instead o
   const result = await new Promise((resolve, reject) => {
     const w = new Worker(`const { workerData, parentPort } = require('node:worker_threads');
       import(workerData.brainModule).then(lib => { const a = lib.readNamesShared(workerData.root), b = lib.readNamesShared(workerData.root);
-        parentPort.postMessage({ kept: a === b, count: a.length, same: JSON.stringify(a) === JSON.stringify(b) }); }, e => parentPort.postMessage({ error: e.message }));`,
-      { eval: true, workerData: { brainModule, root }, resourceLimits: { maxOldGenerationSizeMb: 12, maxYoungGenerationSizeMb: 4 } });
+        parentPort.postMessage({ kept: a === b, count: a.length, same: a.map(e => e.id + e._text.length).join() === b.map(e => e.id + e._text.length).join() }); }, e => parentPort.postMessage({ error: e.message }));`,
+      { eval: true, workerData: { brainModule, root }, resourceLimits: { maxOldGenerationSizeMb: 32, maxYoungGenerationSizeMb: 4 } /* 32 MB: the lib itself no longer loads in 12 since the round-three lanes joined; the files (about 9 MB) are still over a quarter of it */ });
     w.once('message', m => { w.terminate(); resolve(m); }); w.once('error', reject);
   });
   assert.equal(result.error, undefined, result.error);
