@@ -25,8 +25,32 @@ test("the core is at most 15 short lines, plain hyphens only", () => {
   for (const line of lines) assert.ok(line.length <= 100, `long line: ${line}`);
   assert.doesNotMatch(core, /[\u2013\u2014]/);
   // the non-negotiables, in the words the rules already use
-  for (const re of [/remember/, /one memory per distinct\s+outcome/, /search it with\s+`query`/, /no status call first/, /as of .*days ago/, /approve_change/, /memories\.jsonl/, /Never invent/, /one or two sentences/])
+  for (const re of [/remember/, /one memory per distinct\s+outcome/, /search it with\s+`query`/, /as of .*days ago/, /approve_change/, /APPROVE and only the person's click/, /memories\.jsonl/, /a direct edit\s+is put back/, /Never invent/, /one or\s+two sentences/])
     assert.match(core, re);
+});
+
+// A manual run on 2026-11-15: 6 to 9 rounds a turn, a 39-item list worked through alone in 84 calls, web
+// searches for private people. Three of the six rules answer that, and the core did not get a seventh.
+test("six rules: fewest calls, a list to tidy one item at a time, nothing about a person from the web", () => {
+  const rules = core.split(/\n(?=\d+\. )/).map(r => r.replace(/\s+/g, " "));
+  assert.equal(rules.length, 6);
+  assert.deepEqual(rules.map(r => r.slice(0, 2)), ["1.", "2.", "3.", "4.", "5.", "6."]);
+  const one = re => { const hits = rules.filter(r => re.test(r)); assert.equal(hits.length, 1, `${re} in ${hits.length} rules`); return hits[0]; };
+  const calls = one(/Fewest calls/);
+  assert.match(calls, /the tool named for the job first/);
+  assert.match(calls, /several reads in one call/);
+  assert.match(calls, /no status, environment or rule-page read before a save, a read or a confirmed action/);
+  assert.match(one(/things to tidy/), /one item at a time with the person, never alone/);
+  const web = one(/on the web/);
+  assert.match(web, /Nothing about a person or company is looked up on the web unless the person asks for exactly that/);
+  assert.match(web, /what the notes do not say is unknown/);
+  // APPROVE and the protected files stay, in one rule
+  assert.match(one(/approve_change/), /Workplace \(`brain\/admin\.md`\).*Never edit that file, `brain\/ontology\.ossie\.json` or a `memories\.jsonl` directly/);
+  // no pronoun and no word that reads two ways in the rules every chat starts with: "Never edit it" did not say
+  // which of the form, the change or the file, and "state that changes" read as an order to state something
+  assert.doesNotMatch(rules.join(" "), /Never edit it\b|state that changes/);
+  assert.match(one(/as of .*days ago/), /what may have changed is checked in its tool before acting on it/);
+  assert.ok(Buffer.byteLength(core) <= 1200, `${Buffer.byteLength(core)} bytes: the core stays a screenful`);
 });
 
 test("the core is the first section of the template, once, generated from policies/core.md", () => {
@@ -39,7 +63,12 @@ test("the core is the first section of the template, once, generated from polici
   // every core line is said once: the rest of the file refers to it instead of repeating it
   for (const line of core.split("\n").map(l => l.replace(/^\s*(\d+\.)?\s*/, "")).filter(l => l.length > 30))
     assert.equal(count(template, line), 1, `repeated: ${line}`);
-  assert.match(template, /\(core 1\)/); assert.match(template, /core 4/);
+  assert.match(template, /\(core 1\)/); assert.match(template, /core 6; approve page/);
+  // the numbers the rulebook and the rule pages point at exist and mean what they say
+  const pages = ["answers", "approve", "interactions", "saving"].map(n => readFileSync(join(plugin, "policies/rules", `${n}.md`), "utf8")).join("\n");
+  for (const m of (template + pages).matchAll(/core (\d)(?: (?:to|and) (\d))?/g)) for (const n of [m[1], m[2]].filter(Boolean)) assert.ok(+n >= 1 && +n <= 6, `core ${n}`);
+  assert.match(pages, /the live check is core 2/); assert.match(pages, /Never invent \(rule 5, core 2\)/);
+  assert.match(pages, /`remember` tool \(core 6\)/); assert.doesNotMatch(pages, /core 4 and 5/);
   // the slim rulebook: at most 16 KB with a long company name filled in; the detail is in the rule pages
   const filled = Buffer.byteLength(template.replaceAll("{{COMPANY}}", "A Rather Long Company Name Holding International Sp. z o.o."));
   assert.ok(filled <= 16384, `${filled} bytes is over the 16 KB the slim rulebook allows`);
@@ -74,7 +103,49 @@ test("the server's instructions carry the core once, on either host", async () =
     assert.equal(count(head, core), 1, `${host || "codex"}: the core ends at character ${text.indexOf(core) + core.length}, past the 2048 a host keeps`);
     for (const must of [/first GTM Brain call, whatever it is/, /no separate status call/, /kept at once/, /keep_approved_file, in the same turn/])
       assert.match(head, must, `${host || "codex"}: ${must} is past the first 2048 characters`);
+    // the five common jobs, one line each, right after: no discovery round, no skill or rule page read first
+    const shapes = text.slice(text.indexOf("Call shapes for the common jobs"), text.indexOf("Files you create, edit, move or delete")).trimEnd().split("\n");
+    assert.equal(shapes.length, 6, "a lead line and five shapes");
+    assert.match(shapes[0], /Use them as written: no list_objects, describe_object, status or rule page first/);
+    // the read named for a question is the one the query tool's description opens with (memory-search.test.mjs
+    // holds that sentence), here and in the opening: two names for one job cost a round of choosing
+    assert.match(readFileSync(join(plugin, "server/server.mjs"), "utf8"), /query\.description = "To answer a question from the brain, call query with object answer and search/);
+    assert.match(head, /query answer with search for a question, remember for a save/);
+    assert.doesNotMatch(text.slice(0, text.indexOf("Questions: GTM Brain shows no question forms")), /query memories with search|object: "memories"/);
+    for (const [i, re] of [/^- Answer from the brain: query \{object: "answer", search: "<the question as asked>"\}$/,/^- Save a note: remember \{content, people: \[names\], sources\}.*answer_question/,
+      /^- Read several people or companies in one call: query \{object: "entities", filters: \{name: \["A", "B"\]\}\} \(or filters\.id\)/,
+      /^- Housekeeping, only when the person asks for it: query \{object: "housekeeping"\}, then the first item only, asked with ask_person/,
+      /^- Merge two entities the person confirmed are one: merge_entities \{source, target, confirmed: true\}/].entries()) assert.match(shapes[i + 1], re);
+    for (const line of shapes) assert.ok(line.length <= 160, `long: ${line}`);
+    // Codex keeps the whole text; on Claude Code the shapes start right at the 2048 cut, after the core and the
+    // approved-file rule, and before everything else the instructions say
+    assert.ok(text.indexOf("Call shapes") > text.indexOf("keep_approved_file, in the same turn") && text.indexOf("Call shapes") < 2200, `the shapes start at ${text.indexOf("Call shapes")}`);
+    assert.ok(text.indexOf("Call shapes") < text.indexOf("Questions: GTM Brain shows no question forms"), "before the question line and the catalog");
+    assert.match(text, /Never read a skill file, a references file or a rule page in the middle of a save, a read or a confirmed action/);
+    assert.doesNotMatch(text, /query \(object rules, search: a topic\) returns one rule page/, "no invitation to fetch rule pages");
+    assert.doesNotMatch(text, /[\u2013\u2014]/);
   }
+});
+
+test("the skills do not send the model to a file before a save, a read or a question", () => {
+  const skill = name => readFileSync(join(plugin, "skills", name, "SKILL.md"), "utf8");
+  const use = skill("gtm-brain-use-brain"), todo = skill("gtm-brain-todo");
+  assert.doesNotMatch(use, /Read \[memory recording\]\(references\/remember\.md\) before/);
+  assert.doesNotMatch(use, /Before the first question, read/);
+  assert.doesNotMatch(use, /recommendations, read\s+\[operational evidence\]/);
+  assert.match(use, /is one\s+`remember` call from the tool's own description, with no file read first/);
+  assert.match(use, /\[Memory recording\]\(references\/remember\.md\) is for the rare cases/);
+  assert.doesNotMatch(todo, /^Read \[operational evidence\]/m);
+  assert.match(todo, /Not for housekeeping[\s\S]*`query` with object `housekeeping`, then its first item only/);
+});
+
+test("a brain on the rules before this core (0.35.0 pre-release) is refreshed too", t => {
+  const { root, run } = brain(t, "0.34.5-next.1");
+  const result = run();
+  assert.equal(result.status, 0, result.stderr);
+  const now = readFileSync(join(root, "AGENTS.md"), "utf8");
+  assert.equal(now, template.replaceAll("{{COMPANY}}", "Core Co"));
+  assert.match(now, /4\. A list of things to tidy is taken one item at a time/);
 });
 
 function brain(t, version) {

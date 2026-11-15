@@ -99,7 +99,8 @@ recording a note from refreshing its summary. Report failures or partial complet
 Do not paste file diffs, raw records, file paths or commit output unless explicitly requested.
 The host app may still expose its own review UI; these instructions do not disable it.
 
-Before the first question, read [question handling](../gtm-brain-start/references/questions.md) once; a plain answer needs no reading.
+A question needs no reading first: the chat already holds the question rule (the server's
+instructions), and [question handling](../gtm-brain-start/references/questions.md) is only for a grouped form.
 This applies after onboarding too: every question in everyday work (which context, same as X?,
 is this a company?, what is the answer?, which direction or photo?) is asked
 with two or three concrete options, recommended first.
@@ -144,11 +145,11 @@ changes refresh it, and do not open another dashboard tab. Use the saved persona
 
 ## Working context and memory
 
-For operational status, priorities, follow-ups or recommendations, read
-[operational evidence](references/operational-evidence.md). Ground the answer in specific
+For operational status, priorities, follow-ups or recommendations, ground the answer in specific
 memories and relevant live MCP results: name the work, the evidence, and the next action.
 Check changeable external state before presenting an old next step as current. If access is
-missing, date the recorded facts and say what remains unverified.
+missing, date the recorded facts and say what remains unverified. One answer needs no file read
+first; [operational evidence](references/operational-evidence.md) is for a full review.
 
 For "where do we stand on <topic>" about one known topic, call `load_context` for it: one call
 gives the summary and the notes, and when the summary is behind, the `as_of` to write it once.
@@ -160,10 +161,12 @@ memory counts and summary-update status are not a substitute for the company's a
 For the default contexts, follow [starting contexts](../gtm-brain-start/references/contexts.md).
 Our company (`company`) describes the organization that owns this brain. File external
 company findings by topic, linking their names with `remember.companies`.
-Before company work, use the loaded context or read [loading](references/load.md) to select
-the relevant context. Read [memory recording](references/remember.md) before an explicit note,
-correction, withdrawal, or answer to a recorded question, and when work is producing findings
+For company work, use the loaded context or the one whose purpose fits; [loading](references/load.md)
+is only for switching what is loaded. An explicit note, a correction (`supersedes`), a withdrawal
+(`retracts`) or an answer to a recorded question (`retracts` = the question's id) is one
+`remember` call from the tool's own description, with no file read first, and so is a finding
 worth keeping: a decision, a commitment, a change to a customer or deal.
+[Memory recording](references/remember.md) is for the rare cases: a batch, a move between contexts.
 
 A quick lookup is not company work that needs a context or a memory: "what was the last
 message in #general", "what is on my calendar", "who emailed me today". Answer it with the

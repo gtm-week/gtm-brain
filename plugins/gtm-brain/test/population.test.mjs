@@ -21,6 +21,7 @@ delete env.GTM_BRAIN_RUN;
 const lib = await import(`${P}/lib/brain.mjs`);
 const pop = await import(`${P}/lib/population.mjs`);
 const health = await import(`${P}/lib/health-line.mjs`);
+const { housekeepingText } = await import(`${P}/lib/housekeeping.mjs`);
 
 function brain(t) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "gtm-pop-")));
@@ -117,7 +118,14 @@ test("the health line carries the population only when a number is out of range,
   assert.doesNotMatch(health.healthLine(root, { coverage: [], policies: [], meetings: [] }), /population:/, "in range: nothing about the population");
   write(root, "beta", Array.from({ length: 12 }, (_, i) => rec("beta", ago(0.2 + i / 100), "The same sentence saved again.")));
   const line = health.healthLine(root, { coverage: [], policies: [], meetings: [] });
-  assert.match(line, /population: [^|]*duplicates \(\d+ notes with the same content as another\) \(query population\)/);
+  // things to tidy are never counted at the chat start: a count there was taken as a job and worked through unasked
+  assert.doesNotMatch(line, /population:|duplicates|\d+ notes with the same content/);
+  assert.match(line, /housekeeping: there are things to tidy, when asked for/);
+  assert.match(line, /Housekeeping starts only when the person asks for it: query \(object housekeeping\) for the names and files to settle, query \(object population\) for the numbers, then one item at a time with them; never start on it or count it out unasked\./);
+  // the hint comes from the population numbers (copies here), which the housekeeping view does not list: the
+  // line names the read that has them, so "there are things to tidy" is never answered with "nothing to settle"
+  assert.match(housekeepingText(root), /Housekeeping: nothing to settle/);
+  assert.match(pop.outOfRange(pop.population(root, { now })).join(), /duplicates \(\d+ notes with the same content as another\)/, "the number stays in the view");
   // the cache: same stamp and hour gives the cached numbers; a new note recomputes
   const cached = JSON.parse(readFileSync(join(root, "work/population.json"), "utf8"));
   assert.equal(cached.population.notes, pop.population(root, { now }).notes);
