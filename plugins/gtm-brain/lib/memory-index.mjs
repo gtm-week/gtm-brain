@@ -1,4 +1,5 @@
 // Disposable disk-backed memory projection. The MCP host uses this API in a worker.
+import { foldLatin } from './fold.mjs';
 import { sourceMembers } from './pointers.mjs';
 import { openSync, closeSync, readSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -18,9 +19,9 @@ import { hasMemoryIndex, indexPath, openDatabase, cacheLock, readerLock, retireC
 export { hasMemoryIndex };
 export const MAX_RECORD_BYTES = 4 * 1024 * 1024;
 export const MAX_RESULT_BYTES = 2 * 1024 * 1024;
-export const MEMORY_INDEX_VERSION = 9;   // 5: source pointers as members (field source); 6: entity rows with relation to us and SCHEMA.md fields; 7: meeting ids as identity refs; 8: stemmed keywords, word list for typos; 9: relations, relation events and entity events (lib/relation-log.mjs)
+export const MEMORY_INDEX_VERSION = 10;   // 5: source pointers as members (field source); 6: entity rows with relation to us and SCHEMA.md fields; 7: meeting ids as identity refs; 8: stemmed keywords, word list for typos; 9: relations, relation events and entity events (lib/relation-log.mjs)
 const VERSION = MEMORY_INDEX_VERSION;
-const normalizeMention = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const normalizeMention = s => foldLatin(s).replace(/[^a-z0-9]+/g, ' ').trim();
 function hashFile(path, size) {
   if (!size) return createHash('sha256').digest('hex');
   const fd = openSync(path, 'r'), hash = createHash('sha256'), buffer = Buffer.alloc(65536);
@@ -85,6 +86,7 @@ const SCHEMA = `
  CREATE TABLE IF NOT EXISTS keyword_rows(memory INTEGER PRIMARY KEY REFERENCES memories(rowid) ON DELETE CASCADE);
  CREATE VIRTUAL TABLE IF NOT EXISTS identity_text USING fts5(mention_text,content='memories',content_rowid='rowid');
  CREATE VIRTUAL TABLE IF NOT EXISTS identity_vocab USING fts5vocab(identity_text,'row');
+ CREATE VIRTUAL TABLE IF NOT EXISTS keywords_vocab USING fts5vocab(keywords,'row');
  CREATE TABLE IF NOT EXISTS relinks(memory INTEGER PRIMARY KEY REFERENCES memories(rowid) ON DELETE CASCADE);
  CREATE TABLE IF NOT EXISTS entity_versions(id TEXT PRIMARY KEY,version INTEGER NOT NULL);
  CREATE TABLE IF NOT EXISTS entity_rows(id TEXT PRIMARY KEY,name TEXT,kind TEXT,subtype TEXT,status TEXT,relation_to_us TEXT,short_id TEXT,path TEXT,last_mentioned TEXT,raw TEXT);
