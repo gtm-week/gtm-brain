@@ -230,7 +230,9 @@ test('rewriting every entity page costs the same per page as the registry grows'
     return (performance.now() - started) / count;
   };
   const small = perPage(100), large = perPage(800);
-  assert.ok(large < small * 1.8 + 0.2, `100 entities ${small.toFixed(2)} ms a page, 800 entities ${large.toFixed(2)} ms a page`);
+  // 8 times the entities: a per-page cost that grew with the registry would be near 8x. 3x leaves room for a shared CI
+  // runner (failed once at 1.8x on ubuntu, Node 22.16, 2026-11-15) and still fails on quadratic work.
+  assert.ok(large < small * 3 + 0.3, `100 entities ${small.toFixed(2)} ms a page, 800 entities ${large.toFixed(2)} ms a page`);
 });
 
 // Every save checks each entity page against what it was built from. That check looked up the
