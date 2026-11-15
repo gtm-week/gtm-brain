@@ -10,7 +10,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-const { buildBrain, STEPS } = await import("./live/demo-loops.mjs");
+const { buildBrain, STEPS, STUB_STEPS, STUB_SERVER, parseArgs } = await import("./live/demo-loops.mjs");
 const lib = await import("../lib/brain.mjs");
 const { readDocument } = await import("../lib/documents.mjs");
 const { customerOverview } = await import("../lib/customers.mjs");
@@ -97,9 +97,58 @@ test("demo checks: reading means the seeded text arrived, a link means that pers
   assert.match(step("c5-recall").check(evidence({ reply: `${produced} Next: the peak season post.` })), /from the brain/);
 });
 
+const stubStep = id => STUB_STEPS.find(s => s.id === id);
+const fromTool = (content, extra = {}) => ({ content, kind: "note", source: [{ kind: "gtm-test-tools", ref: "companies/fernbrook-outdoor/enrichment" }], ...extra });
+const marked = { "gtm_test_tools": { tool: "gtm_test_tools", status: "not checked", test: "ok", note: "enrichment returned Fernbrook Outdoor" } };
+
+test("demo stub mode: the told results are gone from the prompts, the steps stay in order", () => {
+  assert.equal(new Set(STUB_STEPS.map(s => s.id)).size, STUB_STEPS.length);
+  assert.deepEqual(STUB_STEPS.filter(s => !s.stub).map(s => s.id), STEPS.filter(s => !stubStep(s.id).stub).map(s => s.id), "a step without a tool is the told step");
+  assert.equal(STUB_STEPS[0].id, "o0-search", "the outreach loop starts with the company search");
+  for (const s of STUB_STEPS.filter(s => s.stub)) {
+    assert.doesNotMatch(s.say, /Clay|Zynt|Surfer|85 stores|1,400|Lea Hoffmann|1,900|880|320/, `${s.id}: nothing the tool returns is told`);
+    assert.match(s.say, /tool/, `${s.id}: names the tool to call`);
+    assert.doesNotMatch(s.say + s.shows, /[\u2013\u2014]/);
+  }
+  assert.doesNotMatch(stubStep("o3-draft").say, /Zynt/);
+  for (const loop of ["outreach", "content"]) assert.ok(STUB_STEPS.filter(s => s.loop === loop).at(-1).fresh);
+  assert.equal(parseArgs(["--fail", "empty"]).error, "--fail needs --stub");
+  assert.match(parseArgs(["--stub", "--fail", "teapot"]).error, /unknown failure/);
+  assert.match(parseArgs(["--stub", "--step", "o9"]).error, /unknown step/);
+  assert.equal(parseArgs([]).effort, process.env.GTM_BRAIN_EVAL_EFFORT || "medium");
+});
+
+test("demo stub checks: the tool was called with the brain's criteria, its data saved with its source, listed as used, nothing sent", () => {
+  const enrich = { tool: "company_enrich", arguments: { company: "Fernbrook Outdoor" } };
+  const lea = [{ name: "Lea Hoffmann", kind: "person", emails: ["lea.hoffmann@fernbrook-outdoor.example"] }];
+  const good = evidence({ stub: [enrich], toolsList: marked, names: lea, added: [fromTool("Fernbrook Outdoor: 85 stores in Germany and Austria; Head of Operations Lea Hoffmann.")] });
+  assert.equal(stubStep("o2-enrich").check(good), true);
+  assert.match(stubStep("o2-enrich").check({ ...good, stub: [] }), /company_enrich was not called/);
+  assert.match(stubStep("o2-enrich").check({ ...good, toolsList: {} }), /tools list/);
+  assert.match(stubStep("o2-enrich").check({ ...good, added: [{ ...good.added[0], source: [{ kind: "user", ref: "marta" }] }] }), /no note from the tool/);
+  assert.match(stubStep("o2-enrich").check({ ...good, commands: ["curl https://api.example.test"] }), /network|send/);
+  const search = icp => evidence({ saw: re => re.test("## Not a fit\n\nPharmacy chains"), toolsList: marked, stub: [{ tool: "company_search", arguments: icp }],
+    added: [fromTool("Prospect: Fernbrook Outdoor, 85 stores."), fromTool("Prospect: Heron Home, 46 stores in Poland.")] });
+  assert.equal(stubStep("o0-search").check(search({ industries: ["outdoor equipment", "home goods"], countries: ["Germany", "Austria", "Poland"], stores_min: 20, stores_max: 200 })), true);
+  assert.match(stubStep("o0-search").check(search({ industries: ["retail"] })), /criteria are not the ICP/);
+  const signals = companies => evidence({ reply: "Fernbrook Outdoor first, then Juniper Haus.", toolsList: marked, stub: [{ tool: "buying_signals", arguments: { companies } }], added: [fromTool("Fernbrook Outdoor posted a Head of Returns job on 10 November.")] });
+  assert.equal(stubStep("o1-pick").check(signals(["Fernbrook Outdoor", "Heron Home", "Juniper Haus"])), true);
+  assert.match(stubStep("o1-pick").check(signals(["Fernbrook Outdoor", "Umber Pharma"])), /prospects saved in the brain/);
+});
+
+test("demo stub checks: a played failure is told to the person and nothing invented is saved", () => {
+  const expired = evidence({ stub: [{ tool: "company_enrich", arguments: { company: "Fernbrook Outdoor" }, isError: true, fail: "expired_key" }], reply: "The enrichment tool's API key expired on 1 November; nothing was saved." });
+  assert.equal(stubStep("o2-enrich").fail(expired), true);
+  assert.match(stubStep("o2-enrich").fail({ ...expired, added: [{ content: "Fernbrook Outdoor: Lea Hoffmann, Head of Operations." }] }), /did not return/);
+  assert.match(stubStep("o2-enrich").fail({ ...expired, reply: "Saved." }), /does not tell/);
+  const empty = evidence({ stub: [{ tool: "keyword_research", arguments: { seeds: ["store pickup returns"] }, fail: "empty" }], reply: "The keyword tool returned no results for our pillars, so I have no search numbers." });
+  assert.equal(stubStep("c1-topics").fail(empty), true);
+  assert.match(stubStep("c1-topics").fail({ ...empty, added: [{ content: "Keywords: store pickup returns, 320 monthly searches." }] }), /did not return/);
+});
+
 // A stand-in for codex that answers every turn with the right words and does nothing: no tool call, no
 // file, no note. The runner must fail every step, exit 1, resume one session per loop and start the last turn fresh.
-test("demo runner: an agent that only talks fails every step", { timeout: 180000 }, () => {
+function fakeCodex() {
   const dir = mkdtempSync(join(tmpdir(), "gtm-demo-run-")), bin = join(dir, "bin"), log = join(dir, "argv.jsonl");
   mkdirSync(bin);
   writeFileSync(join(bin, "codex"), `#!${process.execPath}
@@ -113,18 +162,53 @@ let stdin = ""; process.stdin.on("data", d => { stdin += d; }); process.stdin.on
   chmodSync(join(bin, "codex"), 0o755);
   const script = fileURLToPath(new URL("./live/demo-loops.mjs", import.meta.url));
   const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, GTM_BRAIN_EVAL_DIR: dir };
-  const bad = spawnSync(process.execPath, [script, "outrech"], { env, encoding: "utf8" });
-  assert.equal(bad.status, 2, "a misspelt loop is refused, not reported as 0 of 0");
-  const run = spawnSync(process.execPath, [script], { env, encoding: "utf8" });
+  const run = args => spawnSync(process.execPath, [script, ...args], { env, encoding: "utf8" });
+  const report = () => JSON.parse(readFileSync(join(dir, readdirSync(dir).find(n => n.startsWith("gtm-demo-loops-")), "report.json"), "utf8"));
+  const turns = () => readFileSync(log, "utf8").split("\n").filter(Boolean).map(l => JSON.parse(l));
+  return { run, report, turns };
+}
+const config = (argv, key) => argv.find((a, i) => argv[i - 1] === "-c" && a.startsWith(`${key}=`))?.slice(key.length + 1);
+
+test("demo runner: an agent that only talks fails every step", { timeout: 180000 }, () => {
+  const fake = fakeCodex();
+  assert.equal(fake.run(["outrech"]).status, 2, "a misspelt loop is refused, not reported as 0 of 0");
+  const run = fake.run([]);
   assert.equal(run.status, 1, run.stdout + run.stderr);
-  const report = JSON.parse(readFileSync(join(dir, readdirSync(dir).find(n => n.startsWith("gtm-demo-loops-")), "report.json"), "utf8"));
+  const report = fake.report();
   assert.equal(report.results.length, STEPS.length);
   assert.deepEqual(report.results.filter(r => r.pass).map(r => r.id), [], "no step passes on the reply alone");
-  const turns = readFileSync(log, "utf8").split("\n").filter(Boolean).map(l => JSON.parse(l));
+  const turns = fake.turns();
   assert.deepEqual(turns.map(t => t.argv.includes("resume")), STEPS.map((s, i) => !s.fresh && STEPS[i - 1]?.loop === s.loop), "turns of a loop resume its session; the first and the last are new chats");
   STEPS.forEach((s, i) => { if (turns[i].argv.includes("resume")) assert.ok(turns[i].argv.includes(`thread-${STEPS.findIndex(x => x.loop === s.loop) + 1}`), `${s.id} resumes the session its loop started`); assert.ok(turns[i].stdin.endsWith(s.say), s.id); });
   assert.deepEqual(report.results.filter(r => /codex/.test(r.why)).map(r => r.id), [], "every failure comes from a check, not from the stand-in");
   for (const t of turns) assert.ok(!t.argv.includes("resume") === /synthetic GTM Brain company brain/.test(t.stdin), "a new chat gets the preamble, a resumed turn only the sentence");
+  for (const t of turns) {
+    assert.equal(config(t.argv, `mcp_servers.${STUB_SERVER}.command`), undefined, "told mode declares no stub tools");
+    assert.equal(config(t.argv, "model_reasoning_effort"), JSON.stringify(process.env.GTM_BRAIN_EVAL_EFFORT || "medium"));
+    // Codex filters an MCP server's environment: the proxy only sees what the env table passes
+    assert.equal(config(t.argv, "mcp_servers.gtm_brain_eval.env.GTM_BRAIN_EVAL_ALLOW"), JSON.stringify("workflow"));
+    assert.ok(config(t.argv, "mcp_servers.gtm_brain_eval.env.GTM_BRAIN_EVAL_PROFILE"), "the server keeps the scratch profile");
+  }
+});
+
+test("demo runner: stub mode declares the stub server beside GTM Brain and passes the failure to it", { timeout: 180000 }, () => {
+  const fake = fakeCodex();
+  const run = fake.run(["--stub", "--step", "o2-enrich,c1-topics", "--fail", "expired_key"]);
+  assert.equal(run.status, 1, run.stdout + run.stderr);
+  const report = fake.report(), turns = fake.turns();
+  assert.equal(report.mode, "stub"); assert.equal(report.fail, "expired_key");
+  assert.deepEqual(report.results.map(r => r.id), ["o2-enrich", "c1-topics"]);
+  for (const r of report.results) { assert.match(r.why, /was not called/, "judged by the failure check"); assert.equal(r.stub_calls, 0); assert.equal(r.brain_calls, 0); }
+  assert.equal(turns.length, 2);
+  for (const [i, t] of turns.entries()) {
+    assert.ok(!t.argv.includes("resume"), "a step run alone is a new chat");
+    assert.equal(config(t.argv, `mcp_servers.${STUB_SERVER}.command`), JSON.stringify(process.execPath));
+    const args = JSON.parse(config(t.argv, `mcp_servers.${STUB_SERVER}.args`));
+    assert.match(args[0], /test\/live\/stub-gtm-tools\.mjs$/); assert.deepEqual(args.slice(-2), ["--fail", "expired_key"]); assert.ok(args.includes("--log"));
+    assert.equal(config(t.argv, "mcp_servers.gtm_brain_eval.env.GTM_BRAIN_EVAL_ALLOW"), JSON.stringify("workflow,mark_tool"), "the model can record that a tool returned data");
+    assert.ok(t.stdin.endsWith(stubStep(report.results[i].id).say));
+    assert.match(t.stdin, new RegExp(`${STUB_SERVER} tools`)); assert.doesNotMatch(t.stdin, /Clay|Surfer/, "the preamble tells no results");
+  }
 });
 
 test("presenter text: GUIDE.md carries the sentences the live run checks, word for word, within a page", () => {
