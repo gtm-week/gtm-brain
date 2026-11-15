@@ -29,9 +29,17 @@ export function checkSchema(schema, path = "schema") {
   return schema;
 }
 
+// A small object's whole shape, for a refusal: the model fixes every field in one more call instead of one per
+// call (demo loops, 2026-11-15: five refusals for one meeting participant). A wide object is left out.
+const shapeOf = schema => {
+  const props = Object.entries(schema.properties || {});
+  if (schema.type !== "object" || !props.length || props.length > 8) return "";
+  return ` (expected {${props.map(([k, c]) => `${k}${(schema.required || []).includes(k) ? "" : "?"}${c.enum ? `: ${c.enum.join("|")}` : ""}`).join(", ")}})`;
+};
+
 export function validateValue(schema, value, path = "arguments") {
   const matches = type => type === "object" ? object(value) : type === "array" ? Array.isArray(value) : type === "null" ? value === null : type === "integer" ? Number.isInteger(value) : type === "number" ? typeof value === "number" && Number.isFinite(value) : typeof value === type;
-  if (schema.type && !matches(schema.type)) return `${path} must be ${schema.type}`;
+  if (schema.type && !matches(schema.type)) return `${path} must be ${schema.type}${shapeOf(schema)}`;
   if (schema.enum && !schema.enum.some(v => isDeepStrictEqual(v, value))) return `${path} must be one of ${JSON.stringify(schema.enum)}`;
   for (const key of ["anyOf", "oneOf"]) if (schema[key]) {
     const errors = schema[key].map(s => validateValue(s, value, path));
@@ -39,11 +47,11 @@ export function validateValue(schema, value, path = "arguments") {
     if (key === "anyOf" ? count === 0 : count !== 1) return `${path} must match ${key === "anyOf" ? "at least one" : "exactly one"} input shape (${errors.filter(Boolean).join("; ")})`;
   }
   if (object(value)) {
-    for (const key of schema.required || []) if (!Object.hasOwn(value, key)) return `${path} needs ${key}`;
+    for (const key of schema.required || []) if (!Object.hasOwn(value, key)) return `${path} needs ${key}${shapeOf(schema)}`;
     for (const [key, v] of Object.entries(value)) {
       let child;
       if (Object.hasOwn(schema.properties || {}, key)) child = schema.properties[key];
-      else if (schema.additionalProperties === false) return `${path}.${key} is not allowed`;
+      else if (schema.additionalProperties === false) return `${path}.${key} is not allowed${shapeOf(schema)}`;
       else if (object(schema.additionalProperties)) child = schema.additionalProperties;
       if (child) { const error = validateValue(child, v, `${path}.${key}`); if (error) return error; }
     }
