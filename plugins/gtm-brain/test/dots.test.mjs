@@ -230,7 +230,7 @@ test("the rulebook: documents only through the document tool, a not filled one i
   assert.match(text, /Its content is never also saved as a note/);
   assert.match(text, /shown `\[not filled\]`, do the work, then end the reply with one line/);
   assert.match(text, /"How we sound, in three words" stays empty unless the person said the three\s+words/);
-  assert.match(text, /unless the person already gave it \("Northwind \(northwind\.com\)"\): then that is\s+its website, no question/);
+  assert.match(text, /Do not ask for its\s+website on a save\. When the person gives it \("Northwind \(northwind\.com\)"\), that is its website/);
 });
 
 test("the rulebook: another company's brand rule goes to partner-brands.md, not our design system (G1; Maciej, 2026-11-13)", () => {

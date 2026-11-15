@@ -605,7 +605,8 @@ test("MCP capture preserves direct links through memory storage and the rendered
   assert.deepEqual(lib.readMemories(root,"icp").find(m=>m.content==="Object source capture verified.").source.filter(s=>s.kind!=="codex"),
     [{kind:"gmail",account:"sales@fixture.test",ref:"thread-77"},{kind:"hubspot",account:"123456",ref:"0-1/42",url:"https://app.hubspot.com/contacts/123456/record/0-1/42"}]);
   assert.match((await call("query",{brain:root,object:"reference",search:"gmail:sales@fixture.test/thread-77"})).text,/Notes citing it \(1\)[\s\S]*Object source capture verified/);
-  for(const sources of [[{kind:"gmail",ref:"t",extra:"x"}],[{kind:"gmail"}],[{kind:"gmail",ref:"t",url:"javascript:alert(1)"}]]){
+  // a key the format does not take is left out of a note's source since 0.35.0 (it cost a save five calls); a missing ref and a script link are still refused
+  for(const sources of [[{kind:"gmail"}],[{kind:"gmail",ref:"t",url:"javascript:alert(1)"}]]){
     const refused=await call("remember",{brain:root,by:"marta",context:"icp",content:"Must not be saved.",sources}).catch(e=>({isError:true,text:String(e)}));
     assert.ok(refused.isError,JSON.stringify(sources));
   }

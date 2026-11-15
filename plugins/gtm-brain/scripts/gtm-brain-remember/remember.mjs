@@ -71,6 +71,16 @@ const loaded = lib.readLoaded(root, project);
 // The chat this note came from is a source too: codex:<thread id> or claude:<session id>, from
 // work/session.json (the chat start writes it with its host). A separate run (GTM_BRAIN_RUN: the
 // background summary run, a dashboard job, a scheduled run) is nobody's conversation, so it attaches nothing.
+// A note's source object with keys the format does not take (text, title, id, name) is cleaned, not refused: one
+// save cost five calls on them (live benchmark, 2026-11-15). One of them stands in for a missing ref. Only here:
+// lib.parseSources stays strict for every other caller (interact records a business action and refuses on it).
+const cleanSource = v => {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return v;
+  const out = {}; for (const k of ["kind", "account", "ref", "url"]) if (v[k] !== undefined && v[k] !== null) out[k] = v[k];
+  if (typeof out.ref !== "string" || !out.ref.trim()) { const stand = ["id", "title", "name", "text"].map(k => v[k]).find(x => typeof x === "string" && x.trim()); if (stand) out.ref = stand.trim().slice(0, 200); }
+  return out;
+};
+for (const e of entries || []) if (e && e.sources !== undefined && e.sources !== null) e.sources = Array.isArray(e.sources) ? e.sources.map(cleanSource) : cleanSource(e.sources);
 const session = process.env.GTM_BRAIN_RUN ? null : lib.readSession(root, project);
 const chat = session?.session_id || null, chatKind = session?.host || "codex";
 const authors = list(opt.by).map(w => { const h = lib.teamHandle(root, w); if (!h) die(`"${w}" is not in admin.md team`); return h; });
