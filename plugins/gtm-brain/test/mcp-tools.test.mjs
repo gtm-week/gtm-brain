@@ -67,3 +67,22 @@ test("a tool read through its API is on the page once a read test and a note bac
   mark("fail", "401 key expired"); f.check();
   assert.equal(f.state().zynt.test, "fail", "an expired key stays visible as failed, never connected");
 });
+
+// A tool the brain has no plugin, MCP url or read test for (a local MCP server, the demo's stub tools): a note
+// that names it in tools and cites a record of its own kind came from it, so the tools list shows it as used.
+// A note the person told about it (source user) does not, and a failed read test stays failed.
+test("a note that came from a tool with no plugin puts it on the tools list as used; a told one does not", t => {
+  const f = brain(t, ["HubSpot"]);
+  const note = (content, source, tools) => lib.appendMemory(f.root, "icp", { authors: ["ann-lee"], content, at: "2026-11-15T10:00:00Z", source, tools });
+  note("Clay says Fernbrook Outdoor has 85 stores.", [{ kind: "user", ref: "ann-lee" }], ["clay"]);
+  f.check();
+  assert.equal(f.state().clay, undefined, "told by the person: not a read of the tool");
+  note("Fernbrook Outdoor: 85 stores, Head of Operations Lea Hoffmann.", [{ kind: "gtm-test-tools", ref: "companies/fernbrook-outdoor" }], ["gtm_test_tools.company_enrich"]);
+  const out = f.check(), s = Object.values(f.state()).find(x => x && x.tool === "gtm_test_tools");
+  assert.ok(s, JSON.stringify(f.state()));
+  assert.equal(s.used, "a note came from it"); assert.equal(s.test ?? null, null, "not a read test");
+  assert.match(out, /used in this brain, on the dashboard, not in admin\.md tools: gtm_test_tools \(a note came from it\)/);
+  spawnSync(process.execPath, [connect, f.root, "--mark", "gtm_test_tools", "fail", "401 key expired"], { cwd: f.root, env: f.env, encoding: "utf8" });
+  f.check();
+  assert.equal(Object.values(f.state()).find(x => x && x.tool === "gtm_test_tools").test, "fail", "a failed read stays visible as failed");
+});

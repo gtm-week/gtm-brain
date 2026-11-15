@@ -20,7 +20,7 @@
 // A step that fails because of a product gap carries known_gap, the way test/e2e/e2e.mjs marks them;
 // the run exits 1 only on a plain failure. The brain and every trace are kept for inspection.
 // --brain-only builds the seeded brain, prints its path and stops (the presenter's starting point).
-import { execFileSync, spawn } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -325,6 +325,9 @@ async function main() {
       const done = ev.filter(e => e.type === "item.completed" && e.item?.type === "command_execution");
       const commands = done.map(e => String(e.item.command || ""));
       const records = readJSONL(trace).slice(before.trace), calls = records.filter(r => r.kind === "call"), stub = readJSONL(stubLog).slice(before.stub);
+      // a save from a tool the tools list does not know starts a tools check in the background; the eval server runs
+      // without committing, which skips it (remember.mjs), so the harness runs the same check before reading the list
+      if (o.stub && stub.length) spawnSync(process.execPath, [`${P}/scripts/gtm-brain-connect/connect.mjs`, root, "--check"], { cwd: root, env: { ...env, CODEX_HOME: profile, GTM_BRAIN_CODEX_TIMEOUT: "20000" }, stdio: "ignore", timeout: 60000 });
       let toolsList = {}; try { toolsList = JSON.parse(readFileSync(join(root, "work", "tools.json"), "utf8")); } catch {}
       const after = snapshot(root), files = [...after].filter(([p, h]) => before.files.get(p) !== h).map(([p]) => ({ path: p, text: readFileSync(join(root, p), "utf8") }));
       const added = lib.listContexts(root).flatMap(c => c.memories).filter(m => !before.notes.has(m.id));
