@@ -165,6 +165,21 @@ show as "not measured": they need a capture pass that is not built. The same lin
 whose last sync is older than its window (7 days, or the `window_days` its checkpoint carries):
 each source keeps its own checkpoint in `work/sync.json`, by kind and account.
 
+## Workflows
+
+A skill is one sitting of work; a workflow (`workflows/<name>.md`) is skills in sequence with a gate
+between steps. Its header says its status (draft, active, paused), its trigger (manual, a schedule
+such as `every Monday 09:00`, or a save: `note about organization`, `link works_at created`,
+`field person.role changed`, `field organization.industry missing for 30 days`) and what it reads
+and writes. Each step may name a skill and ends on a milestone the brain can see (a note tagged
+x, a link created, a field filled, a document written); that note starts the next step, and the
+chain of notes is the run's only state. An active workflow whose trigger fired is offered once at
+the chat start and starts only on your yes; the first note of the run marks the event taken, for
+teammates too. Rules bind every step. Limits: 3 active runs per workflow, 5 automatic steps a run
+a day, chains stop at depth 3, a workflow's own notes never start it; `workflows: off` in admin.md
+turns them all off. A SCHEMA.md change that removes what an active workflow names holds it until
+the header or the schema is fixed. `query workflows` shows each one, its runs and what they wait for.
+
 ## Changing how it works
 
 | To change | Do this |
@@ -176,7 +191,8 @@ each source keeps its own checkpoint in `work/sync.json`, by kind and account.
 | What the brain keeps (fields, subtypes, relationship types) | `/gtm-brain-schema`, or edit `SCHEMA.md`; a brief's fields are rewritten with its overview, when someone asks about it |
 | How Codex works in a context | "change the rule of <context> to ..." |
 | A rule the work must follow (tone of voice, pricing, ICP) | write it as a document: `<name>.md` at the top, then "add <name>.md as a document" |
-| A recurring process with steps | "start the outbound workflow", or describe a new one; see `workflows/` |
+| A recurring process with steps | "start the outbound workflow", or describe a new one; see `workflows/` and "Workflows" above |
+| When a workflow starts by itself | its header in `workflows/<name>.md` (trigger: a schedule or a save); "check the workflow", then "switch it on" |
 | A new skill for your team | "make a skill that ..." (gtm-brain-skill) |
 | An action your own tools run (a CRM write) | "propose an interaction for ..."; applied only after APPROVE. When it runs, Codex does it in the tool first and the note is written only after the tool confirms, with the record's link or id; a failed write is noted as a failure |
 | Which tools are connected | "connect my tools" |

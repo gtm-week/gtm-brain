@@ -42,7 +42,7 @@ as_of compile_apply checks, the chat writes it once, the next load is current, n
 writers are offered to a chat), remember (single, batch over MCP, `--batch` script, a bare first name saved then
 asked, and the answer linked back),
 corrections (supersede, retract), the tool path of the two demo loops (the voice document, the
-outbound workflow, a recorded send, a user-confirmed prospect; the live run is
+outbound workflow, the workflows view, the workflow check and its dry run writing nothing, a skill's needs, a recorded send, a user-confirmed prospect; the live run is
 `test/live/demo-loops.mjs`), the dashboard's four tabs by pillar (rendered by the real renderer: entity counts per kind, the note list beside the page, replaced notes, workflow triggers, the files the server may open), and on messy the traps. Each result: `id`, `section`, `pass`,
 `ms`, `bytes`, `note`. A failure caused by a gap main is known to have carries `known_gap`; the run
 exits 1 only on a plain failure. `E2E_DEBUG=1` adds the reply text to failed checks.

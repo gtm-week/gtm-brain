@@ -15,7 +15,7 @@ to distinguish these workflows from other installed skills.
 | `gtm-brain-start` | GTM Brain: Start | The first command in a project: creates the brain here, gets to know the business, connects the tools, opens the dashboard; resumes what is unfinished |
 | `gtm-brain-sync` | GTM Brain: Sync | Pull what came in through the connected tools since the last sync, one subagent per tool, and record what matters |
 | `gtm-brain-todo` | GTM Brain: Todo | What should I do now: everything waiting on you, ordered, walked through one by one |
-| `gtm-brain-workflow` | GTM Brain: Workflows | Start a run of a workflow document (an outbound campaign, ads then outbound), see where it stands, do the next step, skip or abandon; the brain keeps the steps and dates |
+| `gtm-brain-workflow` | GTM Brain: Workflows | Start a run of a workflow document (an outbound campaign, ads then outbound), see where it stands, do the next step, skip or abandon; switch one on so a schedule or a save offers it; the brain keeps the steps, dates and milestones |
 | `gtm-brain-deepdive` | GTM Brain: Deep dive | A one-page brief on an entity or a context, from the notes and the tools read live |
 | `gtm-brain-define-icp` | GTM Brain: Define ICP | Chris Pawlak's exploratory interview: company examples, fit and exclusions, buying committee, awareness and readiness; reuses brain evidence and keeps one formal draft ICP document |
 | `gtm-brain-unit-economics` | GTM Brain: Unit economics | Lech Kaniuk's unit economics review: CAC, LTV12 and LTV24, LTV:CAC, both paybacks and retention from the chat and the brain, then PUSH, FIX, STOP or MEASURE overall and per acquisition source or segment; offers to keep the decision as a note and the missing inputs as questions |
@@ -428,17 +428,28 @@ lines name the approved files.
 
 ### workflow
 *"start the outbound workflow"*, *"where is the campaign"*, *"next step"*, *"skip this step"*,
-*"abandon the run"*, *"list workflows"*
+*"abandon the run"*, *"list workflows"*, *"which workflows are running"*, *"check the workflow"*,
+*"switch on the workflow"*, *"pause the run"*, *"move step 2 to 2026-12-01"*
 
-A workflow is a document in `workflows/` with `type: workflow`; a run is its state as memories
-in one context, tagged `workflow:<slug>` and `run:<id>`, one note per step with a `due:` tag,
-a `brain-question` per reached gate. See [WORKFLOWS.md](WORKFLOWS.md).
+A workflow is a document in `workflows/` with `type: workflow` and a header (status draft,
+active or paused; trigger; reads; writes); a run is its state as memories in one context, tagged
+`workflow:<slug>` and `run:<id>`, one note per step with a `due:` tag, a `brain-question` per
+reached date gate, `event:<id>` and `subject:<entity>` on the first note of a run an event
+started, `milestone-reached` on a step the brain saw done. See [WORKFLOWS.md](WORKFLOWS.md).
 
-Tool: `workflow` (`action` list | start | status | advance | skip | abandon | due). Writes:
-`brain/contexts/<context>/memories.jsonl`, one commit per action. `due` is called by session
-maintenance and by the scheduled run with `by` schedule or session; it writes only for a step
-whose date passed and asks its gate question once.
-`node $PLUGIN_ROOT/scripts/gtm-brain-workflow/workflow.mjs . --list | --start <slug> --context <ctx> --handle "<name>" --settled '{"Label":"answer"}' --by <handle> | --status <run> | --advance <run> --step <n> [--note ...] [--answer ...] [--actions tool:action:ref,...] [--learned '{...}'] --by <handle> | --skip <run> --step <n> --reason ... --by <handle> | --abandon <run> --reason ... --by <handle> | --due [--today YYYY-MM-DD] --by <handle|schedule|session>`
+Tool: `workflow` (`action` list | view | create | check | needs | activate | pause | resume |
+start | dismiss | status | advance | skip | move | fail | pause_run | resume_run | cancel |
+abandon | due). Writes: `brain/contexts/<context>/memories.jsonl`, one commit per action;
+`activate`, `pause` and `resume` change only the `status` and `active_since` lines of the
+workflow file. `check` and `needs` write nothing. `due` is called by session maintenance and by
+the scheduled run with `by` schedule or session: it marks steps whose date passed (asking their
+gate question once), records a due step done when its milestone is in the brain, opens the next,
+at most 5 steps a run a day, and prints the offers; it never starts a run. Writes also
+`work/workflow-raised.json` (a step raised again, once a day). `query` object `workflows` is
+the view. The chat start lists runs in progress, then one line per active workflow with events
+waiting and per workflow held by a SCHEMA.md change. Limits are `LIMITS` in `lib/workflows.mjs`;
+`workflows: off` in `brain/admin.md` turns them all off.
+`node $PLUGIN_ROOT/scripts/gtm-brain-workflow/workflow.mjs . --list | --view | --create "<title>" --body ... [--trigger ...] [--reads ...] [--writes ...] [--context <ctx>] --by <handle> | --check <slug> | --needs <slug or skill> | --activate <slug> | --pause <slug> | --resume <slug> --by <handle> | --start <slug> [--event <id>] [--context <ctx>] [--handle "<name>"] --settled '{"Label":"answer"}' --by <handle> | --dismiss <slug> --event <id> --reason ... --by <handle> | --status <run> | --advance <run> --step <n> [--note ...] [--answer ...] [--actions tool:action:ref,...] [--learned '{...}'] --by <handle> | --skip <run> --step <n> --reason ... | --move <run> --step <n> --to YYYY-MM-DD | --fail <run> --step <n> --reason ... | --pause-run <run> --reason ... | --resume-run <run> | --cancel <run> --reason ... (each --by <handle>) | --due [--today YYYY-MM-DD] --by <handle|schedule|session>`
 
 ## Setup and admin
 

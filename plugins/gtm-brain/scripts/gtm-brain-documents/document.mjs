@@ -84,7 +84,11 @@ if (opt.update) {
   if (opt.append !== undefined && opt.body !== undefined) refuse("pass --body or --append, not both: --append adds a section at the end and keeps the rest");
   if (opt.append !== undefined && !String(opt.append).trim()) refuse("--append needs the section's text");
   const next = { path: current.path, title: opt.title !== undefined ? String(opt.title).trim() : current.title, applies_to: opt["applies-to"] !== undefined ? opt["applies-to"] : current.applies_to, body: opt.body !== undefined ? String(opt.body) : current.body, status: opt.status !== undefined ? String(opt.status) : current.status, by: by || current.by, version: VERSION, extra: { ...current.extra, ...extra } };
-  const why = docs.validateDocument(opt.append !== undefined ? { ...next, body: `${current.body}\n\n${opt.append}` } : next); if (why) refuse(why);   // content only: the name and folder are already the person's
+  // a workflow that is active or paused keeps that through an edit of its text; only workflow activate, pause and
+  // resume change it (activate runs the check), so --status never sets it here
+  const switched = current.extra?.type === "workflow" && ["active", "paused"].includes(current.status) && opt.status === undefined;
+  const checked = switched ? { ...next, status: "draft" } : next;
+  const why = docs.validateDocument(opt.append !== undefined ? { ...checked, body: `${current.body}\n\n${opt.append}` } : checked); if (why) refuse(why);   // content only: the name and folder are already the person's
   if (opt.preview) {
     console.log(opt.append !== undefined ? `Would add at the end of ${current.path}, keeping everything above it:\n\n${String(opt.append).trim()}\n\nNothing written yet.`
       : opt.body === undefined ? `Would change only the frontmatter of ${current.path}; its text stays as it is:\n\n${docs.writeFields(root, current.path, next, { preview: true }).frontmatter}\nNothing written yet.`

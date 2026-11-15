@@ -9,6 +9,7 @@ description: |
   Not building pages or sections (gtm-brain-build-landing-page, gtm-brain-add-section).
 metadata:
   author: Brian Woloszczak, Peakout
+  needs: "tool:web"
 allowed-tools: [Bash, Read]
 ---
 

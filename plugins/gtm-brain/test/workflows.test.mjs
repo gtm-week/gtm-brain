@@ -50,7 +50,7 @@ test("the two shipped workflows parse: settle list, numbered steps with tool and
   assert.equal(ads.steps[1].gate, null, "launching waits for nothing; the wait comes before reading the results");
   assert.match(ads.steps[1].text, /^Brief, creatives, audience from the list\.$/);
   assert.deepEqual(ads.steps[2].gate, { kind: "after", days: 14 }, "two weeks of ads run before engagement is read");
-  assert.deepEqual(ads.steps[3].gate, { kind: "when", condition: "the engaged accounts are known" });
+  assert.deepEqual(ads.steps[3].gate, { kind: "when", condition: "a note tagged engaged-accounts", milestone: { kind: "tag", tag: "engaged-accounts" } }, "0.35.0: the gate is the milestone of step 3, watched by the brain");
   assert.equal(ads.steps[0].gate, null);
   assert.equal(ads.learn.length, 2);
   assert.equal(wf.readWorkflow(root, "outbound").steps[2].gate, null); assert.equal(wf.readWorkflow(root, "outbound").steps[3].gate.days, 10, "replies are read ten days after launch");
@@ -165,7 +165,7 @@ test("workflow --start refuses an unsettled item, an unknown workflow or context
   assert.match(refusedBy(root, "--start", "ads-then-outbound", "--context", "offer", "--handle", "acme", "--settled", SETTLED, "--by", "nobody").text, /"nobody" is not in admin\.md team/);
   const today = wf.localDate(), id = `ads-then-outbound-${today}-acme`;
   const out = workflow(root, "--start", "ads-then-outbound", "--context", "offer", "--handle", "Acme", "--settled", SETTLED, "--by", "marta");
-  assert.match(out, new RegExp(`^started ${id} in Our offer: step 1 of 4, Build the target list, due now \\(`));
+  assert.match(out, new RegExp(`^started ${id} in Our offer: step 1 of 4, Build the target list, due now; done when a note tagged target-list\\. RULES\\.md binds every step \\(`));
   const all = lib.readMemories(root, "offer").filter(m => m.tags.includes(`run:${id}`));
   assert.equal(all.length, 2);
   assert.deepEqual(all[0].tags, ["workflow:ads-then-outbound", `run:${id}`, "run-start"]);
@@ -199,7 +199,7 @@ test("workflow --advance records the step done with its actions, supersedes the 
   assert.match(out, /^step 1 done; step 2 of 4, Launch the ads, due now \(/);
   const all = runMemories(root, id);
   assert.equal(all.length, 4, "start, step 1 due, step 1 done, step 2 due: the JSONL only grows");
-  const done = all[2]; assert.equal(done.supersedes, all[1].id); assert.deepEqual(done.tags.slice(2), ["step:1", "step-status:done"]);
+  const done = all[2]; assert.equal(done.supersedes, all[1].id); assert.deepEqual(done.tags.slice(2), ["step:1", "step-status:done", "target-list"], "the advance note carries the milestone tag: it is the milestone");
   assert.match(done.content, /^Step 1 of 4, Build the target list: done\. Done on \d{4}-\d{2}-\d{2}\. 40 accounts pulled from HubSpot\.$/);
   assert.deepEqual(done.actions, [{ tool: "hubspot", action: "search", ref: "list-40" }]);
   assert.deepEqual(all[3].tags.slice(2), ["step:2", "step-status:due", `due:${today}`]);
@@ -228,13 +228,13 @@ test("workflow --due marks a pending step whose date passed exactly once and ask
   assert.equal(wf.runState(root, id).open.memory, q.id);
   // advancing the due step answers the gate: the question is retracted by the done record, and step 3's when gate asks at once
   const out = workflow(root, "--advance", id, "--step", "3", "--answer", "two weeks of ads ran", "--by", "marta");
-  assert.match(out, /^step 3 done; step 4 of 4, Outreach to the engaged accounts, due now; asked: the engaged accounts are known/);
+  assert.match(out, /^step 3 done; step 4 of 4, Outreach to the engaged accounts, due now \(/, "step 3's note is the milestone step 4's gate names: due at once, nothing to ask");
   const after = runMemories(root, id);
   const done3 = after.find(m => m.tags.includes("step:3") && m.tags.includes("step-status:done"));
   assert.equal(done3.retracts, q.id); assert.match(done3.content, /Gate answer: two weeks of ads ran/);
   const r = wf.runState(root, id);
-  assert.equal(r.current.n, 4); assert.equal(r.current.status, "due"); assert.equal(r.open.step, 4);
-  assert.match(r.open.content, /^Run .*, step 4 \(Outreach to the engaged accounts\): the engaged accounts are known\? Answer this to move the run on\.$/);
+  assert.equal(r.current.n, 4); assert.equal(r.current.status, "due"); assert.equal(r.open, null);
+  assert.match(after.at(-1).content, /Ready now\. Gate reached: a note tagged engaged-accounts \(m_[0-9a-f]+\)\./);
 });
 
 test("workflow --advance on the last step ends the run with the learn items; --skip and --abandon say why", () => {
@@ -244,7 +244,10 @@ test("workflow --advance on the last step ends the run with the learn items; --s
   const skipped = workflow(root, "--skip", id, "--step", "2", "--reason", "no ad budget this quarter", "--by", "marta");
   assert.match(skipped, new RegExp(`^step 2 skipped \\(no ad budget this quarter\\); step 3 of 4, Read engagement, waiting, due ${wf.addDays(wf.localDate(), 14)}`));
   workflow(root, "--skip", id, "--step", "3", "--reason", "nothing to read without ads", "--by", "marta");
-  assert.match(workflow(root, "--status", id), /4\. Outreach to the engaged accounts: due now\nwaiting on you: .*the engaged accounts are known/);
+  assert.match(workflow(root, "--status", id), /4\. Outreach to the engaged accounts: waiting for a note tagged engaged-accounts\n/, "skipped steps leave no milestone: step 4 waits for it");
+  assert.match(refusedBy(root, "--advance", id, "--step", "4", "--by", "marta").text, /step 4 is waiting for its gate/);
+  mem(root, "offer", { content: "12 accounts engaged with the ads.", tags: ["engaged-accounts"] });
+  assert.match(workflow(root, "--due", "--by", "session"), /^due: .* step 4 \(Outreach to the engaged accounts\), gate reached: a note tagged engaged-accounts/);
   const end = workflow(root, "--advance", id, "--step", "4", "--answer", "12 accounts engaged", "--learned", JSON.stringify({ "Reply and meeting rate of the outreach, against the last outbound run.": "3 replies, 1 meeting, better than August" }), "--by", "marta");
   assert.match(end, new RegExp(`^step 4 done; run ${id} finished\\. Read back: `));
   const r = wf.runState(root, id);
@@ -284,7 +287,7 @@ test("a pending step whose date already passed can be advanced without waiting f
   const pending = mem(root, "offer", { content: "Step 3 of 4, Read engagement: waiting, due 2026-01-19.", tags: [...base(id), "step:3", "step-status:pending", "due:2026-01-19"] });
   assert.match(wf.runsLine(root), /1 step due/);
   const out = workflow(root, "--advance", id, "--step", "3", "--answer", "9 accounts engaged", "--by", "marta");
-  assert.match(out, /^step 3 done; step 4 of 4, Outreach to the engaged accounts, due now; asked: the engaged accounts are known/);
+  assert.match(out, /^step 3 done; step 4 of 4, Outreach to the engaged accounts, due now \(/);
   assert.equal(runMemories(root, id).find(m => m.tags.includes("step:3") && m.tags.includes("step-status:done")).supersedes, pending.id);
 });
 

@@ -111,13 +111,14 @@ function isStarterBody(slug, body) {
   const re = starterBody.get(slug); return !!re && re.test(String(body || "").trim());
 }
 
+// A workflow's status is draft, active or paused (lib/workflows.mjs); any other document's is draft or approved.
 export function parseDocument(root, path) {
   const abs = join(root, path); if (!existsSync(abs)) return null;
   const { fm, body } = parseFrontmatter(readFileSync(abs, "utf8"));
   if (fm.kind !== KIND) return null;
   const slug = basename(path, ".md"), dir = posix(dirname(path));
   const extra = Object.fromEntries(Object.entries(fm).filter(([k]) => !DOCUMENT_KEYS.has(k)));
-  const status = STATUSES.includes(fm.status) ? fm.status : "draft", filled = !isStarterBody(slug, body);
+  const status = STATUSES.includes(fm.status) || (fm.type === "workflow" && ["active", "paused"].includes(fm.status)) ? fm.status : "draft", filled = !isStarterBody(slug, body);
   return { slug, path: posix(path), folder: dir === "." ? "" : dir, title: String(fm.title || slug), applies_to: normalizeAppliesTo(fm.applies_to), status, filled, state: filled ? status : "not filled", by: fm.by ? String(fm.by) : null, updated: fm.updated ? String(fm.updated) : null, version: fm["gtm-brain"] ? String(fm["gtm-brain"]) : null, body: body.trim(), bytes: Buffer.byteLength(body, "utf8"), extra };
 }
 
