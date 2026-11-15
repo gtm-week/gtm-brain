@@ -254,6 +254,7 @@ h1,h2,h3{font-family:var(--display);margin:0;letter-spacing:-.01em}
 .md-doc p{margin:0 0 1em}.md-doc ul,.md-doc ol{margin:0 0 1em;padding-left:24px}.md-doc li{margin:.25em 0}.md-doc li>ul,.md-doc li>ol{margin:.25em 0}.md-doc li.md-taskitem{list-style:none;margin-left:-22px}.md-task{display:inline-block;width:13px;height:13px;border:1.5px solid var(--muted);border-radius:3px;margin-right:9px;vertical-align:-2px}.md-task.done{background:var(--green);border-color:var(--green);box-shadow:inset 0 0 0 2px var(--surface)}
 .md-doc blockquote{margin:0 0 1em;padding:2px 0 2px 16px;border-left:3px solid var(--accent);color:var(--muted)}.md-doc blockquote>:last-child{margin-bottom:0}.md-doc hr{border:0;border-top:1px solid var(--rule);margin:2em 0}.md-doc a{text-underline-offset:3px}.md-doc .linkbtn{font-size:inherit;text-decoration:underline;text-underline-offset:3px}.md-plainlink{border-bottom:1px dotted var(--muted)}
 .md-doc code{font-size:.87em}.md-code{position:relative;margin:0 0 1em;padding:14px 16px;background:var(--code);border:1px solid var(--rule);border-radius:4px;overflow-x:auto;font-size:12.5px;line-height:1.6}.md-code code{background:none;padding:0;font-size:inherit;white-space:pre}.md-code[data-lang]:before{content:attr(data-lang);position:absolute;top:6px;right:10px;font-family:var(--label);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.md-swatch{display:inline-block;width:.85em;height:.85em;border-radius:2px;border:1px solid #fff3;margin-right:5px;vertical-align:-1px}.md-swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin:0 0 1.2em}.md-swatch-card{border:1px solid var(--rule);border-radius:6px;overflow:hidden;background:var(--paper)}.md-swatch-block{display:block;height:64px;border-bottom:1px solid var(--rule)}.md-swatch-card>div{display:flex;flex-direction:column;gap:2px;padding:9px 11px;font-size:12px;color:var(--muted)}.md-swatch-name{font-size:13.5px;font-weight:600;color:var(--ink)}.md-swatch-card code{background:none;padding:0;font-size:11.5px}
 .md-table{overflow-x:auto;margin:0 0 1em}.md-table table{border-collapse:collapse;font-size:13.5px;min-width:60%}.md-table th,.md-table td{text-align:left;vertical-align:top;padding:8px 14px 8px 0;border-bottom:1px solid var(--soft)}.md-table th{font-family:var(--label);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;border-bottom-color:var(--rule)}
 tr[data-doc]{cursor:pointer}tr[data-doc]:hover{background:var(--soft)}tr[data-doc]:hover .pl-doc-open{color:var(--accent)}.pl-doc-open{font:inherit;font-weight:600;color:var(--ink);text-align:left}.pl-table tbody th{padding-left:8px}.pl-table thead th:first-child{padding-left:8px}.pl-go{color:var(--muted);text-align:right;white-space:nowrap}
 @media(max-width:1000px){.doc-body,.doc-body.mode-write,.doc-body.mode-preview,.doc-body.mode-read{grid-template-columns:minmax(0,1fr)}.doc-body.mode-split{grid-template-rows:auto 1fr 1fr;height:auto}.doc-body.mode-split .doc-edit{height:50vh;border-right:0;border-bottom:1px solid var(--rule)}.doc-body.mode-split .doc-preview{max-height:60vh}.doc-outline{border-right:0;border-bottom:1px solid var(--rule);max-height:150px;position:static!important}.doc-preview{padding:18px}}
@@ -267,6 +268,7 @@ time.pl-when{white-space:nowrap;cursor:help;text-decoration:underline dotted var
 .ov-list{list-style:none;margin:0 0 34px;padding:0;display:flex;flex-direction:column;gap:10px}.ov-item{display:flex;align-items:center;justify-content:space-between;gap:16px 28px;flex-wrap:wrap;padding:16px 20px;background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--muted);border-radius:4px}.ov-item.high{border-left-color:var(--red)}.ov-item.mid{border-left-color:var(--amber)}.ov-item.low{border-left-color:var(--accent)}
 .ov-text{flex:1 1 380px;min-width:0}.ov-item h3{font-family:var(--body);font-size:15px;font-weight:600;letter-spacing:0;margin:0 0 4px}.ov-item p{margin:0;font-size:13px;color:var(--muted);max-width:76ch}
 .ov-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.ov-act{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border:1px solid var(--accent);border-radius:3px;background:var(--accent-soft);color:var(--accent);font:600 12.5px var(--body);text-decoration:none;white-space:nowrap;cursor:pointer}.ov-act:hover{background:var(--accent);color:var(--on-accent)}.ov-act.quiet{background:none;border-color:var(--rule);color:var(--muted);font-weight:500}.ov-act.quiet:hover{background:var(--soft);color:var(--ink)}
+.ov-suggest{display:flex;align-items:center;justify-content:space-between;gap:16px 28px;flex-wrap:wrap;margin:0 0 34px;padding:14px 20px;border:1px dashed var(--rule);border-radius:4px}.ov-suggest h3{font-family:var(--body);font-size:14px;font-weight:600;margin:0 0 3px}.ov-suggest p{margin:0;font-size:13px;color:var(--muted)}.ov-house{margin:0 0 30px;padding:12px 18px;border:1px solid var(--rule);border-radius:4px;background:var(--surface)}.ov-house>summary{font-size:13.5px!important;color:var(--ink)!important}.ov-house-list{list-style:none;margin:8px 0 4px;padding:0}.ov-house-list li{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;padding:9px 0;border-top:1px solid var(--soft);font-size:13.5px}.ov-house-list .pl-chat{text-decoration:none;white-space:nowrap}.ov-status{margin-top:18px}
 .ov-calm{margin:0 0 34px;padding:18px 20px;border:1px solid var(--rule);border-left:3px solid var(--green);border-radius:4px;background:var(--surface);font-size:14px}
 #ov-more{margin-top:34px}#ov-more h2{font-family:var(--display);font-size:16px;font-weight:650;margin-bottom:12px}.ov-counts{display:flex;gap:10px;flex-wrap:wrap}.ov-count{display:flex;flex-direction:column;gap:2px;min-width:150px;padding:12px 16px;border:1px solid var(--rule);border-radius:4px;background:var(--surface);color:var(--ink);font:inherit;text-align:left;cursor:pointer}.ov-count:hover{border-color:var(--accent)}.ov-count b{font-family:var(--display);font-size:22px}.ov-count span{font-size:12px;color:var(--muted)}
 .gq-pop{position:absolute;top:calc(100% + 8px);left:0;z-index:40;width:min(600px,calc(100vw - 40px));max-height:min(72vh,640px);overflow:auto;padding:6px;background:var(--surface);border:1px solid var(--rule);border-radius:6px;box-shadow:0 18px 48px #000a}.gq-pop[hidden]{display:none}
@@ -302,7 +304,7 @@ time.pl-when{white-space:nowrap;cursor:help;text-decoration:underline dotted var
   <section class="view" data-view="explore"><div class="head"><h1>Explore your knowledge</h1></div><div class="explore-list" id="explore-grid"></div></section>
   <section class="view" data-view="skills"><div class="head"><h1>Help</h1><p class="sub">Every task here opens a prepared message in Codex. Nothing is sent until you send it.</p></div><div id="admin-skills"></div></section>
   <section class="view" data-view="projects"><div id="project-detail"></div></section>
-  <section class="view" data-view="contexts"><div class="head"><h1>Contexts</h1><p class="sub">Shared knowledge about a topic: what we know, how we work, and the evidence behind it.</p></div><div class="explore-toolbar" id="context-toolbar"></div><div class="scroll-list" id="context-directory" tabindex="0" role="region" aria-label="Contexts"></div><div id="context-reader" hidden><div class="chpane" id="ch-pane"></div></div></section>
+  <section class="view" data-view="contexts"><div class="head"><h1>Topics</h1><p class="sub">What the brain knows, grouped by topic: a short summary and the notes behind it.</p></div><div class="explore-toolbar" id="context-toolbar"></div><div class="scroll-list" id="context-directory" tabindex="0" role="region" aria-label="Contexts"></div><div id="context-reader" hidden><div class="chpane" id="ch-pane"></div></div></section>
   <section class="view" data-view="meetings"><div class="head" id="meetings-head"></div><div class="explore-toolbar" id="meetings-toolbar"></div><div class="panel c12 scroll-list" id="meetings-list" tabindex="0" role="region" aria-label="Meetings"></div><div class="panel c12" id="meetings-coverage" style="margin-top:16px"></div></section>
   <section class="view" data-view="customers"><div class="head" id="customers-head"></div><div class="panel c12" id="customers-list"></div><div class="panel c12" id="customers-coverage" style="margin-top:16px"></div></section>
   <section class="view" data-view="questions"><div class="head"><h1>Needs your attention</h1><div class="sub">Use Chat about this to discuss these questions. Answered questions disappear once saved.</div></div><div id="dq-workspace"></div><div class="panel c12" id="dq-questions"></div><div class="panel c12" id="dq-decisions" style="margin-top:16px"></div><div class="panel c12" id="dq-runs" style="margin-top:16px"></div></section>
@@ -362,7 +364,7 @@ const stale=D.contexts.filter(c=>c.stale&&c.status==="active"&&!c.updating);cons
 const PILLARS=["config","entities","notes","workflows"];
 const VIEWS=[["home","Overview"],["config","Configuration"],["entities","Entities"],["notes","Memories"],["workflows","Workflows"]];let view="home";
 const MORE=[["home","Overview"],["explore","Explore"],["skills","Help"]];
-const viewLabel=v=>({doc:"Document",config:"Configuration",entities:"Entities",notes:"Memories",workflows:"Workflows",home:"Overview",contexts:"Contexts",explore:"Explore",search:"Search",people:"People & organizations",customers:"Customers",meetings:"Meetings",memories:"Memories",questions:"Needs your attention",projects:"Working folders",admin:"Settings",skills:"Help"})[v]||v;
+const viewLabel=v=>({doc:"Document",config:"Configuration",entities:"Entities",notes:"Memories",workflows:"Workflows",home:"Overview",contexts:"Topics",explore:"Explore",search:"Search",people:"People & organizations",customers:"Customers",meetings:"Meetings",memories:"Memories",questions:"Needs your attention",projects:"Working folders",admin:"Settings",skills:"Help"})[v]||v;
 function nav(){
  /* One flat row. A view outside it (a document, a topic, search) lights the place it was opened from. */
  const group=PILLARS.includes(view)||view==="home"?view:view==="admin"||view==="skills"?view:view==="doc"?(typeof docBack==="function"?docBack()[0]:"config"):["people","customers"].includes(view)?"entities":["contexts","memories","meetings","questions","decisions"].includes(view)?"notes":["projects"].includes(view)?"home":"";
@@ -1199,41 +1201,57 @@ document.addEventListener("input",e=>{if(e.target?.id==="pe-q"){peQuery=e.target
 document.addEventListener("change",e=>{const id=e.target?.id;if(!["pm-kind","pm-tag","pm-period","pm-state"].includes(id))return;pmF[id.slice(3)]=e.target.value;pmLimit=PM_PAGE;renderNotesTab()});
 /* ---------- Overview: what needs the person, most important first. Each item is one plain sentence, why it
    matters, and one way to deal with it: a prepared chat, or the view that shows what is affected. ---------- */
+const many=(n,one,more)=>n+" "+(n===1?one:more);
+/* Only what a person must decide or repair; never more than a handful. Clean-up waits in Housekeeping below. */
 function inboxItems(){
  const items=[],add=(tone,title,why,actions)=>items.push({tone,title,why,actions:actions.filter(Boolean)});
  const chat=(label,prompt)=>({label,href:askLink(prompt)}),go=(label,v)=>({label,view:v});
- const many=(n,one,more)=>n+" "+(n===1?one:more);
- const P=PL?.memories?.population||null;
- if(PL?.summary_error)add("high","A topic summary could not be updated",`${PL.summary_error.what||"The last update failed"}. What to do: ${PL.summary_error.todo||"ask Codex about the topic again"}.`,[chat("Fix this with Codex","The last summary update failed. Check what went wrong and write the summary again.")]);
+ if(PL?.summary_error)add("high","A topic summary could not be written",`${PL.summary_error.what||"The last attempt failed"}. What to do: ${PL.summary_error.todo||"ask Codex about the topic again"}.`,[chat("Fix this with Codex","The last summary update failed. Check what went wrong and write the summary again.")]);
  if(D.proposal)add("high","A change to the company settings is waiting for a decision","Nothing changes until the owner approves it in Codex.",[{label:"Review it with Codex",href:workspaceReviewHref("admin")},go("See the proposal","admin")]);
  if(D.interaction)add("high",`A new action is proposed: ${D.interaction.title||D.interaction.name}`,"It lets Codex do this for the team. It is not available until the owner approves it.",[{label:"Review it with Codex",href:workspaceReviewHref("interaction")}]);
  const questions=D.totals?.questions??(D.questions||[]).length;
- if(questions)add("high",`${many(questions,"question is","questions are")} waiting for your answer`,"Codex asked these while working and is guessing until you answer.",[{label:"Answer with Codex",href:resolveAttentionHref()},go("Read the questions","questions")]);
- const capture=String(D.meetings?.captureStatus||"");
- if(/no sync has finished|not (being )?captured|never/i.test(capture))add("mid","Meetings are not being captured","No sync has finished in this brain yet, so a meeting shows up only when you ask for it by name.",[chat("Set up the daily sync","Set up the daily sync so meetings and notes from our tools are captured every day.")]);
- if(D.plugin?.status==="newer"&&D.plugin.latest)add("mid",`GTM Brain ${D.plugin.latest} is available`,`This brain runs ${D.plugin.installed}. Updates bring fixes and new abilities.`,[chat("Update with Codex","Update GTM Brain to the newest version.")]);
- /* A topic whose summary is older than its notes is not an item: since 0.35 a summary is written when someone asks about the topic, so it catches up by itself. */
+ if(questions)add("high",`${many(questions,"question is","questions are")} waiting for your answer`,"Codex asked while working and is guessing until you answer.",[{label:"Answer with Codex",href:resolveAttentionHref()},go("Read the questions","questions")]);
+ const broken=(D.tools||[]).filter(t=>t.test==="fail"&&!t.declined);
+ if(broken.length)add("high",`The connection to ${broken.map(t=>t.tool).join(" and ")} is not working`,"Codex cannot read from it, so what it knows from there is getting old.",[chat("Repair it with Codex",`The connection to ${broken.map(t=>t.tool).join(" and ")} failed its last read. Help me repair it.`),go("See connected tools","admin")]);
+ if(D.plugin?.status==="newer"&&D.plugin.latest)add("mid",`GTM Brain ${D.plugin.latest} is available`,`This brain runs ${D.plugin.installed}. An update brings fixes and new abilities.`,[chat("Update with Codex","Update GTM Brain to the newest version.")]);
+ return items.slice(0,6);
+}
+/* One calm suggestion for something never set up, shown until the person says not now (kept for this browser session). */
+function inboxSuggestion(){
+ let hidden=false;try{hidden=sessionStorage.getItem("gtm-ov-sync")==="later"}catch{}
+ if(hidden||!/no sync has finished/i.test(String(D.meetings?.captureStatus||"")))return "";
+ return `<div class="ov-suggest" id="ov-suggest"><div class="ov-text"><h3>${esc("Suggestion: let meetings and notes arrive by themselves")}</h3><p>${esc("No daily sync is set up, so a meeting shows up here only when you ask Codex for it.")}</p></div><div class="ov-actions"><a class="ov-act" href="${esc(askLink("Set up the daily sync so meetings and notes from our tools are captured every day."))}">${esc("Set up the daily sync")} <span aria-hidden="true">↗</span></a><button type="button" class="ov-act quiet" data-ov-later>${esc("Not now")}</button></div></div>`;
+}
+/* Clean-up, each kind once: tidy when there is time. */
+function housekeeping(){
+ const rows=[],P=PL?.memories?.population||null,R=PL?.configuration?.rules,add=(n,text,action)=>rows.push({n,text,action});
+ const chat=(label,prompt)=>`<a class="pl-chat" href="${esc(askLink(prompt))}">${esc(label)} <span aria-hidden="true">↗</span></a>`,go=(label,v,extra="")=>`<button type="button" class="linkbtn" data-v="${v}"${extra}>${esc(label)} →</button>`;
  const merges=(D.merges||[]).length;
- if(merges)add("mid",`${many(merges,"pair of names","pairs of names")} may be the same person or company`,"Notes about one person split across two names are easy to miss.",[{label:"Check the first pair with Codex",href:duplicateChatHref(D.merges[0])}]);
- if(P?.missing_required){const fields=Object.entries(P.missing_required_fields||{}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([f,n])=>`${f.replace(/_/g," ")} (${n})`);
-  add("low",`${P.missing_required} of ${many(P.entities_total,"person or company","people and companies")} ${P.missing_required===1?"is":"are"} missing something your schema requires`,fields.length?`Most often missing: ${fields.join(", ")}. Without it Codex cannot answer simple questions about them.`:"Without the required details Codex cannot answer simple questions about them.",[chat("Fill the gaps with Codex","Entities are missing required fields. Show me which fields are missing most and fill what you can from our notes and tools."),go("See people and companies","entities")])}
- if(P?.duplicates_flag)add("low",`${many(P.duplicates,"note looks","notes look")} like a repeat of another`,`${P.duplicates_exact} say exactly the same as another note, ${P.duplicates_near} nearly the same. Repeats make search results and summaries longer than they need to be.`,[chat("Clean up with Codex","Show me the duplicate and near-duplicate notes and propose which ones to withdraw.")]);
- const R=PL?.configuration?.rules;
- if(R?.problems)add("low",`The rules check found ${many(R.problems,"problem","problems")}`,"A note or page does not follow one of the brain's rules, for example where it is filed.",[chat("Fix them with Codex","Let's go through the rules check: what should I fix first?"),go("See the rules","config")]);
+ if(merges)add(merges,`${merges===1?"pair of names":"pairs of names"} may be the same person or company`,`<a class="pl-chat" href="${esc(duplicateChatHref(D.merges[0]))}">${esc("Check the first pair with Codex")} <span aria-hidden="true">↗</span></a>`);
+ const first=R?.by_rule?.P3||0;
+ if(first)add(first,`${first===1?"person is":"people are"} known by a first name only`,go("See who","config",' data-cfg-open="rules"'));
+ if(P?.duplicates_exact)add(P.duplicates_exact,`${P.duplicates_exact===1?"note says":"notes say"} exactly the same as another`,chat("Clean up with Codex","Show me the exact duplicate notes and propose which ones to withdraw."));
  const base=(PL?.configuration?.documents||[]).filter(d=>d.base),unwritten=base.filter(d=>d.state==="not written");
- if(unwritten.length)add("low",`${unwritten.length} of ${base.length} base documents are not written yet`,`Codex writes and plans without them: ${unwritten.map(d=>d.title).join(", ")}.`,[chat("Write one with Codex",`Help me write our ${unwritten[0].title} document.`),go("See base documents","config")]);
- return items;
+ if(unwritten.length)add(unwritten.length,`${unwritten.length===1?"base document is":"base documents are"} not written yet: ${unwritten.map(d=>d.title).join(", ")}`,go("See base documents","config",' data-cfg-open="docs"'));
+ if(P?.schema_untouched)add(null,"Decide what you want to know about each person and company",go("See what is recorded now","config",' data-cfg-open="schema"'));
+ else if(P?.missing_required)add(P.missing_required,`of ${many(P.entities_total,"person or company","people and companies")} ${P.missing_required===1?"misses":"miss"} a detail you marked as required`,chat("Fill the gaps with Codex","Entities are missing required fields. Show me which fields are missing most and fill what you can from our notes and tools."));
+ return rows;
 }
 function renderInbox(){
  const items=inboxItems(),box=$("#ov-inbox"),order={high:0,mid:1,low:2};items.sort((a,b)=>order[a.tone]-order[b.tone]);
  const action=a=>a.href?`<a class="ov-act" href="${esc(a.href)}">${esc(a.label)} <span aria-hidden="true">↗</span></a>`:`<button type="button" class="ov-act quiet" data-v="${esc(a.view)}">${esc(a.label)} <span aria-hidden="true">→</span></button>`;
  box.innerHTML=`<div class="ov-head"><h2>${esc(items.length?"Needs your attention":"Nothing needs you right now")}</h2>${items.length?`<span class="pl-count">${items.length} ${esc(items.length===1?"item":"items")}</span>`:""}</div>`+
-  (items.length?`<ol class="ov-list">${items.map(i=>`<li class="ov-item ${i.tone}"><div class="ov-text"><h3>${esc(i.title)}</h3><p>${esc(i.why)}</p></div><div class="ov-actions">${i.actions.map(action).join("")}</div></li>`).join("")}</ol>`:`<p class="ov-calm">${esc("The brain is healthy: no open questions, nothing waiting for a decision, nothing out of date. New notes appear below as they are saved.")}</p>`);
- const counts=[[PL?.memories?.total,"notes","notes"],[PL?.entities?.rows?.length,"people, companies and products","entities"],[active.length,"topics","contexts"],[meetingData.meetings.length,"meetings","meetings"],[(customerData.customers||[]).length,"customer relationships","customers"]].filter(([n])=>Number.isFinite(n));
- $("#ov-more").innerHTML=`<h2>${esc("In this brain")}</h2><div class="ov-counts">${counts.map(([n,label,v])=>`<button type="button" class="ov-count" data-v="${v}"><b>${n}</b><span>${esc(label)}</span></button>`).join("")}</div>`+
-  /* the chat start's own status line, part by part, for whoever wants the detail behind the items above */
+  (items.length?`<ol class="ov-list">${items.map(i=>`<li class="ov-item ${i.tone}"><div class="ov-text"><h3>${esc(i.title)}</h3><p>${esc(i.why)}</p></div><div class="ov-actions">${i.actions.map(action).join("")}</div></li>`).join("")}</ol>`:`<p class="ov-calm">${esc("No questions are waiting, nothing needs a decision and every connection works. New notes appear below as they are saved.")}</p>`)+inboxSuggestion();
+ const house=housekeeping();
+ const counts=[[PL?.memories?.total,"notes","notes"],[PL?.entities?.rows?.length,"people, companies and products","entities"],[meetingData.meetings.length,"meetings","meetings"],[(customerData.customers||[]).length,"customer relationships","customers"]].filter(([n])=>Number.isFinite(n));
+ $("#ov-more").innerHTML=(house.length?`<details class="fold ov-house"><summary>${esc("Housekeeping")} · ${house.length} ${esc(house.length===1?"thing":"things")} ${esc("to tidy when you have time")}</summary><ul class="ov-house-list">${house.map(h=>`<li><span>${h.n===null?"":`<b>${h.n}</b> `}${esc(h.text)}</span>${h.action}</li>`).join("")}</ul></details>`:"")+
+  `<h2>${esc("In this brain")}</h2><div class="ov-counts">${counts.map(([n,label,v])=>`<button type="button" class="ov-count" data-v="${v}"><b>${n}</b><span>${esc(label)}</span></button>`).join("")}</div>`+
+  /* the chat start's own status line, part by part, for whoever wants the detail */
   (PL?`<details class="fold ov-status"><summary>${esc("Sync and capture details")}</summary><div>${PL.health?`<ul class="pl-list">${String(PL.health).split(/\s+\|\s+/).map(part=>`<li>${esc(part.replace(/\s*\(query [a-z_ ]+\)/g,""))}</li>`).join("")}</ul>`:`<p class="pl-age">${esc("Nothing to report yet: no meeting capture, summary run or sync recorded.")}</p>`}</div></details>`:"");
 }
+document.addEventListener("click",e=>{const t=e.target;if(!t?.closest)return;
+ if(t.closest("[data-ov-later]")){try{sessionStorage.setItem("gtm-ov-sync","later")}catch{}renderInbox();return}
+ const open=t.closest("[data-cfg-open]");if(open&&typeof renderConfigTabs==="function"){cfgTab=open.dataset.cfgOpen;if(cfgTab==="rules"){cfgRuleGroup="fix";renderRulesBrowser()}renderConfigTabs()}});
 /* ---------- Documents: read and edit in the page. Markdown is escaped first; only the marks below become tags,
    so nothing a document says can run as script. The one write goes to POST /document (server/dash.mjs). ---------- */
 const mdPlain=t=>String(t).replace(/!?\[([^\]]*)\]\([^)]*\)/g,"$1").replace(/[*_`~]/g,"").trim();
@@ -1246,8 +1264,10 @@ function mdLink(label,url){
 }
 function mdInline(src){
  const kept=[],keep=html=>"\u0000"+(kept.push(html)-1)+"\u0000";
- let t=String(src).replace(/(`+)(?!`)([\s\S]*?[^`])\1(?!`)/g,(_,q,c)=>keep(`<code>${esc(c.trim())}</code>`));
+ const swatch=hex=>`<span class="md-swatch" style="background:${hex}" aria-hidden="true"></span>`,HEX=/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+ let t=String(src).replace(/(`+)(?!`)([\s\S]*?[^`])\1(?!`)/g,(_,q,c)=>keep(`${HEX.test(c.trim())?swatch(c.trim()):""}<code>${esc(c.trim())}</code>`));
  t=esc(t);
+ t=t.replace(/(^|[\s(:,])(#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3}))(?![0-9a-zA-Z])/g,(_,pre,hex)=>pre+keep(`${swatch(hex)}<code>${hex}</code>`));
  t=t.replace(/!?\[([^\]]+)\]\(\s*([^)\s]+)(?:\s+[^)]*)?\)/g,(_,label,url)=>keep(mdLink(label,url)));
  t=t.replace(/(^|[\s(])(https?:\/\/[^\s<]*[^\s<.,;:!?)\]'])/g,(_,pre,url)=>pre+keep(mdLink(url,url)));
  t=t.replace(/\*\*([^\s*](?:[^*]*[^\s*])?)\*\*/g,"<strong>$1</strong>").replace(/(^|[^\w_])__([^\s_](?:[^_]*[^\s_])?)__(?!\w)/g,"$1<strong>$2</strong>");
@@ -1278,6 +1298,8 @@ function mdDoc(text,{prefix="h",seen=new Set(),base=0,depth=0}={}){
    flush();const head=mdCells(l),align=mdCells(lines[i+1]).map(c=>c.startsWith(":")&&c.endsWith(":")?"center":c.endsWith(":")?"right":""),rows=[];i+=2;
    while(i<lines.length&&lines[i].trim()&&lines[i].includes("|"))rows.push(mdCells(lines[i++]));i--;
    const cell=(tag,c,j)=>`<${tag}${align[j]?` style="text-align:${align[j]}"`:""}${tag==="th"?' scope="col"':""}>${mdInline(c??"")}</${tag}>`;
+   const hexOf=c=>String(c??"").replace(/`/g,"").trim(),colour=head.findIndex((_,j)=>rows.length>0&&rows.every(r=>/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(hexOf(r[j]))));
+   if(colour>=0){out.push(`<div class="md-swatches" role="list">${rows.map(r=>`<div class="md-swatch-card" role="listitem"><span class="md-swatch-block" style="background:${hexOf(r[colour])}"></span><div>${head.map((h,j)=>j===colour?`<code>${esc(hexOf(r[j]))}</code>`:r[j]?`<span${j===(colour===0?1:0)?' class="md-swatch-name"':""} title="${esc(h)}">${mdInline(r[j])}</span>`:"").join("")}</div></div>`).join("")}</div>`);continue}
    out.push(`<div class="md-table"><table><thead><tr>${head.map((c,j)=>cell("th",c,j)).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${head.map((_,j)=>cell("td",r[j],j)).join("")}</tr>`).join("")}</tbody></table></div>`);continue}
   if((m=l.match(MD_LIST))&&(para.length===0||m[1].length<4)){
    flush();const indent=m[1].length,ordered=/\d/.test(m[2]),start=ordered?parseInt(m[2],10):null,items=[];
@@ -1615,7 +1637,7 @@ function renderOverview(){
  if(typeof window!=="undefined")window.dispatchEvent(new Event("gtm-project-change"));
  const count=attentionCount;
  $("#h-input").innerHTML=`<div class="section-heading"><h2>${esc("Needs your attention")}</h2>${count?`<button class="linkbtn" data-v="questions" aria-label="${esc("Review all items needing attention")}">${count} →</button>`:""}</div>`+(count?`${D.questions.slice(0,3).map(questionCard).join("")}${workspaceReviewHtml()}${(D.merges||[]).length?`<button class="attention-row" data-v="people">${esc("Names to review")}<span>${D.merges.length} →</span></button>`:""}<button class="linkbtn view-more" data-v="questions">${esc("Review all in detail")} →</button>`:`<div class="calm-empty"><span aria-hidden="true">✓</span><div><strong>${esc("No pending questions or reviews")}</strong></div></div>`);
- $("#h-recent").innerHTML=`<div class="section-heading"><h2>${esc("Recently recorded")}</h2><button class="linkbtn" data-v="memories">${esc("View all memories")} →</button></div>`+(overviewRecent().filter(m=>!(m.kind==="question"&&(m.tags||[]).includes("brain-question"))).slice(0,3).map(m=>`<article class="recent-item" data-chat-memory="${esc(m.id)}">${overviewTags(m)}<button class="recent-title" data-mem="${esc(m.id)}"><strong>${esc(m.content.slice(0,160))}${m.content.length>160?"…":""}</strong></button><span class="record-meta">${recordMeta(m)}</span>${recentReferences(m)}</article>`).join("")||`<p class="empty">${esc("New notes from Codex will appear here, with their sources.")}</p>`);
+ $("#h-recent").innerHTML=`<div class="section-heading"><h2>${esc("Recently saved")}</h2><button class="linkbtn" data-v="notes">${esc("See all notes")} →</button></div>`+(overviewRecent().filter(m=>!(m.kind==="question"&&(m.tags||[]).includes("brain-question"))).slice(0,5).map(m=>`<article class="recent-item" data-chat-memory="${esc(m.id)}"><button class="recent-title" data-mem="${esc(m.id)}"><strong>${esc(m.content.slice(0,200))}${m.content.length>200?"…":""}</strong></button><span class="record-meta">${whenText(m.at)}${recordAuthors(m)?" · "+esc(recordAuthors(m)):""}</span>${recentReferences(m)}</article>`).join("")||`<p class="empty">${esc("Nothing saved yet. Tell Codex something worth remembering and it appears here.")}</p>`);
  const scope=selectedProject();
  const exploreContexts=D.contexts.filter(c=>c.status==="active"&&(!scope||[...(scope.contexts||[]),...(scope.loaded||[])].includes(c.slug)));
  const exploreMemories=[...new Map([...ALL,...D.questions,...D.decisions].map(m=>[m.id,m])).values()].filter(m=>!scope||(m.tags||[]).includes("project:"+projectSlug));
@@ -1776,7 +1798,7 @@ let restoringRoute=false;
 function updateBackLink(){
  const detail=(view==="people"&&!!entName)||(view==="contexts"&&!contextDirectory);
  $("#view-back").hidden=!detail;
- $("#view-back-label").textContent=view==="people"?"Back to people & organizations":"Back to contexts";
+ $("#view-back-label").textContent=view==="people"?"Back to people & organizations":"Back to topics";
 }
 $("#view-back-label").textContent="Back";
 $("#view-back").onclick=()=>{

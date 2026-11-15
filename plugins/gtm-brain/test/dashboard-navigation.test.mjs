@@ -314,7 +314,7 @@ test('feed search includes older records and respects its project filter',async(
  const result=await p.run('loadOverviewFeed("recent",6,"research","cobalt")');
  assert.equal(result.records.length,1);assert.equal(result.records[0].id,older.id);assert.equal(result.hasMore,false);
  assert.equal((await p.run('loadOverviewFeed("recent",6,"other","cobalt")')).records.length,0);
- assert.match(p.node('#h-recent').innerHTML,/data-v="memories"/);
+ assert.match(p.node('#h-recent').innerHTML,/data-v="notes"/);
 });
 
 test(`resolution draft contains only displayed questions, without record IDs or a sync request`,async()=>{

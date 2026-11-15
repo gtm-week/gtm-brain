@@ -213,7 +213,7 @@ export function pillarData(root, { registry = lib.readNames(root), admin = lib.r
     entities_without_notes: p.entities.without_notes, entities_total: p.entities.total, missing_required: p.entities.missing_required, notes: p.notes,
     // what the Overview turns into items: each number with whether it is outside the range the chat start reports
     duplicates_exact: p.duplicates.exact, duplicates_near: p.duplicates.near, duplicates_flag: p.notes >= R.min_notes && p.duplicates.share > R.duplicates_max,
-    missing_required_fields: p.entities.missing_required_fields || {}, uncited: p.citations.uncited, uncited_of: p.citations.judged,
+    missing_required_fields: p.entities.missing_required_fields || {}, schema_untouched: !!p.entities.schema_untouched, uncited: p.citations.uncited, uncited_of: p.citations.judged,
     uncited_flag: p.notes >= R.min_notes && p.citations.judged >= R.min_notes && p.citations.uncited_share > R.uncited_max,
     without_source: p.sources.without, without_source_flag: p.notes >= R.min_notes && p.sources.without_share > R.no_source_max }; } catch { pop = null; }
   let summaryError = null; try { const e = summaryRuns(root).error; if (e) summaryError = { at: e.at, context: e.context || null, what: cut(e.what || e.why, 200), todo: cut(e.todo, 200) }; } catch {}
