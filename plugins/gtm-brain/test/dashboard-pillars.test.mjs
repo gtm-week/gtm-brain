@@ -41,7 +41,7 @@ writeFileSync(join(root, "pricing.md"), "---\nkind: document\ntitle: Pricing\nap
 mkdirSync(join(root, "workflows"), { recursive: true });
 const outbound = readFileSync(`${P}/templates/workflows/outbound.md`, "utf8").replace("{{DATE}}", "2026-11-01").replace("{{VERSION}}", "0.35.0");
 writeFileSync(join(root, "workflows", "outbound.md"), outbound);
-writeFileSync(join(root, "workflows", "weekly-review.md"), outbound.replace("title: Outbound", "title: Weekly review\ntrigger: every Monday at 09:00").replace("# Outbound", "# Weekly review"));
+writeFileSync(join(root, "workflows", "weekly-review.md"), outbound.replace("title: Outbound", "title: Weekly review").replace(/^trigger: .*$/m, "trigger: every Monday at 09:00").replace("# Outbound", "# Weekly review"));
 writeFileSync(join(root, "RULES.md"), readFileSync(join(root, "RULES.md"), "utf8").replace(/(## Our rules\n[\s\S]*?offers to add one here\.\n)/, "$1\n- Always ask before tagging a client.\n- Notes about pricing go to Our offer.\n"));
 execFileSync("git", ["-C", root, "add", "-A"]); execFileSync("git", ["-C", root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "fixture"]);
 execFileSync(process.execPath, [`${P}/scripts/gtm-brain-render/render.mjs`, root], { env });

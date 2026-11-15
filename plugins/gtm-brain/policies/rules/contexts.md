@@ -43,12 +43,13 @@ is unclear, ask rather than record in the wrong context. Reuse `brain/admin.md` 
 `personal-<handle>` context; never create parallel admin or personal contexts, or archive or
 fork these fixed homes. A declined proposal is not repeated in that chat.
 
-**Summaries update by themselves (rule 1b).** A separate run rewrites the contexts that have new
-notes, right after each saved change and at chat start. Never compile in the chat and never
-offer to; the words are "summary updating shortly" (a run is due) and "summary updating" (one
-is on), never "behind". Only when the person asks ("compile pipeline", "update the summary now")
-run the compile procedure yourself. A summary or Working guidance edited by hand pauses
-compilation for that context until the person confirms a release (compile.md).
+**A summary is written when someone asks about the topic (rule 1b).** No run rewrites a summary
+after a save or at chat start, so never promise one for later. When `load_context` ends with
+"Summary behind: write it now, in this chat", say in one line that it is being written, answer
+the request from the notes first, then call `compile_apply` once (compile.md). A current summary
+is shown with its date and age and nothing is written; rewrite it only when the person asks
+("compile pipeline", "update the summary now"). A summary or Working guidance edited by hand
+pauses compilation for that context until the person confirms a release (compile.md).
 
 **A context is archived, never deleted (rule 5b)**, and only after a yes: "archive <slug>" sets
 its status, unloads it and stops offering it; its memories stay searchable.
