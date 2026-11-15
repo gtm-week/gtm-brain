@@ -200,9 +200,17 @@ test("contexts: a project or a look-alike is never a new context (X1, X3); a sum
   const ctx = (...a) => spawnSync(process.execPath, [`${P}/scripts/gtm-brain-contexts/contexts.mjs`, ".", ...a], { cwd: root, env, encoding: "utf8" });
   mkdirSync(join(root, "projects", "website"), { recursive: true });
   // X1-X3 are Codex's judgment (saving-rules.md): the first call creates nothing and lists what exists to check against
-  const first = ctx("--new", "website", "Website", "rule");
-  assert.equal(first.status, 2); assert.match(first.stderr, /^not created yet: check "Website" against what exists\. Contexts: .*Market \(market\).*\. Projects: website\. X1: .* X3: /);
-  assert.ok(!existsSync(join(root, "brain", "contexts", "website")));
+  const first = ctx("--new", "launch-plan", "Launch plan", "rule");
+  assert.equal(first.status, 2); assert.match(first.stderr, /^not created yet: check "Launch plan" against what exists\. Contexts: .*Market \(market\).*\. Projects: website\. X1: .* X3: /);
+  assert.ok(!existsSync(join(root, "brain", "contexts", "launch-plan")));
+  // X1 by name, even with a reason: the project's own slug, or a shorter or longer form of it, is never a context
+  mkdirSync(join(root, "projects", "berlin-event-2026"), { recursive: true });
+  for (const [slug, title] of [["website", "Website"], ["berlin-event", "Berlin event"], ["website-launch-2026", "Website launch"]]) {
+    const r = ctx("--new", slug, title, "rule", "--distinct", "event planning and logistics");
+    assert.equal(r.status, 2, slug); assert.match(r.stderr, /^not created: ".+" is the project (website|berlin-event-2026) \(X1: a project is not a context\)/, slug);
+    assert.ok(!existsSync(join(root, "brain", "contexts", slug)), slug);
+  }
+  assert.equal(ctx("--new", "events", "Events", "rule", "--distinct", "every event we run, not one project").status, 0, "a word in a project name alone is not a match");
   assert.equal(ctx("--new", "market-research", "Market research", "rule", "--distinct", "research projects, not the market overview").status, 0);
   assert.ok(existsSync(join(root, "brain", "contexts", "market-research", "context.md")));
 
