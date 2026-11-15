@@ -86,6 +86,25 @@ Notes are never edited. "Actually the board meeting is on the 19th" saves a corr
 replaces the old note. "Forget that Lena runs the workshop" withdraws it: the old note leaves every
 view, and a short note says what was withdrawn. Both stay in the file and in git.
 
+### Relationships and history
+
+"Anna works at Northwind", "Northwind is our partner", "Tom reports to Anna": a relationship of a type
+`SCHEMA.md` lists is saved as a note that names both ends and the type; the brain fills in the rest.
+It is current unless your words say it ended ("left", "no longer", "churned", "ended"), dated when
+you said it, and resting on your word, or on the record the note cites (a CRM, LinkedIn).
+
+Each relationship is one record with its own id, and every note about it is an event: started,
+changed, ended. Nothing is overwritten: "Anna left Northwind" is a new note, and the old one stays
+as history. Where `SCHEMA.md` says One at a time (an employer, a manager), a new one ends the one
+before it: "Anna joined Acme" also saves "Anna no longer works at Northwind", dated the same day.
+Partners, investors and attendance can be many at once. What you said beats what a tool says: a
+source that disagrees is listed beside it, never applied.
+
+Renames, merges and kind changes are kept in the same history (`brain/entities/.history/events.jsonl`),
+so "what was Northwind called before?" or "where did Anna work in June?" is answered from the brain,
+not from git: `query` relations for an entity gives its relationships and its history, and with a
+date (filters.at) the ones current then. Each entity page shows the same under `## History`.
+
 ## Contexts
 
 A context is one lasting topic with its own notes and summary: Our company, Strategy, Market,

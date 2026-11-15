@@ -759,8 +759,10 @@ block meeting capture or compilation. The system-scheduler entry point is
 `SCHEMA.md` at the brain root says what the brain keeps about each person, organization and
 product, and how they relate. Each kind has a table of fields (`| Field | What it means | Required |`);
 organizations have subtypes (`### Subtypes`) with fields of their own; `## Relationships` lists the
-types (`| Type | From | To | What it means | Required |`, `us` = our company, `customer_of` = the
-customer block). Setup writes it; the chat start lists it in one digest, and reports a file that
+types (`| Type | From | To | What it means | Required | One at a time |`, `us` = our company,
+`customer_of` = the customer block). One at a time `yes` means a new current link of that type from
+the same entity ends the previous one; a file without the column, or an empty cell, keeps works_at
+and reports_to one at a time and every other type many. Setup writes it; the chat start lists it in one digest, and reports a file that
 cannot be read with a fix per line, leaving it unchanged (`lib/schema.mjs`). The kinds are fixed in
 0.34.0: person, organization, product.
 
@@ -771,9 +773,25 @@ SCHEMA.md edit refills the briefs of that kind (at most 20 per pass), never hidi
 
 A relationship is a note with a `relation` block on `remember`: `{from, type, to, status: current |
 ended, basis: user | source, observed_at, reference?}`, the type checked against SCHEMA.md when it is
-written. "Ended" is a new note; a correction uses `supersedes` / `retracts`; a source never replaces
-what the person said. `query` object `relations` (search = an entity, filters.type) shows each one's
-current state, history and disagreeing sources. `query` object `rules` lists entities with a compiled
+written. `{from, type, to}` is enough: the save fills status (ended when the note says left, no
+longer, churned or ended), observed_at (the note's time; a date alone is that day) and basis (source
+when the note cites a record outside the chat, else user, with the author as the user source); what
+the caller passes is kept. "Ended" is a new note; a correction uses `supersedes` / `retracts`; a
+source never replaces what the person said.
+
+The relationship log (`lib/relation-log.mjs`): each relationship is a record with a stable id, `r_`
+plus a hash of its two ends and its type, derived and never stored; every note that carries it is an
+event (started, changed, ended). For a one-at-a-time type the save writes an ended note for the
+previous link, dated to the new one and tagged `ended-by:<note id>`, in the same context and commit
+(`lib.endPreviousRelations`); a log without that note (a teammate on 0.34 wrote it) is ended when
+read, marked implied. Renames, merges, undone merges and kind changes append `{at, by, entity, change,
+from, to}` to `brain/entities/.history/events.jsonl` (`lib/entity-events.mjs`), written by the entity
+writers and committed with the entity change. The memory index (version 9) fills `relations`,
+`relation_events` and `entity_events` from both on every refresh; they are readable in SQL mode.
+`query` object `relations` reads them: search = an entity for its relationships and its history
+(relationship events and renames, merges and kind changes, newest first), filters.type for one type,
+filters.at = a date for the ones current then. Each entity page has a `## History` section from the
+same data when there is any. `query` object `rules` lists entities with a compiled
 brief missing a required field or relationship.
 
 Source pointers: `lib/pointers.mjs` gives each source one spelling. Kinds are lowercased and short
