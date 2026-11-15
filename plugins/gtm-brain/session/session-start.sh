@@ -35,8 +35,12 @@ interaction_policy() {
 # carries generated copies of both policies: printing them again costs every request of the chat. A
 # linked project folder's AGENTS.md is only a pointer, and an old brain may predate the generated
 # blocks or the CLAUDE.md import, so those still get them.
+# A rulebook from 0.35.0 on carries neither block: both are rule pages the server returns (query, object rules), so
+# the chat gets one pointer line instead of the two policies.
 brain_interaction_policy() {
-  if [ -z "$project" ] && node "$H" rulebook "$root" 2>/dev/null && grep -q '<!-- generated: questions' "$root/AGENTS.md" 2>/dev/null && grep -q '<!-- generated: computer-use' "$root/AGENTS.md" 2>/dev/null; then
+  if [ -z "$project" ] && node "$H" rulebook "$root" 2>/dev/null && grep -q '^## Rule pages' "$root/AGENTS.md" 2>/dev/null && ! grep -q '<!-- generated: questions' "$root/AGENTS.md" 2>/dev/null; then
+    echo "Before the first question you ask the person, read the questions rule page once (query, object rules, search questions); not before a plain answer, and not again later."
+  elif [ -z "$project" ] && node "$H" rulebook "$root" 2>/dev/null && grep -q '<!-- generated: questions' "$root/AGENTS.md" 2>/dev/null && grep -q '<!-- generated: computer-use' "$root/AGENTS.md" 2>/dev/null; then
     echo "Before the first question you ask the person, read $P/skills/gtm-brain-start/references/questions.md once; not before a plain answer, and not again later."
   else
     interaction_policy
@@ -93,7 +97,9 @@ elif [ -n "$url" ] && [ "$mode" = "always" ]; then
 elif [ -n "$url" ]; then
   node "$H" text dashboardOnDemand "$url"
 fi
-echo "brain: $(basename "$root")  ·  admin: brain/admin.md (always loaded)"
+# Which brain, said whole: the first call of a chat is no longer a status call, so the name and the folder to pass are here.
+company="${company:-$(node -e 'const l=await import(process.argv[1]);console.log((l.readAdmin(process.argv[2])||{}).company||"")' "$P/lib/brain.mjs" "$root" 2>/dev/null)}"
+echo "brain: $(basename "$root")${company:+ ($company)} at $root  ·  admin: brain/admin.md (always loaded)"
 # Sharing, said honestly: a failed last push, or a teammate merge that conflicted (lib.syncNotice).
 # Node starts only when one of the two state files records a problem, so a healthy chat start pays nothing.
 if grep -qs '"ok": *false' "$root/work/push.json" || grep -qs '"status": *"conflict"' "$root/work/teammates.json"; then
@@ -134,7 +140,7 @@ if [ -n "$loaded" ] && [ -f "$P/scripts/gtm-brain-load/load.mjs" ]; then
   lo="$( cd "$root" && node "$P/scripts/gtm-brain-load/load.mjs" . $loaded --only --last 0 ${project:+--project "$project"} 2>/dev/null )"; printf '%s\n' "$lo"
   echo; echo "If the person starts on something else, switch: load the fitting context, or offer a new one (AGENTS.md rule 1)."
 else
-  echo "Nothing loaded yet. If a pending onboarding instruction above applies, follow its next step. Otherwise infer a context from the request; ask what they are working on only when no task is known (AGENTS.md rule 1)."
+  echo "Nothing loaded yet. If a pending onboarding instruction above applies, follow its next step. A question needs no load: search with query and answer from the hits. For work that writes, infer a context from the request; ask what they are working on only when no task is known (AGENTS.md rule 1)."
 fi
 # Cached connector status is sufficient for orientation. The worker refreshes it.
 if [ -f "$root/work/tools.json" ]; then

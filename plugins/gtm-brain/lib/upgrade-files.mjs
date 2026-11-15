@@ -2,6 +2,7 @@
 import { existsSync, readFileSync, readdirSync, mkdirSync, copyFileSync, writeFileSync, mkdtempSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { readAdmin, readNames, commit } from "./brain.mjs";
+import { withOwnAdditions, splitOwn, joinOwn } from "./rule-pages.mjs";
 
 // Shared with the upgrade matrix tests. Aliases point to the same immutable snapshot.
 export const legacyTemplates = JSON.parse(readFileSync(new URL("../templates/legacy/manifest.json", import.meta.url), "utf8"));
@@ -23,7 +24,7 @@ const shippedMatches = (templates, company, current) => {
 export function rulesReasons(root, templates) {
   const company = readAdmin(root)?.company; const path = join(root, "AGENTS.md");
   if (!company || !existsSync(path)) return { from: null, reasons: [] };
-  const current = readFileSync(path, "utf8");
+  const current = splitOwn(readFileSync(path, "utf8")).rules;   // the rules part: a person's own additions come after it
   if (current === readFileSync(join(templates, "AGENTS.md"), "utf8").replaceAll("{{COMPANY}}", company)) return { from: null, reasons: [] };
   const matches = shippedMatches(templates, company, current);
   if (!matches.length) return { from: null, reasons: [] };
@@ -52,7 +53,7 @@ export function autoRefresh(root, templates) {
     const prepared = prepareUpgrade(root, templates);
     if (!prepared.ready) return rulesOffer(root, templates);
     backup = prepared.backup;
-    writeFileSync(join(root, "AGENTS.md"), readFileSync(join(templates, "AGENTS.md"), "utf8").replaceAll("{{COMPANY}}", readAdmin(root).company));
+    writeRules(root, templates);
   } catch { return rulesOffer(root, templates); }
   commit(root, ["AGENTS.md"], "upgrade: rules refreshed");
   const why = reasons.length ? reasons.join("; ") : "they name tools and habits the plugin has moved on from";
@@ -78,9 +79,18 @@ export function rulesState(root, templates) {
   const company = readAdmin(root)?.company; if (!company) return "missing";
   const path = join(root, "AGENTS.md"); if (!existsSync(path)) return "missing";
   const render = file => readFileSync(file, "utf8").replaceAll("{{COMPANY}}", company);
-  const current = readFileSync(path, "utf8");
+  const current = splitOwn(readFileSync(path, "utf8")).rules;   // own additions after the rules do not make them edited
   if (current === render(join(templates, "AGENTS.md"))) return "current";
   return [...new Set(Object.values(legacyTemplates))].some(file => current === render(join(templates, "legacy", file))) ? "legacy" : "custom";
+}
+/* Write the shipped rules into the brain's AGENTS.md, the person's own additions (under their heading) carried over
+   word for word. True when the file changed. Only after prepareUpgrade said ready. */
+export function writeRules(root, templates) {
+  const path = join(root, "AGENTS.md"), target = readFileSync(join(templates, "AGENTS.md"), "utf8").replaceAll("{{COMPANY}}", readAdmin(root).company);
+  const current = existsSync(path) ? readFileSync(path, "utf8") : null;
+  const next = joinOwn(target, current === null ? "" : splitOwn(current).own);
+  if (current === next) return false;
+  writeFileSync(path, next); return true;
 }
 export function prepareUpgrade(root, templates) {
   const company = readAdmin(root)?.company;
@@ -90,7 +100,8 @@ export function prepareUpgrade(root, templates) {
   readNames(root);
   const render = file => readFileSync(file, "utf8").replaceAll("{{COMPANY}}", company);
   const target = render(join(templates, "AGENTS.md"));
-  const current = existsSync(join(root, "AGENTS.md")) ? readFileSync(join(root, "AGENTS.md"), "utf8") : null;
+  const whole = existsSync(join(root, "AGENTS.md")) ? readFileSync(join(root, "AGENTS.md"), "utf8") : null;
+  const current = whole === null ? null : splitOwn(whole).rules;   // the rules part; own additions are carried over
   const previous = [...new Set(Object.values(legacyTemplates))].map(file => render(join(templates, "legacy", file)));
   const files = ["AGENTS.md", ".githooks/pre-commit", ".gitignore"];
   const needsChange = current !== target || files.slice(1).some(file => {
@@ -114,7 +125,7 @@ export function prepareUpgrade(root, templates) {
   }
   if (current !== null && current !== target && !previous.includes(current)) {
     const proposal = join(backup, "AGENTS.proposed.md");
-    writeFileSync(proposal, target);
+    writeFileSync(proposal, withOwnAdditions(target, whole, previous));   // the person's own lines stay, under their own heading
     return { ready: false, backup, proposal };
   }
   return { ready: true, backup };

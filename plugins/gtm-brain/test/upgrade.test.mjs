@@ -9,6 +9,7 @@ import { spawnSync } from "node:child_process";
 import * as lib from "../lib/brain.mjs";
 import { legacyTemplates, rulesWhy, rulesReasons, rulesState, autoRefresh } from "../lib/upgrade-files.mjs";
 import { removeBrain } from "./helpers/dash-cleanup.mjs";
+import { wholeRulebook } from "../lib/rule-pages.mjs";
 
 const plugin = new URL("../", import.meta.url).pathname;
 function fixture(t, version = null) {
@@ -312,7 +313,7 @@ test("setup refuses a folder too broad for a brain, before writing anything, and
 });
 
 test("the rules say RULES.md decides where work output goes, inside its project", () => {
-  const rules = readFileSync(join(plugin, "templates/AGENTS.md"), "utf8").replace(/\s+/g, " ");
+  const rules = wholeRulebook(readFileSync(join(plugin, "templates/AGENTS.md"), "utf8")).replace(/\s+/g, " ");   // the files rule page holds the detail
   assert.match(rules, /`RULES\.md` at the brain root decides where every file goes, and the person edits it/);
   assert.match(rules, /a task that belongs to a listed project goes in that project, never in a folder of its own/);
   assert.match(rules, /Never put a deliverable in `work\/` or a new folder at the brain root/);

@@ -18,7 +18,8 @@ Keep authored brain content in English. Preserve names, source quotes and the ex
 
 ## Step 1: read
 
-Call `query` (status) first: a chat's first GTM Brain call runs the chat start, which writes
+Make a GTM Brain call before reading it (any call, no status call needed): a chat's first
+GTM Brain call runs the chat start, which writes
 RULES.md when it is missing and merges an older WHERE.md into it. Then read `RULES.md` at the
 brain root. It has three sections:
 

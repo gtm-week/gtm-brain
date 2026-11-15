@@ -20,7 +20,7 @@ editor opens it.
 | What the brain keeps per person, organization and product, and relationship types | `SCHEMA.md` | you; Codex fills the fields from notes |
 | Your documents (strategy, ICP, tone of voice, design system, pricing) | `<name>.md` at the top (the first four from day one), files in a folder of the same name | you or Codex |
 | Projects (an event, a campaign, a client) | `projects/<project>/` | you or Codex |
-| Rules Codex follows in this folder (six core rules first, also sent with every GTM Brain chat) | `AGENTS.md`, `CLAUDE.md` | GTM Brain; refreshed on update, never edit |
+| Rules Codex follows in this folder (six core rules first, also sent with every GTM Brain chat, then one line per rule; the detail of each is a rule page that ships with the plugin) | `AGENTS.md`, `CLAUDE.md` | GTM Brain; refreshed on update, never edit; your own lines stay at the end under "This brain's own additions" |
 | This computer's working files | `work/` | GTM Brain; not in git, never a deliverable |
 
 ## Saving: what you say, what it keeps

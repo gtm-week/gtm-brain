@@ -20,7 +20,8 @@ Keep authored brain content in English. Preserve names, source quotes and the ex
 
 ## Step 1: read
 
-Call `query` (status) first: a chat's first GTM Brain call runs the chat start, which writes
+Make a GTM Brain call before reading it (any call, no status call needed): a chat's first
+GTM Brain call runs the chat start, which writes
 SCHEMA.md when it is missing and reports one that cannot be read, with a fix per line. Then read
 `SCHEMA.md` at the brain root:
 

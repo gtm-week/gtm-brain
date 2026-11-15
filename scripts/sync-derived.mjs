@@ -15,7 +15,9 @@ const outputs = new Map();
 for (const path of ["AGENTS.md", "INSTALL.md", "plugins/gtm-brain/templates/AGENTS.md"]) {
   let text = read(path);
   // core: the brain's first section only; server/server.mjs reads the same policies/core.md for its instructions.
-  for (const name of ["questions", "computer-use", ...(path.startsWith("plugins/") ? ["core"] : [])]) {
+  // The brain's rulebook keeps only the core: its question and Computer Use text are rule pages the server
+  // serves from policies/ (lib/rule-pages.mjs), so they are not copied into every brain's AGENTS.md.
+  for (const name of path.startsWith("plugins/") ? ["core"] : ["questions", "computer-use"]) {
     const start = `<!-- generated: ${name}; edit plugins/gtm-brain/policies/${name}.md -->`;
     const end = `<!-- /generated: ${name} -->`;
     if (text.split(start).length !== 2 || text.split(end).length !== 2)

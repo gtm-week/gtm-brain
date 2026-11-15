@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { resolve, dirname } from 'node:path';
 import { interviewRoute, updateRoute, icpBodyChecks, icpCases, plainRequestRouted, writtenICPRoute } from './live/icp-cases.mjs';
 import { documentSlug, documentPathFor } from '../lib/documents.mjs';
+import { wholeRulebook } from '../lib/rule-pages.mjs';
 const file = fileURLToPath(new URL('../skills/gtm-brain-define-icp/SKILL.md', import.meta.url));
 const skill = readFileSync(file, 'utf8');
 const method = readFileSync(new URL('../skills/gtm-brain-define-icp/references/method.md', import.meta.url), 'utf8');
@@ -52,7 +53,7 @@ test('interview response check accepts a truthful no-write acknowledgement', () 
 });
 
 test('a plain request reaches Define ICP and a written ICP still goes to documents', () => {
-  const rules = readFileSync(new URL('../templates/AGENTS.md', import.meta.url), 'utf8');
+  const rules = wholeRulebook(readFileSync(new URL('../templates/AGENTS.md', import.meta.url), 'utf8'));
   const documents = readFileSync(new URL('../skills/gtm-brain-use-brain/references/documents.md', import.meta.url), 'utf8');
   assert.match(rules, /define or rework who to target[^:]*: `gtm-brain-define-icp`/);
   assert.match(rules, /`gtm-brain-define-icp` \(Chris Pawlak's interview/);

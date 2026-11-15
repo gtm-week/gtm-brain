@@ -8,6 +8,7 @@ import { mkdtempSync, readFileSync, writeFileSync, existsSync, mkdirSync, rmSync
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync, spawnSync, spawn } from "node:child_process";
+import { wholeRulebook } from "../lib/rule-pages.mjs";
 const P = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 // Keep real installation preferences out of synthetic test brains.
 process.env.CODEX_HOME = mkdtempSync(join(tmpdir(), "gtm-brain-test-profile-"));
@@ -749,7 +750,7 @@ test("GTM Brain has no question forms: questions go to Codex's own box or plain 
 });
 
 test("sync and resolution end without a next step, a reminder or a to-do; the brain is not the person's to-do system (ALL-208)", () => {
-  const template = readFileSync(`${P}/templates/AGENTS.md`, "utf8");
+  const template = wholeRulebook(readFileSync(`${P}/templates/AGENTS.md`, "utf8"));
   assert.match(template, /not the person's to-do system/);
   assert.match(template, /Not after `gtm-brain-sync` or a dashboard resolution/);
   const sync = readFileSync(`${P}/skills/gtm-brain-sync/SKILL.md`, "utf8");
@@ -770,8 +771,8 @@ test("adding a file is one obvious pathway: everyday work through use-brain's fi
   assert.ok(!existsSync(`${P}/skills/gtm-brain-document`), "documents are part of everyday work, not a skill of their own (2026-11-13)");
   assert.match(readFileSync(`${P}/skills/gtm-brain-use-brain/SKILL.md`, "utf8"), /\[documents\]\(references\/documents\.md\)/);
   assert.doesNotMatch(readFileSync(join(P, "..", "..", "COMMANDS.md"), "utf8"), /`gtm-brain-document`/);
-  const template = readFileSync(`${P}/templates/AGENTS.md`, "utf8");
-  assert.match(template, /goes through gtm-brain-use-brain's references\/files\.md/); assert.doesNotMatch(template, /gtm-brain-add-file/);
+  const template = wholeRulebook(readFileSync(`${P}/templates/AGENTS.md`, "utf8"));
+  assert.match(template, /goes through gtm-brain-use-brain's\s+references\/files\.md/); assert.doesNotMatch(template, /gtm-brain-add-file/);
 });
 
 test("a summary is written on demand in the chat that asks: the procedure says so and no longer queues the worker (0.35.0, lane S1)", () => {
@@ -781,7 +782,8 @@ test("a summary is written on demand in the chat that asks: the procedure says s
   const useBrain = readFileSync(`${P}/skills/gtm-brain-use-brain/SKILL.md`, "utf8");
   assert.doesNotMatch(useBrain, /\| `compile_facts`, `compile_apply` \|/);
   assert.doesNotMatch(useBrain, /\| `entity_facts`, `compile_entity` \|/);
-  const template = readFileSync(`${P}/templates/AGENTS.md`, "utf8");
+  const template = wholeRulebook(readFileSync(`${P}/templates/AGENTS.md`, "utf8"));
+  assert.match(template, /compile tools are offered only to the scheduled and background runs/i);
   assert.doesNotMatch(template, /`load_context`, `remember`, `recall`, `compile_facts`,\n`compile_apply`,/);
 });
 
@@ -790,7 +792,8 @@ test("a chat is told one read tool: no skill, policy or template names a retired
   const runProcedures = ["references/compile.md", "references/entity-compile.md"];
   const files = execFileSync("grep", ["-rlE", "`(recall|who_is|entity_facts|list_contexts|list_projects|list_brains|customer_overview|meeting_overview|advise|where_we_are)`", `${P}/skills`, `${P}/policies`, `${P}/templates/AGENTS.md`, "--include=*.md"], { encoding: "utf8" }).trim().split("\n").filter(Boolean).filter(f => !f.includes("/legacy/") && !runProcedures.some(r => f.endsWith(r)));
   assert.deepEqual(files, [], "retired read tools are still named in these files");
-  assert.match(readFileSync(`${P}/templates/AGENTS.md`, "utf8"), /`query` \(status\)/);
+  assert.match(readFileSync(`${P}/templates/AGENTS.md`, "utf8"), /`query` with a search for a question/);
+  assert.doesNotMatch(readFileSync(`${P}/templates/AGENTS.md`, "utf8"), /`query` \(status\)/, "no status call first");
   assert.doesNotMatch(readFileSync(`${P}/templates/AGENTS.md`, "utf8"), retired);
 });
 
@@ -799,7 +802,7 @@ test("remember confirms with the note itself, and the schema guidance lives in t
   assert.match(remember, /quote the note as written/i, "the confirmation is the note, not a list of names");
   assert.match(remember, /do not invent dates/i, "guidance that lived only in the schema moved here");
   assert.match(readFileSync(`${P}/skills/gtm-brain-use-brain/references/customers.md`, "utf8"), /separate call/);
-  assert.match(readFileSync(`${P}/templates/AGENTS.md`, "utf8"), /note text in quotes with its context/);
+  assert.match(readFileSync(`${P}/templates/AGENTS.md`, "utf8"), /note text in\s+quotes with its context/);
 });
 
 test("retired skills live on as references of the eight, and nothing names them as skills any more (ALL-204 step 4)", () => {

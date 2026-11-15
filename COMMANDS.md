@@ -300,6 +300,15 @@ rule, the person or path, and two or three fixed choices carried out through the
 (`add_name`, `merge_entities`, `save` with `placed`), so each fix leaves its own reason. It reads
 only and changes nothing; `query` with object `health` counts what it found.
 
+`query` with object `rules` and a `search` word returns one rule page instead: the detail of a
+rule the brain's `AGENTS.md` keeps as one line (questions, computer-use, answers, saving, contexts,
+entities, files, documents, approve, meetings, customers, interactions, dashboard, projects,
+skills). The pages ship with the plugin in `plugins/gtm-brain/policies/rules/` (the first two are
+`policies/questions.md` and `policies/computer-use.md`). A tool also attaches its own page to its
+first reply of a chat, once: `load_context` and the other context tools the contexts page, the
+entity tools the entities page, `document` the documents page, `query` meetings and customers
+their pages, and so on. Writes: nothing.
+
 *"Is the brain too full or too empty?"* is `query` with object `population`
 (`scripts/gtm-brain-advisor/population.mjs`, numbers in `lib/population.mjs`). Deterministic, from
 the files, no model: notes saved in the last 7 days and the weekly average of the 4 weeks before;

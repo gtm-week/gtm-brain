@@ -25,6 +25,8 @@ import { readSchema, fieldsFor } from "../lib/schema.mjs";
 import { hasMemoryIndex } from "../lib/memory-index-store.mjs";
 import { createSaveNudge } from "../lib/save-nudge.mjs";
 import { relativeDates } from "../lib/dots.mjs";
+import { rulePageAnswer, pageForCall, rulePageText, rulePageIndex } from "../lib/rule-pages.mjs";
+import { foldStatus as foldStatusText } from "../lib/opening.mjs";
 
 const P = dirname(dirname(fileURLToPath(import.meta.url)));
 const lib = await import(join(P, "lib", "brain.mjs"));
@@ -406,6 +408,7 @@ const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [colu
   const datasets = [...query.inputSchema.properties.object.enum];
   const base = query.call, describeBase = describe.call, objectsBase = objects.call;
   query.description = "To answer a question from the brain, call query with object answer and search = the question as asked: one call returns the best notes (text, date and age, id, source), the card and relationships of a person, company or product it names, or Not found stated plainly; answer from that reply. Search again only for a different question, or with the limit its last line gives. Names and aliases resolve to their entity; a period (last week, in October, a date), a kind (decisions) or #tag narrows first; words match stemmed, one typo is tolerated. Replies stay under about 12 KB. Otherwise the one read: rows of one object, newest first (exact filters, limit; a memories search is ranked the same way, best first, same cap), or one read-only SQL SELECT over the memory index (memories, members, contexts, entities, keywords; describe_object shows the columns) for counts, joins and dates. Derived reads by object: status (where we are: contexts, loaded set, tools, onboarding; call it first), brief (an entity's cited one-page view; search = the name; also answers who is X and why did you add X), deal (one deal's MEDDPICC rubric and every memory about it, to score with cited IDs; search = the company), relations (relationships from SCHEMA.md with their history; search = an entity, filters.type = one type), why (why a file or folder is where it is: the RULES.md row, reason, who and when; search = the path), rules (the brain checked against its naming and RULES.md rules; for: check the brain), projects, brains, customers, meetings, health (how the brain is doing), population (too full or too empty: notes per week, duplicates, entities without notes, uncited notes), workflows (each one's status, trigger, runs, what it waits for, last result, events waiting to start). An entities search resolves a name, alias, email or typo to ranked candidates; entities filters: kind, subtype, relation_to_us (team, customer, partner, investor, prospect, other), any SCHEMA.md field (role: VP Sales). Answer from the rows; no rows means say so.";
+  query.description = query.description.replace("onboarding; call it first)", "onboarding; the chat's opening lines already carry it)").replace("rules (the brain checked against its naming and RULES.md rules; for: check the brain)", `rules (search = a topic: that rule page, one of ${rulePageIndex()}; no search: the brain checked against its rules)`);
   query.inputSchema = { ...query.inputSchema, required: [], properties: { ...query.inputSchema.properties,
     object: { ...query.inputSchema.properties.object, enum: [...datasets, "answer", ...Object.keys(VIEWS), "deal", "why", "rules", "relations", "reference", "population", "workflows"] },
     sql: { type: "string", description: "One SELECT (or WITH ... SELECT) over memories, members, contexts, entities and keywords. Read-only; at most limit rows (default 200)." },
@@ -423,7 +426,8 @@ const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [colu
       try { return withAskSource(brain, text(await memoryReader.read(brain, "search", { search, ...(filters && typeof filters === "object" ? { filters } : {}), ...(limit ? { limit } : {}), ...(project ? { project } : {}) }))); } catch (e) { return text(e.message, true); }
     }
     if (object === "brief") return search ? original.get("recall")({ brain, entity: search, ...(filters?.context ? { context: filters.context } : {}), ...(project ? { project } : {}) }) : text("brief needs search: the entity name, alias, email or id.", true);
-    if (object === "rules") return original.get("check_rules")({ brain });
+    // with a search word: that rule page (lib/rule-pages.mjs); without one: the brain checked against its rules
+    if (object === "rules") return typeof search === "string" && search.trim() ? text(rulePageAnswer(search)) : original.get("check_rules")({ brain });
     if (object === "why") return search ? original.get("why_here")({ brain, path: search }) : text("why needs search: the file or folder path.", true);
     if (object === "relations") return run(brain, "gtm-brain-entities/entities.mjs", ["--relations", ...(search ? ["--entity", search] : []), ...(filters?.type ? ["--type", String(filters.type)] : [])]).then(result);
     if (object === "reference") {   // a source pointer (kind:ref or a record URL): the entity that holds it and every note citing it
@@ -454,7 +458,7 @@ const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [colu
   describe.inputSchema = { ...describe.inputSchema, properties: { ...describe.inputSchema.properties, name: { ...describe.inputSchema.properties.name, enum: [...datasets, "answer", ...Object.keys(VIEWS), "deal", "why", "rules", "relations", "reference", "population", "workflows"] } } };
   describe.call = async args => {
     if (args.name === "answer") return text("answer: a derived read (query with object answer, search = the question as asked; optional filters as for memories, limit = notes to show, default 8, project). Names, aliases, first names and emails resolve through the entity registry and narrow to that entity's notes; a period (today, yesterday, tomorrow, last or next week, this month, in October, since October, Q3, last quarter, 3 November, 2026-11-03, a weekday, next Thursday; a calendar word also matches notes that mention it), a kind (decisions, questions) and #tag narrow too, widening one step with a line saying so when nothing is left. Words are matched stemmed; a word no note has (five letters or more) is tried as the nearest spelling in the brain's word list, ranked below exact matches, with a line saying what was searched instead. Ranked: more of the words, the exact phrase, words near each other, then newer first; superseded and retracted notes never appear, and a relationship or customer status a later note contradicts is marked no longer current with that note shown next. Returns the best notes with text, date, age, id and source, the card of each named entity (kind, aliases, compiled overview, fields, current relationships, note count and age), and Not found plainly when nothing matches; under about 12 KB, with a last line saying how many more matched. Reads only.");
-    if (args.name === "rules") return text("rules: a derived read (query with object rules). Checks the brain against its own rules: people known by a first name only (P3), look-alike names nobody confirmed (P4), top-level folders no RULES.md row names, files with no recorded reason (by folder), names with capitals or spaces. Each finding: the rule, the person or path, two or three fixed choices through existing tools. Reads only.");
+    if (args.name === "rules") return text("rules: a derived read (query with object rules). With search = a topic, returns that rule page of the rulebook (" + rulePageIndex() + "). Without search, checks the brain against its own rules: people known by a first name only (P3), look-alike names nobody confirmed (P4), top-level folders no RULES.md row names, files with no recorded reason (by folder), names with capitals or spaces. Each finding: the rule, the person or path, two or three fixed choices through existing tools. Reads only.");
     if (args.name === "why") return text("why: a derived read (query with object why, search = a path inside the brain). Returns the RULES.md row and reason recorded when the file or folder was saved (save's placed), who put it there and when; for a folder, the reasons for what is inside; with no reason recorded, when it arrived and that the person should be asked. Reads only.");
     if (args.name === "reference") return text("reference: a derived read (query with object reference; search = a source pointer as kind:ref, kind:account/ref or a record URL). Kinds are normalized (HubSpot, hubspot and an app.hubspot.com link are one pointer). Returns the entity whose references include it and every note whose sources cite it, newest first. Reads only.");
     if (args.name === "relations") return text("relations: a derived read (query with object relations; search = an entity for its relationships only; filters.type = one type). Every relationship recorded with remember's relation block, typed by SCHEMA.md: from, type, to (an entity or us), current or ended, said by the person or from a source, the observed date, the note it rests on, the history (oldest notes stay) and source records that disagree. Customer status is included read-only as customer_of. A type removed from SCHEMA.md is kept and marked. Reads only.");
@@ -478,9 +482,9 @@ const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [colu
 // Claude Code keeps only the first 2048 characters of a server's instructions (MAX_MCP_DESCRIPTION_LENGTH), so the
 // order below is the order of what must arrive, and rules-core.test.mjs holds the core inside that cut.
 const CORE = `In a brain, its core rules come first (the first section of its AGENTS.md):\n${readFileSync(join(P, "policies", "core.md"), "utf8").trimEnd()}\n`;
-const INSTRUCTIONS = "GTM Brain: the company brain in this workspace. Pass the workspace folder as brain. In a folder with brain/admin.md, or one whose AGENTS.md names a GTM Brain project, start every chat with query (object status) before your first answer: it refreshes the brain and returns the chat's opening lines, which you follow. In a folder without a brain, a request to set up GTM Brain follows the gtm-brain-start skill (check_environment first).\n" + CORE + "Tools return plain text meant for you. Everything a tool writes is kept at once; never ask the person to save, never mention git. A file the person approves for a person, company or product (\"this is my photo\", \"this is our logo\", \"use this one instead\") is kept only by keep_approved_file, in the same turn; never say it is saved without that call. A note or a tag alone is never used again. Files you create, edit, move or delete in the brain folder yourself (a graphic, a brief, RULES.md), not through a GTM Brain tool, are kept by save: call it once when that task is done, with a one-line message and, for each new file or folder, placed (path, RULES.md row, why). Why is this file here: query (object why, search: the path).";
+const INSTRUCTIONS = "GTM Brain: the company brain in this workspace. Pass the workspace folder as brain. In a folder with brain/admin.md, or one whose AGENTS.md names a GTM Brain project, the chat's first GTM Brain call, whatever it is, refreshes the brain and returns the chat's opening lines with its result; follow them. Make that first call the one the request needs (query memories with search for a question, remember for a save): no separate status call. In a folder without a brain, a request to set up GTM Brain follows the gtm-brain-start skill (check_environment first).\n" + CORE + "Tools return plain text meant for you. Everything a tool writes is kept at once; never ask the person to save, never mention git. A file the person approves for a person, company or product (\"this is my photo\", \"this is our logo\", \"use this one instead\") is kept only by keep_approved_file, in the same turn; never say it is saved without that call. A note or a tag alone is never used again. Files you create, edit, move or delete in the brain folder yourself (a graphic, a brief, RULES.md), not through a GTM Brain tool, are kept by save: call it once when that task is done, with a one-line message and, for each new file or folder, placed (path, RULES.md row, why). Why is this file here: query (object why, search: the path).";
 
-const WORKFLOWS = `During company work, read ${join(P, "skills/gtm-brain-use-brain/SKILL.md")} and the internal procedure relevant to the task. Asked how the brain works, what it can or cannot do, how to change it, or why something looks wrong: read ${join(P, "MANUAL.md")} and answer from it in a few lines. Read ${join(P, "skills/gtm-brain-configure/SKILL.md")} for workplace changes and APPROVE. Read ${join(P, "skills/gtm-brain-configure/references/update-plugin.md")} for plugin updates or brain refresh. Internal operations remain tools; the person does not need to invoke a separate skill for each one.`;
+const WORKFLOWS = `Ordinary questions and saving need no skill file: the tool descriptions and the opening lines carry what they need, and query (object rules, search: a topic) returns one rule page. Skills are for the workflows a person asks for by name. Asked how the brain works, what it can or cannot do, how to change it, or why something looks wrong: read ${join(P, "MANUAL.md")} and answer from it in a few lines. Read ${join(P, "skills/gtm-brain-configure/SKILL.md")} for workplace changes and APPROVE. Read ${join(P, "skills/gtm-brain-configure/references/update-plugin.md")} for plugin updates or brain refresh. Internal operations remain tools; the person does not need to invoke a separate skill for each one.`;
 
 /* ---------- The start of a chat ---------- */
 // What session/session-start.sh prints (the project line, loaded contexts, tools, documents, update offer)
@@ -501,6 +505,7 @@ async function opening(args) {
   const key = `${resolve(args.brain)}\t${project}`, last = opened.get(key);
   opened.set(key, Date.now());
   if (last && Date.now() - last < OPEN_AGAIN_MS) return null;
+  attached.delete(key);   // a new start: the rule pages ride along again
   const linked = project && lib.readProjects(args.brain).find(p => p.slug === project)?.path;
   const cwd = linked && existsSync(linked) ? linked : args.brain;
   let chat = null; try { chat = host().currentChat(cwd); } catch {}
@@ -510,6 +515,26 @@ async function opening(args) {
     child.stdin.end(JSON.stringify({ session_id: chat || "", cwd }));
   });
   return out ? `GTM Brain chat start (once per chat; follow it):\n${out}` : null;
+}
+
+/* ---------- The rule pages that ride along ---------- */
+// A tool's own rule page (lib/rule-pages.mjs, the attach line of each page) goes with its first reply of a chat,
+// once per brain and project, the way the saving rules ride along with the chat start: the rulebook keeps one
+// line per rule, and the detail arrives at the moment it matters. Never in a separate run or the compile toolset.
+const attached = new Map();
+function rulePageFor(args, name, res) {
+  if (res?.isError || process.env.GTM_BRAIN_RUN || process.env.GTM_BRAIN_TOOLSET === "compile" || process.env.GTM_BRAIN_NO_RULE_PAGES || process.env.GTM_BRAIN_NO_SESSION_START || !isBrain(args.brain)) return "";   // no chat start (tests that parse a reply as one text): no pages either
+  const page = pageForCall(name, args); if (!page) return "";
+  const key = `${resolve(args.brain)}\t${typeof args.project === "string" ? args.project : ""}`;
+  const sent = attached.get(key) || new Set(); attached.set(key, sent);
+  if (sent.has(page.slug)) return "";
+  sent.add(page.slug); return rulePageText(page);
+}
+
+/* A status call as the first call of a chat: its reply keeps only the lines the opening lines lack (lib/opening.mjs). */
+function foldStatus(name, args, r, start) {
+  if (!start || name !== "query" || args.object !== "status" || r?.isError || !r?.content?.[0]?.text) return r;
+  return { ...r, content: [{ ...r.content[0], text: foldStatusText(r.content[0].text, start) }, ...r.content.slice(1)] };
 }
 
 /* ---------- What this chat called ---------- */
@@ -564,7 +589,8 @@ async function handle(req) {
     const start = await opening(args).catch(() => null);
     let r; try { r = await tool.call(args, id); } catch (e) { r = text(`${tool.name} failed: ${e.message}`, true); }
     logCall(args, tool.name, r);
-    const extra = [saveNudge(args, tool.name, r), start].filter(Boolean).map(t => ({ type: "text", text: t }));
+    r = foldStatus(tool.name, args, r, start);
+    const extra = [saveNudge(args, tool.name, r), rulePageFor(args, tool.name, r), start].filter(Boolean).map(t => ({ type: "text", text: t }));
     return reply(id, extra.length ? { ...r, content: [...(r.content || []), ...extra] } : r);
   }
   if (method === "prompts/list") return reply(id, { prompts: [] });

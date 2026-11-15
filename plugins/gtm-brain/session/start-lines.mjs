@@ -1,5 +1,5 @@
 // The chat start's closing lines, in one process instead of one node per line (each spawn cost about 0.1 s,
-// more on a laptop, and they made the first status call slow): the health line, the documents, the approved
+// more on a laptop, and they made the first status call slow): the health line, the open brain questions, the documents, the approved
 // files, the workflow runs, the stray folders, the rules refresh, RULES.md, Ask the source, SCHEMA.md, the
 // paused summaries and the unplaced files, in that order. Each part stands alone: one that fails prints nothing.
 //   node start-lines.mjs <root> <project> <templates>
@@ -8,6 +8,7 @@ const lib = u => import(new URL(`../lib/${u}`, import.meta.url));
 const say = s => { if (s) console.log(s); };
 const parts = [
   async () => { const l = await lib("brain.mjs"), h = await lib("health-line.mjs"); say(h.healthLine(root, l.meetingOverview(root, { by: l.currentPerson(root) || undefined }))); },
+  async () => say((await lib("opening.mjs")).pendingQuestionsLine(root)),   // the brain questions nobody answered yet
   async () => console.log((await lib("documents.mjs")).documentsLine(root, { absolute: !!project })),
   async () => say((await lib("assets.mjs")).assetsLine(root)),
   async () => say((await lib("workflows.mjs")).runsLine(root)),
