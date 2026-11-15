@@ -72,12 +72,20 @@ export const noAnswerText = (reason, host = false) => `no answer (${reason}). Th
 export async function askPerson(questions, args, requestId) {
   let form; try { form = buildForm(args); } catch (e) { return { text: `not asked: ${e.message}`, isError: true }; }
   if (!questions.available()) return { text: noAnswerText('this host cannot show forms', true) };
-  let read = readForm(form, await questions.raw(form.params, requestId, true));
-  // The person picked the typed-answer choice: its text field is a second form. They have just seen a
-  // form, so a quick close of this one is theirs, not a host that hides forms.
-  if (read.status === 'own') {
-    read = readForm({ offered: null }, await questions.raw(buildFollowUp({ question: form.question }), requestId, false));
-    if (read.status === 'none') read = { status: 'none', reason: 'the person chose to type an answer and closed the form without one' };
+  let read;
+  try {
+    read = readForm(form, await questions.raw(form.params, requestId, true));
+    // The person picked the typed-answer choice: its text field is a second form. They have just seen a
+    // form, so a quick close of this one is theirs, not a host that hides forms.
+    if (read.status === 'own') {
+      read = readForm({ offered: null }, await questions.raw(buildFollowUp({ question: form.question }), requestId, false));
+      if (read.status === 'none') read = { status: 'none', reason: 'the person chose to type an answer and closed the form without one' };
+    }
+  } catch (e) {
+    // Two questions sent at once: the second is not asked. A form the host failed on is no answer either,
+    // and says what to do next like every other one (never a bare failure the model retries).
+    if (/already pending/.test(e.message)) return { text: 'not asked: another question is already waiting for the person\'s answer. One question at a time: ask this one after that call returns, and only if it is still open.', isError: true };
+    return { text: noAnswerText('the host could not show the form', true) };
   }
   return { text: read.status === 'answered' ? answerText(read) : noAnswerText(read.reason, read.host) };
 }

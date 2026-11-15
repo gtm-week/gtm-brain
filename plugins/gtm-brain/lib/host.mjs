@@ -99,6 +99,14 @@ export function formAnswers(output) {
   return out;
 }
 
+/* Only the result of a call that named ask_person counts: any other tool's output (a file, a web page, a
+   search result, a note read back) can carry the same words, and those are not the person's. Codex keeps a
+   tool call as a *_call record and its result under the same call_id; a call is ask_person's by its name, or,
+   for the code runner (custom_tool_call exec), by its code. Claude Code: a tool_use part and its tool_use_id. */
+export const asksPerson = p => /_call$/.test(p?.type || "") && (/(^|_|\.)ask_person$/.test(p.name || "") || (p.type === "custom_tool_call" && /ask_person["']?\]?\s*\(/.test(String(p.input || ""))));
+const claudeAsks = (r, asked) => { if (r.type === "assistant" && Array.isArray(r.message?.content)) for (const c of r.message.content) if (c?.type === "tool_use" && /(^|_)ask_person$/.test(c.name || "") && c.id) asked.add(c.id); };
+const claudePicked = (r, asked) => r.type === "user" && Array.isArray(r.message?.content) ? r.message.content.filter(c => c?.type === "tool_result" && asked.has(c.tool_use_id)).flatMap(c => formAnswers(c.content)) : [];
+
 const ADAPTERS = {
   codex: {
     projectSkillsDir: ".agents/skills",
@@ -120,12 +128,13 @@ const ADAPTERS = {
       const days = [0, 1, 2].map(n => new Date(Date.now() - n * 864e5)).map(d => join(home, "sessions", String(d.getFullYear()), String(d.getMonth() + 1).padStart(2, "0"), String(d.getDate()).padStart(2, "0")));
       const file = days.flatMap(dir => { try { return readdirSync(dir).filter(f => f.endsWith(`${id}.jsonl`)).map(f => join(dir, f)); } catch { return []; } })[0];
       if (!file) return "";
-      let last = "";
-      try { for (const line of readFileSync(file, "utf8").split("\n")) { try { const p = JSON.parse(line).payload || {}; if (p.type === "message" && p.role === "user") { const t = (p.content || []).map(c => c?.text || "").join(" "); if (t && !/^\s*<(environment_context|user_instructions|permissions)/.test(t) && !/AGENTS\.md instructions/.test(t.slice(0, 300))) last = t; }
+      let last = ""; const asked = new Set();
+      try { for (const line of readFileSync(file, "utf8").split("\n")) { try { const p = JSON.parse(line).payload || {}; if (asksPerson(p) && p.call_id) asked.add(p.call_id);
+        if (p.type === "message" && p.role === "user") { const t = (p.content || []).map(c => c?.text || "").join(" "); if (t && !/^\s*<(environment_context|user_instructions|permissions)/.test(t) && !/AGENTS\.md instructions/.test(t.slice(0, 300))) last = t; }
         // an answer picked in the question box is the person's words too ("Florian Kim" picked, not typed; new-brain, 2026-11-12)
         else if (p.type === "function_call_output" && /"answers"/.test(String(p.output).slice(0, 40))) { const a = JSON.parse(p.output).answers || {}; const picked = Object.values(a).flatMap(x => x?.answers || []).join(" "); if (picked) last = `${last} ${picked}`.trim(); }
         // and so is an answer given in ask_person's form
-        else if (/_output$/.test(p.type || "")) { const picked = formAnswers(p.output).join(" "); if (picked) last = `${last} ${picked}`.trim(); } } catch {} } } catch {}
+        else if (/_output$/.test(p.type || "") && asked.has(p.call_id)) { const picked = formAnswers(p.output).join(" "); if (picked) last = `${last} ${picked}`.trim(); } } catch {} } } catch {}
       return last;
     },
     capture: {
@@ -144,7 +153,7 @@ const ADAPTERS = {
       },
       // The person's and the assistant's words, in order; tool calls, their output and the host's scaffolding are left out.
       turns(file) {
-        const out = [];
+        const out = [], asked = new Set();
         for (const r of jsonLines(file) || []) {
           const p = r.payload || {}, at = r.timestamp || null;
           if (r.type === "response_item" && p.type === "message" && (p.role === "user" || p.role === "assistant")) {
@@ -153,7 +162,8 @@ const ADAPTERS = {
             out.push({ role: p.role === "user" ? "person" : "assistant", text: unwrap(t), at });
           } else if (r.type === "response_item" && p.type === "function_call_output" && /"answers"/.test(String(p.output).slice(0, 40))) {
             try { const picked = Object.values(JSON.parse(p.output).answers || {}).flatMap(x => x?.answers || []).join("; "); if (picked) out.push({ role: "person", text: `(picked) ${picked}`, at }); } catch {}
-          } else if (r.type === "response_item" && /_output$/.test(p.type || "")) {
+          } else if (r.type === "response_item" && asksPerson(p)) { if (p.call_id) asked.add(p.call_id);
+          } else if (r.type === "response_item" && /_output$/.test(p.type || "") && asked.has(p.call_id)) {
             const picked = formAnswers(p.output).join("; "); if (picked) out.push({ role: "person", text: `(picked) ${picked}`, at });
           }
         }
@@ -233,9 +243,9 @@ const ADAPTERS = {
       if (!/^[0-9a-f-]{36}$/.test(id || "")) return "";
       let file = null; try { for (const d of readdirSync(join(home, "projects"))) { const f = join(home, "projects", d, `${id}.jsonl`); if (existsSync(f)) { file = f; break; } } } catch {}
       if (!file) return "";
-      let last = "";
-      try { for (const line of readFileSync(file, "utf8").split("\n")) { try { const r = JSON.parse(line); if (r.type === "user" && typeof r.message?.content === "string") last = r.message.content;
-        else if (r.type === "user" && Array.isArray(r.message?.content)) { const picked = r.message.content.filter(c => c?.type === "tool_result").flatMap(c => formAnswers(c.content)).join(" "); if (picked) last = `${last} ${picked}`.trim(); } } catch {} } } catch {}
+      let last = ""; const asked = new Set();
+      try { for (const line of readFileSync(file, "utf8").split("\n")) { try { const r = JSON.parse(line); claudeAsks(r, asked); if (r.type === "user" && typeof r.message?.content === "string") last = r.message.content;
+        else { const picked = claudePicked(r, asked).join(" "); if (picked) last = `${last} ${picked}`.trim(); } } catch {} } } catch {}
       return last;
     },
     capture: {
@@ -253,11 +263,11 @@ const ADAPTERS = {
         }).filter(Boolean);
       },
       turns(file) {
-        const out = [];
+        const out = [], asked = new Set();
         for (const r of jsonLines(file) || []) {
           if ((r.type !== "user" && r.type !== "assistant") || r.isMeta || r.isSidechain || r.isCompactSummary) continue;   // a compaction summary is the host's text, not the person's
           const c = r.message?.content;
-          if (r.type === "user" && Array.isArray(c)) { const picked = c.filter(x => x?.type === "tool_result").flatMap(x => formAnswers(x.content)).join("; "); if (picked) out.push({ role: "person", text: `(picked) ${picked}`, at: r.timestamp || null }); }
+          claudeAsks(r, asked); { const picked = claudePicked(r, asked).join("; "); if (picked) out.push({ role: "person", text: `(picked) ${picked}`, at: r.timestamp || null }); }
           const t = typeof c === "string" ? c : Array.isArray(c) ? c.filter(x => x?.type === "text").map(x => x.text || "").join("\n") : "";
           if (!t.trim() || (r.type === "user" && SCAFFOLD.test(t))) continue;
           const text = unwrap(t); if (text) out.push({ role: r.type === "user" ? "person" : "assistant", text, at: r.timestamp || null });
