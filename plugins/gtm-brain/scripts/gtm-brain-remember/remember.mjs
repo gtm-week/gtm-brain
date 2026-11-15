@@ -76,7 +76,14 @@ const chat = session?.session_id || null, chatKind = session?.host || "codex";
 const authors = list(opt.by).map(w => { const h = lib.teamHandle(root, w); if (!h) die(`"${w}" is not in admin.md team`); return h; });
 // by is optional: the person in this chat is known (work/person.json, else the brain's git identity), so a save needs no read of admin.md first
 if (!authors.length) { const me = lib.currentPerson(root); if (me) authors.push(me); }
-if (!authors.length) die("need --by <person>: nobody is selected in this brain yet; pass the handle, name or email from admin.md team");
+// Nobody selected here (a fresh clone of a shared brain, before its first chat start): a team of one is that
+// person; otherwise the refusal carries the handles, so the same call repeats once with by and no note is lost
+// (live benchmark on a real brain, 2026-11-15: 12 of 14 saves were refused and never repeated).
+if (!authors.length) {
+  const team = (lib.readAdmin(root)?.team || []).map(p => p.handle).filter(Boolean);
+  if (team.length === 1) authors.push(team[0]);
+  else die(`nothing saved yet: this brain does not know who is in this chat. Call remember again now, with the same content and by = the handle of the person speaking, one of: ${team.join(", ") || "(no team in admin.md)"}. If the chat does not say who that is, ask once: "Who is saving this?"`);
+}
 // the speaker is known from the session: their own name is never an unclear name (s07: "which Artur?" asked of Artur himself)
 const speakers = (lib.readAdmin(root)?.team || []).filter(p => p && authors.includes(p.handle) && p.name).map(p => p.name);
 

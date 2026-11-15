@@ -5,7 +5,7 @@
 // s05), by is optional, and GTM_BRAIN_NO_COMMIT holds for save.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync, spawnSync } from "node:child_process";
@@ -229,4 +229,29 @@ test("a short outcome is an outcome: declined, agreed or signed is never refused
     assert.ok(checks.statesNoOutcome({ content: t, people: ["Lena Hoffmann"], meeting: { title: "Call with Lena Hoffmann" } }, { speakers: ["Artur Wala"] }), t);
   for (const t of ["Lena Hoffmann declined the keynote.", "Lena Hoffmann agreed.", "Lena Hoffmann cancelled."])
     assert.ok(!checks.statesNoOutcome({ content: t, people: ["Lena Hoffmann"], meeting: { title: "Call with Lena Hoffmann" } }, { speakers: ["Artur Wala"] }), t);
+});
+
+test("nobody selected in this checkout: a team of one saves as that person; a larger team is told the handles so the call repeats once", () => {
+  const solo = brain();
+  execFileSync("git", ["-C", solo.root, "config", "user.email", "someone@users.noreply.github.com"]);   // a fresh clone: no selected person, no matching git email
+  rmSync(join(solo.root, "work", "person.json"), { force: true });
+  assert.equal(lib.currentPerson(solo.root), null);
+  const one = solo.remember("--no-by", "--context", "company", "--content", "Doors open at 17:30 on 16 November 2026.");
+  assert.equal(one.status, 0, one.stderr);
+  assert.deepEqual(solo.live().at(-1).authors, ["artur-wala"]);
+
+  const root = mkdtempSync(join(tmpdir(), "gtm-brain-misfire-team-")); execFileSync("git", ["init", "-q", root]);
+  execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "Week", "--one-liner", "events", "--owner", "Artur Wala <artur@week.test>", "--team", "Eva Nowak <eva@week.test>"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P } });
+  execFileSync("git", ["-C", root, "config", "user.email", "someone@users.noreply.github.com"]);
+  rmSync(join(root, "work", "person.json"), { force: true });
+  const env = { ...process.env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1" };
+  const run = (...a) => spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", ...a], { cwd: root, env, encoding: "utf8" });
+  const before = lib.listContexts(root).flatMap(c => c.memories).length;
+  const refused = run("--context", "company", "--content", "Doors open at 17:30 on 16 November 2026.");
+  assert.notEqual(refused.status, 0);
+  assert.match(refused.stderr + refused.stdout, /nothing saved yet.*Call remember again now.*by = the handle of the person speaking, one of: (artur-wala, eva-nowak|eva-nowak, artur-wala)/s);
+  assert.equal(lib.listContexts(root).flatMap(c => c.memories).length, before, "the refusal wrote nothing");
+  const again = run("--by", "eva-nowak", "--context", "company", "--content", "Doors open at 17:30 on 16 November 2026.");
+  assert.equal(again.status, 0, again.stderr);
+  assert.deepEqual(lib.effectiveMemories(lib.listContexts(root).flatMap(c => c.memories)).at(-1).authors, ["eva-nowak"]);
 });
