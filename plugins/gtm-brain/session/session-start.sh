@@ -66,6 +66,13 @@ if [ -f "$root/brain/layout.json" ]; then
   blocked="$(node -e 'const v=await import(process.argv[1]);process.stdout.write(v.layoutBlock(process.argv[2]))' "$(dirname "${BASH_SOURCE[0]}")/../lib/layout-version.mjs" "$root" 2>/dev/null || true)"
   [ -n "$blocked" ] && { echo "$blocked"; exit 0; }
 fi
+# Entity pages in kind folders while brain/layout.json says 1 or is missing (a 0.35 pre-release moved them and
+# did not record it): the file is set to 2 in a commit of its own and said in one line, once (lib.healLayout).
+# lib.commit does the same with the first write; here a chat that only reads repairs it too. Node starts only
+# for a brain that looks like that, so a healthy chat start pays nothing.
+if ! grep -qs '"layout": *[2-9]' "$root/brain/layout.json" && ls "$root"/brain/entities/*/index.md >/dev/null 2>&1; then
+  node -e 'const l=await import(process.argv[1]);const t=l.healLayout(process.argv[2]);if(t)console.log(t)' "$(dirname "${BASH_SOURCE[0]}")/../lib/brain.mjs" "$root" 2>/dev/null || true
+fi
 # Remember which Codex chat this is (work/session.json): the dashboard shows which chat is linked.
 [ -n "${PLUGIN_ROOT:-}" ] && printf '%s' "$input" | node "$PLUGIN_ROOT/session/session.mjs" "$root" "$project" 2>/dev/null || true
 # This machine has opened this brain: known to /gtm-brain-project when it offers the skill elsewhere.
