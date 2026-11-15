@@ -17,7 +17,8 @@ import { readLayout, writeLayout, understandsLayout, LAYOUT_FILE } from "./layou
 import { diskLayout } from "./layout.mjs";
 import { settingsFromAdmin, logActivity, rerender, readAdmin } from "./brain.mjs";
 const readAdminCompany = root => String(readAdmin(root)?.company || "");
-import { ADMIN_FILE, SETTINGS_FILE, ABOUT_DIR, CONFIG_DIR, FIXED_MOVES, inConfigFolders } from "./brain-paths.mjs";
+import { ADMIN_FILE, SETTINGS_FILE, ABOUT_DIR, CONFIG_DIR, CONFIG_RULES, CONFIG_SCHEMA, ROOT_RULES, ROOT_SCHEMA, FIXED_MOVES, inConfigFolders } from "./brain-paths.mjs";
+import { ownerOf, personHere } from "./owner.mjs";
 
 const isDir = p => { try { return statSync(p).isDirectory(); } catch { return false; } };
 
@@ -115,6 +116,19 @@ function shippedReadme(root, text, company) {
   const shipped = [readFileSync(new URL("README.md", TEMPLATE_DIR), "utf8")];
   try { const dir = new URL("legacy/readme/", TEMPLATE_DIR); for (const f of readdirSync(dir)) if (f.endsWith(".md")) shipped.push(readFileSync(new URL(f, dir), "utf8")); } catch {}
   return shipped.map(render).includes(text);
+}
+
+/* The chat start of a layout 3 brain, one line: where the files are that the rulebook, the rule pages and the tool
+   descriptions still call RULES.md, SCHEMA.md, brain/admin.md and a document "at the top", and whose they are.
+   Without it a model follows those names literally (a new RULES.md at the top, which nothing reads) or spends a
+   call finding out that a teammate's change there is a proposal. "" before layout 3. */
+export function layoutStartLine(root) {
+  if (!inConfigFolders(root)) return "";
+  const where = `This brain keeps its base documents in ${ABOUT_DIR}/ and its configuration in ${CONFIG_DIR}/: where the rules or a tool say ${ROOT_RULES} is ${CONFIG_RULES}, ${ROOT_SCHEMA} is ${CONFIG_SCHEMA}, ${ADMIN_FILE} is ${SETTINGS_FILE}, and a document "at the top" or "at the brain root" (strategy.md, icp.md, voice.md, design-system.md, market.md, a new one) is in ${ABOUT_DIR}/. Never create ${ROOT_RULES}, ${ROOT_SCHEMA} or ${ADMIN_FILE}.`;
+  const owner = ownerOf(root); if (!owner) return where;
+  if (personHere(root) === owner) return `${where} You are the owner: only you change those two folders, and a teammate's change waits for your approval.`;
+  const name = (readAdmin(root)?.team || []).find(p => p && p.handle === owner)?.name || owner;
+  return `${where} Only the owner (${name}) changes ${ABOUT_DIR}/ and ${CONFIG_DIR}/: make a change there as usual (the tool, or the file and save) and it is kept as a proposal for the owner, not applied; say that in one line and do not try another way.`;
 }
 
 /* The sentence the layout question says before it asks: what moves, and what it means for teammates. */

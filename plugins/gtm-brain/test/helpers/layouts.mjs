@@ -9,6 +9,7 @@ import { spawnSync, execFileSync } from "node:child_process";
 import * as lib from "../../lib/brain.mjs";
 import { LAYOUT_FILE } from "../../lib/layout-version.mjs";
 import { STARTERS } from "../../lib/upgrade-files.mjs";
+import { rulesInFolders } from "../../lib/where.mjs";
 import { removeBrain } from "./dash-cleanup.mjs";
 
 export const P = new URL("../../", import.meta.url).pathname;
@@ -37,7 +38,9 @@ export function toLayout2(root, git) {
   const about = join(root, "about-us");
   for (const f of readdirSync(about)) renameSync(join(about, f), join(root, f));
   rmSync(about, { recursive: true, force: true });
-  renameSync(join(root, "config/rules.md"), join(root, "RULES.md"));
+  // the rules as a layout 2 brain has them: the shipped wording, where setup wrote the layout 3 one
+  const rules = readFileSync(join(root, "config/rules.md"), "utf8"), shipped = readFileSync(join(P, "templates/RULES.md"), "utf8");
+  rmSync(join(root, "config/rules.md")); writeFileSync(join(root, "RULES.md"), rules === rulesInFolders(shipped) ? shipped : rules);
   renameSync(join(root, "config/schema.md"), join(root, "SCHEMA.md"));
   const a = lib.readAdmin(root);
   const fm = { company: a.company, created: a.created, owner: a.owner, team: a.team, tools: a.tools, dashboard: a.dashboard, deal_scoring: a.deal_scoring, big_files: a.big_files, protected: a.protected };

@@ -157,10 +157,11 @@ JS
 fi
 # Layout 3, last and in a commit of its own, only after the owner's yes (--confirm, the question above named what
 # moves): the base files into about-us/, RULES.md and SCHEMA.md into config/ as rules.md and schema.md, admin.md
-# into config/settings.yaml, brain/layout.json 3, with git mv so every byte stays (lib/config-folders.mjs).
+# into config/settings.yaml, brain/layout.json 3, with git mv so every byte stays (lib/config-folders.mjs). Then,
+# in a commit of its own, rules nobody edited get the layout 3 wording of the shipped rules (lib/where.mjs).
 moved3=""
 if [ "$CONFIRM" = 1 ]; then
-  moved3="$(node --input-type=module -e 'const u=await import(process.argv[1]),c=await import(process.argv[2]);if(!u.layoutStep(".",true).startsWith("CHANGE"))process.exit(0);const r=c.migrateToConfigFolders(".");if(!r.layout)process.exit(0);for(const [f,t] of r.moves)console.log(`moved ${f} -> ${t}`);if(r.settings)console.log("moved brain/admin.md -> config/settings.yaml (the same settings, the prose as notes)");for(const [f,w] of r.kept)console.log(`kept ${f}: ${w}`);console.log(`changed the brain'"'"'s file layout to ${r.layout} (brain/layout.json): only the owner changes about-us/ and config/ from now on; a teammate on an older GTM Brain does not find this brain until they update; ${r.note}`)' "$PLUGIN/lib/upgrade-files.mjs" "$PLUGIN/lib/config-folders.mjs")"
+  moved3="$(node --input-type=module -e 'const u=await import(process.argv[1]),c=await import(process.argv[2]);if(!u.layoutStep(".",true).startsWith("CHANGE"))process.exit(0);const r=c.migrateToConfigFolders(".");if(!r.layout)process.exit(0);for(const [f,t] of r.moves)console.log(`moved ${f} -> ${t}`);if(r.settings)console.log("moved brain/admin.md -> config/settings.yaml (the same settings, the prose as notes)");for(const [f,w] of r.kept)console.log(`kept ${f}: ${w}`);console.log(`changed the brain'"'"'s file layout to ${r.layout} (brain/layout.json): only the owner changes about-us/ and config/ from now on; a teammate on an older GTM Brain does not find this brain until they update; ${r.note}`);const w=await import(process.argv[3]);if(w.ensureRules(".",process.argv[4]))console.log("updated config/rules.md (it was a shipped version nobody edited): its row for documents names about-us/")' "$PLUGIN/lib/upgrade-files.mjs" "$PLUGIN/lib/config-folders.mjs" "$PLUGIN/lib/where.mjs" "$T")"
   [ -n "$moved3" ] && echo "$moved3"
 fi
 [ "$changed" = 1 ] || [ -n "$moved3" ] || echo "already current"

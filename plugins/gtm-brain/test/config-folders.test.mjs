@@ -61,13 +61,16 @@ test("the upgrade asks the owner, moves byte for byte with layout 3 in one commi
   assert.match(yes.stdout, /moved strategy\.md -> about-us\/strategy\.md/);
   assert.match(yes.stdout, /changed the brain's file layout to 3/);
   assert.equal(readLayout(root).layout, 3); assert.equal(diskLayout(root), 3);
-  const commit = lastCommit(git);
+  // the move is one commit; the shipped rules nobody edited then get their layout 3 wording in a commit of their own
+  assert.match(git("log", "-1", "--format=%s"), /^upgrade: config\/rules\.md/);
+  const moved = git("log", "-1", "--format=%H", "--grep=^layout 3:").trim(), commit = git("show", "--name-status", "-M", "--format=%s", moved);
   assert.match(commit, /^layout 3:/);
   for (const [from, to] of [["strategy.md", "about-us/strategy.md"], ["pricing.md", "about-us/pricing.md"], ["design-system.html", "about-us/design-system.html"], ["RULES.md", "config/rules.md"], ["SCHEMA.md", "config/schema.md"]])
     assert.match(commit, new RegExp(`^R100\\s+${from.replace(".", "\\.")}\\s+${to.replace(/[./]/g, "\\$&")}$`, "m"), `${from} moved whole`);
   assert.match(commit, /^D\s+brain\/admin\.md$/m); assert.match(commit, /^A\s+config\/settings\.yaml$/m); assert.match(commit, /^M\s+brain\/layout\.json$/m);
   // every byte of the person's text kept
-  for (const [from, to] of [["pricing.md", "about-us/pricing.md"], ["strategy.md", "about-us/strategy.md"], ["RULES.md", "config/rules.md"], ["design-system.html", "about-us/design-system.html"]]) assert.equal(readFileSync(join(root, to), "utf8"), before[from], to);
+  for (const [from, to] of [["pricing.md", "about-us/pricing.md"], ["strategy.md", "about-us/strategy.md"], ["RULES.md", "config/rules.md"], ["design-system.html", "about-us/design-system.html"]]) assert.equal(git("show", `${moved}:${to}`), before[from], to);
+  assert.equal(readFileSync(join(root, "about-us/pricing.md"), "utf8"), before["pricing.md"]);
   const was = lib.parseFrontmatter(before["brain/admin.md"]), now = lib.readAdmin(root);
   for (const k of ["company", "owner", "created", "tools", "dashboard"]) assert.deepEqual(now[k], was.fm[k], k);
   assert.deepEqual(now.team, was.fm.team); assert.equal(now.body, was.body.trim(), "the prose is kept as notes, word for word");

@@ -1270,6 +1270,8 @@ export function guardAtStart(root) {
 }
 /* The owner's chat start: one line while teammates' proposals wait (lib/owner.mjs). */
 export { ownerLine as ownerStartLine } from './owner.mjs';
+/* Layout 3, every chat start: where the files the rules name are, and whose (lib/config-folders.mjs). */
+export { layoutStartLine } from './config-folders.mjs';
 /* The Codex chat a brain folder was last opened in: the chat start records it (session/session.mjs),
    the dashboard sends its buttons there. Input is JSON with session_id and cwd. */
 function landingSession(root, input) {

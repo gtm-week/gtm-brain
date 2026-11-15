@@ -8,7 +8,9 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from "node
 import { join } from "node:path";
 import * as lib from "../lib/brain.mjs";
 import * as owner from "../lib/owner.mjs";
-import { makeBrain, actAs, toLayout2, exists } from "./helpers/layouts.mjs";
+import { spawnSync } from "node:child_process";
+import { ensureRules } from "../lib/where.mjs";
+import { makeBrain, actAs, toLayout2, exists, P } from "./helpers/layouts.mjs";
 
 const clean = git => git("status", "--porcelain", "--", ".", ":!profile").trim();
 const memories = root => lib.listContexts(root).flatMap(c => lib.readMemories(root, c.slug));
@@ -129,6 +131,50 @@ test("a proposal's summary reaches the owner's chat start as one short line, wha
   assert.match(line, /^Waiting for your approval/);
   assert.ok(!line.includes("\n"), "one line");
   assert.ok(line.length < 700, `short: ${line.length}`);
+});
+
+// The rulebook, the rule pages and the tool descriptions still say RULES.md, SCHEMA.md, brain/admin.md and "at
+// this level". Followed literally in layout 3 that makes a second RULES.md at the top that nothing reads.
+test("the chat start of a layout 3 brain says once where the files the rules name are, and whose they are", t => {
+  const { root, git } = makeBrain(t);
+  const mine = lib.layoutStartLine(root);
+  assert.match(mine, /RULES\.md is config\/rules\.md, SCHEMA\.md is config\/schema\.md, brain\/admin\.md is config\/settings\.yaml/);
+  assert.match(mine, /about-us\//); assert.match(mine, /never create RULES\.md, SCHEMA\.md or brain\/admin\.md/i);
+  assert.match(mine, /You are the owner/); assert.ok(!mine.includes("\n") && mine.length < 700, String(mine.length));
+  actAs(root, "bo-chen");
+  const theirs = lib.layoutStartLine(root);
+  assert.match(theirs, /Only the owner \(Ann Lee\) changes about-us\/ and config\//);
+  assert.match(theirs, /kept as a proposal/); assert.ok(!theirs.includes("\n") && theirs.length < 800, String(theirs.length));
+  const out = spawnSync("bash", [join(P, "session/session-start.sh")], { cwd: root, encoding: "utf8", input: JSON.stringify({ session_id: "thread-1", cwd: root }),
+    env: { ...process.env, PLUGIN_ROOT: P.replace(/\/$/, ""), CODEX_HOME: join(root, "profile"), GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_NO_VERSION_CHECK: "1", GTM_BRAIN_NO_SESSION_MAINTENANCE: "1", GTM_BRAIN_NO_WATCH: "1" } }).stdout;
+  assert.ok(out.includes(theirs), "said at the chat start");
+  toLayout2(root, git);
+  assert.equal(lib.layoutStartLine(root), "", "nothing to say before layout 3");
+});
+
+test("the where row for documents names about-us/ in layout 3: a new brain's rules, and moved rules nobody edited", t => {
+  const { root, git, upgrade } = makeBrain(t);
+  const row = /\| A document the work must follow[^\n]*\| `about-us\/<name>\.md`/;
+  assert.match(readFileSync(join(root, "config/rules.md"), "utf8"), row);
+  assert.doesNotMatch(readFileSync(join(root, "config/rules.md"), "utf8"), /at this level/);
+  assert.equal(ensureRules(root, join(P, "templates")), false, "a new brain's rules are current");
+  // moved from a layout 2 brain word for word, then refreshed like any shipped file nobody edited
+  toLayout2(root, git);
+  assert.match(readFileSync(join(root, "RULES.md"), "utf8"), /`<name>\.md` at this level/);
+  assert.equal(ensureRules(root, join(P, "templates")), false, "layout 2 keeps the wording it has");
+  const up = upgrade("--confirm");
+  assert.equal(up.status, 0, up.stderr);
+  const moved = git("log", "-1", "--format=%H", "--grep=^layout 3:").trim();
+  assert.match(git("show", `${moved}:config/rules.md`), /`<name>\.md` at this level/, "the move itself keeps every byte");
+  assert.match(up.stdout, /updated config\/rules\.md \(it was a shipped version nobody edited\)/);
+  assert.match(readFileSync(join(root, "config/rules.md"), "utf8"), row);
+  assert.equal(ensureRules(root, join(P, "templates")), false, "once");
+  assert.equal(clean(git), "");
+  // rules the owner edited are theirs
+  const edited = readFileSync(join(root, "config/rules.md"), "utf8").replace("about-us/<name>.md", "docs/<name>.md");
+  writeFileSync(join(root, "config/rules.md"), edited); lib.save(root, "save");
+  assert.equal(ensureRules(root, join(P, "templates")), false);
+  assert.equal(readFileSync(join(root, "config/rules.md"), "utf8"), edited);
 });
 
 test("before layout 3 nobody owns the root files: a teammate's edit of strategy.md and RULES.md saves", t => {

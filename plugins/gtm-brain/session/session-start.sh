@@ -126,7 +126,7 @@ node "$H" text foreign
 # Claude Code reads CLAUDE.md: without its AGENTS.md import (a brain from before 0.30) the rulebook is named here.
 rules_dir="$root"; [ -n "$project" ] && rules_dir="$cwd"
 node "$H" rulebook "$rules_dir" 2>/dev/null || node "$H" text rulebook "$root"
-node -e 'const l=await import(process.argv[1]);const p=l.currentPerson(process.argv[2]);if(p)console.log("Current person: "+p+" (resolved from this checkout and validated against the team). Reuse this as by; do not ask who the user is again.");const o=l.ownerStartLine(process.argv[2]);if(o)console.log(o)' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
+node -e 'const l=await import(process.argv[1]);const p=l.currentPerson(process.argv[2]);if(p)console.log("Current person: "+p+" (resolved from this checkout and validated against the team). Reuse this as by; do not ask who the user is again.");const w=l.layoutStartLine(process.argv[2]);if(w)console.log(w);const o=l.ownerStartLine(process.argv[2]);if(o)console.log(o)' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
 brain_interaction_policy
 node -e 'const d=await import(process.argv[1]);console.log(d.datesLine())' "$P/lib/dots.mjs" 2>/dev/null || true
 node -e 'const s=await import(process.argv[1]);const t=s.scheduleNotice(process.argv[2]);if(t)console.log(t)' "$P/lib/schedule.mjs" "$root" 2>/dev/null || true

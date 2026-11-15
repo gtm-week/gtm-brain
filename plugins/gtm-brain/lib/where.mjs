@@ -8,7 +8,7 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync, statSync, mkdirSync, rmSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join, dirname } from "node:path";
-import { rulesFile, OLD_WHERE, TEMPLATES, ROOT_KEEP } from "./brain-paths.mjs";
+import { rulesFile, OLD_WHERE, TEMPLATES, ROOT_KEEP, ABOUT_DIR, inConfigFolders } from "./brain-paths.mjs";
 import { readAdmin, commit } from "./brain.mjs";
 import { layoutBlock } from "./layout-version.mjs";
 
@@ -19,6 +19,13 @@ export const RULES_NAME = TEMPLATES.rules; // the template, and the rules file's
 const MAX_PROJECTS = 20;
 const OWN = /^##\s+Our rules\s*$/m, ASK = /^##\s+Ask the source\s*$/m;   // lib/ask-source.mjs reads the Ask the source table
 const read = p => { try { return readFileSync(p, "utf8"); } catch { return null; } };
+/* The shipped rules as a layout 3 brain keeps them. The template speaks from the top of the brain ("at this
+   level"); in config/ that would send a new document to the wrong folder, so the two rows that say it name the
+   place: documents in about-us/, a deliverable never in a new folder at the top. Layouts 1 and 2: as shipped. */
+export const rulesInFolders = text => String(text)
+  .replace("`<name>.md` at this level (`strategy.md`, `icp.md`, `voice.md`, `design-system.md` are here from day one)", `\`${ABOUT_DIR}/<name>.md\` (\`strategy.md\`, \`icp.md\`, \`voice.md\`, \`design-system.md\` are there from day one; the owner's to change)`)
+  .replace("never a new folder at this level", "never a new folder at the top of the brain");
+export const layoutRules = (text, root) => (inConfigFolders(root) ? rulesInFolders(text) : text);
 const shipped = (templates, dir) => { try { return readdirSync(join(templates, "legacy", dir)).filter(f => f.endsWith(".md")).map(f => readFileSync(join(templates, "legacy", dir, f), "utf8")); } catch { return []; } };
 const hasTable = text => /^\|\s*-{3,}/m.test(text);
 /* the lines R2 wrote into a RULES.md from before the merge: "# Our rules", then one line per rule */
@@ -28,10 +35,11 @@ const oldOwnLines = text => text.replace(/^#\s+Our rules\s*$/m, "").trim();
    shipped version nobody edited. WHERE.md is removed only when its content is in RULES.md. */
 export function ensureRules(root, templates) {
   if (process.env.GTM_BRAIN_RUN || !readAdmin(root) || layoutBlock(root)) return false;   // never into a newer-layout brain
-  const file = rulesFile(root), path = join(root, file), next = readFileSync(join(templates, TEMPLATES.rules), "utf8");
+  const file = rulesFile(root), path = join(root, file), raw = readFileSync(join(templates, TEMPLATES.rules), "utf8"), next = layoutRules(raw, root);
   const current = read(path), where = read(join(root, OLD_WHERE));
   if (current !== null && (OWN.test(current) || hasTable(current))) {
-    if (current === next || !shipped(templates, "rules").includes(current)) return false;
+    // raw: the shipped wording the layout 3 move carried into config/ word for word
+    if (current === next || ![...shipped(templates, "rules"), raw].includes(current)) return false;
     writeFileSync(path, next); commit(root, [file], `upgrade: ${file}, the brain's rules`, { system: true }); return true;
   }
   // The where part: the shipped template when WHERE.md was never edited, the person's own WHERE.md otherwise.

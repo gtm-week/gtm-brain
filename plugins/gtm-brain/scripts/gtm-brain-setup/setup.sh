@@ -100,12 +100,12 @@ PLUGIN_VERSION="$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$T/../.codex-plu
 # schema.md; the five starter documents in about-us/ (strategy waits for the strategic intake; voice, design system,
 # ICP and market are offered at the end of onboarding and can wait; GTM week sync, 2026-11-13).
 node --input-type=module -e '
-  const fs = await import("node:fs"), l = await import(process.argv[1]), c = await import(process.argv[2]), u = await import(process.argv[3]);
-  const [t, company, version] = process.argv.slice(4);
+  const fs = await import("node:fs"), l = await import(process.argv[1]), c = await import(process.argv[2]), u = await import(process.argv[3]), w = await import(process.argv[4]);
+  const [t, company, version] = process.argv.slice(5);
   if (!fs.existsSync("README.md")) fs.writeFileSync("README.md", c.layoutReadme(fs.readFileSync(`${t}/README.md`, "utf8").replaceAll("{{COMPANY}}", company), "."));
-  for (const [file, template] of [[l.rulesFile("."), "RULES.md"], [l.schemaFile("."), "SCHEMA.md"]]) if (!fs.existsSync(file)) { fs.mkdirSync(file.split("/").slice(0, -1).join("/") || ".", { recursive: true }); fs.copyFileSync(`${t}/${template}`, file); }
+  for (const [file, template] of [[l.rulesFile("."), "RULES.md"], [l.schemaFile("."), "SCHEMA.md"]]) if (!fs.existsSync(file)) { fs.mkdirSync(file.split("/").slice(0, -1).join("/") || ".", { recursive: true }); fs.writeFileSync(file, template === "RULES.md" ? w.layoutRules(fs.readFileSync(`${t}/${template}`, "utf8"), ".") : fs.readFileSync(`${t}/${template}`, "utf8")); }
   u.addStarters(".", t, { version });
-' "$PLUGIN/lib/brain.mjs" "$PLUGIN/lib/config-folders.mjs" "$PLUGIN/lib/upgrade-files.mjs" "$T" "$COMPANY" "$PLUGIN_VERSION"
+' "$PLUGIN/lib/brain.mjs" "$PLUGIN/lib/config-folders.mjs" "$PLUGIN/lib/upgrade-files.mjs" "$PLUGIN/lib/where.mjs" "$T" "$COMPANY" "$PLUGIN_VERSION"
 # brain/layout.json: the file layout this brain uses, read by every GTM Brain before it writes; the starters
 # are recorded as given, so an upgrade never brings back one the person deleted (lib/layout-version.mjs). The
 # layout number is the 3 startKindLayout recorded above; this adds the starters and never lowers it.
