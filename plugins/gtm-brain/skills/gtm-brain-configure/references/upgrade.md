@@ -20,6 +20,12 @@ tool reports it, and ask one question: Yes, upgrade the layout / No, not now. On
 `upgrade_brain` again with `confirm: true`. On no, leave it: the flat brain keeps working. Never
 pass `confirm` without that yes, after a plugin update on its own, or in a scheduled run.
 
+For the owner the change can also be layout 3: the base files move into `about-us/` and `RULES.md`,
+`SCHEMA.md` and `brain/admin.md` into `config/` (`rules.md`, `schema.md`, `settings.yaml`), word for
+word, in one commit. Say what the tool lists as moving and that teammates on an older GTM Brain
+will not find the brain until they update, then ask the same one question. A teammate who is not
+the owner is never asked about it.
+
 The refresh recognizes current rules and every shipped template in
 `templates/legacy/manifest.json`, including skipped releases. Before replacing files it
 validates editable entity files and saves previous instructions under `work/upgrades/before-*`. Company data and
