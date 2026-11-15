@@ -702,7 +702,7 @@ export function similarNames(names, mention) {
   return names.filter(n => (fuzzy.has(n) || [n.name, ...n.aliases].some(x => nameLetters(x) === letters || nameWords(x).some(w => words.has(w))))).map(n => ({ name: n.name, kind: n.kind }));
 }
 /* P4, second sentence: the same first name with a clearly different surname is someone else, never a look-alike
-   ("Wojciech Ozimek" beside "Wojciech Niemiec": a manual run on 2026-11-15 was refused for it and asked the
+   ("Borys Zielony" beside "Borys Nowicki": a manual run on 2026-11-15 was refused for it and asked the
    person). Only between two full personal names: one or two letters off the same name, a first name alone, a
    shared surname or a company word is still asked about. entry: {name, aliases, kind}. */
 const nameDistance = (a, b) => { let row = Array.from({ length: b.length + 1 }, (_, i) => i);

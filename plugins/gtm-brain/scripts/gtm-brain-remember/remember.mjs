@@ -225,14 +225,19 @@ const problems = entries.map((e, i) => {
   // evidence (2026-11-15: 18 of 18 backfilled relations were left out and each note was saved twice). What those
   // notes rest on becomes this note's evidence too, their outside records or the word of the person who said them,
   // so the stored block keeps the two bases every released reader knows (source, user).
-  for (const key of ["relation", "customer"]) {
+  // Only a note that names an end of the relationship is evidence for it, and every end must be named by one: a
+  // cited id that says nothing about them proves nothing, and the block is left out as before. Customer status is
+  // never read from notes: validateCustomerEvidence above asks for an outside record or the person's word.
+  for (const key of ["relation"]) {
     const block = e[key]; if (!block || typeof block !== "object" || Array.isArray(block) || block.basis === "user" || (key === "relation" && e.customer)) continue;
     const src0 = sourceOf(e), outside = s => !!s && !!s.ref && !(s.kind === "memory" || s.kind === "user" || isChatSource(s));
     const ids = src0.filter(s => s.kind === "memory" && s.ref).map(s => s.ref.replace(/^.*\//, ""));
     if (!ids.length || src0.some(outside)) continue;
     citedNotes ??= lib.listContexts(root).flatMap(c => c.memories);
-    const found = ids.map(id => citedNotes.find(m => m.id === id)).filter(Boolean);
-    if (!found.length) continue;
+    const reg = lib.readNames(root), ends = [block.from, block.to].filter(x => typeof x === "string" && x && x !== "us").map(x => { const k = lib.resolveEntity(reg, x); return [x, k?.name, ...(k?.aliases || [])].filter(Boolean).map(fold); });
+    const names = m => { const text = ` ${fold(m.content).replace(/[^\p{L}\p{N}]+/gu, " ")} `, linked = (m.people || []).map(fold); return end => end.some(w => linked.includes(w) || text.includes(` ${w.replace(/[^\p{L}\p{N}]+/gu, " ").trim()} `)); };
+    const found = ids.map(id => citedNotes.find(m => m.id === id)).filter(m => m && ends.some(names(m)));
+    if (!found.length || !ends.every(end => found.some(m => names(m)(end)))) continue;
     const records = found.flatMap(m => (m.source || []).filter(outside)), said = found.flatMap(m => (m.source || []).filter(s => s.kind === "user" && s.ref));
     const add = (records.length ? records : [said[0] || { kind: "user", ref: found[0].authors?.[0] || authors[0] }]).map(s => ({ kind: s.kind, ref: s.ref, ...(s.account ? { account: s.account } : {}), ...(s.url ? { url: s.url } : {}) }));
     entries[i] = e = { ...e, [key]: { ...block, basis: records.length ? "source" : "user" }, sources: [...(Array.isArray(e.sources) ? e.sources : e.sources ? [e.sources] : []), ...add.filter(a => !src0.some(s => s.kind === a.kind && s.ref === a.ref))] };
@@ -298,7 +303,14 @@ for (let i = 0; i < entries.length; i++) {
   // Not when this entry answers a question the brain asked before this message: the message is the answer, and
   // whatever was refused on the way was the model's to repair. And not when the model's repair is to file the held
   // word as a company (relatedToHeld).
-  const answersEarlier = !!e.retracts && !!heldBefore && !(heldBefore.asked || []).includes(e.retracts) && (() => { try { return lib.readMemories(root, ctxOf(e)).find(m => m.id === e.retracts)?.kind === "question"; } catch { return false; } })();
+  // Never when the resend itself settles what was held: the held spelling still under people or new_names, or a
+  // new name for a held first name that neither the person nor the question spelled out ("Bo" answered with
+  // new_names ["Bo"], a look-alike confirmed as someone new): that is the model answering for the person.
+  const earlier = (() => { try { const q = !!e.retracts && !!heldBefore && !(heldBefore.asked || []).includes(e.retracts) && lib.readMemories(root, ctxOf(e)).find(m => m.id === e.retracts); return q && q.kind === "question" ? q : null; } catch { return null; } })();
+  const heldWords = (heldBefore?.words || []).map(fold), spoken = fold(`${personText} ${earlier?.content || ""}`);
+  const settlesHeld = [...list(e.people), ...list(e.new_names)].some(x => heldWords.includes(fold(x)))
+    || list(e.new_names).some(x => !spoken.includes(fold(x)) && heldWords.some(w => w.split(/\s+/)[0] === fold(x).split(/\s+/)[0]));
+  const answersEarlier = !!earlier && !settlesHeld;
   if (heldBefore && !answersEarlier && checks.relatedToHeld({ ...e, people: list(e.people), companies: list(e.companies), new_names: list(e.new_names) }, heldBefore)) { held.push({ n, why: "the person has not answered the question yet: ask it once and end the turn, do not resend this before their reply", mentions: [], ask: true }); continue; }
   // "forget that Lena runs the workshop" withdraws the note; a supersedes with "Lena does not run the workshop"
   // puts a claim in the brain the person never made (scenario run, 2026-11-12)
@@ -352,7 +364,7 @@ for (let i = 0; i < entries.length; i++) {
   // then refused again as unanswered, and Codex asked the person the question they had just answered).
   let answered = ""; try { const t = e.retracts || e.supersedes; if (t) answered = lib.readMemories(root, ctx).find(m => m.id === t)?.content || ""; } catch {}
   // A company listed under people is the company it is, never a new person and never a question (manual run,
-  // 2026-11-15: a third prompt because Shift4 stood between two people). Known as an organization or product: it is
+  // 2026-11-15: a third prompt because a company stood between two people). Known as an organization or product: it is
   // linked as that. Unknown, and it reads as a company beside a full personal name: no person is created for it.
   const knownOrgs = [], notPeople = [];
   { const reg = lib.readNames(root), sent = list(e.people), declared = new Set([...companies, ...list(e.new_names)].map(fold));

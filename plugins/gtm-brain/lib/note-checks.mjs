@@ -180,16 +180,22 @@ export function relatedToHeld(entry, held) {
   const text = ` ${fold(entry.content).replace(/[^\p{L}\p{N}]+/gu, " ")} `;
   const hit = words.filter(w => text.includes(` ${w.replace(/[^\p{L}\p{N}]+/gu, " ").trim()} `) || names.some(n => n === w || n.split(/\s+/)[0] === w.split(/\s+/)[0]));
   // the model's own repair: every held word in this entry is now filed as a company, none as a person
-  if (hit.length && hit.every(w => companies.includes(w) && !persons.includes(w))) return false;
-  if (hit.length) return true;
+  const repaired = w => companies.includes(w) && !persons.includes(w), left = words.filter(w => !repaired(w));
+  if (hit.some(w => !repaired(w))) return true;
+  if (hit.length && !left.length) return false;
+  // The repair settles only the words it files. A held text this entry rewrites, which also held a word the repair
+  // does not cover ("Max moved the call to next Tuesday" resent with Max as a company and a date the model picked),
+  // still waits for the person; an unrelated entry of the same turn does not.
+  const spaced = s => ` ${fold(s).replace(/[^\p{L}\p{N}]+/gu, " ").trim()} `;
   const mine = meaningWords(entry.content);
-  return (held.texts || []).some(t => { const other = meaningWords(t), both = [...mine].filter(w => other.has(w)).length; return both / Math.max(1, new Set([...mine, ...other]).size) >= 0.5; });
+  return (held.texts || []).some(t => { const other = meaningWords(t), both = [...mine].filter(w => other.has(w)).length;
+    return both / Math.max(1, new Set([...mine, ...other]).size) >= 0.5 && (!hit.length || left.some(w => spaced(t).includes(spaced(w)))); });
 }
 
 /* Whether a name sent under people reads as a company, not a person: a digit, an inner capital or all capitals
-   ("Shift4", "HubSpot", "IBM"), a domain or an ampersand, a company word at its end ("Acme Labs"), or the note
-   saying so about a single word ("joined Tidio", "at Tidio"). Used only beside a full personal name;
-   a known name never reaches it. */
+   ("Volt9", "HubSpot", "IBM"), a domain or an ampersand, a company word at its end ("Acme Labs"), or the note
+   saying so about a single word ("joined Lumio", "at Lumio"; not "works for Max", as often a person). Used only
+   beside a full personal name; a known name never reaches it. */
 const ORG_END = /\s(inc|llc|ltd|gmbh|ag|plc|corp|corporation|company|group|holdings|labs|technologies|technology|systems|solutions|software|payments|capital|ventures|partners|bank|studio|studios|media|agency|consulting|university|foundation|institute)\.?$/i;
 export function looksLikeCompany(name, content = "") {
   const t = String(name || "").trim(); if (!t) return false;
@@ -198,5 +204,5 @@ export function looksLikeCompany(name, content = "") {
   if (/^\p{Lu}{2,}$/u.test(t)) return true;
   if (/^\p{L}+\p{Ll}\p{Lu}/u.test(t) && !/^(Mc|Mac|De|Di|Le|La|Van|O)\p{Lu}/u.test(t)) return true;
   const w = t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`\\b(?:at|joined|works for|works at|employed by)\\s+${w}(?![\\p{L}\\p{N}])`, "u").test(String(content));
+  return new RegExp(`\\b(?:at|joined|works at|employed by)\\s+${w}(?![\\p{L}\\p{N}])`, "u").test(String(content));
 }
