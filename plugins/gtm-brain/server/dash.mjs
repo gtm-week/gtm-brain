@@ -86,7 +86,7 @@ function serve() {
   // The search box's notes: the memory index's own ranked search (stemmed words, one letter off), run in the
   // reader's worker so a large brain never holds up the page. A read: the query and the count are capped.
   const memoryReader = createMemoryReader({ idleMs: 30000, timeoutMs: 15000, maxPending: 8 });
-  const SEARCH_MAX = 200, SEARCH_NOTES = 20;
+  const SEARCH_MAX = 200, SEARCH_NOTES = 50;
   async function searchNotes(req, res, url) {
     if (req.headers["sec-fetch-site"] === "cross-site") return json(res, 403, { ok: false, note: "Search from this dashboard's own page." });
     const q = String(url.searchParams.get("q") || "").replace(/\s+/g, " ").trim();

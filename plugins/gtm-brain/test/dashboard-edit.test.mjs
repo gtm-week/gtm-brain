@@ -128,7 +128,7 @@ test("the search box's notes come from the memory index: a typo still finds the 
   assert.equal((await get("/search?q=" + encodeURIComponent("zzqqxx never said"))).json.notes.length, 0);
   assert.equal((await get("/search?q=")).status, 400);
   assert.equal((await get("/search?q=" + "a".repeat(201))).status, 400);
-  assert.ok((await get("/search?q=pricing&limit=5000")).json.notes.length <= 20);
+  assert.ok((await get("/search?q=pricing&limit=5000")).json.notes.length <= 50);
   assert.equal((await send("GET", "/search?q=pricing", { headers: { "sec-fetch-site": "cross-site" } })).status, 403);
   for (const method of ["POST", "PUT", "DELETE"]) assert.equal((await send(method, "/search?q=pricing", { headers: { origin } })).status, 405, method);
 });
@@ -165,6 +165,28 @@ test("page: the search forgives typos, missing letters, part words and word orde
   assert.deepEqual(JSON.parse(JSON.stringify(p.run(`fzNearest("amxdaxl",["John Smith","Amdahl Systems","Returns Desk"])`))), ["Amdahl Systems"], "a name too far off to match is still offered as the closest");
   assert.deepEqual(JSON.parse(JSON.stringify(p.run(`fzNearest("qqqzzzxxx",["John Smith","Amdahl Systems"])`))), []);
   p.run(`gqSearch("")`); assert.equal(p.node("#gq-results").hidden, true);
+});
+
+test("page: every filter box uses the one scorer: Entities, Memories, the rules and the schema", async () => {
+  const calls = [], fetcher = async path => { calls.push(String(path)); return { ok: true, status: 200, json: async () => String(path).startsWith("/search") ? { ok: true, notes: [], more: 0 } : String(path).endsWith("notes.json") ? JSON.parse(readFileSync(join(root, "work", "home", D.pillars.memories.file), "utf8")) : D }; };
+  const p = page(D, { live: true, fetcher }), type = (id, value) => p.listeners.input.forEach(fn => fn({ target: { id, value, selectionStart: value.length } }));
+  // the three examples, on the scorer itself
+  for (const [q, text] of [["amdal", "Amdahl Systems"], ["jon smi", "John Smith"], ["berln workshp", "Notes from the Berlin workshop with Amdahl Systems"]]) assert.ok(p.run(`fzMatch(${JSON.stringify(q)},[[${JSON.stringify(text)},1]])`), q);
+  p.run('show("entities")'); type("ent-q", "amdal");
+  assert.deepEqual(JSON.parse(JSON.stringify(p.run("exRows.map(e=>e.name)"))), ["Amdahl Systems", "John Smith"], "the Entities filter forgives a typo: the company first, then the person whose email is there");
+  type("ent-q", "jon smi"); assert.equal(p.run("exRows[0].name"), "John Smith", "and part words, best match first");
+  type("ent-q", "smith john"); assert.equal(p.run("exRows[0].name"), "John Smith", "in any order");
+  assert.match(p.run('entMark("John Smith","jon smi")'), /<mark class="ent-hit">John<\/mark> <mark class="ent-hit">Smi<\/mark>th/);
+  type("ent-q", "");
+  p.run('show("notes")'); type("pm-q", "berln workshp");
+  assert.match(p.node("#pm-list").innerHTML, /<mark>Berlin<\/mark> <mark>workshop<\/mark>/, "the Memories filter forgives typos and marks what matched");
+  assert.doesNotMatch(p.node("#pm-list").innerHTML, /Pricing review moved/);
+  assert.match(p.node("#pm-status").textContent, /^Searching all \d+ notes/, "and says it is asking for every note");
+  type("pm-q", "");
+  p.run('cfgTab="rules";renderConfigTabs()'); type("cfg-rule-q", "calender");
+  assert.match(p.node("#cfg-rules").innerHTML, /Calendar/, "the rules filter forgives a typo"); assert.doesNotMatch(p.node("#cfg-rules").innerHTML, /cfg-rule-title">Questions about deal stage/);
+  type("cfg-schema-q", "linkdin");
+  assert.match(p.node("#cfg-schema").innerHTML, /linkedin/); assert.doesNotMatch(p.node("#cfg-schema").innerHTML, /<th scope="row">location/);
 });
 
 test("page: a document is shown as Markdown with nothing in it able to run, and an outline of its headings", () => {

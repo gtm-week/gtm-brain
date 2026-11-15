@@ -1,34 +1,37 @@
 // What a person sees on the live dashboard of a generated brain: the four tabs by pillar under the health line.
 import { test } from '@e2e-dev/web';
 import { expect } from 'e2e';
-import { fixture, TABS, kindTitle, ENTITY_KIND } from './fixture.ts';
+import { fixture, TABS, PLACES, kindTitle, ENTITY_KIND } from './fixture.ts';
 
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-test('the four tabs exist, open on Configuration and switch', async ({ app, screen }) => {
+test('one flat navigation: Overview first, where the dashboard opens, and every place switches', async ({ app, screen }) => {
   await app.open('/');
   const nav = screen.getByRole('navigation', 'Main navigation');
-  for (const tab of TABS) await expect(nav.getByRole('button', tab)).toBeVisible();
-  await expect(nav.getByRole('button', 'Configuration')).toHaveAttribute('aria-current', 'page');
-  await expect(screen.getByRole('heading', 'Configuration', { level: 1 })).toBeVisible();
-  for (const tab of [...TABS.slice(1), TABS[0]]) {
-    await nav.getByRole('button', tab).tap();
-    await expect(screen.getByRole('heading', tab, { level: 1 })).toBeVisible();
-    await expect(nav.getByRole('button', tab)).toHaveAttribute('aria-current', 'page');
-    for (const other of TABS.filter(t => t !== tab)) await expect(screen.getByRole('heading', other, { level: 1 })).toBeHidden();
+  for (const place of PLACES) await expect(nav.getByRole('button', place)).toBeVisible();
+  await expect(nav.getByRole('button', 'More')).toHaveCount(0);
+  await expect(nav.getByRole('button', 'Overview')).toHaveAttribute('aria-current', 'page');
+  await expect(screen.getByRole('heading', 'Overview', { level: 1 })).toBeVisible();
+  for (const place of [...PLACES.slice(1), PLACES[0]]) {
+    await nav.getByRole('button', place).tap();
+    await expect(screen.getByRole('heading', place, { level: 1 })).toBeVisible();
+    await expect(nav.getByRole('button', place)).toHaveAttribute('aria-current', 'page');
+    for (const other of PLACES.filter(t => t !== place)) await expect(screen.getByRole('heading', other, { level: 1 })).toBeHidden();
   }
 });
 
-test('the health line shows above the tabs', async ({ app, browser }) => {
+test('Overview says what needs the person, or that nothing does, and the header carries no health line', async ({ app, screen, browser }) => {
   await app.open('/');
-  const line = browser.locator('#health-line');
-  await expect(line).toBeVisible();
-  await expect(line).toHaveText(/^Health \S.{10,}/i);
+  await expect(browser.locator('#ov-inbox').getByRole('heading', /^(Needs your attention|Nothing needs you right now)$/, { level: 2 })).toBeVisible();
+  await expect(browser.locator('#health-line')).toHaveCount(0);
+  await expect(browser.locator('#brain-health')).toHaveText(/^Updated (just now|\d+ minutes? ago|today)/);
+  await expect(browser.locator('#brain-health')).toHaveAttribute('title', /\d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
 });
 
-test('Configuration lists the base files with their state, RULES.md and SCHEMA.md', async ({ app, screen }) => {
+test('Configuration: base documents open in the page; rules and schema are browsed in their own parts', async ({ app, screen, browser }) => {
   const f = fixture(app.baseUrl);
   await app.open('/');
+  await screen.getByRole('navigation', 'Main navigation').getByRole('button', 'Configuration').tap();
   const docs = screen.getByRole('table').filter({ has: screen.getByRole('columnheader', 'Document') });
   // every base file has a row, filled or not
   await expect(docs.getByRole('rowheader')).toHaveCount(f.documents.length);
@@ -37,11 +40,24 @@ test('Configuration lists the base files with their state, RULES.md and SCHEMA.m
     await expect(row).toContainText(d.state);
   }
   await expect(screen.getByRole('heading', /^Base documents/)).toContainText(`${f.documents.filter(d => d.state !== 'not written').length} / `);
-  for (const file of ['RULES.md', 'SCHEMA.md']) {
-    await expect(screen.getByRole('heading', file, { level: 2 })).toBeVisible();
-    // a brain on layout 3 keeps the two files in config/ (config/rules.md); older layouts keep them at the top
-    await expect(screen.getByRole('link', new RegExp(`^Open (config/)?${file.replace('.', '\\.')}$`, 'i'))).toHaveAttribute('href', new RegExp(`^/file\\?path=(config(/|%2F))?${file.replace('.', '\\.')}$`, 'i'));
+  await expect(screen.getByRole('columnheader', 'Applies to')).toHaveCount(0);
+  // a written document opens in the dashboard, with its text and the chat link
+  const written = f.documents.find(d => d.state !== 'not written');
+  if (written) {
+    await docs.getByRole('button', written.title).tap();
+    await expect(screen.getByRole('heading', written.title, { level: 1 })).toBeVisible();
+    await expect(browser.locator('#doc-preview')).not.toBeEmpty();
+    await expect(browser.locator('#doc-view').getByRole('link', /^Chat about this/)).toHaveAttribute('href', /^codex:\/\/threads\/new/);
+    await screen.getByRole('button', /Configuration$/).first().tap();
   }
+  const parts = screen.getByRole('tablist', 'Parts of the configuration');
+  await parts.getByRole('tab', /^Rules/).tap();
+  await expect(screen.getByRole('heading', 'Rules', { level: 2 })).toBeVisible();
+  await expect(browser.locator('#cfg-rules details.cfg-rule').first()).toBeVisible();
+  await expect(browser.locator('#cfg-rules')).not.toContainText(/\bP[1-4]\b/);
+  await parts.getByRole('tab', /^What the brain records/).tap();
+  await expect(screen.getByRole('heading', 'What the brain records', { level: 2 })).toBeVisible();
+  await expect(browser.locator('#cfg-schema article.cfg-kind').first()).toBeVisible();
 });
 
 test('Entities: a list to pick from with a count per kind, and the picked entity with its notes beside it', async ({ app, screen, browser }) => {
@@ -72,36 +88,35 @@ test('Entities: a list to pick from with a count per kind, and the picked entity
   await expect(browser.locator('#ent-detail').getByRole('link', new RegExp(`^Chat about ${esc(f.person.name)}$`))).toHaveAttribute('href', /^codex:\/\/threads\/new/);
 });
 
-test('Memories lists notes newest first, shows a replaced note as replaced, and the entity search filters', async ({ app, screen, browser }) => {
+test('Memories is one timeline, newest first; a replaced note shows as replaced; the person filter narrows it', async ({ app, screen, browser }) => {
   const f = fixture(app.baseUrl);
   await app.open('/');
   await screen.getByRole('navigation', 'Main navigation').getByRole('button', 'Memories').tap();
   const rows = browser.locator('#pm-list article.pl-note');
   await expect(rows.first()).toBeVisible();
-  const dates = (await browser.locator('#pm-list article.pl-note .pl-date').allTextContents()).map(t => t.slice(0, 10));
+  const dates: string[] = await browser.evaluate(() => [...document.querySelectorAll('#pm-list article.pl-note .pl-date time')].map(t => t.getAttribute('datetime') || ''));
   expect(dates.length).toBeGreaterThan(10);
-  for (const d of dates) expect(d).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  for (const d of dates) expect(d).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   expect([...dates].sort().reverse()).toEqual(dates);
-  // in force by default: the old version of a corrected note is not listed, its correction says what it replaces
+  // current notes by default: the old version of a corrected note is not listed
   await expect(screen.getByText(f.correction.old)).toBeHidden();
-  await screen.getByLabel('State').selectOption('Replaced');
+  await screen.getByLabel('Show').selectOption('Replaced notes');
   const old = rows.filter({ hasText: f.correction.old });
   await expect(old).toHaveCount(1);
   await expect(old).toContainText('replaced');
-  await expect(old).toContainText(`Replaced by`);
   await expect(old).toContainText(f.correction.new);
-  await screen.getByLabel('State').selectOption('In force');
-  // the entity search keeps only the notes about that entity
+  await screen.getByLabel('Show').selectOption('Current notes');
+  // the person filter keeps only the notes about that person
   const status = browser.locator('#pm-status');
   const before = await status.textContent();
-  await screen.getByLabel('Entity').fill(f.person.name);
+  await screen.getByLabel('Person or company').fill(f.person.name);
   await expect(status).toContainText(`Showing ${f.person.notes.length} of ${f.person.notes.length} notes`);
   await expect(browser.locator('#pm-list article.pl-note .pl-text')).toHaveText(f.person.notes);
-  await screen.getByLabel('Entity').fill('');
+  await screen.getByLabel('Person or company').fill('');
   await expect(status).toHaveText(before ?? '');
 });
 
-test('Workflows shows each file with its status and trigger, and the run in progress', async ({ app, screen, browser }) => {
+test('Workflows shows each one as a card in plain words; a click shows its steps and its runs', async ({ app, screen, browser }) => {
   const f = fixture(app.baseUrl);
   await app.open('/');
   await screen.getByRole('navigation', 'Main navigation').getByRole('button', 'Workflows').tap();
@@ -110,14 +125,14 @@ test('Workflows shows each file with its status and trigger, and the run in prog
   for (const w of f.workflows) {
     const row = browser.locator('#pw-files article').filter({ has: screen.getByRole('heading', w.title, { level: 3 }) });
     await expect(row).toHaveCount(1);
-    await expect(row).toContainText(w.status);
-    await expect(row).toContainText(`Trigger: ${w.trigger}`);
     await expect(row).toContainText(`${w.runs} ${w.runs === 1 ? 'run' : 'runs'} in progress`);
+    await expect(row).toContainText(w.trigger === 'manual' ? 'You start it by asking Codex' : w.trigger);
   }
   const outbound = browser.locator('#pw-files article').filter({ has: screen.getByRole('heading', 'Outbound', { level: 3 }) });
-  const run = browser.locator('#pw-files article .pl-runs li').filter({ hasText: f.run.id });
+  await outbound.getByRole('button', 'Outbound').tap();
+  await expect(outbound.locator('ol.wf-steps li').first()).toBeVisible();
+  const run = outbound.locator('.pl-runs li').filter({ hasText: f.run.id });
   await expect(run).toHaveCount(1);
   await expect(run).toContainText(f.run.step);
   await expect(run).toContainText(f.run.status);
-  await expect(outbound).toContainText(f.run.id);
 });

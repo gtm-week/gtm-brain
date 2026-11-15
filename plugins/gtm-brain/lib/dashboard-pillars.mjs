@@ -213,17 +213,28 @@ export function workflowTrigger(doc) {
   return "manual";
 }
 
+/* What a workflow does, in its own first sentence: the first paragraph of the file that is not a heading, the
+   header line, a list or a table. Empty when the file says nothing of the kind. */
+export function workflowAbout(doc) {
+  for (const block of String(doc?.body || "").split(/\n{2,}/)) {
+    const t = block.trim(); if (!t || /^(#|[-*+] |\d+[.)] |\||>|```|<!--)/.test(t) || /^Made with GTM /.test(t)) continue;
+    const first = t.replace(/\s+/g, " ").match(/^.*?[.!?](?=\s|$)/)?.[0] || t.replace(/\s+/g, " ");
+    return cut(first.replace(/[*_`]/g, ""), 220);
+  }
+  return "";
+}
+
 function workflows(root, documents, runs, commits) {
   const docs = new Map(documents.filter(d => d.extra?.type === WORKFLOW_TYPE).map(d => [d.slug, d]));
   let parsed = []; try { parsed = listWorkflows(root); } catch {}
   const files = parsed.map(w => {
     try { return fileRow(w); }   // one file nobody can read is one row saying so, not an empty tab
-    catch { return { slug: String(w?.slug || "?"), title: String(w?.title || w?.slug || "?"), path: typeof w?.path === "string" ? w.path : null, status: "draft", ok: false, problems: ["This workflow file could not be read."], steps: null, trigger: "manual", changed: null, runs: [] }; }
+    catch { return { slug: String(w?.slug || "?"), title: String(w?.title || w?.slug || "?"), path: typeof w?.path === "string" ? w.path : null, status: "draft", ok: false, problems: ["This workflow file could not be read."], steps: null, trigger: "manual", changed: null, runs: [], step_titles: [], about: "" }; }
   });
   function fileRow(w) {
     const d = docs.get(w.slug), own = runs.filter(r => r.workflow === w.slug);
     return { slug: w.slug, title: w.title || w.slug, path: w.path || d?.path || null, status: w.status || d?.status || "draft", ok: !!w.ok, problems: (w.problems || []).map(p => cut(p, 160)),
-      steps: w.ok ? w.steps.length : null, trigger: workflowTrigger(d), changed: w.path ? changedAt(root, w.path, commits, d?.updated) : null,
+      steps: w.ok ? w.steps.length : null, step_titles: w.ok ? w.steps.map(st => cut(st.title || "", 120)) : [], about: workflowAbout(d), trigger: workflowTrigger(d), changed: w.path ? changedAt(root, w.path, commits, d?.updated) : null,
       runs: own.map(r => { const step = r.current, title = step && w.ok ? w.steps[step.n - 1]?.title || null : null;
         return { id: r.id, started: r.startedAt, by: r.by, context: r.context, ended: r.ended ? { how: r.ended.how, at: r.ended.at } : null,
           step: step ? { n: step.n, of: w.ok ? w.steps.length : r.steps.length, title, status: step.status, due: step.due || null } : null, waiting: r.open ? cut(r.open.content, 160) : null }; }) };

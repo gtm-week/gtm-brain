@@ -161,7 +161,7 @@ test("page: Entities filters as you type, by kind and by relation, in plain word
   assert.match(p.node("#ent-kinds").innerHTML, /data-ent-kind="person"[^>]*>People<span>\d+<\/span>/); assert.match(p.node("#ent-kinds").innerHTML, />Companies<span>/);
   assert.doesNotMatch(p.node("#ent-kinds").innerHTML, />Events</, "a kind with nothing in it has no chip");
   fire(p, "input", { target: { id: "ent-q", value: "olka" } });   // an alias
-  assert.match(p.node("#ent-list").innerHTML, /Ola Kowalska/); assert.doesNotMatch(p.node("#ent-list").innerHTML, /Jan Zielinski/);
+  assert.match(p.node("#ent-list").innerHTML, /Ola(<\/mark>)? Kowalska/); assert.doesNotMatch(p.node("#ent-list").innerHTML, /Jan Zielinski/);
   assert.equal(p.node("#ent-count").textContent, `1 of ${all} shown`);
   fire(p, "input", { target: { id: "ent-q", value: "ACME.TEST" } });   // an email address
   assert.equal((p.node("#ent-list").innerHTML.match(/role="option"/g) || []).length, 1);
@@ -308,12 +308,14 @@ test("page: Entities stays a window of rows with 2,000 entities, and an empty br
 test("page: Memories shows date, age, source and what replaced what; a filter fetches the whole list once", async () => {
   const p = page(D);
   const list = p.node("#pm-list").innerHTML;
-  assert.match(list, /Ola Kowalska runs returns and logistics/); assert.match(list, /Replaces [0-9-]+: Ola Kowalska runs returns at Acme Retail\./);
+  assert.match(list, /Ola Kowalska runs returns and logistics/); assert.match(list, /Replaces what was saved <time[^>]*>[^<]+<\/time>: Ola Kowalska runs returns at Acme Retail\./);
   assert.match(list, /title="[^"]+">3 days ago<\/time>/, "a date reads as how long ago, with the exact time on hover"); assert.match(list, /Sources/);
   assert.doesNotMatch(list, /Jan Zielinski left/, "in force by default");
-  assert.match(p.node("#pm-population").innerHTML, /Saved this week/); assert.match(p.node("#pm-population").innerHTML, /Duplicates/);
+  assert.match(list, /data-entity-id="[^"]+">Ola Kowalska<\/button>/, "the people and companies a note names are chips that open them"); assert.match(list, /class="mem-topic">Our company</, "the topic is small secondary text, by its title");
+  assert.doesNotMatch(p.node("#pm-filters").innerHTML + list, /context/i, "the word context is not shown to a person");
+  assert.match(p.node("#pm-filters").innerHTML, /data-pm-kind="decision"[^>]*>Decisions</); assert.match(p.node("#pm-filters").innerHTML, /<label>Who <select id="pm-who">/);
   p.run('pmF.state="";renderNotesTab()');
-  assert.match(p.node("#pm-list").innerHTML, /Replaced by [0-9-]+: Ola Kowalska runs returns and logistics/); assert.match(p.node("#pm-list").innerHTML, /Withdrawn [0-9-]+: Withdrawn: Jan never worked/);
+  assert.match(p.node("#pm-list").innerHTML, /Replaced <time[^>]*>[^<]+<\/time> by: Ola Kowalska runs returns and logistics/); assert.match(p.node("#pm-list").innerHTML, /Withdrawn <time[^>]*>[^<]+<\/time>: Withdrawn: Jan never worked/);
   p.run('pmF.state="in force";pmF.kind="decision";renderNotesTab()');
   assert.match(p.node("#pm-list").innerHTML, /50 stores/); assert.doesNotMatch(p.node("#pm-list").innerHTML, /Ola Kowalska/);
   p.run('pmF.kind="";pmF.entity="Olka";renderNotesTab()');
@@ -335,7 +337,9 @@ test("page: Memories shows date, age, source and what replaced what; a filter fe
 test("page: Workflows shows each file's status, trigger and runs, and the skills; the earlier views stay reachable", () => {
   const p = page(D); p.run('show("workflows")');
   const w = p.node("#pw-files").innerHTML;
-  assert.match(w, /Outbound.*Trigger: <b>manual<\/b>/s); assert.match(w, /Weekly review.*every Monday at 09:00/s); assert.match(w, /4 steps|\d+ steps/);
+  assert.match(w, /Outbound.*You start it by asking Codex/s); assert.match(w, /Weekly review.*Starts every Monday at 09:00/s); assert.match(w, /never run/);
+  p.run('pwOpen="outbound";renderWorkflowsTab()');
+  assert.match(p.node("#pw-files").innerHTML, /<ol class="wf-steps"><li class=""><span>[^<]+<\/span>/, "a click shows the steps as a numbered path"); assert.match(p.node("#pw-files").innerHTML, /<summary>Details<\/summary>.*Trigger: manual/s, "the file's own words stay in Details");
   assert.match(p.node("#pw-skills").innerHTML, /gtm-brain-workflow/);
   p.run('show("contexts")'); assert.match(p.node("#nav").innerHTML, /data-v="notes" class="on"/, "an earlier view lights the place it belongs to; there is no More menu");
   const older = structuredClone(D); delete older.pillars; const o = page(older);
