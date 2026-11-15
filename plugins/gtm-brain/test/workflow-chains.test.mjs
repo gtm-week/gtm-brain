@@ -1,3 +1,6 @@
+// These tests read and write the root files of a layout 2 brain: setup and the lib play a plugin that writes layout 2 at most
+// (lib/layout-version.mjs GTM_BRAIN_TEST_LAYOUT). Layout 3 (about-us/, config/) is covered by config-folders.test.mjs.
+process.env.GTM_BRAIN_TEST_LAYOUT = "2";
 // Workflow triggers, round three (0.35.0, lane S2 review): the behaviours of the brief no earlier test held down.
 // A chain that passes through notes saved with remember, a milestone raised once a day, a dismissed event, a link
 // ended, a field changed, two machines taking one event, and a workflow paused by a person or by SCHEMA.md.

@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { lastNoteAgo, quietBrainLine } from "../../lib/staleness.mjs";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
-if (!existsSync(join(root, "brain", "admin.md"))) { console.error("no brain here (brain/admin.md missing). Run setup."); process.exit(1); }
+if (!lib.isBrain(root)) { console.error("no brain here (brain/admin.md missing). Run setup."); process.exit(1); }
 // --project <slug>: this chat runs in a linked folder; its loaded set is its own (lib.readLoaded(root, project))
 let project = null; { const pi = args.indexOf("--project"); if (pi >= 0) { project = args[pi + 1] || ""; args.splice(pi, 2); const known = lib.readProjects(root).map(p => p.slug); if (!known.includes(project)) { console.error(`no project ${project}; projects: ${known.join(", ") || "none"}`); process.exit(2); } } }
 
@@ -79,7 +79,7 @@ if (args[0] === "--fork") {
 const cs = lib.listContexts(root);
 if (args.includes("--json")) { console.log(JSON.stringify(cs.map(c => ({ slug: c.slug, title: c.title, rule: c.rule, status: c.status, summary: c.summary, memories: lib.effectiveMemories(c.memories).length, stored: c.memories.length, lastMemory: c.lastMemory, compiledAt: c.compiledAt, stale: c.stale, people: c.people, tools: c.tools, related: c.related })), null, 1)); process.exit(0); }
 // lib.summaryState's words: "summary up to date", "summary as of <date>, N newer notes (written when asked)", "loaded in this chat".
-console.log("admin: brain/admin.md (always loaded)");
+console.log(`admin: ${lib.settingsFile(root)} (always loaded)`);
 const loadedNow = lib.readLoaded(root, project); const busy = lib.compileBusy(root);
 // --brief-loaded: the chat start prints each loaded context in full right after this list, so its
 // summary excerpt and standing rule are left out here instead of reaching the chat twice.

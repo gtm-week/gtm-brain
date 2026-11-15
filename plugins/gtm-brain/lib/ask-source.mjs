@@ -14,6 +14,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readAdmin, toolKey } from "./brain.mjs";
+import { rulesFile } from "./brain-paths.mjs";
 import { daysSince, nowMs } from "./staleness.mjs";
 
 export const HEADING = "Ask the source";
@@ -106,7 +107,7 @@ export function defaultRows() {
    none of its rows can be read (then the problems say why). Never throws. */
 export function readAskSource(root) {
   let tools = []; try { tools = (readAdmin(root) || {}).tools || []; } catch {}
-  const text = read(join(root, "RULES.md"));
+  const text = read(join(root, rulesFile(root)));
   const parsed = parseAskSource(text || "", { tools });
   if (!parsed.found) return { rows: defaultRows(), problems: [], defaults: true };
   if (!parsed.rows.length) return { rows: defaultRows(), problems: parsed.problems, defaults: true };
@@ -172,8 +173,8 @@ export function toolRows(root, entity, { category = null, table = null } = {}) {
 export function toolPageLine(root, entity, options = {}) {
   const { rows, defaults } = toolRows(root, entity, options);
   if (!rows.length) return "";
-  const where = r => defaults ? `good for ${goodText(r.good_for)}` : `RULES.md line ${r.line}, good for ${goodText(r.good_for)}`;
-  return `Ask the source (${defaults ? "the built-in rows: RULES.md has no table of its own" : "RULES.md"}): read ${entity.name} for ${rows.map(r => `${r.topic.toLowerCase()} (${where(r)})`).join("; ")}.`;
+  const where = r => defaults ? `good for ${goodText(r.good_for)}` : `${rulesFile(root)} line ${r.line}, good for ${goodText(r.good_for)}`;
+  return `Ask the source (${defaults ? `the built-in rows: ${rulesFile(root)} has no table of its own` : rulesFile(root)}): read ${entity.name} for ${rows.map(r => `${r.topic.toLowerCase()} (${where(r)})`).join("; ")}.`;
 }
 /* What the tool pages' line rests on: the readable rows, so a page refreshes when the table changes. */
 export function askSourceRevision(root) {

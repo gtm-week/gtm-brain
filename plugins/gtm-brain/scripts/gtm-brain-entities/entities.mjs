@@ -8,7 +8,7 @@ import { existsSync } from "node:fs"; import { join } from "node:path";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 function main() {
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
-if (!existsSync(join(root, "brain", "admin.md"))) { console.error("no brain here"); process.exit(1); }
+if (!lib.isBrain(root)) { console.error("no brain here"); process.exit(1); }
 if (args[0] === "--brain-legacy-note") process.exit(0);
 // A flag followed by another flag (or by nothing) takes no value: --relations --entity X used to swallow --entity.
 const opt = {}; for (let i = 0; i < args.length; i++) if (args[i].startsWith("--")) { const bare = args[i + 1] === undefined || args[i + 1].startsWith("--"); opt[args[i].slice(2)] = bare ? undefined : args[i + 1]; if (!bare) i++; }

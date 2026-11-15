@@ -1,3 +1,6 @@
+// These tests read and write the root files of a layout 2 brain: setup and the lib play a plugin that writes layout 2 at most
+// (lib/layout-version.mjs GTM_BRAIN_TEST_LAYOUT). Layout 3 (about-us/, config/) is covered by config-folders.test.mjs.
+process.env.GTM_BRAIN_TEST_LAYOUT = "2";
 // The nightly capture pass (lib/capture.mjs, 0.35.0): outcomes said in a chat and never saved. A fake host
 // session folder and a stand-in for the model run; the real remember script and a brain made by setup.
 import { test } from "node:test";

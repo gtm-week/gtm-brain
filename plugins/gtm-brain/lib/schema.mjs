@@ -8,15 +8,17 @@
 // `relation` block (lib/relations.mjs). Every "## <Kind>" section with a field table is a kind; the seven
 // DEFAULT_KINDS always exist, even when the file leaves their section out. A meeting is a kind (its page collects
 // the notes with its meeting id; the transcript stays in its tool); a project is not, it is a tag.
-import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, writeFileSync, existsSync, readdirSync, statSync, mkdirSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { schemaFile, TEMPLATES } from "./brain-paths.mjs";
 import { createHash } from "node:crypto";
 import { readAdmin, commit } from "./brain.mjs";
 import { layoutBlock } from "./layout-version.mjs";
 import { DEFAULT_KINDS, KIND_NAME, NOT_KINDS } from "./kinds.mjs";
 export { DEFAULT_KINDS, KIND_NAME, NOT_KINDS };
 
-export const SCHEMA = "SCHEMA.md";
+/* The schema file of this brain: SCHEMA.md at the root, config/schema.md in layout 3 (lib/brain-paths.mjs). */
+export const schemaPath = root => schemaFile(root);
 /** The defaults; a brain's own kinds come from brainKinds(root). */
 export const SCHEMA_KINDS = DEFAULT_KINDS;
 const orList = list => list.length < 2 ? list.join("") : `${list.slice(0, -1).join(", ")} or ${list[list.length - 1]}`;
@@ -170,7 +172,7 @@ export function checkRelation(schema, { type, fromKind, toKind }) {
 let cache = null;
 /* {schema} when the file parses, {error} when it does not, {missing} when there is none. */
 export function readSchema(root) {
-  const path = join(root, SCHEMA);
+  const path = join(root, schemaFile(root));
   let stat; try { stat = statSync(path); } catch { return { missing: true }; }
   const key = `${path}|${stat.mtimeMs}|${stat.size}`;
   if (cache?.key === key) return cache.value;
@@ -191,14 +193,14 @@ export function brainKinds(root) {
 /* Write SCHEMA.md when it is missing, refresh it when it is a shipped version nobody edited. */
 export function ensureSchema(root, templates) {
   if (process.env.GTM_BRAIN_RUN || !readAdmin(root) || layoutBlock(root)) return false;   // never into a newer-layout brain
-  const path = join(root, SCHEMA), next = readFileSync(join(templates, SCHEMA), "utf8"), had = existsSync(path);
+  const file = schemaFile(root), path = join(root, file), next = readFileSync(join(templates, TEMPLATES.schema), "utf8"), had = existsSync(path);
   if (had) {
     const current = readFileSync(path, "utf8");
     let older = []; try { const dir = join(templates, "legacy", "schema"); older = readdirSync(dir).filter(f => f.endsWith(".md")).map(f => readFileSync(join(dir, f), "utf8")); } catch {}
     if (current === next || !older.includes(current)) return false;
   }
-  writeFileSync(path, next);
-  commit(root, [SCHEMA], had ? "upgrade: SCHEMA.md, what the brain keeps" : "SCHEMA.md: what the brain keeps about people, organizations, products, offerings, events, tools and meetings");
+  mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, next);
+  commit(root, [file], had ? `upgrade: ${file}, what the brain keeps` : `${file}: what the brain keeps about people, organizations, products, offerings, events, tools and meetings`, { system: true });
   return true;
 }
 
@@ -206,11 +208,11 @@ export function ensureSchema(root, templates) {
 export function schemaLine(root) {
   const r = readSchema(root);
   if (r.missing) return "";
-  if (r.error) return `SCHEMA.md cannot be read, and was left as it is: ${r.error.message}. Show the fix to the person and offer to apply it (/gtm-brain-schema). Until then relationship saves are refused and briefs show no Fields.`;
+  if (r.error) return `${schemaFile(root)} cannot be read, and was left as it is: ${r.error.message}. Show the fix to the person and offer to apply it (/gtm-brain-schema). Until then relationship saves are refused and briefs show no Fields.`;
   const s = r.schema, f = list => list.map(x => `${x.name}${x.required ? "*" : ""}`).join(", ") || "none";
   const subs = Object.entries(s.kinds.organization.subtypes).map(([n, v]) => v.fields.length ? `${n} (+${f(v.fields)})` : n).join(", ");
   const rels = Object.entries(s.relations).map(([t, v]) => v.built_in ? `${t} (the customer block)` : `${t} ${v.from.join("|")}>${v.to.join("|")}${v.required ? "*" : ""}`).join(", ");
-  return [`SCHEMA.md says what the brain keeps (the person's to edit; /gtm-brain-schema changes it), * = required:`,
+  return [`${schemaFile(root)} says what the brain keeps (the person's to edit; /gtm-brain-schema changes it), * = required:`,
     `  ${Object.entries(s.kinds).map(([k, v]) => `${k}: ${f(v.fields)}${k === "organization" && subs ? `; subtypes ${subs}` : ""}`).join(". ")}.`,
     `  relationships: ${rels}. A field value goes plainly in the note's text; a listed relationship goes in remember's relation block (saving rules S1-S3).`].join("\n");
 }

@@ -32,7 +32,7 @@ const PROTOCOL = 4;
 // code from a cache folder Codex replaced, so --start retires a server from another version.
 const VERSION = (() => { try { return JSON.parse(readFileSync(new URL("../.codex-plugin/plugin.json", import.meta.url), "utf8")).version || null; } catch { return null; } })();
 const work = join(root, "work"), stateFile = join(work, "dash.json"), home = join(work, "home");
-if (!existsSync(join(root, "brain", "admin.md"))) { console.error(`not a brain: ${root}`); process.exit(1); }
+if (!lib.isBrain(root)) { console.error(`not a brain: ${root}`); process.exit(1); }
 mkdirSync(work, { recursive: true });
 
 const readState = () => { try { return JSON.parse(readFileSync(stateFile, "utf8")); } catch { return null; } };
@@ -159,7 +159,7 @@ function serve() {
   });
   server.listen(port, "127.0.0.1");
   // Leave when the brain is gone or a newer server took over.
-  setInterval(() => { const s = readState(); if (!existsSync(join(root, "brain", "admin.md")) || (s && s.pid && s.pid !== process.pid && alive(s))) process.exit(0); }, 60000).unref();
+  setInterval(() => { const s = readState(); if (!lib.isBrain(root) || (s && s.pid && s.pid !== process.pid && alive(s))) process.exit(0); }, 60000).unref();
   const bye = () => { watcher.close(); clearInterval(heartbeat); for (const res of clients) res.end(); const s = readState(); if (s && s.pid === process.pid) remember({ port }); process.exit(0); };
   process.on("SIGTERM", bye); process.on("SIGINT", bye);
 }

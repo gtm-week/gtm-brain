@@ -7,7 +7,8 @@ set -u -o pipefail
 P="${PLUGIN_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 BY="${GTM_BRAIN_COMPILE_BY:-schedule}"   # schedule (launchd, cron) or background (kicked by a note)
 BRAIN="${1:-.}"; cd "$BRAIN" || exit 1
-[ -f AGENTS.md ] && [ -f brain/admin.md ] || { echo "not a brain: $BRAIN"; exit 1; }
+. "$P/session/resolve.sh"
+[ -f AGENTS.md ] && gtm_brain_is . || { echo "not a brain: $BRAIN"; exit 1; }
 mkdir -p work
 printf '%s  scheduled-run  start\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log
 # Workflow steps whose gate date passed become a due step and a gate question (lib/workflows.mjs): deterministic, no model.

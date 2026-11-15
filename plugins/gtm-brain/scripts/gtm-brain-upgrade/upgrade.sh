@@ -13,7 +13,8 @@ HERE="$(cd "$(dirname "$0")" && pwd)"; PLUGIN="$(cd "$HERE/../.." && pwd)"; T="$
 ROOT="."; CONFIRM=0
 for a in "$@"; do case "$a" in --confirm) CONFIRM=1;; *) ROOT="$a";; esac; done
 cd "$ROOT"
-[ -f brain/admin.md ] || { echo "not a brain: $ROOT"; exit 1; }
+. "$PLUGIN/session/resolve.sh"
+gtm_brain_is . || { echo "not a brain: $ROOT"; exit 1; }
 # The layout first, before anything is backed up or replaced: a brain on a newer layout than this plugin
 # understands is never written (exit 3); a layout change waits for the person's yes (exit 0, nothing changed).
 node --input-type=module - "$PLUGIN/lib/upgrade-files.mjs" "$T" "$CONFIRM" <<'JS' || { rc=$?; [ "$rc" = 10 ] && exit 0; exit "$rc"; }
@@ -21,6 +22,7 @@ const { prepareUpgrade, rulesReasons, layoutStep } = await import(process.argv[2
 const step = layoutStep(".", process.argv[4] === "1");
 if (step.startsWith("BLOCKED\t")) { console.log(`${step.slice(8)}\nNothing was upgraded.`); process.exit(3); }
 if (step.startsWith("ASK\t")) { console.log(`not upgraded yet: ${step.slice(4)}\nNothing was changed.`); process.exit(10); }
+if (step.startsWith("NOTE\t")) console.log(step.slice(5));
 // Read before anything is replaced: the reasons are counted from the rules this brain has now.
 const { from, reasons } = rulesReasons(".", process.argv[3]);
 const result = prepareUpgrade(".", process.argv[3]);
@@ -31,7 +33,7 @@ if (!result.ready) {
   process.exit(2);
 }
 JS
-COMPANY="$(sed -n 's/^company:[[:space:]]*//p' brain/admin.md | head -1 | sed 's/^"//; s/"$//')"
+IFS="$(printf '\t')" read -r RULES_F SCHEMA_F COMPANY <<< "$(node -e 'const l=await import(process.argv[1]);console.log([l.rulesFile("."),l.schemaFile("."),(l.readAdmin(".")||{}).company||""].join("\t"))' "$PLUGIN/lib/brain.mjs")"
 changed=0
 # The shipped rules; a person's own additions under "## This brain's own additions" are carried over word for word.
 rules_out="$(node --input-type=module -e 'const u=await import(process.argv[1]);if(u.writeRules(".",process.argv[2]))console.log("changed")' "$PLUGIN/lib/upgrade-files.mjs" "$T")"
@@ -102,17 +104,17 @@ fi
 # layout every GTM Brain reads before it writes, is recorded last, after the starters it lists as given; a layout
 # change happens only with --confirm, and a flat brain keeps layout 1. One node process for the three: one line each.
 PLUGIN_VERSION="$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$PLUGIN/.codex-plugin/plugin.json" | head -1)"
-had_rules=0; [ -f RULES.md ] && had_rules=1; had_schema=0; [ -f SCHEMA.md ] && had_schema=1
+had_rules=0; [ -f "$RULES_F" ] && had_rules=1; had_schema=0; [ -f "$SCHEMA_F" ] && had_schema=1
 delivered="$(node --input-type=module -e 'const u = await import(process.argv[1]); console.log(u.deliverMissing(".", process.argv[2], process.argv[3], process.argv[4] === "1"))' "$PLUGIN/lib/upgrade-files.mjs" "$T" "$PLUGIN_VERSION" "$layout_said")"
 starters="$(sed -n 1p <<< "$delivered")"; ensured="$(sed -n 2p <<< "$delivered")"; layout_change="$(sed -n 3p <<< "$delivered")"
 added_strategy=0; other_starters=""
 for f in $starters; do
   echo "added $f"; changed=1; paths="$paths $f"
-  if [ "$f" = strategy.md ]; then added_strategy=1; else other_starters="$other_starters${other_starters:+, }$f"; fi
+  if [ "${f##*/}" = strategy.md ]; then added_strategy=1; else other_starters="$other_starters${other_starters:+, }$f"; fi
 done
 added_rules=""
 for f in $ensured; do
-  if { [ "$f" = RULES.md ] && [ "$had_rules" = 0 ]; } || { [ "$f" = SCHEMA.md ] && [ "$had_schema" = 0 ]; }; then echo "added $f"; added_rules="$added_rules${added_rules:+, }$f"; else echo "updated $f (it was a shipped version nobody edited)"; fi
+  if { [ "$f" = "$RULES_F" ] && [ "$had_rules" = 0 ]; } || { [ "$f" = "$SCHEMA_F" ] && [ "$had_schema" = 0 ]; }; then echo "added $f"; added_rules="$added_rules${added_rules:+, }$f"; else echo "updated $f (it was a shipped version nobody edited)"; fi
   changed=1; paths="$paths $f"
 done
 if [ -n "$layout_change" ]; then
@@ -152,4 +154,14 @@ const lib = await import(process.argv[2]);
 const result = lib.commit(".", process.argv.slice(3), "upgrade: rules and hook refreshed");
 console.log(`upgrade done: rules and hook refreshed; ${result.note}`);
 JS
-else echo "already current"; fi
+fi
+# Layout 3, last and in a commit of its own, only after the owner's yes (--confirm, the question above named what
+# moves): the base files into about-us/, RULES.md and SCHEMA.md into config/ as rules.md and schema.md, admin.md
+# into config/settings.yaml, brain/layout.json 3, with git mv so every byte stays (lib/config-folders.mjs). Then,
+# in a commit of its own, rules nobody edited get the layout 3 wording of the shipped rules (lib/where.mjs).
+moved3=""
+if [ "$CONFIRM" = 1 ]; then
+  moved3="$(node --input-type=module -e 'const u=await import(process.argv[1]),c=await import(process.argv[2]);if(!u.layoutStep(".",true).startsWith("CHANGE"))process.exit(0);const r=c.migrateToConfigFolders(".");if(!r.layout)process.exit(0);for(const [f,t] of r.moves)console.log(`moved ${f} -> ${t}`);if(r.settings)console.log("moved brain/admin.md -> config/settings.yaml (the same settings, the prose as notes)");for(const [f,w] of r.kept)console.log(`kept ${f}: ${w}`);console.log(`changed the brain'"'"'s file layout to ${r.layout} (brain/layout.json): only the owner changes about-us/ and config/ from now on; a teammate on an older GTM Brain does not find this brain until they update; ${r.note}`);const w=await import(process.argv[3]);if(w.ensureRules(".",process.argv[4]))console.log("updated config/rules.md (it was a shipped version nobody edited): its row for documents names about-us/")' "$PLUGIN/lib/upgrade-files.mjs" "$PLUGIN/lib/config-folders.mjs" "$PLUGIN/lib/where.mjs" "$T")"
+  [ -n "$moved3" ] && echo "$moved3"
+fi
+[ "$changed" = 1 ] || [ -n "$moved3" ] || echo "already current"

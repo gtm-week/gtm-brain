@@ -7,6 +7,8 @@ import { readLayout, layoutBlock, layoutPlan, writeLayout, writesLayout } from "
 import { diskLayout, pagePaths, isKindPagePath } from "./layout.mjs";
 import { ensureRules } from "./where.mjs";
 import { ensureSchema } from "./schema.mjs";
+import { basePath, rulesFile, schemaFile, inConfigFolders } from "./brain-paths.mjs";
+import { configMoveWhat, layoutReadme } from "./config-folders.mjs";
 
 // Shared with the upgrade matrix tests. Aliases point to the same immutable snapshot.
 export const legacyTemplates = JSON.parse(readFileSync(new URL("../templates/legacy/manifest.json", import.meta.url), "utf8"));
@@ -69,7 +71,7 @@ export function autoRefresh(root, templates) {
 export function refreshReadme(root, templates) {
   const company = readAdmin(root)?.company, path = join(root, "README.md");
   if (process.env.GTM_BRAIN_RUN || !company || !existsSync(path)) return false;
-  const render = file => readFileSync(file, "utf8").replaceAll("{{COMPANY}}", company);
+  const render = file => layoutReadme(readFileSync(file, "utf8").replaceAll("{{COMPANY}}", company), root);
   const current = readFileSync(path, "utf8"), next = render(join(templates, "README.md")), shipped = join(templates, "legacy", "readme");
   if (current === next || !readdirSync(shipped).some(f => f.endsWith(".md") && render(join(shipped, f)) === current)) return false;
   writeFileSync(path, next);
@@ -142,10 +144,11 @@ export const STARTERS = ["strategy", "icp", "voice", "design-system", "market"];
 export function addStarters(root, templates, { version = "", date = new Date().toISOString().slice(0, 10) } = {}) {
   const company = readAdmin(root)?.company || "", given = new Set(readLayout(root).starters || []), added = [];
   for (const doc of STARTERS) {
-    const template = join(templates, `${doc}.md`);
-    if (given.has(doc) || !existsSync(template) || existsSync(join(root, `${doc}.md`)) || existsSync(join(root, doc, `${doc}.md`))) continue;
-    writeFileSync(join(root, `${doc}.md`), readFileSync(template, "utf8").replaceAll("{{COMPANY}}", company).replaceAll("{{DATE}}", date).replaceAll("{{VERSION}}", version));
-    added.push(`${doc}.md`);
+    const template = join(templates, `${doc}.md`), at = basePath(root, `${doc}.md`);
+    if (given.has(doc) || !existsSync(template) || existsSync(join(root, at)) || existsSync(join(root, basePath(root, `${doc}/${doc}.md`)))) continue;
+    mkdirSync(dirname(join(root, at)), { recursive: true });
+    writeFileSync(join(root, at), readFileSync(template, "utf8").replaceAll("{{COMPANY}}", company).replaceAll("{{DATE}}", date).replaceAll("{{VERSION}}", version));
+    added.push(at);
   }
   return added;
 }
@@ -159,11 +162,16 @@ export function addStarters(root, templates, { version = "", date = new Date().t
 export function layoutStep(root, confirmed) {
   const blocked = layoutBlock(root);
   if (blocked) return `BLOCKED\t${blocked}`;
-  const names = Object.fromEntries((readAdmin(root)?.team || []).map(p => [p.handle, p.name]));
+  const admin = readAdmin(root) || {}, names = Object.fromEntries((admin.team || []).map(p => [p.handle, p.name]));
+  const me = currentPerson(root), owner = admin.owner ? String(admin.owner) : null;
+  // Layout 3 moves the base files and the settings into the owner's folders: only the owner says yes to it.
+  // Anyone else upgrades to layout 2 at most, and the rest of the upgrade goes on.
+  const target = !owner || me === owner ? writesLayout() : Math.min(writesLayout(), 2);
   const on = diskLayout(root), flat = on < 2 ? pagePaths(root).filter(p => !isKindPagePath(p)).length : 0;
-  const what = on < 2 ? `It moves ${flat} entity page${flat === 1 ? "" : "s"} into a folder per kind (brain/entities/people/, organizations/, ...), where a GTM Brain from before 0.35 does not find them; 0.34 does not check the layout yet, so it keeps saving and writes flat pages of its own, which the next write here folds in.` : "";
-  const plan = layoutPlan(root, { me: currentPerson(root), names, on, what });
-  if (!plan.changes) return "";
+  const kinds = on < 2 ? `It moves ${flat} entity page${flat === 1 ? "" : "s"} into a folder per kind (brain/entities/people/, organizations/, ...), where a GTM Brain from before 0.35 does not find them; 0.34 does not check the layout yet, so it keeps saving and writes flat pages of its own, which the next write here folds in.` : "";
+  const config = target >= 3 && !inConfigFolders(root) ? configMoveWhat(root) : "";
+  const plan = layoutPlan(root, { me, names, on, target, what: [kinds, config].filter(Boolean).join(" "), older: config ? "they will need to update GTM Brain: until then their GTM Brain does not find this brain." : "" });
+  if (!plan.changes) return target < writesLayout() && on < writesLayout() && on >= target ? `NOTE\tMoving the base files into about-us/ and config/ (layout 3) is the owner's (${names[owner] || owner}) to say yes to; nothing of it was asked or moved.` : "";
   if (process.env.GTM_BRAIN_RUN) return `ASK\t${plan.summary} A scheduled or background run never changes the layout: the person says "upgrade the brain" in a chat.`;
   return confirmed ? `CHANGE\t${plan.from}\t${plan.to}` : `ASK\t${plan.line}`;
 }
@@ -174,8 +182,8 @@ export function layoutStep(root, confirmed) {
    here the number only rises to what this plugin writes for a brain in kind folders, and a flat brain keeps 1. */
 export function deliverMissing(root, templates, version, said = false) {
   const starters = addStarters(root, templates, { version });
-  const files = [ensureRules(root, templates) && "RULES.md", ensureSchema(root, templates) && "SCHEMA.md"].filter(Boolean);
-  const before = readLayout(root), written = writeLayout(root, { starters: STARTERS, layout: diskLayout(root) === 2 ? writesLayout() : undefined }), after = readLayout(root).layout;
+  const files = [ensureRules(root, templates) && rulesFile(root), ensureSchema(root, templates) && schemaFile(root)].filter(Boolean);
+  const before = readLayout(root), written = writeLayout(root, { starters: STARTERS, layout: diskLayout(root) >= 2 ? diskLayout(root) : undefined }), after = readLayout(root).layout;
   const layout = !written ? "" : before.layout !== after ? `changed the brain's file layout to ${after}` : said ? "" : "recorded the brain's file layout (brain/layout.json)";
   return [starters.join(" "), files.join(" "), layout].join("\n");
 }

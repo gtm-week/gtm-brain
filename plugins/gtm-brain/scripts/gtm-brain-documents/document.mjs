@@ -13,7 +13,7 @@ import { join, resolve, relative, isAbsolute } from "node:path";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const docs = await import(new URL("../../lib/documents.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = realpathSync(resolve(args[0] && !args[0].startsWith("--") ? args.shift() : "."));
-if (!existsSync(join(root, "brain", "admin.md"))) { console.error("no brain here (brain/admin.md missing)."); process.exit(1); }
+if (!lib.isBrain(root)) { console.error("no brain here (brain/admin.md missing)."); process.exit(1); }
 const opt = {}; for (let i = 0; i < args.length; i++) if (args[i].startsWith("--")) { const k = args[i].slice(2), v = args[i + 1]; if (v === undefined || v.startsWith("--")) opt[k] = true; else { opt[k] = v; i++; } }
 const refuse = why => { console.error(why); process.exit(2); };
 for (const flag of ["title", "applies-to", "body", "append", "file", "folder", "status", "by", "update", "show", "files", "remove"]) if (opt[flag] === true) refuse(`--${flag} needs a value`);
@@ -36,7 +36,7 @@ if (opt.file !== undefined) {
   opt.body = parsed.body; extra = parsed.fm || {};
   if (inside(real)) {
     const rel = relative(root, real).split("/");
-    if (docs.SKIP_DIRS.has(rel[0])) refuse(`${relative(root, real)} is one of the brain's own files; a document is something the person wrote, at the root or in a folder of theirs`);
+    if (docs.SKIP_DIRS.has(rel[0]) || lib.engineDirs(root).includes(rel[0])) refuse(`${relative(root, real)} is one of the brain's own files; a document is something the person wrote, at the root or in a folder of theirs`);
     if (docs.projectDirs(root).has(rel[0])) refuse(`${relative(root, real)} is inside the linked project ${rel[0]}; a document lives at the brain root or in a folder of its own, not in a project`);
     if (abs.endsWith(".md") && rel.length <= docs.MAX_DEPTH + 1) adopt = relative(root, real);
   }
@@ -47,6 +47,8 @@ const finish = (doc, verb, message) => {
   const moves = verb === "removed" ? [] : docs.consolidateDocuments(root);
   for (const m of moves) paths.push(m.from, m.to);
   const c = lib.commit(root, paths, moves.length ? `${message}; ${moves.map(m => `${m.from} -> ${m.to}`).join(", ")}` : message);
+  // layout 3, someone other than the owner: the change is a proposal and the file is as it was; say only that
+  if (c.proposal) { console.log(c.note); lib.rerender(root); return; }
   console.log(`${verb} document ${doc.path} [${doc.state}] (${c.note}). ${verb === "removed" ? "Nothing else changed." : `Codex reads ${doc.path} before work it applies to (${doc.applies_to.join(", ")}), from the next chat on; in this chat, from now.`}`);
   for (const m of moves) console.log(`moved ${m.from} into ${m.to.slice(0, m.to.lastIndexOf("/") + 1)} (now ${m.to}), so the document and its folder are one thing.`);
   lib.logActivity(root, "document", `${verb} ${doc.path}`); lib.rerender(root);
@@ -60,7 +62,7 @@ if (opt.prepare) {
   process.exit(0);
 }
 if (opt.create) {
-  const title = String(opt.title || "").trim(), slug = docs.documentSlug(title), status = String(opt.status || "draft"), folder = String(opt.folder || "");
+  const title = String(opt.title || "").trim(), slug = docs.documentSlug(title), status = String(opt.status || "draft"), folder = String(opt.folder || (adopt ? "" : lib.baseDir(root)));   // layout 3: a new base file goes in about-us/
   // An adopted file keeps its own name and folder; only a new file is held to the naming rules.
   const why = docs.validateDocument(adopt ? { title, applies_to: opt["applies-to"], body: opt.body, status } : { slug, title, applies_to: opt["applies-to"], body: opt.body, status, folder, root }); if (why) refuse(why);
   if (adopt && docs.parseDocument(root, adopt)) refuse(`${adopt} is already a document; update it instead`);

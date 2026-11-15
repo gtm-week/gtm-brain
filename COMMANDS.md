@@ -616,8 +616,17 @@ members can approve. APPROVE, "ok" or "yes" typed in the chat applies nothing. W
 cannot show the form, Codex gives you the `approve.mjs` command to run in a terminal yourself,
 where it asks you to type APPROVE.
 
-Tools: `propose_admin_change` for the proposal, `approve_change` (kind `admin` or `interaction`, `by`) to apply it. Writes: `brain/admin.md`, `~/.gtm-brain/approvals.log`, a commit.
-`node $PLUGIN_ROOT/scripts/gtm-brain-approve/approve.mjs . --diff`, `... --apply --by <handle|name|email>` (in a terminal; asks you to type APPROVE)
+In a brain with `about-us/` and `config/` (layout 3) the settings are `config/settings.yaml` and
+only the owner approves: anyone else's change, and any change they make under `about-us/` or
+`config/` (a tool write or a hand edit), is kept as a proposal in `brain/proposals/<id>/` with a
+note tagged for the owner, who sees it at their next chat start and decides with
+`approve_change` kind `proposal`. Every approval, and every owner's own hand edit there, is
+recorded as a decision note (who asked, who approved, which file, a summary, the commit);
+`query` with object `approvals` lists them and the proposals waiting. See MANUAL.md, "Who can
+change the base files".
+
+Tools: `propose_admin_change` for the proposal, `approve_change` (kind `admin`, `interaction` or `proposal` with `id`, `by`) to apply it. Writes: the settings file, `~/.gtm-brain/approvals.log`, a commit, a decision note.
+`node $PLUGIN_ROOT/scripts/gtm-brain-approve/approve.mjs . --diff`, `... --apply --by <handle|name|email>` (in a terminal; asks you to type APPROVE), `... --proposal <id> --diff | --apply | --drop --by <owner>`
 
 ### schedule
 *"set up the weekly compile"*, *"schedule"*

@@ -57,7 +57,7 @@ function stamp(root, now) {
   const st = p => { try { const s = statSync(p); return `${s.size}:${s.mtimeMs}`; } catch { return "-"; } };
   const parts = [CACHE_VERSION, String(Math.floor(now / 36e5))];
   for (const c of contextDirs(root)) parts.push(c, st(join(root, "brain/contexts", c, "memories.jsonl")), st(join(root, "brain/contexts", c, "context.md")));
-  parts.push(...entityFiles(root), st(join(root, "SCHEMA.md")), st(join(root, "brain/admin.md")));
+  parts.push(...entityFiles(root), st(join(root, lib.schemaFile(root))), st(join(root, lib.settingsFile(root))));
   return lib.snapshotKey([{ id: parts.join("|") }]);
 }
 
@@ -155,7 +155,7 @@ export function population(root, { now = nowMs(), cache = true } = {}) {
   const key = stamp(root, now), file = join(root, "work", "population.json");
   if (cache) { try { const c = JSON.parse(readFileSync(file, "utf8")); if (c.key === key && c.population?.saved && c.population.duplicates && c.population.entities && c.population.citations && c.population.sources) return c.population; } catch {} }
   const p = computePopulation(root, { now });
-  if (cache && existsSync(join(root, "brain", "admin.md"))) {
+  if (cache && lib.isBrain(root)) {
     try { mkdirSync(join(root, "work"), { recursive: true }); const tmp = `${file}.${process.pid}.tmp`; writeFileSync(tmp, JSON.stringify({ key, population: p }) + "\n"); renameSync(tmp, file); } catch {}
   }
   return p;
