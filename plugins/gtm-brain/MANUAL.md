@@ -276,6 +276,33 @@ Do not edit `AGENTS.md`, `CLAUDE.md`, `admin.md`, `memories.jsonl` or `ontology.
 hand: a direct edit of a protected file is put back at the next chat start and your version is kept
 in `work/manual-edits/protected/`.
 
+## The four folders (file layout 4)
+
+A brain made by setup, and one the owner said yes to moving ("upgrade the brain"), keeps everything
+in four folders, the tabs of the dashboard, with no `brain/` folder and no visible `work/`:
+
+- `configuration/`: `about-us/` (the base documents and their files), `rules.md`, `schema.md`,
+  `settings.yaml` (company, owner, team, tools) and `interactions.json` (the company's own
+  interactions; the same file `brain/ontology.ossie.json` was). Only the owner changes it; a
+  teammate's change waits in `configuration/proposals/`.
+- `entities/`: a folder per kind, one page per entity, its files in the folder of the same name
+  beside it. No generated `index.md`: `query` (object entities) lists a kind.
+- `memories/`: every note, one per line, in the file of its month (`2026-11.jsonl`, the month of the
+  note's `at` in UTC), appended and never edited. A note names its topic in its `context` field, so
+  reading by topic is a filter and a search over the folder reads every note. `topics/<slug>.md` is
+  what a context's cover was: the title, the working guidance and the summary.
+- `workflows/`: as before.
+
+`layout.json` at the top says 4. This computer's own files (the search index, the rendered
+dashboard, logs, the loaded set, upgrade backups, kept manual edits) are in the hidden
+`.gtm-brain/`, gitignored; a task's throwaway files go in `.gtm-brain/scratch/`.
+
+The move asks first, is the owner's to say yes to, and is one commit of renames: every note line is
+read back and compared before it is kept, and a full copy of the old files stays in
+`.gtm-brain/upgrades/`. A brain in layout 1, 2 or 3 keeps working as it is until then. A GTM Brain
+older than layout 4 finds no brain in a layout 4 folder, so a teammate updates before reading or
+saving there. The tools still say context for a topic, and their parameter is still `context`.
+
 ## Who can change the base files
 
 A brain set up or upgraded with this release keeps its base files in `about-us/` (strategy, ICP,

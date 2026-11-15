@@ -36,7 +36,8 @@ trap cleanup EXIT
 # worker waits until no note has been saved for GTM_BRAIN_COMPILE_DELAY seconds (default 120) and then
 # compiles everything waiting in one run. Notes saved while it waits extend the wait.
 DELAY="${GTM_BRAIN_COMPILE_DELAY:-120}"
-last_note() { node -e 'const p=await import(process.argv[1]),fs=await import("node:fs");let t=0;for(const f of p.noteFiles(".")){try{t=Math.max(t,fs.statSync(f).mtimeMs)}catch{}}console.log(Math.floor(t/1000))' "$P/lib/brain-paths.mjs"; }
+# Both places a brain keeps notes (lib/brain-paths.mjs noteFiles), spelled here: this worker runs with node built-ins only.
+last_note() { node -e 'const fs=require("fs"),p=require("path");let t=0;const s=f=>{try{t=Math.max(t,fs.statSync(f).mtimeMs)}catch{}};try{for(const c of fs.readdirSync("brain/contexts"))s(p.join("brain/contexts",c,"memories.jsonl"))}catch{}try{for(const f of fs.readdirSync("memories"))if(f.endsWith(".jsonl"))s(p.join("memories",f))}catch{}console.log(Math.floor(t/1000))'; }
 # Nothing behind: stop before any wait, with no state written, so the page is never told a summary is coming.
 # HANDLED first: the exit cleanup restarts the worker for any kick it did not see, and an early exit
 # that had not read the kick would restart itself forever.

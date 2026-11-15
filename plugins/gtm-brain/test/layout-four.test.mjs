@@ -163,6 +163,25 @@ test("the move refuses, changing nothing, when a folder of the team's own has on
   assert.equal(git("status", "--porcelain", "--", "brain", "config", "about-us").trim(), "");
 });
 
+test("a move that does not read back the same is undone: every old file is back, nothing is committed", { skip }, t => {
+  const { root, git } = makeBrain(t, { layout: 3 });
+  fill(root, git);
+  const files = tree(root), head = git("rev-parse", "HEAD").trim();
+  process.env.GTM_BRAIN_TEST_FAIL_MOVE = "1";
+  let r; try { r = migrateToTabs(root); } finally { delete process.env.GTM_BRAIN_TEST_FAIL_MOVE; }
+  assert.equal(r.layout, 0); assert.match(r.refused, /stopped and everything put back/);
+  assert.equal(lib.diskLayout(root), 3);
+  assert.deepEqual(tree(root), files, "every file as it was");
+  assert.equal(git("rev-parse", "HEAD").trim(), head);
+  assert.equal(git("status", "--porcelain", "--", ".", ":!profile").trim(), "");
+  for (const p of ["configuration", "entities", "memories", "layout.json", ".gtm-brain"]) assert.ok(!exists(root, p), `${p} is not left behind`);
+  assert.ok(exists(root, "work/person.json") || exists(root, "work/hooks.log"), "this computer's folder is work/ again");
+  // and the brain still works: a note saves, the move runs when asked again
+  lib.appendMemory(root, "company", { authors: by, content: "Still saving." });
+  assert.equal(lib.commit(root, lib.notesPaths(root, "company"), "note").ok, true);
+  assert.equal(migrateToTabs(root).layout, 4);
+});
+
 test("an unsaved edit under what moves stops the move: save first", { skip }, t => {
   const { root } = makeBrain(t, { layout: 3 });
   appendFileSync(join(root, "about-us/voice.md"), "\nA line nobody saved.\n");
@@ -300,6 +319,6 @@ test("the path module is the only place that names the notes, the covers, the en
   const shells = [];
   const walkSh = dir => { for (const e of readdirSync(dir, { withFileTypes: true })) { const p = join(dir, e.name); if (e.isDirectory()) walkSh(p); else if (e.name.endsWith(".sh")) shells.push(p); } };
   roots.forEach(walkSh);
-  const sh = /(?:"\$root\/work|[ >"]work\/[a-z]|\$root\/brain\/layout\.json|brain\/contexts)/;
+  const sh = /(?:"\$root\/work|[ >"]work\/[a-z]|\$root\/brain\/layout\.json)/;   // background-compile.sh spells both notes folders itself: it runs without the lib
   assert.deepEqual(shells.filter(f => !f.endsWith("session/resolve.sh")).flatMap(f => readFileSync(f, "utf8").split("\n").map((l, i) => `${f.slice(P.length)}:${i + 1}: ${l.trim().slice(0, 100)}`).filter(l => sh.test(l) && !/^\S+:\d+: (#|echo )/.test(l))), []);
 });

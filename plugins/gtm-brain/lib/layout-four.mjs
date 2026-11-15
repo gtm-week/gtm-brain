@@ -135,10 +135,11 @@ export function migrateToTabs(root, { commit = !process.env.GTM_BRAIN_NO_COMMIT 
   for (const p of [...MOVED, ".gitattributes", ".gitignore", ".githooks", "README.md"]) if (existsSync(join(root, p))) cpSync(join(root, p), join(backup, p), { recursive: true });
 
   const undo = () => {
+    // this computer's folder first: the copy of the old files is inside it
+    if (!existsSync(join(root, "work")) && existsSync(join(root, P.WORK_DIR4))) renameSync(join(root, P.WORK_DIR4), join(root, "work"));
     if (inGit) { try { git("reset", "-q", "HEAD", "--", ...TOUCHED); } catch {} }
     for (const p of [P.CONFIGURATION_DIR, P.ENTITIES_DIR4, P.NOTES_DIR, P.LAYOUT_FILE4]) rmSync(join(root, p), { recursive: true, force: true });
     for (const p of [...MOVED, ".gitattributes", ".gitignore", ".githooks", "README.md"]) if (existsSync(join(backup, p))) { rmSync(join(root, p), { recursive: true, force: true }); cpSync(join(backup, p), join(root, p), { recursive: true }); }
-    if (!existsSync(join(root, "work")) && existsSync(join(root, P.WORK_DIR4))) renameSync(join(root, P.WORK_DIR4), join(root, "work"));
   };
   try {
     // 2. the files that keep their bytes: git mv (a rename in the commit), plain mv for what git does not hold
@@ -196,6 +197,7 @@ export function migrateToTabs(root, { commit = !process.env.GTM_BRAIN_NO_COMMIT 
       const was = [...c.lines].sort(), is = [...(after.get(c.slug) || [])].sort();
       if (was.length !== is.length || was.some((l, i) => l !== is[i])) throw new Error(`the notes of ${c.slug} do not read back the same (${was.length} before, ${is.length} after)`);
     }
+    if (process.env.GTM_BRAIN_TEST_FAIL_MOVE) throw new Error("stopped by the test");   // tests only: the way back
     const total = [...after.values()].reduce((n, l) => n + l.length, 0);
     if (total !== plan.notes) throw new Error(`${plan.notes} notes before, ${total} after`);
     const idsAfter = new Set(readNames(root).map(e => e.id));

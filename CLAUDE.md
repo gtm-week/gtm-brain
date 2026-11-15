@@ -112,6 +112,23 @@ index can always be rebuilt from them and is never a second store.
 
 ### A brain on disk
 
+Layout 4, what setup makes (`lib/brain-paths.mjs` answers every path by the brain's layout; the move is
+`lib/layout-four.mjs`):
+
+```
+configuration/about-us/                the base documents and their files
+configuration/rules.md, schema.md      the rules and the schema
+configuration/settings.yaml            workplace info, the owner's to change
+configuration/interactions.json        the company's own interactions, protected
+entities/<kind folder>/<name>-<id>.md  identity, aliases, cited brief; hand-editable
+memories/<YYYY-MM>.jsonl               append-only records, one file per month of `at`
+memories/topics/<slug>.md              the compiled cover of a context (a topic)
+workflows/, layout.json, README.md, AGENTS.md, CLAUDE.md
+.gtm-brain/                            gitignored: dashboard, loaded set, tools.json, hooks.log, index
+```
+
+Layouts 1 to 3, still read and written for a brain that has not moved:
+
 ```
 brain/admin.md                         workplace info, protected, changed only via APPROVE
 brain/entities/*.md                    identity, aliases, cited brief; hand-editable
