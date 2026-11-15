@@ -8,6 +8,9 @@ const lib = u => import(new URL(`../lib/${u}`, import.meta.url));
 const say = s => { if (s) console.log(s); };
 const parts = [
   async () => { const l = await lib("brain.mjs"), h = await lib("health-line.mjs"); say(h.healthLine(root, l.meetingOverview(root, { by: l.currentPerson(root) || undefined }))); },
+  // who saves here: known (no by needed), or not yet, with the handles, so the first save passes by and is not refused
+  async () => { const l = await lib("brain.mjs"), me = l.currentPerson(root), team = (l.readAdmin(root)?.team || []).map(p => p.handle).filter(Boolean);
+    say(me ? `saving as: ${me} (a save needs no by)` : team.length > 1 ? `saving as: not known in this checkout yet. On the first save pass by = the handle of the person speaking (${team.join(", ")}); if the chat does not say who that is, ask once. It is remembered after that.` : ""); },
   async () => say((await lib("opening.mjs")).pendingQuestionsLine(root)),   // the brain questions nobody answered yet
   async () => console.log((await lib("documents.mjs")).documentsLine(root, { absolute: !!project })),
   async () => say((await lib("assets.mjs")).assetsLine(root)),

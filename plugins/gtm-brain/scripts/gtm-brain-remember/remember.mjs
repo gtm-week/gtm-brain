@@ -75,7 +75,12 @@ const session = process.env.GTM_BRAIN_RUN ? null : lib.readSession(root, project
 const chat = session?.session_id || null, chatKind = session?.host || "codex";
 const authors = list(opt.by).map(w => { const h = lib.teamHandle(root, w); if (!h) die(`"${w}" is not in admin.md team`); return h; });
 // by is optional: the person in this chat is known (work/person.json, else the brain's git identity), so a save needs no read of admin.md first
+const named = authors.length === 1 ? authors[0] : null;
 if (!authors.length) { const me = lib.currentPerson(root); if (me) authors.push(me); }
+// The first save that names its one author in a checkout where nobody is selected settles who works here
+// (work/person.json, this machine only), so the next save needs no by and no second call. Never from a
+// scheduled or background run, which is nobody's chat.
+if (named && !process.env.GTM_BRAIN_RUN && !lib.currentPerson(root)) { try { lib.selectPerson(root, named); } catch {} }
 // Nobody selected here (a fresh clone of a shared brain, before its first chat start): a team of one is that
 // person; otherwise the refusal carries the handles, so the same call repeats once with by and no note is lost
 // (live benchmark on a real brain, 2026-11-15: 12 of 14 saves were refused and never repeated).

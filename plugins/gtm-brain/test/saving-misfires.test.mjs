@@ -254,4 +254,14 @@ test("nobody selected in this checkout: a team of one saves as that person; a la
   const again = run("--by", "eva-nowak", "--context", "company", "--content", "Doors open at 17:30 on 16 November 2026.");
   assert.equal(again.status, 0, again.stderr);
   assert.deepEqual(lib.effectiveMemories(lib.listContexts(root).flatMap(c => c.memories)).at(-1).authors, ["eva-nowak"]);
+  // that save settled who works in this checkout: the next one needs no by
+  assert.equal(lib.currentPerson(root), "eva-nowak");
+  const third = run("--context", "company", "--content", "The cloakroom closes at 23:00 on 16 November 2026.");
+  assert.equal(third.status, 0, third.stderr);
+  assert.deepEqual(lib.effectiveMemories(lib.listContexts(root).flatMap(c => c.memories)).at(-1).authors, ["eva-nowak"]);
+  // the chat start says who saves, or that nobody is known yet with the handles
+  const lines = r2 => spawnSync(process.execPath, [`${P}/session/start-lines.mjs`, r2, "", `${P}/templates`], { encoding: "utf8", env }).stdout;
+  assert.match(lines(root), /saving as: eva-nowak \(a save needs no by\)/);
+  rmSync(join(root, "work", "person.json"), { force: true });
+  assert.match(lines(root), /saving as: not known in this checkout yet\. On the first save pass by = the handle of the person speaking \((artur-wala, eva-nowak|eva-nowak, artur-wala)\)/);
 });
