@@ -15,6 +15,9 @@ for a in "$@"; do case "$a" in --confirm) CONFIRM=1;; *) ROOT="$a";; esac; done
 cd "$ROOT"
 . "$PLUGIN/session/resolve.sh"
 gtm_brain_is . || { echo "not a brain: $ROOT"; exit 1; }
+# Where this brain keeps its entity pages and its layout file (session/resolve.sh, lib/brain-paths.mjs).
+if gtm_brain_layout4 .; then ENT=entities; else ENT=brain/entities; fi
+LAYOUT_F="$(gtm_brain_layout_file .)"
 # The layout first, before anything is backed up or replaced: a brain on a newer layout than this plugin
 # understands is never written (exit 3); a layout change waits for the person's yes (exit 0, nothing changed).
 node --input-type=module - "$PLUGIN/lib/upgrade-files.mjs" "$T" "$CONFIRM" <<'JS' || { rc=$?; [ "$rc" = 10 ] && exit 0; exit "$rc"; }
@@ -53,7 +56,7 @@ paths="AGENTS.md CLAUDE.md .githooks .gitignore"
 entity_change="$(node --input-type=module -e 'const lib=await import(process.argv[1]); if(lib.migrateEntities("."))console.log("changed")' "$PLUGIN/lib/brain.mjs")"
 if [ "$entity_change" = "changed" ]; then
   echo "migrated entity identities and kinds (original files backed up in work/entity-migration)"
-  changed=1; paths="$paths brain/entities brain/entities.md brain/names.md"
+  changed=1; paths="$paths $ENT$([ "$ENT" = entities ] || echo " brain/entities.md brain/names.md")"
 fi
 # 0.35.0: entity pages move to a folder per kind (people/max-jendral-3f9a2c.md), files folders with them, in this commit.
 # A flat brain reaches this line only after the person's yes (the layout step above); the move records layout 2 in
@@ -68,13 +71,13 @@ if [ -n "$kind_out" ]; then
   if [ -n "$kind_layout" ]; then
     if [ "$kind_n" -gt 0 ]; then echo "changed the brain's file layout to $kind_layout (brain/layout.json): a teammate's older GTM Brain needs an update before it saves here again"
     else echo "recorded the brain's file layout as $kind_layout (brain/layout.json): the entity pages were already in kind folders"; fi
-    layout_said=1; paths="$paths brain/layout.json"
+    layout_said=1; paths="$paths $LAYOUT_F"
   fi
-  changed=1; paths="$paths brain/entities"
+  changed=1; paths="$paths $ENT"
 fi
 # 0.35.0: a meeting is an entity; meetings captured before get theirs (their notes are not rewritten).
 meet_out="$(node --input-type=module -e 'const lib=await import(process.argv[1]); const n=lib.deriveMeetingEntities(".").length; if(n)console.log(n)' "$PLUGIN/lib/brain.mjs")"
-if [ -n "$meet_out" ]; then echo "added $meet_out meeting page$([ "$meet_out" = 1 ] || echo s) (brain/entities/meetings/), one per meeting already captured"; changed=1; paths="$paths brain/entities"; fi
+if [ -n "$meet_out" ]; then echo "added $meet_out meeting page$([ "$meet_out" = 1 ] || echo s) (brain/entities/meetings/), one per meeting already captured"; changed=1; paths="$paths $ENT"; fi
 # 0.27.0: guidelines become documents at the root; the root README says what goes where.
 docs_out="$(node --input-type=module -e 'const d=await import(process.argv[1]);const r=d.migrateGuidelines(".");for(const [f,t] of r.moved)console.log(`moved ${f} -> ${t}`);for(const [f,w] of r.kept)console.log(`kept ${f}: ${w}`);' "$PLUGIN/lib/documents.mjs")"
 if [ -n "$docs_out" ]; then
@@ -118,7 +121,7 @@ for f in $ensured; do
   changed=1; paths="$paths $f"
 done
 if [ -n "$layout_change" ]; then
-  echo "$layout_change"; changed=1; paths="$paths brain/layout.json"
+  echo "$layout_change"; changed=1; paths="$paths $LAYOUT_F"
 fi
 # workflows/ (0.28.0): a brain from before gets the folder with the two shipped workflows once. A folder that
 # exists is never added to, so a deleted shipped workflow stays deleted; a deleted folder comes back.
@@ -164,4 +167,12 @@ if [ "$CONFIRM" = 1 ]; then
   moved3="$(node --input-type=module -e 'const u=await import(process.argv[1]),c=await import(process.argv[2]);if(!u.layoutStep(".",true).startsWith("CHANGE"))process.exit(0);const r=c.migrateToConfigFolders(".");if(!r.layout)process.exit(0);for(const [f,t] of r.moves)console.log(`moved ${f} -> ${t}`);if(r.settings)console.log("moved brain/admin.md -> config/settings.yaml (the same settings, the prose as notes)");for(const [f,w] of r.kept)console.log(`kept ${f}: ${w}`);console.log(`changed the brain'"'"'s file layout to ${r.layout} (brain/layout.json): only the owner changes about-us/ and config/ from now on; a teammate on an older GTM Brain does not find this brain until they update; ${r.note}`);const w=await import(process.argv[3]);if(w.ensureRules(".",process.argv[4]))console.log("updated config/rules.md (it was a shipped version nobody edited): its row for documents names about-us/")' "$PLUGIN/lib/upgrade-files.mjs" "$PLUGIN/lib/config-folders.mjs" "$PLUGIN/lib/where.mjs" "$T")"
   [ -n "$moved3" ] && echo "$moved3"
 fi
-[ "$changed" = 1 ] || [ -n "$moved3" ] || echo "already current"
+# Layout 4, after 3 and in a commit of its own, on the same yes (the question named it): configuration/, entities/,
+# memories/ (one file of notes per month, topics/ for the summaries) and workflows/ at the top, no brain/ folder,
+# work/ becomes .gtm-brain/ (lib/layout-four.mjs). Every line of every note is read back before the commit.
+moved4=""
+if [ "$CONFIRM" = 1 ]; then
+  moved4="$(node --input-type=module -e 'const u=await import(process.argv[1]),f=await import(process.argv[2]);if(!u.layoutStep(".",true).startsWith("CHANGE"))process.exit(0);const r=f.migrateToTabs(".");if(!r.layout){if(r.refused)console.log(`not moved to layout 4: ${r.refused}`);process.exit(0);}for(const [a,b] of r.moves)console.log(`moved ${a} -> ${b}`);console.log(`moved ${r.notes} note${r.notes===1?"":"s"} of ${r.topics} topic${r.topics===1?"":"s"} into ${r.months.length} month file${r.months.length===1?"":"s"} in memories/, every line unchanged`);if(r.indexes.length)console.log(`removed ${r.indexes.length} generated index.md from the entity folders`);if(r.leftover)console.log(`left in brain/: ${r.leftover} file${r.leftover===1?"":"s"} GTM Brain does not know`);console.log(`changed the brain'"'"'s file layout to 4 (layout.json): the folders are configuration/, entities/, memories/ and workflows/; this computer'"'"'s files are in .gtm-brain/ (${r.note}). The copy of everything as it was: ${r.backup}. A teammate on an older GTM Brain needs to update before reading or saving here.`);if(r.pages&&r.pages!=="nothing to commit")console.log(`entity pages refreshed for the new folders (${r.pages})`)' "$PLUGIN/lib/upgrade-files.mjs" "$PLUGIN/lib/layout-four.mjs")"
+  [ -n "$moved4" ] && echo "$moved4"
+fi
+[ "$changed" = 1 ] || [ -n "$moved3" ] || [ -n "$moved4" ] || echo "already current"

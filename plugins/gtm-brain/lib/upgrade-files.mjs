@@ -9,6 +9,8 @@ import { ensureRules } from "./where.mjs";
 import { ensureSchema } from "./schema.mjs";
 import { basePath, rulesFile, schemaFile, inConfigFolders } from "./brain-paths.mjs";
 import { configMoveWhat, layoutReadme } from "./config-folders.mjs";
+import { tabsMoveWhat } from "./layout-four.mjs";
+import { inLayout4, layoutFile } from "./brain-paths.mjs";
 import { workDir } from './brain-paths.mjs';
 
 // Shared with the upgrade matrix tests. Aliases point to the same immutable snapshot.
@@ -171,8 +173,10 @@ export function layoutStep(root, confirmed) {
   const on = diskLayout(root), flat = on < 2 ? pagePaths(root).filter(p => !isKindPagePath(p)).length : 0;
   const kinds = on < 2 ? `It moves ${flat} entity page${flat === 1 ? "" : "s"} into a folder per kind (brain/entities/people/, organizations/, ...), where a GTM Brain from before 0.35 does not find them; 0.34 does not check the layout yet, so it keeps saving and writes flat pages of its own, which the next write here folds in.` : "";
   const config = target >= 3 && !inConfigFolders(root) ? configMoveWhat(root) : "";
-  const plan = layoutPlan(root, { me, names, on, target, what: [kinds, config].filter(Boolean).join(" "), older: config ? "they will need to update GTM Brain: until then their GTM Brain does not find this brain." : "" });
-  if (!plan.changes) return target < writesLayout() && on < writesLayout() && on >= target ? `NOTE\tMoving the base files into about-us/ and config/ (layout 3) is the owner's (${names[owner] || owner}) to say yes to; nothing of it was asked or moved.` : "";
+  // Layout 4, after 3 in the same run: the four folders (lib/layout-four.mjs). The owner's to say yes to, like 3.
+  const tabs = target >= 4 && !inLayout4(root) ? tabsMoveWhat(root) : "";
+  const plan = layoutPlan(root, { me, names, on, target, what: [kinds, config, tabs].filter(Boolean).join(" "), older: config || tabs ? "they will need to update GTM Brain: until then their GTM Brain does not find this brain." : "" });
+  if (!plan.changes) return target < writesLayout() && on < writesLayout() && on >= target ? `NOTE\tMoving the brain into the newer folders (layout ${writesLayout()}) is the owner's (${names[owner] || owner}) to say yes to; nothing of it was asked or moved.` : "";
   if (process.env.GTM_BRAIN_RUN) return `ASK\t${plan.summary} A scheduled or background run never changes the layout: the person says "upgrade the brain" in a chat.`;
   return confirmed ? `CHANGE\t${plan.from}\t${plan.to}` : `ASK\t${plan.line}`;
 }
@@ -185,6 +189,6 @@ export function deliverMissing(root, templates, version, said = false) {
   const starters = addStarters(root, templates, { version });
   const files = [ensureRules(root, templates) && rulesFile(root), ensureSchema(root, templates) && schemaFile(root)].filter(Boolean);
   const before = readLayout(root), written = writeLayout(root, { starters: STARTERS, layout: diskLayout(root) >= 2 ? diskLayout(root) : undefined }), after = readLayout(root).layout;
-  const layout = !written ? "" : before.layout !== after ? `changed the brain's file layout to ${after}` : said ? "" : "recorded the brain's file layout (brain/layout.json)";
+  const layout = !written ? "" : before.layout !== after ? `changed the brain's file layout to ${after}` : said ? "" : `recorded the brain's file layout (${layoutFile(root)})`;
   return [starters.join(" "), files.join(" "), layout].join("\n");
 }

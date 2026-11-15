@@ -37,7 +37,7 @@ export { entityFacts, entityBrief, entityRecords, compileEntity, resolveEntity, 
 export { withEntityLock, startKindLayout, migrateToKindFolders } from './entities.mjs';
 export { ensureMeetingEntities, deriveMeetingEntities, meetingEntityId, meetingAttendees } from './meeting-entities.mjs';
 import { ensureMeetingEntities as meetingEntitiesFor, meetingAnchors, anchorOf } from './meeting-entities.mjs';
-export { layout as entityLayout, pagePaths as entityPagePaths, kindFolder, kindPagePath, assetFolder, findPage } from './layout.mjs';
+export { layout as entityLayout, pagePaths as entityPagePaths, kindFolder, kindPagePath, assetFolder, findPage, diskLayout } from './layout.mjs';
 import { ENTITIES_DIR, recordKindLayout } from './layout.mjs';
 import { isBrain, settingsFile, settingsPathOf, PROTECTED_FILES, SETTINGS_PROPOSAL, SETTINGS_FILE } from './brain-paths.mjs';
 import { divertCommit, proposalLine, guardOwnerEdits, ownerEditNotice, recordApproval } from './owner.mjs';
@@ -683,7 +683,7 @@ export function writeNames(root, names) {
 export function migrateEntities(root) {
   return withEntityLock(root, () => {
     const names = readNames(root);
-    if (!entitiesFiles(root).length && existsSync(join(root, ENTITIES_DIR)) && names.every(e => e._fm?.format === ENTITY_FORMAT)) return false;
+    if (!entitiesFiles(root).length && existsSync(join(root, entitiesDir(root))) && names.every(e => e._fm?.format === ENTITY_FORMAT)) return false;
     writeNames(root, names);
     return true;
   });

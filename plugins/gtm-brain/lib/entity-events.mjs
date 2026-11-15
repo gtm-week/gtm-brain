@@ -5,9 +5,9 @@
 // (writeEntityFiles, applyEntityChange) and lib/entity-lifecycle.mjs, inside the entity lock.
 import { appendFileSync, mkdirSync, readFileSync, statSync, lstatSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { HISTORY_DIR, historyDir } from "./layout.mjs";
+import { historyDir } from "./layout.mjs";
 
-export const EVENTS_FILE = `${HISTORY_DIR}/events.jsonl`;   // layouts 1 to 3
+export const EVENTS_FILE = "brain/entities/.history/events.jsonl";   // layouts 1 to 3; the literal, since layout.mjs may still be loading (import cycle)
 export const eventsFile = root => `${historyDir(root)}/events.jsonl`;
 export const ENTITY_CHANGES = ["rename", "kind", "merge", "unmerge"];
 const ID = /^e_[0-9a-f]{16}$/;

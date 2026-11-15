@@ -105,7 +105,12 @@ export function migrateToConfigFolders(root, { commit = !process.env.GTM_BRAIN_N
    here (setup, the upgrade, the chat start's refresh), so a shipped README is recognized in either layout. */
 export function layoutReadme(text, root) {
   if (!inConfigFolders(root)) return text;
-  const three = String(text)
+  const three = readmeInFolders(text);
+  return inLayout4(root) ? readmeInTabs(three) : three;
+}
+/* The layout 3 wording, whatever the brain's layout now: the move to 4 recognizes a README nobody edited by it. */
+export function readmeInFolders(text) {
+  return String(text)
     .replace("[RULES.md](RULES.md) is", "[config/rules.md](config/rules.md) is")
     .replace("[SCHEMA.md](SCHEMA.md) says", "[config/schema.md](config/schema.md) says")
     .replace("with the RULES.md row", "with the rules.md row")
@@ -113,7 +118,6 @@ export function layoutReadme(text, root) {
     .replace("what it belongs to.\n", "what it belongs to.\n\nOnly the owner named in `config/settings.yaml` changes `about-us/` and `config/`. A teammate's change\nwaits there as a proposal, and the owner approves it or not at the start of their next chat.\n")
     .replace("`brain/admin.md` is always loaded", "`config/settings.yaml` is always loaded")
     .replace("- `admin.md`: the company profile. Protected.\n", "- `proposals/`: teammates' changes to `about-us/` and `config/`, waiting for the owner.\n");
-  return inLayout4(root) ? readmeInTabs(three) : three;
 }
 /* Layout 4: the same README with that layout's folders. The part that describes brain/ is replaced whole: there
    is no brain/ folder, and the four folders at the top are the dashboard's tabs. */

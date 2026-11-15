@@ -19,9 +19,12 @@ import { hasMemoryIndex, indexPath, openDatabase, cacheLock, readerLock, retireC
 export { hasMemoryIndex };
 export const MAX_RECORD_BYTES = 4 * 1024 * 1024;
 export const MAX_RESULT_BYTES = 2 * 1024 * 1024;
-export const MEMORY_INDEX_VERSION = 11;   // 11: a source file is a context (layouts 1 to 3) or a month (layout 4); corrections and keyword order go by the record's context
+export const MEMORY_INDEX_VERSION = 11;   // 11: source, the file a record is read from: its context's file (layouts 1 to 3) or its month's (layout 4). file stays the record's context, and line orders a context's records (month, then line, in layout 4)
 // earlier:   // 5: source pointers as members (field source); 6: entity rows with relation to us and SCHEMA.md fields; 7: meeting ids as identity refs; 8: stemmed keywords, word list for typos; 9: relations, relation events and entity events (lib/relation-log.mjs)
 const VERSION = MEMORY_INDEX_VERSION;
+/* memories.line in layout 4: the month's ordinal times this, plus the line in the month's file. */
+export const LINES_PER_MONTH = 100000000;
+const monthOrdinal = name => { const m = /^(\d{4})-(\d{2})$/.exec(name); return m ? Number(m[1]) * 12 + Number(m[2]) : 0; };
 const normalizeMention = s => foldLatin(s).replace(/[^a-z0-9]+/g, ' ').trim();
 function hashFile(path, size) {
   if (!size) return createHash('sha256').digest('hex');
@@ -68,8 +71,9 @@ const visible = alias => `${alias}.effective=1 AND NOT EXISTS (SELECT 1 FROM for
 const SCHEMA = `
  CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT);
  CREATE TABLE IF NOT EXISTS files(file TEXT PRIMARY KEY,stamp TEXT,bytes INTEGER,hash TEXT,newline INTEGER,line INTEGER,complete INTEGER);
- CREATE TABLE IF NOT EXISTS memories(rowid INTEGER PRIMARY KEY,file TEXT,line INTEGER,id TEXT,context TEXT,kind TEXT,via TEXT,at TEXT,time REAL,raw TEXT,entities TEXT,projected TEXT GENERATED ALWAYS AS (json_set(raw,'$.entities',json(entities))) VIRTUAL,authors TEXT,people TEXT,tools TEXT,content TEXT,effective INTEGER DEFAULT 1,asset_entity TEXT,asset_role TEXT,asset_status TEXT,mention_text TEXT,UNIQUE(file,line));
+ CREATE TABLE IF NOT EXISTS memories(rowid INTEGER PRIMARY KEY,source TEXT,file TEXT,line INTEGER,id TEXT,context TEXT,kind TEXT,via TEXT,at TEXT,time REAL,raw TEXT,entities TEXT,projected TEXT GENERATED ALWAYS AS (json_set(raw,'$.entities',json(entities))) VIRTUAL,authors TEXT,people TEXT,tools TEXT,content TEXT,effective INTEGER DEFAULT 1,asset_entity TEXT,asset_role TEXT,asset_status TEXT,mention_text TEXT,UNIQUE(file,line));
  CREATE INDEX IF NOT EXISTS memory_file_id ON memories(file,id);
+ CREATE INDEX IF NOT EXISTS memory_source ON memories(source);
  CREATE INDEX IF NOT EXISTS memory_id ON memories(id);
  CREATE INDEX IF NOT EXISTS memory_context_time ON memories(context,time DESC,id);
  CREATE INDEX IF NOT EXISTS memory_time ON memories(time DESC,id);
@@ -245,7 +249,7 @@ export class MemoryIndex {
   refreshVisibility() {
     const db = this.db;
     db.exec(`INSERT OR IGNORE INTO touched SELECT m.rowid FROM forks f JOIN memories m ON m.id=f.target WHERE f.memory IN (SELECT memory FROM touched);
-      UPDATE memories AS m SET effective=NOT EXISTS(SELECT 1 FROM corrections c WHERE c.file=m.context AND c.target=m.id) WHERE rowid IN (SELECT memory FROM touched);`);
+      UPDATE memories AS m SET effective=NOT EXISTS(SELECT 1 FROM corrections c WHERE c.file=m.file AND c.target=m.id) WHERE rowid IN (SELECT memory FROM touched);`);
     this.stats.visibilityRows += db.prepare('SELECT count(*) AS n FROM touched').get().n;
     db.exec(`INSERT INTO entity_versions SELECT DISTINCT v.value,1 FROM members v JOIN touched t ON t.memory=v.memory WHERE v.field='entities'
       ON CONFLICT(id) DO UPDATE SET version=version+1;`);
@@ -256,10 +260,10 @@ export class MemoryIndex {
       DELETE FROM touched;`);
   }
   removeFile(file) {
-    this.db.prepare('INSERT OR IGNORE INTO touched SELECT m.rowid FROM memories m JOIN forks f ON f.target=m.id JOIN memories c ON c.rowid=f.memory WHERE c.file=?').run(file);
+    this.db.prepare('INSERT OR IGNORE INTO touched SELECT m.rowid FROM memories m JOIN forks f ON f.target=m.id JOIN memories c ON c.rowid=f.memory WHERE c.source=?').run(file);
     // a correction in this file may have hidden a note kept in another file (layout 4: another month)
-    this.db.prepare('INSERT OR IGNORE INTO touched SELECT t.rowid FROM corrections c JOIN memories s ON s.rowid=c.memory JOIN memories t ON t.id=c.target AND t.context=c.file WHERE s.file=? AND t.file<>?').run(file, file);
-    this.db.prepare('DELETE FROM memories WHERE file=?').run(file);
+    this.db.prepare('INSERT OR IGNORE INTO touched SELECT t.rowid FROM corrections c JOIN memories s ON s.rowid=c.memory JOIN memories t ON t.id=c.target AND t.file=c.file WHERE s.source=? AND t.source<>?').run(file, file);
+    this.db.prepare('DELETE FROM memories WHERE source=?').run(file);
     this.db.prepare('DELETE FROM files WHERE file=?').run(file);
   }
   sync({ budgetMs = 20000, maxRecords = Infinity, onCheckpoint } = {}) {
@@ -289,10 +293,10 @@ export class MemoryIndex {
       if (oldRegistry !== registry) { if (oldRegistry) this.queueRelinks(JSON.parse(oldRegistry)); this.setMeta('registry', registry); }
       const remaining = new Set(before.map(f => f.file));
       for (const old of db.prepare('SELECT file FROM files').all()) if (!remaining.has(old.file)) this.removeFile(old.file);
-      const insert = db.prepare('INSERT INTO memories(file,line,id,context,kind,via,at,time,raw,entities,authors,people,tools,content,asset_entity,asset_role,asset_status,mention_text) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+      const insert = db.prepare('INSERT INTO memories(source,file,line,id,context,kind,via,at,time,raw,entities,authors,people,tools,content,asset_entity,asset_role,asset_status,mention_text) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
       const member = db.prepare('INSERT INTO members VALUES (?,?,?)'), correction = db.prepare('INSERT INTO corrections VALUES (?,?,?)'), fork = db.prepare('INSERT INTO forks VALUES (?,?)');
       const touch = db.prepare('INSERT OR IGNORE INTO touched VALUES (?)');
-      const touchTarget = db.prepare('INSERT OR IGNORE INTO touched SELECT rowid FROM memories WHERE context=? AND id=?');
+      const touchTarget = db.prepare('INSERT OR IGNORE INTO touched SELECT rowid FROM memories WHERE file=? AND id=?');
       const saveFile = db.prepare('INSERT OR REPLACE INTO files VALUES (?,?,?,?,?,?,?)');
       for (const f of before) {
         const old = db.prepare('SELECT * FROM files WHERE file=?').get(f.file), size = f.state?.size || 0, key = f.state?.key || 'missing';
@@ -303,6 +307,8 @@ export class MemoryIndex {
         if (trusted) { append = true; this.stats.trustedAppends++; }
         if (!append && old?.newline && size >= old.bytes && old.hash) { this.stats.hashedBytes += old.bytes; append = hashFile(f.path, old.bytes) === old.hash; }
         if (!append) { this.removeFile(f.file); this.stats.rebuiltFiles++; }
+        // layout 4: a context's records are ordered by month, then line (as lib.readMemories returns them)
+        const base = this.monthly ? monthOrdinal(f.file) * LINES_PER_MONTH : 0;
         let line = append ? old.line : 0, newline = append ? old.newline : 1, end = append ? old.bytes : 0, batch = 0, batchBytes = 0;
         this.stats.filesRead++;
         for (const entry of lines(f.path, end, size)) {
@@ -313,7 +319,7 @@ export class MemoryIndex {
             const errors = lib.validateMemory(r);
             if (errors.length || (!this.monthly && r.context !== f.file)) throw new Error(`Invalid memory: ${f.path}:${line}. ${errors.join('; ') || 'Context does not match the source folder.'}`);
             const row = project(r);
-            const rowid = insert.run(f.file, line, r.id, r.context, r.kind, r.via, r.at, Date.parse(r.at) || 0, JSON.stringify(r), JSON.stringify(row.entities), r.authors.join(' '), r.people.join(' '), r.tools.join(' '), r.content, ...asset(r), normalizeMention(r.content)).lastInsertRowid;
+            const rowid = insert.run(f.file, r.context, base + line, r.id, r.context, r.kind, r.via, r.at, Date.parse(r.at) || 0, JSON.stringify(r), JSON.stringify(row.entities), r.authors.join(' '), r.people.join(' '), r.tools.join(' '), r.content, ...asset(r), normalizeMention(r.content)).lastInsertRowid;
             for (const field of ['authors', 'people', 'tools', 'tags', 'entities']) for (const value of row[field]) member.run(rowid, field, JSON.stringify(value));
             for (const ref of new Set([...(r.entities || []), ...r.people, ...(r.asset ? [r.asset.entity] : []), ...(anchorOf(r) ? [`meeting:${anchorOf(r)}`] : [])])) member.run(rowid, 'identity_ref', String(ref).trim().toLowerCase());
             for (const key of sourceMembers(r.source)) member.run(rowid, 'source', JSON.stringify(key));
@@ -492,7 +498,7 @@ export class MemoryIndex {
       const suffix = own === null ? '' : ` AND ${own ? '' : 'NOT '}${membership}`;
       const params = own === null ? [q] : [q, JSON.stringify('project:' + project)];
       counts.push(this.db.prepare(`SELECT count(*) AS n ${from}${suffix}`).get(...params).n);
-      groups.push(this.bounded(this.db.prepare(`SELECT m.raw,rank AS score ${from}${suffix} ORDER BY rank,context_order(m.context),m.file,m.line LIMIT 40`), params, 'raw'));
+      groups.push(this.bounded(this.db.prepare(`SELECT m.raw,rank AS score ${from}${suffix} ORDER BY rank,context_order(m.file),m.line LIMIT 40`), params, 'raw'));
     }
     return { total: counts.reduce((a, b) => a + b, 0), groups, counts };
   }
