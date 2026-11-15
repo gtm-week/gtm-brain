@@ -55,8 +55,8 @@ test('Configuration: base documents open in the page; rules and schema are brows
   await expect(screen.getByRole('heading', 'Rules', { level: 2 })).toBeVisible();
   await expect(browser.locator('#cfg-rules details.cfg-rule').first()).toBeVisible();
   await expect(browser.locator('#cfg-rules')).not.toContainText(/\bP[1-4]\b/);
-  await parts.getByRole('tab', /^What the brain records/).tap();
-  await expect(screen.getByRole('heading', 'What the brain records', { level: 2 })).toBeVisible();
+  await parts.getByRole('tab', /^Schema/).tap();
+  await expect(screen.getByRole('heading', 'Schema', { level: 2 })).toBeVisible();
   await expect(browser.locator('#cfg-schema article.cfg-kind').first()).toBeVisible();
 });
 
