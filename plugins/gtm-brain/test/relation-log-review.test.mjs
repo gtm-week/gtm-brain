@@ -116,6 +116,17 @@ test("withdrawing the note that ended a link withdraws the end with it; a correc
   assert.deepEqual(works(two), { Globex: "current", Northwind: "ended" });
 });
 
+test("a scheduled run is not the person: without an outside record its relation is not saved as the person's word", () => {
+  assert.equal(log.completeRelation({ from: "a", type: "works_at", to: "b" }, { person: false }).relation.basis, undefined);
+  assert.equal(log.completeRelation({ from: "a", type: "works_at", to: "b" }, { person: false, sources: [{ kind: "hubspot", ref: "0-1/42" }] }).relation.basis, "source");
+  const root = brain();
+  const f = join(root, "work", "batch.json"); writeFileSync(f, JSON.stringify([anna("Northwind", "Anna Lee works at Northwind.")]));
+  let out; try { out = execFileSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, root, "--by", "marta", "--batch", f], { env: { ...env, GTM_BRAIN_RUN: "1" }, encoding: "utf8" }); } catch (e) { out = `${e.stdout}${e.stderr}`; }
+  assert.match(out, /left out/);
+  assert.equal(all(root).filter(m => m.relation).length, 0);
+  assert.equal(all(root).filter(m => m.content.includes("Anna Lee works at Northwind")).length, 1, "the note itself is saved");
+});
+
 test("two teammates renaming on two branches merge without a conflict in the entity log", () => {
   const root = brain();
   assert.ok(lib.MERGE_ATTRIBUTES.includes(`${events.EVENTS_FILE} merge=union`));

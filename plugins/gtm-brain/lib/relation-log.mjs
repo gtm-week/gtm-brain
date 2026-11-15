@@ -40,7 +40,7 @@ const day = v => String(v || "").slice(0, 10);
    note's time; a date alone is that day, a month its first day, a time with an offset is put in UTC. basis: source
    when the note cites a record outside the chat, else user, and then the author is its user source. What the
    caller passed is kept. */
-export function completeRelation(relation, { content = "", sources = [], author = null, at = new Date().toISOString(), names = null } = {}) {
+export function completeRelation(relation, { content = "", sources = [], author = null, at = new Date().toISOString(), names = null, person = true } = {}) {
   if (!relation || typeof relation !== "object" || Array.isArray(relation)) return { relation, sources, filled: [] };
   const r = { ...relation }, filled = [];
   if (r.status === undefined || r.status === null || r.status === "") { r.status = saysEnded(content, names || [r.to === US ? r.from : r.to]) ? "ended" : "current"; filled.push("status"); }
@@ -52,7 +52,9 @@ export function completeRelation(relation, { content = "", sources = [], author 
   }
   if (r.observed_at === undefined || r.observed_at === null || r.observed_at === "") { r.observed_at = at; filled.push("observed_at"); }
   const external = sources.some(s => s && s.ref && ![...CHAT_KINDS, "memory", "user"].includes(s.kind));
-  if (r.basis === undefined || r.basis === null || r.basis === "") { r.basis = external ? "source" : "user"; filled.push("basis"); }
+  // person: false is a scheduled or background run: nobody said it there, so without an outside record the basis
+  // is not made up (the person's word outranks every source) and the strict check says what is missing
+  if ((r.basis === undefined || r.basis === null || r.basis === "") && (external || person)) { r.basis = external ? "source" : "user"; filled.push("basis"); }
   const needsUser = r.basis === "user" && author && !sources.some(s => s?.kind === "user" && s.ref);
   return { relation: r, sources: needsUser ? [...sources, { kind: "user", ref: author }] : sources, filled };
 }

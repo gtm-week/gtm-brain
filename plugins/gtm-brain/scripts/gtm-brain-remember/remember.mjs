@@ -219,7 +219,7 @@ const problems = entries.map((e, i) => {
   if (e.relation && typeof e.relation === "object" && !Array.isArray(e.relation) && !e.customer) {
     // the ending words count where the note names the other end, under any name the brain knows it by
     const other = e.relation.to === "us" ? e.relation.from : e.relation.to, known = typeof other === "string" ? lib.resolveEntity(lib.readNames(root), other) : null;
-    const src = sourceOf(e), done = lib.completeRelation(e.relation, { content: String(e.content), sources: src, author: authors[0], names: [other, known?.name, ...(known?.aliases || [])] });
+    const src = sourceOf(e), done = lib.completeRelation(e.relation, { content: String(e.content), sources: src, author: authors[0], names: [other, known?.name, ...(known?.aliases || [])], person: !process.env.GTM_BRAIN_RUN });
     if (done.filled.length) filledRelation.set(i, done.filled);
     if (done.sources !== src) e.sources = [...(Array.isArray(e.sources) ? e.sources : e.sources ? [e.sources] : []), `user:${authors[0]}`];
     entries[i] = e = { ...e, relation: done.relation };
@@ -230,7 +230,7 @@ const problems = entries.map((e, i) => {
   else if (relationErrors.length) return `${at(n)}${relationErrors.join("; ")}`;
   // a correction from the chat that cites no outside record is the person's word, as a three-field save is: it may
   // withdraw or replace what the person said without a user: source spelled out (a source refresh still may not)
-  if ((e.supersedes || e.retracts) && (!e.relation || e.relation.basis === "user") && authors[0] && !sourceOf(e).some(s => s.kind === "user" || !(s.kind === "memory" || isChatSource(s)))
+  if ((e.supersedes || e.retracts) && !process.env.GTM_BRAIN_RUN && (!e.relation || e.relation.basis === "user") && authors[0] && !sourceOf(e).some(s => s.kind === "user" || !(s.kind === "memory" || isChatSource(s)))
     && lib.readMemories(root, ctx).some(m => [e.supersedes, e.retracts].includes(m.id) && m.relation?.basis === "user"))
     entries[i] = e = { ...e, sources: [...(Array.isArray(e.sources) ? e.sources : e.sources ? [e.sources] : []), `user:${authors[0]}`] };
   try { lib.guardRelationCorrection(root, ctx, { ...e, source: sourceOf(e) }); }
