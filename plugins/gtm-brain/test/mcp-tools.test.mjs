@@ -86,3 +86,34 @@ test("a note that came from a tool with no plugin puts it on the tools list as u
   f.check();
   assert.equal(Object.values(f.state()).find(x => x && x.tool === "gtm_test_tools").test, "fail", "a failed read stays visible as failed");
 });
+
+// tools.json is this machine's list. A teammate's notes arrive with the next pull: they prove the teammate read
+// the tool, not that it is connected here. And a tool Codex has a plugin for follows the plugin's state.
+test("a teammate's note from a tool does not list it here, and a tool with a plugin that is not installed stays off", t => {
+  const f = brain(t, ["HubSpot"], "granola@openai-curated-remote not installed");
+  assert.equal(lib.currentPerson(f.root), "ann-lee", "the fixture knows whose machine this is");
+  const note = (by, content, kind, tool) => lib.appendMemory(f.root, "icp", { authors: [by], content, at: "2026-11-15T10:00:00Z", source: [{ kind, ref: "records/1" }], tools: [tool] });
+  note("bo-berg", "Fernbrook Outdoor: 85 stores.", "gtm-test-tools", "gtm_test_tools.company_enrich");
+  note("ann-lee", "Call with Rosa Brandt: returns pile up after peak season.", "granola", "granola");
+  const out = f.check();
+  assert.equal(Object.values(f.state()).find(x => x && /gtm.?test.?tools/i.test(x.tool || "")), undefined, "a teammate's read is not a connection on this machine");
+  assert.equal(Object.values(f.state()).find(x => x && /granola/i.test(x.tool || "") && x.used), undefined, "Codex has a plugin for it and it is not installed");
+  assert.doesNotMatch(out, /a note came from it/);
+  note("ann-lee", "Heron Home: 46 stores.", "gtm-test-tools", "gtm_test_tools.company_enrich");
+  f.check();
+  assert.equal(Object.values(f.state()).find(x => x && x.tool === "gtm_test_tools")?.used, "a note came from it", "the person's own note counts");
+});
+
+// codex plugin list can fail (offline, a slow start): the last list stands. A read test recorded since then still
+// turns "a note came from it" into a tested read.
+test("a read test recorded after a note listed the tool shows as tested, also when codex plugin list fails", t => {
+  const f = brain(t, ["HubSpot"]);
+  lib.appendMemory(f.root, "icp", { authors: ["ann-lee"], content: "Heron Home: 46 stores.", at: "2026-11-15T10:00:00Z", source: [{ kind: "gtm-test-tools", ref: "companies/heron-home" }], tools: ["gtm_test_tools"] });
+  f.check();
+  assert.equal(Object.values(f.state()).find(x => x && x.tool === "gtm_test_tools").used, "a note came from it");
+  writeFileSync(join(f.root, "..", "bin", "codex"), "#!/bin/sh\nexit 1\n");
+  spawnSync(process.execPath, [connect, f.root, "--mark", "gtm_test_tools", "ok", "company_enrich returned Heron Home"], { cwd: f.root, env: f.env, encoding: "utf8" });
+  f.check();
+  const s = Object.values(f.state()).find(x => x && x.tool === "gtm_test_tools");
+  assert.equal(s.test, "ok"); assert.equal(s.used, "read through its API", JSON.stringify(s));
+});

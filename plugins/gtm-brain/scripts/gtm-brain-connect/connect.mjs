@@ -200,6 +200,8 @@ if (listed) {
 /* Read through its HTTP API with a key the person pasted (ZYNT's setup), no plugin and no MCP server: on the page
    once a read test was recorded (mark_tool) and a memory names it in tools or as its source. A failed test stays
    visible as failed, so a key that expired never reads as connected. */
+// recomputed below; dropped here so a read test recorded since the last run counts, also when the plugin list failed
+for (const k of Object.keys(state)) if (state[k] && state[k].used === "a note came from it") delete state[k].used;
 for (const k of Object.keys(state)) {
   const s = state[k]; if (!s || s.plugin || s.mcp || s.suggested || s.used || !s.test || s.test === "skip") continue;
   if (![k, s.tool].some(x => brainText.tools.has(norm(x)))) continue;
@@ -209,12 +211,15 @@ for (const k of Object.keys(state)) {
 /* A tool with no plugin, no remote MCP server and no read test (a local MCP server Codex runs; GTM Brain never sees
    another server's calls): on the page once a note names it in tools and cites a record of its own kind, so the
    data came from it. A note the person told about it cites them, not the tool, and does not count. A failed read
-   test stays on the page as failed; a declined tool stays off. Recomputed each run. */
+   test stays on the page as failed; a declined tool stays off. Recomputed each run.
+   Only the notes of the person on this machine count: this file is this machine's list, and a teammate's note
+   arrives with a pull and proves their connection, not one here. A tool Codex has a plugin for follows the
+   plugin's state above (installed or not), never a note. */
 const CHAT = new Set(["user", "codex", "claude", "memory", "file", "url", "web", "document", "manual", "person"]);
-for (const k of Object.keys(state)) if (state[k] && state[k].used === "a note came from it") delete state[k].used;
-for (const r of brainText.recs) for (const t of r.tools || []) {
+const me = lib.currentPerson(root);
+for (const r of me ? brainText.recs.filter(r => (r.authors || []).includes(me)) : []) for (const t of r.tools || []) {
   const base = String(t).split(".")[0].trim(), nb = norm(base);
-  if (nb.length < 3 || COMMON.has(nb) || DEV.has(base.toLowerCase())) continue;
+  if (nb.length < 3 || COMMON.has(nb) || DEV.has(base.toLowerCase()) || findPlugin(base).plugin) continue;
   if (!(r.source || []).some(s => s && !CHAT.has(String(s.kind || "").toLowerCase()) && norm(s.kind).length >= 3 && (nb.startsWith(norm(s.kind)) || norm(s.kind).startsWith(nb)))) continue;
   const k = entryKey(state, base), s = state[k] || {};
   if (s.plugin || s.mcp || s.used || s.declined || s.test === "skip" || (admin.tools || []).some(a => key(a) === k)) continue;
