@@ -117,7 +117,12 @@ test("page: opens on Overview, a base document row opens in the page, every prep
   assert.equal(p.run("view"), "home");
   assert.match(p.node("#nav").innerHTML, /^<button data-v="home"[^>]*aria-current="page"[^>]*><span>Overview<\/span><\/button><button data-v="config"/, "one flat navigation, Overview first");
   assert.doesNotMatch(p.node("#nav").innerHTML, /More/);
-  assert.match(p.node("#ov-inbox").innerHTML, /Needs your attention|Nothing needs you right now/);
+  assert.match(p.node("#ov-inbox").innerHTML, /Needs your attention|Coming up|Nothing needs you right now/);
+  assert.doesNotMatch(p.node("#ov-inbox").innerHTML + p.node("#ov-more").innerHTML + p.node("#h-recent").innerHTML, /In this brain|<article class="recent-item"|Sync and capture/, "Overview carries no count tiles, no list of recent notes and no status fold");
+  const asked = structuredClone(D); asked.questions = [{ id: "m_q00001", at: day(2), kind: "question", context: "company", content: "Is Acme Retail renewing in March or in June?", people: ["Acme Retail"], authors: ["marta"], tags: ["brain-question"], source: [], tools: [], actions: [] }]; asked.totals = { ...(asked.totals || {}), questions: 1 };
+  const inbox = page(asked).node("#ov-inbox").innerHTML;
+  assert.match(inbox, /<h3>Is Acme Retail renewing in March or in June\?<\/h3><p>Codex asked this 2 days ago/, "an open question is written out, with how long it has waited");
+  assert.match(inbox, /data-entity="Acme Retail"/); assert.match(decodeURIComponent(inbox.match(/class="ov-act" href="([^"]+)"/)[1]), /Is Acme Retail renewing in March or in June/, "its link carries that question");
   const cfg = p.node("#cfg-docs").innerHTML;
   assert.match(cfg, /Pricing.*approved/s); assert.match(cfg, /Ideal customer profile.*not written.*Help%20me%20write%20our%20Ideal%20customer%20profile/s);
   assert.match(cfg, /<tr data-doc="pricing\.md"><th scope="row"><button class="linkbtn pl-doc-open" data-doc="pricing\.md">Pricing<\/button>/, "the whole row opens the document in the page");
