@@ -133,6 +133,7 @@ summary is written when you ask about it. When you want a specific workflow:
 | Set up ZYNT from what the brain knows: paste the prompt ZYNT gives you after "Set up with my AI agent" | `/gtm-brain-zynt-setup` |
 | Connect Freckle and build its first list of target companies and people from the brain | `/gtm-brain-freckle-setup` |
 | Connect Clay and find the target companies and people the brain names | `/gtm-brain-clay-setup` |
+| Connect Woodpecker and save one email sequence written from the brain as a draft | `/gtm-brain-woodpecker-setup` |
 | Add a PDF, image or deck to the brain | drop it in the chat and say what it belongs to; no command |
 | Keep a recording or a file over 25 MB | drop it in the chat; it goes to Google Drive or a folder outside git, and the note keeps the link |
 | Change company info, team or tools | `/gtm-brain-configure` |

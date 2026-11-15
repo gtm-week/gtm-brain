@@ -182,5 +182,13 @@
     "title": "Set up Clay",
     "description": "Connect Clay and find the target companies and people the brain already names; enrichment asks first.",
     "example": "Set up Clay for me."
+  },
+  {
+    "id": "gtm-brain-woodpecker-setup",
+    "group": "setup",
+    "featured": false,
+    "title": "Set up Woodpecker",
+    "description": "Connect Woodpecker, see how your campaigns perform, and save one email sequence written from the brain as a draft.",
+    "example": "Set up Woodpecker for me."
   }
 ]
