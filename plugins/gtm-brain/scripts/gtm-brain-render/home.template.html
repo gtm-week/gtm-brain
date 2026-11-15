@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <link rel="icon" type="image/png" sizes="512x512" href="ui/favicon.png">
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8"><meta name="gtm-brain-edit" content=""><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GTM Brain</title>
 <style>
 @font-face{font-family:"Inter";font-style:normal;font-weight:300 700;font-display:swap;src:url("ui/fonts/inter-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
@@ -263,27 +263,80 @@ h1,h2,h3{font-family:var(--display);margin:0;letter-spacing:-.01em}
 @media(max-width:900px){.ent-wrap{grid-template-columns:1fr;height:auto;min-height:0}.ent-side{border-right:0}.ent-list{max-height:62vh}.ent-detail{border-top:1px solid var(--rule);padding:20px}.ent-wrap.ent-open .ent-side{display:none}.ent-wrap.ent-open .ent-detail{border-top:0}.ent-wrap.ent-open .ent-back{display:inline-block}.ent-head{flex-wrap:wrap}}
 @media(prefers-reduced-motion:no-preference){.ent-row,.ent-chip,.ent-link{transition:background-color .12s,border-color .12s,color .12s}}
 @media(max-width:900px){.pl-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.pl-row{flex-direction:column}}
+/* Documents: a reading page and a writing desk. The text column keeps a book's measure; the editor is the same page in monospace. */
+.doc-top{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:16px}.doc-heading{min-width:0;flex:1 1 420px}.doc-back{font-size:12.5px;color:var(--muted);margin-bottom:10px;display:inline-block}.doc-back:hover{color:var(--accent)}
+.doc-heading h1{font-size:32px;font-weight:750;letter-spacing:-.04em;line-height:1.15;overflow-wrap:anywhere}.doc-heading h1:focus{outline:none}.doc-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin-top:10px;font-size:12.5px;color:var(--muted)}.doc-meta code{font-size:11px;background:none;padding:0;color:var(--muted)}.doc-applies{margin:8px 0 0;font-size:12.5px;color:var(--muted)}
+.doc-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}.doc-chat{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border:1px solid var(--accent);border-radius:3px;color:var(--accent);background:var(--accent-soft);font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap}.doc-chat:hover{background:var(--accent);color:var(--on-accent)}
+.doc-save{margin:0;padding:9px 20px;font-size:13px;font-weight:650}.doc-save:disabled{background:transparent;border-color:var(--rule);color:var(--muted);cursor:default;filter:none}
+.doc-notice{display:none;margin:0 0 14px;padding:12px 16px;border:1px solid var(--rule);border-left:3px solid var(--accent);border-radius:3px;background:var(--surface);font-size:13px}.doc-notice.on{display:block}.doc-notice.ok{border-left-color:var(--green)}.doc-notice.warn{border-left-color:var(--amber)}.doc-notice p{margin:0 0 6px}.doc-notice p:last-child{margin-bottom:0}
+.doc-theirs{max-height:240px;overflow:auto;margin:10px 0;padding:12px;background:var(--code);border-radius:3px;font-family:var(--mono);font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}.doc-choices{display:flex;gap:10px;flex-wrap:wrap}.doc-choices .btn{margin:0;padding:6px 12px}
+.doc-toolbar{display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--rule);border-bottom:0;border-radius:4px 4px 0 0;background:var(--surface)}
+.doc-tool{min-width:34px;height:32px;padding:0 9px;border:1px solid transparent;border-radius:3px;background:none;color:var(--ink);font:500 12.5px var(--body);cursor:pointer}.doc-tool:hover{background:var(--soft);border-color:var(--rule)}.doc-tool:focus-visible,.doc-modes button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}.doc-tool b{font-weight:800}.doc-tool i{font-family:Georgia,serif;font-size:14px}.doc-sep{width:1px;height:18px;background:var(--rule);margin:0 6px}
+.doc-modes{margin-left:auto;display:inline-flex;border:1px solid var(--rule);border-radius:3px;overflow:hidden}.doc-modes button{border:0;background:none;color:var(--muted);font:500 12px var(--body);padding:6px 12px;cursor:pointer}.doc-modes button+button{border-left:1px solid var(--rule)}.doc-modes button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+.doc-body{display:grid;grid-template-columns:200px minmax(0,1fr) minmax(0,1fr);border:1px solid var(--rule);border-radius:0 0 4px 4px;background:var(--surface);height:max(440px,calc(100vh - 400px));min-height:0}
+.doc-body>*{min-height:0;min-width:0;overflow:auto}.doc-body.mode-write{grid-template-columns:200px minmax(0,1fr)}.doc-body.mode-write .doc-preview{display:none}.doc-body.mode-preview{grid-template-columns:200px minmax(0,1fr)}.doc-body.mode-preview .doc-edit{display:none}
+.doc-body.mode-read{grid-template-columns:200px minmax(0,1fr);height:auto;border-radius:4px}.doc-body.mode-read>*{overflow:visible}.doc-body.mode-read .doc-outline{position:sticky;top:170px;align-self:start;max-height:calc(100vh - 200px);overflow:auto}
+.doc-outline{padding:16px 10px 16px 14px;border-right:1px solid var(--rule)}.doc-outline h2{font-family:var(--label);font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 10px 6px}
+.doc-outline-item{display:block;width:100%;text-align:left;border:0;border-left:2px solid transparent;background:none;color:var(--muted);font:inherit;font-size:12.5px;line-height:1.4;padding:5px 6px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.doc-outline-item:hover{color:var(--ink);border-left-color:var(--accent)}.doc-outline-item.l1{color:var(--ink);font-weight:600}.doc-outline-item.l3{padding-left:18px}.doc-outline-item.l4{padding-left:30px}
+.doc-edit{display:flex;border-right:1px solid var(--rule)}.doc-body.mode-write .doc-edit{border-right:0}
+#doc-text{flex:1;width:100%;height:100%;resize:none;border:0;outline:0;background:var(--paper);color:var(--ink);font-family:var(--mono);font-size:13px;line-height:1.75;padding:22px 26px;tab-size:2;caret-color:var(--accent)}#doc-text:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}#doc-text::selection{background:var(--accent-soft)}
+.doc-preview{padding:24px 32px 40px}.doc-preview:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.doc-foot{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--muted)}#doc-dirty{margin-right:auto}#doc-dirty.on{color:var(--amber);font-weight:600}#doc-dirty.on:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--amber);margin-right:7px}
+.md-doc{font-size:15px;line-height:1.75;max-width:78ch;overflow-wrap:anywhere}.md-doc>:first-child{margin-top:0}.md-doc h1,.md-doc h2,.md-doc h3,.md-doc h4,.md-doc h5,.md-doc h6{font-family:var(--display);letter-spacing:-.02em;line-height:1.25;margin:1.7em 0 .5em;scroll-margin-top:180px}.md-doc h1{font-size:26px;font-weight:750}.md-doc h2{font-size:20px;font-weight:700;padding-bottom:6px;border-bottom:1px solid var(--rule)}.md-doc h3{font-size:16.5px;font-weight:650}.md-doc h4,.md-doc h5,.md-doc h6{font-size:14px;font-weight:650;color:var(--muted)}
+.md-doc p{margin:0 0 1em}.md-doc ul,.md-doc ol{margin:0 0 1em;padding-left:24px}.md-doc li{margin:.25em 0}.md-doc li>ul,.md-doc li>ol{margin:.25em 0}.md-doc li.md-taskitem{list-style:none;margin-left:-22px}.md-task{display:inline-block;width:13px;height:13px;border:1.5px solid var(--muted);border-radius:3px;margin-right:9px;vertical-align:-2px}.md-task.done{background:var(--green);border-color:var(--green);box-shadow:inset 0 0 0 2px var(--surface)}
+.md-doc blockquote{margin:0 0 1em;padding:2px 0 2px 16px;border-left:3px solid var(--accent);color:var(--muted)}.md-doc blockquote>:last-child{margin-bottom:0}.md-doc hr{border:0;border-top:1px solid var(--rule);margin:2em 0}.md-doc a{text-underline-offset:3px}.md-doc .linkbtn{font-size:inherit;text-decoration:underline;text-underline-offset:3px}.md-plainlink{border-bottom:1px dotted var(--muted)}
+.md-doc code{font-size:.87em}.md-code{position:relative;margin:0 0 1em;padding:14px 16px;background:var(--code);border:1px solid var(--rule);border-radius:4px;overflow-x:auto;font-size:12.5px;line-height:1.6}.md-code code{background:none;padding:0;font-size:inherit;white-space:pre}.md-code[data-lang]:before{content:attr(data-lang);position:absolute;top:6px;right:10px;font-family:var(--label);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.md-swatch{display:inline-block;width:.85em;height:.85em;border-radius:2px;border:1px solid #fff3;margin-right:5px;vertical-align:-1px}.md-swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin:0 0 1.2em}.md-swatch-card{border:1px solid var(--rule);border-radius:6px;overflow:hidden;background:var(--paper)}.md-swatch-block{display:block;height:64px;border-bottom:1px solid var(--rule)}.md-swatch-card>div{display:flex;flex-direction:column;gap:2px;padding:9px 11px;font-size:12px;color:var(--muted)}.md-swatch-name{font-size:13.5px;font-weight:600;color:var(--ink)}.md-swatch-card code{background:none;padding:0;font-size:11.5px}
+.md-table{overflow-x:auto;margin:0 0 1em}.md-table table{border-collapse:collapse;font-size:13.5px;min-width:60%}.md-table th,.md-table td{text-align:left;vertical-align:top;padding:8px 14px 8px 0;border-bottom:1px solid var(--soft)}.md-table th{font-family:var(--label);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;border-bottom-color:var(--rule)}
+tr[data-doc]{cursor:pointer}tr[data-doc]:hover{background:var(--soft)}tr[data-doc]:hover .pl-doc-open{color:var(--accent)}.pl-doc-open{font:inherit;font-weight:600;color:var(--ink);text-align:left}.pl-table tbody th{padding-left:8px}.pl-table thead th:first-child{padding-left:8px}.pl-go{color:var(--muted);text-align:right;white-space:nowrap}
+@media(max-width:1000px){.doc-body,.doc-body.mode-write,.doc-body.mode-preview,.doc-body.mode-read{grid-template-columns:minmax(0,1fr)}.doc-body.mode-split{grid-template-rows:auto 1fr 1fr;height:auto}.doc-body.mode-split .doc-edit{height:50vh;border-right:0;border-bottom:1px solid var(--rule)}.doc-body.mode-split .doc-preview{max-height:60vh}.doc-outline{border-right:0;border-bottom:1px solid var(--rule);max-height:150px;position:static!important}.doc-preview{padding:18px}}
+/* The shell: one row with the brain's name, the five places, the search box and when the page was last updated. */
+.top{flex-wrap:wrap;gap:10px 22px;padding:14px 0;min-height:0}.brand{margin-right:0;max-width:200px}.top .nav{gap:4px;margin-right:auto}.top .nav button{padding:8px 12px;min-height:38px;border:0;border-radius:3px;font-size:13.5px}.top .nav button.on{background:var(--accent-soft);color:var(--accent)}.top .nav button:hover{background:var(--soft)}
+.top .search-wrap{flex:1 1 220px;max-width:340px;display:flex;align-items:center}.top .search-wrap svg{position:absolute;left:11px;width:15px;height:15px;color:var(--muted);pointer-events:none}.top .gq{padding:9px 44px 9px 34px}.top .search-wrap kbd{top:9px;right:10px;font-family:var(--label);font-size:10px;border:1px solid var(--rule);border-radius:3px;padding:1px 5px}
+.sync-status{font-size:12px;color:var(--muted);white-space:nowrap}.sync-status:before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:7px;vertical-align:1px}.sync-status.stale:before{background:var(--amber)}
+.help-link{width:32px;height:32px;border-radius:50%;border:1px solid var(--rule);background:none;color:var(--muted);font:700 13px var(--body);cursor:pointer;flex-shrink:0}.help-link:hover{color:var(--accent);border-color:var(--accent)}
+time.pl-when{white-space:nowrap;cursor:help;text-decoration:underline dotted var(--rule);text-underline-offset:3px}
+.ov-head{display:flex;align-items:baseline;gap:12px;margin:0 0 14px}.ov-head h2{font-family:var(--display);font-size:20px;font-weight:700;letter-spacing:-.02em}
+.ov-list{list-style:none;margin:0 0 34px;padding:0;display:flex;flex-direction:column;gap:10px}.ov-item{display:flex;align-items:center;justify-content:space-between;gap:16px 28px;flex-wrap:wrap;padding:16px 20px;background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--muted);border-radius:4px}.ov-item.high{border-left-color:var(--red)}.ov-item.mid{border-left-color:var(--amber)}.ov-item.low{border-left-color:var(--accent)}
+.ov-text{flex:1 1 380px;min-width:0}.ov-item h3{font-family:var(--body);font-size:15px;font-weight:600;letter-spacing:0;margin:0 0 4px}.ov-item p{margin:0;font-size:13px;color:var(--muted);max-width:76ch}
+.ov-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.ov-act{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border:1px solid var(--accent);border-radius:3px;background:var(--accent-soft);color:var(--accent);font:600 12.5px var(--body);text-decoration:none;white-space:nowrap;cursor:pointer}.ov-act:hover{background:var(--accent);color:var(--on-accent)}.ov-act.quiet{background:none;border-color:var(--rule);color:var(--muted);font-weight:500}.ov-act.quiet:hover{background:var(--soft);color:var(--ink)}
+.ov-suggest{display:flex;align-items:center;justify-content:space-between;gap:16px 28px;flex-wrap:wrap;margin:0 0 34px;padding:14px 20px;border:1px dashed var(--rule);border-radius:4px}.ov-suggest h3{font-family:var(--body);font-size:14px;font-weight:600;margin:0 0 3px}.ov-suggest p{margin:0;font-size:13px;color:var(--muted)}.ov-house{margin:0 0 30px;padding:12px 18px;border:1px solid var(--rule);border-radius:4px;background:var(--surface)}.ov-house>summary{font-size:13.5px!important;color:var(--ink)!important}.ov-house-list{list-style:none;margin:8px 0 4px;padding:0}.ov-house-list li{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;padding:9px 0;border-top:1px solid var(--soft);font-size:13.5px}.ov-house-list .pl-chat{text-decoration:none;white-space:nowrap}.ov-status{margin-top:18px}
+.ov-calm{margin:0 0 34px;padding:18px 20px;border:1px solid var(--rule);border-left:3px solid var(--green);border-radius:4px;background:var(--surface);font-size:14px}
+#ov-more{margin-top:34px}#ov-more h2{font-family:var(--display);font-size:16px;font-weight:650;margin-bottom:12px}.ov-counts{display:flex;gap:10px;flex-wrap:wrap}.ov-count{display:flex;flex-direction:column;gap:2px;min-width:150px;padding:12px 16px;border:1px solid var(--rule);border-radius:4px;background:var(--surface);color:var(--ink);font:inherit;text-align:left;cursor:pointer}.ov-count:hover{border-color:var(--accent)}.ov-count b{font-family:var(--display);font-size:22px}.ov-count span{font-size:12px;color:var(--muted)}
+.gq-pop{position:absolute;top:calc(100% + 8px);left:0;z-index:40;width:min(600px,calc(100vw - 40px));max-height:min(72vh,640px);overflow:auto;padding:6px;background:var(--surface);border:1px solid var(--rule);border-radius:6px;box-shadow:0 18px 48px #000a}.gq-pop[hidden]{display:none}
+.gq-label{display:flex;align-items:center;gap:8px;padding:10px 10px 4px;font-family:var(--label);font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}.gq-group+.gq-group{border-top:1px solid var(--soft);margin-top:4px}
+.gq-opt{display:flex;flex-direction:column;gap:2px;width:100%;padding:8px 10px;border:0;border-radius:4px;background:none;color:var(--ink);font:inherit;font-size:13.5px;text-align:left;cursor:pointer}.gq-opt.on,.gq-opt:hover{background:var(--accent-soft)}.gq-opt.on{box-shadow:inset 2px 0 0 var(--accent)}
+.gq-title{overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.45}.gq-detail{font-size:11.5px;color:var(--muted)}.gq-pop mark{background:none;color:var(--accent);font-weight:700;text-decoration:underline;text-decoration-color:var(--accent);text-underline-offset:3px}
+.gq-how,.gq-keys{margin:0;padding:6px 10px;font-size:11.5px;color:var(--muted)}.gq-keys{border-top:1px solid var(--soft);margin-top:4px}.gq-none{padding:14px 12px;font-size:13px}.gq-none p{margin:0 0 6px;color:var(--muted)}.gq-none p b{color:var(--ink)}
+.cfg-tabs{display:flex;gap:4px;flex-wrap:wrap;margin:0 0 18px;border-bottom:1px solid var(--rule)}.cfg-tabs button{display:inline-flex;align-items:center;gap:8px;border:0;border-bottom:2px solid transparent;background:none;color:var(--muted);font:500 14px var(--body);padding:10px 14px;margin-bottom:-1px;cursor:pointer}.cfg-tabs button:hover{color:var(--ink)}.cfg-tabs button.on{color:var(--ink);border-bottom-color:var(--accent);font-weight:650}.cfg-flag{font-size:11px;font-weight:600;color:var(--amber);background:var(--amber-soft);border-radius:3px;padding:1px 7px}
+.pl-path{font-size:11px;background:none;padding:0;color:var(--muted)}.cfg-group{margin-top:22px}.cfg-group>h3{font-size:15px;margin:0 0 2px}.cfg-group>.m{margin:0 0 8px}
+.cfg-rule{border-top:1px solid var(--soft)}.cfg-rule>summary{display:grid;grid-template-columns:minmax(0,1fr);gap:2px;padding:11px 28px 11px 14px;cursor:pointer;list-style:none;position:relative;border-left:2px solid transparent}.cfg-rule>summary::-webkit-details-marker{display:none}.cfg-rule>summary:after{content:"";position:absolute;right:10px;top:18px;width:6px;height:6px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:rotate(45deg);transition:transform .15s}.cfg-rule[open]>summary:after{transform:rotate(-135deg)}
+.cfg-rule>summary:hover{background:var(--soft)}.cfg-rule>summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}.cfg-rule.problem>summary{border-left-color:var(--amber)}.cfg-rule-title{font-size:14px;font-weight:500;overflow-wrap:anywhere}.cfg-rule:not([open]) .cfg-rule-title{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.cfg-rule-sub{font-size:12px;color:var(--muted);overflow-wrap:anywhere}.cfg-rule:not([open]) .cfg-rule-sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cfg-rule-full{padding:4px 16px 16px;font-size:13.5px;max-width:86ch}.cfg-rule-full p{margin:0 0 8px}.cfg-rule-full .pl-chat{display:inline-block;margin-top:6px;font-weight:600;text-decoration:none}
+.cfg-schema{display:grid;grid-template-columns:190px minmax(0,1fr);gap:24px;align-items:start}.cfg-kinds{position:sticky;top:96px;display:flex;flex-direction:column}.cfg-kind{padding:18px 0;border-top:1px solid var(--rule);scroll-margin-top:96px}.cfg-kind:first-child{border-top:0;padding-top:0}.cfg-kind h3{font-size:17px;margin:0 0 10px;display:flex;align-items:baseline;gap:10px}.cfg-kind h4{font-family:var(--label);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;font-weight:600}.cfg-kind .pl-table tbody th{padding-left:0;white-space:nowrap}.cfg-kind .pl-table thead th:first-child{padding-left:0}.cfg-links{list-style:none;padding-left:0}.cfg-links li{padding:6px 0;border-top:1px solid var(--soft)}
+@media(max-width:800px){.cfg-schema{grid-template-columns:1fr}.cfg-kinds{position:static;flex-direction:row;flex-wrap:wrap}}
 </style>
 <link rel="stylesheet" href="ui/dashboard.css">
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to content</a>
 <div class="app">
-<header class="app-header"><div class="header-inner"><div class="top"><div class="brand"><div class="brand-copy"><b id="brand-co"></b><span id="sub"></span></div></div><div class="project-picker" id="project-picker" hidden><label for="project-select" id="project-label"></label><div class="project-select-wrap"><select id="project-select"></select></div></div><div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><label class="sr-only" for="gq">Search company knowledge</label><input id="gq" class="gq" type="search" placeholder="Find anything in your company…" autocomplete="off" aria-controls="s-grid"><kbd aria-hidden="true">⌘ K</kbd></div></div><p class="health-line" id="health-line" role="status"></p><div class="navrow"><nav class="nav" id="nav" aria-label="Main navigation"></nav><span class="brain-health" id="brain-health"></span><button class="workspace-link" id="workspace-link" data-v="admin">Settings</button></div><nav class="subnav" id="subnav" aria-label="More" hidden></nav></div></header>
+<header class="app-header"><div class="header-inner"><div class="top"><div class="brand"><div class="brand-copy"><b id="brand-co"></b><span id="sub"></span></div></div><nav class="nav" id="nav" aria-label="Main navigation"></nav><div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><label class="sr-only" for="gq">Search this brain</label><input id="gq" class="gq" type="search" placeholder="Search people, notes, documents" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="gq-results"><kbd aria-hidden="true">/</kbd><div class="gq-pop" id="gq-results" role="listbox" aria-label="Search results" hidden></div></div><span class="sync-status" id="brain-health" role="status"></span><button class="help-link" data-v="skills" aria-label="Help" title="Help: what you can ask Codex to do">?</button><button class="workspace-link" id="workspace-link" data-v="admin">Settings</button></div><div class="project-picker" id="project-picker" hidden><label for="project-select" id="project-label"></label><div class="project-select-wrap"><select id="project-select"></select></div></div><nav class="subnav" id="subnav" aria-label="More" hidden></nav></div></header>
 <main class="main" id="main-content" tabindex="-1"><div class="view-toolbar"><button class="view-back" id="view-back" type="button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m12 5-7 7 7 7M5 12h14"/></svg><span id="view-back-label">Back</span></button><div class="location" id="location" hidden></div><p class="chat-instruction" id="chat-instruction"></p></div>
 <p class="m" id="view-scope"></p>
 <div id="manual-edits" role="status"></div>
 <div id="compile-notice" role="status"></div>
-  <section class="view" data-view="config"><div class="head"><h1>Configuration</h1><p class="sub">The documents, rules and schema the work follows, and this brain's settings. Change them in Codex: Chat about this opens a prepared message.</p></div><div id="cfg-docs"></div><div id="cfg-rules"></div><div id="cfg-schema"></div><div id="cfg-settings"></div></section>
+  <section class="view" data-view="config"><div class="head"><h1>Configuration</h1><p class="sub">What Codex follows when it works for you: your base documents, the rules for keeping notes, and what the brain records about people and companies.</p></div><div class="cfg-tabs" id="cfg-tabs" role="tablist" aria-label="Parts of the configuration"></div><div id="cfg-docs" role="tabpanel"></div><div id="cfg-rules" role="tabpanel"></div><div id="cfg-schema" role="tabpanel"></div><div id="cfg-settings" role="tabpanel"></div></section>
+  <section class="view" data-view="doc"><div id="doc-view"></div></section>
   <section class="view" data-view="entities"><div class="head"><h1>Entities</h1><p class="sub">The people, companies, products and meetings the brain knows about. Pick a name to read what is known about it and where each note came from.</p></div><div id="pe-groups"><div class="ent-wrap" id="ent-wrap"><div class="ent-side"><div class="ent-tools"><div class="ent-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><label class="sr-only" for="ent-q">Find by name, company or email</label><input id="ent-q" type="search" autocomplete="off" spellcheck="false" placeholder="Find by name, company or email" aria-controls="ent-list"></div><div class="ent-chips" id="ent-kinds" role="group" aria-label="Show only"></div><div class="ent-selects"><label for="ent-rel">Relation to us<select id="ent-rel"></select></label><label for="ent-sort">Sort by<select id="ent-sort"></select></label></div></div><p class="ent-count" id="ent-count" role="status" aria-live="polite"></p><p class="sr-only" id="ent-say" role="status" aria-live="polite"></p><div class="ent-list" id="ent-list" role="listbox" tabindex="0" aria-label="Entities. Arrow keys move, Enter opens."></div></div><section class="ent-detail" id="ent-detail" tabindex="-1" aria-label="What is known about the picked entity"></section></div></div></section>
   <section class="view" data-view="notes"><div class="head"><h1>Memories</h1><p class="sub">Every saved note, newest first, with its source and what it replaced.</p></div><div id="pm-population"></div><div class="explore-toolbar pl-filters" id="pm-filters"></div><p class="m" id="pm-status" role="status" aria-live="polite"></p><div id="pm-list"></div></section>
   <section class="view" data-view="workflows"><div class="head"><h1>Workflows</h1><p class="sub">The playbooks this brain runs, where each run stands, and the skills that start work.</p></div><div id="pw-files"></div><div id="pw-skills"></div></section>
   <section class="view" data-view="search"><div class="head"><h1 id="s-title" tabindex="-1">Search</h1><p class="sub" id="s-status" role="status" aria-live="polite"></p></div><div class="search-filters" id="s-filters" aria-label="Search result types"></div><div class="grid" id="s-grid"></div><div class="entity-pager" id="s-pages"></div></section>
-  <section class="view" data-view="home"><h1 class="sr-only">Overview</h1><div id="h-onboard"></div><div class="sec attention-section" id="h-input"></div><div class="sec" id="h-recent"></div><div class="sec" id="h-skills"></div></section>
+  <section class="view" data-view="home"><div class="head"><h1>Overview</h1><p class="sub">What needs you in this brain, most important first, and what was saved lately.</p></div><div id="h-onboard"></div><div id="ov-inbox"></div><div class="sec" id="h-recent"></div><div id="ov-more"></div><div id="h-input" hidden></div><div id="h-skills" hidden></div></section>
   <section class="view" data-view="explore"><div class="head"><h1>Explore your knowledge</h1></div><div class="explore-list" id="explore-grid"></div></section>
   <section class="view" data-view="skills"><div class="head"><h1>Help</h1><p class="sub">Every task here opens a prepared message in Codex. Nothing is sent until you send it.</p></div><div id="admin-skills"></div></section>
   <section class="view" data-view="projects"><div id="project-detail"></div></section>
-  <section class="view" data-view="contexts"><div class="head"><h1>Contexts</h1><p class="sub">Shared knowledge about a topic: what we know, how we work, and the evidence behind it.</p></div><div class="explore-toolbar" id="context-toolbar"></div><div class="scroll-list" id="context-directory" tabindex="0" role="region" aria-label="Contexts"></div><div id="context-reader" hidden><div class="chpane" id="ch-pane"></div></div></section>
+  <section class="view" data-view="contexts"><div class="head"><h1>Topics</h1><p class="sub">What the brain knows, grouped by topic: a short summary and the notes behind it.</p></div><div class="explore-toolbar" id="context-toolbar"></div><div class="scroll-list" id="context-directory" tabindex="0" role="region" aria-label="Contexts"></div><div id="context-reader" hidden><div class="chpane" id="ch-pane"></div></div></section>
   <section class="view" data-view="meetings"><div class="head" id="meetings-head"></div><div class="explore-toolbar" id="meetings-toolbar"></div><div class="panel c12 scroll-list" id="meetings-list" tabindex="0" role="region" aria-label="Meetings"></div><div class="panel c12" id="meetings-coverage" style="margin-top:16px"></div></section>
   <section class="view" data-view="customers"><div class="head" id="customers-head"></div><div class="panel c12" id="customers-list"></div><div class="panel c12" id="customers-coverage" style="margin-top:16px"></div></section>
   <section class="view" data-view="questions"><div class="head"><h1>Needs your attention</h1><div class="sub">Use Chat about this to discuss these questions. Answered questions disappear once saved.</div></div><div id="dq-workspace"></div><div class="panel c12" id="dq-questions"></div><div class="panel c12" id="dq-decisions" style="margin-top:16px"></div><div class="panel c12" id="dq-runs" style="margin-top:16px"></div></section>
@@ -343,20 +396,18 @@ const stale=D.contexts.filter(c=>c.stale&&c.status==="active"&&!c.updating);cons
 const PILLARS=["config","entities","notes","workflows"];
 const VIEWS=[["home","Overview"],["config","Configuration"],["entities","Entities"],["notes","Memories"],["workflows","Workflows"]];let view="home";
 const MORE=[["home","Overview"],["explore","Explore"],["skills","Help"]];
-const viewLabel=v=>({config:"Configuration",entities:"Entities",notes:"Memories",workflows:"Workflows",home:"Overview",contexts:"Contexts",explore:"Explore",search:"Search",people:"People & organizations",customers:"Customers",meetings:"Meetings",memories:"Memories",questions:"Needs your attention",projects:"Working folders",admin:"Settings",skills:"Help"})[v]||v;
+const viewLabel=v=>({doc:"Document",config:"Configuration",entities:"Entities",notes:"Memories",workflows:"Workflows",home:"Overview",contexts:"Topics",explore:"Explore",search:"Search",people:"People & organizations",customers:"Customers",meetings:"Meetings",memories:"Memories",questions:"Needs your attention",projects:"Working folders",admin:"Settings",skills:"Help"})[v]||v;
 function nav(){
- const sub=["contexts","people","customers","meetings","memories","search"].includes(view)?"explore":["questions","decisions","projects"].includes(view)?"home":view;
- const group=PILLARS.includes(view)?view:view==="admin"?"admin":"home";
+ /* One flat row. A view outside it (a document, a topic, search) lights the place it was opened from. */
+ const group=PILLARS.includes(view)||view==="home"?view:view==="admin"||view==="skills"?view:view==="doc"?(typeof docBack==="function"?docBack()[0]:"config"):["people","customers"].includes(view)?"entities":["contexts","memories","meetings","questions","decisions"].includes(view)?"notes":["projects"].includes(view)?"home":"";
  $("#nav").innerHTML=VIEWS.map(([k,label])=>`<button data-v="${k}" class="${group===k?"on":""}" ${group===k?'aria-current="page"':''}><span>${esc(label)}</span></button>`).join("");
- $("#subnav").hidden=true;/* Explore duplicated the Entities and Memories tabs; search and those tabs replace it */
- $("#subnav").innerHTML=group==="home"?MORE.map(([k,label])=>`<button data-v="${k}" class="${sub===k?"on":""}" ${sub===k?'aria-current="page"':''}>${esc(label)}</button>`).join(""):"";
  $("#workspace-link").classList.toggle("on",view==="admin");
  $("#workspace-link").setAttribute("aria-current",view==="admin"?"page":"false");
- const parent=view==="projects"?null:["contexts","people","customers","meetings","memories"].includes(view)?"explore":view==="questions"?"home":null;
+ const parent=["contexts","people","customers","meetings","memories","questions"].includes(view)?"home":null;
  $("#location").hidden=!parent;
  $("#location").innerHTML=(parent?`<button data-v="${parent}">${esc(viewLabel(parent))}</button><span aria-hidden="true">/</span>`:"")+`<span>${esc(viewLabel(view))}</span>`;
 }
-function show(v){$("#view-scope").textContent=projectSlug?(["home","projects"].includes(v)?"Project view":v==="contexts"?"Shared company contexts used by this project":v==="memories"?"Notes recorded in this project":"Company-wide information"):"";if(v==="questions"||v==="decisions"){memoryKinds=[v==="questions"?"question":"decision"];memoryContexts=[];mems();v="memories"}if(![...VIEWS.map(([k])=>k),"contexts","search","people","customers","meetings","memories","questions","decisions","projects","admin","skills","home","explore"].includes(v))v="config";view=v;if(document.body&&document.body.dataset)document.body.dataset.view=v;document.querySelectorAll(".view").forEach(e=>e.classList.toggle("on",e.dataset.view===v));nav();scrollTo(0,0);if(v!=="search"){const heading=document.querySelector(`.view[data-view="${v}"] h1`);heading?.setAttribute("tabindex","-1");heading?.focus({preventScroll:true})}}
+function show(v){$("#view-scope").textContent=projectSlug?(["home","projects"].includes(v)?"Project view":v==="contexts"?"Shared company contexts used by this project":v==="memories"?"Notes recorded in this project":"Company-wide information"):"";if(v==="questions"||v==="decisions"){memoryKinds=[v==="questions"?"question":"decision"];memoryContexts=[];mems();v="memories"}if(![...VIEWS.map(([k])=>k),"contexts","search","people","customers","meetings","memories","questions","decisions","projects","admin","skills","home","explore","doc"].includes(v))v="home";view=v;if(document.body&&document.body.dataset)document.body.dataset.view=v;document.querySelectorAll(".view").forEach(e=>e.classList.toggle("on",e.dataset.view===v));nav();scrollTo(0,0);if(v!=="search"){const heading=document.querySelector(`.view[data-view="${v}"] h1`);heading?.setAttribute("tabindex","-1");heading?.focus({preventScroll:true})}}
 document.addEventListener("click",e=>{const b=e.target.closest("[data-v]");if(b){if(b.dataset.v==="contexts"){contextDirectory=!b.dataset.ch;renderContextDirectory();renderChannels()}if(b.dataset.ch){chan=b.dataset.ch;try{sessionStorage.setItem("gtm-chan",chan)}catch{}if(typeof renderChannels==="function")renderChannels()}show(b.dataset.v)}});
 /* Skills are launchable drafts, never dashboard actions. The person presses Send in Codex. */
 const dashboardSkills=(D.skills||[]).filter(s=>/^gtm-brain-[a-z0-9-]+$/.test(s.id)&&s.command==="/"+s.id);
@@ -580,7 +631,7 @@ let projectSlug="";
 const selectedProject=()=>(D.projects||[]).find(p=>p.slug===projectSlug)||null;
 function renderProject(){
  const projects=D.projects||[];
- /* the project picker is no longer a header control */
+ $("#project-picker").hidden=true;/* a project is a filter inside Memories, never a control over the whole page */
  if(!projects.some(p=>p.slug===projectSlug))projectSlug="";
  $("#project-label").textContent="Project";
  $("#project-select").innerHTML=`<option value="">${esc("All company")}</option>`+projects.map(p=>`<option value="${esc(p.slug)}">${esc(p.title)}</option>`).join("");
@@ -1006,55 +1057,108 @@ function gsearch(q){
  if(view!=='search'){searchReturn=view;show('search')}
  paintSearch();void loadSearchHistory();
 }
-$('#gq').oninput=e=>{clearTimeout(searchTimer);const value=e.target.value;searchTimer=setTimeout(()=>{const replacing=view==='search';gsearch(value);updateChatLink();publishRoute(replacing)},150)};
 document.addEventListener('click',e=>{
  const kind=e.target.closest('[data-search-kind]');if(kind){searchFilter=kind.dataset.searchKind;searchPage=0;paintSearch();return}
  const page=e.target.closest('[data-search-page]');if(page&&!page.disabled){searchPage+=Number(page.dataset.searchPage);paintSearch();$('#s-title').focus();return}
  const retry=e.target.closest('[data-search-retry]');if(retry){failedSearchPages.clear();paintSearch();void loadSearchHistory();return}
  const memory=e.target.closest('[data-search-memory]');if(memory){const m=searchRecords.get(memory.dataset.searchMemory);if(m){addCitations([m]);jumpToMemory(m.id)}return}
 });
-document.addEventListener('keydown',e=>{
- const a=document.activeElement,editing=['INPUT','TEXTAREA','SELECT'].includes(a.tagName)||a.isContentEditable;
- if((e.key==='/'&&!editing)||((e.key==='k'||e.key==='K')&&(e.metaKey||e.ctrlKey))){e.preventDefault();$('#gq').focus()}
- if(e.key==='Escape'&&a===$('#gq')){clearTimeout(searchTimer);$('#gq').value='';gsearch('');$('#gq').blur();updateChatLink();publishRoute(true)}
-});
-
 /* ---------- the front page: four tabs by pillar, one health line above them. Reads D.pillars only; no actions. ---------- */
 const PL=D.pillars||null;
 const askLink=prompt=>"codex://threads/new?path="+encodeURIComponent(D.brain)+"&prompt="+encodeURIComponent("Use GTM Brain. "+prompt);
 const fileHref=path=>LIVE?"/file?path="+encodeURIComponent(path):"file://"+encodeURI(String(D.brain).replace(/\/$/,"")+"/"+path);
 const rowLinks=(path,prompt,label)=>`<span class="pl-links">${path?`<a class="pl-open" href="${esc(fileHref(path))}" target="_blank" rel="noopener" aria-label="${esc("Open "+path)}">${esc("Open file")}</a>`:""}<a class="pl-chat" href="${esc(askLink(prompt))}" aria-label="${esc("Chat about "+label)}">${esc("Chat about this")} <span aria-hidden="true">↗</span></a></span>`;
 /* Age in the viewer's calendar days, so the date shown and its age agree. */
-const ageText=at=>{const day=s=>Date.parse(String(s).slice(0,10)+"T12:00:00Z"),then=day(localDate(at)),now=day(localDate(new Date().toISOString()));if(!Number.isFinite(then)||!Number.isFinite(now))return"";const d=Math.round((now-then)/864e5);return d<=0?"today":d===1?"1 day ago":d<60?d+" days ago":d<730?Math.round(d/30)+" months ago":Math.round(d/365)+" years ago"};
-const whenText=at=>at?`${esc(localDate(at))} <span class="pl-age">(${esc(ageText(at))})</span>`:`<span class="pl-age">${esc("never")}</span>`;
+/* One helper for every date on the page: how long ago in words, the exact local time on hover. A date without a
+   time is counted in the viewer's calendar days, so "today" and the date shown always agree. */
+const ageText=at=>{const day=x=>Date.parse(String(x).slice(0,10)+"T12:00:00Z"),t=Date.parse(at),dateOnly=/^\d{4}-\d{2}-\d{2}$/.test(String(at));if(!Number.isFinite(t))return"";
+ const mins=Math.round((Date.now()-t)/6e4);if(!dateOnly&&mins<1&&mins>-5)return"just now";if(!dateOnly&&mins>=1&&mins<60)return mins===1?"1 minute ago":mins+" minutes ago";
+ const d=Math.round((day(localDate(new Date().toISOString()))-day(dateOnly?at:localDate(at)))/864e5);
+ if(d<0)return dateOnly?localDate(at):"in the future";if(d===0)return !dateOnly&&mins>=60?(Math.round(mins/60)===1?"1 hour ago":Math.round(mins/60)+" hours ago"):"today";
+ return d===1?"yesterday":d<14?d+" days ago":d<60?Math.round(d/7)+" weeks ago":d<730?Math.round(d/30)+" months ago":Math.round(d/365)+" years ago"};
+const whenText=at=>at?`<time class="pl-when" datetime="${esc(at)}" title="${esc(localDateTime(at))}">${esc(ageText(at)||localDate(at))}</time>`:`<span class="pl-age">${esc("never")}</span>`;
 const goodFor=g=>g==="live"?"always ask":g==="always"?"no limit":typeof g==="number"?(g===1?"1 day":g+" days"):String(g??"");
 const stateBadge=s=>`<span class="pl-state ${s==="approved"?"ok":s==="draft"?"draft":"missing"}">${esc(s)}</span>`;
 const kindTitle=k=>({person:"People",organization:"Organizations",product:"Products",event:"Events",tool:"Tools"})[k]||(k.charAt(0).toUpperCase()+k.slice(1).replace(/_/g," ")+"s");
 const plUnreadMsg=`<p class="empty pl-warn">${esc("This tab could not be read from the brain's files. The other tabs and More still work. Ask Codex to check the brain.")}</p>`;
 const plEmpty=D.pillarsUnread?plUnreadMsg:`<p class="empty">${esc("Refresh the dashboard in Codex to see this tab: it was made by an older version.")}</p>`;
 const plUnread=s=>Array.isArray(PL?.unread)&&PL.unread.includes(s);
-function renderHealthLine(){const el=$("#health-line");if(!el)return;el.hidden=true;return;if(!PL){el.innerHTML="";return}/* no tabs' data: nothing is known, so nothing is claimed */el.innerHTML=`<b>${esc("Health")}</b> `+(PL?.health?esc(PL.health):`<span class="pl-age">${esc("Nothing to report yet: no meeting capture, summary run or sync recorded.")}</span>`)}
 function renderConfig(){
  if(!PL){$("#cfg-docs").innerHTML=plEmpty;return}
  if(plUnread("configuration")){$("#cfg-docs").innerHTML=plUnreadMsg;return}
  const C=PL.configuration,R=C.rules,S=C.schema,T=C.settings;
- const baseDocs=C.documents.filter(d=>d.base),otherDocs=C.documents.filter(d=>!d.base);
- const docRow=d=>`<tr${d.path?` class="pl-rowlink" data-open="/file?path=${encodeURIComponent(d.path)}" tabindex="0"`:""}><th scope="row">${esc(d.title)}${d.base&&!d.starter?` <span class="pl-age">${esc("added by the team")}</span>`:""}</th><td>${stateBadge(d.state)}</td><td>${d.changed?whenText(d.changed):`<span class="pl-age">${esc("not made yet")}</span>`}</td><td>${rowLinks(d.path,d.state!=="not written"?`Let's discuss our ${d.title} document (${d.path}). Read it first, then tell me what is missing or out of date.`:`Help me write our ${d.title} document.`,d.title)}</td></tr>`;
- $("#cfg-docs").innerHTML=`<section class="sec pl-card"><h2>${esc("Base documents")} <span class="pl-count">${baseDocs.filter(d=>d.state!=="not written").length} / ${baseDocs.length}</span></h2><p class="m">${esc("What the work must follow. Codex reads the matching one before that kind of work.")}</p><div class="pl-table-wrap"><table class="pl-table"><thead><tr><th>${esc("Document")}</th><th>${esc("State")}</th><th>${esc("Last changed")}</th><th><span class="sr-only">${esc("Links")}</span></th></tr></thead><tbody>${baseDocs.map(docRow).join("")}</tbody></table></div></section>`;
- const byRule=Object.entries(R.by_rule||{}).map(([k,n])=>`<span class="tag">${esc(k)} · ${n}</span>`).join(" ");
- $("#cfg-rules").innerHTML=`<section class="sec pl-card"><div class="pl-card-head"><h2>RULES.md</h2>${rowLinks(R.path,R.path?"Let's go through RULES.md and the rules check: what should I fix first?":"Set up RULES.md for this brain.","RULES.md")}</div>`+
-  `<p class="pl-big">${R.path?`<b>${R.count}</b> ${esc(R.count===1?"rule":"rules")} <span class="pl-age">(${R.placement} ${esc("where things go")}, ${R.own.length} ${esc("of our rules")})</span>`:esc("No RULES.md yet: the built-in Ask the source rows apply.")} · <b class="${R.problems?"pl-warn":""}">${R.problems}</b> ${esc(R.problems===1?"problem":"problems")} ${esc("from the rules check")}${R.path&&R.changed?` · ${esc("changed")} ${whenText(R.changed)}`:""}</p>${byRule?`<p>${byRule}</p>`:""}`+
-  (R.findings.length?`<details class="fold"><summary>${esc("What the rules check found")} · ${R.problems}</summary><ul class="pl-list">${R.findings.map(f=>`<li><span class="tag">${esc(f.rule)}</span> ${esc(f.what)}</li>`).join("")}</ul>${R.problems>R.findings.length?`<p class="pl-age">${esc("and")} ${R.problems-R.findings.length} ${esc("more: ask Codex to run the rules check")}</p>`:""}</details>`:"")+
-  (R.own.length?`<h3>${esc("Our rules")}</h3><ul class="pl-list">${R.own.map(r=>`<li>${esc(r)}</li>`).join("")}</ul>`:"")+
-  `<h3>${esc("Ask the source")}${R.ask.defaults?` <span class="pl-age">${esc("built-in rows")}</span>`:""}</h3><div class="pl-table-wrap"><table class="pl-table"><thead><tr><th>${esc("Question about")}</th><th>${esc("Ask")}</th><th>${esc("Brain answer is good for")}</th></tr></thead><tbody>${R.ask.rows.map(r=>`<tr><td>${esc(r.topic)}</td><td>${esc(r.source)}</td><td>${esc(goodFor(r.good_for))}</td></tr>`).join("")}</tbody></table></div>${R.ask.problems.length?`<ul class="pl-list">${R.ask.problems.map(p=>`<li class="pl-warn">${esc("Line")} ${p.line}: ${esc(p.problem)}</li>`).join("")}</ul>`:""}</section>`;
- const fl=fs=>fs.length?fs.map(f=>`${esc(f.name.replace(/_/g," "))}${f.required?'<span class="pl-req" title="required">*</span>':""}`).join(", "):`<span class="pl-age">${esc("no fields")}</span>`;
- $("#cfg-schema").innerHTML=`<section class="sec pl-card"><div class="pl-card-head"><h2>SCHEMA.md</h2>${rowLinks(S.path,S.path?"Let's review SCHEMA.md: the kinds, their fields and the link types.":"Set up SCHEMA.md: what the brain keeps about each kind.","SCHEMA.md")}</div>`+
-  (S.error?`<p class="pl-warn">${esc("SCHEMA.md cannot be read")}: ${esc(S.error)}</p>`:!S.path?`<p class="m">${esc("No SCHEMA.md: the built-in kinds apply.")}</p>`:`<p class="m">${S.kinds.length} ${esc("kinds")} · ${S.relations.length} ${esc("link types")}${S.changed?` · ${esc("changed")} ${whenText(S.changed)}`:""} · <span class="pl-req">*</span> ${esc("required")}</p>`)+
-  `<div class="pl-table-wrap"><table class="pl-table"><thead><tr><th>${esc("Kind")}</th><th>${esc("Fields")}</th><th>${esc("Subtypes")}</th></tr></thead><tbody>${S.kinds.map(k=>`<tr><th scope="row">${esc(k.kind)}</th><td>${fl(k.fields)}</td><td>${k.subtypes.length?k.subtypes.map(s=>`${esc(s.name)}${s.fields.length?` (+${fl(s.fields)})`:""}`).join(", "):""}</td></tr>`).join("")}</tbody></table></div>`+
-  (S.relations.length?`<h3>${esc("Link types")}</h3><div class="pl-table-wrap"><table class="pl-table"><thead><tr><th>${esc("Type")}</th><th>${esc("From")}</th><th>${esc("To")}</th><th>${esc("About")}</th></tr></thead><tbody>${S.relations.map(r=>`<tr><th scope="row">${esc(r.type.replace(/_/g," "))}${r.required?'<span class="pl-req" title="required">*</span>':""}</th><td>${esc(r.from.join(", "))}</td><td>${esc(r.to.join(", "))}</td><td>${esc(r.about)}</td></tr>`).join("")}</tbody></table></div>`:"")+`</section>`;
- const dl=[["Company",T.company],["Owner",T.owner],["Team",T.team+" "+(T.team===1?"person":"people")],["Connected tools",T.tools.length?T.tools.map(t=>t.tool+" ("+t.status+")").join(", "):"none listed"],["Dashboard",T.dashboard==="on-demand"?"opens when asked":"always on"],["Summaries",T.compile||"not set"],["Plugin",T.plugin||"unknown"]];
- $("#cfg-settings").innerHTML=`<section class="sec pl-card"><div class="pl-card-head"><h2>${esc("Settings")}</h2>${rowLinks(T.path,`Let's review our workspace settings (${T.path}).`,"the settings")}</div><dl class="pl-dl">${dl.map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v??"not set")}</dd>`).join("")}</dl><p class="m">${T.changed?`${esc("Changed")} ${whenText(T.changed)} · `:""}<button class="linkbtn" data-v="admin">${esc("All settings")} →</button></p></section>`;
+ const baseDocs=C.documents.filter(d=>d.base);
+ const docWho=d=>d.by||d.changed_by?` <span class="pl-age">${esc("by")} ${esc(authorName(d.by||d.changed_by))}</span>`:"";
+ const docRow=d=>d.path?`<tr data-doc="${esc(d.path)}"><th scope="row"><button class="linkbtn pl-doc-open" data-doc="${esc(d.path)}">${esc(d.title)}</button>${d.base&&!d.starter?` <span class="pl-age">${esc("added by the team")}</span>`:""}</th><td>${stateBadge(d.state)}</td><td>${d.changed?whenText(d.changed)+docWho(d):`<span class="pl-age">${esc("not saved yet")}</span>`}</td><td class="pl-go">${d.state==="not written"?`<a class="pl-chat" href="${esc(askLink(`Help me write our ${d.title} document.`))}" aria-label="${esc("Write "+d.title+" with Codex")}">${esc("Write it with Codex")} <span aria-hidden="true">↗</span></a>`:`<span aria-hidden="true">${esc(LIVE&&EDIT_TOKEN?"Open and edit":"Open")} →</span>`}</td></tr>`
+  :`<tr><th scope="row">${esc(d.title)}</th><td>${stateBadge(d.state)}</td><td><span class="pl-age">${esc("not written yet")}</span></td><td class="pl-go"><a class="pl-chat" href="${esc(askLink(`Help me write our ${d.title} document.`))}" aria-label="${esc("Write "+d.title+" with Codex")}">${esc("Write it with Codex")} <span aria-hidden="true">↗</span></a></td></tr>`;
+ $("#cfg-docs").innerHTML=`<section class="sec pl-card"><h2>${esc("Base documents")} <span class="pl-count">${baseDocs.filter(d=>d.state!=="not written").length} / ${baseDocs.length} ${esc("written")}</span></h2><p class="m">${esc("What your company's work must follow: strategy, voice, who you sell to. Codex reads the matching one before it writes or plans. Click a document to read and edit it.")}</p><div class="pl-table-wrap"><table class="pl-table"><thead><tr><th>${esc("Document")}</th><th>${esc("State")}</th><th>${esc("Last changed")}</th><th><span class="sr-only">${esc("Open")}</span></th></tr></thead><tbody>${baseDocs.map(docRow).join("")}</tbody></table></div></section>`;
+ renderRulesBrowser();renderSchemaBrowser();
+ const team=(D.admin?.team||[]),tools=T.tools||[];
+ $("#cfg-settings").innerHTML=`<section class="sec pl-card"><div class="pl-card-head"><h2>${esc("Company and team")}</h2><span class="pl-links"><a class="pl-chat" href="${esc(askLink(`Let's review our company profile and team (${T.path}).`))}" aria-label="${esc("Chat about the company and team")}">${esc("Chat about this")} <span aria-hidden="true">↗</span></a></span></div><p class="m">${esc("Who this brain belongs to and who works in it. A change here is proposed in Codex and approved by the owner.")}</p><dl class="pl-dl"><dt>${esc("Company")}</dt><dd>${esc(T.company??"not set")}</dd><dt>${esc("Owner")}</dt><dd>${esc(authorName(T.owner)??"not set")}</dd><dt>${esc("Team")}</dt><dd>${team.length?team.map(p=>esc(p.name)).join(", "):esc(T.team+" "+(T.team===1?"person":"people"))}</dd><dt>${esc("Connected tools")}</dt><dd>${tools.length?tools.map(t=>`${esc(t.tool)} <span class="pl-age">(${esc(t.status)})</span>`).join(", "):esc("none yet")}</dd></dl>${T.changed?`<p class="m">${esc("Last changed")} ${whenText(T.changed)}</p>`:""}</section>`+
+  `<section class="sec pl-card"><div class="pl-card-head"><h2>${esc("How this brain behaves")}</h2><span class="pl-links"><button class="linkbtn" data-v="admin">${esc("All settings")} →</button></span></div><p class="m">${esc("The switches. Each one is changed in a Codex conversation.")}</p><dl class="pl-dl"><dt>${esc("The dashboard opens")}</dt><dd>${esc(T.dashboard==="on-demand"?"when you ask for it":"at the start of each chat")}</dd><dt>${esc("Topic summaries")}</dt><dd>${esc("written when someone asks about the topic")}</dd><dt>${esc("GTM Brain version")}</dt><dd>${esc(T.plugin||"unknown")}</dd></dl></section>`;
+ renderConfigTabs();
 }
+/* ---------- Configuration: four parts, one shown at a time, so the rules and the schema can grow without the page
+   becoming one long scroll. Rules and schema are browsed as rows and cards with a filter; the file itself is one click away. ---------- */
+let cfgTab="docs",cfgRuleQ="",cfgRuleGroup="all",cfgSchemaQ="";try{cfgTab=sessionStorage.getItem("gtm-cfg")||"docs"}catch{}
+const mdCodeSpans=t=>esc(t).replace(/`([^`]+)`/g,"<code>$1</code>");
+const FINDING_KINDS={person:"Names",organization:"Names",product:"Names",folder:"Files and folders",files:"Files and folders",name:"Files and folders",gap:"Missing details",schema:"Missing details",ask:"Where Codex looks first"};
+function cfgRuleRows(){
+ const R=PL.configuration.rules,rows=[];
+ for(const r of R.placement_rows||[])rows.push({group:"where",title:r.what,sub:"Goes in: "+r.where.replace(/`/g,""),full:`<p>${mdCodeSpans(r.what)}</p><dl class="pl-dl"><dt>${esc("Where it goes")}</dt><dd>${mdCodeSpans(r.where)}</dd></dl>`,chat:`Let's talk about this rule in RULES.md: "${r.what}" goes in ${r.where.replace(/`/g,"")}. Is it still right for us?`,text:r.what+" "+r.where});
+ for(const r of R.own_rules||(R.own||[]).map(text=>({text})))rows.push({group:"ours",title:r.text,sub:[r.applies?"Applies to: "+r.applies:"Applies to all work",r.when?"when "+r.when:"",r.mode==="check"?"checked automatically":r.mode==="guidance"?"guidance for Codex":""].filter(Boolean).join(" · "),full:`<p>${esc(r.text)}</p>`,chat:`Let's talk about our rule: "${r.text}". Is it still right, and is it being followed?`,text:r.text+" "+(r.applies||"")});
+ for(const r of R.ask?.rows||[])rows.push({group:"ask",title:"Questions about "+r.topic.charAt(0).toLowerCase()+r.topic.slice(1),sub:`Codex asks ${r.source} · the brain's own answer is good for ${goodFor(r.good_for)}`,full:`<dl class="pl-dl"><dt>${esc("Question about")}</dt><dd>${esc(r.topic)}</dd><dt>${esc("Codex asks")}</dt><dd>${esc(r.source)}</dd><dt>${esc("The brain's own answer is good for")}</dt><dd>${esc(goodFor(r.good_for))}</dd></dl>`,chat:`Let's talk about where you look first for "${r.topic}" (now: ${r.source}, good for ${goodFor(r.good_for)}). Should that change?`,text:r.topic+" "+r.source});
+ for(const f of R.all_findings||R.findings||[])rows.push({group:"fix",problem:true,title:f.what,sub:(FINDING_KINDS[f.kind]||"To look at")+(f.subject?" · "+f.subject:""),full:`<p>${esc(f.what)}</p>${f.choices?.length?`<p class="m">${esc("Ways to fix it:")}</p><ul class="pl-list">${f.choices.map(c=>`<li>${esc(c.replace(/\s*\((?:add_name|merge|rename|update_entity|remember|query)[^)]*\)/g,""))}</li>`).join("")}</ul>`:""}`,chat:`The rules check found this: "${f.what}". Help me fix it; ask me what you need to know.`,text:f.what+" "+(f.subject||"")});
+ return rows;
+}
+const CFG_RULE_GROUPS=[["fix","To fix","What the rules check found: a name, a file or a detail that does not follow the rules yet."],["ours","Our rules","Rules your team added. Codex follows them when it saves notes and writes drafts."],["where","Where things go","Which folder each kind of file belongs in, so everyone finds it again."],["ask","Where Codex looks first","For each kind of question: the tool Codex asks, and how long the brain's own answer can be trusted."]];
+function renderRulesBrowser(){
+ const R=PL.configuration.rules,all=cfgRuleRows(),q=cfgRuleQ.trim();
+ const hits=q?all.filter(r=>fzMatch(q,[[r.text,1]])):all,count=g=>hits.filter(r=>r.group===g).length;
+ const groups=CFG_RULE_GROUPS.filter(([g])=>all.some(r=>r.group===g));if(cfgRuleGroup!=="all"&&!groups.some(([g])=>g===cfgRuleGroup))cfgRuleGroup="all";
+ const chip=(g,label,n)=>`<button type="button" class="filter-pill${cfgRuleGroup===g?" selected":""}" data-cfg-rule-group="${g}" aria-pressed="${cfgRuleGroup===g}">${esc(label)}<span class="pill-count">${n}</span></button>`;
+ const row=r=>`<details class="cfg-rule${r.problem?" problem":""}"><summary><span class="cfg-rule-title">${mdCodeSpans(r.title)}</span><span class="cfg-rule-sub">${esc(r.sub)}</span></summary><div class="cfg-rule-full">${r.full}<a class="pl-chat" href="${esc(askLink(r.chat))}">${esc(r.problem?"Fix this with Codex":"Chat about this rule")} <span aria-hidden="true">↗</span></a></div></details>`;
+ $("#cfg-rules").innerHTML=`<section class="sec pl-card"><div class="pl-card-head"><h2>${esc("Rules")}</h2><span class="pl-links">${R.path?`<button type="button" class="linkbtn" data-doc="${esc(R.path)}">${esc("Read the whole file")}</button><a class="pl-open sr-only" href="${esc(fileHref(R.path))}" target="_blank" rel="noopener" aria-label="${esc("Open "+R.path)}">${esc("Open file")}</a>`:""}<a class="pl-chat" href="${esc(askLink(R.path?"Let's go through RULES.md and the rules check: what should I fix first?":"Set up RULES.md for this brain."))}" aria-label="${esc("Chat about the rules")}">${esc("Chat about this")} <span aria-hidden="true">↗</span></a></span></div>`+
+  `<p class="m">${esc("How this brain is kept: where files go, the rules your team added, and where Codex looks first. Click a rule to read it in full.")}${R.path&&R.changed?` ${esc("Last changed")} ${whenText(R.changed)}${R.changed_by?" "+esc("by")+" "+esc(authorName(R.changed_by)):""}. <code class="pl-path">${esc(R.path)}</code>`:""}</p>`+
+  (R.path?"":`<p class="empty">${esc("No rules file yet, so the built-in rules apply. Say \"set up our rules\" in Codex to make one.")}</p>`)+
+  `<div class="explore-toolbar">${searchField("cfg-rule-q","Filter the rules","Filter the rules, for example pricing or folder",cfgRuleQ)}<div class="explore-filters" role="group" aria-label="${esc("Kinds of rules")}">${chip("all","All",hits.length)}${groups.map(([g,label])=>chip(g,label,count(g))).join("")}</div></div>`+
+  (groups.filter(([g])=>cfgRuleGroup==="all"||cfgRuleGroup===g).map(([g,label,about])=>{const rows=hits.filter(r=>r.group===g);if(!rows.length)return"";const cap=cfgRuleGroup==="all"&&!q?8:200;
+   return `<div class="cfg-group"><h3>${esc(label)} <span class="pl-count">${rows.length}</span></h3><p class="m">${esc(about)}</p>${rows.slice(0,cap).map(row).join("")}${rows.length>cap?`<button type="button" class="linkbtn pl-more" data-cfg-rule-group="${g}">${esc("Show all")} ${rows.length} →</button>`:""}</div>`}).join("")||`<p class="empty">${esc("No rule matches")} "${esc(cfgRuleQ)}". ${esc("Try fewer letters, or clear the filter.")}</p>`)+
+  ((R.ask?.problems||[]).length?`<ul class="pl-list">${R.ask.problems.map(p=>`<li class="pl-warn">${esc("Line")} ${p.line}: ${esc(p.problem)}</li>`).join("")}</ul>`:"")+`</section>`;
+}
+const cfgWords=s=>String(s||"").replace(/_/g," ");
+function renderSchemaBrowser(){
+ const S=PL.configuration.schema,q=cfgSchemaQ.trim(),has=text=>!q||!!fzMatch(q,[[text,1]]);
+ const counts=Object.fromEntries((PL.entities?.kinds||[]).map(k=>[k.kind,k.count]));
+ const fieldRows=(fields,extra="")=>fields.map(f=>`<tr><th scope="row">${esc(cfgWords(f.name))}${extra?` <span class="pl-age">${esc(extra)}</span>`:""}</th><td>${f.required?`<span class="pl-state draft">${esc("required")}</span>`:`<span class="pl-age">${esc("optional")}</span>`}</td><td>${esc(f.about||"")}</td></tr>`).join("");
+ const cards=S.kinds.map(k=>{
+  const whole=has(k.kind),fields=k.fields.filter(f=>whole||has(f.name+" "+(f.about||""))),subs=k.subtypes.map(st=>({...st,fields:st.fields.filter(f=>whole||has(st.name)||has(f.name+" "+(f.about||"")))})).filter(st=>whole||has(st.name)||st.fields.length);
+  const links=S.relations.filter(r=>(r.from.includes(k.kind)||r.to.includes(k.kind))&&(whole||has(r.type+" "+r.about)));
+  if(q&&!whole&&!fields.length&&!subs.length&&!links.length)return null;
+  return {kind:k.kind,html:`<article class="cfg-kind" id="cfg-kind-${esc(k.kind)}"><h3>${esc(kindTitle(k.kind))} ${counts[k.kind]!==undefined?`<span class="pl-count">${counts[k.kind]} ${esc("in this brain")}</span>`:""}</h3>`+
+   (fields.length||subs.some(s=>s.fields.length)?`<div class="pl-table-wrap"><table class="pl-table"><thead><tr><th>${esc("What is recorded")}</th><th>${esc("Needed?")}</th><th>${esc("What it means")}</th></tr></thead><tbody>${fieldRows(fields)}${subs.map(st=>fieldRows(st.fields,"for a "+st.name)).join("")}</tbody></table></div>`:`<p class="pl-age">${esc(q?"No field matches here.":"Nothing extra is recorded for this kind yet.")}</p>`)+
+   (subs.length?`<p class="m">${esc("Types:")} ${subs.map(st=>`<span class="tag" title="${esc(st.about||"")}">${esc(st.name)}</span>`).join(" ")}</p>`:"")+
+   (links.length?`<h4>${esc("Relationships")}</h4><ul class="pl-list cfg-links">${links.map(r=>`<li><b>${esc(cfgWords(r.type))}</b> <span class="pl-age">${esc(r.from.map(cfgWords).join(" or "))} → ${esc(r.to.map(x=>x==="us"?"our company":cfgWords(x)).join(" or "))}</span>${r.required?` <span class="pl-state draft">${esc("required")}</span>`:""}${r.one?` <span class="pl-age">${esc("one at a time")}</span>`:""}<br><span class="pl-age">${esc(r.about)}</span></li>`).join("")}</ul>`:"")+`</article>`};
+ }).filter(Boolean);
+ $("#cfg-schema").innerHTML=`<section class="sec pl-card"><div class="pl-card-head"><h2>${esc("What the brain records")}</h2><span class="pl-links">${S.path?`<button type="button" class="linkbtn" data-doc="${esc(S.path)}">${esc("Read the whole file")}</button><a class="pl-open sr-only" href="${esc(fileHref(S.path))}" target="_blank" rel="noopener" aria-label="${esc("Open "+S.path)}">${esc("Open file")}</a>`:""}<a class="pl-chat" href="${esc(askLink(S.path?"Let's review SCHEMA.md: the kinds, their fields and the link types.":"Set up SCHEMA.md: what the brain keeps about each kind."))}" aria-label="${esc("Chat about the schema")}">${esc("Chat about this")} <span aria-hidden="true">↗</span></a></span></div>`+
+  `<p class="m">${esc("For each kind of thing (a person, a company, a product) the details Codex keeps and how they connect. A required detail is one Codex asks for when it is missing.")}${S.path&&S.changed?` ${esc("Last changed")} ${whenText(S.changed)}${S.changed_by?" "+esc("by")+" "+esc(authorName(S.changed_by)):""}. <code class="pl-path">${esc(S.path)}</code>`:""}</p>`+
+  (S.error?`<p class="pl-warn">${esc("The schema file cannot be read")}: ${esc(S.error)}</p>`:!S.path?`<p class="empty">${esc("No schema file yet, so the built-in kinds apply. Say \"set up what we record\" in Codex to make one.")}</p>`:"")+
+  `<div class="explore-toolbar">${searchField("cfg-schema-q","Filter kinds and fields","Filter, for example role or website",cfgSchemaQ)}<span class="explore-result-count" role="status">${cards.length} ${esc(cards.length===1?"kind":"kinds")}${q?" "+esc("match"):""}</span></div>`+
+  `<div class="cfg-schema"><nav class="cfg-kinds" aria-label="${esc("Kinds")}">${cards.map(c=>`<button type="button" class="doc-outline-item l1" data-cfg-kind="${esc(c.kind)}">${esc(kindTitle(c.kind))}</button>`).join("")}</nav><div class="cfg-cards">${cards.map(c=>c.html).join("")||`<p class="empty">${esc("No kind or field matches")} "${esc(cfgSchemaQ)}".</p>`}</div></div></section>`;
+}
+function renderConfigTabs(){
+ if(!PL||plUnread("configuration"))return;
+ const C=PL.configuration,tabs=[["docs","Base documents",C.documents.filter(d=>d.base).length],["rules","Rules",(C.rules.placement_rows||[]).length+(C.rules.own_rules||C.rules.own||[]).length+(C.rules.ask?.rows||[]).length],["schema","What the brain records",C.schema.kinds.length],["company","Company and team",null]];
+ if(!tabs.some(([k])=>k===cfgTab))cfgTab="docs";
+ $("#cfg-tabs").innerHTML=tabs.map(([k,label,n])=>`<button type="button" role="tab" id="cfg-tab-${k}" aria-selected="${cfgTab===k}" aria-controls="cfg-${k==="company"?"settings":k}" tabindex="${cfgTab===k?0:-1}" data-cfg-tab="${k}" class="${cfgTab===k?"on":""}">${esc(label)}${n===null?"":` <span class="pl-count">${n}</span>`}${k==="rules"&&C.rules.problems?` <span class="cfg-flag" title="${esc(C.rules.problems+" to fix")}">${C.rules.problems} ${esc("to fix")}</span>`:""}</button>`).join("");
+ for(const [k,id] of [["docs","#cfg-docs"],["rules","#cfg-rules"],["schema","#cfg-schema"],["company","#cfg-settings"]])$(id).hidden=cfgTab!==k;
+}
+document.addEventListener("click",e=>{const t=e.target;if(!t?.closest)return;
+ const tab=t.closest("[data-cfg-tab]");if(tab){cfgTab=tab.dataset.cfgTab;try{sessionStorage.setItem("gtm-cfg",cfgTab)}catch{}renderConfigTabs();return}
+ const g=t.closest("[data-cfg-rule-group]");if(g){cfgRuleGroup=g.dataset.cfgRuleGroup;renderRulesBrowser();return}
+ const k=t.closest("[data-cfg-kind]");if(k){document.getElementById("cfg-kind-"+k.dataset.cfgKind)?.scrollIntoView?.({block:"start",behavior:"smooth"});return}});
+document.addEventListener("keydown",e=>{const tab=e.target?.closest?.("[data-cfg-tab]");if(!tab||!["ArrowRight","ArrowLeft"].includes(e.key))return;const order=["docs","rules","schema","company"],i=(order.indexOf(cfgTab)+(e.key==="ArrowRight"?1:-1)+order.length)%order.length;cfgTab=order[i];renderConfigTabs();document.getElementById("cfg-tab-"+cfgTab)?.focus?.()});
+document.addEventListener("input",e=>{const id=e.target?.id;if(id!=="cfg-rule-q"&&id!=="cfg-schema-q")return;const pos=e.target.selectionStart;if(id==="cfg-rule-q"){cfgRuleQ=e.target.value;renderRulesBrowser()}else{cfgSchemaQ=e.target.value;renderSchemaBrowser()}const again=document.getElementById(id);again?.focus?.();try{again?.setSelectionRange?.(pos,pos)}catch{}});
 /* Entities: a list to pick from on the left (filter as you type, kind chips, relation and sort), the picked one on
    the right (who or what it is, relation to us, details, links, history, notes). View only. The list draws a window
    of rows, so thousands of entities cost the same as forty. */
@@ -1230,6 +1334,8 @@ document.addEventListener("keydown",e=>{
  if(e.key==="Enter"&&exRows[exActive]){e.preventDefault?.();entSelect(exRows[exActive].id,false);if(typeof publishRoute==="function")publishRoute()}
  else if(e.key==="Escape"&&t.id==="ent-q"&&exQ){e.preventDefault?.();exQ="";t.value="";exActive=0;renderEntitiesTab()}
 });
+/* The page search opens an entity here. */
+function openEntity(id){show("entities");if(!exReady)renderEntitiesTab();entSelect(id,true);if(typeof publishRoute==="function")publishRoute()}
 /* The picked entity is part of the address (#view=entities&e=<id>), so Back, Forward and a copied link work. */
 const entRouteState=routeState;routeState=()=>{const s=entRouteState();if(s.view==="entities"&&exSel)s.e=exSel;return s};
 const entRestoreRoute=restoreRoute;restoreRoute=()=>{entRestoreRoute();if(typeof URLSearchParams==="undefined"||view!=="entities"||!PL||!exReady)return;const id=new URLSearchParams(String(location.hash||"").slice(1)).get("e")||"";if(id!==exSel)entSelect(id,false)};
@@ -1286,8 +1392,391 @@ document.addEventListener("click",e=>{const r=e.target.closest?.("tr[data-open]"
 document.addEventListener("click",e=>{const b=e.target.closest?.("[data-pe-more],[data-pm-more]");if(!b)return;if(b.hasAttribute("data-pm-more")){pmLimit+=PM_PAGE;renderNotesTab()}else{const k=b.dataset.peMore;peLimits[k]=(peLimits[k]||PE_PAGE)+PE_PAGE*2;renderEntitiesTab()}});
 document.addEventListener("input",e=>{if(e.target?.id==="pe-q"){peQuery=e.target.value;peLimits={};renderEntitiesTab()}else if(e.target?.id==="pm-entity"){pmF.entity=e.target.value;pmLimit=PM_PAGE;renderNotesTab()}});
 document.addEventListener("change",e=>{const id=e.target?.id;if(!["pm-kind","pm-tag","pm-period","pm-state"].includes(id))return;pmF[id.slice(3)]=e.target.value;pmLimit=PM_PAGE;renderNotesTab()});
-renderHealthLine();renderConfig();renderEntitiesTab();renderNotesTab();renderWorkflowsTab();
-(function(){let v="home";try{v=sessionStorage.getItem("gtm-view")||"home"}catch{}if(v==="search"||!document.querySelector(`.view[data-view="${v}"]`))v="config";show(v)})();
+/* ---------- Overview: what needs the person, most important first. Each item is one plain sentence, why it
+   matters, and one way to deal with it: a prepared chat, or the view that shows what is affected. ---------- */
+const many=(n,one,more)=>n+" "+(n===1?one:more);
+/* Only what a person must decide or repair; never more than a handful. Clean-up waits in Housekeeping below. */
+function inboxItems(){
+ const items=[],add=(tone,title,why,actions)=>items.push({tone,title,why,actions:actions.filter(Boolean)});
+ const chat=(label,prompt)=>({label,href:askLink(prompt)}),go=(label,v)=>({label,view:v});
+ if(PL?.summary_error)add("high","A topic summary could not be written",`${PL.summary_error.what||"The last attempt failed"}. What to do: ${PL.summary_error.todo||"ask Codex about the topic again"}.`,[chat("Fix this with Codex","The last summary update failed. Check what went wrong and write the summary again.")]);
+ if(D.proposal)add("high","A change to the company settings is waiting for a decision","Nothing changes until the owner approves it in Codex.",[{label:"Review it with Codex",href:workspaceReviewHref("admin")},go("See the proposal","admin")]);
+ if(D.interaction)add("high",`A new action is proposed: ${D.interaction.title||D.interaction.name}`,"It lets Codex do this for the team. It is not available until the owner approves it.",[{label:"Review it with Codex",href:workspaceReviewHref("interaction")}]);
+ const questions=D.totals?.questions??(D.questions||[]).length;
+ if(questions)add("high",`${many(questions,"question is","questions are")} waiting for your answer`,"Codex asked while working and is guessing until you answer.",[{label:"Answer with Codex",href:resolveAttentionHref()},go("Read the questions","questions")]);
+ const broken=(D.tools||[]).filter(t=>t.test==="fail"&&!t.declined);
+ if(broken.length)add("high",`The connection to ${broken.map(t=>t.tool).join(" and ")} is not working`,"Codex cannot read from it, so what it knows from there is getting old.",[chat("Repair it with Codex",`The connection to ${broken.map(t=>t.tool).join(" and ")} failed its last read. Help me repair it.`),go("See connected tools","admin")]);
+ if(D.plugin?.status==="newer"&&D.plugin.latest)add("mid",`GTM Brain ${D.plugin.latest} is available`,`This brain runs ${D.plugin.installed}. An update brings fixes and new abilities.`,[chat("Update with Codex","Update GTM Brain to the newest version.")]);
+ return items.slice(0,6);
+}
+/* One calm suggestion for something never set up, shown until the person says not now (kept for this browser session). */
+function inboxSuggestion(){
+ let hidden=false;try{hidden=sessionStorage.getItem("gtm-ov-sync")==="later"}catch{}
+ if(hidden||!/no sync has finished/i.test(String(D.meetings?.captureStatus||"")))return "";
+ return `<div class="ov-suggest" id="ov-suggest"><div class="ov-text"><h3>${esc("Suggestion: let meetings and notes arrive by themselves")}</h3><p>${esc("No daily sync is set up, so a meeting shows up here only when you ask Codex for it.")}</p></div><div class="ov-actions"><a class="ov-act" href="${esc(askLink("Set up the daily sync so meetings and notes from our tools are captured every day."))}">${esc("Set up the daily sync")} <span aria-hidden="true">↗</span></a><button type="button" class="ov-act quiet" data-ov-later>${esc("Not now")}</button></div></div>`;
+}
+/* Clean-up, each kind once: tidy when there is time. */
+function housekeeping(){
+ const rows=[],P=PL?.memories?.population||null,R=PL?.configuration?.rules,add=(n,text,action)=>rows.push({n,text,action});
+ const chat=(label,prompt)=>`<a class="pl-chat" href="${esc(askLink(prompt))}">${esc(label)} <span aria-hidden="true">↗</span></a>`,go=(label,v,extra="")=>`<button type="button" class="linkbtn" data-v="${v}"${extra}>${esc(label)} →</button>`;
+ const merges=(D.merges||[]).length;
+ if(merges)add(merges,`${merges===1?"pair of names":"pairs of names"} may be the same person or company`,`<a class="pl-chat" href="${esc(duplicateChatHref(D.merges[0]))}">${esc("Check the first pair with Codex")} <span aria-hidden="true">↗</span></a>`);
+ const first=R?.by_rule?.P3||0;
+ if(first)add(first,`${first===1?"person is":"people are"} known by a first name only`,go("See who","config",' data-cfg-open="rules"'));
+ if(P?.duplicates_exact)add(P.duplicates_exact,`${P.duplicates_exact===1?"note says":"notes say"} exactly the same as another`,chat("Clean up with Codex","Show me the exact duplicate notes and propose which ones to withdraw."));
+ const base=(PL?.configuration?.documents||[]).filter(d=>d.base),unwritten=base.filter(d=>d.state==="not written");
+ if(unwritten.length)add(unwritten.length,`${unwritten.length===1?"base document is":"base documents are"} not written yet: ${unwritten.map(d=>d.title).join(", ")}`,go("See base documents","config",' data-cfg-open="docs"'));
+ if(P?.schema_untouched)add(null,"Decide what you want to know about each person and company",go("See what is recorded now","config",' data-cfg-open="schema"'));
+ else if(P?.missing_required)add(P.missing_required,`of ${many(P.entities_total,"person or company","people and companies")} ${P.missing_required===1?"misses":"miss"} a detail you marked as required`,chat("Fill the gaps with Codex","Entities are missing required fields. Show me which fields are missing most and fill what you can from our notes and tools."));
+ return rows;
+}
+function renderInbox(){
+ const items=inboxItems(),box=$("#ov-inbox"),order={high:0,mid:1,low:2};items.sort((a,b)=>order[a.tone]-order[b.tone]);
+ const action=a=>a.href?`<a class="ov-act" href="${esc(a.href)}">${esc(a.label)} <span aria-hidden="true">↗</span></a>`:`<button type="button" class="ov-act quiet" data-v="${esc(a.view)}">${esc(a.label)} <span aria-hidden="true">→</span></button>`;
+ box.innerHTML=`<div class="ov-head"><h2>${esc(items.length?"Needs your attention":"Nothing needs you right now")}</h2>${items.length?`<span class="pl-count">${items.length} ${esc(items.length===1?"item":"items")}</span>`:""}</div>`+
+  (items.length?`<ol class="ov-list">${items.map(i=>`<li class="ov-item ${i.tone}"><div class="ov-text"><h3>${esc(i.title)}</h3><p>${esc(i.why)}</p></div><div class="ov-actions">${i.actions.map(action).join("")}</div></li>`).join("")}</ol>`:`<p class="ov-calm">${esc("No questions are waiting, nothing needs a decision and every connection works. New notes appear below as they are saved.")}</p>`)+inboxSuggestion();
+ const house=housekeeping();
+ const counts=[[PL?.memories?.total,"notes","notes"],[PL?.entities?.rows?.length,"people, companies and products","entities"],[meetingData.meetings.length,"meetings","meetings"],[(customerData.customers||[]).length,"customer relationships","customers"]].filter(([n])=>Number.isFinite(n));
+ $("#ov-more").innerHTML=(house.length?`<details class="fold ov-house"><summary>${esc("Housekeeping")} · ${house.length} ${esc(house.length===1?"thing":"things")} ${esc("to tidy when you have time")}</summary><ul class="ov-house-list">${house.map(h=>`<li><span>${h.n===null?"":`<b>${h.n}</b> `}${esc(h.text)}</span>${h.action}</li>`).join("")}</ul></details>`:"")+
+  `<h2>${esc("In this brain")}</h2><div class="ov-counts">${counts.map(([n,label,v])=>`<button type="button" class="ov-count" data-v="${v}"><b>${n}</b><span>${esc(label)}</span></button>`).join("")}</div>`+
+  /* the chat start's own status line, part by part, for whoever wants the detail */
+  (PL?`<details class="fold ov-status"><summary>${esc("Sync and capture details")}</summary><div>${PL.health?`<ul class="pl-list">${String(PL.health).split(/\s+\|\s+/).map(part=>`<li>${esc(part.replace(/\s*\(query [a-z_ ]+\)/g,""))}</li>`).join("")}</ul>`:`<p class="pl-age">${esc("Nothing to report yet: no meeting capture, summary run or sync recorded.")}</p>`}</div></details>`:"");
+}
+document.addEventListener("click",e=>{const t=e.target;if(!t?.closest)return;
+ if(t.closest("[data-ov-later]")){try{sessionStorage.setItem("gtm-ov-sync","later")}catch{}renderInbox();return}
+ const open=t.closest("[data-cfg-open]");if(open&&typeof renderConfigTabs==="function"){cfgTab=open.dataset.cfgOpen;if(cfgTab==="rules"){cfgRuleGroup="fix";renderRulesBrowser()}renderConfigTabs()}});
+/* ---------- Documents: read and edit in the page. Markdown is escaped first; only the marks below become tags,
+   so nothing a document says can run as script. The one write goes to POST /document (server/dash.mjs). ---------- */
+const mdPlain=t=>String(t).replace(/!?\[([^\]]*)\]\([^)]*\)/g,"$1").replace(/[*_`~]/g,"").trim();
+function mdLink(label,url){
+ const raw=String(url).replace(/&amp;/g,"&");
+ if(/^(https?:\/\/|mailto:)/i.test(raw))return `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+ const rel=raw.replace(/^\.\//,"").replace(/#.*$/,"");
+ if(rel&&Array.isArray(PL?.files)&&PL.files.includes(rel))return `<button class="linkbtn" data-doc="${esc(rel)}">${label}</button>`;
+ return `<span class="md-plainlink" title="${url}">${label}</span>`;
+}
+function mdInline(src){
+ const kept=[],keep=html=>"\u0000"+(kept.push(html)-1)+"\u0000";
+ const swatch=hex=>`<span class="md-swatch" style="background:${hex}" aria-hidden="true"></span>`,HEX=/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+ let t=String(src).replace(/(`+)(?!`)([\s\S]*?[^`])\1(?!`)/g,(_,q,c)=>keep(`${HEX.test(c.trim())?swatch(c.trim()):""}<code>${esc(c.trim())}</code>`));
+ t=esc(t);
+ t=t.replace(/(^|[\s(:,])(#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3}))(?![0-9a-zA-Z])/g,(_,pre,hex)=>pre+keep(`${swatch(hex)}<code>${hex}</code>`));
+ t=t.replace(/!?\[([^\]]+)\]\(\s*([^)\s]+)(?:\s+[^)]*)?\)/g,(_,label,url)=>keep(mdLink(label,url)));
+ t=t.replace(/(^|[\s(])(https?:\/\/[^\s<]*[^\s<.,;:!?)\]'])/g,(_,pre,url)=>pre+keep(mdLink(url,url)));
+ t=t.replace(/\*\*([^\s*](?:[^*]*[^\s*])?)\*\*/g,"<strong>$1</strong>").replace(/(^|[^\w_])__([^\s_](?:[^_]*[^\s_])?)__(?!\w)/g,"$1<strong>$2</strong>");
+ t=t.replace(/(^|[^*\w])\*([^\s*](?:[^*]*[^\s*])?)\*(?!\*)/g,"$1<em>$2</em>").replace(/(^|[^\w_])_([^\s_](?:[^_]*[^\s_])?)_(?!\w)/g,"$1<em>$2</em>");
+ t=t.replace(/~~([^~]+)~~/g,"<del>$1</del>");
+ let n=0;while(/\u0000\d+\u0000/.test(t)&&n++<4)t=t.replace(/\u0000(\d+)\u0000/g,(_,i)=>kept[+i]);
+ return t;
+}
+const MD_LIST=/^(\s*)([-*+]|\d{1,9}[.)])\s+(.*)$/,MD_FENCE=/^\s{0,3}(`{3,}|~{3,})\s*([^`]*)$/,MD_RULE=/^\s{0,3}([-*_])(\s*\1){2,}\s*$/,MD_HEAD=/^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/,MD_SEP=/^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
+const mdCells=line=>{let l=line.trim();if(l.startsWith("|"))l=l.slice(1);if(l.endsWith("|")&&!l.endsWith("\\|"))l=l.slice(0,-1);return l.split(/(?<!\\)\|/).map(c=>c.replace(/\\\|/g,"|").trim())};
+/* text -> { html, headings: [{ level, text, id, line }] }. line is the heading's line in the text, for the outline. */
+function mdDoc(text,{prefix="h",seen=new Set(),base=0,depth=0}={}){
+ const lines=String(text??"").replace(/\r\n?/g,"\n").split("\n"),out=[],headings=[],para=[];
+ const flush=()=>{if(para.length){out.push(`<p>${mdInline(para.join("\n")).replace(/ {2,}\n|\\\n/g,"<br>").replace(/\n/g," ")}</p>`);para.length=0}};
+ const inner=(block,at)=>{const r=mdDoc(block.join("\n"),{prefix,seen,base:base+at,depth:depth+1});headings.push(...r.headings);return r.html};
+ for(let i=0;i<lines.length;i++){
+  const l=lines[i];let m;
+  if((m=l.match(MD_FENCE))){flush();const fence=m[1],lang=m[2].trim().split(/\s+/)[0],code=[];i++;while(i<lines.length&&!(lines[i].trim().startsWith(fence[0].repeat(fence.length))&&/^\s{0,3}(`+|~+)\s*$/.test(lines[i])))code.push(lines[i++]);
+   out.push(`<pre class="md-code"${lang?` data-lang="${esc(lang)}"`:""}><code>${esc(code.join("\n"))}</code></pre>`);continue}
+  if(/^\s*<!--.*-->\s*$/.test(l)){flush();continue}
+  if(!l.trim()){flush();continue}
+  if((m=l.match(MD_HEAD))){flush();const level=m[1].length,plain=mdPlain(m[2]);let slug=plain.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,"-").replace(/^-|-$/g,"")||"section",id=prefix+"-"+slug,k=2;while(seen.has(id))id=prefix+"-"+slug+"-"+k++;seen.add(id);
+   if(!depth)headings.push({level,text:plain,id,line:base+i});out.push(`<h${level} id="${esc(id)}">${mdInline(m[2])}</h${level}>`);continue}
+  if(MD_RULE.test(l)&&!para.length){out.push("<hr>");continue}
+  if(/^\s{0,3}>/.test(l)){flush();const block=[],at=i;while(i<lines.length&&(/^\s{0,3}>/.test(lines[i])||(lines[i].trim()&&block.length&&!MD_LIST.test(lines[i])&&!MD_HEAD.test(lines[i]))))block.push(lines[i++].replace(/^\s{0,3}>\s?/,""));i--;
+   out.push(depth<6?`<blockquote>${inner(block,at)}</blockquote>`:`<blockquote><p>${esc(block.join(" "))}</p></blockquote>`);continue}
+  if(l.includes("|")&&i+1<lines.length&&MD_SEP.test(lines[i+1])&&lines[i+1].includes("-")&&mdCells(l).length===mdCells(lines[i+1]).length){
+   flush();const head=mdCells(l),align=mdCells(lines[i+1]).map(c=>c.startsWith(":")&&c.endsWith(":")?"center":c.endsWith(":")?"right":""),rows=[];i+=2;
+   while(i<lines.length&&lines[i].trim()&&lines[i].includes("|"))rows.push(mdCells(lines[i++]));i--;
+   const cell=(tag,c,j)=>`<${tag}${align[j]?` style="text-align:${align[j]}"`:""}${tag==="th"?' scope="col"':""}>${mdInline(c??"")}</${tag}>`;
+   const hexOf=c=>String(c??"").replace(/`/g,"").trim(),colour=head.findIndex((_,j)=>rows.length>0&&rows.every(r=>/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(hexOf(r[j]))));
+   if(colour>=0){out.push(`<div class="md-swatches" role="list">${rows.map(r=>`<div class="md-swatch-card" role="listitem"><span class="md-swatch-block" style="background:${hexOf(r[colour])}"></span><div>${head.map((h,j)=>j===colour?`<code>${esc(hexOf(r[j]))}</code>`:r[j]?`<span${j===(colour===0?1:0)?' class="md-swatch-name"':""} title="${esc(h)}">${mdInline(r[j])}</span>`:"").join("")}</div></div>`).join("")}</div>`);continue}
+   out.push(`<div class="md-table"><table><thead><tr>${head.map((c,j)=>cell("th",c,j)).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${head.map((_,j)=>cell("td",r[j],j)).join("")}</tr>`).join("")}</tbody></table></div>`);continue}
+  if((m=l.match(MD_LIST))&&(para.length===0||m[1].length<4)){
+   flush();const indent=m[1].length,ordered=/\d/.test(m[2]),start=ordered?parseInt(m[2],10):null,items=[];
+   while(i<lines.length){
+    const im=lines[i].match(MD_LIST);
+    if(im&&im[1].length<=indent+1&&/\d/.test(im[2])===ordered){items.push({at:i,lines:[im[3]]});i++;continue}
+    if(!items.length)break;
+    if(!lines[i].trim()){let j=i+1;while(j<lines.length&&!lines[j].trim())j++;const nm=j<lines.length?lines[j].match(MD_LIST):null;if(j<lines.length&&((nm&&nm[1].length<=indent+1&&/\d/.test(nm[2])===ordered)||/^\s{2,}\S/.test(lines[j]))){items.at(-1).lines.push("");i++;continue}break}
+    if(im||/^\s{2,}\S/.test(lines[i])){items.at(-1).lines.push(lines[i].replace(new RegExp("^\\s{0,"+(indent+(ordered?3:2))+"}"),""));i++;continue}
+    if(MD_HEAD.test(lines[i])||MD_FENCE.test(lines[i])||/^\s{0,3}>/.test(lines[i])||MD_RULE.test(lines[i]))break;
+    items.at(-1).lines.push(lines[i].trim());i++;
+   }
+   i--;
+   out.push(`<${ordered?"ol":"ul"}${ordered&&start!==1?` start="${start}"`:""}>${items.map(it=>{
+    let first=it.lines[0],task="";const tm=first.match(/^\[([ xX])\]\s+(.*)$/);if(tm){task=`<span class="md-task${tm[1]===" "?"":" done"}" role="img" aria-label="${tm[1]===" "?"not done":"done"}"></span>`;first=tm[2]}
+    const rest=it.lines.slice(1),simple=!rest.some(x=>!x.trim()||MD_LIST.test(x)||MD_FENCE.test(x)||/^\s*>/.test(x));
+    const body=simple||depth>=6?mdInline([first,...rest].join(" ")):mdInline(first)+inner(rest,it.at+1);
+    return `<li${task?' class="md-taskitem"':""}>${task}${body}</li>`}).join("")}</${ordered?"ol":"ul"}>`);continue}
+  para.push(l.trim());
+ }
+ flush();return {html:out.join("\n"),headings};
+}
+const mdWords=t=>{const w=String(t||"").replace(/```[\s\S]*?```/g," ").match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu);return w?w.length:0};
+const mdFront=raw=>{const m=String(raw).replace(/\r\n?/g,"\n").match(/^---\n[\s\S]*?\n---\n?/);return m?String(raw).replace(/\r\n?/g,"\n").slice(m[0].length).trim():String(raw).replace(/\r\n?/g,"\n").trim()};
+
+const EDIT_TOKEN=(()=>{try{const t=document.querySelector('meta[name="gtm-brain-edit"]')?.getAttribute("content")||"";return /^[a-f0-9]{64}$/.test(t)?t:""}catch{return ""}})();
+let docState=null,docPendingRefresh=false;
+const docDirty=()=>!!docState&&docState.editable&&docState.text!==docState.body&&docState.text!==docState.sent;
+/* What a path is: a document (the only thing the page saves), or a brain file the page shows as it is. */
+function docInfo(path){
+ if(!PL||!path||!(PL.files||[]).includes(path))return null;
+ const C=PL.configuration,d=C.documents.find(x=>x.path===path);
+ if(d)return {kind:"document",title:d.title,state:d.state,changed:d.changed,by:d.by,applies:d.applies_to,base:d.base,canEdit:true,chat:`Let's discuss our ${d.title} document (${d.path}). Read it first, then tell me what is missing or out of date.`,readonly:""};
+ if(C.rules.path===path)return {kind:"rules",title:"RULES.md",changed:C.rules.changed,by:C.rules.changed_by,chat:"Let's go through RULES.md and the rules check: what should I fix first?",readonly:"The rules are changed in Codex, which checks each one as it is written. Chat about this opens a prepared message."};
+ if(C.schema.path===path)return {kind:"schema",title:"SCHEMA.md",changed:C.schema.changed,by:C.schema.changed_by,chat:"Let's review SCHEMA.md: the kinds, their fields and the link types.",readonly:"The schema is changed in Codex, which checks that every entity still fits it. Chat about this opens a prepared message."};
+ if(C.settings.path===path)return {kind:"settings",title:"Company and team",changed:C.settings.changed,chat:`Let's review our workspace settings (${path}).`,readonly:"Company and team details change only through an approved proposal in Codex."};
+ const w=PL.workflows.files.find(f=>f.path===path);
+ if(w)return {kind:"workflow",title:w.title,state:w.status,changed:w.changed,chat:`Let's discuss the ${w.title} workflow (${w.path}): where its runs stand and what is next.`,readonly:"A workflow is changed in Codex, which checks its steps before it runs. Chat about this opens a prepared message."};
+ const e=PL.entities.rows.find(r=>r.path===path);
+ if(e)return {kind:"entity",title:e.name,changed:e.last,entity:e.id,chat:`Let's discuss ${e.name} (${e.kind}). Read the entity page and its notes first.`,readonly:"An entity page is written from its notes. To change what it says, tell Codex what is new or wrong."};
+ return {kind:"file",title:path,chat:`Let's look at ${path}.`,readonly:"This file is changed in Codex."};
+}
+const docBack=()=>docState?.info.kind==="workflow"?["workflows","Workflows"]:docState?.info.kind==="entity"?["entities","Entities"]:["config","Configuration"];
+function docShell(){
+ const s=docState,i=s.info,[backView,backLabel]=docBack();
+ const tool=(id,label,glyph,keys)=>`<button type="button" class="doc-tool" data-md="${id}" aria-label="${esc(label)}" title="${esc(label+(keys?" ("+keys+")":""))}">${glyph}</button>`;
+ const mod=typeof navigator!=="undefined"&&/Mac|iPhone|iPad/.test(navigator.platform||"")?"Cmd":"Ctrl";
+ const meta=[i.state?stateBadge(i.state):"",i.changed?`<span>${esc("Last changed")} ${whenText(i.changed)}${i.by?" "+esc("by")+" "+esc(authorName(i.by)):""}</span>`:i.kind==="document"?`<span class="pl-age">${esc("not saved yet")}</span>`:"",`<code>${esc(s.path)}</code>`].filter(Boolean).join("");
+ $("#doc-view").innerHTML=`<div class="doc-top"><div class="doc-heading"><button class="linkbtn doc-back" data-v="${backView}"><span aria-hidden="true">←</span> ${esc(backLabel)}</button><h1 id="doc-title" tabindex="-1">${esc(i.title)}</h1><div class="doc-meta">${meta}</div>${i.applies?.length?`<p class="doc-applies">${esc("Codex reads this before:")} ${esc(i.applies.join(", "))}</p>`:""}</div>`+
+  `<div class="doc-actions"><a class="doc-chat" href="${esc(askLink(i.chat))}">${esc("Chat about this")} <span aria-hidden="true">↗</span></a>${s.editable?`<button type="button" class="btn doc-save" id="doc-save" data-doc-save disabled title="${esc("Save ("+mod+"-S)")}">${esc("Save")}</button>`:""}</div></div>`+
+  `<div id="doc-notice" class="doc-notice" role="status" aria-live="polite"></div>`+
+  (s.editable?`<div class="doc-toolbar" role="toolbar" aria-label="${esc("Formatting")}">${tool("h2","Heading","H2")}${tool("h3","Smaller heading","H3")}<span class="doc-sep" aria-hidden="true"></span>${tool("bold","Bold","<b>B</b>",mod+"-B")}${tool("italic","Italic","<i>I</i>",mod+"-I")}${tool("code","Code","&lt;/&gt;")}<span class="doc-sep" aria-hidden="true"></span>${tool("ul","Bulleted list","&bull;&thinsp;&mdash;")}${tool("ol","Numbered list","1.")}${tool("quote","Quote","&ldquo;")}<span class="doc-sep" aria-hidden="true"></span>${tool("link","Link","Link")}${tool("table","Table","Table")}`+
+   `<span class="doc-modes" role="group" aria-label="${esc("Layout")}">${[["write","Write"],["split","Split"],["preview","Preview"]].map(([k,l])=>`<button type="button" data-doc-mode="${k}" aria-pressed="${s.mode===k}">${esc(l)}</button>`).join("")}</span></div>`:"")+
+  `<div class="doc-body ${s.editable?"mode-"+s.mode:"mode-read"}" id="doc-body"><aside class="doc-outline" aria-label="${esc("Outline")}"><h2>${esc("Outline")}</h2><nav id="doc-outline"></nav></aside>`+
+  (s.editable?`<div class="doc-edit"><label class="sr-only" for="doc-text">${esc("Document text, in Markdown")}</label><textarea id="doc-text" spellcheck="true" autocapitalize="sentences"></textarea></div>`:"")+
+  `<article class="doc-preview md-doc" id="doc-preview" tabindex="0" aria-label="${esc(s.editable?"Preview":i.title)}"></article></div>`+
+  `<div class="doc-foot"><span id="doc-count"></span><span id="doc-dirty" role="status"></span><a class="pl-open" href="${esc(fileHref(s.path))}" target="_blank" rel="noopener" aria-label="${esc("Open "+s.path)}">${esc("Open file")}</a></div>`;
+}
+function docPaint(){
+ const s=docState;if(!s)return;
+ const r=mdDoc(s.text);
+ $("#doc-preview").innerHTML=s.loading?`<p class="empty"><span class="spin"></span>${esc("Opening the document…")}</p>`:s.error?`<p class="empty pl-warn">${esc(s.error)}</p>`:r.html||`<p class="empty">${esc("Nothing written yet.")}</p>`;
+ $("#doc-outline").innerHTML=r.headings.length?r.headings.map(h=>`<button type="button" class="doc-outline-item l${Math.min(h.level,4)}" data-doc-head="${esc(h.id)}" data-doc-line="${h.line}">${esc(h.text)}</button>`).join(""):`<p class="pl-age">${esc("No headings yet.")}</p>`;
+ const words=mdWords(s.text),bytes=typeof TextEncoder!=="undefined"?new TextEncoder().encode(s.text).length:s.text.length;
+ $("#doc-count").textContent=s.loading||s.error?"":`${words} ${words===1?"word":"words"} · ${Math.max(1,Math.round(words/220))} min read`+(s.editable?` · ${(bytes/1024).toFixed(1)} of 64 KB`:"");
+ const dirty=docDirty(),mark=$("#doc-dirty");
+ mark.textContent=!s.editable?"":dirty?"Unsaved changes":s.savedAt?"Saved "+localTime(s.savedAt):"No changes";mark.classList.toggle("on",dirty);
+ const save=$("#doc-save");if(save){save.disabled=!dirty||!!s.saving;save.textContent=s.saving?"Saving…":"Save"}
+ try{sessionStorage.setItem("gtm-doc",s.path)}catch{}
+}
+let docNoticeHtml="",docNoticeTone="";
+function docNotice(html=docNoticeHtml,tone=docNoticeTone){docNoticeHtml=html;docNoticeTone=tone;const el=$("#doc-notice");el.className="doc-notice"+(html?" on":"")+(tone?" "+tone:"");
+ el.innerHTML=html+(docPendingRefresh?`<p>${esc("The brain changed while you were editing. This page refreshes once you save or leave the document.")}</p>`:"");if(docPendingRefresh)el.classList.add("on")}
+async function openDoc(path,restoring=false){
+ const info=docInfo(path);if(!info){if(!restoring)return;docState=null;return}
+ if(docState&&docState.path!==path&&docDirty()&&typeof confirm==="function"&&!confirm("Leave this document? Your unsaved changes will be lost."))return;
+ let mode="split";try{mode=sessionStorage.getItem("gtm-doc-mode")||"split"}catch{}if(!["write","split","preview"].includes(mode))mode="split";
+ docNoticeHtml=docNoticeTone="";const s=docState={path,info,raw:"",body:"",text:"",sent:null,hash:"",editable:false,loading:LIVE,error:LIVE?"":"A saved copy of the dashboard cannot open files. Open the live dashboard to read this here, or open the file itself.",mode,saving:false,savedAt:null};
+ docShell();docPaint();
+ if(!restoring||view!=="doc")show("doc");
+ let flash=null;try{flash=JSON.parse(sessionStorage.getItem("gtm-doc-flash")||"null");sessionStorage.removeItem("gtm-doc-flash")}catch{}
+ if(!LIVE){docNotice(info.readonly?`<p>${esc(info.readonly)}</p>`:"");return}
+ try{
+  const r=await fetch(fileHref(path),{cache:"no-store"});if(!r.ok)throw new Error("unavailable");
+  const raw=await r.text();if(docState!==s)return;
+  s.raw=raw;s.hash=r.headers?.get?.("x-gtm-brain-hash")||"";s.body=s.text=mdFront(raw);s.loading=false;
+  s.editable=!!info.canEdit&&!!EDIT_TOKEN&&/^[a-f0-9]{64}$/.test(s.hash);
+ }catch{if(docState!==s)return;s.loading=false;s.error="This file could not be opened. It may have moved since the dashboard was refreshed: ask Codex to refresh the dashboard."}
+ docShell();const ta=$("#doc-text");if(s.editable&&ta)ta.value=s.text;docPaint();
+ docNotice(flash&&flash.path===path?`<p>${esc(flash.text)}</p>`:!s.editable&&info.canEdit&&!s.error?`<p>${esc("Read-only for now: saving from the page needs the dashboard restarted on this version. Ask Codex to open the dashboard again, or use Chat about this.")}</p>`:!s.editable&&info.readonly?`<p>${esc(info.readonly)}</p>`:"",flash&&flash.path===path?(flash.tone||"ok"):"");
+ if(!restoring)$("#doc-title")?.focus?.({preventScroll:true});
+}
+/* The editor is the page's one text area. Changes go through insertText so the browser's own undo keeps working. */
+function docEdit(start,end,text,selStart,selEnd){
+ const ta=$("#doc-text");ta.focus();ta.setSelectionRange(start,end);let done=false;try{done=document.execCommand("insertText",false,text)}catch{}
+ if(!done)ta.setRangeText(text,start,end,"end");ta.setSelectionRange(selStart??start+text.length,selEnd??selStart??start+text.length);docChanged();
+}
+function docChanged(){const s=docState,ta=$("#doc-text");if(!s||!s.editable)return;s.text=String(ta.value).replace(/\r\n?/g,"\n");docPaint()}
+function docFormat(kind){
+ const ta=$("#doc-text"),v=ta.value,a=ta.selectionStart,b=ta.selectionEnd,sel=v.slice(a,b);
+ const wrap=(mark,hint)=>{const n=mark.length;if(sel&&v.slice(a-n,a)===mark&&v.slice(b,b+n)===mark)return docEdit(a-n,b+n,sel,a-n,b-n);if(sel.startsWith(mark)&&sel.endsWith(mark)&&sel.length>=2*n)return docEdit(a,b,sel.slice(n,-n),a,b-2*n);const t=sel||hint;docEdit(a,b,mark+t+mark,a+n,a+n+t.length)};
+ const lines=fn=>{const from=v.lastIndexOf("\n",a-1)+1,toRaw=v.indexOf("\n",Math.max(b-1,a)),to=toRaw<0?v.length:toRaw,block=v.slice(from,to).split("\n"),next=fn(block).join("\n");docEdit(from,to,next,from,from+next.length)};
+ if(kind==="bold")return wrap("**","bold text");
+ if(kind==="italic")return wrap("*","italic text");
+ if(kind==="code"){if(sel.includes("\n")||(!sel&&v.slice(v.lastIndexOf("\n",a-1)+1,a).trim()==="")){const t=sel||"code";return docEdit(a,b,"```\n"+t+"\n```\n",a+4,a+4+t.length)}return wrap("`","code")}
+ if(kind==="h2"||kind==="h3"){const marks=kind==="h2"?"## ":"### ";return lines(block=>block.map(l=>{const bare=l.replace(/^\s{0,3}#{1,6}\s+/,"");return l.startsWith(marks)?bare:marks+(bare||"Heading")}))}
+ if(kind==="ul")return lines(block=>block.every(l=>/^\s*[-*+]\s+/.test(l))?block.map(l=>l.replace(/^(\s*)[-*+]\s+/,"$1")):block.map(l=>l.replace(/^(\s*)(?:[-*+]|\d+[.)])?\s*/,"$1- ")));
+ if(kind==="ol")return lines(block=>block.every(l=>/^\s*\d+[.)]\s+/.test(l))?block.map(l=>l.replace(/^(\s*)\d+[.)]\s+/,"$1")):block.map((l,i)=>l.replace(/^(\s*)(?:[-*+]|\d+[.)])?\s*/,`$1${i+1}. `)));
+ if(kind==="quote")return lines(block=>block.every(l=>/^\s*>/.test(l))?block.map(l=>l.replace(/^\s*>\s?/,"")):block.map(l=>"> "+l));
+ if(kind==="link"){const url=/^https?:\/\/\S+$/.test(sel)?sel:"https://",label=url===sel?"link text":sel||"link text",t=`[${label}](${url})`;return url===sel?docEdit(a,b,t,a+1,a+1+label.length):docEdit(a,b,t,a+label.length+3,a+label.length+3+url.length)}
+ if(kind==="table"){const lead=a>0&&v[a-1]!=="\n"?"\n\n":a>1&&v[a-2]!=="\n"?"\n":"",t=lead+"| Column | Column |\n| --- | --- |\n| Text | Text |\n| Text | Text |\n";return docEdit(a,b,t,a+lead.length+2,a+lead.length+8)}
+}
+function docEnter(e){
+ const ta=$("#doc-text"),v=ta.value,a=ta.selectionStart;if(a!==ta.selectionEnd)return;
+ const from=v.lastIndexOf("\n",a-1)+1,line=v.slice(from,a),m=line.match(/^(\s*)([-*+]|(\d+)([.)]))\s+(\[[ xX]\]\s+)?(.*)$/);
+ if(!m||(v[a]!==undefined&&v[a]!=="\n"))return;e.preventDefault();
+ if(!m[6].trim())return docEdit(from,a,"",from,from);
+ docEdit(a,a,"\n"+m[1]+(m[3]?(Number(m[3])+1)+m[4]:m[2])+" "+(m[5]?"[ ] ":""));
+}
+async function docSave(force=false){
+ const s=docState;if(!s||!s.editable||s.saving||(!docDirty()&&!force))return;
+ s.saving=true;docPaint();
+ let status=0,j=null;const sent=s.text;
+ try{const r=await fetch("/document",{method:"POST",cache:"no-store",headers:{"content-type":"application/json","x-gtm-brain-token":EDIT_TOKEN},body:JSON.stringify({path:s.path,body:s.text,hash:s.hash})});status=r.status;j=await r.json()}catch{}
+ if(docState!==s)return;s.saving=false;
+ if(status===200&&j?.ok&&j.status==="saved"){
+  s.hash=j.hash||s.hash;s.savedAt=new Date().toISOString();s.sent=null;
+  if(typeof j.body==="string"){s.body=j.body;if(s.text===sent){const ta=$("#doc-text");ta.value=j.body;s.text=j.body}}
+  const text="Saved. Codex reads the new text before the work it applies to, from the next chat on.";
+  try{sessionStorage.setItem("gtm-doc-flash",JSON.stringify({path:s.path,text,tone:"ok"}))}catch{}
+  docPaint();docNotice(`<p>${esc(text)}</p>`,"ok");if(docPendingRefresh){docPendingRefresh=false;newer("saved")}return;
+ }
+ if(status===200&&j?.ok&&j.status==="proposal"){
+  s.sent=s.text;const text="Sent to the owner as a proposal. The document itself stays as it was until the owner approves the change.";
+  try{sessionStorage.setItem("gtm-doc-flash",JSON.stringify({path:s.path,text:text+" "+(j.note||""),tone:"warn"}))}catch{}
+  docPaint();docNotice(`<p><b>${esc(text)}</b></p>${j.note?`<p>${esc(j.note)}</p>`:""}`,"warn");return;
+ }
+ if(status===409&&j?.status==="stale"){
+  s.stale={hash:j.hash,body:String(j.body||"")};docPaint();
+  docNotice(`<p><b>${esc("This document changed since you opened it. Nothing was saved.")}</b> ${esc("Codex, a teammate or an edit by hand changed the file. Your text is still in the editor below; this is what the file says now:")}</p><pre class="doc-theirs" tabindex="0" aria-label="${esc("The file as it is now")}">${esc(s.stale.body)}</pre><p class="doc-choices"><button type="button" class="btn quiet" data-doc-stale="theirs">${esc("Load the file's version")}</button><button type="button" class="btn quiet" data-doc-stale="mine">${esc("Save mine over it")}</button></p>`,"warn");return;
+ }
+ docPaint();docNotice(`<p><b>${esc("Not saved.")}</b> ${esc(j?.note||(status?"The dashboard refused the save.":"The dashboard did not answer. Check that it is still running, then save again."))}</p>`,"warn");
+}
+document.addEventListener("click",e=>{
+ const t=e.target;if(!t?.closest)return;
+ if(t.closest("[data-doc-save]")){docSave();return}
+ const tool=t.closest("[data-md]");if(tool&&docState?.editable){if(docState.mode==="preview"){docState.mode="split";docMode()}docFormat(tool.dataset.md);return}
+ const mode=t.closest("[data-doc-mode]");if(mode&&docState){docState.mode=mode.dataset.docMode;docMode();return}
+ const stale=t.closest("[data-doc-stale]");if(stale&&docState?.stale){const s=docState;if(stale.dataset.docStale==="theirs"){s.body=s.text=s.stale.body;s.hash=s.stale.hash;s.stale=null;$("#doc-text").value=s.text;docPaint();docNotice("","")}else{s.hash=s.stale.hash;s.body=s.stale.body;s.stale=null;docSave(true)}return}
+ const head=t.closest("[data-doc-head]");if(head&&docState){const ta=docState.editable&&docState.mode!=="preview"?$("#doc-text"):null;
+  if(ta&&ta.value!==undefined){const at=ta.value.split("\n").slice(0,Number(head.dataset.docLine)).join("\n").length+(Number(head.dataset.docLine)?1:0);ta.focus();ta.setSelectionRange(at,at);const lh=parseFloat(typeof getComputedStyle==="function"?getComputedStyle(ta).lineHeight:"22")||22;ta.scrollTop=Math.max(0,Number(head.dataset.docLine)*lh-40)}
+  document.getElementById(head.dataset.docHead)?.scrollIntoView?.({block:"start",behavior:"smooth"});return}
+ const open=t.closest("[data-doc]");if(open&&!t.closest("a")){openDoc(open.dataset.doc);return}
+});
+function docMode(){const s=docState;try{sessionStorage.setItem("gtm-doc-mode",s.mode)}catch{}const body=$("#doc-body");body.className="doc-body mode-"+s.mode;for(const b of document.querySelectorAll("[data-doc-mode]"))b.setAttribute("aria-pressed",String(b.dataset.docMode===s.mode))}
+document.addEventListener("input",e=>{if(e.target?.id==="doc-text")docChanged()});
+document.addEventListener("keydown",e=>{
+ if(view!=="doc"||!docState?.editable)return;
+ const mod=e.metaKey||e.ctrlKey,key=String(e.key||"").toLowerCase(),inText=e.target?.id==="doc-text";
+ if(mod&&key==="s"){e.preventDefault();docSave();return}
+ if(!inText)return;
+ if(mod&&key==="b"){e.preventDefault();docFormat("bold")}else if(mod&&key==="i"){e.preventDefault();docFormat("italic")}else if(e.key==="Enter"&&!mod&&!e.shiftKey&&!e.isComposing)docEnter(e);
+});
+/* The preview follows the editor: the same share of the way down. */
+document.addEventListener("scroll",e=>{const ta=e.target;if(ta?.id!=="doc-text"||docState?.mode!=="split")return;const p=$("#doc-preview"),span=ta.scrollHeight-ta.clientHeight;if(span>0)p.scrollTop=(ta.scrollTop/span)*(p.scrollHeight-p.clientHeight)},true);
+if(typeof addEventListener==="function")addEventListener("beforeunload",e=>{if(docDirty()&&!refreshing){e.preventDefault();e.returnValue=""}});
+{const plain=show;show=v=>{
+ if(view==="doc"&&v!=="doc"&&docDirty()&&typeof confirm==="function"&&!confirm("Leave this document? Your unsaved changes will be lost."))return;
+ if(view==="doc"&&v!=="doc"){docState=null;try{sessionStorage.removeItem("gtm-doc")}catch{}if(docPendingRefresh){docPendingRefresh=false;plain(v);newer("left");return}}
+ if(v==="doc"&&!docState){let path="";try{path=sessionStorage.getItem("gtm-doc")||""}catch{}if(docInfo(path)){plain("doc");openDoc(path,true);return}v="config"}
+ plain(v)}}
+/* ---------- One search box for the whole brain. Names, documents and workflows are matched in the page, forgiving
+   typos, missing letters, part words and word order; notes are searched by the dashboard server over the memory
+   index (GET /search), or in the page over the note list when that is not available. Reads only. ---------- */
+const fzFold=s=>Array.from(String(s??""),c=>{const b=c.normalize("NFD")[0].toLowerCase();return b==="ł"?"l":b==="ø"?"o":b==="ß"?"s":b}).join("");
+const fzWords=t=>{const out=[],re=/[\p{L}\p{N}]+/gu,f=fzFold(t);let m;while((m=re.exec(f)))out.push({w:m[0],at:m.index});return out};
+/* Edit distance (a swap of two neighbours counts once), given up as soon as it passes max. */
+function fzDistance(a,b,max){
+ if(Math.abs(a.length-b.length)>max)return max+1;
+ let prev2=null,prev=Array.from({length:b.length+1},(_,i)=>i);
+ for(let i=1;i<=a.length;i++){const row=[i];let best=i;
+  for(let j=1;j<=b.length;j++){let v=Math.min(prev[j]+1,row[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));if(prev2&&i>1&&j>1&&a[i-1]===b[j-2]&&a[i-2]===b[j-1])v=Math.min(v,prev2[j-2]+1);row.push(v);if(v<best)best=v}
+  if(best>max)return max+1;prev2=prev;prev=row}
+ return prev[b.length];
+}
+/* How well one typed word matches one word of a text: [points, letters of the word it covers], or null. */
+function fzWord(q,w){
+ if(w===q)return [100,w.length];
+ if(w.startsWith(q))return [80+10*q.length/w.length,q.length];
+ if(q.length>=3&&w.includes(q))return [55,-1];
+ const max=q.length<3?0:q.length<=5?1:2;if(!max||w[0]!==q[0])return null;
+ let best=null;for(const len of new Set([q.length-1,q.length,q.length+1,w.length])){if(len<2||len>w.length)continue;const d=fzDistance(q,w.slice(0,len),max);if(d<=max&&(!best||d<best[0]||(d===best[0]&&len===w.length)))best=[d,len]}
+ return best?[62-18*best[0]+(best[1]===w.length?6:0),best[1]]:null;
+}
+/* A query against the fields of one thing ([[text, weight], ...], the first is its title). Every typed word has to
+   match somewhere; the order does not matter. Returns the points and the parts of the title to highlight. */
+function fzMatch(query,fields){
+ const tokens=typeof query==="string"?fzWords(query).map(x=>x.w):query;if(!tokens.length)return null;
+ const words=fields.map(([text])=>fzWords(text));let total=0;const marks=[];
+ for(const q of tokens){let best=null;
+  for(let f=0;f<fields.length;f++)for(const x of words[f]){const m=fzWord(q,x.w);if(!m)continue;const points=m[0]*fields[f][1];if(!best||points>best.points)best={points,f,at:m[1]<0?x.at+x.w.indexOf(q):x.at,len:m[1]<0?q.length:m[1]}}
+  if(!best)return null;total+=best.points;if(best.f===0)marks.push([best.at,best.at+best.len])}
+ const title=fzFold(fields[0][0]);
+ return {score:total/tokens.length+(title===tokens.join(" ")?30:title.startsWith(tokens.join(" "))?12:0),marks};
+}
+const fzMark=(text,marks)=>{const t=String(text??"");if(!marks?.length||fzFold(t).length!==t.length)return esc(t);let out="",pos=0;for(const [a,b] of [...marks].sort((x,y)=>x[0]-y[0])){if(a<pos)continue;out+=esc(t.slice(pos,a))+"<mark>"+esc(t.slice(a,b))+"</mark>";pos=b}return out+esc(t.slice(pos))};
+/* Best first. When several words were typed and nothing has them all, what has one of them is still shown, lower. */
+const fzRank=(query,items,fieldsOf,limit=6)=>{const tokens=fzWords(query).map(x=>x.w),out=[];for(const item of items){const m=fzMatch(tokens,fieldsOf(item));if(m)out.push({item,...m})}
+ if(!out.length&&tokens.length>1)for(const item of items){let best=null;for(const t of tokens){if(t.length<3)continue;const m=fzMatch([t],fieldsOf(item));if(m&&(!best||m.score>best.score))best=m}if(best)out.push({item,score:best.score/2,marks:best.marks})}
+ return out.sort((a,b)=>b.score-a.score).slice(0,limit)};
+/* The nearest names to a query that found nothing: looser than a match, for "did you mean". */
+function fzNearest(query,names,limit=3){const q=fzFold(query).replace(/[^\p{L}\p{N}]+/gu,"");if(q.length<3)return [];const max=Math.max(2,Math.ceil(q.length/2));
+ return names.map(n=>{let best=max+1;for(const x of fzWords(n)){if(x.w.length<3)continue;const d=fzDistance(q.slice(0,x.w.length+2),x.w,max);if(d<=Math.max(1,Math.floor(x.w.length/3))&&d<best)best=d}return [best,n]}).filter(([d])=>d<=max).sort((a,b)=>a[0]-b[0]).slice(0,limit).map(([,n])=>n)}
+
+const gqEntityKind=e=>({person:"Person",organization:e.subtype?e.subtype.charAt(0).toUpperCase()+e.subtype.slice(1):"Company",product:"Product",meeting:"Meeting",event:"Event",tool:"Tool"})[e.kind]||e.kind;
+let gqState={q:"",groups:[],flat:[],active:-1,notes:null,notesFor:"",notesHow:"",loading:false,seq:0},gqServer=LIVE?null:false,gqNotesAll=null,gqTimer=null;
+function gqLocal(q){
+ const groups=[],C=PL?.configuration,W=PL?.workflows;
+ const people=fzRank(q,PL?.entities?.rows||[],e=>[[e.name,1],[(e.aliases||[]).join(" "),.9],[e.email||"",.8]],6);
+ groups.push({key:"entities",label:"People and companies",rows:people.map(r=>({kind:"entity",id:r.item.id,name:r.item.name,title:fzMark(r.item.name,r.marks),detail:[gqEntityKind(r.item),r.item.relation,r.item.notes?noteCount(r.item.notes):"",!r.marks.length?(r.item.aliases||[]).concat(r.item.email||[]).find(a=>fzMatch(q,[[a,1]]))||"":""].filter(Boolean).join(" · ")}))});
+ const docs=C?[...C.documents.filter(d=>d.path).map(d=>({path:d.path,title:d.title,what:d.base?"Base document":"Document"})),...(C.rules.path?[{path:C.rules.path,title:"Rules",what:"How notes are kept",also:"RULES.md rules"}]:[]),...(C.schema.path?[{path:C.schema.path,title:"Schema",what:"What the brain records about each kind",also:"SCHEMA.md schema fields kinds"}]:[])]:[];
+ groups.push({key:"documents",label:"Documents",rows:fzRank(q,docs,d=>[[d.title,1],[d.also||"",.8],[d.path,.5]],5).map(r=>({kind:"doc",path:r.item.path,title:fzMark(r.item.title,r.marks),detail:r.item.what}))});
+ groups.push({key:"workflows",label:"Workflows",rows:fzRank(q,W?.files||[],f=>[[f.title,1],[f.slug||"",.7]],4).map(r=>({kind:"workflow",path:r.item.path,slug:r.item.slug,title:fzMark(r.item.title,r.marks),detail:r.item.ok?r.item.status:"needs fixing"}))});
+ groups.push({key:"topics",label:"Topics",rows:fzRank(q,active,c=>[[contextTitle(c),1],[c.slug,.6]],3).map(r=>({kind:"topic",slug:r.item.slug,title:fzMark(contextTitle(r.item),r.marks),detail:noteCount(r.item.totalMemories??r.item.memories.length)}))});
+ return groups;
+}
+const gqNoteRow=(n,q)=>{const text=String(n.content??n.text??""),tokens=fzWords(q).map(x=>x.w),words=fzWords(text);let at=0;const marks=[];
+ for(const t of tokens){let best=null;for(const x of words){const m=fzWord(t,x.w);if(m&&(!best||m[0]>best[0]))best=[m[0],x.at,m[1]<0?x.w.length:Math.max(m[1],Math.min(x.w.length,t.length))]}if(best)marks.push([best[1],best[1]+best[2]])}
+ if(marks.length)at=Math.max(0,Math.min(...marks.map(m=>m[0]))-50);const from=at?text.indexOf(" ",at)+1||at:0,slice=text.slice(from,from+170);
+ const c=D.contexts.find(x=>x.slug===n.context);
+ return {kind:"note",id:n.id,note:n,title:(from?"…":"")+fzMark(slice,marks.map(([a,b])=>[a-from,b-from]).filter(([a,b])=>a>=0&&b<=slice.length))+(text.length>from+170?"…":""),detail:[ageText(n.at),(n.authors||[]).map(authorName).join(", "),c?contextTitle(c):""].filter(Boolean).join(" · ")}};
+function gqNotesLocal(q){const list=gqNotesAll||PL?.memories?.first||[];return fzRank(q,list.filter(n=>n.state!=="withdrawn"),n=>[[n.text,1],[(n.tags||[]).join(" "),.6]],6).map(r=>r.item)}
+async function gqNotes(q,seq){
+ const s=gqState;let notes=null,how="";
+ if(gqServer!==false){try{const r=await fetch("/search?q="+encodeURIComponent(q)+"&limit=6",{cache:"no-store"});if(r.status===404||r.status===405){gqServer=false}else if(r.ok){const j=await r.json();if(Array.isArray(j.notes)){gqServer=true;notes=j.notes;how=j.more?`${j.more} more notes match. Add a word to narrow it.`:""}}}catch{}}
+ if(!notes){if(!gqNotesAll&&LIVE&&PL&&/^entities-[a-f0-9-]{36}\/notes\.json$/.test(PL.memories.file||"")){try{const r=await fetch(PL.memories.file);if(r.ok){const j=await r.json();if(Array.isArray(j.notes))gqNotesAll=j.notes}}catch{}}
+  notes=gqNotesLocal(q);const total=PL?.memories?.total||0;how=gqNotesAll?"Notes are matched on their first 320 characters.":total>(PL?.memories?.first||[]).length?`Only the ${(PL?.memories?.first||[]).length} newest of ${total} notes are searched in this saved copy.`:""}
+ if(gqState!==s||s.seq!==seq)return;s.notes=notes;s.notesFor=q;s.notesHow=how;s.loading=false;gqPaint();
+}
+function gqPaint(){
+ const s=gqState,box=$("#gq-results"),input=$("#gq");if(!s.q){box.hidden=true;box.innerHTML="";input.setAttribute("aria-expanded","false");return}
+ const groups=s.groups.slice(0,1).concat([{key:"notes",label:"Notes",rows:(s.notes||[]).map(n=>gqNoteRow(n,s.q)),how:s.notesHow,loading:s.loading}],s.groups.slice(1)).filter(g=>g.rows.length||g.loading);
+ s.flat=groups.flatMap(g=>g.rows);if(s.active>=s.flat.length)s.active=s.flat.length-1;let i=0;
+ const row=r=>{const n=i++;return `<button type="button" role="option" class="gq-opt${n===s.active?" on":""}" id="gq-opt-${n}" data-gq="${n}" aria-selected="${n===s.active}"><span class="gq-title">${r.title}</span>${r.detail?`<span class="gq-detail">${esc(r.detail)}</span>`:""}</button>`};
+ const nothing=!s.flat.length&&!s.loading,near=nothing?fzNearest(s.q,[...(PL?.entities?.rows||[]).map(e=>e.name),...(PL?.configuration?.documents||[]).map(d=>d.title)]):[];
+ box.innerHTML=groups.map(g=>`<div class="gq-group" role="group" aria-label="${esc(g.label)}"><div class="gq-label">${esc(g.label)}${g.loading?` <span class="spin"></span>`:""}</div>${g.rows.map(row).join("")}${g.loading&&!g.rows.length?`<p class="gq-how">${esc("Searching notes…")}</p>`:""}${g.how?`<p class="gq-how">${esc(g.how)}</p>`:""}</div>`).join("")+
+  (nothing?`<div class="gq-none"><p><b>${esc("Nothing found for")} "${esc(s.q)}"</b></p><p>${esc(`Searched ${PL?.entities?.rows?.length??D.names.length} people and companies, ${PL?.memories?.total??0} notes, the documents and the workflows.`)}</p>${near.length?`<p>${esc("Closest names:")} ${near.map(n=>`<button type="button" class="linkbtn" data-gq-try="${esc(n)}">${esc(n)}</button>`).join(", ")}</p>`:`<p>${esc("Try a name, a company, or a few words from a conversation.")}</p>`}</div>`:`<p class="gq-keys" aria-hidden="true">${esc("↑ ↓ to move · Enter to open · Esc to close")}</p>`);
+ box.hidden=false;input.setAttribute("aria-expanded","true");if(s.active>=0)input.setAttribute("aria-activedescendant","gq-opt-"+s.active);else input.removeAttribute("aria-activedescendant");
+ document.getElementById("gq-opt-"+s.active)?.scrollIntoView?.({block:"nearest"});
+}
+function gqSearch(value){
+ const q=String(value||"").trim().slice(0,120);clearTimeout(gqTimer);
+ if(!q){gqState={q:"",groups:[],flat:[],active:-1,notes:null,notesFor:"",notesHow:"",loading:false,seq:gqState.seq+1};gqPaint();return}
+ const seq=gqState.seq+1;gqState={q,groups:gqLocal(q),flat:[],active:0,notes:gqState.notesFor===q?gqState.notes:gqNotesLocal(q),notesFor:gqState.notesFor===q?q:"",notesHow:"",loading:q.length>=2&&LIVE,seq};gqPaint();
+ if(q.length>=2)gqTimer=setTimeout(()=>gqNotes(q,seq),180);
+}
+function gqClose(clear=false){if(clear)$("#gq").value="";gqSearch(clear?"":"");const box=$("#gq-results");box.hidden=true;$("#gq").setAttribute("aria-expanded","false")}
+function gqOpen(r){
+ if(!r)return;gqClose(true);$("#gq").blur?.();
+ if(r.kind==="entity"){
+  /* the Entities tab owns how an entity is shown; the address is #entities/<id> */
+  if(typeof openEntity==="function")openEntity(r.id);else{show("entities");try{if(typeof history!=="undefined")history.pushState(null,"","#entities/"+encodeURIComponent(r.id))}catch{}if(typeof dispatchEvent==="function"&&typeof HashChangeEvent!=="undefined")dispatchEvent(new HashChangeEvent("hashchange"));if(typeof peQuery!=="undefined"){peQuery=r.name;syncField("#pe-q",r.name);renderEntitiesTab()}}
+ }else if(r.kind==="doc"||r.kind==="workflow")openDoc(r.path);
+ else if(r.kind==="topic"){contextDirectory=false;chan=r.slug;renderContextDirectory();renderChannels();show("contexts")}
+ else if(r.kind==="note"){const n=r.note;addCitations([{...n,content:n.content??n.text,authors:n.authors||[],people:n.people||[],tools:n.tools||[],actions:n.actions||[],source:n.source||[],tags:n.tags||[]}]);jumpToMemory(n.id)}
+ updateChatLink();publishRoute();
+}
+$("#gq").oninput=e=>gqSearch(e.target.value);
+document.addEventListener("click",e=>{const t=e.target;if(!t?.closest)return;
+ const again=t.closest("[data-gq-try]");if(again){$("#gq").value=again.dataset.gqTry;gqSearch(again.dataset.gqTry);$("#gq").focus();return}
+ const opt=t.closest("[data-gq]");if(opt){e.stopPropagation?.();gqOpen(gqState.flat[Number(opt.dataset.gq)]);return}
+ if(!t.closest(".search-wrap")&&gqState.q)gqClose()});
+document.addEventListener("focusin",e=>{if(e.target?.id==="gq"&&e.target.value&&$("#gq-results").hidden)gqSearch(e.target.value)});
+document.addEventListener("keydown",e=>{
+ const a=document.activeElement,editing=["INPUT","TEXTAREA","SELECT"].includes(a?.tagName)||a?.isContentEditable,input=$("#gq");
+ if((e.key==="/"&&!editing)||((e.key==="k"||e.key==="K")&&(e.metaKey||e.ctrlKey))){e.preventDefault();input.focus();input.select?.();return}
+ if(a!==input)return;
+ if(e.key==="Escape"){e.preventDefault();gqClose(true);input.blur();return}
+ if(!gqState.q)return;
+ if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();const n=gqState.flat.length;if(n){gqState.active=(gqState.active+(e.key==="ArrowDown"?1:-1)+n)%n;gqPaint()}return}
+ if(e.key==="Enter"){e.preventDefault();gqOpen(gqState.flat[Math.max(0,gqState.active)])}
+});
+renderInbox();renderConfig();renderEntitiesTab();renderNotesTab();renderWorkflowsTab();
+(function(){let v="home";try{v=sessionStorage.getItem("gtm-view")||"home"}catch{}if(v==="search"||v==="explore"||!document.querySelector(`.view[data-view="${v}"]`))v="home";show(v)})();
 const _show=show;show=v=>{_show(v);try{sessionStorage.setItem("gtm-view",v)}catch{}};
 renderSkills();
 const contextRow=c=>`<button class="context-row" data-v="contexts" data-ch="${esc(c.slug)}"><span class="context-name"><strong>${esc(contextTitle(c))}</strong></span><span class="context-excerpt">${esc((c.summaryPlaceholder?c.rule:firstSentence(summaryText(c)))||"No notes yet.")}</span><span class="context-meta">${esc(noteCount(c.totalMemories??c.memories.length))}<span aria-hidden="true">↗</span></span></button>`;
@@ -1341,7 +1830,7 @@ function renderOverview(){
  if(typeof window!=="undefined")window.dispatchEvent(new Event("gtm-project-change"));
  const count=attentionCount;
  $("#h-input").innerHTML=`<div class="section-heading"><h2>${esc("Needs your attention")}</h2>${count?`<button class="linkbtn" data-v="questions" aria-label="${esc("Review all items needing attention")}">${count} →</button>`:""}</div>`+(count?`${D.questions.slice(0,3).map(questionCard).join("")}${workspaceReviewHtml()}${(D.merges||[]).length?`<button class="attention-row" data-v="people">${esc("Names to review")}<span>${D.merges.length} →</span></button>`:""}<button class="linkbtn view-more" data-v="questions">${esc("Review all in detail")} →</button>`:`<div class="calm-empty"><span aria-hidden="true">✓</span><div><strong>${esc("No pending questions or reviews")}</strong></div></div>`);
- $("#h-recent").innerHTML=`<div class="section-heading"><h2>${esc("Recently recorded")}</h2><button class="linkbtn" data-v="memories">${esc("View all memories")} →</button></div>`+(overviewRecent().filter(m=>!(m.kind==="question"&&(m.tags||[]).includes("brain-question"))).slice(0,3).map(m=>`<article class="recent-item" data-chat-memory="${esc(m.id)}">${overviewTags(m)}<button class="recent-title" data-mem="${esc(m.id)}"><strong>${esc(m.content.slice(0,160))}${m.content.length>160?"…":""}</strong></button><span class="record-meta">${recordMeta(m)}</span>${recentReferences(m)}</article>`).join("")||`<p class="empty">${esc("New notes from Codex will appear here, with their sources.")}</p>`);
+ $("#h-recent").innerHTML=`<div class="section-heading"><h2>${esc("Recently saved")}</h2><button class="linkbtn" data-v="notes">${esc("See all notes")} →</button></div>`+(overviewRecent().filter(m=>!(m.kind==="question"&&(m.tags||[]).includes("brain-question"))).slice(0,5).map(m=>`<article class="recent-item" data-chat-memory="${esc(m.id)}"><button class="recent-title" data-mem="${esc(m.id)}"><strong>${esc(m.content.slice(0,200))}${m.content.length>200?"…":""}</strong></button><span class="record-meta">${whenText(m.at)}${recordAuthors(m)?" · "+esc(recordAuthors(m)):""}</span>${recentReferences(m)}</article>`).join("")||`<p class="empty">${esc("Nothing saved yet. Tell Codex something worth remembering and it appears here.")}</p>`);
  const scope=selectedProject();
  const exploreContexts=D.contexts.filter(c=>c.status==="active"&&(!scope||[...(scope.contexts||[]),...(scope.loaded||[])].includes(c.slug)));
  const exploreMemories=[...new Map([...ALL,...D.questions,...D.decisions].map(m=>[m.id,m])).values()].filter(m=>!scope||(m.tags||[]).includes("project:"+projectSlug));
@@ -1488,7 +1977,7 @@ try{const raw=sessionStorage.getItem(refreshKey);sessionStorage.removeItem(refre
  if(dashboardSkills.length){skillGroup=st.skillGroup||"all";$("#skill-search").value=st.skillQuery||"";renderSkillLibrary(st.skillQuery||"");}
  contextDirectory=st.contextDirectory??false;contextQuery=st.contextQuery||"";contextStatus=st.contextStatus||"active";renderContextDirectory();chan=st.chan;renderChannels();$("#gq").value=st.gq||"";$("#q").value=st.q||"";memoryKinds=st.memoryKinds||(st.memoryKind&&st.memoryKind!=="all"?[st.memoryKind]:[]);memoryContexts=st.memoryContexts||[];mems();
  entFilter=["company","team","teams"].includes(st.entFilter)?"organization":st.entFilter||"all";entRelationship=st.entRelationship||"all";entQ=st.entQ;entName=st.entName;entContext=st.entContext;entPair=st.entPair;renderEntities();renderEntityDetail();
- show(document.querySelector('.view[data-view="'+st.view+'"]')?st.view:"config");searchFilter=searchKinds.some(([k])=>k===st.searchFilter)?st.searchFilter:"all";searchReturn=st.searchReturn||"home";if(st.gq){gsearch(st.gq);searchPage=st.searchPage||0;paintSearch();}
+ show(document.querySelector('.view[data-view="'+st.view+'"]')?st.view:"home");searchFilter=searchKinds.some(([k])=>k===st.searchFilter)?st.searchFilter:"all";searchReturn=st.searchReturn||"home";if(st.gq){gsearch(st.gq);searchPage=st.searchPage||0;paintSearch();}
  document.querySelectorAll("details:not(.sources)").forEach((d,i)=>{if(st.details[i]!==undefined)d.open=st.details[i]});
  document.querySelectorAll("[data-sources]").forEach(d=>d.open=(st.sources||[]).includes(d.dataset.sources));
  document.querySelectorAll(".changes").forEach((d,i)=>d.classList.toggle("open",!!st.exact[i]));
@@ -1502,7 +1991,7 @@ let restoringRoute=false;
 function updateBackLink(){
  const detail=(view==="people"&&!!entName)||(view==="contexts"&&!contextDirectory);
  $("#view-back").hidden=!detail;
- $("#view-back-label").textContent=view==="people"?"Back to people & organizations":"Back to contexts";
+ $("#view-back-label").textContent=view==="people"?"Back to people & organizations":"Back to topics";
 }
 $("#view-back-label").textContent="Back";
 $("#view-back").onclick=()=>{
@@ -1511,7 +2000,7 @@ $("#view-back").onclick=()=>{
  else return;
  updateChatLink();publishRoute(true);
 };
-function routeState(){const state={view};if(view==="memories"){if(memoryKinds.length)state.type=memoryKinds.join(",");if(memoryContexts.length)state.context=memoryContexts.join(",")}if(view==='contexts'){if(!contextDirectory&&chan)state.context=chan;else{if(contextQuery)state.query=contextQuery;if(contextStatus!=='active')state.status=contextStatus;}}if(projectSlug)state.project=projectSlug;if(view==='people'&&entName){state.entity=entName;if(entContext)state.context=entContext}if(view==='search'&&searchText){state.search=searchText;state.type=searchFilter}return state}
+function routeState(){const state={view};if(view==="memories"){if(memoryKinds.length)state.type=memoryKinds.join(",");if(memoryContexts.length)state.context=memoryContexts.join(",")}if(view==='contexts'){if(!contextDirectory&&chan)state.context=chan;else{if(contextQuery)state.query=contextQuery;if(contextStatus!=='active')state.status=contextStatus;}}if(projectSlug)state.project=projectSlug;if(view==='people'&&entName){state.entity=entName;if(entContext)state.context=entContext}if(view==='search'&&searchText){state.search=searchText;state.type=searchFilter}if(view==='doc'&&docState)state.path=docState.path;return state}
 function publishRoute(replace=false){
  updateBackLink();
  if(restoringRoute||typeof history==='undefined'||typeof URLSearchParams==='undefined')return;
@@ -1528,7 +2017,8 @@ function restoreRoute(){
   const project=params.get('project');projectSlug=(D.projects||[]).some(p=>p.slug===project)?project:'';renderProject();renderOverview();renderContextDirectory();
   const entity=params.get('entity');entName=D.names.some(n=>n.name===entity)?entity:'';entContext=context&&D.contexts.some(c=>c.slug===context)?context:'';entPair='';renderEntityDetail();
   memoryKinds=(params.get("type")||"").split(",").filter(k=>["note","question","decision","action"].includes(k));memoryContexts=params.get("view")==="memories"?(params.get("context")||"").split(",").filter(slug=>D.contexts.some(c=>c.slug===slug)):[];mems();
-  const next=params.get('view');show(next==='search'&&!params.get('search')?'explore':next);
+  const next=params.get('view');if(next==='doc'&&docInfo(params.get('path'))&&docState?.path!==params.get('path'))openDoc(params.get('path'),true);
+  show(next==='search'&&!params.get('search')?'explore':next);
   if(next==='search'&&params.get('search')){$('#gq').value=params.get('search');searchFilter=searchKinds.some(([k])=>k===params.get('type'))?params.get('type'):'all';gsearch(params.get('search'))}
   else{$('#gq').value='';searchText=''}
   updateChatLink();
@@ -1541,12 +2031,13 @@ if(typeof history!=='undefined'&&typeof addEventListener==='function'){
 }
 
 updateChatLink();
-function freshness(ok){$("#freshness").classList.toggle("stale",!ok);$("#freshness").textContent=(ok?"Dashboard refreshed: ":"Connection lost. Dashboard last refreshed: ")+localDateTime(D.generatedAt)}
+function freshness(ok){if(typeof renderBrainHealth==="function")renderBrainHealth(ok);$("#freshness").classList.toggle("stale",!ok);$("#freshness").textContent=(ok?"Dashboard refreshed: ":"Connection lost. Dashboard last refreshed: ")+localDateTime(D.generatedAt)}
 freshness(true);
-(function renderBrainHealth(){var el=$("#brain-health");if(!el)return;var staleCount=stale.length;var ago=D.generatedAt?localDateTime(D.generatedAt):"";var mins=D.generatedAt?Math.max(0,Math.round((Date.now()-Date.parse(D.generatedAt))/60000)):null;var rel=mins===null?"":mins<1?"just now":mins<60?mins+(mins===1?" minute ago":" minutes ago"):mins<1440?Math.round(mins/60)+(Math.round(mins/60)===1?" hour ago":" hours ago"):Math.round(mins/1440)+(Math.round(mins/1440)===1?" day ago":" days ago");el.innerHTML=rel?'<span class="health-sync" title="'+esc(ago)+'">● '+esc("Updated "+rel)+'</span>':""})();
+function renderBrainHealth(ok=true){const el=$("#brain-health");if(!el||!D.generatedAt)return;el.textContent=(ok?"Updated ":"Connection lost. Last updated ")+ageText(D.generatedAt);el.setAttribute("title","This page was last updated "+localDateTime(D.generatedAt)+". It updates by itself when something is saved.");el.classList.toggle("stale",!ok)}
+renderBrainHealth();
 let refreshing=false;
 function refreshStatus(state){if(["pending","running","failed"].includes(state?.status))$("#freshness").textContent=(state.status==="failed"?"Dashboard refresh failed. Your saved records are safe; retry in Codex.":"Saved changes are being added to this dashboard.")}
-function newer(revision){if(revision&&revision!==D.generatedAt&&!refreshing){refreshing=true;refreshPage()}}
+function newer(revision){if(revision&&revision!==D.generatedAt&&!refreshing){if(docDirty()||docState?.saving){docPendingRefresh=true;docNotice();return}refreshing=true;refreshPage()}}
 // Events follow a completed render. Polling also recovers after server restarts or lost events.
 if(LIVE){
  if(typeof EventSource!=="undefined"){const events=new EventSource("/events");events.addEventListener("revision",e=>{freshness(true);newer(JSON.parse(e.data).generatedAt)});events.onerror=()=>freshness(false)}
@@ -1554,6 +2045,5 @@ if(LIVE){
  setInterval(check,1000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)check()});check();
 }else{$("#freshness").textContent=("Saved dashboard copy. Generated: ")+D.generatedAt;setInterval(refreshPage,60000)}
 </script>
-<script src="ui/dashboard.js" defer></script>
 </body>
 </html>

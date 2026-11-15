@@ -13,9 +13,10 @@ import { readSchema, brainKinds, fieldsFor, US } from "./schema.mjs";
 import { ruleFindings } from "./rules-check.mjs";
 import { readAskSource } from "./ask-source.mjs";
 import { whereRows } from "./where.mjs";
+import { readOurRules } from "./our-rules.mjs";
 import { rulesFile, schemaFile, settingsFile } from "./brain-paths.mjs";
-import { population } from "./population.mjs";
-import { healthLine } from "./health-line.mjs";
+import { population, POPULATION_RANGES } from "./population.mjs";
+import { healthLine, summaryRuns } from "./health-line.mjs";
 import { listWorkflows, listRuns, TYPE as WORKFLOW_TYPE } from "./workflows.mjs";
 import { relationOverview } from "./relations.mjs";
 import { buildRelationLog } from "./relation-log.mjs";
@@ -29,13 +30,15 @@ const exists = (root, rel) => { try { return statSync(join(root, rel)).isFile();
 
 /* The last commit date of each path, in one git call, and the paths with changes not saved yet. */
 function lastCommits(root, paths) {
-  const out = {}, dirty = new Set(); if (!paths.length) return { out, dirty };
-  const text = git(root, ["log", "--format=%x00%cI", "--name-only", "--", ...paths]);
-  let at = null;
-  for (const line of text.split("\n")) { if (line.startsWith("\0")) at = line.slice(1).trim(); else if (line.trim() && at && !out[line.trim()]) out[line.trim()] = at; }
+  const out = {}, who = {}, dirty = new Set(); if (!paths.length) return { out, who, dirty };
+  const text = git(root, ["log", "--format=%x00%cI%x09%an", "--name-only", "--", ...paths]);
+  let at = null, by = null;
+  for (const line of text.split("\n")) { if (line.startsWith("\0")) [at, by] = line.slice(1).trim().split("\t"); else if (line.trim() && at && !out[line.trim()]) { out[line.trim()] = at; who[line.trim()] = by || null; } }
   for (const entry of git(root, ["status", "--porcelain", "-z", "--", ...paths]).split("\0")) if (entry.length > 3) dirty.add(entry.slice(3));
-  return { out, dirty };
+  return { out, who, dirty };
 }
+/* Who made a file's last saved change (the commit's author); nobody while it has changes not saved yet. */
+const changedBy = (rel, commits) => (rel && commits.who?.[rel] && !commits.dirty.has(rel) ? commits.who[rel] : null);
 /* When a file last changed: its last commit, or the file's own time while it has changes not saved (or was never committed). */
 const changedAt = (root, rel, commits, updated = null) => {
   const c = commits.out[rel] || null;
@@ -69,7 +72,7 @@ export function ourRules(text) {
 function configuration(root, admin, { documents, commits, findings, tools, plugin, compileMode }) {
   const docs = documents.filter(d => d.extra?.type !== WORKFLOW_TYPE);
   const state = d => !d.filled ? "not written" : d.status === "approved" ? "approved" : "draft";
-  const rows = docs.map(d => ({ slug: d.slug, title: d.title, path: d.path, state: state(d), applies_to: d.applies_to, changed: changedAt(root, d.path, commits, d.updated), by: d.by, base: !!d.base, starter: STARTERS.includes(d.slug) }));
+  const rows = docs.map(d => ({ slug: d.slug, title: d.title, path: d.path, state: state(d), applies_to: d.applies_to, changed: changedAt(root, d.path, commits, d.updated), by: d.by, changed_by: changedBy(d.path, commits), base: !!d.base, starter: STARTERS.includes(d.slug) }));
   // A base document nobody has made yet is a row too: the team sees what is missing.
   for (const slug of STARTERS) if (!rows.some(r => r.slug === slug)) rows.push({ slug, title: slug === "icp" ? "ICP" : slug.split("-").map(w => w[0].toUpperCase() + w.slice(1)).join(" "), path: null, state: "not written", applies_to: [], changed: null, by: null, base: true, starter: true });
   const rank = r => (r.starter ? STARTERS.indexOf(r.slug) : STARTERS.length);
@@ -77,18 +80,29 @@ function configuration(root, admin, { documents, commits, findings, tools, plugi
 
   const RULES = rulesFile(root); let rulesText = ""; try { rulesText = readFileSync(join(root, RULES), "utf8"); } catch {}
   const ask = readAskSource(root), placement = whereRows(root), own = ourRules(rulesText);
+  // Our rules with what each applies to, as the rules reader understands them; the plain lines when it cannot read them
+  let ownParsed = own.map(text => ({ text: cut(text, 600), applies: null, when: null, mode: null }));
+  try {
+    const parsed = readOurRules(root).rules; const list = v => (Array.isArray(v) ? v : v ? [v] : []);
+    if (parsed.length) ownParsed = parsed.map(r => ({ text: cut(r.text, 600),
+      applies: r.tag ? list(r.tag.applies).map(a => (a && typeof a === "object" ? String(Object.values(a).find(v => typeof v === "string") || "") : String(a)).replace(/_/g, " ")).filter(Boolean).join(", ") || null : null,
+      when: r.tag?.when ? list(r.tag.when).join(", ") : null, mode: r.tag?.mode || null }));
+  } catch {}
   const byRule = {}; for (const f of findings) byRule[f.rule] = (byRule[f.rule] || 0) + 1;
-  const rules = { path: rulesText ? RULES : null, changed: rulesText ? changedAt(root, RULES, commits) : null,
+  const rules = { path: rulesText ? RULES : null, changed: rulesText ? changedAt(root, RULES, commits) : null, changed_by: rulesText ? changedBy(RULES, commits) : null,
     count: placement.length + own.length, placement: placement.length, own: own.map(r => cut(r, 200)),
     problems: findings.length, by_rule: byRule, findings: findings.slice(0, 12).map(f => ({ rule: f.rule, what: cut(f.what, 240) })),
+    // the rules browser: every rule as a row a person can read, and every finding of the rules check with its choices
+    placement_rows: placement.map(r => ({ what: cut(r.what, 300), where: cut(r.where, 400) })), own_rules: ownParsed,
+    all_findings: findings.slice(0, 500).map(f => ({ rule: f.rule, kind: f.kind || null, subject: f.subject ? cut(f.subject, 120) : null, what: cut(f.what, 400), choices: (f.choices || []).slice(0, 4).map(c => cut(c, 300)) })),
     ask: { defaults: ask.defaults, rows: ask.rows.map(r => ({ topic: r.topic, source: r.source, good_for: r.good_for })), problems: ask.problems.map(p => ({ line: p.line, problem: cut(p.problem, 200) })) } };
 
   const s = readSchema(root);
-  const schema = { path: s.missing ? null : schemaFile(root), changed: s.missing ? null : changedAt(root, schemaFile(root), commits), error: s.error ? cut(s.error.message, 400) : null, kinds: [], relations: [] };
+  const schema = { path: s.missing ? null : schemaFile(root), changed: s.missing ? null : changedAt(root, schemaFile(root), commits), changed_by: s.missing ? null : changedBy(schemaFile(root), commits), error: s.error ? cut(s.error.message, 400) : null, kinds: [], relations: [] };
   if (s.schema) {
-    schema.kinds = Object.entries(s.schema.kinds).map(([kind, k]) => ({ kind, fields: k.fields.map(f => ({ name: f.name, required: f.required })),
-      subtypes: Object.entries(k.subtypes || {}).map(([name, v]) => ({ name, fields: (v.fields || []).map(f => ({ name: f.name, required: f.required })) })) }));
-    schema.relations = Object.entries(s.schema.relations).map(([type, r]) => ({ type, from: r.from, to: r.to, required: !!r.required, built_in: !!r.built_in, about: cut(r.about, 160) }));
+    schema.kinds = Object.entries(s.schema.kinds).map(([kind, k]) => ({ kind, fields: k.fields.map(f => ({ name: f.name, required: f.required, about: cut(f.about, 240) })),
+      subtypes: Object.entries(k.subtypes || {}).map(([name, v]) => ({ name, about: cut(v.about, 200), fields: (v.fields || []).map(f => ({ name: f.name, required: f.required, about: cut(f.about, 240) })) })) }));
+    schema.relations = Object.entries(s.schema.relations).map(([type, r]) => ({ type, from: r.from, to: r.to, required: !!r.required, one: !!r.one, built_in: !!r.built_in, about: cut(r.about, 160) }));
   } else schema.kinds = brainKinds(root).map(kind => ({ kind, fields: [], subtypes: [] }));
 
   const settings = { path: settingsFile(root), changed: changedAt(root, settingsFile(root), commits), company: admin.company || null, owner: admin.owner || null,
@@ -233,16 +247,22 @@ export function pillarData(root, { registry = lib.readNames(root), admin = lib.r
   const unread = [], section = (name, read, empty) => { try { return read(); } catch { unread.push(name); return empty; } };
   const notes = section("memories", () => noteIndex(full), []);
   let runs = []; try { runs = listRuns(root); } catch {}
-  let pop = null;
+  let pop = null; const R = POPULATION_RANGES;
   try { const p = population(root); pop = { at: p.at, saved_this_week: p.saved.last_7_days, average_week: p.saved.average_4_weeks_before, duplicates: p.duplicates.exact + p.duplicates.near,
-    entities_without_notes: p.entities.without_notes, entities_total: p.entities.total, missing_required: p.entities.missing_required, notes: p.notes }; } catch { pop = null; }
+    entities_without_notes: p.entities.without_notes, entities_total: p.entities.total, missing_required: p.entities.missing_required, notes: p.notes,
+    // what the Overview turns into items: each number with whether it is outside the range the chat start reports
+    duplicates_exact: p.duplicates.exact, duplicates_near: p.duplicates.near, duplicates_flag: p.notes >= R.min_notes && p.duplicates.share > R.duplicates_max,
+    missing_required_fields: p.entities.missing_required_fields || {}, schema_untouched: !!p.entities.schema_untouched, uncited: p.citations.uncited, uncited_of: p.citations.judged,
+    uncited_flag: p.notes >= R.min_notes && p.citations.judged >= R.min_notes && p.citations.uncited_share > R.uncited_max,
+    without_source: p.sources.without, without_source_flag: p.notes >= R.min_notes && p.sources.without_share > R.no_source_max }; } catch { pop = null; }
+  let summaryError = null; try { const e = summaryRuns(root).error; if (e) summaryError = { at: e.at, context: e.context || null, what: cut(e.what || e.why, 200), todo: cut(e.todo, 200) }; } catch {}
   const entities = section("entities", () => {
     const kinds = [...new Set([...brainKinds(root), ...registry.map(e => e.kind || "person")])], { rows, details } = entityCards(root, registry, admin, notes, full);
     return { kinds: kinds.map(k => ({ kind: k, count: rows.filter(e => e.kind === k).length })), rows, details };
   }, { kinds: [], rows: [], details: {} });
   const tagCount = new Map(); for (const n of notes) for (const t of n.tags) tagCount.set(t, (tagCount.get(t) || 0) + 1);
   return {
-    health: healthText(root, meetings),
+    health: healthText(root, meetings), summary_error: summaryError,
     configuration: section("configuration", () => configuration(root, admin, { documents, commits, findings: ruleList, tools, plugin, compileMode }), EMPTY_CONFIGURATION()),
     entities,
     memories: { notes, total: notes.length, in_force: notes.filter(n => n.state === "in force").length,

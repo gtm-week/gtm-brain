@@ -13,6 +13,7 @@ import * as lib from "./brain.mjs";
 import { readSchema, fieldsFor } from "./schema.mjs";
 import { normalizeSource } from "./pointers.mjs";
 import { ENTITIES_DIR } from "./layout.mjs";
+import { TEMPLATES } from "./brain-paths.mjs";
 
 const DAY = 864e5;
 const nowMs = () => process.env.GTM_BRAIN_NOW ? Date.parse(process.env.GTM_BRAIN_NOW) : Date.now();
@@ -140,9 +141,9 @@ export function computePopulation(root, { now = nowMs() } = {}) {
     at: new Date(now).toISOString(),
     notes: notes.length,
     saved: { last_7_days: week, average_4_weeks_before: Math.round((before / 4) * 10) / 10, history_days: Math.floor((now - oldest) / DAY) },
-    duplicates: { exact, near, share: share(exact + near, notes.length), examples },
+    duplicates: { exact, near, share: share(exact + near, notes.length), exact_share: share(exact, notes.length), examples },
     entities: { total: tracked.length, without_notes: without.length, without_notes_share: share(without.length, tracked.length), without_notes_examples: without.slice(0, 5).map(e => e.name),
-      missing_required: missing.length, missing_required_share: share(missing.length, tracked.length), missing_required_fields: byField, missing_required_examples: missing.slice(0, 5) },
+      missing_required: missing.length, missing_required_share: share(missing.length, tracked.length), missing_required_fields: byField, missing_required_examples: missing.slice(0, 5), schema_untouched: schemaUntouched(root) },
     citations: { uncited, waiting_for_summary: waiting, judged, uncited_share: share(uncited, judged) },
     sources: { without: noSource, without_share: share(noSource, notes.length) },
     capture_rate: "not measured",
@@ -161,6 +162,17 @@ export function population(root, { now = nowMs(), cache = true } = {}) {
   return p;
 }
 
+/* True while the brain's SCHEMA.md is still one GTM Brain shipped (this version's or an earlier one's): the team
+   has not said what it wants to keep, so what the file marks required is our default, not their rule. */
+export function schemaUntouched(root) {
+  try {
+    const current = readFileSync(join(root, lib.schemaFile(root)), "utf8"), dir = new URL("../templates/", import.meta.url);
+    const shipped = [readFileSync(new URL(TEMPLATES.schema, dir), "utf8")];
+    try { for (const f of readdirSync(new URL("legacy/schema/", dir))) if (f.endsWith(".md")) shipped.push(readFileSync(new URL(`legacy/schema/${f}`, dir), "utf8")); } catch {}
+    return shipped.includes(current);
+  } catch { return false; }
+}
+
 const pct = x => `${Math.round(x * 100)}%`;
 /* What is out of range, as short phrases; empty when the brain is within every range. */
 export function outOfRange(p, r = POPULATION_RANGES) {
@@ -170,13 +182,18 @@ export function outOfRange(p, r = POPULATION_RANGES) {
   if (compared && week < avg * r.week_low) out.push(`too empty: ${week} note${week === 1 ? "" : "s"} saved in the last 7 days against ${avg} a week before`);
   if (compared && week > avg * r.week_high) out.push(`too full: ${week} notes saved in the last 7 days against ${avg} a week before`);
   if (p.notes >= r.min_notes) {
-    if (p.duplicates.share > r.duplicates_max) out.push(`${pct(p.duplicates.share)} duplicates (${p.duplicates.exact} exact, ${p.duplicates.near} near)`);
+    // exact copies only: "near" (the same source record on the same day) is what one chat or one meeting that
+    // yields several notes looks like, and flagged a real brain at 15% with no copy in it (2026-11-15)
+    if ((p.duplicates.exact_share ?? 0) > r.duplicates_max) out.push(`${pct(p.duplicates.exact_share)} duplicates (${p.duplicates.exact} notes with the same content as another)`);
     if (p.sources.without_share > r.no_source_max) out.push(`${pct(p.sources.without_share)} of notes without a source`);
-    if (p.citations.judged >= r.min_notes && p.citations.uncited_share > r.uncited_max) out.push(`${pct(p.citations.uncited_share)} of summarised notes cited nowhere`);
+    // notes no summary cites are not reported: summaries are written on demand since 0.35.0 (the background run is
+    // retired), so nobody is behind on them; the number stays in the population report
   }
   if (p.entities.total >= r.min_entities) {
     if (p.entities.without_notes_share > r.entities_without_notes_max) out.push(`${p.entities.without_notes} of ${p.entities.total} entities without notes`);
-    if (p.entities.missing_required_share > r.entities_missing_required_max) out.push(`${p.entities.missing_required} of ${p.entities.total} entities missing a required field`);
+    // not against a schema nobody chose: the shipped SCHEMA.md marks fields required, and a brain that got it on
+    // upgrade fails on every entity before anyone has decided what to keep
+    if (!p.entities.schema_untouched && p.entities.missing_required_share > r.entities_missing_required_max) out.push(`${p.entities.missing_required} of ${p.entities.total} entities missing a required field`);
   }
   return out;
 }

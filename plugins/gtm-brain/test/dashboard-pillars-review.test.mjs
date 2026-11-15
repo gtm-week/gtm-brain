@@ -107,7 +107,7 @@ test("health line: what the chat start prints, with real content and without the
   // if the instruction is ever reworded, nothing addressed to the model reaches the page
   assert.doesNotMatch(pillars.healthText(root, overview, () => "health: last sync: gmail 2026-11-13 10:00 UTC. Tell the person only when they ask; never raise it yourself."), /Tell the person|never raise/);
   const p = page(D);
-  assert.match(p.node("#health-line").innerHTML, /last sync: gmail/); assert.doesNotMatch(p.node("#health-line").innerHTML, /Say this/);
+  assert.match(p.node("#ov-more").innerHTML, /Sync and capture details.*last sync: gmail/s, "the status line is a fold on Overview, not a header"); assert.doesNotMatch(p.node("#ov-more").innerHTML, /Say this/);
 });
 
 test("Memories: the first page holds a full page of notes in force, so opening the dashboard fetches nothing", async () => {
@@ -216,8 +216,8 @@ test("Workflows and Entities on a brain with runs, its own skill and a customer:
 test("health line: a page without the tabs' data claims nothing about the brain's health", () => {
   for (const make of [d => { delete d.pillars; }, d => { d.pillars = null; d.pillarsUnread = true; }]) {
     const older = structuredClone(D); make(older);
-    const p = page(older), el = p.node("#health-line");
+    const p = page(older), el = p.node("#ov-more");
     assert.ok(el.hidden || !/Nothing to report/.test(el.innerHTML), "an older page or unread tabs do not say all is quiet");
   }
-  assert.match(page({ ...structuredClone(D), pillars: { ...structuredClone(D.pillars), health: null } }).node("#health-line").innerHTML, /Nothing to report yet/, "a brain with nothing to report says so");
+  assert.match(page({ ...structuredClone(D), pillars: { ...structuredClone(D.pillars), health: null } }).node("#ov-more").innerHTML, /Nothing to report yet/, "a brain with nothing to report says so");
 });

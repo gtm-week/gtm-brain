@@ -112,19 +112,20 @@ test("health line: the chat start's line without its instruction to the model", 
   assert.deepEqual(ourRules("## Our rules\n\nText.\n- one\n2. two\n## Next\n- not"), ["one", "two"]);
 });
 
-test("page: opens on Configuration under the health line, every row opens its file and a prepared chat, nothing writes", () => {
+test("page: opens on Overview, a base document row opens in the page, every prepared chat names the brain, nothing writes by itself", () => {
   const p = page(D);
-  assert.equal(p.run("view"), "config");
-  assert.match(p.node("#health-line").innerHTML, /<b>Health<\/b>/);
+  assert.equal(p.run("view"), "home");
+  assert.match(p.node("#nav").innerHTML, /^<button data-v="home"[^>]*aria-current="page"[^>]*><span>Overview<\/span><\/button><button data-v="config"/, "one flat navigation, Overview first");
+  assert.doesNotMatch(p.node("#nav").innerHTML, /More/);
+  assert.match(p.node("#ov-inbox").innerHTML, /Needs your attention|Nothing needs you right now/);
   const cfg = p.node("#cfg-docs").innerHTML;
   assert.match(cfg, /Pricing.*approved/s); assert.match(cfg, /Ideal customer profile.*not written.*Help%20me%20write%20our%20Ideal%20customer%20profile/s);
-  assert.match(cfg, /href="file:\/\/[^"]*pricing\.md"/, "a saved copy opens the file itself");
+  assert.match(cfg, /<tr data-doc="pricing\.md"><th scope="row"><button class="linkbtn pl-doc-open" data-doc="pricing\.md">Pricing<\/button>/, "the whole row opens the document in the page");
+  assert.doesNotMatch(cfg, /Applies to|Other documents/);
   const chats = [...html(p).matchAll(/class="pl-chat" href="(codex:\/\/threads\/new[^"]*)"/g)].map(m => new URL(m[1].replace(/&amp;/g, "&")));
   assert.ok(chats.length > 10); for (const u of chats) { assert.equal(u.searchParams.get("path"), D.brain); assert.match(u.searchParams.get("prompt"), /^Use GTM Brain\. /); }
   assert.match(p.node("#cfg-rules").innerHTML, /Always ask before tagging a client/); assert.match(p.node("#cfg-rules").innerHTML, /Deal stage and amount/);
   assert.match(p.node("#cfg-schema").innerHTML, /SCHEMA\.md/); assert.match(p.node("#cfg-settings").innerHTML, /Reflow/);
-  const live = page(D, { live: true });
-  assert.match(live.node("#cfg-docs").innerHTML, /href="\/file\?path=pricing\.md"/, "the live dashboard opens files through its own server");
   assert.doesNotMatch(html(p), /<form|data-say=|>Edit<|>Save<|>Approve<|>Delete</);
 });
 
@@ -242,7 +243,7 @@ test("page: Memories shows date, age, source and what replaced what; a filter fe
   const p = page(D);
   const list = p.node("#pm-list").innerHTML;
   assert.match(list, /Ola Kowalska runs returns and logistics/); assert.match(list, /Replaces [0-9-]+: Ola Kowalska runs returns at Acme Retail\./);
-  assert.match(list, /\(3 days ago\)/); assert.match(list, /Sources/);
+  assert.match(list, /title="[^"]+">3 days ago<\/time>/, "a date reads as how long ago, with the exact time on hover"); assert.match(list, /Sources/);
   assert.doesNotMatch(list, /Jan Zielinski left/, "in force by default");
   assert.match(p.node("#pm-population").innerHTML, /Saved this week/); assert.match(p.node("#pm-population").innerHTML, /Duplicates/);
   p.run('pmF.state="";renderNotesTab()');
@@ -265,12 +266,12 @@ test("page: Memories shows date, age, source and what replaced what; a filter fe
   assert.match(file.node("#pm-status").textContent, /Open the live dashboard to filter all 120 notes/);
 });
 
-test("page: Workflows shows each file's status, trigger and runs, and the skills; More keeps the earlier views", () => {
+test("page: Workflows shows each file's status, trigger and runs, and the skills; the earlier views stay reachable", () => {
   const p = page(D); p.run('show("workflows")');
   const w = p.node("#pw-files").innerHTML;
   assert.match(w, /Outbound.*Trigger: <b>manual<\/b>/s); assert.match(w, /Weekly review.*every Monday at 09:00/s); assert.match(w, /4 steps|\d+ steps/);
   assert.match(p.node("#pw-skills").innerHTML, /gtm-brain-workflow/);
-  p.run('show("home")'); assert.match(p.node("#subnav").innerHTML, /data-v="home"[^>]*aria-current="page"[^>]*>Overview/); assert.match(p.node("#subnav").innerHTML, /data-v="explore"/);
+  p.run('show("contexts")'); assert.match(p.node("#nav").innerHTML, /data-v="notes" class="on"/, "an earlier view lights the place it belongs to; there is no More menu");
   const older = structuredClone(D); delete older.pillars; const o = page(older);
   assert.match(o.node("#cfg-docs").innerHTML, /made by an older version/, "a page rendered by an older plugin still loads");
 });

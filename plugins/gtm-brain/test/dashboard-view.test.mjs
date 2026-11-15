@@ -182,7 +182,7 @@ test(`optional chat stays short and excludes unrelated attention items`,()=>{
 test(`empty lists hide unusable controls and populated lists retain search recovery`,()=>{
  const D=data();D.contexts.forEach(c=>c.memories=[]);D.questions=[];
  const empty=page(D);
- assert.equal(empty.node('#project-picker').hidden,false);
+ assert.equal(empty.node('#project-picker').hidden,true,'a project is never a control over the whole page');
  assert.match(empty.node('#project-detail').innerHTML,/No projects linked|Brak podłączonych projektów/);
  assert.equal(empty.node('#memory-filter').hidden,true);
  assert.match(empty.node('#mem-list').innerHTML,/No notes yet|Nie ma jeszcze notatek/);
@@ -190,9 +190,9 @@ test(`empty lists hide unusable controls and populated lists retain search recov
  assert.equal(empty.node('#people-toolbar').hidden,true);
  // A newly linked project restores the complete picker; removing the last link hides it again.
  empty.run('D.projects=[{slug:"website",title:"Website",path:"/tmp/website",contexts:[],loaded:[],pointer:true}];renderProject()');
- assert.equal(empty.node('#project-picker').hidden,false);
+ assert.equal(empty.node('#project-picker').hidden,true,'a project is never a control over the whole page');
  assert.match(empty.node('#project-select').innerHTML,/Website/);
- empty.run('D.projects=[];renderProject()');assert.equal(empty.node('#project-picker').hidden,false);
+ empty.run('D.projects=[];renderProject()');assert.equal(empty.node('#project-picker').hidden,true,'a project is never a control over the whole page');
  const populated=data();
  populated.names=[{name:'Example',kind:'company',aliases:[],emails:[],contexts:[],mentions:0}];
  const full=page(populated);
