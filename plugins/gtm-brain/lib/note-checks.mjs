@@ -94,11 +94,13 @@ export function restatement(pool, note, { speakers = [], cache = new Map() } = {
     const quiet = same(mine.neg, f.neg) && subset(new Set(ours), new Set(evidence(m.source)));
     if (covered && quiet && (sharedCode ? types.length > 0 || ov >= 0.6 : ov >= 0.85)) return { kept: m };
     // said in other words: the same people, no value the kept note lacks, the same denials, and enough of the
-    // words (more when the note has no value to compare). Not decided here: the caller shows the kept note once
+    // words. Not decided here: the caller shows the kept note once
     // and the model, which reads both, says whether anything is new.
     // Only in the band where wording really differs: nearly the same words with one changed ("invoiced EUR 600"
     // after "agreed to EUR 600") is another fact and is saved as it is.
-    if (covered && quiet && sameWho && ov >= (mine.values.size ? 0.34 : 0.6) && ov < (mine.values.size ? 0.7 : 0.85) && (!cand || ov > cand.ov)) cand = { m, ov };
+    // Only for a note that states a value (an amount, a date, a count): without one there is nothing to compare,
+    // and "approved the annual discount" beside "approved the volume discount" would be held for nothing.
+    if (mine.values.size && covered && quiet && sameWho && ov >= 0.34 && ov < 0.7 && (!cand || ov > cand.ov)) cand = { m, ov };
     // the same fact with another value: one type whose values all differ from the kept note's
     const changable = !m.meeting && !m.meeting_id && !m.asset && !m.customer && !m.relation;
     // the same fact, not two of a kind: a shared code, most of the words, or another value in common with all
