@@ -45,7 +45,7 @@ process.exit(Number(process.env.GTM_PROJECT_LAUNCH_STATUS || 0));
   };
   t.after(() => {
     try { if (existsSync(join(root, 'work/dash.json'))) run(process.execPath, [join(plugin, 'server/dash.mjs'), root, '--stop']); }
-    finally { rmSync(scratch, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 }); }
+    finally { try { rmSync(scratch, { recursive: true, force: true, maxRetries: 40, retryDelay: 100 }); } catch {} }   // a watcher still writing into work/ must not fail a passed test (ENOTEMPTY on macOS)
   });
   call('setup_brain', { folder: root, company: 'Project Flow', one_liner: 'Synthetic project testing',
     owner: 'Alex Example <alex@example.invalid>', dashboard: 'on-demand' });
