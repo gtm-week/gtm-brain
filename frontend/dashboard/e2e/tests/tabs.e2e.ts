@@ -39,7 +39,8 @@ test('Configuration lists the base files with their state, RULES.md and SCHEMA.m
   await expect(screen.getByRole('heading', /^Base documents/)).toContainText(`${f.documents.filter(d => d.state !== 'not written').length} / `);
   for (const file of ['RULES.md', 'SCHEMA.md']) {
     await expect(screen.getByRole('heading', file, { level: 2 })).toBeVisible();
-    await expect(screen.getByRole('link', `Open ${file}`)).toHaveAttribute('href', `/file?path=${file}`);
+    // a brain on layout 3 keeps the two files in config/ (config/rules.md); older layouts keep them at the top
+    await expect(screen.getByRole('link', `Open ${file}`)).toHaveAttribute('href', new RegExp(`^/file\\?path=(config(/|%2F))?${file.replace('.', '\\.')}$`, 'i'));
   }
 });
 
