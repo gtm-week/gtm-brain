@@ -1,7 +1,7 @@
 // What a person sees on the live dashboard of a generated brain: the four tabs by pillar under the health line.
 import { test } from '@e2e-dev/web';
 import { expect } from 'e2e';
-import { fixture, TABS, kindTitle } from './fixture.ts';
+import { fixture, TABS, kindTitle, ENTITY_KIND } from './fixture.ts';
 
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -44,23 +44,32 @@ test('Configuration lists the base files with their state, RULES.md and SCHEMA.m
   }
 });
 
-test('Entities shows a count per kind equal to the brain, and an entity page with its notes', async ({ app, screen, browser }) => {
+test('Entities: a list to pick from with a count per kind, and the picked entity with its notes beside it', async ({ app, screen, browser }) => {
   const f = fixture(app.baseUrl);
   await app.open('/');
   await screen.getByRole('navigation', 'Main navigation').getByRole('button', 'Entities').tap();
-  for (const [kind, count] of Object.entries(f.kinds)) await expect(screen.getByRole('heading', new RegExp(`^${esc(kindTitle(kind))}\\s*${count}$`), { level: 2 })).toBeVisible();
-  await expect(browser.locator('#pe-groups [data-pe-kind]')).toHaveCount(Object.keys(f.kinds).length);
+  // one chip per kind that has entities, in plain plural words, with the brain's count
+  const total = Object.values(f.kinds).reduce((a, b) => a + b, 0);
+  await expect(browser.locator('#ent-kinds [data-ent-kind=""]')).toHaveText(new RegExp(`^All\\s*${total}$`));
+  for (const [kind, count] of Object.entries(f.kinds)) {
+    if (count) await expect(browser.locator(`#ent-kinds [data-ent-kind="${kind}"]`)).toHaveText(new RegExp(`^${esc(ENTITY_KIND[kind] ?? kindTitle(kind))}\\s*${count}$`));
+    else await expect(browser.locator(`#ent-kinds [data-ent-kind="${kind}"]`)).toHaveCount(0);
+  }
+  const list = screen.getByRole('listbox');
   // the meeting is an entity of its own
-  await expect(browser.locator('[data-pe-kind="meeting"]').getByRole('button', f.meeting.name)).toBeVisible();
-  // a search narrows the groups to the matching names
-  await screen.getByLabel('Search names and aliases').fill(f.person.name);
-  const card = browser.locator('[data-pe-kind="person"] article');
-  await expect(card).toHaveCount(1);
-  await expect(card).toContainText(`${f.person.notes.length} notes`);
-  await card.getByRole('button', f.person.name).tap();
-  await expect(screen.getByRole('heading', f.person.name, { level: 1 })).toBeVisible();
-  await screen.getByText('Evidence & history').tap();
-  for (const note of f.person.notes) await expect(browser.locator('#entity-detail')).toContainText(note);
+  await browser.locator('#ent-kinds [data-ent-kind="meeting"]').tap();
+  await expect(list.getByRole('option', new RegExp(esc(f.meeting.name)))).toBeVisible();
+  await browser.locator('#ent-kinds [data-ent-kind=""]').tap();
+  // typing narrows the list; Enter opens the highlighted row beside it
+  const search = screen.getByLabel('Find by name, company or email');
+  await search.fill(f.person.name);
+  await expect(list.getByRole('option')).toHaveCount(1);
+  await expect(list.getByRole('option')).toContainText(`${f.person.notes.length} notes`);
+  await search.press('Enter');
+  await expect(screen.getByRole('heading', f.person.name, { level: 2 })).toBeVisible();
+  await expect(list).toBeVisible();
+  for (const note of f.person.notes) await expect(browser.locator('#ent-detail')).toContainText(note);
+  await expect(browser.locator('#ent-detail').getByRole('link', new RegExp(`^Chat about ${esc(f.person.name)}$`))).toHaveAttribute('href', /^codex:\/\/threads\/new/);
 });
 
 test('Memories lists notes newest first, shows a replaced note as replaced, and the entity search filters', async ({ app, screen, browser }) => {

@@ -230,6 +230,38 @@ h1,h2,h3{font-family:var(--display);margin:0;letter-spacing:-.01em}
 .pl-dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;margin:8px 0;font-size:13px}.pl-dl dt{color:var(--muted)}.pl-dl dd{margin:0}
 .pl-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}.pl-stats div{background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}.pl-stats span{font-family:var(--label);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}.pl-stats b{font-family:var(--display);font-size:22px}.pl-stats small{color:var(--muted);font-size:11.5px}
 .pl-filters{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}.pl-filters label{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center}.pl-filters select,.pl-filters input{font:inherit;font-size:13px;background:var(--surface);color:var(--ink);border:1px solid var(--rule);border-radius:3px;padding:6px 8px;max-width:220px}
+.ent-wrap{display:grid;grid-template-columns:minmax(300px,390px) minmax(0,1fr);height:calc(100vh - 270px);min-height:520px;border:1px solid var(--rule);border-radius:6px;overflow:hidden;background:var(--surface)}
+.ent-side{display:flex;flex-direction:column;min-height:0;min-width:0;border-right:1px solid var(--rule);background:var(--paper)}
+.ent-tools{padding:14px 14px 10px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--rule)}
+.ent-search{position:relative;display:flex;align-items:center}.ent-search svg{position:absolute;left:11px;width:15px;height:15px;color:var(--muted);pointer-events:none}
+.ent-search input{width:100%;box-sizing:border-box;margin:0;padding:10px 12px 10px 34px;font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--rule);border-radius:4px}.ent-search input:hover{border-color:var(--muted)}.ent-search input:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+.ent-chips{display:flex;flex-wrap:wrap;gap:6px}.ent-chip{font:500 12px var(--body);color:var(--muted);background:transparent;border:1px solid var(--rule);border-radius:999px;padding:4px 10px;cursor:pointer;display:inline-flex;gap:6px;align-items:baseline}.ent-chip span{font-family:var(--mono);font-size:10.5px}.ent-chip-none{border-style:dashed}.ent-chip:hover{color:var(--ink);border-color:var(--muted)}.ent-chip-on,.ent-chip-on:hover{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}.ent-chip:focus-visible,.ent-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ent-selects{display:flex;gap:10px}.ent-selects label{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted)}.ent-selects select{font:inherit;font-size:12.5px;color:var(--ink);background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:6px 8px;min-width:0;width:100%}.ent-selects select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.ent-count{margin:0;padding:7px 14px;font-family:var(--label);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--soft)}
+.ent-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;outline:0}.ent-list:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}
+.ent-row{height:60px;box-sizing:border-box;display:flex;align-items:center;gap:11px;padding:0 14px;border-bottom:1px solid var(--soft);cursor:pointer;border-left:3px solid transparent}.ent-row:hover{background:var(--surface)}.ent-side:focus-within .ent-row.ent-active{background:var(--soft);box-shadow:inset 0 0 0 1px var(--accent)}.ent-row.ent-on,.ent-side:focus-within .ent-row.ent-on{background:var(--accent-soft);border-left-color:var(--accent)}
+.ent-row-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.ent-name{display:flex;align-items:center;gap:7px;min-width:0;font-size:14px;font-weight:600;color:var(--ink)}.ent-name-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ent-line{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ent-row-meta{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:11.5px;color:var(--muted);white-space:nowrap}.ent-row-meta b{color:var(--ink);font-weight:600}.ent-ago{font-size:11px}
+.ent-hit{background:var(--amber-soft);color:var(--amber);border-radius:2px;padding:0 1px}.ent-dim{color:var(--muted)}.ent-small{font-size:12px}
+.ent-av{flex:none;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;font:600 11.5px var(--display);letter-spacing:.02em;border-radius:7px;background:var(--soft);color:var(--muted)}.ent-av.ent-k-person{border-radius:50%;background:var(--accent-soft);color:var(--accent)}.ent-av.ent-k-organization{background:var(--amber-soft);color:var(--amber)}.ent-av.ent-k-product,.ent-av.ent-k-offering{background:var(--green-soft);color:var(--green)}.ent-av.ent-k-meeting,.ent-av.ent-k-event{background:var(--red-soft);color:var(--red)}.ent-av-big{width:52px;height:52px;font-size:18px;border-radius:11px}
+.ent-badge{flex:none;font:500 10.5px var(--label);letter-spacing:.03em;padding:1px 6px;border-radius:3px;background:var(--soft);color:var(--muted);white-space:nowrap}.ent-badge.ent-rel-customer,.ent-badge.ent-rel-team,.ent-badge.ent-rel-us,.ent-badge-strong{background:var(--green-soft);color:var(--green)}.ent-badge.ent-rel-prospect,.ent-badge.ent-rel-partner{background:var(--accent-soft);color:var(--accent)}
+.ent-none{padding:36px 22px;text-align:center;color:var(--muted);font-size:13px}.ent-none strong{display:block;color:var(--ink);font-size:15px;margin-bottom:6px}.ent-none p{margin:0 0 12px}
+.ent-detail{min-width:0;overflow-y:auto;overscroll-behavior:contain;padding:26px 30px 30px;outline:0}
+.ent-back{display:none;margin-bottom:14px}
+.ent-head{display:flex;gap:16px;align-items:flex-start}.ent-head-main{flex:1;min-width:0}.ent-head .pl-links{padding-top:4px}.ent-eyebrow{margin:0 0 4px;font:500 10.5px var(--label);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.ent-eyebrow .ent-badge{text-transform:none;letter-spacing:.02em}
+.ent-head h2{font-family:var(--display);font-size:26px;line-height:1.15;font-weight:650;letter-spacing:-.01em;color:var(--ink);margin:0;text-transform:none;overflow-wrap:anywhere;outline:0}.ent-lead{margin:6px 0 0;font-size:15px;color:var(--ink)}.ent-ident{margin:6px 0 0;font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}.ent-ident a{color:inherit}
+.ent-facts{display:flex;flex-wrap:wrap;gap:6px 22px;margin:18px 0 0;padding:10px 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);font-size:12.5px;color:var(--muted)}.ent-facts b{color:var(--ink);font-weight:600}
+.ent-sec{margin-top:24px}.ent-sec>h3{margin:0 0 10px;font:500 10.5px var(--label);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:8px}.ent-sec>h3::after{content:"";flex:1;height:1px;background:var(--soft)}.ent-n{font-family:var(--mono);color:var(--ink)}.ent-sec p{margin:0 0 6px;font-size:14px;max-width:72ch}
+.ent-brief{margin:0;padding:0;list-style:none;max-width:72ch}.ent-brief li{font-size:14.5px;line-height:1.55;padding-left:14px;border-left:2px solid var(--accent);margin-bottom:10px}.ent-plain{margin:0;padding:0;list-style:none;font-size:14px}.ent-plain li{margin-bottom:4px}
+.ent-dl{display:grid;grid-template-columns:minmax(110px,max-content) 1fr;gap:7px 20px;margin:0 0 8px;font-size:14px}.ent-dl dt{color:var(--muted)}.ent-dl dd{margin:0;overflow-wrap:anywhere}.ent-unknown{color:var(--amber);font-style:italic}
+.ent-group{margin-bottom:14px}.ent-group h4{margin:0 0 7px;font-size:13px;font-weight:600;color:var(--ink)}.ent-links{display:flex;flex-wrap:wrap;gap:7px}
+.ent-link{display:inline-flex;align-items:center;gap:7px;max-width:100%;font:inherit;font-size:13px;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:999px;padding:3px 11px 3px 3px;cursor:pointer}.ent-link>span:not(.ent-av){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ent-link .ent-av{width:22px;height:22px;font-size:9px}.ent-link i{font-style:normal;font-family:var(--mono);font-size:10.5px;color:var(--muted)}button.ent-link:hover{border-color:var(--accent);color:var(--accent)}.ent-link-flat{cursor:default;padding-left:11px}.ent-link-ended{opacity:.65}
+.ent-history{margin:0;padding:0;list-style:none;font-size:13.5px}.ent-history li{display:grid;grid-template-columns:92px 1fr;gap:12px;padding:6px 0;border-top:1px solid var(--soft)}.ent-history li:first-child{border-top:0}.ent-history time{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.ent-note{padding:12px 0;border-top:1px solid var(--soft)}.ent-note:first-of-type{border-top:0;padding-top:2px}.ent-note-head{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:12px;color:var(--muted)}.ent-note-when{color:var(--ink);font-weight:600}.ent-note p{margin:5px 0 6px;font-size:14px;line-height:1.55;max-width:74ch;overflow-wrap:anywhere}.ent-note-src{font-size:12px}
+.ent-more{display:block;margin:10px 0 2px}.ent-foot{margin:28px 0 0;padding-top:14px;border-top:1px solid var(--rule);font-size:12.5px;color:var(--muted)}.ent-foot .linkbtn{font-size:12.5px}
+.ent-start{max-width:62ch}.ent-start h2{font-family:var(--display);font-size:22px;font-weight:650;color:var(--ink);margin:0 0 8px;text-transform:none;letter-spacing:0}.ent-start p{font-size:14px;margin:0 0 8px}.ent-start h3{margin:24px 0 10px;font:500 10.5px var(--label);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+@media(max-width:900px){.ent-wrap{grid-template-columns:1fr;height:auto;min-height:0}.ent-side{border-right:0}.ent-list{max-height:62vh}.ent-detail{border-top:1px solid var(--rule);padding:20px}.ent-wrap.ent-open .ent-side{display:none}.ent-wrap.ent-open .ent-detail{border-top:0}.ent-wrap.ent-open .ent-back{display:inline-block}.ent-head{flex-wrap:wrap}}
+@media(prefers-reduced-motion:no-preference){.ent-row,.ent-chip,.ent-link{transition:background-color .12s,border-color .12s,color .12s}}
 @media(max-width:900px){.pl-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.pl-row{flex-direction:column}}
 /* Documents: a reading page and a writing desk. The text column keeps a book's measure; the editor is the same page in monospace. */
 .doc-top{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:16px}.doc-heading{min-width:0;flex:1 1 420px}.doc-back{font-size:12.5px;color:var(--muted);margin-bottom:10px;display:inline-block}.doc-back:hover{color:var(--accent)}
@@ -299,7 +331,7 @@ time.pl-when{white-space:nowrap;cursor:help;text-decoration:underline dotted var
 <div id="compile-notice" role="status"></div>
   <section class="view" data-view="config"><div class="head"><h1>Configuration</h1><p class="sub">What Codex follows when it works for you: your base documents, the rules for keeping notes, and what the brain records about people and companies.</p></div><div class="cfg-tabs" id="cfg-tabs" role="tablist" aria-label="Parts of the configuration"></div><div id="cfg-docs" role="tabpanel"></div><div id="cfg-rules" role="tabpanel"></div><div id="cfg-schema" role="tabpanel"></div><div id="cfg-settings" role="tabpanel"></div></section>
   <section class="view" data-view="doc"><div id="doc-view"></div></section>
-  <section class="view" data-view="entities"><div class="head"><h1>Entities</h1><p class="sub">Who and what the brain knows, by kind. Open a name for its notes and connections.</p></div><div class="explore-toolbar"><div class="explore-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><label class="sr-only" for="pe-q">Search names and aliases</label><input id="pe-q" type="search" autocomplete="off" placeholder="Search names and aliases"></div></div><div id="pe-groups"></div></section>
+  <section class="view" data-view="entities"><div class="head"><h1>Entities</h1><p class="sub">The people, companies, products and meetings the brain knows about. Pick a name to read what is known about it and where each note came from.</p></div><div id="pe-groups"><div class="ent-wrap" id="ent-wrap"><div class="ent-side"><div class="ent-tools"><div class="ent-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><label class="sr-only" for="ent-q">Find by name, company or email</label><input id="ent-q" type="search" autocomplete="off" spellcheck="false" placeholder="Find by name, company or email" aria-controls="ent-list"></div><div class="ent-chips" id="ent-kinds" role="group" aria-label="Show only"></div><div class="ent-selects"><label for="ent-rel">Relation to us<select id="ent-rel"></select></label><label for="ent-sort">Sort by<select id="ent-sort"></select></label></div></div><p class="ent-count" id="ent-count" role="status" aria-live="polite"></p><p class="sr-only" id="ent-say" role="status" aria-live="polite"></p><div class="ent-list" id="ent-list" role="listbox" tabindex="0" aria-label="Entities. Arrow keys move, Enter opens."></div></div><section class="ent-detail" id="ent-detail" tabindex="-1" aria-label="What is known about the picked entity"></section></div></div></section>
   <section class="view" data-view="notes"><div class="head"><h1>Memories</h1><p class="sub">Everything the brain was told, newest first: notes, decisions and open questions, each with who said it and where it came from.</p></div><div class="explore-toolbar pl-filters mem-filters" id="pm-filters"></div><p class="m" id="pm-status" role="status" aria-live="polite"></p><div id="pm-list"></div><div id="pm-docs"></div></section>
   <section class="view" data-view="workflows"><div class="head"><h1>Workflows</h1><p class="sub">Repeatable jobs Codex runs for you, step by step: what each does, whether it is on, and where its runs stand.</p></div><div id="pw-files"></div><div id="pw-skills"></div></section>
   <section class="view" data-view="search"><div class="head"><h1 id="s-title" tabindex="-1">Search</h1><p class="sub" id="s-status" role="status" aria-live="polite"></p></div><div class="search-filters" id="s-filters" aria-label="Search result types"></div><div class="grid" id="s-grid"></div><div class="entity-pager" id="s-pages"></div></section>
@@ -938,7 +970,7 @@ function renderEntityDetail(){const panel=$("#entity-detail"),n=GRAPH.nodes.find
 }
 document.addEventListener("click",e=>{
   const close=e.target.closest("[data-entity-close]");if(close){entName="";entContext="";entPair="";renderEntityDetail();$("#people-list input").focus();return}
-  const b=e.target.closest("[data-entity]");if(b){entName=b.dataset.entity;if(b.hasAttribute("data-entity-context"))entContext=b.dataset.entityContext;entPair="";entPage=0;entGroup="";renderEntityDetail();show("people");$("#entity-title")?.focus();return}
+  const b=e.target.closest("[data-entity]");if(b){const known=D.pillars?.entities?.rows?.find(x=>x.name===b.dataset.entity);if(known&&typeof openEntityById==="function"&&openEntityById(known.id))return;entName=b.dataset.entity;if(b.hasAttribute("data-entity-context"))entContext=b.dataset.entityContext;entPair="";entPage=0;entGroup="";renderEntityDetail();show("people");$("#entity-title")?.focus();return}
   const g=e.target.closest("[data-entity-group]");if(g){entGroup=g.dataset.entityGroup||"";entPage=0;renderEntityDetail();$("#entity-neighborhood .eg")?.focus?.();return}
   const pg=e.target.closest("[data-entity-page]");if(pg&&!pg.disabled){entPage=Number(pg.dataset.entityPage)||0;renderEntityDetail();$("#entity-neighborhood .entity-pager button:not(:disabled)")?.focus();return}
   const p=e.target.closest("[data-entity-pair]");if(p){entPair=p.dataset.entityPair;renderEntityDetail();$("#entity-evidence-title").focus();return}
@@ -1130,28 +1162,189 @@ document.addEventListener("click",e=>{const t=e.target;if(!t?.closest)return;
  const k=t.closest("[data-cfg-kind]");if(k){document.getElementById("cfg-kind-"+k.dataset.cfgKind)?.scrollIntoView?.({block:"start",behavior:"smooth"});return}});
 document.addEventListener("keydown",e=>{const tab=e.target?.closest?.("[data-cfg-tab]");if(!tab||!["ArrowRight","ArrowLeft"].includes(e.key))return;const order=["docs","rules","schema","company"],i=(order.indexOf(cfgTab)+(e.key==="ArrowRight"?1:-1)+order.length)%order.length;cfgTab=order[i];renderConfigTabs();document.getElementById("cfg-tab-"+cfgTab)?.focus?.()});
 document.addEventListener("input",e=>{const id=e.target?.id;if(id!=="cfg-rule-q"&&id!=="cfg-schema-q")return;const pos=e.target.selectionStart;if(id==="cfg-rule-q"){cfgRuleQ=e.target.value;renderRulesBrowser()}else{cfgSchemaQ=e.target.value;renderSchemaBrowser()}const again=document.getElementById(id);again?.focus?.();try{again?.setSelectionRange?.(pos,pos)}catch{}});
-/* Entities: one group per kind; the first rows of each, the rest on scroll or search. */
+/* Entities: a list to pick from on the left (filter as you type, kind chips, relation and sort), the picked one on
+   the right (who or what it is, relation to us, details, links, history, notes). View only. The list draws a window
+   of rows, so thousands of entities cost the same as forty. */
 const PE_PAGE=40;let peQuery="",peLimits={};
 const peMatch=(e,q)=>!q||[e.name,...(e.aliases||[]),e.email||""].some(n=>String(n).toLowerCase().includes(q));
-function peCard(e){
- const kind=e.kind+(e.subtype?" · "+e.subtype:"");
- const fields=e.fields.length?e.fields.map(([k,v])=>`<span class="pl-field"><b>${esc(k)}</b> ${esc(v)}</span>`).join(""):(e.email?`<span class="pl-field">${esc(e.email)}</span>`:"")+(e.aliases.length?`<span class="pl-field"><b>${esc("also")}</b> ${esc(e.aliases.join(", "))}</span>`:"");
- return `<article class="pl-row"><div class="pl-row-main"><h3><button class="linkbtn" data-entity="${esc(e.name)}">${esc(e.name)}</button></h3><div class="pl-meta"><span class="pill kind">${esc(kind)}</span>${e.relation?`<span class="pl-rel">${esc(e.relation)}</span>`:""}<span>${e.last?esc("last mentioned")+" "+whenText(e.last):`<span class="pl-age">${esc("no notes yet")}</span>`}</span>${e.notes?`<span class="pl-age">${esc(noteCount(e.notes))}</span>`:""}</div>${fields?`<div class="pl-fields">${fields}</div>`:""}</div>${rowLinks(e.path,`Let's discuss ${e.name} (${kind}). Read the entity page and its notes first.`,e.name)}</article>`;
+const ENT_ROW=60,ENT_NOTES=12;
+const ENT_KINDS={person:["People","Person"],organization:["Companies","Company"],product:["Products","Product"],event:["Events","Event"],meeting:["Meetings","Meeting"],tool:["Tools","Tool"],offering:["Offerings","Offering"]};
+const ENT_REL={customer:"Customer",prospect:"Prospect",partner:"Partner",former_customer:"Former customer",team:"Our team",us:"Our company"};
+const ENT_FIELD={linkedin:"LinkedIn",hq:"Headquarters",url:"Link",how_we_met:"How we met",what_it_is:"What it is",who_it_is_for:"Who it is for"};
+const ENT_LINK={works_at:["Works at","People who work here"],reports_to:["Reports to","Direct reports"],partner_of:["Partner of","Partner of"],investor_in:["Investor in","Investors"],uses:["Uses","Used by"],speaker_at:["Speaker at","Speakers"],attended:["Attended","Who attended"],integrates_with:["Integrates with","Integrates with"],customer_of:["Customer of","Customers"]};
+const entWords=s=>String(s??"").replace(/[_-]+/g," ").trim();
+const entCap=s=>{const t=entWords(s);return t.charAt(0).toUpperCase()+t.slice(1)};
+const entPlural=k=>ENT_KINDS[k]?.[0]||kindTitle(k);
+const entKindWord=e=>e.kind==="organization"?(e.subtype&&e.subtype!=="company"?entCap(e.subtype):e.subtype?"Company":"Organization"):(ENT_KINDS[e.kind]?.[1]||entCap(e.kind));
+const entLinkLabel=l=>(ENT_LINK[l.type]?.[l.out?0:1])||(l.out?entCap(l.type):entCap(l.type)+" (from)");
+const entWho=a=>entWords(a).replace(/\b\p{L}/gu,c=>c.toUpperCase());
+const entAgo=at=>at?`<span title="${esc(localDateTime(at))}">${esc(ageText(at))}</span>`:"";
+const entInitials=e=>{const w=String(e.name).replace(/[^\p{L}\p{N}\s]/gu," ").trim().split(/\s+/).filter(Boolean);return ((e.kind==="person"&&w.length>1?w[0][0]+w[w.length-1][0]:(w[0]||"?").slice(0,2))).toUpperCase()};
+const entAvatar=(e,big)=>`<span class="ent-av ent-k-${esc(ENT_KINDS[e.kind]?e.kind:"other")}${big?" ent-av-big":""}" aria-hidden="true">${esc(entInitials(e))}</span>`;
+let exQ="",exKind="",exRel="",exSort="notes",exSel="",exActive=0,exRows=[],exFrom=-1,exReady=false,exNotesLimit=ENT_NOTES,exDetails=PL?.entities?.details||null,exDetailsState="",exIndex=null,exHay=null;
+try{const p=new URLSearchParams(String(location.hash||"").slice(1));if(p.get("view")==="entities"&&p.get("e"))exSel=p.get("e")}catch{}
+const entById=()=>exIndex||(exIndex=new Map((PL?.entities?.rows||[]).map(e=>[e.id,e])));
+const entHay=e=>{exHay||(exHay=new Map());let h=exHay.get(e.id);if(h===undefined){h=[e.name,...(e.aliases||[]),...(e.emails||[e.email||""]),e.company||""].join("\n").toLowerCase();exHay.set(e.id,h)}return h};
+const entMark=(text,q)=>{const s=String(text),i=q?s.toLowerCase().indexOf(q):-1;return i<0?esc(s):esc(s.slice(0,i))+`<mark class="ent-hit">${esc(s.slice(i,i+q.length))}</mark>`+esc(s.slice(i+q.length))};
+function entFiltered(){
+ const q=exQ.trim().toLowerCase(),counts={};let rows=[];
+ for(const e of PL.entities.rows){if(q&&!entHay(e).includes(q))continue;if(exRel&&!(e.rel||[]).includes(exRel))continue;counts[e.kind]=(counts[e.kind]||0)+1;rows.push(e)}
+ const total=rows.length;if(exKind)rows=rows.filter(e=>e.kind===exKind);
+ const name=(a,b)=>a.name.localeCompare(b.name),recent=(a,b)=>String(b.last||"").localeCompare(String(a.last||""));
+ rows.sort(exSort==="az"?name:exSort==="recent"?(a,b)=>recent(a,b)||name(a,b):(a,b)=>b.notes-a.notes||recent(a,b)||name(a,b));
+ return {rows,counts,total,q};
+}
+function entRowHtml(e,i,q){
+ const rel=(e.rel||[])[0],line=e.line||e.email||(e.aliases?.length?"Also known as "+e.aliases.join(", "):"");
+ return `<div class="ent-row${e.id===exSel?" ent-on":""}${i===exActive?" ent-active":""}" role="option" id="ent-o-${i}" aria-selected="${e.id===exSel}" aria-posinset="${i+1}" aria-setsize="${exRows.length}" data-ent-id="${esc(e.id)}">${entAvatar(e)}<span class="ent-row-main"><span class="ent-name"><span class="ent-name-text">${entMark(e.name,q)}</span>${rel?`<span class="ent-badge ent-rel-${esc(rel)}">${esc(ENT_REL[rel]||entCap(rel))}</span>`:""}</span><span class="ent-line">${line?esc(line):`<span class="ent-dim">${esc(entKindWord(e))}</span>`}</span></span><span class="ent-row-meta">${e.notes?`<span><b>${e.notes}</b> ${esc(e.notes===1?"note":"notes")}</span>`:e.last?"":`<span class="ent-dim">${esc("no notes yet")}</span>`}${e.last?`<span class="ent-ago">${e.notes?"":esc("mentioned ")}${entAgo(e.last)}</span>`:""}</span></div>`;
+}
+function entDrawList(force){
+ const box=$("#ent-list"),n=exRows.length,q=exQ.trim().toLowerCase();
+ const span=Math.ceil(((typeof innerHeight==="number"&&innerHeight)||900)/ENT_ROW)+8,from=Math.max(0,Math.min(Math.max(0,n-span),Math.floor((box.scrollTop||0)/ENT_ROW)-4));
+ if(!force&&from===exFrom)return;exFrom=from;const to=Math.min(n,from+span);
+ box.setAttribute("aria-activedescendant",n?"ent-o-"+exActive:"");
+ if(!n){const any=PL.entities.rows.length;box.innerHTML=`<div class="ent-none">${any?`<strong>${esc("Nothing matches")}</strong><p>${esc(exQ.trim()?`No name, company or email contains "${exQ.trim()}"`:"Nothing fits these filters")}${esc(exKind||exRel?" with the filters on.":".")}</p><button type="button" class="linkbtn" data-ent-reset>${esc("Clear search and filters")}</button>`:`<strong>${esc("Nobody here yet")}</strong><p>${esc("People, companies and products appear here as you tell Codex about them or connect a tool like your CRM, email or calendar.")}</p>`}</div>`;return}
+ let html=`<div style="height:${from*ENT_ROW}px" aria-hidden="true"></div>`;
+ for(let i=from;i<to;i++)html+=entRowHtml(exRows[i],i,q);
+ box.innerHTML=html+`<div style="height:${(n-to)*ENT_ROW}px" aria-hidden="true"></div>`;
+}
+function entDrawTools(f){
+ const chip=(k,label,c)=>`<button type="button" class="ent-chip${exKind===k?" ent-chip-on":""}${c?"":" ent-chip-none"}" data-ent-kind="${esc(k)}" aria-pressed="${exKind===k}">${esc(label)}<span>${c}</span></button>`;
+ const kinds=PL.entities.kinds.filter(k=>k.count>0||exKind===k.kind);
+ $("#ent-kinds").innerHTML=chip("","All",f.total)+kinds.map(k=>chip(k.kind,entPlural(k.kind),f.counts[k.kind]||0)).join("");
+ const all=PL.entities.rows.length,shown=f.rows.length;
+ $("#ent-count").textContent=shown===all?`${all} ${all===1?"entry":"entries"}`:`${shown} of ${all} shown`;
+}
+function entLoadDetails(){
+ if(exDetails||exDetailsState||!PL)return;const file=PL.entities.file;
+ if(!LIVE||!/^entities-[a-f0-9-]{36}\/entity-details\.json$/.test(file||"")){exDetailsState="none";return}
+ exDetailsState="loading";
+ fetch(file).then(r=>{if(!r.ok)throw Error("unavailable");return r.json()}).then(j=>{if(!j||typeof j.details!=="object"||!j.details)throw Error("invalid");exDetails=j.details;exDetailsState="ok"}).catch(()=>{exDetailsState="none"}).finally(()=>{entDrawDetail()});
+}
+/* The whole note list once it is here (the Memories tab's loader fetches it), else the page's first notes. */
+function entNoteList(){
+ if(pmAll)return {notes:pmAll,all:true};
+ if(LIVE&&!pmError){const p=pmLoad();if(p&&!p.entWaiting){p.entWaiting=true;p.then(()=>{entDrawDetail()})}return {notes:PL.memories.first||[],all:false,loading:true}}
+ return {notes:PL.memories.first||[],all:false};
+}
+const entChip=(o,extra="",cls="")=>o?.id&&entById().has(o.id)?`<button type="button" class="ent-link${cls}" data-ent-id="${esc(o.id)}">${entAvatar(entById().get(o.id))}<span>${esc(o.name)}</span>${extra}</button>`:`<span class="ent-link ent-link-flat${cls}"><span>${esc(o?.kind==="us"||o?.name==="us"?(PL.configuration?.settings?.company||"Our company"):o?.name||"Unknown")}</span>${extra}</span>`;
+function entFieldValue(v){return /^https?:\/\/\S+$/.test(v)?`<a href="${esc(v)}" target="_blank" rel="noopener noreferrer">${esc(v.replace(/^https?:\/\/(www\.)?/,"").replace(/\/$/,""))}</a>`:esc(v)}
+function entNoteHtml(n){
+ const who=(n.authors||[]).map(entWho).filter(Boolean).join(", ");
+ return `<article class="ent-note"><div class="ent-note-head"><span class="ent-note-when">${entAgo(n.at)}</span>${n.kind&&n.kind!=="note"?`<span class="ent-badge">${esc(entCap(n.kind))}</span>`:""}${who?`<span>${esc("noted by")} ${esc(who)}</span>`:""}</div><p>${esc(n.text)}</p>${n.source?.length?`<div class="ent-note-src">${sourcesHtml(n.source)}</div>`:`<div class="ent-note-src ent-dim">${esc("No source recorded")}</div>`}</article>`;
+}
+function entStartHtml(){
+ const rows=PL.entities.rows,top=[...rows].filter(e=>e.notes).sort((a,b)=>b.notes-a.notes).slice(0,8),recent=[...rows].filter(e=>e.last).sort((a,b)=>String(b.last).localeCompare(String(a.last))).slice(0,8);
+ if(!rows.length)return `<div class="ent-start"><h2>${esc("Nobody here yet")}</h2><p>${esc("This is where the people, companies and products your team deals with will show up, each with what is known about them and where it came from.")}</p><p>${esc("To add the first ones, tell Codex about a customer or a meeting, or connect your CRM, email or calendar.")}</p><p><a class="pl-chat" href="${esc(askLink("Help me add the first people and companies to the brain."))}">${esc("Start in a chat")} <span aria-hidden="true">↗</span></a></p></div>`;
+ const list=(title,items,extra)=>items.length?`<h3>${esc(title)}</h3><div class="ent-links">${items.map(e=>entChip(e,extra(e))).join("")}</div>`:"";
+ return `<div class="ent-start"><h2>${esc("Pick a name to read about it")}</h2><p>${esc("Choose anyone or anything in the list. You will see who or what it is, how it relates to your company, what it is linked to, and every note about it with its source.")}</p><p class="ent-dim">${esc("Tip: type in the search box, then use the arrow keys and Enter.")}</p>${list("Most written about",top,e=>`<i>${e.notes}</i>`)}${list("Mentioned most recently",recent,e=>`<i>${esc(ageText(e.last))}</i>`)}</div>`;
+}
+function entDrawDetail(){
+ const box=$("#ent-detail");if(!PL)return;
+ const e=exSel?entById().get(exSel):null;
+ $("#ent-wrap").className="ent-wrap"+(e?" ent-open":"");
+ if(!e){box.innerHTML=entStartHtml();return}
+ entLoadDetails();
+ const d=exDetails?.[e.id]||null,kind=entKindWord(e),rels=(e.rel||[]).map(r=>ENT_REL[r]||entCap(r));
+ const sec=(title,body,count)=>`<section class="ent-sec"><h3>${esc(title)}${count?` <span class="ent-n">${count}</span>`:""}</h3>${body}</section>`;
+ let html=`<button type="button" class="linkbtn ent-back" data-ent-back>← ${esc("Back to the list")}</button><header class="ent-head">${entAvatar(e,true)}<div class="ent-head-main"><p class="ent-eyebrow">${esc(kind)}${rels.map(r=>` <span class="ent-badge ent-badge-strong">${esc(r)}</span>`).join("")}</p><h2 id="ent-title" tabindex="-1">${esc(e.name)}</h2>${e.described?`<p class="ent-lead">${esc(e.line)}</p>`:""}<p class="ent-ident">${[e.aliases?.length?esc("Also known as "+e.aliases.join(", ")):"",...(e.emails||(e.email?[e.email]:[])).map(m=>`<a href="mailto:${esc(m)}">${esc(m)}</a>`)].filter(Boolean).join(" · ")}</p></div>${rowLinks(e.path,`Let's discuss ${e.name} (${kind.toLowerCase()}). Read the entity page and its notes first.`,e.name)}</header>`;
+ html+=`<p class="ent-facts"><span><b>${e.notes}</b> ${esc(e.notes===1?"note":"notes")}</span>${e.last?`<span>${esc("last mentioned")} <b>${entAgo(e.last)}</b></span>`:""}${e.links?`<span><b>${e.links}</b> ${esc(e.links===1?"link":"links")}</span>`:""}</p>`;
+ // in short: the first lines of the brief
+ if(d?.brief?.length)html+=sec("In short",`<ul class="ent-brief">${d.brief.map(t=>`<li>${esc(t)}</li>`).join("")}</ul>${d.compiled?`<p class="ent-dim ent-small">${esc("Summary written")} ${entAgo(d.compiled)} ${esc("from the notes below.")}</p>`:""}`);
+ else if(!d&&e.line&&!e.described)html+=sec("In short",`<p>${esc(e.line)}</p>`);
+ // relation to us
+ const usLinks=(d?.links||[]).filter(l=>!l.other.id);
+ const usText=usLinks.map(l=>`<li><b>${esc(l.customer?ENT_REL[l.customer]||entCap(l.customer):entLinkLabel(l)+(l.status==="ended"?" (ended)":""))}</b>${l.since?` ${esc("since")} ${esc(localDate(l.since))}`:l.at?` · ${esc("recorded")} ${esc(localDate(l.at))}`:""}${l.until?`, ${esc("ended")} ${esc(localDate(l.until))}`:""}</li>`).join("");
+ const own=(e.rel||[]).includes("team")?`<li><b>${esc("On our team")}</b></li>`:(e.rel||[]).includes("us")?`<li><b>${esc("This is our company")}</b></li>`:"";
+ html+=sec("Relation to us",own||usText?`<ul class="ent-plain">${own}${usText}</ul>`:rels.length?`<p>${esc(rels.join(", "))}</p>`:`<p class="ent-dim">${esc(e.kind==="person"||e.kind==="organization"?"Not recorded: nobody has said whether this is a customer, a prospect or a partner.":"None recorded.")}</p>`);
+ // details: the fields the schema asks for
+ if(d){const known=d.fields.filter(f=>f.value),need=d.fields.filter(f=>!f.value&&f.required),rest=d.fields.filter(f=>!f.value&&!f.required),label=f=>ENT_FIELD[f.name]||entCap(f.name);
+  if(d.fields.length)html+=sec("Details",`<dl class="ent-dl">${known.map(f=>`<dt>${esc(label(f))}</dt><dd>${entFieldValue(f.value)}</dd>`).join("")}${need.map(f=>`<dt>${esc(label(f))}</dt><dd class="ent-unknown">${esc("not known yet")}</dd>`).join("")}</dl>${rest.length?`<p class="ent-dim ent-small">${esc("Also not recorded: ")}${esc(rest.map(f=>label(f).toLowerCase()).join(", "))}.</p>`:""}`);
+ }else if(exDetailsState==="loading")html+=sec("Details",`<p class="ent-dim">${esc("Loading...")}</p>`);
+ else if(e.fields?.length)html+=sec("Details",`<dl class="ent-dl">${e.fields.map(([k,v])=>`<dt>${esc(entCap(k))}</dt><dd>${entFieldValue(v)}</dd>`).join("")}</dl>`);
+ // links, grouped by what they say
+ const links=(d?.links||[]).filter(l=>l.other.id),groups=new Map();
+ for(const l of links){const k=entLinkLabel(l);groups.set(k,[...(groups.get(k)||[]),l])}
+ const N=entNoteList(),mine=N.notes.filter(n=>n.state==="in force"&&n.entities.includes(e.id));
+ const together=new Map();for(const n of mine)for(const id of n.entities)if(id!==e.id&&entById().has(id))together.set(id,(together.get(id)||0)+1);
+ const near=[...together].sort((a,b)=>b[1]-a[1]||entById().get(a[0]).name.localeCompare(entById().get(b[0]).name)).slice(0,14);
+ html+=sec("Connections",(groups.size?[...groups].map(([label,ls])=>`<div class="ent-group"><h4>${esc(label)}</h4><div class="ent-links">${ls.slice(0,40).map(l=>entChip(l.other,l.status==="ended"?`<i>${esc("ended")}</i>`:"",l.status==="ended"?" ent-link-ended":"")).join("")}${ls.length>40?`<span class="ent-dim ent-small">${esc("and")} ${ls.length-40} ${esc("more")}</span>`:""}</div></div>`).join(""):`<p class="ent-dim">${esc("No named links recorded, such as where someone works or who uses what.")}</p>`)
+  +(near.length?`<div class="ent-group"><h4>${esc("Often mentioned together with")} <span class="ent-dim ent-small">${esc("(notes in common)")}</span></h4><div class="ent-links">${near.map(([id,c])=>entChip(entById().get(id),`<i title="${esc(noteCount(c)+" in common")}">${c}</i>`)).join("")}</div></div>`:""));
+ // history: the dated events behind the links
+ const events=(d?.links||[]).flatMap(l=>(l.events||[]).map(ev=>({...ev,l}))).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+ if(events.length)html+=sec("History",`<ol class="ent-history">${events.slice(0,30).map(ev=>`<li><time title="${esc(localDateTime(ev.at))}">${esc(localDate(ev.at))}</time><span><b>${esc(entCap(ev.event))}</b>: ${esc(ev.customer?(ENT_REL[ev.customer]||entCap(ev.customer)):entLinkLabel(ev.l))}${ev.l.other.id?" "+esc(ev.l.other.name):""} <span class="ent-dim">(${esc(ev.by==="person"?"said by a person":"from a source")})</span></span></li>`).join("")}</ol>`);
+ // notes, newest first
+ const shown=mine.slice(0,exNotesLimit),missing=!N.all&&e.notes>mine.length;
+ html+=sec("Notes",(shown.length?shown.map(entNoteHtml).join(""):`<p class="ent-dim">${esc(N.loading?"Loading notes...":e.notes?"":e.last?"No note is filed under this name. It is mentioned inside other notes: open Evidence by topic and files below.":"No notes mention this yet.")}</p>`)
+  +(mine.length>shown.length?`<button type="button" class="linkbtn ent-more" data-ent-more>${esc("Show more notes")} (${mine.length-shown.length})</button>`:"")
+  +(missing&&!N.loading?`<p class="ent-dim ent-small">${esc(LIVE?"Older notes could not be loaded. Refresh the dashboard.":"This saved copy holds only the newest notes. Open the live dashboard for all of them.")}</p>`:""),e.notes||mine.length);
+ html+=`<p class="ent-foot">${esc("Something wrong or missing?")} <a class="pl-chat" href="${esc(askLink(`Let's correct or add to what we know about ${e.name} (${kind.toLowerCase()}). Read the entity page and its notes first.`))}">${esc("Tell Codex in a chat")} <span aria-hidden="true">↗</span></a></p>`;
+ box.innerHTML=html;
 }
 function renderEntitiesTab(){
- const box=$("#pe-groups");if(!PL){box.innerHTML=plEmpty;return}
- if(plUnread("entities")){box.innerHTML=plUnreadMsg;return}
- const q=peQuery.trim().toLowerCase();
- box.innerHTML=PL.entities.kinds.map(({kind,count})=>{
-  const rows=q?PL.entities.rows.filter(e=>e.kind===kind&&peMatch(e,q)):PL.entities.rows.filter(e=>e.kind===kind);
-  if(q&&!rows.length)return"";const limit=peLimits[kind]||PE_PAGE;
-  return `<section class="sec pl-card" data-pe-kind="${esc(kind)}"><h2>${esc(kindTitle(kind))} <span class="pl-count">${q?rows.length+" / "+count:count}</span></h2>${rows.slice(0,limit).map(peCard).join("")||`<p class="empty">${esc("None yet.")}</p>`}${rows.length>limit?`<button class="linkbtn pl-more" data-pe-more="${esc(kind)}">${esc("Show more")} (${rows.length-limit})</button>`:""}</section>`;
- }).join("")||`<p class="empty">${esc("No name or alias matches")} "${esc(peQuery)}".</p>`;
- plObserve();
+ if(!PL){$("#pe-groups").innerHTML=plEmpty;return}
+ if(plUnread("entities")){$("#pe-groups").innerHTML=plUnreadMsg;return}
+ if(!exReady){exReady=true;
+  const n=k=>PL.entities.rows.filter(e=>(e.rel||[]).includes(k)).length;
+  $("#ent-rel").innerHTML=`<option value="">${esc("Anyone")}</option>`+["customer","prospect","partner","former_customer","team"].map(k=>`<option value="${k}"${n(k)?"":" disabled"}>${esc(ENT_REL[k])} (${n(k)})</option>`).join("");
+  $("#ent-sort").innerHTML=[["notes","Most notes"],["recent","Most recent"],["az","A to Z"]].map(([v,l])=>`<option value="${v}">${esc(l)}</option>`).join("");
+  $("#ent-list").onscroll=()=>entDrawList(false);
+  if(exSel&&!entById().has(exSel))exSel="";
+ }
+ const f=entFiltered();exRows=f.rows;if(exActive>=exRows.length)exActive=Math.max(0,exRows.length-1);
+ entDrawTools(f);entDrawList(true);entDrawDetail();
 }
+/* The two panes fill the window below the page header, each scrolling on its own; the picked row is brought into view. */
+function entReveal(){
+ const i=exRows.findIndex(e=>e.id===exSel),box=$("#ent-list");if(i<0||!box)return;const top=i*ENT_ROW,h=box.clientHeight||0,at=box.scrollTop||0;
+ if(top<at||top+ENT_ROW>at+h){box.scrollTop=Math.max(0,top-ENT_ROW*2);entDrawList(false)}
+}
+function entFit(){
+ const w=$("#ent-wrap");if(!w?.getBoundingClientRect||!w.style||typeof innerHeight!=="number")return;
+ const wide=typeof innerWidth!=="number"||innerWidth>900,top=w.getBoundingClientRect().top+(typeof scrollY==="number"?scrollY:0);
+ w.style.height=wide&&top>0?Math.max(440,innerHeight-top-24)+"px":"";
+ entDrawList(true);entReveal();
+}
+const entShow=show;show=v=>{entShow(v);if(v==="entities"&&PL&&exReady)entFit()};
+if(typeof addEventListener==="function")addEventListener("resize",()=>{if(view==="entities"&&PL&&exReady)entFit()});
+function entSelect(id,focus){
+ exSel=entById().has(id)?id:"";exNotesLimit=ENT_NOTES;const i=exRows.findIndex(e=>e.id===exSel);if(i>=0)exActive=i;
+ entDrawList(true);entDrawDetail();entReveal();const pane=$("#ent-detail");if(pane)pane.scrollTop=0;
+ const say=$("#ent-say");if(say)say.textContent=exSel?`Showing ${entById().get(exSel).name}.`:"";
+ if(focus)$("#ent-title")?.focus?.({preventScroll:true});
+}
+function entMove(to){
+ if(!exRows.length)return;exActive=Math.max(0,Math.min(exRows.length-1,to));
+ const box=$("#ent-list"),top=exActive*ENT_ROW,h=box.clientHeight||ENT_ROW*8;
+ if(top<(box.scrollTop||0))box.scrollTop=top;else if(top+ENT_ROW>(box.scrollTop||0)+h)box.scrollTop=top+ENT_ROW-h;
+ entDrawList(true);
+}
+document.addEventListener("click",e=>{
+ const t=e.target;if(!t?.closest)return;
+ const k=t.closest("[data-ent-kind]");if(k){exKind=k.dataset.entKind||"";exActive=0;$("#ent-list").scrollTop=0;renderEntitiesTab();return}
+ if(t.closest("[data-ent-reset]")){exQ="";exKind="";exRel="";exActive=0;$("#ent-q").value="";$("#ent-rel").value="";renderEntitiesTab();$("#ent-q").focus?.();return}
+ if(t.closest("[data-ent-back]")){entSelect("",false);$("#ent-list").focus?.();return}
+ if(t.closest("[data-ent-more]")){exNotesLimit+=ENT_NOTES*2;entDrawDetail();return}
+ const row=t.closest("[data-ent-id]");if(row){if(view!=="entities")show("entities");entSelect(row.dataset.entId,!row.classList?.contains?.("ent-row"))}
+});
+document.addEventListener("input",e=>{if(e.target?.id!=="ent-q")return;exQ=e.target.value;exActive=0;$("#ent-list").scrollTop=0;renderEntitiesTab()});
+document.addEventListener("change",e=>{const id=e.target?.id;if(id==="ent-rel")exRel=e.target.value;else if(id==="ent-sort")exSort=e.target.value;else return;exActive=0;$("#ent-list").scrollTop=0;renderEntitiesTab()});
+document.addEventListener("keydown",e=>{
+ const t=e.target;if(view!=="entities"||!t||(t.id!=="ent-q"&&t.id!=="ent-list")||e.altKey||e.metaKey||e.ctrlKey)return;
+ const page=Math.max(1,Math.floor(($("#ent-list").clientHeight||ENT_ROW*8)/ENT_ROW)-1);
+ const to={ArrowDown:exActive+1,ArrowUp:exActive-1,PageDown:exActive+page,PageUp:exActive-page}[e.key]??(t.id==="ent-list"?{Home:0,End:exRows.length-1}[e.key]:undefined);
+ if(to!==undefined){e.preventDefault?.();entMove(to);return}
+ if(e.key==="Enter"&&exRows[exActive]){e.preventDefault?.();entSelect(exRows[exActive].id,false);if(typeof publishRoute==="function")publishRoute()}
+ else if(e.key==="Escape"&&t.id==="ent-q"&&exQ){e.preventDefault?.();exQ="";t.value="";exActive=0;renderEntitiesTab()}
+});
+/* The page search opens an entity here. */
+function openEntity(id){show("entities");if(!exReady)renderEntitiesTab();entSelect(id,true);if(typeof publishRoute==="function")publishRoute()}
+/* The picked entity is part of the address (#view=entities&e=<id>), so Back, Forward and a copied link work. */
+const entRouteState=routeState;routeState=()=>{const s=entRouteState();if(s.view==="entities"&&exSel)s.e=exSel;return s};
+const entRestoreRoute=restoreRoute;restoreRoute=()=>{entRestoreRoute();if(typeof URLSearchParams==="undefined"||view!=="entities"||!PL||!exReady)return;const id=new URLSearchParams(String(location.hash||"").slice(1)).get("e")||"";if(id!==exSel)entSelect(id,false)};
 /* Memories: one timeline, newest first. A filter box and a few plain filters; questions and decisions are filters of
    the same list. The page carries the newest notes and fetches the whole list once a filter or "Show older" needs it. */
-const PM_PAGE=30;let pmFiltersDrawn=false,pmAll=null,pmLoading=null,pmError=false,pmLimit=PM_PAGE,pmFocus="";const pmF={q:"",kind:"",who:"",topic:"",project:"",tag:"",entity:"",period:"",state:"in force"};
+const PM_PAGE=40;let pmFiltersDrawn=false,pmAll=null,pmLoading=null,pmError=false,pmLimit=PM_PAGE,pmFocus="";const pmF={q:"",kind:"",who:"",topic:"",project:"",tag:"",entity:"",period:"",state:"in force"};
 function pmLoad(){
  if(pmAll||pmLoading||pmError||!LIVE||!PL)return pmLoading;
  const file=PL.memories.file;if(!/^entities-[a-f0-9-]{36}\/notes\.json$/.test(file||"")){pmError=true;return null}
@@ -1200,13 +1393,8 @@ function renderNotesTab(){
  const docs=(PL.configuration?.documents||[]).filter(d=>!d.base&&d.path);
  $("#pm-docs").innerHTML=docs.length?`<details class="fold mem-docs"><summary>${esc("Documents your team keeps")} · ${docs.length}</summary><p class="m">${esc("Longer texts that are not base documents: playbooks, plans, lists. Click one to read or edit it.")}</p><ul class="pl-list">${docs.map(d=>`<li><button type="button" class="linkbtn" data-doc="${esc(d.path)}">${esc(d.title)}</button> <span class="pl-age">${d.changed?esc("changed")+" "+whenText(d.changed):""}</span></li>`).join("")}</ul></details>`:"";
 }
-function openEntityById(id,name){
- /* the Entities tab owns how an entity is shown; the address is #entities/<id> */
- if(typeof openEntity==="function"){openEntity(id);return}
- show("entities");try{if(typeof history!=="undefined")history.pushState(null,"","#entities/"+encodeURIComponent(id))}catch{}
- if(typeof dispatchEvent==="function"&&typeof HashChangeEvent!=="undefined")dispatchEvent(new HashChangeEvent("hashchange"));
- const e=pmEntityById(id);if(typeof peQuery!=="undefined"&&(name||e)){peQuery=name||e.name;syncField("#pe-q",peQuery);renderEntitiesTab()}
-}
+/* Every name on the page opens the Entities pane (#view=entities&e=<id>). */
+function openEntityById(id){if(typeof openEntity==="function"&&PL?.entities?.rows?.some(e=>e.id===id)){openEntity(id);return true}return false}
 function openNote(id){pmFocus=id;Object.assign(pmF,{q:"",kind:"",who:"",topic:"",project:"",tag:"",entity:"",period:"",state:""});pmLimit=PM_PAGE;pmFiltersDrawn=false;show("notes");renderNotesTab();if(!pmAll&&!(PL?.memories?.first||[]).some(n=>n.id===id))pmLoad()}
 document.addEventListener("click",e=>{const t=e.target;if(!t?.closest)return;
  const k=t.closest("[data-pm-kind]");if(k){pmF.kind=k.dataset.pmKind;pmLimit=PM_PAGE;pmFiltersDrawn=false;renderNotesTab();return}
@@ -1608,7 +1796,7 @@ function gqClose(clear=false){if(clear)$("#gq").value="";gqSearch(clear?"":"");c
 function gqOpen(r){
  if(!r)return;gqClose(true);$("#gq").blur?.();
  if(r.kind==="entity"){
-  openEntityById(r.id,r.name);
+  openEntityById(r.id);
  }else if(r.kind==="doc")openDoc(r.path);
  else if(r.kind==="workflow"){pwOpen=r.slug;renderWorkflowsTab();show("workflows")}
  else if(r.kind==="topic"){contextDirectory=false;chan=r.slug;renderContextDirectory();renderChannels();show("contexts")}

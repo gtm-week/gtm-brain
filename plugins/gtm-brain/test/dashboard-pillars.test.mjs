@@ -40,6 +40,12 @@ const fix = lib.appendMemory(root, "company", { authors: ["marta"], content: "Ol
 const gone = lib.appendMemory(root, "company", { authors: ["marta"], content: "Jan Zielinski left Acme Retail.", people: ["Jan Zielinski"], at: day(10) }).rec;
 lib.appendMemory(root, "company", { authors: ["marta"], retracts: gone.id, content: "Withdrawn: Jan never worked at Acme Retail.", at: day(9) });
 const decision = lib.appendMemory(root, "company", { authors: ["marta"], kind: "decision", content: "We sell to retailers with more than 50 stores first.", at: day(1) }).rec;
+// links between entities, with their dates: Jan worked at Acme Retail and left; Acme Retail is a partner of ours
+const idOf = name => lib.readNames(root).find(e => e.name === name).id, said = [{ kind: "user", ref: "marta" }];
+const linkNote = (content, people, relation, n) => lib.appendMemory(root, "company", { authors: ["marta"], content, people, source: said, at: day(n), relation: { ...relation, basis: "user", observed_at: day(n).slice(0, 19) + "Z" } }).rec;
+linkNote("Jan Zielinski joined Acme Retail as a buyer.", ["Jan Zielinski", "Acme Retail"], { from: idOf("Jan Zielinski"), type: "works_at", to: idOf("Acme Retail"), status: "current" }, 15);
+linkNote("Jan Zielinski is no longer at Acme Retail.", ["Jan Zielinski", "Acme Retail"], { from: idOf("Jan Zielinski"), type: "works_at", to: idOf("Acme Retail"), status: "ended" }, 6);
+linkNote("Acme Retail is a partner of ours.", ["Acme Retail"], { from: idOf("Acme Retail"), type: "partner_of", to: "us", status: "current" }, 4);
 writeFileSync(join(root, "pricing.md"), "---\nkind: document\ntitle: Pricing\napplies_to: [proposals, outreach]\nstatus: approved\nby: marta\nupdated: 2026-11-01\n---\n# Pricing\n\nThree plans, billed yearly.\n");
 mkdirSync(join(root, "workflows"), { recursive: true });
 const outbound = readFileSync(`${P}/templates/workflows/outbound.md`, "utf8").replace("{{DATE}}", "2026-11-01").replace("{{VERSION}}", "0.35.0");
@@ -123,22 +129,114 @@ test("page: opens on Overview, a base document row opens in the page, every prep
   assert.doesNotMatch(html(p), /<form|data-say=|>Edit<|>Save<|>Approve<|>Delete</);
 });
 
-test("page: Entities searches names and aliases and stays a first page with 2,000 entities", () => {
-  const p = page(D);
-  p.node("#pe-q").value = "olka"; p.listeners.input.forEach(fn => fn({ target: { id: "pe-q", value: "olka" } }));
-  const one = p.node("#pe-groups").innerHTML;
-  assert.match(one, /Ola Kowalska/); assert.doesNotMatch(one, /Jan Zielinski/); assert.match(one, /1 \/ \d+/);
+test("render: each entity carries a plain line, its relation to us and what is missing; fields, links and history go to a side file", () => {
+  const E = D.pillars.entities, row = name => E.rows.find(e => e.name === name);
+  assert.equal(E.details, undefined, "the details are not in the page");
+  assert.match(E.file, /^entities-[a-f0-9-]{36}\/entity-details\.json$/);
+  const details = JSON.parse(readFileSync(join(root, "work", "home", E.file), "utf8")).details;
+  assert.deepEqual(Object.keys(details).sort(), E.rows.map(e => e.id).sort(), "one detail per listed entity");
+  const ola = row("Ola Kowalska"), jan = row("Jan Zielinski"), acme = row("Acme Retail");
+  assert.deepEqual(ola.emails, ["ola@acme.test"]); assert.deepEqual(ola.rel, []); assert.equal(ola.missing, 1, "a person needs a role");
+  assert.deepEqual(details[ola.id].fields.find(f => f.name === "role"), { name: "role", required: true, value: null });
+  assert.deepEqual(acme.rel, ["partner"]); assert.match(acme.relation, /partner of/); assert.deepEqual(row("Marta Nowak").rel, ["team"]);
+  // Jan's link to Acme Retail: ended, with both dated events, and seen from the company's side too
+  const out = details[jan.id].links.find(l => l.type === "works_at");
+  assert.deepEqual([out.out, out.other.name, out.other.id, out.status], [true, "Acme Retail", acme.id, "ended"]);
+  assert.deepEqual(out.events.map(e => [e.event, e.by]), [["started", "person"], ["ended", "person"]]);
+  assert.ok(Date.parse(out.since) < Date.parse(out.until));
+  assert.equal(jan.company, null, "an ended job is not where he works"); assert.equal(jan.links, 1);
+  assert.deepEqual(details[acme.id].links.filter(l => l.type === "works_at").map(l => [l.out, l.other.name]), [[false, "Jan Zielinski"]]);
+  assert.deepEqual(details[acme.id].links.find(l => l.type === "partner_of").other, { id: null, name: "us", kind: "us" });
+  assert.ok(D.pillars.files.every(f => !f.includes("entity-details")), "the side file is not a brain file");
+});
+
+const withDetails = d => { const c = structuredClone(d); c.pillars.entities.details = JSON.parse(readFileSync(join(root, "work", "home", d.pillars.entities.file), "utf8")).details; return c; };
+const fire = (p, type, event) => p.listeners[type].forEach(fn => fn(event));
+const tap = (p, attr, dataset) => fire(p, "click", { target: { closest: s => s === `[${attr}]` ? { dataset, classList: { contains: () => true } } : null } });
+
+test("page: Entities filters as you type, by kind and by relation, in plain words", () => {
+  const p = page(D); p.run('show("entities")');
+  const all = D.pillars.entities.rows.length;
+  assert.match(p.node("#ent-count").textContent, new RegExp(`^${all} entries$`));
+  assert.match(p.node("#ent-kinds").innerHTML, /data-ent-kind="person"[^>]*>People<span>\d+<\/span>/); assert.match(p.node("#ent-kinds").innerHTML, />Companies<span>/);
+  assert.doesNotMatch(p.node("#ent-kinds").innerHTML, />Events</, "a kind with nothing in it has no chip");
+  fire(p, "input", { target: { id: "ent-q", value: "olka" } });   // an alias
+  assert.match(p.node("#ent-list").innerHTML, /Ola Kowalska/); assert.doesNotMatch(p.node("#ent-list").innerHTML, /Jan Zielinski/);
+  assert.equal(p.node("#ent-count").textContent, `1 of ${all} shown`);
+  fire(p, "input", { target: { id: "ent-q", value: "ACME.TEST" } });   // an email address
+  assert.equal((p.node("#ent-list").innerHTML.match(/role="option"/g) || []).length, 1);
+  fire(p, "input", { target: { id: "ent-q", value: "zzz" } });
+  assert.match(p.node("#ent-list").innerHTML, /Nothing matches/); assert.match(p.node("#ent-list").innerHTML, /data-ent-reset/);
+  tap(p, "data-ent-reset", {});
+  assert.equal((p.node("#ent-list").innerHTML.match(/role="option"/g) || []).length, all);
+  tap(p, "data-ent-kind", { entKind: "organization" });
+  assert.match(p.node("#ent-list").innerHTML, /Acme Retail/); assert.doesNotMatch(p.node("#ent-list").innerHTML, /Ola Kowalska/);
+  assert.match(p.node("#ent-list").innerHTML, /ent-rel-partner">Partner</);
+  tap(p, "data-ent-kind", { entKind: "" });
+  assert.match(p.node("#ent-rel").innerHTML, /<option value="partner">Partner \(1\)<\/option>/); assert.match(p.node("#ent-rel").innerHTML, /<option value="customer" disabled>Customer \(0\)/);
+  fire(p, "change", { target: { id: "ent-rel", value: "partner" } });
+  assert.equal((p.node("#ent-list").innerHTML.match(/role="option"/g) || []).length, 1);
+  fire(p, "change", { target: { id: "ent-rel", value: "" } }); fire(p, "change", { target: { id: "ent-sort", value: "az" } });
+  const names = [...p.node("#ent-list").innerHTML.matchAll(/class="ent-name-text">([^<]+)</g)].map(m => m[1]);
+  assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b)), "A to Z");
+  assert.doesNotMatch(p.node("#ent-list").innerHTML + p.node("#ent-kinds").innerHTML, /e_[0-9a-f]{16}<|>person<|>organization<|brain\/entities/, "no ids, kind ids or paths as text");
+});
+
+test("page: the picked entity shows beside the list: relation to us, fields, links, history and notes; the keyboard and the address work", () => {
+  const data = withDetails(D), p = page(data, { route: "#view=entities" });
+  assert.match(p.node("#ent-detail").innerHTML, /Pick a name to read about it/); assert.match(p.node("#ent-detail").innerHTML, /Most written about/);
+  const jan = data.pillars.entities.rows.find(e => e.name === "Jan Zielinski"), acme = data.pillars.entities.rows.find(e => e.name === "Acme Retail");
+  // arrow keys move the highlighted row, Enter opens it
+  fire(p, "input", { target: { id: "ent-q", value: "Zielinski" } });
+  fire(p, "keydown", { key: "ArrowDown", target: { id: "ent-q" } }); fire(p, "keydown", { key: "ArrowUp", target: { id: "ent-q" } });
+  assert.match(p.node("#ent-list").innerHTML, /class="ent-row ent-active"/);
+  fire(p, "keydown", { key: "Enter", target: { id: "ent-q" } });
+  let pane = p.node("#ent-detail").innerHTML;
+  assert.match(pane, /<h2 id="ent-title" tabindex="-1">Jan Zielinski<\/h2>/); assert.match(pane, />Person</);
+  assert.match(pane, /<dt>Role<\/dt><dd class="ent-unknown">not known yet<\/dd>/); assert.match(pane, /Also not recorded: location, linkedin, how we met\./);
+  assert.match(pane, /<h4>Works at<\/h4>.*data-ent-id="[^"]+"[^>]*>.*Acme Retail.*ended/s);
+  assert.match(pane, /<b>Ended<\/b>: Works at Acme Retail.*<b>Started<\/b>: Works at Acme Retail/s, "history, newest first");
+  assert.match(pane, /Jan Zielinski is no longer at Acme Retail\..*Jan Zielinski joined Acme Retail as a buyer\./s, "notes, newest first");
+  assert.match(pane, /noted by Marta/); assert.match(pane, /Sources/); assert.doesNotMatch(pane, /Jan Zielinski left/, "a withdrawn note is not shown");
+  assert.match(pane, /class="pl-chat" href="codex:\/\/threads\/new[^"]*Jan%20Zielinski/);
+  assert.equal(new URLSearchParams(p.location.hash.slice(1)).get("e"), jan.id, "the address names the picked entity");
+  // a link chip picks the other entity, in the same pane
+  tap(p, "data-ent-id", { entId: acme.id }); fire(p, "click", { target: { closest: () => null } });
+  pane = p.node("#ent-detail").innerHTML;
+  assert.match(pane, />Acme Retail<\/h2>/); assert.match(pane, /<b>Partner of<\/b> since \d{4}-\d\d-\d\d/); assert.match(pane, /<h4>People who work here<\/h4>.*Jan Zielinski/s);
+  assert.match(pane, /Often mentioned together with.*Ola Kowalska/s);
+  assert.match(pane, /<dt>Website<\/dt><dd class="ent-unknown">not known yet/);
+  assert.equal(new URLSearchParams(p.location.hash.slice(1)).get("e"), acme.id);
+  p.history.back();
+  assert.match(p.node("#ent-detail").innerHTML, />Jan Zielinski<\/h2>/, "Back returns to the entity before");
+  assert.doesNotMatch(p.node("#ent-detail").innerHTML, /<form|<input|<textarea|>Edit<|>Save<|>Delete</, "view only");
+  // a copied address opens on that entity
+  const linked = page(data, { route: "#view=entities&e=" + acme.id });
+  assert.match(linked.node("#ent-detail").innerHTML, />Acme Retail<\/h2>/);
+  // the live dashboard reads the details from the side file, once
+  let fetched = 0;
+  const live = page(D, { live: true, route: "#view=entities&e=" + jan.id, fetcher: async path => { if (String(path).endsWith("entity-details.json")) { fetched++; return { ok: true, json: async () => ({ details: data.pillars.entities.details }) }; } return { ok: true, json: async () => ({ notes: allNotes() }) }; } });
+  assert.match(live.node("#ent-detail").innerHTML, /Loading/);
+  return new Promise(r => setTimeout(r, 30)).then(() => { assert.equal(fetched, 1); assert.match(live.node("#ent-detail").innerHTML, /<h4>Works at<\/h4>/); assert.match(live.node("#ent-detail").innerHTML, /joined Acme Retail as a buyer/); });
+});
+
+test("page: Entities stays a window of rows with 2,000 entities, and an empty brain says what to do", () => {
   const big = structuredClone(D);
-  big.pillars.entities.rows = Array.from({ length: 2000 }, (_, i) => ({ id: "e_" + i, name: `Person ${i}`, kind: i % 4 ? "person" : "organization", subtype: null, aliases: [`alias${i}`], email: null, fields: [], relation: null, last: null, notes: 0, path: `brain/entities/p${i}.md` }));
+  big.pillars.entities.rows = Array.from({ length: 2000 }, (_, i) => ({ id: "e_" + i, name: `Person ${i}`, kind: i % 4 ? "person" : "organization", subtype: null, aliases: [`alias${i}`], email: null, emails: [], fields: [], relation: null, rel: [], line: null, last: null, notes: 2000 - i, path: `brain/entities/p${i}.md` }));
   big.pillars.entities.kinds = [{ kind: "person", count: 1500 }, { kind: "organization", count: 500 }];
-  const q = page(big), groups = q.node("#pe-groups").innerHTML;
-  assert.equal((groups.match(/class="pl-row"/g) || []).length, 80, "forty rows per kind at first");
-  assert.match(groups, /data-pe-more="person">Show more \(1460\)/);
-  const t = performance.now(); q.run('peQuery="alias1999";renderEntitiesTab()');
+  const q = page(big); q.run('show("entities")'); const drawn = () => (q.node("#ent-list").innerHTML.match(/role="option"/g) || []).length;
+  assert.ok(drawn() > 10 && drawn() < 80, "only the rows near the window are drawn");
+  assert.match(q.node("#ent-list").innerHTML, /aria-setsize="2000"/); assert.match(q.node("#ent-list").innerHTML, new RegExp(`<div style="height:${(2000 - drawn()) * 60}px"`), "the rest is empty height");
+  q.node("#ent-list").scrollTop = 60 * 1000; q.node("#ent-list").onscroll();
+  assert.match(q.node("#ent-list").innerHTML, /Person 1000</); assert.doesNotMatch(q.node("#ent-list").innerHTML, /Person 0</); assert.ok(drawn() < 80);
+  const t = performance.now(); fire(q, "input", { target: { id: "ent-q", value: "alias1999" } });
   assert.ok(performance.now() - t < 200, "a search over 2,000 entities is immediate");
-  assert.match(q.node("#pe-groups").innerHTML, /Person 1999/); assert.equal((q.node("#pe-groups").innerHTML.match(/class="pl-row"/g) || []).length, 1);
-  q.run('peQuery="";renderEntitiesTab()');q.listeners.click.forEach(fn => fn({ target: { closest: s => s.includes("data-pe-more") ? { hasAttribute: () => false, dataset: { peMore: "person" } } : null } }));
-  assert.equal((q.node("#pe-groups").innerHTML.match(/class="pl-row"/g) || []).length, 160, "Show more adds the next rows");
+  assert.match(q.node("#ent-list").innerHTML, /Person 1999/); assert.equal(drawn(), 1);
+  fire(q, "input", { target: { id: "ent-q", value: "" } }); fire(q, "keydown", { key: "End", target: { id: "ent-list" } });
+  assert.match(q.node("#ent-list").innerHTML, /class="ent-row ent-active" role="option" id="ent-o-1999"/); assert.equal(q.node("#ent-list").getAttribute("aria-activedescendant"), "ent-o-1999");
+  const none = structuredClone(D); none.pillars.entities.rows = []; none.pillars.entities.kinds = [];
+  const e = page(none);
+  assert.match(e.node("#ent-list").innerHTML, /Nobody here yet/); assert.match(e.node("#ent-detail").innerHTML, /connect your CRM, email or calendar/); assert.match(e.node("#ent-detail").innerHTML, /codex:\/\/threads\/new/);
 });
 
 test("page: Memories shows date, age, source and what replaced what; a filter fetches the whole list once", async () => {

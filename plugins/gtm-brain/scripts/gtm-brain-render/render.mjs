@@ -107,6 +107,10 @@ try {
   const notes = pillars.memories.notes; delete pillars.memories.notes;
   writeFileSync(join(detailDir, 'notes.json'), JSON.stringify({ notes }));
   Object.assign(pillars.memories, { first: firstNotes(notes), file: detailFolder + '/notes.json' });
+  // each entity's fields, links and brief lines: read by the Entities tab when a name is opened
+  const entityDetails = pillars.entities.details || {}; delete pillars.entities.details;
+  writeFileSync(join(detailDir, 'entity-details.json'), JSON.stringify({ details: entityDetails }));
+  pillars.entities.file = detailFolder + '/entity-details.json';
   pillars.files = pillarFiles(pillars);
   data.pillars = pillars;
   if (process.env.GTM_BRAIN_RENDER_PROFILE) console.error(JSON.stringify({ stage: 'pillars', ms: Math.round(performance.now() - pillarsStarted) }));

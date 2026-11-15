@@ -122,7 +122,7 @@ test("Memories: the first page holds a full page of notes in force, so opening t
   assert.equal((live.node("#pm-list").innerHTML.match(/class="pl-row pl-note/g) || []).length, 40);
   // the page is not the end of the list: Show more is there, and it brings the rest
   assert.match(live.node("#pm-list").innerHTML, /data-pm-more/, "the person can go past the first page");
-  assert.match(live.node("#pm-status").textContent, new RegExp(`Showing the 40 newest\\. ${M.total} notes in all`));
+  assert.match(live.node("#pm-status").textContent, new RegExp(`Showing the 40 newest of ${M.total} notes`));
   assert.doesNotMatch(page(D).node("#pm-list").innerHTML, /data-pm-more/, "a saved copy has nothing more to bring");
   live.listeners.click.forEach(fn => fn({ target: { closest: s => s.includes("data-pm-more") ? { hasAttribute: a => a === "data-pm-more", dataset: {} } : null } }));
   await new Promise(r => setTimeout(r, 20));
@@ -203,12 +203,18 @@ test("Workflows and Entities on a brain with runs, its own skill and a customer:
     assert.equal(B.pillars.entities.rows.find(e => e.name === "Northwind")?.relation, "customer", "a customer's relation to us comes from the customer notes");
     const p = page(B); p.run('show("workflows")');
     const w = p.node("#pw-files").innerHTML;
-    assert.match(w, new RegExp(`Step 2 of ${ob.steps}: ${live.step.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} · pending · <b>due 2026-11-20</b>`));
-    assert.match(w, /1 run in progress, 1 ended/); assert.match(w, /Runs whose workflow file is gone.*webinar-2026-11-02-marta/s);
-    const skills = p.node("#pw-skills").innerHTML, own = skills.split("This brain's own")[1] || "";
-    assert.match(own, /Weekly pipeline.*\/gtm-brain-weekly-pipeline.*Go through the open deals every Monday\./s, "the brain's own skill is listed with its one line");
-    assert.doesNotMatch(skills.split("This brain's own")[0], /weekly-pipeline/, "and not among the shipped ones");
-    p.run('show("entities")'); assert.match(p.node("#pe-groups").innerHTML, /Northwind.*class="pl-rel">customer</s);
+    const title = live.step.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    assert.match(w, new RegExp(`1 run in progress.*Last run: on step 2 of ${ob.steps}: ${title}, due 2026-11-20`, "s"), "the card says where the last run stands in words");
+    assert.match(w, /Runs of workflows that were removed.*webinar/s);
+    p.run('pwOpen="outbound";renderWorkflowsTab()');
+    const open = p.node("#pw-files").innerHTML;
+    assert.match(open, new RegExp(`<li class="here"><span>${title}</span> <span class="pl-state ok">a run is here</span>`), "the current step is marked on the path");
+    assert.match(open, /On step 2 of \d+: [^<]+, due 2026-11-20 · pending/); assert.match(open, /Finished \d+ (weeks|months) ago|Finished/); assert.match(open, /<code class="pl-path">outbound-2026-11-01-marta<\/code>/, "the run's own name stays, small");
+    const skills = p.node("#pw-skills").innerHTML, own = skills.split("Made by your team")[1] || "";
+    assert.match(own, /Weekly pipeline.*Go through the open deals every Monday\..*\/gtm-brain-weekly-pipeline/s, "the brain's own skill is listed with its one line");
+    assert.doesNotMatch(skills.split("Made by your team")[0], /weekly-pipeline/, "and not among the shipped ones");
+    p.run('show("entities")'); assert.match(p.node("#ent-list").innerHTML, /Northwind.*class="ent-badge ent-rel-customer">Customer</s);
+    assert.deepEqual(B.pillars.entities.rows.find(e => e.name === "Northwind")?.rel, ["customer"]); assert.match(p.node("#ent-rel").innerHTML, /<option value="customer">Customer \(1\)/);
   } finally { rmSync(b, { recursive: true, force: true }); }
 });
 
