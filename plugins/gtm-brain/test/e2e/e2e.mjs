@@ -121,7 +121,7 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
     await check("relations.hub", "relations", async () => { const r = await q({ object: "relations", search: gold.hub.name }); return { pass: !r.isError && r.text.includes(gold.hub.name) && /partner_of/.test(r.text), text: r.text }; });
     await check("relations.ended_partnership", "relations", async () => { const r = await q({ object: "relations", search: gold.hub.name, filters: { type: "partner_of" } }); return { pass: /ended/.test(r.text), text: r.text }; });
     await check("relations.history_dates", "relations", async () => { const r = await q({ object: "relations", search: gold.hub.name, filters: { type: "partner_of" } }); return { pass: hasAll(r.text, gold.hub.partnership.history.map(h => `${h.status} ${h.observed_at.slice(0, 10)}`)), text: r.text }; });
-    await check("relations.history_ids", "relations", async () => { const r = await q({ object: "relations", search: gold.hub.name, filters: { type: "partner_of" } }); return found(r.text, gold.hub.partnership.history.map(h => h.memory), ids); }, { known_gap: "relation history lists dates without the note ids" });
+    await check("relations.history_ids", "relations", async () => { const r = await q({ object: "relations", search: gold.hub.name, filters: { type: "partner_of" } }); return found(r.text, gold.hub.partnership.history.map(h => h.memory), ids); });
   }
   const job = gold.changes.find(c => c.what === "works_at");
   if (job) await check("relations.job_change", "relations", async () => { const r = await q({ object: "relations", search: job.entity, filters: { type: "works_at" } }); const names = [job.from, job.to].map(id => gold.entities.find(e => e.id === id)?.name); return { pass: hasAll(r.text, names) && /ended/.test(r.text) && /current/.test(r.text), text: r.text, note: `${Buffer.byteLength(r.text)} bytes` }; });
@@ -302,6 +302,18 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
     await check("traps.merged_retired_id", "traps", () => resolvesTo(T.merged.retired, T.merged.survivor));
     await check("traps.contradicting_size", "traps", async () => { const name = gold.entities.find(e => e.id === T.size.company)?.name; const r = await q({ object: "brief", search: name }); return { pass: hasAll(r.text, T.size.values.map(String)), text: r.text }; });
     if (T.contradiction) await check("traps.contradicting_job", "traps", async () => { const r = await q({ object: "relations", search: T.contradiction.person, filters: { type: "works_at" } }); return { pass: /conflict|disagree|linkedin/i.test(r.text), text: r.text }; });
+  }
+
+  /* ---------- the relationship log (ALL-711): three fields saved and read back, an employer change, as of, a rename ---------- */
+  const RP = gold.relation_probe;
+  if (RP) {
+    const works = to => ({ by, context: "icp", content: `E2E relation probe: ${RP.person.name} works at ${to.name} (e2erelprobe).`, people: [RP.person.name], companies: [to.name], relation: { from: RP.person.name, type: "works_at", to: to.name } });
+    const read = async (extra = {}) => (await q({ object: "relations", search: RP.person.name, filters: { type: "works_at", ...extra } })).text;
+    let firstSave = null, change = null;
+    await check("relations_log.three_fields", "relations_log", async () => { firstSave = await call("remember", { ...works(RP.first), relation: { ...works(RP.first).relation, observed_at: "2026-01-15" } }); const t = await read(); return { pass: !firstSave.isError && !/left out/.test(firstSave.text) && t.includes(`${RP.person.name} works_at ${RP.first.name}: current, user, observed 2026-01-15`), text: `${firstSave.text}\n---\n${t}` }; });
+    await check("relations_log.employer_change", "relations_log", async () => { change = await call("remember", { ...works(RP.second), relation: { ...works(RP.second).relation, observed_at: "2026-06-01" } }); const t = await read(); return { pass: !change.isError && change.text.includes(`ended ${RP.person.name} works_at ${RP.first.name}`) && t.includes(`${RP.person.name} works_at ${RP.first.name}: ended`) && t.includes(`${RP.person.name} works_at ${RP.second.name}: current`) && /ended 2026-06-01 m_/.test(t), text: `${change.text}\n---\n${t}` }; });
+    await check("relations_log.as_of", "relations_log", async () => { const t = await read({ at: "2026-03-01" }); return { pass: /current on 2026-03-01/.test(t) && t.includes(`works_at ${RP.first.name}`) && !t.includes(`works_at ${RP.second.name}:`), text: t }; });
+    await check("relations_log.rename_from_log", "relations_log", async () => { const renamed = `${RP.first.name} Holdings`; const u = await call("update_entity", { entity: RP.first.id, by, set: { name: renamed } }); const t = (await q({ object: "relations", search: RP.first.name })).text; return { pass: !u.isError && t.includes(`History of ${renamed}`) && t.includes(`renamed from "${RP.first.name}" to "${renamed}"`) && t.includes(`${RP.person.name} works_at ${renamed}: ended`), text: `${u.text}\n---\n${t}` }; });
   }
 
   /* ---------- upgrade and the layout guard (brain/layout.json), last: the guard check makes the scratch brain read-only ---------- */
