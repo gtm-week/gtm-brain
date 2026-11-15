@@ -203,7 +203,8 @@ test("a teammate's file for a base document is a proposal, and add-file does not
 test("the layout move never takes one of the brain's own folders because a root document shares its name", t => {
   const { root, git, upgrade } = makeBrain(t);
   toLayout2(root, git);
-  const doc = title => `---\nkind: document\ntitle: ${title}\napplies_to: [planning]\nstatus: draft\n---\n# ${title}\n`;
+  // base: true, since only base files move to about-us/; a plain document at the top stays where it is
+  const doc = title => `---\nkind: document\ntitle: ${title}\napplies_to: [planning]\nstatus: draft\nbase: true\n---\n# ${title}\n`;
   for (const name of ["workflows", "brain", "work", "projects"]) writeFileSync(join(root, `${name}.md`), doc(name));
   mkdirSync(join(root, "projects/site"), { recursive: true }); writeFileSync(join(root, "projects/site/README.md"), "A site.\n");
   git("add", "-A"); git("-c", "commit.gpgsign=false", "commit", "-qm", "documents named like the brain's folders");

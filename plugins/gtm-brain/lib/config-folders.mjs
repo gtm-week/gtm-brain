@@ -35,7 +35,9 @@ export function configMovePlan(root) {
   // Never a document's files folder, whatever a document at the top is called: the engine's folders (a document
   // titled Brain or Work would take brain/ or work/ with it), the projects, the workflows.
   const own = new Set([...SKIP_DIRS, ...projectDirs(root), "projects", "workflows", ABOUT_DIR, CONFIG_DIR]);
+  // base files only: a talk draft or a brief at the top is a document of the team's, not the owner's configuration
   for (const d of listDocuments(root)) {
+    if (!d.base) continue;
     if (d.folder === "") {
       add(d.path, `${ABOUT_DIR}/${d.path}`);
       if (isDir(join(root, d.slug)) && !own.has(d.slug)) add(d.slug, `${ABOUT_DIR}/${d.slug}`);

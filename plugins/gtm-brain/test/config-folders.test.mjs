@@ -303,3 +303,25 @@ test("the path module is the only place that names these files", () => {
   const test = /\[ !? ?-[fe] "?[^\]]*(?:admin\.md|settings\.yaml|RULES\.md|SCHEMA\.md)/;
   assert.deepEqual(shells.filter(f => !f.endsWith("session/resolve.sh")).flatMap(f => readFileSync(f, "utf8").split("\n").map((l, i) => `${f.slice(P.length)}:${i + 1}: ${l.trim()}`).filter(l => test.test(l))), []);
 });
+
+test("a base file is a starter, a file in about-us/ or one that says base: true; another document at the top stays there in the move", t => {
+  const { root, git } = makeBrain(t);
+  toLayout2(root, git);
+  const doc = (title, more = "") => `---\nkind: document\ntitle: ${title}\napplies_to: [talks]\nstatus: draft\n${more}---\n# ${title}\n`;
+  writeFileSync(join(root, "talk-draft.md"), doc("Talk draft"));
+  writeFileSync(join(root, "partner-principles.md"), doc("Partner principles", "base: true\n"));
+  const by = Object.fromEntries(listDocuments(root).map(d => [d.path, d.base]));
+  assert.equal(by["talk-draft.md"], false, "a draft at the top is a document, not a base file");
+  assert.equal(by["partner-principles.md"], true, "base: true in the header");
+  assert.equal(by["strategy.md"], true, "a starter");
+  const plan = configMovePlan(root), from = plan.moves.map(([f]) => f);
+  assert.ok(from.includes("strategy.md") && from.includes("partner-principles.md"), `base files move: ${from}`);
+  assert.ok(!from.includes("talk-draft.md"), "the talk draft stays at the top");
+  const C = pillarData(root, lib.readAdmin(root)).configuration.documents;
+  assert.equal(C.find(d => d.path === "talk-draft.md").base, false);
+  // marked through the document script, the header keeps the rest byte for byte
+  const r = spawnSync(process.execPath, [new URL("../scripts/gtm-brain-documents/document.mjs", import.meta.url).pathname, "--update", "talk-draft", "--base", "yes"], { cwd: root, encoding: "utf8", env: { ...process.env, GTM_BRAIN_NO_COMMIT: "1" } });
+  assert.equal(r.status, 0, r.stderr + r.stdout);
+  assert.equal(listDocuments(root).find(d => d.path === "talk-draft.md").base, true);
+  assert.match(readFileSync(join(root, "talk-draft.md"), "utf8"), /# Talk draft/);
+});

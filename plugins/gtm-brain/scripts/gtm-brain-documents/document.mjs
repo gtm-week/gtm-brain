@@ -54,6 +54,12 @@ const finish = (doc, verb, message) => {
   lib.logActivity(root, "document", `${verb} ${doc.path}`); lib.rerender(root);
 };
 
+// --base yes|no: whether the document is a base file (what the company's work must follow), kept as base: in its header
+let baseSet = false;
+if (opt.base !== undefined) {
+  if (!/^(yes|no|true|false)$/i.test(String(opt.base))) refuse("--base takes yes or no");
+  extra = { ...extra, base: /^(yes|true)$/i.test(String(opt.base)) ? "true" : "false" }; baseSet = true;
+}
 if (opt.prepare) {
   if (opt.title === undefined && !adopt) refuse("--prepare needs --title (the subject: Pricing, Positioning, Competitors) or --file (a Markdown at the brain root)");
   if (adopt && docs.parseDocument(root, adopt)) refuse(`${adopt} is already a document; update it instead`);
@@ -73,7 +79,7 @@ if (opt.create) {
   if (adopt) {
     // adopted where it lies: only the frontmatter is added above the person's text, which stays byte for byte
     if (opt.preview) { const p = docs.writeFields(root, adopt, fields, { preview: true }); console.log(`Adopting ${adopt} adds only this frontmatter above its text; the text stays as it is (${p.text.split("\n").length} lines):\n\n${p.frontmatter}\nNothing written yet.`); process.exit(0); }
-    docs.writeFields(root, adopt, fields);
+    docs.writeFields(root, adopt, baseSet ? { ...fields, extra: { base: extra.base } } : fields);
   } else {
     if (opt.preview) { console.log(`Would write ${path}:\n\n${docs.renderDocument({ ...fields, body: String(opt.body), extra })}\nNothing written yet.`); process.exit(0); }
     docs.writeDocument(root, { path, ...fields, body: String(opt.body), extra });
@@ -82,7 +88,7 @@ if (opt.create) {
 }
 if (opt.update) {
   const current = find(String(opt.update)); if (!current) refuse(`no such document ${opt.update}; yours: ${yours()}`);
-  if (!["title", "applies-to", "body", "append", "status"].some(k => opt[k] !== undefined)) refuse("nothing to change: pass --title, --applies-to, --body, --append, --file or --status");
+  if (!["title", "applies-to", "body", "append", "status", "base"].some(k => opt[k] !== undefined)) refuse("nothing to change: pass --title, --applies-to, --body, --append, --file, --status or --base");
   if (opt.append !== undefined && opt.body !== undefined) refuse("pass --body or --append, not both: --append adds a section at the end and keeps the rest");
   if (opt.append !== undefined && !String(opt.append).trim()) refuse("--append needs the section's text");
   const next = { path: current.path, title: opt.title !== undefined ? String(opt.title).trim() : current.title, applies_to: opt["applies-to"] !== undefined ? opt["applies-to"] : current.applies_to, body: opt.body !== undefined ? String(opt.body) : current.body, status: opt.status !== undefined ? String(opt.status) : current.status, by: by || current.by, version: VERSION, extra: { ...current.extra, ...extra } };

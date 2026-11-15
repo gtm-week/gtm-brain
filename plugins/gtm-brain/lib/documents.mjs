@@ -112,6 +112,18 @@ function isStarterBody(slug, body) {
   const re = starterBody.get(slug); return !!re && re.test(String(body || "").trim());
 }
 
+/* A base file is what the company's work must follow, not every document a team keeps: one of the shipped
+   starters or ready base files at the top of the brain, anything in about-us/ (layout 3, the owner's folder), or a
+   document that says so itself with `base: true` in its header. A talk draft or a brief at the top is a document,
+   not a base file: the dashboard lists it apart and the move to about-us/ leaves it where it is. */
+export function isBase(slug, folder, fm = {}) {
+  if (fm.type === "workflow") return false;
+  if (folder === ABOUT_DIR || folder.startsWith(`${ABOUT_DIR}/`)) return true;
+  if (/^(true|yes)$/i.test(String(fm.base ?? "").trim())) return true;
+  if (/^(false|no)$/i.test(String(fm.base ?? "").trim())) return false;
+  return (folder === "" || folder === slug) && (STARTERS.includes(slug) || BASE_STARTERS.includes(slug));
+}
+
 // A workflow's status is draft, active or paused (lib/workflows.mjs); any other document's is draft or approved.
 export function parseDocument(root, path) {
   const abs = join(root, path); if (!existsSync(abs)) return null;
@@ -120,7 +132,8 @@ export function parseDocument(root, path) {
   const slug = basename(path, ".md"), dir = posix(dirname(path));
   const extra = Object.fromEntries(Object.entries(fm).filter(([k]) => !DOCUMENT_KEYS.has(k)));
   const status = STATUSES.includes(fm.status) || (fm.type === "workflow" && ["active", "paused"].includes(fm.status)) ? fm.status : "draft", filled = !isStarterBody(slug, body);
-  return { slug, path: posix(path), folder: dir === "." ? "" : dir, title: String(fm.title || slug), applies_to: normalizeAppliesTo(fm.applies_to), status, filled, state: filled ? status : "not filled", by: fm.by ? String(fm.by) : null, updated: fm.updated ? String(fm.updated) : null, version: fm["gtm-brain"] ? String(fm["gtm-brain"]) : null, body: body.trim(), bytes: Buffer.byteLength(body, "utf8"), extra };
+  const folder = dir === "." ? "" : dir;
+  return { slug, path: posix(path), folder, base: isBase(slug, folder, fm), title: String(fm.title || slug), applies_to: normalizeAppliesTo(fm.applies_to), status, filled, state: filled ? status : "not filled", by: fm.by ? String(fm.by) : null, updated: fm.updated ? String(fm.updated) : null, version: fm["gtm-brain"] ? String(fm["gtm-brain"]) : null, body: body.trim(), bytes: Buffer.byteLength(body, "utf8"), extra };
 }
 
 export function listDocuments(root) { return markdownFiles(root).map(p => parseDocument(root, p)).filter(Boolean); }
@@ -192,7 +205,7 @@ export function writeFields(root, path, fields, { preview = false } = {}) {
   const abs = join(root, path), raw = readFileSync(abs, "utf8").replace(/^﻿/, "");
   const { fm, body } = parseFrontmatter(raw.replace(/\r\n/g, "\n"));
   const text = /\r\n/.test(raw) ? raw.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "") : body;   // a CRLF file keeps its own line ends below
-  const head = renderFrontmatter(documentFields(fields, fm));
+  const head = renderFrontmatter(documentFields(fields, { ...fm, ...(fields.extra || {}) }));   // extra: header keys of the caller's (base: true)
   if (!preview) writeFileSync(abs, head + text);
   return { frontmatter: head, text };
 }

@@ -58,7 +58,7 @@ test("render: Configuration lists the base documents with state, scope and date,
   const docs = D.pillars.configuration.documents;
   for (const slug of ["strategy", "icp", "voice", "design-system", "market"]) assert.equal(docs.find(d => d.slug === slug)?.state, "not written", `${slug} is still the starter`);
   const pricing = docs.find(d => d.slug === "pricing");
-  assert.deepEqual([pricing.state, pricing.base, pricing.applies_to, pricing.path], ["approved", false, ["proposals", "outreach"], "pricing.md"]);
+  assert.deepEqual([pricing.state, pricing.base, pricing.starter, pricing.applies_to, pricing.path], ["approved", true, false, ["proposals", "outreach"], "pricing.md"]);   // pricing is a ready base file, not one of the five starters
   assert.ok(Date.parse(pricing.changed), "a committed document shows its last commit");
   assert.ok(!docs.some(d => d.path?.startsWith("workflows/")), "workflow files are not base documents");
   const R = D.pillars.configuration.rules;

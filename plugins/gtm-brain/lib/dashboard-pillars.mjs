@@ -68,10 +68,11 @@ export function ourRules(text) {
 function configuration(root, admin, { documents, commits, findings, tools, plugin, compileMode }) {
   const docs = documents.filter(d => d.extra?.type !== WORKFLOW_TYPE);
   const state = d => !d.filled ? "not written" : d.status === "approved" ? "approved" : "draft";
-  const rows = docs.map(d => ({ slug: d.slug, title: d.title, path: d.path, state: state(d), applies_to: d.applies_to, changed: changedAt(root, d.path, commits, d.updated), by: d.by, base: STARTERS.includes(d.slug) }));
+  const rows = docs.map(d => ({ slug: d.slug, title: d.title, path: d.path, state: state(d), applies_to: d.applies_to, changed: changedAt(root, d.path, commits, d.updated), by: d.by, base: !!d.base, starter: STARTERS.includes(d.slug) }));
   // A base document nobody has made yet is a row too: the team sees what is missing.
-  for (const slug of STARTERS) if (!rows.some(r => r.slug === slug)) rows.push({ slug, title: slug === "icp" ? "ICP" : slug.split("-").map(w => w[0].toUpperCase() + w.slice(1)).join(" "), path: null, state: "not written", applies_to: [], changed: null, by: null, base: true });
-  rows.sort((a, b) => (b.base - a.base) || (a.base ? STARTERS.indexOf(a.slug) - STARTERS.indexOf(b.slug) : a.title.localeCompare(b.title)));
+  for (const slug of STARTERS) if (!rows.some(r => r.slug === slug)) rows.push({ slug, title: slug === "icp" ? "ICP" : slug.split("-").map(w => w[0].toUpperCase() + w.slice(1)).join(" "), path: null, state: "not written", applies_to: [], changed: null, by: null, base: true, starter: true });
+  const rank = r => (r.starter ? STARTERS.indexOf(r.slug) : STARTERS.length);
+  rows.sort((a, b) => (b.base - a.base) || (rank(a) - rank(b)) || a.title.localeCompare(b.title));
 
   const RULES = rulesFile(root); let rulesText = ""; try { rulesText = readFileSync(join(root, RULES), "utf8"); } catch {}
   const ask = readAskSource(root), placement = whereRows(root), own = ourRules(rulesText);
