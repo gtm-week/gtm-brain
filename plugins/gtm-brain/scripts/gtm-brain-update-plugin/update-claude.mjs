@@ -72,6 +72,8 @@ try {
         console.log("Refreshing this brain's rules with the new version:");
         const up = spawnSync("bash", [join(after.installPath, "scripts/gtm-brain-upgrade/upgrade.sh"), brainArg], { cwd: brainArg, encoding: "utf8", timeout: 120000 });
         process.stdout.write(up.stdout || "");
+        // The update never says yes for the person: a layout change (entity pages into kind folders) is only described.
+        if (/^not upgraded yet:/m.test(up.stdout || "")) console.log("The brain was left as it is. The question above waits for the new session: the plugin running in this one is still the old one, so ask it there and call upgrade_brain with confirm: true only on yes.");
         if (up.status !== 0) console.log(`The rules were not refreshed (${(up.stderr || "").trim().split("\n")[0] || `exit ${up.status}`}). Say: refresh the rules.`);
       }
     }

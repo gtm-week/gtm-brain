@@ -3,12 +3,15 @@
 //   flat (brains from before 0.35): brain/entities/<slug>.md, files in brain/entities/<slug>/
 //   per kind (setup and upgrade):   brain/entities/<kind folder>/<readable name>-<short id>.md, files in the
 //                                   folder of the same name beside it, and an index.md per kind folder
+// brain/layout.json says which one a brain is in, for the plugins that read only the flat one: 1 flat, 2 per
+// kind (lib/layout-version.mjs). recordKindLayout keeps that number with the files.
 // The short id is the first 6 hex characters of the stable id (e_...): it never changes, so a rename moves
 // only the readable part and an old asset path still finds its folder.
 import { existsSync, readdirSync, lstatSync, readFileSync } from "node:fs";
 import { join, posix } from "node:path";
 import { DEFAULT_KINDS } from "./kinds.mjs";
 import { handleFor } from "./brain.mjs";
+import { readLayout, writeLayout, writesLayout, understandsLayout } from "./layout-version.mjs";
 
 export const ENTITIES_DIR = "brain/entities";
 export const INDEX_FILE = "index.md";
@@ -50,6 +53,19 @@ export function kindFolders(root) {
 }
 /* "kinds" when the brain has kind folders (setup and upgrade make them), else "flat". */
 export function layout(root) { return kindFolders(root).length ? "kinds" : "flat"; }
+/* The same as the number brain/layout.json records (lib/layout-version.mjs): 2 with kind folders, 1 flat. */
+export const diskLayout = root => (layout(root) === "kinds" ? 2 : 1);
+/* brain/layout.json follows the files: a brain in kind folders is at least layout 2. Whatever makes kind
+   folders calls this right after (setup's startKindLayout, the upgrade's migrateToKindFolders), and lib.commit
+   and the chat start call it for a brain a 0.35 pre-release moved while the file still said 1 or was missing.
+   A plugin from before kind folders does not raise the number, and a file that cannot be read is left alone.
+   Returns the layout written, 0 when the file was right. The caller commits brain/layout.json. */
+export function recordKindLayout(root) {
+  const recorded = readLayout(root);
+  if (recorded.error || recorded.layout >= 2 || understandsLayout() < 2 || layout(root) !== "kinds") return 0;
+  const to = Math.max(2, writesLayout());
+  return writeLayout(root, { layout: to }) ? to : 0;
+}
 
 /* Every entity page, both layouts, relative to the brain and sorted. Index files and asset folders are skipped. */
 export function pagePaths(root) {

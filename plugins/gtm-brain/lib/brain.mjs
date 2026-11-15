@@ -21,7 +21,7 @@ export { normalizeKind, normalizeSource, normalizeSources, pointerKey, parsePoin
 import { checkSchema } from "./ontology/validation.mjs";
 import { sharedEntityFiles, thaw, deepFreeze, writeEntityFiles, entityId, entityType, ENTITY_FORMAT, refreshEntityPages, staleEntities, withEntityLock } from "./entities.mjs";
 import { appendMemoryBytes } from './memory-journal.mjs';
-import { assertWritable, layoutBlock } from "./layout-version.mjs";
+import { assertWritable, layoutBlock, LAYOUT_FILE } from "./layout-version.mjs";
 import { requestDashboardRefresh } from './dashboard-refresh.mjs';
 import { MEETING_FIELDS, validateMeetingEvidence, prepareMeetingMemory, duplicateMeetingMemory, meetingMetadata } from './meetings.mjs';
 export { meetingOverview, meetingCaptureStatus, meetingSourceSuggestions, validateMeetingEvidence, prepareMeetingMemory, meetingMetadata } from './meetings.mjs';
@@ -37,7 +37,7 @@ export { withEntityLock, startKindLayout, migrateToKindFolders } from './entitie
 export { ensureMeetingEntities, deriveMeetingEntities, meetingEntityId, meetingAttendees } from './meeting-entities.mjs';
 import { ensureMeetingEntities as meetingEntitiesFor, meetingAnchors, anchorOf } from './meeting-entities.mjs';
 export { layout as entityLayout, pagePaths as entityPagePaths, kindFolder, kindPagePath, assetFolder, findPage } from './layout.mjs';
-import { ENTITIES_DIR } from './layout.mjs';
+import { ENTITIES_DIR, recordKindLayout } from './layout.mjs';
 
 /* The machine-wide GTM Brain preferences file. */
 export const preferencesPath = () => join(process.env.CODEX_HOME || join(homedir(), ".codex"), "gtm-brain", "preferences.json");
@@ -958,8 +958,27 @@ export function savePathsFor(root) { return [...[".", "brain"].filter(p => exist
 /* Every writer calls this once after writing: everything written is kept at once, one commit per
    change. The message is also the activity line the dashboard shows. GTM_BRAIN_NO_COMMIT (tests,
    dry runs) turns committing off, for save as well. */
-export function commit(root, paths, message, { always = false, push = true, allowEmpty = false } = {}) {
+export function commit(root, paths, message, options = {}) {
   const blocked = layoutBlock(root); if (blocked) return { ok: false, note: blocked, blocked: true };
+  // brain/layout.json follows the files, in the commit that finds them ahead of it: a brain whose pages a 0.35
+  // pre-release moved into kind folders while the file still said 1, or had none, gets 2 with this write.
+  // Here because every writer ends here: no commit by this plugin leaves a kind-folder brain saying 1, with or
+  // without a chat start before it (a scheduled run, a script). Said once, in the note every writer prints.
+  let healed = 0; try { healed = readAdmin(root) ? recordKindLayout(root) : 0; } catch {}
+  const kept = keep(root, healed ? [...paths, LAYOUT_FILE] : paths, message, options);
+  return healed ? { ...kept, note: `${kept.note}; ${layoutHealed(healed)}` } : kept;
+}
+const layoutHealed = (n, kept = "") => `recorded file layout ${n} in ${LAYOUT_FILE}${kept && ` (${kept})`}: the entity pages were already in kind folders, and an older GTM Brain that checks this file now reads this brain but writes nothing until it is updated`;
+/* The chat start's part of the same repair, for a chat that only reads: the file in a commit of its own, and
+   the one line to say. "" when the file was right (every later call). */
+export function healLayout(root) {
+  if (!readAdmin(root) || layoutBlock(root)) return "";
+  let n = 0; try { n = recordKindLayout(root); } catch {}
+  if (!n) return "";
+  const kept = keep(root, [LAYOUT_FILE], `layout: ${LAYOUT_FILE} says ${n}, the entity pages were already in kind folders`);
+  return `GTM Brain: ${layoutHealed(n, kept.note)}. Tell the person in one line; nothing was moved.`;
+}
+function keep(root, paths, message, { always = false, push = true, allowEmpty = false } = {}) {
   // Keep identity files and derived evidence views with every brain write.
   if (readAdmin(root) && paths.some(p => /brain(?:\/|$)|context\.md$|memories\.jsonl$/.test(p))) {
     withEntityLock(root, () => { if (!migrateEntities(root)) refreshEntityPages(root); });

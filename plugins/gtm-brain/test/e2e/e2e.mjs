@@ -305,14 +305,14 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
   }
 
   /* ---------- upgrade and the layout guard (brain/layout.json), last: the guard check makes the scratch brain read-only ---------- */
-  await check("upgrade.layout_recorded", "upgrade", async () => { const t = readFileSync(join(brain, "brain/layout.json"), "utf8"); return { pass: JSON.parse(t).layout === 1, text: t }; });
+  await check("upgrade.layout_recorded", "upgrade", async () => { const t = readFileSync(join(brain, "brain/layout.json"), "utf8"); return { pass: JSON.parse(t).layout === 2, text: t }; });   // a brain made by setup: entity pages in kind folders
   await check("upgrade.repeat_changes_nothing", "upgrade", async () => { await call("upgrade_brain", {}); const r = await call("upgrade_brain", {}); return { pass: !r.isError && /already current/.test(r.text), text: r.text }; });
   await check("upgrade.newer_layout_read_only", "upgrade", async () => {
     const file = join(brain, "brain/layout.json"), notes = join(brain, "brain/contexts/offer/memories.jsonl"), before = readFileSync(notes, "utf8");
-    writeFileSync(file, JSON.stringify({ layout: 2 }) + "\n");
+    writeFileSync(file, JSON.stringify({ layout: 3 }) + "\n");
     const w = await call("remember", { by, context: "offer", content: "E2E probe: must not land (e2elayoutprobe)." });
     const r = await q({ object: "memories", search: N.single.query });
-    const pass = w.isError && /update GTM Brain/.test(w.text) && readFileSync(notes, "utf8") === before && !r.isError && /^GTM Brain: this brain was upgraded to file layout 2/.test(r.text) && rowIds(r.text).length > 0;
+    const pass = w.isError && /update GTM Brain/.test(w.text) && readFileSync(notes, "utf8") === before && !r.isError && /^GTM Brain: this brain was upgraded to file layout 3/.test(r.text) && rowIds(r.text).length > 0;
     return { pass, text: `${w.text}\n---\n${r.text}`, note: pass ? "write refused, read answered with the line on top" : "" };
   });
 

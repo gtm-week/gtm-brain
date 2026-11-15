@@ -13,6 +13,13 @@ work/entity-migration/. It never rewrites admin.md, contexts or memories.
 
 Call the GTM Brain tool `upgrade_brain` with `brain` = this workspace folder. No shell command.
 
+If it answers "not upgraded yet", nothing was changed: the upgrade would change the brain's file
+layout. For a brain from before 0.35 that is the move of its flat entity pages into a folder per
+kind (layout 1 to 2). Say how many pages would move and which teammates must update first, as the
+tool reports it, and ask one question: Yes, upgrade the layout / No, not now. Only on yes call
+`upgrade_brain` again with `confirm: true`. On no, leave it: the flat brain keeps working. Never
+pass `confirm` without that yes, after a plugin update on its own, or in a scheduled run.
+
 The refresh recognizes current rules and every shipped template in
 `templates/legacy/manifest.json`, including skipped releases. Before replacing files it
 validates editable entity files and saves previous instructions under `work/upgrades/before-*`. Company data and

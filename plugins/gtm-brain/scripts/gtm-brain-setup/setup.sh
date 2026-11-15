@@ -66,6 +66,7 @@ node -e 'const l=await import(process.argv[1]);l.seedOnboarding(".",process.argv
 
 # 2b. names registry, seeded with the team
 # Entity pages go in a folder per kind (people/, organizations/, ...), each with its generated index.md.
+# startKindLayout records that as layout 2 in brain/layout.json, kept in the setup commit with the folders.
 node -e 'const l=await import(process.argv[1]); l.startKindLayout("."); l.writeNames(".", l.readNames("."))' "$PLUGIN/lib/brain.mjs"
 
 # 3. AGENTS.md, gitignore, hooks
@@ -86,7 +87,8 @@ for doc in strategy icp voice design-system market; do
   [ -f "$doc.md" ] || [ -f "$doc/$doc.md" ] || sed -e "s|{{COMPANY}}|$(esc "$COMPANY")|g" -e "s|{{DATE}}|$(date +%F)|g" -e "s|{{VERSION}}|$PLUGIN_VERSION|g" "$T/$doc.md" > "$doc.md"
 done
 # brain/layout.json: the file layout this brain uses, read by every GTM Brain before it writes; the starters
-# are recorded as given, so an upgrade never brings back one the person deleted (lib/layout-version.mjs).
+# are recorded as given, so an upgrade never brings back one the person deleted (lib/layout-version.mjs). The
+# layout number is the 2 startKindLayout recorded above; this adds the starters and never lowers it.
 node -e 'const v=await import(process.argv[1]),u=await import(process.argv[2]);v.writeLayout(".",{starters:u.STARTERS})' "$PLUGIN/lib/layout-version.mjs" "$PLUGIN/lib/upgrade-files.mjs"
 # workflows/ from day one (0.28.0): the two shipped workflow documents as drafts; a folder already there is the person's.
 if [ ! -d workflows ]; then

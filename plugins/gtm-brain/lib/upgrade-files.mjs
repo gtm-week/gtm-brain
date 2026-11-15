@@ -3,7 +3,8 @@ import { existsSync, readFileSync, readdirSync, mkdirSync, copyFileSync, writeFi
 import { join, dirname } from "node:path";
 import { readAdmin, readNames, commit, currentPerson } from "./brain.mjs";
 import { withOwnAdditions, splitOwn, joinOwn } from "./rule-pages.mjs";
-import { readLayout, layoutBlock, layoutPlan, writeLayout } from "./layout-version.mjs";
+import { readLayout, layoutBlock, layoutPlan, writeLayout, writesLayout } from "./layout-version.mjs";
+import { diskLayout, pagePaths, isKindPagePath } from "./layout.mjs";
 import { ensureRules } from "./where.mjs";
 import { ensureSchema } from "./schema.mjs";
 
@@ -150,22 +151,31 @@ export function addStarters(root, templates, { version = "", date = new Date().t
 }
 
 /* upgrade.sh, before anything is backed up or replaced: BLOCKED\t<line> for a brain on a newer layout,
-   ASK\t<question> for a layout change without the person's yes, CHANGE\t<from>\t<to> with it, "" otherwise. */
+   ASK\t<question> for a layout change without the person's yes, CHANGE\t<from>\t<to> with it, "" otherwise.
+   The change 0.35 brings is the move of a flat brain's entity pages into kind folders (layout 1 to 2): the
+   question says how many pages move. A brain whose pages are in kind folders already has nothing to ask
+   about, whatever its file says (the upgrade records 2). A scheduled or background run never changes the
+   layout, with or without the flag: nobody is there to have said yes. */
 export function layoutStep(root, confirmed) {
   const blocked = layoutBlock(root);
   if (blocked) return `BLOCKED\t${blocked}`;
   const names = Object.fromEntries((readAdmin(root)?.team || []).map(p => [p.handle, p.name]));
-  const plan = layoutPlan(root, { me: currentPerson(root), names });
+  const on = diskLayout(root), flat = on < 2 ? pagePaths(root).filter(p => !isKindPagePath(p)).length : 0;
+  const what = on < 2 ? `It moves ${flat} entity page${flat === 1 ? "" : "s"} into a folder per kind (brain/entities/people/, organizations/, ...), where a GTM Brain from before 0.35 does not find them; 0.34 does not check the layout yet, so it keeps saving and writes flat pages of its own, which the next write here folds in.` : "";
+  const plan = layoutPlan(root, { me: currentPerson(root), names, on, what });
   if (!plan.changes) return "";
+  if (process.env.GTM_BRAIN_RUN) return `ASK\t${plan.summary} A scheduled or background run never changes the layout: the person says "upgrade the brain" in a chat.`;
   return confirmed ? `CHANGE\t${plan.from}\t${plan.to}` : `ASK\t${plan.line}`;
 }
 
 /* upgrade.sh: what a brain lacks, as three lines: the starters added, RULES.md and SCHEMA.md written, and
-   the line to print when brain/layout.json was written. The layout is recorded last, after the starters it lists. */
-export function deliverMissing(root, templates, version) {
+   the line to print when brain/layout.json was written. The layout is recorded last, after the starters it
+   lists. The move into kind folders has recorded its own layout by now (said: upgrade.sh printed that line);
+   here the number only rises to what this plugin writes for a brain in kind folders, and a flat brain keeps 1. */
+export function deliverMissing(root, templates, version, said = false) {
   const starters = addStarters(root, templates, { version });
   const files = [ensureRules(root, templates) && "RULES.md", ensureSchema(root, templates) && "SCHEMA.md"].filter(Boolean);
-  const before = readLayout(root), written = writeLayout(root, { starters: STARTERS }), after = readLayout(root).layout;
-  const layout = !written ? "" : before.layout !== after ? `changed the brain's file layout to ${after}` : "recorded the brain's file layout (brain/layout.json)";
+  const before = readLayout(root), written = writeLayout(root, { starters: STARTERS, layout: diskLayout(root) === 2 ? writesLayout() : undefined }), after = readLayout(root).layout;
+  const layout = !written ? "" : before.layout !== after ? `changed the brain's file layout to ${after}` : said ? "" : "recorded the brain's file layout (brain/layout.json)";
   return [starters.join(" "), files.join(" "), layout].join("\n");
 }
