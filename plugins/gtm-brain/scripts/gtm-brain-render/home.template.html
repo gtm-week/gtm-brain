@@ -328,6 +328,11 @@ time.pl-when{white-space:nowrap;cursor:help;text-decoration:underline dotted var
 .gq-opt{display:flex;flex-direction:column;gap:2px;width:100%;padding:8px 10px;border:0;border-radius:4px;background:none;color:var(--ink);font:inherit;font-size:13.5px;text-align:left;cursor:pointer}.gq-opt.on,.gq-opt:hover{background:var(--accent-soft)}.gq-opt.on{box-shadow:inset 2px 0 0 var(--accent)}
 .gq-title{overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.45}.gq-detail{font-size:11.5px;color:var(--muted)}.gq-pop mark{background:none;color:var(--accent);font-weight:700;text-decoration:underline;text-decoration-color:var(--accent);text-underline-offset:3px}
 .gq-how,.gq-keys{margin:0;padding:6px 10px;font-size:11.5px;color:var(--muted)}.gq-keys{border-top:1px solid var(--soft);margin-top:4px}.gq-none{padding:14px 12px;font-size:13px}.gq-none p{margin:0 0 6px;color:var(--muted)}.gq-none p b{color:var(--ink)}
+.mem-more{position:relative;flex:none}.mem-dots{font:inherit;font-size:18px;line-height:1;letter-spacing:1px;color:var(--muted);background:none;border:1px solid transparent;border-radius:4px;padding:2px 8px 6px;cursor:pointer}.mem-dots:hover,.mem-dots[aria-expanded="true"]{color:var(--ink);border-color:var(--rule);background:var(--surface)}.mem-dots:focus-visible,.mem-menu button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.mem-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:30;min-width:220px;display:flex;flex-direction:column;padding:4px;background:var(--surface);border:1px solid var(--rule);border-radius:6px;box-shadow:0 8px 28px rgba(0,0,0,.22)}.mem-menu button{font:inherit;font-size:13.5px;text-align:left;color:var(--ink);background:none;border:0;border-radius:4px;padding:8px 10px;cursor:pointer;white-space:nowrap}.mem-menu button:hover,.mem-menu button:focus{background:var(--soft)}
+.mem-form textarea{font:inherit;font-size:14.5px;line-height:1.55;color:var(--ink);background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:9px 11px;width:100%;box-sizing:border-box;resize:vertical;min-height:96px}.mem-form textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}.mem-cands{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin:0 0 12px}.mem-cands .filter-pill:disabled{opacity:.55;cursor:default}
+.mem-history{margin:4px 0 10px;padding:0 0 0 18px;font-size:13.5px;color:var(--muted);max-width:75ch}.mem-history li{margin:4px 0}.mem-hist,.mem-same .linkbtn{font-size:12.5px}.mem-flash{margin:0 0 12px}
+@media(max-width:900px){.mem-menu{right:auto;left:0}}
 .mem-filters{align-items:flex-start}.mem-filters .explore-search input{padding-left:34px;max-width:none}.mem-selects{display:flex;flex-wrap:wrap;gap:8px 14px;flex-basis:100%}.mem-card{padding:16px 0}.mem-card .pl-text{font-size:15px;line-height:1.6;margin:6px 0 6px;max-width:86ch}.mem-card.focus{box-shadow:inset 3px 0 0 var(--accent);padding-left:14px;background:var(--surface)}.mem-topic{color:var(--muted);font-size:11.5px}.mem-topic:before{content:"in ";opacity:.7}.mem-people{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.mem-people .tag{border:0;font:inherit;font-size:12px;cursor:pointer;background:var(--accent-soft);color:var(--accent)}.mem-people .tag:hover{box-shadow:inset 0 0 0 1px var(--accent)}.mem-older{display:block;margin:18px auto 4px;padding:9px 18px}.mem-docs{margin-top:26px;padding-top:14px;border-top:1px solid var(--rule)}
 .wf-card{padding:16px 0}.wf-card h3 .linkbtn{font-size:16px}.wf-about{margin:2px 0 8px;font-size:14px;max-width:80ch}.wf-wait{margin:8px 0 0;padding:8px 12px;border-left:3px solid var(--amber);background:var(--amber-soft);border-radius:3px;font-size:13px}.wf-detail{margin-top:14px;padding:14px 16px;background:var(--paper);border:1px solid var(--rule);border-radius:4px}.wf-detail h4{font-family:var(--label);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;font-weight:600}.wf-detail h4:not(:first-child){margin-top:16px}
 .wf-steps{list-style:none;counter-reset:step;margin:0;padding:0}.wf-steps li{counter-increment:step;position:relative;padding:5px 0 12px 38px;font-size:13.5px}.wf-steps li:before{content:counter(step);position:absolute;left:0;top:2px;width:24px;height:24px;border-radius:50%;border:1px solid var(--rule);display:grid;place-items:center;font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--surface)}.wf-steps li:not(:last-child):after{content:"";position:absolute;left:12px;top:28px;bottom:0;width:1px;background:var(--rule)}.wf-steps li.here:before{border-color:var(--green);color:var(--green);background:var(--green-soft)}.wf-steps li.here>span:first-child{font-weight:600}
@@ -1579,15 +1584,15 @@ function pmFiltered(list){
  const ids=q?new Set(PL.entities.rows.filter(e=>[e.name,...(e.aliases||[])].some(n=>String(n).toLowerCase()===q)).map(e=>e.id)):null;
  if(ids&&!ids.size)for(const e of PL.entities.rows)if(peMatch(e,q))ids.add(e.id);
  const tokens=text?fzWords(text).map(x=>x.w):null,project=pmF.project?"project:"+pmF.project:"";
- return list.filter(n=>(!pmF.kind||n.kind===pmF.kind)&&(!pmF.tag||n.tags.includes(pmF.tag))&&(!project||n.tags.includes(project))&&(!pmF.state||n.state===pmF.state)&&(!pmF.who||(n.authors||[]).includes(pmF.who))&&(!pmF.topic||n.context===pmF.topic)&&(!since||Date.parse(n.at)>=since)&&(!ids||n.entities.some(id=>ids.has(id)))&&(!tokens||!!fzMatch(tokens,[[n.text,1]])||(pmFound.q===text&&!!pmFound.ids?.has(n.id))));
+ return list.filter(n=>(!pmF.kind||n.kind===pmF.kind)&&(!pmF.tag||n.tags.includes(pmF.tag))&&(!project||n.tags.includes(project))&&(!pmF.state||(pmF.state==="copies"?n.state==="in force"&&!!n.sameAs:n.state===pmF.state))&&(!pmF.who||(n.authors||[]).includes(pmF.who))&&(!pmF.topic||n.context===pmF.topic)&&(!since||Date.parse(n.at)>=since)&&(!ids||n.entities.some(id=>ids.has(id)))&&(!tokens||!!fzMatch(tokens,[[n.text,1]])||(pmFound.q===text&&!!pmFound.ids?.has(n.id))));
 }
 const pmEntityById=id=>(pmEntityById.map??=new Map((PL?.entities?.rows||[]).map(e=>[e.id,e]))).get(id);
 const pmKindWord=k=>({note:"Note",decision:"Decision",question:"Question",action:"Action"})[k]||k.charAt(0).toUpperCase()+k.slice(1);
 function pmRow(n){
  const c=D.contexts.find(x=>x.slug===n.context),topic=c?contextTitle(c):"";
- const rel=(n.replaces?`<p class="pl-rel-line">${esc("Replaces what was saved")} ${n.replaces.at?whenText(n.replaces.at)+": ":""}${n.replaces.text?esc(n.replaces.text):`<span class="pl-age">${esc("an earlier note")}</span>`}</p>`:"")+(n.replacedBy?`<p class="pl-rel-line pl-warn">${esc("Replaced")} ${whenText(n.replacedBy.at)} ${esc("by")}: ${esc(n.replacedBy.text)}</p>`:"")+(n.withdrawnBy?`<p class="pl-rel-line pl-warn">${esc("Withdrawn")} ${whenText(n.withdrawnBy.at)}: ${esc(n.withdrawnBy.text)}</p>`:"");
+ const rel=(n.replaces?`<p class="pl-rel-line">${esc("Replaces what was saved")} ${n.replaces.at?whenText(n.replaces.at)+": ":""}${n.replaces.text?esc(n.replaces.text):`<span class="pl-age">${esc("an earlier note")}</span>`} <button type="button" class="linkbtn mem-hist" data-pm-history="${esc(n.id)}" aria-expanded="${pmHistory===n.id}">${esc("History")}</button></p>${pmHistory===n.id?pmHistoryHtml(n):""}`:"")+(n.sameAs&&n.state==="in force"?`<p class="pl-rel-line mem-same">${pmCanEdit()?`<button type="button" class="linkbtn" data-pm-open="dupe" data-pm-id="${esc(n.id)}">${esc("Same as an earlier note")}</button>`:esc("Same as an earlier note")}${n.sameAs.at?" "+esc("saved")+" "+whenText(n.sameAs.at):""}</p>`:"")+(n.replacedBy?`<p class="pl-rel-line pl-warn">${esc("Replaced")} ${whenText(n.replacedBy.at)} ${esc("by")}: ${esc(n.replacedBy.text)}</p>`:"")+(n.withdrawnBy?`<p class="pl-rel-line pl-warn">${esc("Withdrawn")} ${whenText(n.withdrawnBy.at)}: ${esc(n.withdrawnBy.text)}</p>`:"");
  const people=(n.entities||[]).map(pmEntityById).filter(Boolean).slice(0,8),who=(n.authors||[]).map(authorName).join(", ");
- return `<article class="pl-row pl-note mem-card${n.state!=="in force"?" pl-old":""}${n.id===pmFocus?" focus":""}" data-note="${esc(n.id)}"><div class="pl-row-main"><div class="pl-meta"><span class="pl-date">${whenText(n.at)}</span>${who?`<span>${esc(who)}</span>`:""}${n.kind!=="note"?`<span class="pill ${esc(n.kind)}">${esc(pmKindWord(n.kind))}</span>`:""}${n.state!=="in force"?stateBadge(n.state):""}${topic?`<span class="mem-topic">${esc(topic)}</span>`:""}</div><p class="pl-text">${pmF.q.trim()?fzMark(n.text,fzMatch(pmF.q,[[n.text,1]])?.marks):esc(n.text)}</p>${rel}${people.length?`<div class="mem-people" aria-label="${esc("People and companies in this note")}">${people.map(e=>`<button type="button" class="tag" data-entity-id="${esc(e.id)}">${esc(e.name)}</button>`).join("")}</div>`:""}${n.source.length?`<div class="pl-sources">${sourcesHtml(n.source)}</div>`:""}</div>${rowLinks(null,`Let's discuss the note saved ${localDate(n.at)}${topic?" about "+topic:""}: "${n.text.slice(0,200)}". Read it and its sources first.`,"this note")}</article>`;
+ return `<article class="pl-row pl-note mem-card${n.state!=="in force"?" pl-old":""}${n.id===pmFocus?" focus":""}" data-note="${esc(n.id)}"><div class="pl-row-main"><div class="pl-meta"><span class="pl-date">${whenText(n.at)}</span>${who?`<span>${esc(who)}</span>`:""}${n.kind!=="note"?`<span class="pill ${esc(n.kind)}">${esc(pmKindWord(n.kind))}</span>`:""}${n.state!=="in force"?stateBadge(n.state):""}${topic?`<span class="mem-topic">${esc(topic)}</span>`:""}</div><p class="pl-text">${pmF.q.trim()?fzMark(n.text,fzMatch(pmF.q,[[n.text,1]])?.marks):esc(n.text)}</p>${rel}${people.length?`<div class="mem-people" aria-label="${esc("People and companies in this note")}">${people.map(e=>`<button type="button" class="tag" data-entity-id="${esc(e.id)}">${esc(e.name)}</button>`).join("")}</div>`:""}${n.source.length?`<div class="pl-sources">${sourcesHtml(n.source)}</div>`:""}${pmFormHtml(n)}</div>${rowLinks(null,`Let's discuss the note saved ${localDate(n.at)}${topic?" about "+topic:""}: "${n.text.slice(0,200)}". Read it and its sources first.`,"this note")}${pmMoreHtml(n)}</article>`;
 }
 function renderNotesTab(){
  if(!PL){$("#pm-list").innerHTML=plEmpty;return}
@@ -1604,14 +1609,14 @@ function renderNotesTab(){
    `<label>${esc("Person or company")} <input id="pm-entity" type="search" list="pm-entity-list" autocomplete="off" placeholder="${esc("Anyone")}" value="${esc(pmF.entity)}"><datalist id="pm-entity-list">${PL.entities.rows.slice(0,3000).map(e=>`<option value="${esc(e.name)}">`).join("")}</datalist></label>`+
    (topics.length>1?`<label>${esc("Topic")} <select id="pm-topic">${opt("","Any topic",pmF.topic)}${topics.map(c=>opt(c.slug,contextTitle(c),pmF.topic)).join("")}</select></label>`:"")+
    (projects.length?`<label>${esc("Project")} <select id="pm-project">${opt("","Any project",pmF.project)}${projects.map(p=>opt(p.slug,p.title,pmF.project)).join("")}</select></label>`:"")+
-   `<label>${esc("Show")} <select id="pm-state">${[["in force","Current notes"],["replaced","Replaced notes"],["withdrawn","Withdrawn notes"],["","All of them"]].map(([v,l])=>opt(v,l,pmF.state)).join("")}</select></label></div>`;
+   `<label>${esc("Show")} <select id="pm-state">${[["in force","Current notes"],["replaced","Replaced notes"],["withdrawn","Withdrawn notes"],...(source.some(n=>n.sameAs&&n.state==="in force")||pmF.state==="copies"?[["copies","Copies of earlier notes"]]:[]),["","All of them"]].map(([v,l])=>opt(v,l,pmF.state)).join("")}</select></label></div>`;
  }
  const rows=pmFiltered(source),partial=!pmAll&&M.total>M.first.length;
  if(pmF.q.trim()){const tokens=fzWords(pmF.q).map(x=>x.w),score=new Map(rows.map(n=>[n.id,(fzMatch(tokens,[[n.text,1]])?.score||0)+(pmFound.ids?.has(n.id)?40:0)]));rows.sort((a,b)=>score.get(b.id)-score.get(a.id)||String(b.at).localeCompare(String(a.at)))}
  if(pmFocus){const at=rows.findIndex(n=>n.id===pmFocus);if(at>0)rows.unshift(rows.splice(at,1)[0])}
  if(partial&&rows.length<pmLimit&&LIVE&&!pmError)pmLoad();
  const filtered=!!(pmF.q||pmF.kind||pmF.who||pmF.topic||pmF.project||pmF.tag||pmF.entity||pmF.period||pmF.state!=="in force");
- $("#pm-list").innerHTML=rows.slice(0,pmLimit).map(pmRow).join("")+(rows.length>pmLimit?`<button class="btn quiet pl-more mem-older" data-pm-more>${esc("Show older")} (${rows.length-pmLimit} ${esc("more")})</button>`:partial&&LIVE&&!pmError&&!pmLoading&&rows.length?`<button class="btn quiet pl-more mem-older" data-pm-more>${esc("Show older")}</button>`:"")||`<p class="empty">${esc(pmLoading?"Loading notes…":filtered?"No note matches these filters. Remove one, or try other words.":"Nothing saved yet. Tell Codex something worth remembering, for example \"remember that Acme renews in March\".")}</p>`;
+ $("#pm-list").innerHTML=(pmFlash?`<p class="ent-flash mem-flash" role="status">${esc(pmFlash.text)}</p>`:"")+rows.slice(0,pmLimit).map(pmRow).join("")+(rows.length>pmLimit?`<button class="btn quiet pl-more mem-older" data-pm-more>${esc("Show older")} (${rows.length-pmLimit} ${esc("more")})</button>`:partial&&LIVE&&!pmError&&!pmLoading&&rows.length?`<button class="btn quiet pl-more mem-older" data-pm-more>${esc("Show older")}</button>`:"")||`<p class="empty">${esc(pmLoading?"Loading notes…":filtered?"No note matches these filters. Remove one, or try other words.":"Nothing saved yet. Tell Codex something worth remembering, for example \"remember that Acme renews in March\".")}</p>`;
  const shown=Math.min(rows.length,pmLimit);
  $("#pm-status").textContent=pmF.q.trim()&&(pmFound.loading||pmLoading)?`Searching all ${M.total} notes…`:partial?(pmLoading?`Showing ${shown} of the ${M.first.length} newest notes. Loading all ${M.total}…`:pmError||!LIVE?`Showing ${shown} of the ${M.first.length} newest notes. ${LIVE?"The full list could not be loaded; refresh the dashboard to retry.":"Open the live dashboard to filter all "+M.total+" notes."}`:`Showing the ${shown} newest of ${M.total} notes.`):`Showing ${shown} of ${rows.length} ${rows.length===1?"note":"notes"}${rows.length!==M.total?" ("+M.total+" in all)":""}.`;
  const docs=(PL.configuration?.documents||[]).filter(d=>!d.base&&d.path);
@@ -1659,6 +1664,108 @@ document.addEventListener("click",e=>{const r=e.target.closest?.("tr[data-open]"
 document.addEventListener("click",e=>{const b=e.target.closest?.("[data-pe-more],[data-pm-more]");if(!b)return;if(b.hasAttribute("data-pm-more")){pmLimit+=PM_PAGE;renderNotesTab()}else{const k=b.dataset.peMore;peLimits[k]=(peLimits[k]||PE_PAGE)+PE_PAGE*2;renderEntitiesTab()}});
 document.addEventListener("input",e=>{if(e.target?.id==="pe-q"){peQuery=e.target.value;peLimits={};renderEntitiesTab()}else if(e.target?.id==="pm-entity"||e.target?.id==="pm-q"){pmF[e.target.id.slice(3)]=e.target.value;pmFocus="";pmLimit=PM_PAGE;if(e.target.id==="pm-q")pmFind();renderNotesTab()}});
 document.addEventListener("change",e=>{const id=e.target?.id;if(!["pm-who","pm-topic","pm-project","pm-tag","pm-period","pm-state"].includes(id))return;pmF[id.slice(3)]=e.target.value;pmFocus="";pmLimit=PM_PAGE;renderNotesTab()});
+/* ---------- Memories: managing a note from its card. The "..." menu on a note in force offers five things, each one
+   named operation of POST /memory-edit (server/memory-edit.mjs), which runs the remember script the chat tools run;
+   the page writes nothing itself and no note is ever edited or removed: a correction is a new note that replaces
+   the old one, "This was wrong" a note that withdraws it. The menu and its forms show only on the live dashboard,
+   which alone carries the save token, and a form is in the page only while it is open. ---------- */
+const pmCanEdit=()=>LIVE&&!!entToken();
+let pmEdit=null,pmFlash=null,pmPendingRefresh=null,pmHistory="",pmWhole=null;
+// what the last save said and the filters it was made under, kept across the page's own refresh for half a minute
+try{const f=JSON.parse(sessionStorage.getItem("gtm-mem-flash")||"null");if(f&&typeof f.text==="string"&&Date.now()-Number(f.at)<30000){pmFlash={text:f.text};if(f.f&&typeof f.f==="object")for(const k of Object.keys(pmF))if(typeof f.f[k]==="string")pmF[k]=f.f[k];if(Number(f.limit)>PM_PAGE)pmLimit=Number(f.limit)}else sessionStorage.removeItem("gtm-mem-flash")}catch{}
+const pmNewer=newer;newer=r=>{if(pmEdit&&pmEdit.mode!=="menu"&&r&&r!==D.generatedAt){pmPendingRefresh=r;return}pmNewer(r)};
+const pmNote=id=>(pmAll||PL?.memories?.first||[]).find(n=>n.id===id);
+const pmTopicTitle=slug=>{const c=D.contexts.find(x=>x.slug===slug);return c?contextTitle(c):""};
+const pmTopics=n=>D.contexts.filter(c=>c.status==="active"&&c.slug!==n.context&&!String(c.slug).startsWith("personal-"));
+const pmNameQuestion=n=>(n.tags||[]).includes("name-question");
+const PM_ITEMS=[["correct","Correct this"],["retract","This was wrong"],["move","Move to another topic"],["kind","Change what kind it is"],["answer","Answered"]];
+const pmItems=n=>PM_ITEMS.filter(([m])=>m==="move"?pmTopics(n).length>0:m==="answer"?n.kind==="question"&&!pmNameQuestion(n):true);
+function pmMoreHtml(n){
+ if(!pmCanEdit()||n.state!=="in force")return"";
+ const open=pmEdit?.id===n.id&&pmEdit.mode==="menu";
+ return `<div class="mem-more"><button type="button" class="mem-dots" data-pm-menu="${esc(n.id)}" aria-haspopup="menu" aria-expanded="${open}" aria-label="${esc("More for this note")}" title="${esc("More for this note")}"><span aria-hidden="true">…</span></button>${open?`<div class="mem-menu" id="pm-menu" role="menu" aria-label="${esc("What to do with this note")}">${pmItems(n).map(([m,label])=>`<button type="button" role="menuitem" tabindex="-1" data-pm-open="${m}" data-pm-id="${esc(n.id)}">${esc(label)}</button>`).join("")}</div>`:""}</div>`;
+}
+function pmCandsHtml(n,x){
+ const topics=pmTopics(n),q=x.v.q.trim(),rows=q&&typeof fzRank==="function"?fzRank(q,topics,c=>[[contextTitle(c),1]],8).map(r=>r.item):topics.slice(0,8),chosen=topics.find(c=>c.slug===x.v.topic);
+ if(chosen&&!rows.includes(chosen))rows.unshift(chosen);
+ return rows.length?rows.map(c=>`<button type="button" class="filter-pill${x.v.topic===c.slug?" selected":""}" data-pm-pick="${esc(c.slug)}" aria-pressed="${x.v.topic===c.slug}">${esc(contextTitle(c))}</button>`).join("")+(!q&&topics.length>8?`<span class="pl-age">${esc("Type to find the others.")}</span>`:""):`<span class="pl-age">${esc("No topic matches. Try other words.")}</span>`;
+}
+function pmFormHtml(n){
+ const x=pmEdit;if(!x||x.id!==n.id||x.mode==="menu")return"";
+ const v=x.v,off=x.busy?" disabled":"",foot=(label,ok=true)=>`<div class="ent-form-foot">${ok?`<button type="button" class="btn" data-pm-do="save"${off}>${esc(x.busy?"Saving…":label)}</button>`:""}<button type="button" class="btn quiet" data-pm-do="cancel"${off}>${esc("Cancel")}</button></div>`;
+ const err=x.error?`<p class="ent-err" id="pm-err" role="alert" tabindex="-1">${esc(x.error)}</p>`:"";
+ let title="",body="";
+ if(x.mode==="correct"){title="Correct this note";body=x.loading?`<p class="pl-age">${esc("Loading the whole note…")}</p>${foot("",false)}`:x.blocked?foot("",false):`<label class="ent-f"><span>${esc("What it should say")}</span><textarea data-pm-f="text" rows="6" maxlength="8000"${off}>${esc(v.text)}</textarea></label><p>${esc("The old note is kept in history; this one replaces it.")}</p>${foot("Save the correction")}`}
+ if(x.mode==="retract"){title="This was wrong";body=`<p>${esc("The note will be marked as withdrawn, so the brain stops using it. It stays in history.")}</p><label class="ent-f"><span>${esc("Why, in one line (optional)")}</span><input type="text" data-pm-f="reason" maxlength="300" value="${esc(v.reason)}"${off}></label>${foot("Withdraw this note")}`}
+ if(x.mode==="dupe"){title="Same as an earlier note";body=`<p>${esc("This note says the same as one saved")} ${whenText(n.sameAs?.at)}${n.sameAs&&n.sameAs.context!==n.context&&pmTopicTitle(n.sameAs.context)?" "+esc("in")+" "+esc(pmTopicTitle(n.sameAs.context)):""}. ${esc("Withdrawing this copy keeps the earlier one. The copy stays in history.")}</p>${foot("Retract this copy")}`}
+ if(x.mode==="move"){title="Move to another topic";body=`<p>${esc("Now in")} ${esc(pmTopicTitle(n.context)||"its topic")}. ${esc("The note is saved again in the topic you choose, with the same text and sources, and withdrawn here.")}</p><label class="ent-f"><span>${esc("Find a topic")}</span><input type="search" data-pm-f="q" autocomplete="off" value="${esc(v.q)}"${off}></label><div class="mem-cands" id="pm-cands" role="group" aria-label="${esc("Topics")}">${pmCandsHtml(n,x)}</div>${foot("Move the note")}`}
+ if(x.mode==="kind"){title="Change what kind it is";body=`<div class="mem-cands" role="group" aria-label="${esc("Kind of note")}">${[["note","Note"],["decision","Decision"],["question","Question"]].map(([k,label])=>`<button type="button" class="filter-pill${v.kind===k?" selected":""}" data-pm-pick="${k}" aria-pressed="${v.kind===k}"${k===n.kind?" disabled":""}>${esc(label)}${k===n.kind?" "+esc("(now)"):""}</button>`).join("")}</div><p>${esc("The note is saved again as the kind you choose; the earlier version is kept in history.")}</p>${foot("Save the kind")}`}
+ if(x.mode==="answer"){title="Answer this question";body=`<label class="ent-f"><span>${esc("The answer")}</span><textarea data-pm-f="text" rows="4" maxlength="8000"${off}>${esc(v.text)}</textarea></label><p>${esc("The answer is saved as a decision and the question is closed.")}</p>${foot("Save the answer")}`}
+ return `<section class="ent-form mem-form" id="pm-form" role="group" aria-labelledby="pm-form-title"><h3 id="pm-form-title">${esc(title)}</h3>${body}${err}</section>`;
+}
+/* The earlier versions of a note that replaced another, newest first; read-only, on every copy of the page. */
+function pmHistoryHtml(n){
+ const list=[];let cur=n;
+ for(let i=0;i<50&&cur?.replaces;i++){const o=pmNote(cur.replaces.id);list.push(o?{at:o.at,text:o.text,kind:o.kind}:{at:cur.replaces.at,text:cur.replaces.text});if(!o&&!pmAll&&LIVE&&!pmError)pmLoad();cur=o}
+ return `<ol class="mem-history" aria-label="${esc("Earlier versions, newest first")}">${list.map(h=>`<li><span class="pl-age">${h.at?whenText(h.at):esc("earlier")}${h.kind&&h.kind!==n.kind?" · "+esc(pmKindWord(h.kind)):""}</span> ${h.text?esc(h.text):`<span class="pl-age">${esc("an earlier note")}</span>`}</li>`).join("")}</ol>`;
+}
+const pmDraw=()=>renderNotesTab();
+const pmFocus2=sel=>{try{document.querySelector(sel)?.focus?.()}catch{}};
+function pmClose(back){const x=pmEdit;pmEdit=null;pmDraw();if(back&&x)pmFocus2(`[data-pm-menu="${x.id}"]`);if(pmPendingRefresh){const r=pmPendingRefresh;pmPendingRefresh=null;pmNewer(r)}}
+async function pmWholeText(x){
+ x.loading=true;let t=null;
+ try{const f=PL.memories.whole;if(/^entities-[a-f0-9-]{36}\/notes-whole\.json$/.test(f||"")){if(!pmWhole){const r=await fetch(f,{cache:"no-store"});if(r.ok)pmWhole=(await r.json()).texts||null}t=pmWhole?.[x.id]}}catch{}
+ if(pmEdit!==x)return;x.loading=false;
+ if(typeof t==="string"){x.v.text=t;x.was=t}else{x.blocked=true;x.error="The whole text of this note could not be loaded. Refresh the dashboard, or correct the note in a chat."}
+ pmDraw();pmFocus2("#pm-form textarea");
+}
+function pmOpen(mode,id){
+ const n=pmNote(id);if(!n||!pmCanEdit()||n.state!=="in force"||!["correct","retract","move","kind","answer","dupe"].includes(mode))return;
+ if(mode==="dupe"?!n.sameAs:!pmItems(n).some(([m])=>m===mode))return;
+ pmFlash=null;pmEdit={id,mode,v:{text:mode==="correct"?n.text:"",reason:"",q:"",topic:"",kind:""},was:n.text,busy:false,error:"",loading:false,blocked:false};
+ if(mode==="correct"&&n.more){pmWholeText(pmEdit);pmDraw();return}
+ pmDraw();pmFocus2("#pm-form textarea,#pm-form input,#pm-form button");
+}
+async function pmSend(body){
+ let status=0,j=null;
+ try{const r=await fetch("/memory-edit",{method:"POST",cache:"no-store",headers:{"content-type":"application/json","x-gtm-brain-token":entToken()},body:JSON.stringify(body)});status=r.status;j=await r.json()}catch{}
+ return j&&typeof j==="object"&&typeof j.ok==="boolean"?j:{ok:false,note:status?"The dashboard could not save this. Try again.":"The dashboard is not answering. Check that it is still open, then try again."};
+}
+async function pmDo(action){
+ const x=pmEdit;if(!x||x.busy||x.mode==="menu")return;
+ if(action==="cancel"){pmClose(true);return}
+ if(action!=="save"||x.loading||x.blocked)return;
+ const v=x.v,text=String(v.text||"").trim();let body=null,err="";
+ if(x.mode==="correct"){if(!text)err="A note needs some text.";else if(text===String(x.was||"").trim())err="Nothing was changed.";else body={op:"correct",id:x.id,text}}
+ if(x.mode==="retract"){const reason=String(v.reason||"").trim();body={op:"retract",id:x.id,...(reason?{reason}:{})}}
+ if(x.mode==="dupe")body={op:"retract",id:x.id,reason:"Same as an earlier note."};
+ if(x.mode==="move"){if(!v.topic)err="Choose a topic.";else body={op:"move",id:x.id,topic:v.topic}}
+ if(x.mode==="kind"){if(!v.kind)err="Choose what kind it is.";else body={op:"set_kind",id:x.id,kind:v.kind}}
+ if(x.mode==="answer"){if(!text)err="Write the answer.";else body={op:"answer",id:x.id,text}}
+ if(!body){x.error=err||"Nothing to save.";pmDraw();pmFocus2("#pm-err");return}
+ x.busy=true;x.error="";pmDraw();
+ let r;try{r=await pmSend(body)}catch{r={ok:false,note:"Something went wrong on this page. Nothing was saved."}}
+ if(pmEdit!==x)return;x.busy=false;
+ // refused: the tool's own words, and the form as it was typed
+ if(!r.ok){x.error=r.note||"This was not saved.";pmDraw();pmFocus2("#pm-err");return}
+ pmFlash={text:(r.note||"Saved.")+" The page updates in a moment."};
+ try{sessionStorage.setItem("gtm-mem-flash",JSON.stringify({text:r.note||"Saved.",at:Date.now(),f:{...pmF},limit:pmLimit}))}catch{}
+ pmClose(true);
+}
+document.addEventListener("click",e=>{const t=e.target;if(!t?.closest)return;
+ const h=t.closest("[data-pm-history]");if(h){pmHistory=pmHistory===h.dataset.pmHistory?"":h.dataset.pmHistory;pmDraw();return}
+ const m=t.closest("[data-pm-menu]");if(m){if(!pmCanEdit())return;const id=m.dataset.pmMenu;if(pmEdit?.mode==="menu"&&pmEdit.id===id){pmClose(true);return}if(pmEdit&&pmEdit.mode!=="menu"&&pmEdit.busy)return;pmEdit={id,mode:"menu"};pmDraw();pmFocus2("#pm-menu [role=menuitem]");return}
+ const o=t.closest("[data-pm-open]");if(o){pmOpen(o.dataset.pmOpen,o.dataset.pmId);return}
+ const d=t.closest("[data-pm-do]");if(d){pmDo(d.dataset.pmDo);return}
+ const p=t.closest("[data-pm-pick]");if(p){const x=pmEdit;if(!x||x.busy)return;if(x.mode==="move")x.v.topic=p.dataset.pmPick;else if(x.mode==="kind")x.v.kind=p.dataset.pmPick;else return;x.error="";pmDraw();pmFocus2(`#pm-form [data-pm-pick="${p.dataset.pmPick}"]`);return}
+ if(pmEdit?.mode==="menu"){pmEdit=null;pmDraw()}});
+document.addEventListener("input",e=>{const k=e.target?.dataset?.pmF,x=pmEdit;if(!k||!x||x.mode==="menu")return;x.v[k]=e.target.value;
+ if(k==="q"){const n=pmNote(x.id),box=$("#pm-cands");if(n&&box)box.innerHTML=pmCandsHtml(n,x)}});
+document.addEventListener("keydown",e=>{const x=pmEdit;if(!x)return;
+ if(e.key==="Escape"){if(x.busy)return;e.preventDefault?.();pmClose(true);return}
+ if(x.mode!=="menu"||!["ArrowDown","ArrowUp","Home","End"].includes(e.key))return;
+ let items=[];try{items=[...document.querySelectorAll("#pm-menu [role=menuitem]")]}catch{}if(!items.length)return;e.preventDefault?.();
+ const i=items.indexOf(document.activeElement),to=e.key==="Home"?0:e.key==="End"?items.length-1:e.key==="ArrowDown"?(i+1)%items.length:(i<=0?items.length-1:i-1);items[to]?.focus?.()});
 /* ---------- Overview: what needs the person, most important first. Each item is one plain sentence, why it
    matters, and one way to deal with it: a prepared chat, or the view that shows what is affected. ---------- */
 const many=(n,one,more)=>n+" "+(n===1?one:more);

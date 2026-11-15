@@ -11,7 +11,7 @@ import { contextGraph } from "../../lib/context-graph.mjs";
 import { entityGraph } from "../../lib/entity-graph.mjs";
 import { dashboardData, dashboardSourceRevision } from '../../lib/dashboard-data.mjs';
 import { listRuns } from '../../lib/workflows.mjs';
-import { pillarData, pillarFiles, firstNotes } from '../../lib/dashboard-pillars.mjs';
+import { pillarData, pillarFiles, firstNotes, wholeTexts } from '../../lib/dashboard-pillars.mjs';
 import { refreshIndexedPages } from '../../lib/entity-pages.mjs';
 import { hasMemoryIndex, openDatabase } from '../../lib/memory-index-store.mjs';
 import { readJSON, writeJSON, renderQueue } from '../../lib/dashboard-refresh.mjs';
@@ -107,6 +107,8 @@ try {
   const notes = pillars.memories.notes; delete pillars.memories.notes;
   writeFileSync(join(detailDir, 'notes.json'), JSON.stringify({ notes }));
   Object.assign(pillars.memories, { first: firstNotes(notes), file: detailFolder + '/notes.json' });
+  // the whole text of the notes the page shows shortened: read when one is corrected on the Memories tab
+  try { writeFileSync(join(detailDir, 'notes-whole.json'), JSON.stringify({ texts: wholeTexts(snapshot ? lib.listContexts(root) : sourceContexts) })); pillars.memories.whole = detailFolder + '/notes-whole.json'; } catch {}
   // each entity's fields, links and brief lines: read by the Entities tab when a name is opened
   const entityDetails = pillars.entities.details || {}; delete pillars.entities.details;
   writeFileSync(join(detailDir, 'entity-details.json'), JSON.stringify({ details: entityDetails }));

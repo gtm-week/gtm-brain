@@ -15,7 +15,7 @@ import { readAskSource } from "./ask-source.mjs";
 import { whereRows } from "./where.mjs";
 import { readOurRules } from "./our-rules.mjs";
 import { rulesFile, schemaFile, settingsFile } from "./brain-paths.mjs";
-import { population, POPULATION_RANGES } from "./population.mjs";
+import { population, POPULATION_RANGES, normalizedContent } from "./population.mjs";
 import { healthLine, summaryRuns } from "./health-line.mjs";
 import { listWorkflows, listRuns, TYPE as WORKFLOW_TYPE } from "./workflows.mjs";
 import { relationOverview } from "./relations.mjs";
@@ -113,7 +113,7 @@ function configuration(root, admin, { documents, commits, findings, tools, plugi
 
 /* Every note but a retraction, newest first, with what it replaced and what replaced or withdrew it. */
 export function noteIndex(contexts) {
-  const out = [];
+  const out = [], full = new Map();
   for (const c of contexts) {
     const all = c.memories || [], byId = new Map(all.map(m => [m.id, m]));
     const replacedBy = new Map(), withdrawnBy = new Map();
@@ -121,7 +121,9 @@ export function noteIndex(contexts) {
     for (const m of lib.hideForkCopies(all)) {
       if (m.retracts) continue;
       const old = m.supersedes ? byId.get(m.supersedes) : null, next = replacedBy.get(m.id), gone = withdrawnBy.get(m.id);
+      full.set(m.id, m.content);
       out.push({ id: m.id, at: m.at, kind: m.kind || "note", context: c.slug, tags: (m.tags || []).filter(t => typeof t === "string"), text: cut(m.content, EXCERPT),
+        ...(typeof m.content === "string" && cut(m.content, EXCERPT) !== m.content.trim() ? { more: true } : {}),
         source: (Array.isArray(m.source) ? m.source : []).slice(0, 3), entities: (m.entities || []).filter(x => typeof x === "string"), authors: (m.authors || []).slice(0, 3),
         state: gone ? "withdrawn" : next ? "replaced" : "in force",
         ...(m.supersedes ? { replaces: { id: m.supersedes, at: old?.at || null, text: old ? cut(old.content, SHORT) : null } } : {}),
@@ -129,7 +131,22 @@ export function noteIndex(contexts) {
         ...(gone ? { withdrawnBy: { id: gone.id, at: gone.at, text: cut(gone.content, SHORT) } } : {}) });
     }
   }
+  // an exact duplicate: a note in force with the same content as an earlier one in force (lib/population.mjs counts
+  // them the same way); the later one carries where the first is, so the page can offer to withdraw the copy
+  const seen = new Map();
+  for (const n of [...out].sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.id.localeCompare(b.id))) {
+    if (n.state !== "in force") continue;
+    const text = normalizedContent(full.get(n.id)); if (!text) continue;
+    const first = seen.get(text);
+    if (first) n.sameAs = { id: first.id, at: first.at, context: first.context }; else seen.set(text, n);
+  }
   return out.sort((a, b) => String(b.at).localeCompare(String(a.at)) || a.id.localeCompare(b.id));
+}
+/* The whole text of the notes in force the page carries shortened or on one line: read when one is corrected. */
+export function wholeTexts(contexts) {
+  const out = {};
+  for (const c of contexts) for (const m of lib.hideForkCopies(lib.effectiveMemories(c.memories || []))) if (!m.retracts && typeof m.content === "string" && cut(m.content, EXCERPT) !== m.content.trim()) out[m.id] = m.content.trim();
+  return out;
 }
 
 /* One entity's row for the list and its detail for the reading pane. The row is what the page carries for every
