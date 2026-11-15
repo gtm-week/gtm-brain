@@ -16,12 +16,18 @@ const git = (root, ...a) => { try { return execFileSync("git", ["--no-optional-l
 const BAD_NAME = /[A-Z\s]/;
 const suggest = name => name.replace(/\.[^.]+$/, "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + (name.match(/\.[^.]+$/)?.[0].toLowerCase() || "");
 
-export function ruleFindings(root) {
-  const out = [], add = (rule, kind, subject, what, choices) => out.push({ rule, kind, subject, what, choices });
+/* The words every list of things to settle ends with (the rules check and query object housekeeping): one source. */
+export const ONE_AT_A_TIME = "Start with the first item only: say in one line what it is and ask the person, with numbered choices, the first recommended. Carry out the answer with the tool named, then offer the next. Do not work through the list by yourself and never search the web to find out who a person is: what the notes do not say stays unknown until the person says it.";
+
+/* shared, when given, receives what was read on the way (names, memories), for a caller that shows the evidence
+   (lib/housekeeping.mjs) without reading the brain twice. A P3 or P4 finding carries the entity ids it is about. */
+export function ruleFindings(root, shared = {}) {
+  const out = [], add = (rule, kind, subject, what, choices, extra = {}) => out.push({ rule, kind, subject, what, choices, ...extra });
   const names = lib.readNames(root), admin = lib.readAdmin(root) || {};
   const team = new Set((admin.team || []).map(p => String(p.name || "").toLowerCase()));
   const memories = lib.listContexts(root).flatMap(c => lib.effectiveMemories(c.memories));
   const notesAbout = e => memories.filter(m => (m.entities || []).includes(e.id));
+  Object.assign(shared, { names, memories, notesAbout });
   const kept = e => memories.some(m => (m.entity_mentions || []).some(x => x.entity === e.id && x.resolution === "confirmed_new"));
 
   // P3: a person known by one word, unless the person already said the one word is the name
@@ -32,11 +38,11 @@ export function ruleFindings(root) {
       `Give the full name: say "${e.name} is <Full Name>" (add_name with the full name and alias ${e.name})`,
       ...alike.slice(0, 2).map(o => `Same as ${o.name}: merge_entities ${e.name} into ${o.name}`),
       `Not a person: say what it is (add_name with kind organization, product, event or tool)`,
-    ]);
+    ], { ids: [e.id], alike: alike.slice(0, 2).map(o => o.id) });
   }
   // P4: two names that look alike and were never said to be different
   for (const m of lib.suggestMerges(names)) add("P4", m.kind, `${m.a} / ${m.b}`, `${m.a} and ${m.b} may be the same ${m.kind}; nobody has said either way.`, [
-    `Same: merge_entities ${m.b} into ${m.a}`, `Different: add_name ${m.b} with not ["${m.a}"], so it is never asked again`]);
+    `Same: merge_entities ${m.b} into ${m.a}`, `Different: add_name ${m.b} with not ["${m.a}"], so it is never asked again`], { ids: [m.a, m.b].map(n => names.find(e => e.name === n)?.id).filter(Boolean) });
 
   // RULES.md: top-level folders GTM Brain does not use and no row names
   const rows = whereRows(root), rowText = rows.map(r => r.where).join(" ");
@@ -105,5 +111,5 @@ export function rulesReport(root) {
   const count = k => f.filter(x => k.includes(x.kind)).length, ours = count(["rule-problem", "rule-work", "rule-unfiled", "rule-guidance"]);
   const head = `Rules check: ${f.length} thing${f.length === 1 ? "" : "s"} to look at (${count(["person", "organization", "product"])} names, ${count(["folder", "files", "name"])} files and folders, ${count(["gap", "schema"])} SCHEMA.md gaps${count(["ask"]) ? `, ${count(["ask"])} Ask the source rows` : ""}${ours ? `, ${ours} Our rules lines` : ""}). Reads only; nothing was changed.`;
   const body = f.map((x, i) => `${i + 1}. [${x.rule}] ${x.what}\n${x.choices.map((c, j) => `   ${String.fromCharCode(97 + j)}) ${c}`).join("\n")}${x.detail ? `\n${x.detail.trimEnd().split("\n").map(l => l ? `      ${l}` : "").join("\n")}` : ""}`).join("\n");
-  return `${head}\n${body}\nStart with the first one only: say in one line what it is and ask the person, choices as numbered options, the first recommended; carry out the answer through the tool named, then offer the next. Do not work through the list by yourself, do not read every item's notes first, and never search the web to find out who a person is or where they work: what the notes do not say stays unknown until the person says it. Nothing in RULES.md is rewritten without their yes. The rules: P1-P4 in the brain's README (How we name people), the rows, naming, Ask the source table and Our rules in RULES.md, the required fields and relationships in SCHEMA.md.`;
+  return `${head}\n${body}\n${ONE_AT_A_TIME} Do not read every item's notes first: query object housekeeping returns the first items with their evidence. Nothing in RULES.md is rewritten without their yes. The rules: P1-P4 in the brain's README (How we name people), the rows, naming, Ask the source table and Our rules in RULES.md, the required fields and relationships in SCHEMA.md.`;
 }

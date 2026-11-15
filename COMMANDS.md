@@ -324,6 +324,26 @@ first reply of a chat, once: `load_context` and the other context tools the cont
 entity tools the entities page, `document` the documents page, `query` meetings and customers
 their pages, and so on. Writes: nothing.
 
+*"Let's do housekeeping"*, *"tidy up"*, *"clean up the duplicates"* is `query` with object
+`housekeeping` (`lib/housekeeping.mjs`): the rules check's list in three groups with counts (people
+known by a first name only, names that may be the same person or company, other findings) and,
+for the first five items of each group, the evidence to ask the person without another read: the
+notes that mention a first-name person (id, date, 200 characters) with the companies and emails in
+them; for a pair both cards side by side, what a merge would keep and the two tool calls with ids.
+`filters.offset` returns the next items, `search` (first names, same names, other) one group. The
+reply stays under 12 KB and ends with the instruction the rules check also ends with
+(`ONE_AT_A_TIME` in `lib/rules-check.mjs`): one item at a time, ask the person, never the web.
+Reads only. Writes: nothing.
+
+Several people or companies in one read: `query` with object `entities` and `filters.name` and/or
+`filters.id` as lists (or names typed into `search` with commas or "and"), at most 25
+(`lib/entity-cards.mjs`). One card each in the order asked: name, kind, id, relation to us, where
+they work (the relation log), the compiled brief's first lines and the newest three notes cut to
+200 characters. A name several entities share lists them in one line; an unknown name says so.
+Same 12 KB cap whatever `limit` says: notes are dropped before entities and the last lines say
+what was left out. The `sql` parameter's description names the tables and columns and gives one
+worked example, so no `describe_object` call comes first. Writes: nothing.
+
 *"Is the brain too full or too empty?"* is `query` with object `population`
 (`scripts/gtm-brain-advisor/population.mjs`, numbers in `lib/population.mjs`). Deterministic, from
 the files, no model: notes saved in the last 7 days and the weekly average of the 4 weeks before;
