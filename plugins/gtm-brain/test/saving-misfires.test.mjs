@@ -287,7 +287,7 @@ test("said in other words: shown the kept note once, saved when sent again; anot
   // a relationship block that is incomplete: the note is saved, the relationship is not, and the line says so
   const rel = b.batch([{ context: "company", content: "Nina Vogel joined Circuit as head of events.", people: ["Nina Vogel"], relation: { type: "works_at" } }]);
   assert.equal(rel.status, 0, rel.stderr + rel.stdout);
-  assert.match(rel.stdout, /the note is saved; its relationship was not recorded/);
+  assert.match(rel.stdout, /the note is saved and says it in words; its relationship block was left out/);
   assert.match(b.live().at(-1).content, /Nina Vogel joined Circuit/);
 });
 

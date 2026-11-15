@@ -968,7 +968,9 @@ export function commit(root, paths, message, options = {}) {
   const kept = keep(root, healed ? [...paths, LAYOUT_FILE] : paths, message, options);
   return healed ? { ...kept, note: `${kept.note}; ${layoutHealed(healed)}` } : kept;
 }
-const layoutHealed = (n, kept = "") => `recorded file layout ${n} in ${LAYOUT_FILE}${kept && ` (${kept})`}: the entity pages were already in kind folders, and an older GTM Brain that checks this file now reads this brain but writes nothing until it is updated`;
+// Housekeeping, for the model only: said to the person it came out as "your plugin needs updating", which is false
+// (live benchmark, 2026-11-15, two answers). This plugin is current; the file only protects teammates on older ones.
+const layoutHealed = (n, kept = "") => `recorded file layout ${n} in ${LAYOUT_FILE}${kept && ` (${kept})`}: the entity pages were already in kind folders. Housekeeping only: this GTM Brain is up to date and nothing was moved`;
 /* The chat start's part of the same repair, for a chat that only reads: the file in a commit of its own, and
    the one line to say. "" when the file was right (every later call). */
 export function healLayout(root) {
@@ -976,7 +978,7 @@ export function healLayout(root) {
   let n = 0; try { n = recordKindLayout(root); } catch {}
   if (!n) return "";
   const kept = keep(root, [LAYOUT_FILE], `layout: ${LAYOUT_FILE} says ${n}, the entity pages were already in kind folders`);
-  return `GTM Brain: ${layoutHealed(n, kept.note)}. Tell the person in one line; nothing was moved.`;
+  return `GTM Brain: ${layoutHealed(n, kept.note)}. Do not mention it to the person and do not say anything needs updating.`;
 }
 function keep(root, paths, message, { always = false, push = true, allowEmpty = false } = {}) {
   // Keep identity files and derived evidence views with every brain write.

@@ -419,7 +419,7 @@ for (let i = 0; i < entries.length; i++) {
   if (replacing.has(i)) lines.push(`${at(n)}replaced the approved ${replacing.get(i).role} of ${replacing.get(i).entity} (${replacing.get(i).label}, ${replacing.get(i).id}): every chat now uses the new file`);
   // one short line for the person; the detail line after it is for the model
   lines.push(`${at(n)}saved in ${titleOf(ctx)}: ${shown.length > 100 ? shown.slice(0, 97) + "..." : shown}`);
-  if (droppedRelation.has(i)) lines.push(`${at(n)}the note is saved; its relationship was not recorded (${droppedRelation.get(i)}). Record it only if the person stated it: remember again with the relation block complete.`);
+  if (droppedRelation.has(i)) lines.push(`${at(n)}the note is saved and says it in words; its relationship block was left out (${droppedRelation.get(i)}). Do not save the note again and do not add a second note for it.`);
   if (guessed.has(i)) lines.push(`${at(n)}filed under ${titleOf(ctx)} as the best guess (${guessed.get(i)}). Do not ask about it; if the person says it belongs elsewhere, remember a correction with that context.`);
   if (changes) lines.push(`${at(n)}${changes.beside ? checks.mayChangeLine(changes, titleOf(changes.changed.context)) : checks.changedLine(changes, titleOf(ctx), rec.id)}`);
   else if (!e.context && !opt.context && !(loaded.length === 1 && loaded[0] === ctx) && evidenceOf(e).why) lines.push(`${at(n)}put in ${titleOf(ctx)}: ${evidenceOf(e).why}.`);
