@@ -161,6 +161,26 @@ when. A file that appears without one is named at the next chat start.
 Work in your own folders: `/gtm-brain-project` in any Codex project links it to the brain. Notes
 made there carry the project's tag, and everything stays searchable from the brain.
 
+### One brain, many projects
+
+A project (an event, a campaign, a client) is two things: a folder in `projects/` for its files,
+and a tag on its notes. It is not a second memory.
+
+- **People, organizations and every other entity are shared.** Max Jendral has one page, whether
+  he comes up in the Berlin event or in the Q1 campaign. A note saved in either project lands on
+  that one page, so nobody is entered twice and nothing has to be copied between projects.
+- **Notes go where their meaning fits.** A pricing decision made while working on the Berlin event
+  is saved in Our offer, tagged `project:berlin-event`. The tag says which work it came from; the
+  context says what it is about.
+- **A question can be wide or narrow.** "What do we know about Max?" answers from every project.
+  "What did we decide for the Berlin event?" answers from the notes with that tag.
+- **Files stay with their project.** A deliverable made for a project goes in its folder under
+  `projects/`; a file that belongs to a person or a company (a photo, a logo) stays with that
+  entity's page, so it is found from any project.
+
+A project ends when its work does: its folder and notes stay, and the people and companies it
+touched keep everything that was learned about them.
+
 ## Asking it things
 
 - "What do we know about the TCO?" searches every context and says where it found it.

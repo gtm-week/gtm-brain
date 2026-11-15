@@ -225,6 +225,8 @@ opened as a Codex project, say `/gtm-brain-project`: it asks which brain, whethe
 you do here, and which contexts this project touches. From then on a chat there starts with its
 own open contexts and every note is tagged with the project; everything is still in the one
 brain, searchable from anywhere. Ask "list projects" to see them, "unlink this project" to stop.
+People and companies are shared by every project, and a project is a folder plus a tag, not a
+second memory: see [One brain, many projects](plugins/gtm-brain/MANUAL.md#one-brain-many-projects).
 
 A linked code repository stays yours: its own `.claude/` and `brain/` paths are never blocked,
 and the brain's skill links are kept out of its `git status`. The link itself is a block in the
