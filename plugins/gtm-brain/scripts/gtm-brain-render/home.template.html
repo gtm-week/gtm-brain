@@ -216,7 +216,7 @@ h1,h2,h3{font-family:var(--display);margin:0;letter-spacing:-.01em}
 .settings-about #plugin-line{color:var(--ink)}
 @media(max-width:900px){.setting-row{grid-template-columns:1fr auto;gap:10px}.setting-row>div{grid-column:1/-1}}
 /* The front page: four tabs by pillar under one health line; More holds the earlier views. */
-.health-line{margin:0 0 4px;font-size:12px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere}.health-line b{font-family:var(--label);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);margin-right:6px}
+.pl-rowlink{cursor:pointer}.pl-rowlink:hover th,.pl-rowlink:focus th{text-decoration:underline}.health-line{margin:0 0 4px;font-size:12px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere}.health-line b{font-family:var(--label);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);margin-right:6px}
 .subnav{display:flex;gap:18px;padding:2px 0 10px}.subnav[hidden]{display:none}.subnav button{border:0;background:none;color:var(--muted);font:inherit;font-size:13px;padding:4px 0;cursor:pointer;border-bottom:1px solid transparent}.subnav button.on{color:var(--ink);border-bottom-color:var(--accent)}.subnav button:hover{color:var(--ink)}
 .pl-card{background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:18px 20px;margin-bottom:16px}.pl-card h2{font-size:17px;display:flex;align-items:baseline;gap:10px;margin-bottom:6px}.pl-card h3{font-size:14px;margin:16px 0 6px}.pl-card-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .pl-count{font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:400}.pl-age{color:var(--muted);font-size:12px}.pl-warn{color:var(--amber)}.pl-req{color:var(--amber);margin-left:1px}.pl-big{margin:4px 0 8px;font-size:14px}
@@ -1135,6 +1135,7 @@ function plObserve(){
  plObserver=new IntersectionObserver(entries=>{for(const e of entries)if(e.isIntersecting)e.target.click()},{rootMargin:"200px"});
  for(const b of document.querySelectorAll("[data-pe-more],[data-pm-more]"))plObserver.observe(b);
 }
+document.addEventListener("click",e=>{const r=e.target.closest?.("tr[data-open]");if(r&&!e.target.closest("a,button"))window.open(r.dataset.open,"_blank","noopener")});document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.matches?.("tr[data-open]"))window.open(e.target.dataset.open,"_blank","noopener")});
 document.addEventListener("click",e=>{const b=e.target.closest?.("[data-pe-more],[data-pm-more]");if(!b)return;if(b.hasAttribute("data-pm-more")){pmLimit+=PM_PAGE;renderNotesTab()}else{const k=b.dataset.peMore;peLimits[k]=(peLimits[k]||PE_PAGE)+PE_PAGE*2;renderEntitiesTab()}});
 document.addEventListener("input",e=>{if(e.target?.id==="pe-q"){peQuery=e.target.value;peLimits={};renderEntitiesTab()}else if(e.target?.id==="pm-entity"){pmF.entity=e.target.value;pmLimit=PM_PAGE;renderNotesTab()}});
 document.addEventListener("change",e=>{const id=e.target?.id;if(!["pm-kind","pm-tag","pm-period","pm-state"].includes(id))return;pmF[id.slice(3)]=e.target.value;pmLimit=PM_PAGE;renderNotesTab()});
