@@ -32,6 +32,7 @@ import { isChatSource, host } from "../../lib/host.mjs";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const dots = await import(new URL("../../lib/dots.mjs", import.meta.url));
 const checks = await import(new URL("../../lib/note-checks.mjs", import.meta.url));
+const ourRules = await import(new URL("../../lib/our-rules.mjs", import.meta.url));   // RULES.md Our rules tagged check (S4)
 // One-word names held under P3, so a later new_names for the same word is the person's answer, not a guess.
 const ASKED_DAYS = 7, askedFile = () => join(root, "work", "asked-names.json"), fold = n => String(n).trim().toLowerCase();
 const readAsked = () => { try { return JSON.parse(readFileSync(askedFile(), "utf8")); } catch { return {}; } };
@@ -177,6 +178,7 @@ const problems = entries.map((e, i) => {
   if (relationErrors.length) return `${at(n)}${relationErrors.join("; ")}`;
   try { lib.guardRelationCorrection(root, ctx, { ...e, source: sourceOf(e) }); }
   catch (err) { return `${at(n)}${err.message}`; }
+  const ruled = ourRules.saveRefusals(root, e, { siblings: entries }); if (ruled.length) return `${at(n)}${ruled.join("; ")}`;
   // a correction points at a note that exists, in this context: readers resolve supersedes and
   // retracts per context, so a pointer into another one corrects nothing and the brain says both
   for (const [field, verb] of [["supersedes", "replace"], ["retracts", "withdraw"]]) {

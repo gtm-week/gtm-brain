@@ -7,7 +7,7 @@
 // Each check: id, section, pass or fail, ms, bytes. A check that fails because of a gap main is
 // known to have is marked known_gap, so a fix shows up as a check that turns to pass.
 import { spawn, spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createInterface } from "node:readline";
@@ -259,6 +259,15 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
   // the step "update the customer status": a prospect the person confirms as a customer, the overview follows
   const prospect = gold.customers.find(c => c.status === "prospect");
   if (prospect) await check("loops.customer_status", "loops", async () => { const w = await call("remember", { by, context: "icp", content: `E2E loop: ${prospect.name} signed the pilot and is now a customer (e2eloopstatus).`, people: [prospect.name], companies: [prospect.name], sources: [`user:${by}`], customer: { entity: prospect.name, status: "customer", basis: "user", observed_at: "2026-11-14T09:00:00Z" } }); const r = await q({ object: "customers" }); const row = jsonOf(r.text)?.customers?.find(c => c.name === prospect.name) || null; return { pass: !w.isError && row?.status === "customer" && row?.basis === "user", text: w.isError ? w.text : r.text, note: `${prospect.name}: ${row?.status || "absent"}` }; });
+
+  /* ---------- typed rules: RULES.md Our rules with tag lines (lib/our-rules.mjs), on the scratch copy ---------- */
+  appendFileSync(join(brain, "RULES.md"), "\nNever call a company a customer before a signed contract.\n> applies to: organization · when: saving customer status · check\n\nMention the partner tier when writing to a partner.\n> applies to: link partner_of · when: drafting · guidance\n\nAsk before saving anything about pricing.\n\nAlways thank a speaker after the event.\n");
+  await check("rules.typed_unfiled", "rules", async () => { const r = await q({ object: "rules" }); return { pass: !r.isError && /"Ask before saving anything about pricing\." is not filed yet[\s\S]*File it: write > applies to: general · when: saving · guidance/.test(r.text), text: r.text }; });
+  await check("rules.typed_work_offer", "rules", async () => { const r = await q({ object: "rules" }); return { pass: !r.isError && /"Always thank a speaker after the event" starts work, and a rule never starts work[\s\S]*Make it a workflow: workflow create \(title "Thank a speaker"/.test(r.text), text: r.text }; });
+  await check("rules.typed_scoped", "rules", async () => { const r = await q({ object: "rules", search: "organization" }); return { pass: !r.isError && /^Our rules for organization/.test(r.text) && r.text.includes("signed contract") && !r.text.includes("partner tier"), text: r.text }; });
+  if (gold.hub) await check("rules.typed_link_current_only", "rules", async () => { const r = await q({ object: "rules", search: gold.hub.name, filters: { when: "drafting" } }); const current = gold.hub.partnership.history.at(-1)?.status === "current"; return { pass: !r.isError && r.text.includes("partner tier") === current, text: r.text, note: `partnership ${current ? "current" : "ended"}` }; });
+  await check("rules.typed_refused", "rules", async () => { const w = await call("remember", { by, context: "icp", content: "E2E Rules Co is now a customer (e2erulesrefused).", companies: ["E2E Rules Co"], sources: [`user:${by}`] }); const s = await q({ object: "memories", search: "e2erulesrefused" }); return { pass: w.isError && /refused by Our rules "Never call a company a customer before a signed contract\."/.test(w.text) && !rowIds(s.text).length, text: w.text }; });
+  if (gold.hub) await check("rules.typed_once", "rules", async () => { const a = await call("remember", { by, context: "icp", content: `E2E rules probe: ${gold.hub.name} moved its office (e2erulesonce1).`, companies: [gold.hub.name], sources: [`user:${by}`] }), b = await call("remember", { by, context: "icp", content: `E2E rules probe: ${gold.hub.name} hired (e2erulesonce2).`, companies: [gold.hub.name], sources: [`user:${by}`] }); const shown = t => /Our rules for organization[^\n]*when saving[^\n]*\n- Never call a company a customer/.test(t.text); return { pass: !a.isError && !b.isError && shown(a) && !shown(b), text: `${a.text}\n---\n${b.text}`, bytes: Buffer.byteLength(a.text) }; });
 
   /* ---------- messy traps ---------- */
   const T = gold.traps || {};
