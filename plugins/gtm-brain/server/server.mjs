@@ -12,6 +12,7 @@ import { existsSync, mkdirSync, writeFileSync, readFileSync, appendFileSync } fr
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { questionInput } from "./question-input.mjs";
+import { askPerson, properties as ASK_PERSON, required as ASK_PERSON_REQUIRED } from "./ask-person.mjs";
 import { createInterface } from "node:readline";
 import { loadOntology, buildTools, instructionsText } from "../lib/ontology/index.mjs";
 import { createFilesBackend } from "./files-backend.mjs";
@@ -379,6 +380,10 @@ const TOOLS = [
       if (answer.status !== "answered" || !answer.selections?.includes("APPROVE")) return text(`not applied (${answer.status === "answered" ? `the person chose ${[...(answer.selections || []), answer.text].filter(Boolean).join(", ")}` : answer.status}); the proposal stays in ${file}.`);
       return result(await run(brain, "gtm-brain-approve/approve.mjs", apply, { env: { GTM_BRAIN_APPROVAL_TICKET: lib.issueApproval(brain, admin ? "admin" : "interaction") } }));
     } },
+  { name: "ask_person", title: "Asking you a question", readOnly: true, noBrain: true,
+    description: host().texts.askPerson(),
+    inputSchema: schema(ASK_PERSON, ASK_PERSON_REQUIRED),
+    call: (args, requestId) => askPerson(questions, args, requestId).then(r => text(r.text, r.isError)) },
   { name: "upgrade_brain", title: "Upgrading the brain", readOnly: false,
     description: "After a plugin update: refresh managed rules, preserving local edits; add the rules, schema and starter documents a brain lacks, never replacing a file the person has. Migrate legacy identity registries into permanent entity files, backing up originals and leaving memories unchanged. When the brain's files are still arranged as an older GTM Brain kept them, it changes nothing and says what would move (entity pages into a folder per kind; for the owner also the base documents into about-us/ and the rules, schema and settings into config/) and which teammates must update GTM Brain first; ask the person yes or no, and only on yes call it again with confirm: true. A teammate who is not the owner is asked about the entity pages only. Never pass confirm in a scheduled or background run.",
     inputSchema: schema({ confirm: { type: "boolean", description: "true only after the person said yes, in this chat, to the layout change the previous run described" } }),
@@ -396,10 +401,8 @@ const RETIRED_READS = { recall: "query (memories with search, or object brief)",
 // A summary run (GTM_BRAIN_TOOLSET=compile, set by scripts/gtm-brain-compile/run-args.mjs) is listed only what it
 // calls: every other description is re-sent with each of its requests and is pure cost there.
 const COMPILE_TOOLSET = new Set(["compile_facts", "compile_apply", "compile_entity", "entity_facts", "render_dashboard", "query"]);   // query: --facts is a digest, older notes are looked up
-// With Codex's own question box on in ordinary chats, it asks instead: the free text sits on the same screen.
+// How to ask: ask_person's form first, then the host's own question box, then chat text (lib/host.mjs holds the words).
 const NATIVE_QUESTIONS = (() => { try { return host().nativeQuestions(); } catch { return false; } })();
-const NATIVE_LINE = "\nQuestions: GTM Brain shows no question forms of its own. This Codex has its own question box on, so ask every question with request_user_input: one question per call unless a procedure groups them, two or three concrete options, recommended first. It adds the free-text answer itself, so never add Other or Something else. It has no checkboxes: where several can apply, offer the likely combinations as options. APPROVE still goes only through approve_change.";
-const CHAT_LINE = "\nQuestions: GTM Brain shows no question forms of its own. When request_user_input is available in this chat (Plan mode, or a Codex where the question box is on by default), ask every question with it, two or three options, recommended first. Without it, ask as plain chat text and end the turn: one question, one line on why it matters, then two or three numbered options with the recommended first. The person answers with a number or in their own words, so never add Other or Something else. Where several can apply, say they can pick several numbers. In Plan mode use the host's own planning question tool. APPROVE still goes only through approve_change.";
 const offered = t => process.env.GTM_BRAIN_TOOLSET === "compile" ? COMPILE_TOOLSET.has(t.name)
   : !(RUN_ONLY_TOOLS.has(t.name) && !process.env.GTM_BRAIN_RUN) && !(t.name in RETIRED_READS);
 
@@ -677,7 +680,7 @@ async function handle(req) {
   const { id, method, params = {} } = req;
   if (method === "initialize") questions.initialize(params.capabilities);
   if (method === "notifications/cancelled") { questions.cancel(params.requestId); return; }
-  if (method === "initialize") return reply(id, { protocolVersion: params.protocolVersion || "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "gtm-brain", title: "GTM Brain", version: VERSION }, instructions: INSTRUCTIONS + (NATIVE_QUESTIONS ? NATIVE_LINE : CHAT_LINE) + "\n" + instructionsText(ontology) + "\n" + WORKFLOWS + "\nGTM Brain speaks English. Author brain records in English. Preserve names, IDs, source quotes, and the exact token APPROVE." });
+  if (method === "initialize") return reply(id, { protocolVersion: params.protocolVersion || "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "gtm-brain", title: "GTM Brain", version: VERSION }, instructions: INSTRUCTIONS + host().texts.questions({ form: questions.available(), boxOn: NATIVE_QUESTIONS }) + "\n" + instructionsText(ontology) + "\n" + WORKFLOWS + "\nGTM Brain speaks English. Author brain records in English. Preserve names, IDs, source quotes, and the exact token APPROVE." });
   if (method === "ping") return reply(id, {});
   if (method === "tools/list") return reply(id, { tools: TOOLS.filter(offered).map(t => ({ name: t.name, title: t.title, description: t.description, inputSchema: advertised(t.inputSchema), annotations: { title: t.title, readOnlyHint: t.readOnly, destructiveHint: false, openWorldHint: !!t.openWorld } })) });
   if (method === "tools/call") {

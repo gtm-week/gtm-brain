@@ -5,13 +5,15 @@ The question policy itself (one question pending, what counts as an answer) is i
 
 ## How to ask
 
-GTM Brain has no question forms of its own. Ask every question one of two ways:
+Ask every question in this order:
 
-- Codex's own question box, `request_user_input`, when this chat has it (the chat's opening
-  lines say so; Plan mode always has it). Two or three options, recommended first. It adds the
-  free-text answer itself, so never add Other or Something else. It has no checkboxes: offer the
-  likely combinations as options.
-- Otherwise plain chat text, and end the turn: the question, one line on why it matters, and
+- `ask_person`: a native form with the choices to click, in any chat; the answer comes back as
+  its result. The question, one line on why it matters, two to four choices, recommended first.
+  It takes a typed answer itself, so never add Other or Something else. It has no checkboxes:
+  offer the likely combinations as choices.
+- Where `ask_person` is not available, Codex's own question box, `request_user_input`, when
+  this chat has it (Plan mode always has it). The same rules for options.
+- Last, and when `ask_person` returns no answer, plain chat text, and end the turn: the question, one line on why it matters, and
   numbered options, recommended first. The person answers with a number or in their own words.
   Where several can apply, say they can pick several numbers.
 
