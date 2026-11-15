@@ -64,7 +64,7 @@ test("each moved topic is found by its name and by the words people use", () => 
   assert.match(page("entities"), /Is this the Pierre Aubert we know\?/);
   assert.match(page("files"), /kept only by `keep_approved_file`, in the\s+same turn/);
   assert.match(page("meetings"), /Invitations are plans, not\s+attendance/);
-  assert.match(page("contexts"), /never "behind"/);
+  assert.match(page("contexts"), /No run rewrites a summary/);   // 0.35.0: summaries are written on demand (summaries lane), so the page no longer says they update by themselves
   assert.match(page("questions"), /Keep one question pending/);
   assert.doesNotMatch(template, /Pierre Aubert|Invitations are plans|Keep one question pending\. A question without/, "the detail is no longer in AGENTS.md");
 });

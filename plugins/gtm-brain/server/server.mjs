@@ -26,7 +26,7 @@ import { readSchema, fieldsFor } from "../lib/schema.mjs";
 import { hasMemoryIndex } from "../lib/memory-index-store.mjs";
 import { createSaveNudge } from "../lib/save-nudge.mjs";
 import { relativeDates } from "../lib/dots.mjs";
-import { rulePageAnswer, pageForCall, rulePageText, rulePageIndex, matchRulePages } from "../lib/rule-pages.mjs";
+import { rulePageAnswer, pageForCall, rulePageText, rulePageIndex, rulePages } from "../lib/rule-pages.mjs";
 import { foldStatus as foldStatusText } from "../lib/opening.mjs";
 
 const P = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -428,10 +428,11 @@ const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [colu
       try { return withAskSource(brain, text(await memoryReader.read(brain, "search", { search, ...(filters && typeof filters === "object" ? { filters } : {}), ...(limit ? { limit } : {}), ...(project ? { project } : {}) }))); } catch (e) { return text(e.message, true); }
     }
     if (object === "brief") return search ? Promise.resolve(original.get("recall")({ brain, entity: search, ...(filters?.context ? { context: filters.context } : {}), ...(project ? { project } : {}) })).then(r => withRules(r, brain, project, rules => [entityScope(brain, search, { rules })].filter(Boolean), ["reading", "drafting"])) : text("brief needs search: the entity name, alias, email or id.", true);
-    if (object === "rules") {   // no search: the check. A topic: that rule page (lib/rule-pages.mjs). "rules for <kind, link, name>", filters.when or filters.text: the Our rules that apply (lib/our-rules.mjs)
+    if (object === "rules") {   // no search: the check. A rule page's own name: that page (lib/rule-pages.mjs). A kind, link <type> or a name, filters.when or filters.text: the Our rules that apply (lib/our-rules.mjs). Anything else: the page for that topic
       if (!search && !filters?.when && !filters?.text) return original.get("check_rules")({ brain });
       const asked = typeof search === "string" ? search.trim() : "", scopedAsk = !!(filters?.when || filters?.text) || /^(?:(?:our\s+)?rules\s+for|for|link|relationship)\s+/i.test(asked);
-      if (asked && !scopedAsk && matchRulePages(asked).length) return text(rulePageAnswer(asked));
+      const named = asked.toLowerCase().replace(/\s+/g, "-"), byName = !scopedAsk && rulePages().some(pg => pg.slug === named || pg.slug === `${named}s` || `${pg.slug}s` === named);
+      if (byName) return text(rulePageAnswer(asked));
       const r = scopedReport(brain, { search, when: filters?.when || null, text: filters?.text || null });
       if (r.unknown && asked && !scopedAsk) return text(rulePageAnswer(asked));
       return text(r.text, r.error);
