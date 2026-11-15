@@ -13,11 +13,11 @@ import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync, statSy
 import { join, dirname, basename } from "node:path";
 import { execFileSync } from "node:child_process";
 import { listDocuments, inOwnFolder, SKIP_DIRS, projectDirs } from "./documents.mjs";
-import { readLayout, writeLayout, understandsLayout, LAYOUT_FILE } from "./layout-version.mjs";
+import { readLayout, writeLayout, understandsLayout } from "./layout-version.mjs";
 import { diskLayout } from "./layout.mjs";
 import { settingsFromAdmin, logActivity, rerender, readAdmin } from "./brain.mjs";
 const readAdminCompany = root => String(readAdmin(root)?.company || "");
-import { ADMIN_FILE, SETTINGS_FILE, ABOUT_DIR, CONFIG_DIR, CONFIG_RULES, CONFIG_SCHEMA, ROOT_RULES, ROOT_SCHEMA, FIXED_MOVES, inConfigFolders } from "./brain-paths.mjs";
+import { ADMIN_FILE, SETTINGS_FILE, ABOUT_DIR, CONFIG_DIR, CONFIG_RULES, CONFIG_SCHEMA, ROOT_RULES, ROOT_SCHEMA, FIXED_MOVES, inConfigFolders, inLayout4, layoutFile, aboutDir, configDir, rulesFile, schemaFile, settingsFile } from "./brain-paths.mjs";
 import { ownerOf, personHere } from "./owner.mjs";
 
 const isDir = p => { try { return statSync(p).isDirectory(); } catch { return false; } };
@@ -84,7 +84,7 @@ export function migrateToConfigFolders(root, { commit = !process.env.GTM_BRAIN_N
   } catch {}
   const to = diskLayout(root);   // 3 now: settings.yaml is there
   writeLayout(root, { layout: to });
-  touched.push(LAYOUT_FILE);
+  touched.push(layoutFile(root));
   let committed = false, note = "";
   if (inGit && commit) {
     const inHead = p => { try { return !!git("ls-tree", "-r", "--name-only", "HEAD", "--", p).trim(); } catch { return false; } };
@@ -105,7 +105,7 @@ export function migrateToConfigFolders(root, { commit = !process.env.GTM_BRAIN_N
    here (setup, the upgrade, the chat start's refresh), so a shipped README is recognized in either layout. */
 export function layoutReadme(text, root) {
   if (!inConfigFolders(root)) return text;
-  return String(text)
+  const three = String(text)
     .replace("[RULES.md](RULES.md) is", "[config/rules.md](config/rules.md) is")
     .replace("[SCHEMA.md](SCHEMA.md) says", "[config/schema.md](config/schema.md) says")
     .replace("with the RULES.md row", "with the rules.md row")
@@ -113,6 +113,36 @@ export function layoutReadme(text, root) {
     .replace("what it belongs to.\n", "what it belongs to.\n\nOnly the owner named in `config/settings.yaml` changes `about-us/` and `config/`. A teammate's change\nwaits there as a proposal, and the owner approves it or not at the start of their next chat.\n")
     .replace("`brain/admin.md` is always loaded", "`config/settings.yaml` is always loaded")
     .replace("- `admin.md`: the company profile. Protected.\n", "- `proposals/`: teammates' changes to `about-us/` and `config/`, waiting for the owner.\n");
+  return inLayout4(root) ? readmeInTabs(three) : three;
+}
+/* Layout 4: the same README with that layout's folders. The part that describes brain/ is replaced whole: there
+   is no brain/ folder, and the four folders at the top are the dashboard's tabs. */
+function readmeInTabs(text) {
+  let out = String(text)
+    .replaceAll("config/rules.md", "configuration/rules.md").replaceAll("config/schema.md", "configuration/schema.md")
+    .replace("in `about-us/`: ", "in `configuration/about-us/`: ")
+    .replace("named in `config/settings.yaml` changes `about-us/` and `config/`", "named in `configuration/settings.yaml` changes `configuration/`")
+    .replace("`config/settings.yaml` is always loaded", "`configuration/settings.yaml` is always loaded")
+    .replace(/- `work\/`: this computer's working files/, "- `.gtm-brain/`: this computer's working files");
+  const from = out.indexOf("## Inside `brain/`"), to = out.indexOf("A project is not a separate memory.");
+  if (from >= 0 && to > from) out = out.slice(0, from) + `## The four folders
+
+The folders at the top are the tabs of the dashboard.
+
+- \`configuration/\`: \`about-us/\` (the base documents), \`rules.md\`, \`schema.md\`, \`settings.yaml\` (the company
+  profile) and \`interactions.json\` (actions your own tools can run). The owner's to change; \`proposals/\` holds
+  teammates' changes waiting for the owner.
+- \`entities/\`: who and what the notes are about, in a folder per kind (\`people/\`, \`organizations/\`,
+  \`products/\`, \`events/\`, \`tools/\`, \`meetings/\`). One page each, named by the name and a short id
+  (\`people/max-jendral-3f9a2c.md\`), shared by every topic and project; its files sit in the folder
+  of the same name beside it.
+- \`memories/\`: every note, one per line, in the file of its month (\`2026-11.jsonl\`), never edited.
+  Corrections are new notes. A note names its topic in \`context\`, so a search over this folder reads every
+  note. \`topics/<topic>.md\` is the summary of a topic's notes, rewritten by Codex.
+- \`workflows/\`: the team's workflows.
+
+` + out.slice(to);
+  return out;
 }
 const TEMPLATE_DIR = new URL("../templates/", import.meta.url);
 /* README.md exactly as a release wrote it (any layout's wording): the move rewrites it for layout 3. */
@@ -129,11 +159,15 @@ function shippedReadme(root, text, company) {
    call finding out that a teammate's change there is a proposal. "" before layout 3. */
 export function layoutStartLine(root) {
   if (!inConfigFolders(root)) return "";
-  const where = `This brain keeps its base documents in ${ABOUT_DIR}/ and its configuration in ${CONFIG_DIR}/: where the rules or a tool say ${ROOT_RULES} is ${CONFIG_RULES}, ${ROOT_SCHEMA} is ${CONFIG_SCHEMA}, ${ADMIN_FILE} is ${SETTINGS_FILE}, and a document "at the top" or "at the brain root" (strategy.md, icp.md, voice.md, design-system.md, market.md, a new one) is in ${ABOUT_DIR}/. Never create ${ROOT_RULES}, ${ROOT_SCHEMA} or ${ADMIN_FILE}.`;
+  const four = inLayout4(root), about = aboutDir(root), config = configDir(root);
+  const where = four
+    ? `This brain keeps everything in four folders: ${config}/ (the base documents in ${about}/, ${rulesFile(root)}, ${schemaFile(root)}, ${settingsFile(root)}), entities/, memories/ (every note in the file of its month, a topic's summary in memories/topics/<topic>.md; a topic is what the tools call a context) and workflows/. Where the rules or a tool say ${ROOT_RULES} it is ${rulesFile(root)}, ${ROOT_SCHEMA} is ${schemaFile(root)}, ${ADMIN_FILE} is ${settingsFile(root)}, brain/entities/ is entities/, brain/contexts/ is memories/, work/ is .gtm-brain/ (this computer only; a task's throwaway files go in .gtm-brain/scratch/), and a document "at the top" or "at the brain root" (strategy.md, icp.md, voice.md, design-system.md, market.md, a new one) is in ${about}/. Never create ${ROOT_RULES}, ${ROOT_SCHEMA}, a brain/ folder or a work/ folder.`
+    : `This brain keeps its base documents in ${ABOUT_DIR}/ and its configuration in ${CONFIG_DIR}/: where the rules or a tool say ${ROOT_RULES} is ${CONFIG_RULES}, ${ROOT_SCHEMA} is ${CONFIG_SCHEMA}, ${ADMIN_FILE} is ${SETTINGS_FILE}, and a document "at the top" or "at the brain root" (strategy.md, icp.md, voice.md, design-system.md, market.md, a new one) is in ${ABOUT_DIR}/. Never create ${ROOT_RULES}, ${ROOT_SCHEMA} or ${ADMIN_FILE}.`;
+  const folders = four ? `${config}/` : `${ABOUT_DIR}/ and ${CONFIG_DIR}/`, those = four ? "that folder" : "those two folders";
   const owner = ownerOf(root); if (!owner) return where;
-  if (personHere(root) === owner) return `${where} You are the owner: only you change those two folders, and a teammate's change waits for your approval.`;
+  if (personHere(root) === owner) return `${where} You are the owner: only you change ${those}, and a teammate's change waits for your approval.`;
   const name = (readAdmin(root)?.team || []).find(p => p && p.handle === owner)?.name || owner;
-  return `${where} Only the owner (${name}) changes ${ABOUT_DIR}/ and ${CONFIG_DIR}/: make a change there as usual (the tool, or the file and save) and it is kept as a proposal for the owner, not applied; say that in one line and do not try another way.`;
+  return `${where} Only the owner (${name}) changes ${folders}: make a change there as usual (the tool, or the file and save) and it is kept as a proposal for the owner, not applied; say that in one line and do not try another way.`;
 }
 
 /* The sentence the layout question says before it asks: what moves, and what it means for teammates. */

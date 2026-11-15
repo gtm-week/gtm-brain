@@ -8,7 +8,7 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync, statSync, mkdirSync, rmSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join, dirname } from "node:path";
-import { rulesFile, OLD_WHERE, TEMPLATES, ROOT_KEEP, ABOUT_DIR, inConfigFolders } from "./brain-paths.mjs";
+import { rulesFile, OLD_WHERE, TEMPLATES, ROOT_KEEP, ABOUT_DIR, ABOUT_DIR4, inConfigFolders, inLayout4 } from "./brain-paths.mjs";
 import { readAdmin, commit } from "./brain.mjs";
 import { layoutBlock } from "./layout-version.mjs";
 import { workDir } from './brain-paths.mjs';
@@ -26,7 +26,13 @@ const read = p => { try { return readFileSync(p, "utf8"); } catch { return null;
 export const rulesInFolders = text => String(text)
   .replace("`<name>.md` at this level (`strategy.md`, `icp.md`, `voice.md`, `design-system.md` are here from day one)", `\`${ABOUT_DIR}/<name>.md\` (\`strategy.md\`, \`icp.md\`, \`voice.md\`, \`design-system.md\` are there from day one; the owner's to change)`)
   .replace("never a new folder at this level", "never a new folder at the top of the brain");
-export const layoutRules = (text, root) => (inConfigFolders(root) ? rulesInFolders(text) : text);
+/* Layout 4: the same rows with the folders of that layout: base documents in configuration/about-us/, notes in
+   memories/, this computer's files in .gtm-brain/ and a task's throwaway files in .gtm-brain/scratch/. */
+export const rulesInTabs = text => rulesInFolders(text)
+  .replace(`\`${ABOUT_DIR}/<name>.md\``, `\`${ABOUT_DIR4}/<name>.md\``)
+  .replace("Codex notes it in `brain/`", "Codex notes it in `memories/`")
+  .replace("`work/`: this computer's own files, never a deliverable, not shared; do not delete it", "`.gtm-brain/`: this computer's own files, never a deliverable, not shared; do not delete it. A task's throwaway files go in `.gtm-brain/scratch/`");
+export const layoutRules = (text, root) => (inLayout4(root) ? rulesInTabs(text) : inConfigFolders(root) ? rulesInFolders(text) : text);
 const shipped = (templates, dir) => { try { return readdirSync(join(templates, "legacy", dir)).filter(f => f.endsWith(".md")).map(f => readFileSync(join(templates, "legacy", dir, f), "utf8")); } catch { return []; } };
 const hasTable = text => /^\|\s*-{3,}/m.test(text);
 /* the lines R2 wrote into a RULES.md from before the merge: "# Our rules", then one line per rule */
@@ -40,7 +46,7 @@ export function ensureRules(root, templates) {
   const current = read(path), where = read(join(root, OLD_WHERE));
   if (current !== null && (OWN.test(current) || hasTable(current))) {
     // raw: the shipped wording the layout 3 move carried into config/ word for word
-    if (current === next || ![...shipped(templates, "rules"), raw].includes(current)) return false;
+    if (current === next || ![...shipped(templates, "rules"), raw, rulesInFolders(raw)].includes(current)) return false;   // rulesInFolders: the layout 3 wording the move to 4 carried over
     writeFileSync(path, next); commit(root, [file], `upgrade: ${file}, the brain's rules`, { system: true }); return true;
   }
   // The where part: the shipped template when WHERE.md was never edited, the person's own WHERE.md otherwise.

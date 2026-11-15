@@ -494,6 +494,18 @@ export function markMergeStale(root, slugs) {
   mkdirSync(workDir(root), { recursive: true }); writeFileSync(mergeStaleFile(root), JSON.stringify({ contexts }));
   return contexts;
 }
+/* Layout 4, after a merge with two parents: the topics that took notes from both sides in these month files.
+   A line the merge added against the first parent came from the second, and the other way round. */
+export function mergedTopics(root, files) {
+  const added = (parent, file) => {
+    const out = new Set();
+    try { for (const l of execFileSync("git", ["-C", root, "diff", "--unified=0", parent, "HEAD", "--", file], { encoding: "utf8", stdio: "pipe", maxBuffer: 256 << 20 }).split("\n")) { if (!l.startsWith("+{")) continue; try { out.add(JSON.parse(l.slice(1)).context); } catch {} } } catch {}
+    return out;
+  };
+  const both = new Set();
+  for (const f of files.filter(isNotesPath)) { const a = added("HEAD^1", f), b = added("HEAD^2", f); for (const c of a) if (b.has(c)) both.add(c); }
+  return [...both].filter(s => /^[a-z0-9-]+$/.test(String(s))).sort();
+}
 function clearMergeStale(root, slug) {
   const left = mergeStale(root); if (!left.includes(slug)) return;
   try { const rest = left.filter(s => s !== slug); if (rest.length) writeFileSync(mergeStaleFile(root), JSON.stringify({ contexts: rest })); else rmSync(mergeStaleFile(root), { force: true }); } catch {}
