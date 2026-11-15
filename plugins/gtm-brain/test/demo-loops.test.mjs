@@ -174,20 +174,22 @@ test("demo stub checks: a played failure is told to the person and nothing inven
 
 // A stand-in for codex that answers every turn with the right words and does nothing: no tool call, no
 // file, no note. The runner must fail every step, exit 1, resume one session per loop and start the last turn fresh.
-function fakeCodex() {
+function fakeCodex(more = {}) {
   const dir = mkdtempSync(join(tmpdir(), "gtm-demo-run-")), bin = join(dir, "bin"), log = join(dir, "argv.jsonl");
   mkdirSync(bin);
   writeFileSync(join(bin, "codex"), `#!${process.execPath}
 const fs = require("node:fs"), argv = process.argv.slice(2);
 let stdin = ""; process.stdin.on("data", d => { stdin += d; }); process.stdin.on("end", () => {
   fs.appendFileSync(${JSON.stringify(log)}, JSON.stringify({ argv, stdin, home: process.env.CODEX_HOME || null }) + "\\n");
+  // a real chat's first GTM Brain call starts the dashboard server of the brain; it outlives the chat
+  if (process.env.FAKE_CODEX_DASH && argv.includes("-C")) require("node:child_process").spawnSync(process.execPath, [process.env.FAKE_CODEX_DASH, argv[argv.indexOf("-C") + 1], "--start"], { stdio: "ignore" });
   console.log(JSON.stringify({ type: "thread.started", thread_id: "thread-" + fs.readFileSync(${JSON.stringify(log)}, "utf8").split("\\n").filter(Boolean).length }));
   fs.writeFileSync(argv[argv.indexOf("-o") + 1], "Fernbrook Outdoor first, then Heron Home. Contact: Lea Hoffmann. ERP migration, call on 14 January, prospect. Posts: 'store pickup returns', 'reduce return rate retail'; customers say they drown after Black Friday. 1,240 visits, 3 demo requests. Next: peak season. Saved and drafted everything.");
 });
 `);
   chmodSync(join(bin, "codex"), 0o755);
   const script = fileURLToPath(new URL("./live/demo-loops.mjs", import.meta.url));
-  const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, GTM_BRAIN_EVAL_DIR: dir };
+  const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, GTM_BRAIN_EVAL_DIR: dir, ...more };
   const run = args => spawnSync(process.execPath, [script, ...args], { env, encoding: "utf8" });
   const report = () => JSON.parse(readFileSync(join(dir, readdirSync(dir).find(n => n.startsWith("gtm-demo-loops-")), "report.json"), "utf8"));
   const turns = () => readFileSync(log, "utf8").split("\n").filter(Boolean).map(l => JSON.parse(l));
@@ -220,12 +222,17 @@ test("demo runner: an agent that only talks fails every step", { timeout: 180000
 });
 
 test("demo runner: stub mode declares the stub server beside GTM Brain and passes the failure to it", { timeout: 180000 }, () => {
-  const fake = fakeCodex();
+  const fake = fakeCodex({ FAKE_CODEX_DASH: fileURLToPath(new URL("../server/dash.mjs", import.meta.url)), GTM_BRAIN_NO_OPEN: "1" });
   assert.equal(fake.run(["--stub", "--step", "o3-draft", "--fail", "expired_key"]).status, 2, "no step to run is refused, not reported as 0 of 0");
   const run = fake.run(["--stub", "--step", "o2-enrich,o3-draft,c1-topics", "--fail", "expired_key"]);   // o3-draft calls no tool: nothing to judge
   assert.equal(run.status, 1, run.stdout + run.stderr);
   const report = fake.report(), turns = fake.turns();
   assert.equal(report.mode, "stub"); assert.equal(report.fail, "expired_key");
+  // 15 Nov: every live run left a dashboard server running. The brain is kept for inspection; its server is not.
+  const dash = JSON.parse(readFileSync(join(report.brain, "work", "dash.json"), "utf8"));
+  if (dash.pid) { try { process.kill(dash.pid); } catch {} }   // do not leak it from a failing test either
+  assert.ok(dash.port, "the stand-in started the dashboard server during the run");
+  assert.equal(dash.pid, undefined, "the run stops the dashboard server it caused");
   assert.deepEqual(report.results.map(r => r.id), ["o2-enrich", "c1-topics"]);
   for (const r of report.results) { assert.match(r.why, /was not called/, "judged by the failure check"); assert.equal(r.stub_calls, 0); assert.equal(r.brain_calls, 0); }
   assert.equal(turns.length, 2);

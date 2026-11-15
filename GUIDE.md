@@ -201,7 +201,10 @@ After every step the check also asks: was the right tool called with criteria fr
 document, the saved prospects), was what came back saved with a source pointing at the tool, does
 the brain's tools list show the tool as used, and was nothing sent. Every call is logged in
 `stub-calls.jsonl` beside the brain. Add `--fail expired_key`, `--fail empty` or `--fail rate_limit`
-(with `--step o2-enrich`, for example) to see what Codex tells the person when a tool fails.
+(with `--step o2-enrich`, for example) to see what Codex tells the person when a tool fails. A failure
+run asks only the steps that call a tool, and passes when Codex says what failed, saves nothing the
+tool did not return and stops asking after three calls. On 15 November an empty result did not pass:
+Codex asked the same tool 16 and 42 times before it gave up.
 
 What the stubs do not prove: real sign-in and keys, the real tools' rate limits and cost per call,
 and the real tools' data shapes and quality. The fixture data is small and fits the demo brain.

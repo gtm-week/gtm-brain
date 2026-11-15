@@ -370,6 +370,9 @@ async function main() {
       console.log(`${r.pass ? "PASS" : r.known_gap ? "GAP " : "FAIL"}  ${step.id.padEnd(14)} ${String(r.seconds).padStart(4)}s  ${String(r.brain_calls).padStart(2)} brain ${String(r.stub_calls).padStart(2)} stub  ${step.shows}${r.why ? `\n      why: ${r.why}${r.known_gap ? ` (known gap: ${r.known_gap})` : ""}` : ""}\n      tools: ${r.tools.join(" > ") || "none"}${r.stub_tools.length ? `\n      stub: ${r.stub_tools.join(" > ")}` : ""}${commands.length ? `\n      shell: ${commands.length} command(s)` : ""}${skill ? "" : "\n      note: the workflow instructions (SKILL.md) were not read in this chat"}${r.saved.length ? `\n      saved: ${r.saved.join("\n             ")}` : ""}${r.files.length ? `\n      files: ${r.files.join(", ")}` : ""}`);
     }
   }
+  // a chat's first GTM Brain call starts the brain's dashboard server and watcher, and they outlive the chat: the
+  // brain is kept for inspection, its processes are not (each live run left one running, 15 Nov)
+  spawnSync(process.execPath, [`${P}/server/dash.mjs`, root, "--stop"], { cwd: root, env, stdio: "ignore", timeout: 30000 });
   writeFileSync(join(artifacts, "report.json"), JSON.stringify({ brain: root, model, effort: o.effort, mode: o.stub ? "stub" : "told", fail: o.fail || null, plugin: P, results }, null, 2) + "\n");
   const plain = results.filter(r => !r.pass && !r.known_gap).length, gaps = results.filter(r => !r.pass && r.known_gap).length;
   console.log(`\n${results.filter(r => r.pass).length} of ${results.length} steps pass, ${plain} fail, ${gaps} known gap. Brain kept: ${root}\nReport: ${join(artifacts, "report.json")}`);
