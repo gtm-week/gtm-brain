@@ -276,7 +276,8 @@ npm run test:e2e --prefix frontend/dashboard           # about 15 seconds
 plus an adopted document, a scheduled workflow and a run in progress) in a scratch folder under
 the system temp directory with its own `CODEX_HOME`, renders it and runs `server/dash.mjs` on a
 free port. The runner starts it and stops it when the run ends, passed or failed, and the scratch
-folder goes with it; no server or browser is left running. A failed test leaves its trace,
+folder goes with it; no server or browser is left running. A run that was killed outright cannot
+clean up: the next run stops the server it left and removes its folder. A failed test leaves its trace,
 screen and screenshot in `frontend/dashboard/.e2e/results/` (gitignored). Rebuild the dashboard
 (`npm run build --prefix frontend/dashboard`) before running them after a change under
 `frontend/dashboard/src`. They are not part of `node --test`; CI runs them in their own job,
