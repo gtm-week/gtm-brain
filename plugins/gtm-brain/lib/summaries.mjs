@@ -19,7 +19,7 @@ const count = arrs => { const m = new Map(); for (const a of arrs) for (const x 
 export function contextFacts(root, slug) {
   const c = lib.readContext(root, slug); if (!c) return null;
   const mem = lib.effectiveMemories(c.memories);
-  const reg = lib.readNames(root);   // names as the registry knows them now: "Chris" counts for Krzysztof Pawlak once the alias exists
+  const reg = lib.readNamesShared(root);   // names as the registry knows them now: "Chris" counts for Krzysztof Pawlak once the alias exists
   const people = count(mem.map(m => lib.mentionsIn(reg, m))), tools = count(mem.map(m => m.tools));
   const kinds = new Map(reg.map(n => [n.name.toLowerCase(), n.kind || "person"]));
   const names = people.map(([name, mentions]) => ({ name, kind: kinds.get(name.toLowerCase()) || "person", mentions }));

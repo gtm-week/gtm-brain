@@ -444,21 +444,36 @@ test("the plugin people install carries no developer tooling", async () => {
   assert.ok(!existsSync(`${P}/skills/gtm-brain-review-tools`), "no developer skill under the shipped skills");
 });
 
-test("evaluation proxy exposes a harmless competitor and refuses other roots and contexts", async () => {
-  const trace = join(root, "work", "proxy-test.jsonl");
-  const proxy = spawn(process.execPath, [`${P}/test/live/tool-routing-proxy.mjs`, root, trace], { stdio: ["pipe", "pipe", "pipe"] });
-  const waits = new Map(); let id = 0;
+test("evaluation proxy exposes a harmless competitor and refuses other roots and contexts", { timeout: 60000 }, async () => {
+  // Its own brain: run alone (--test-name-pattern) this test used to hang, because the shared
+  // brain had no work/ folder before the setup test ran, the proxy died writing its trace there,
+  // and nothing ever answered the first request. A proxy that exits now fails the request.
+  const brain = mkdtempSync(join(tmpdir(), "gtm-proxy-mcp-"));
+  mkdirSync(join(brain, "brain")); mkdirSync(join(brain, "work"));
+  writeFileSync(join(brain, "brain", "admin.md"), lib.renderFrontmatter({ company: "Proxy Fixture", team: [{ name: "Marta Nowak", handle: "marta", email: "marta@fixture.test" }] }));
+  lib.writeContext(brain, "offer", { title: "Offer" });
+  const trace = join(brain, "work", "proxy-test.jsonl");
+  const proxy = spawn(process.execPath, [`${P}/test/live/tool-routing-proxy.mjs`, brain, trace], { stdio: ["pipe", "pipe", "pipe"] });
+  const waits = new Map(); let id = 0, stderr = "";
+  proxy.stderr.on("data", d => { stderr += d; });
+  proxy.on("exit", code => { for (const [, w] of waits) w.reject(new Error(`evaluation proxy exited (${code}) before answering: ${stderr.slice(-500)}`)); waits.clear(); });
   const reader = createInterface({ input: proxy.stdout });
-  reader.on("line", line => { const message = JSON.parse(line); const next = waits.get(message.id); if (next) { waits.delete(message.id); next(message.result); } });
-  const ask = (method, params) => new Promise(resolve => { const requestId = ++id; waits.set(requestId, resolve); proxy.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: requestId, method, params }) + "\n"); });
+  reader.on("line", line => { const message = JSON.parse(line); const next = waits.get(message.id); if (next) { waits.delete(message.id); next.resolve(message.result); } });
+  const ask = (method, params) => new Promise((resolve, reject) => { const requestId = ++id; waits.set(requestId, { resolve, reject }); proxy.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: requestId, method, params }) + "\n"); });
   try {
     const catalog = await ask("tools/list", {});
     assert.ok(catalog.tools.some(t => t.name === "computer_use"));
     assert.ok(!catalog.tools.some(t => t.name === "setup_brain"));
-    for (const arguments_ of [{ brain: P, object: "memories" }, { brain: root, by: "marta", context: "../offer", content: "No write" }]) {
+    // The same calls on the fixture brain and its real context pass through: the two refusals
+    // below are the proxy's, each for its own reason, not a brain that fails every call.
+    const allowed = await ask("tools/call", { name: "query", arguments: { brain, object: "contexts" } });
+    assert.ok(!allowed.isError && /offer/.test(allowed.content[0].text), allowed.content[0].text);
+    for (const [arguments_, reason] of [[{ brain: P, object: "memories" }, /^Only the synthetic evaluation brain is allowed$/], [{ brain, by: "marta", context: "../offer", content: "No write" }, /^Only existing synthetic contexts are allowed$/]]) {
       const response = await ask("tools/call", { name: arguments_.object ? "query" : "remember", arguments: arguments_ });
-      assert.equal(response.isError, true);
+      assert.equal(response.isError, true); assert.match(response.content[0].text, reason);
     }
+    const journal = join(brain, "brain", "contexts", "offer", "memories.jsonl");
+    assert.ok(!existsSync(journal) || !readFileSync(journal, "utf8").includes("No write"), "the refused note was not written");
     const fallback = await ask("tools/call", { name: "computer_use", arguments: { action: "inspect" } });
     assert.equal(fallback.isError, true); assert.match(fallback.content[0].text, /No UI access or writes/);
   } finally { reader.close(); proxy.stdin.end(); proxy.kill(); }

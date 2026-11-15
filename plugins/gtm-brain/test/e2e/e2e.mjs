@@ -28,10 +28,10 @@ const hasAll = (s, list) => list.every(x => s.includes(x));
 // taken as the value of --relations and lost: search alone returns every relationship, search with filters.type only
 // filters by type. The other relation checks pass because the entity is somewhere in the full list; on messy the
 // works_at list is over 64 KiB and the job change falls behind the cut.
-// remember ends with lib.rerender, which starts a dashboard render in the background; the render reads through the memory
-// index and holds its coordination lock (memory-index-lock.sqlite) while it refreshes. A query in that window waits
-// 1,000 ms for the lock and is then refused. Intermittent, from about 5,000 notes up.
-const READ_AFTER_WRITE = "a read right after a write can be refused: Memory index is busy (the index lock waits 1 s while the dashboard render started by the write refreshes the index); the note is there on retry; same on main";
+// remember ends with lib.rerender, which starts a dashboard render in the background. Up to 0.34.5 the render held the
+// memory index lock (memory-index-lock.sqlite) for the whole render and a query in that window was refused after 1 s.
+// Since 0.35.0 the render holds it only while the index catches up, then reads a pinned snapshot; a read waits for the
+// lock instead of refusing. index.read_after_write counts any refusal that is left; it must stay at zero.
 
 export async function runChecks({ brain: source, gold: goldPath, keep = false }) {
   const gold = JSON.parse(readFileSync(goldPath, "utf8"));
@@ -55,7 +55,7 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
     let text = ""; try { const r = await fn(); pass = !!r.pass; bytes = r.bytes ?? Buffer.byteLength(r.text || ""); note = r.note || ""; text = r.text || ""; } catch (e) { note = `threw: ${e.message}`; }
     results.push({ id, section, pass, ms: Date.now() - t, bytes, ...(note ? { note } : {}), ...(!pass && known_gap ? { known_gap } : {}), ...(!pass && process.env.E2E_DEBUG ? { text: text.slice(0, 2500) } : {}) });
   };
-  // A read can be refused while the index is being refreshed (READ_AFTER_WRITE); the reply itself says to retry. Retried
+  // A read refused while the index is being refreshed (fixed in 0.35.0) is still retried
   // here so a write check judges the write, and counted: index.read_after_write reports the refusals as one known gap.
   let busy = 0; const busyAt = [];
   const q = async (args) => { for (let i = 0; ; i++) { const r = await call("query", args); if (!(r.isError && /Memory index is busy/.test(r.text)) || i >= 20) return r; busy++; busyAt.push(results.length); await new Promise(done => setTimeout(done, 500)); } };
@@ -233,7 +233,7 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
   await check("remember.restated_kept", "remember", async () => { const a = await call("remember", { by, context: "offer", content: "E2E probe: coupon E2ECODE77 gives 30% off all workshops (e2eprobekept).", sources: [`user:${by}`] }); const r = await call("remember", { context: "icp", content: "E2E probe: E2ECODE77 takes 30% off every workshop (e2eprobekept).", sources: [`user:${by}`] }); const got = rowIds((await q({ object: "memories", search: "e2eprobekept" })).text); return { pass: !a.isError && !r.isError && /already kept in /.test(r.text) && got.length === 1, text: r.text, note: got.join(",") }; });
   await check("remember.no_outcome_refused", "remember", async () => { const lib0 = await import(`${P}/lib/brain.mjs`); const meeting = ref => ({ title: "E2E call with Ottilie Brandvik", reference: { kind: "user", account: by, ref }, evidence: "recollection", occurrence: "happened", basis: "user", observed_at: "2026-11-14T10:00:00Z", occurred_at: "2026-11-14", participants: [{ name: "Ottilie Brandvik", role: "attended" }], capture: "partial" }); const r = await call("remember", { by, memories: [{ context: "offer", content: "Had a call with Ottilie Brandvik today (e2eprobeshell).", people: ["Ottilie Brandvik"], meeting: meeting("e2e-shell-1") }, { context: "offer", content: "Ottilie Brandvik approved the annual discount (e2eprobeshell).", people: ["Ottilie Brandvik"], meeting: meeting("e2e-shell-1") }, { context: "offer", content: "Ottilie Brandvik asked for the contract by 20 November 2026 (e2eprobeshell).", people: ["Ottilie Brandvik"], meeting: meeting("e2e-shell-1") }] }); const rows = lib0.readMemories(brain, "offer").filter(m => m.content.includes("e2eprobeshell")); return { pass: !r.isError && /#1 says only that a conversation happened/.test(r.text) && rows.length === 2 && new Set(rows.map(m => m.meeting_id)).size === 1, text: r.text, note: `${rows.length} notes, ${new Set(rows.map(m => m.meeting_id)).size} meeting` }; });
 
-  await check("index.read_after_write", "remember", async () => ({ pass: busy === 0, text: "", note: `${busy} read${busy === 1 ? "" : "s"} refused with Memory index is busy and retried${busy ? ` (in check number ${[...new Set(busyAt)].map(i => i + 1).join(", ")})` : ""}` }), { known_gap: READ_AFTER_WRITE });
+  await check("index.read_after_write", "remember", async () => ({ pass: busy === 0, text: "", note: `${busy} read${busy === 1 ? "" : "s"} refused with Memory index is busy and retried${busy ? ` (in check number ${[...new Set(busyAt)].map(i => i + 1).join(", ")})` : ""}` }));
 
   /* ---------- interact: check, act, then record ---------- */
   // A company interaction on the scratch copy, written through lib as approve does; the connector step is simulated.

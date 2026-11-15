@@ -19,7 +19,7 @@ import { rankEntityCandidates } from './entity-search.mjs';
 export { rankEntityCandidates } from './entity-search.mjs';
 export { normalizeKind, normalizeSource, normalizeSources, pointerKey, parsePointer, urlPointer, lookupKey, sourceMembers, citesPointer, referenceText, isRecording, bigFilePointer } from './pointers.mjs';
 import { checkSchema } from "./ontology/validation.mjs";
-import { readEntityFiles, writeEntityFiles, entityId, entityType, ENTITY_FORMAT, refreshEntityPages, staleEntities, withEntityLock } from "./entities.mjs";
+import { sharedEntityFiles, thaw, deepFreeze, writeEntityFiles, entityId, entityType, ENTITY_FORMAT, refreshEntityPages, staleEntities, withEntityLock } from "./entities.mjs";
 import { appendMemoryBytes } from './memory-journal.mjs';
 import { requestDashboardRefresh } from './dashboard-refresh.mjs';
 import { MEETING_FIELDS, validateMeetingEvidence, prepareMeetingMemory, duplicateMeetingMemory, meetingMetadata } from './meetings.mjs';
@@ -549,11 +549,27 @@ function promoteFullName(e) {
 }
 /* The formal Entity object has three kinds. Older company/team inputs retain their subtype. */
 export { ENTITY_KINDS as NAME_KINDS } from "./entities.mjs";
-export function readNames(root) {
-  return withEntityLock(root, () => readRegistry(root));
+/* The registry is read once per change, not once per call: kept for the life of the process and
+   checked on every call against the entity files (sharedEntityFiles), the legacy registry files
+   and admin.md by device, inode, size and change times. readNames hands out a copy the caller may
+   change; readNamesShared the cached, frozen registry, for callers that only look things up. */
+const registries = new Map();
+const fileKey = path => { try { const s = statSync(path, { bigint: true }); return `${s.dev}:${s.ino}:${s.size}:${s.mtimeNs}:${s.ctimeNs}`; } catch (e) { if (e.code === "ENOENT") return "missing"; throw e; } };
+function sharedRegistry(root) {
+  const scan = sharedEntityFiles(root), key = [scan.key, ...[join(root, "brain", "entities.md"), join(root, "brain", "names.md"), join(root, "brain", "admin.md")].map(fileKey)].join("|");
+  const hit = registries.get(resolve(root));
+  if (scan.key !== null && hit?.key === key) return hit.names;
+  const names = deepFreeze(readRegistry(root, scan.entries.map(e => thaw(e))));
+  if (scan.key === null) registries.delete(resolve(root)); else registries.set(resolve(root), { key, names });
+  return names;
 }
-function readRegistry(root) {
-  const out = readEntityFiles(root);
+export function readNames(root) {
+  return withEntityLock(root, () => thaw(sharedRegistry(root)));
+}
+export function readNamesShared(root) {
+  return withEntityLock(root, () => sharedRegistry(root));
+}
+function readRegistry(root, out) {
   for (const f of entitiesFiles(root)) for (const line of readFileSync(f, "utf8").split("\n")) {
     if (!/^-\s+\S/.test(line)) continue;
     const parts = line.replace(/^-\s+/, "").split("|").map(s => s.trim()); const name = parts.shift();
@@ -655,21 +671,51 @@ export function resolvePeople(names, people) {
 /* Every entity a memory mentions: the people field, plus any registry name or alias that appears in
    the text as whole words. So a company the note names but the people field left out still counts,
    from the moment it is in the registry. Aliases shorter than three letters and emails are not matched. */
+// The normalized form of a name or alias is a pure function of its text; kept so a save does not
+// fold every name in a large registry again. Bounded: cleared when it grows past 100,000 forms.
+const normalForms = new Map();
+const normalForm = s => { let f = normalForms.get(s); if (f === undefined) { if (normalForms.size > 100000) normalForms.clear(); f = foldName(s).replace(/[^a-z0-9]+/g, " ").trim(); normalForms.set(s, f); } return f; };
+// Lookup tables over a registry, the same answers as exactName, inferredName and the owner count
+// below, built once per frozen (shared, cached) registry instead of once per note.
+const mentionTables = new WeakMap();
+function tablesFor(names) {
+  if (!Object.isFrozen(names)) return looseTables(names);
+  let t = mentionTables.get(names);
+  if (t) return t;
+  const exact = new Map(), first = new Map(), owners = new Map(), add = (map, key, value) => { if (!map.has(key)) map.set(key, new Set()); map.get(key).add(value); };
+  names.forEach((n, i) => {
+    for (const key of [n.id, ...(n.previous_ids || []), n.name.toLowerCase(), ...n.aliases.map(a => a.toLowerCase()), ...n.emails.map(e => e.toLowerCase())]) add(exact, key, i);
+    for (const x of [n.name, ...n.aliases]) add(first, x.toLowerCase().split(/\s+/)[0], i);
+    for (const form of [n.name, ...n.aliases].map(normalForm)) add(owners, form, n.name);
+  });
+  const forms = names.map(n => [n.name, ...n.aliases].filter(f => !f.includes("@")).map(normalForm).filter(f => f.length >= 3 && owners.get(f).size === 1));
+  const one = (map, key) => { const hits = map.get(key); return hits?.size === 1 ? names[hits.values().next().value].name : null; };
+  const canonical = mention => { const w = String(mention || "").trim().toLowerCase(); if (!w) return null; return one(exact, w) || (/\s/.test(w) ? null : one(first, w)); };
+  const exactCount = mention => { const w = String(mention || "").trim().toLowerCase(); return w ? exact.get(w)?.size || 0 : 0; };
+  // the meeting entities of each anchor, in registry order (lib/meeting-entities.mjs)
+  const meetings = new Map();
+  for (const n of names) for (const anchor of meetingAnchors(n)) { if (!meetings.has(anchor)) meetings.set(anchor, []); meetings.get(anchor).push(n.name); }
+  t = { forms, canonical, exactCount, anchored: anchor => meetings.get(anchor) || [] };
+  mentionTables.set(names, t);
+  return t;
+}
+// A registry the caller may still change (readNames): nothing is kept, and a single call costs
+// no more than the scan it replaces, so a loop over many notes is not slower than before.
+function looseTables(names) {
+  const owners = new Map();
+  for (const n of names) for (const form of [n.name, ...n.aliases].map(normalForm)) { if (!owners.has(form)) owners.set(form, new Set()); owners.get(form).add(n.name); }
+  const forms = names.map(n => [n.name, ...n.aliases].filter(f => !f.includes("@")).map(normalForm).filter(f => f.length >= 3 && owners.get(f).size === 1));
+  return { forms, canonical: mention => canonicalName(names, mention), exactCount: mention => names.filter(n => exactName([n], mention)).length, anchored: anchor => names.filter(n => meetingAnchors(n).includes(anchor)).map(n => n.name) };
+}
 export function mentionsIn(names, memory) {
-  const mentions = [...(memory.entities || []), ...(memory.people || [])].filter(p => names.filter(n => exactName([n], p)).length <= 1);
-  const out = resolvePeople(names, mentions); const text = " " + foldName(memory.content).replace(/[^a-z0-9]+/g, " ") + " ";
-  const owners = new Map(), normalized = s => foldName(s).replace(/[^a-z0-9]+/g, " ").trim();
-  for (const n of names) for (const form of [n.name, ...n.aliases].map(normalized)) {
-    if (!owners.has(form)) owners.set(form, new Set()); owners.get(form).add(n.name);
-  }
-  for (const n of names) {
-    if (out.includes(n.name)) continue;
-    const forms = [n.name, ...n.aliases].filter(f => !f.includes("@")).map(normalized).filter(f => f.length >= 3 && owners.get(f).size === 1);
-    if (forms.some(f => text.includes(" " + f + " "))) out.push(n.name);
-  }
+  const { forms, canonical, exactCount, anchored } = tablesFor(names);
+  const mentions = [...(memory.entities || []), ...(memory.people || [])].filter(p => exactCount(p) <= 1);
+  const out = []; for (const p of mentions) { const c = canonical(p) || p; if (!out.includes(c)) out.push(c); }
+  const text = " " + foldName(memory.content).replace(/[^a-z0-9]+/g, " ") + " ";
+  names.forEach((n, i) => { if (!out.includes(n.name) && forms[i].some(f => text.includes(" " + f + " "))) out.push(n.name); });
   // a note with a meeting id belongs to that meeting's entity (lib/meeting-entities.mjs)
   const anchor = anchorOf(memory);
-  if (anchor) for (const n of names) if (!out.includes(n.name) && meetingAnchors(n).includes(anchor)) out.push(n.name);
+  if (anchor) for (const name of anchored(anchor)) if (!out.includes(name)) out.push(name);
   return out;
 }
 /* Reuse registry normalization while indexing a stream of memories. The ordinary reader
@@ -1389,7 +1435,7 @@ function appendMemoryRecord(root, slug, { authors, via = "codex", kind = "note",
   if (rec.meeting && !rec.meeting_id) rec.meeting_id = rec.id;
   if (customer !== undefined) rec.customer = { ...customer };
   if (customer_coverage !== undefined) rec.customer_coverage = customer_coverage;
-  const registry = readNames(root), mentioned = mentionsIn(registry, rec);
+  const registry = readNamesShared(root), mentioned = mentionsIn(registry, rec);
   if (customer !== undefined) {
     const entity = registry.find(e => e.name === exactName(registry, customer?.entity));
     if (!entity || !["person", "organization"].includes(entity.kind)) throw new Error("customer.entity must resolve to a registered person or organization");
