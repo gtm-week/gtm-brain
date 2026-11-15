@@ -10,7 +10,8 @@ import { HISTORY_DIR } from "./layout.mjs";
 export const EVENTS_FILE = `${HISTORY_DIR}/events.jsonl`;
 export const ENTITY_CHANGES = ["rename", "kind", "merge", "unmerge"];
 const ID = /^e_[0-9a-f]{16}$/;
-const typeText = (kind, subtype) => `${kind || "person"}${subtype ? ` (${subtype})` : ""}`;
+// company and team are the older spelling of an organization subtype: the same kind, never a change
+const typeText = (kind, subtype) => ["company", "team"].includes(kind) ? `organization (${kind})` : `${kind || "person"}${subtype ? ` (${subtype})` : ""}`;
 
 /* The events between two states of one entity: a new name, a new kind or subtype. */
 export function identityEvents(before, after) {

@@ -14,21 +14,42 @@ import { CHAT_KINDS } from "./host.mjs";
 import { entityEventText } from "./entity-events.mjs";
 
 export const relationId = (from, type, to) => "r_" + createHash("sha256").update(`${from}|${type}|${to}`).digest("hex").slice(0, 12);
-// the words that say a link is over: "Anna left Northwind", "no longer our partner", "churned in October"
-export const ENDED_WORDS = /\b(left|no longer|churned|ended)\b/i;
+// the words that say a link is over: "Anna left Northwind", "no longer our partner", "churned in October", and a
+// past one said as past ("used to work at", "a former", "previously"), which must not read as a new current link
+export const ENDED_WORDS = /\b(left|no longer|churned|ended|former|formerly|previously|used to|quit|resigned|departed)\b/i;
+const CLAUSE = /[.;,!?\n]+|\b(?:and|but|after|before|then|while|who)\b/i;
+/* Whether the note's words end this link. names: what the other end is called (the from end when to is us). The
+   ending word has to stand in the clause that names it: "Anna left Northwind and joined Acme Labs" ends Northwind
+   and starts Acme Labs. A note that does not name the end at all ("She left in May") is about the link. */
+export function saysEnded(content, names = []) {
+  const low = String(content || "").toLowerCase();
+  if (!ENDED_WORDS.test(low)) return false;
+  const known = [...new Set(names.filter(Boolean).map(n => String(n).toLowerCase().trim()))].filter(n => n && low.includes(n));
+  if (!known.length) return true;
+  // "left Northwind for Acme Labs": what follows for is the new one
+  const clauses = low.replace(/\b(left\b[^.;,!?\n]*?)\bfor\b/g, "$1;").split(CLAUSE).filter(c => c && c.trim());
+  return clauses.some(c => ENDED_WORDS.test(c) && known.some(n => c.includes(n)));
+}
 const ISO = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/;
 const synthetic = m => m.tags?.some(t => /^(synthetic|demo)(:|$)/i.test(t));
 const time = v => Date.parse(v) || 0;
 const day = v => String(v || "").slice(0, 10);
 
-/* A save needs only {from, type, to}; the rest comes from the note. status: ended when its words say so, else
-   current. observed_at: the note's time (a date alone is taken as that day). basis: source when the note cites a
-   record outside the chat, else user, and then the author is its user source. What the caller passed is kept. */
-export function completeRelation(relation, { content = "", sources = [], author = null, at = new Date().toISOString() } = {}) {
+/* A save needs only {from, type, to}; the rest comes from the note. status: ended when its words say so about this
+   link (saysEnded; names: what the other end is called, by default as passed), else current. observed_at: the
+   note's time; a date alone is that day, a month its first day, a time with an offset is put in UTC. basis: source
+   when the note cites a record outside the chat, else user, and then the author is its user source. What the
+   caller passed is kept. */
+export function completeRelation(relation, { content = "", sources = [], author = null, at = new Date().toISOString(), names = null } = {}) {
   if (!relation || typeof relation !== "object" || Array.isArray(relation)) return { relation, sources, filled: [] };
   const r = { ...relation }, filled = [];
-  if (r.status === undefined || r.status === null || r.status === "") { r.status = ENDED_WORDS.test(content) ? "ended" : "current"; filled.push("status"); }
-  if (typeof r.observed_at === "string" && /^\d{4}-\d\d-\d\d$/.test(r.observed_at.trim())) r.observed_at = `${r.observed_at.trim()}T00:00:00Z`;
+  if (r.status === undefined || r.status === null || r.status === "") { r.status = saysEnded(content, names || [r.to === US ? r.from : r.to]) ? "ended" : "current"; filled.push("status"); }
+  if (typeof r.observed_at === "string") {
+    const v = r.observed_at.trim();
+    if (/^\d{4}-\d\d-\d\d$/.test(v)) r.observed_at = `${v}T00:00:00Z`;
+    else if (/^\d{4}-\d\d$/.test(v) && Number.isFinite(Date.parse(`${v}-01T00:00:00Z`))) r.observed_at = `${v}-01T00:00:00Z`;
+    else if (/^\d{4}-\d\d-\d\d[T ]\d\d:\d\d/.test(v) && !ISO.test(v) && Number.isFinite(Date.parse(v))) r.observed_at = new Date(Date.parse(v)).toISOString();
+  }
   if (r.observed_at === undefined || r.observed_at === null || r.observed_at === "") { r.observed_at = at; filled.push("observed_at"); }
   const external = sources.some(s => s && s.ref && ![...CHAT_KINDS, "memory", "user"].includes(s.kind));
   if (r.basis === undefined || r.basis === null || r.basis === "") { r.basis = external ? "source" : "user"; filled.push("basis"); }

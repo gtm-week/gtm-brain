@@ -90,13 +90,15 @@ view, and a short note says what was withdrawn. Both stay in the file and in git
 
 "Anna works at Northwind", "Northwind is our partner", "Tom reports to Anna": a relationship of a type
 `SCHEMA.md` lists is saved as a note that names both ends and the type; the brain fills in the rest.
-It is current unless your words say it ended ("left", "no longer", "churned", "ended"), dated when
-you said it, and resting on your word, or on the record the note cites (a CRM, LinkedIn).
+It is current unless your words say it ended ("left", "no longer", "churned", "ended", "used to",
+"former"), dated when you said it, and resting on your word, or on the record the note cites (a CRM,
+LinkedIn). "Anna left Northwind and joined Acme" starts Acme and ends Northwind.
 
 Each relationship is one record with its own id, and every note about it is an event: started,
 changed, ended. Nothing is overwritten: "Anna left Northwind" is a new note, and the old one stays
 as history. Where `SCHEMA.md` says One at a time (an employer, a manager), a new one ends the one
 before it: "Anna joined Acme" also saves "Anna no longer works at Northwind", dated the same day.
+If that was a mistake and you withdraw it, Northwind is current again.
 Partners, investors and attendance can be many at once. What you said beats what a tool says: a
 source that disagrees is listed beside it, never applied.
 

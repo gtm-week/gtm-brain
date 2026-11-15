@@ -30,7 +30,7 @@ import { host, hostId, HOST_DIRS } from "./host.mjs";
 export { customerOverview, customerIdentity, validateCustomerEvidence, guardCustomerCorrection } from "./customers.mjs";
 import { validateRelationEvidence, guardRelationCorrection } from "./relations.mjs";
 import { readSchema, checkRelation, brainKinds, US } from "./schema.mjs";
-export { validateRelationEvidence, guardRelationCorrection, relationOverview, relationsText, endPreviousRelations, completeRelation, relationId, buildRelationLog, statusAt } from "./relations.mjs";
+export { validateRelationEvidence, guardRelationCorrection, relationOverview, relationsText, endPreviousRelations, withdrawEndedBy, completeRelation, relationId, buildRelationLog, statusAt } from "./relations.mjs";
 export { updateEntity, mergeEntities, archiveEntity, undoEntityMerge } from "./entity-lifecycle.mjs";
 export { entityFacts, entityBrief, entityRecords, compileEntity, resolveEntity, refreshEntityPages, staleEntities, entityEvidenceIndex, entityType, ENTITY_FORMAT } from "./entities.mjs";
 export { withEntityLock, startKindLayout, migrateToKindFolders } from './entities.mjs';
@@ -418,7 +418,8 @@ export function seedContexts(root, owner, rules = {}) {
    post-merge hook lists the contexts that took notes from both sides in work/merge-stale.json. A
    note from the other branch can be older than the kept summary, so its timestamp alone would never
    make the context stale; the list does, until the next compilation of that context. */
-export const MERGE_ATTRIBUTES = ["brain/contexts/*/memories.jsonl merge=union", "brain/contexts/*/context.md merge=gtm-brain-cover"];
+// the entity log (lib/entity-events.mjs) is append-only lines too: two teammates' renames merge as lines
+export const MERGE_ATTRIBUTES = ["brain/contexts/*/memories.jsonl merge=union", "brain/contexts/*/context.md merge=gtm-brain-cover", "brain/entities/.history/events.jsonl merge=union"];
 const mergeStaleFile = root => join(root, "work", "merge-stale.json");
 export function mergeStale(root) { try { return JSON.parse(readFileSync(mergeStaleFile(root), "utf8")).contexts || []; } catch { return []; } }
 export function markMergeStale(root, slugs) {

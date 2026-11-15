@@ -120,8 +120,30 @@ export function endPreviousRelations(root, context, rec) {
   const name = id => id === US ? US : byRef.get(id)?.name || id, words = t => t.replace(/_/g, " ");
   return relationsToEnd(relations, canon, schema).map(old => lib.appendMemory(root, context, {
     authors: rec.authors, via: rec.via, kind: "note", tools: [], people: [name(old.from), name(old.to)].filter(n => n !== US),
-    content: `${name(old.from)} no longer ${words(old.type)} ${name(old.to)}: ${name(old.from)} ${words(old.type)} ${name(canon.relation.to)} since ${String(rec.relation.observed_at).slice(0, 10)} (${rec.id}), and SCHEMA.md keeps one current ${old.type} at a time.`,
-    source: rec.source, actions: [], supersedes: null, retracts: null, tags: [`ended-by:${rec.id}`],
+    // the date is when the newer note was observed, never a start date nobody gave
+    content: `${name(old.from)} no longer ${words(old.type)} ${name(old.to)}: a newer note (${rec.id}, ${String(rec.relation.observed_at).slice(0, 10)}) says ${name(old.from)} ${words(old.type)} ${name(canon.relation.to)}, and SCHEMA.md keeps one current ${old.type} at a time.`,
+    source: rec.source, actions: [], supersedes: null, retracts: null, tags: [`${ENDED_BY}${rec.id}`],
     relation: { from: old.from, type: old.type, to: old.to, status: "ended", basis: rec.relation.basis, observed_at: rec.relation.observed_at },
   }).rec);
+}
+export const ENDED_BY = "ended-by:";
+
+/* The other way round: a note that ended a link only because of note X goes when X goes. rec withdraws or replaces
+   X (retracts, supersedes); each live ended-by:X note in the context is withdrawn with it, unless rec itself is a
+   new current link of that type from the same entity to another end (the person corrected which employer, and the
+   old one is still over). Returns the notes withdrawn. The caller commits the context's file. */
+export function withdrawEndedBy(root, context, rec) {
+  const gone = [rec?.supersedes, rec?.retracts].filter(Boolean);
+  if (!gone.length) return [];
+  const ended = lib.effectiveMemories(lib.readMemories(root, context)).filter(m => m.relation && !m.retracts && m.id !== rec.id && m.tags?.some(t => t.startsWith(ENDED_BY) && gone.includes(t.slice(ENDED_BY.length))));
+  if (!ended.length) return [];
+  const registry = lib.readNames(root), byRef = new Map(registry.flatMap(e => [e.id, ...(e.previous_ids || [])].map(id => [id, e])));
+  const id = v => v === US ? US : byRef.get(v)?.id || v, name = v => v === US ? US : byRef.get(v)?.name || v, words = t => t.replace(/_/g, " ");
+  const { schema = null } = readSchema(root), type = t => (schema && relationType(schema, t)?.type) || t;
+  const still = m => rec.relation?.status === "current" && id(rec.relation.from) === id(m.relation.from) && type(rec.relation.type) === type(m.relation.type) && id(rec.relation.to) !== id(m.relation.to);
+  return ended.filter(m => !still(m)).map(m => (lib.appendMemory(root, context, {
+    authors: rec.authors, via: rec.via, kind: "note", tools: [], people: [name(m.relation.from), name(m.relation.to)].filter(n => n !== US),
+    content: `Withdrawn with ${gone.join(", ")}: ${m.id} ended ${name(m.relation.from)} ${words(m.relation.type)} ${name(m.relation.to)} only because of that note.`,
+    source: rec.source, actions: [], supersedes: null, retracts: m.id, tags: [],
+  }), m));
 }

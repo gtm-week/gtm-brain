@@ -773,8 +773,10 @@ SCHEMA.md edit refills the briefs of that kind (at most 20 per pass), never hidi
 
 A relationship is a note with a `relation` block on `remember`: `{from, type, to, status: current |
 ended, basis: user | source, observed_at, reference?}`, the type checked against SCHEMA.md when it is
-written. `{from, type, to}` is enough: the save fills status (ended when the note says left, no
-longer, churned or ended), observed_at (the note's time; a date alone is that day) and basis (source
+written. `{from, type, to}` is enough: the save fills status (ended when the clause of the note that
+names the other end says left, no longer, churned, ended, former, previously, used to, quit, resigned
+or departed, or when the note says so and does not name that end; `saysEnded` in `lib/relation-log.mjs`), observed_at (the
+note's time; a date alone is that day, a month its first day, an offset is put in UTC) and basis (source
 when the note cites a record outside the chat, else user, with the author as the user source); what
 the caller passes is kept. "Ended" is a new note; a correction uses `supersedes` / `retracts`; a
 source never replaces what the person said.
@@ -784,7 +786,9 @@ plus a hash of its two ends and its type, derived and never stored; every note t
 event (started, changed, ended). For a one-at-a-time type the save writes an ended note for the
 previous link, dated to the new one and tagged `ended-by:<note id>`, in the same context and commit
 (`lib.endPreviousRelations`); a log without that note (a teammate on 0.34 wrote it) is ended when
-read, marked implied. Renames, merges, undone merges and kind changes append `{at, by, entity, change,
+read, marked implied. A correction that withdraws or replaces the note which ended a link withdraws
+that ended note too (`lib.withdrawEndedBy`), unless it names another current end of the same type; a
+correction from the chat that cites no outside record counts as the person's word. Renames, merges, undone merges and kind changes append `{at, by, entity, change,
 from, to}` to `brain/entities/.history/events.jsonl` (`lib/entity-events.mjs`), written by the entity
 writers and committed with the entity change. The memory index (version 9) fills `relations`,
 `relation_events` and `entity_events` from both on every refresh; they are readable in SQL mode.

@@ -15,8 +15,10 @@ enough:
   "relation": { "from": "Anna Lee", "type": "works_at", "to": "Northwind" } }
 ```
 
-The save fills `status` (ended when the note says left, no longer, churned or ended, else
-current), `observed_at` (now; pass a date such as `"2026-09-01"` when the person said when) and
+The save fills `status` (ended when the note says so about the other end: left, no longer,
+churned, ended, former, previously, used to, quit, resigned; else current. "Anna left Northwind
+and joined Acme" with `to: Acme` is current, and ends Northwind by itself), `observed_at` (now;
+pass a date such as `"2026-09-01"` when the person said when) and
 `basis` (`source` when the note cites a record outside the chat, else `user` with the author as
 its source). Pass them only to say something else.
 
@@ -38,7 +40,9 @@ its source). Pass them only to say something else.
 - It ended ("Northwind is no longer our partner since October"): a new note with the same
   from, type and to and `status: "ended"`. The current one stays as history; never retract it.
 - It was wrong ("Anna never worked at Northwind"): a correction with `supersedes` (the right
-  fact) or `retracts` (nothing replaces it), as for any note (F1, F2).
+  fact) or `retracts` (nothing replaces it), as for any note (F1, F2). From the chat it needs
+  no `sources`. If the wrong note had ended an earlier link (one at a time), that end is
+  withdrawn with it; the reply says so.
 - A source never replaces or withdraws what the person said: record the disagreement as its
   own note with `basis: source`.
 

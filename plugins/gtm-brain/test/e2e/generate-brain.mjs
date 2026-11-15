@@ -293,12 +293,6 @@ export async function generate({ shape = "small", out, seed = 1, gold: goldPath 
   const attachmentTargets = companies.slice(0, Math.min(10, Math.max(1, Math.round(companies.length / 30))));
 
   // messy: identity events and traps in notes
-  // the relationship log (ALL-711): e2e saves a three-field works_at from this person to first, then to second, then
-  // renames first; neither company is the hub, the busiest one or a trap, and the person is no Max and not the owner
-  { const skip = new Set([gold.hub?.id, gold.busiest?.id, cfg.messy ? canon(traps.renamed.entity.id) : null, cfg.messy ? canon(traps.merged.survivor.id) : null].filter(Boolean));
-    const ppl = gold.entities.filter(e => e.kind === "person" && /\s/.test(e.name) && !/^Max\b/.test(e.name) && e.name !== gold.owner.name);
-    const orgs = gold.entities.filter(e => e.kind === "organization" && e.subtype === "company" && !skip.has(e.id) && /\s/.test(e.name));
-    if (ppl.length && orgs.length >= 2) gold.relation_probe = { person: { id: ppl[0].id, name: ppl[0].name }, first: { id: orgs[0].id, name: orgs[0].name }, second: { id: orgs[1].id, name: orgs[1].name } }; }
   if (cfg.messy) {
     const [mw, mg] = traps.maxes;
     for (let i = 0; i < 6; i++) ev(0.1 + i * 0.12, "icp", { content: `${mw.name} at ${traps.employers.maxWeber.name} asked for ${["a store-level report", "the API docs", "a call with finance", "references", "an SSO demo", "the DPA"][i]}.`, people: [mw.name, traps.employers.maxWeber.name], source: userSrc });

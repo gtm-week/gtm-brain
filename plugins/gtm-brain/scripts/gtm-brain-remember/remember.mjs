@@ -217,7 +217,9 @@ const problems = entries.map((e, i) => {
   catch (err) { return `${at(n)}${err.message}`; }
   // a relationship needs only from, type and to: the plugin fills status, observed_at and basis from the note (ALL-711)
   if (e.relation && typeof e.relation === "object" && !Array.isArray(e.relation) && !e.customer) {
-    const src = sourceOf(e), done = lib.completeRelation(e.relation, { content: String(e.content), sources: src, author: authors[0] });
+    // the ending words count where the note names the other end, under any name the brain knows it by
+    const other = e.relation.to === "us" ? e.relation.from : e.relation.to, known = typeof other === "string" ? lib.resolveEntity(lib.readNames(root), other) : null;
+    const src = sourceOf(e), done = lib.completeRelation(e.relation, { content: String(e.content), sources: src, author: authors[0], names: [other, known?.name, ...(known?.aliases || [])] });
     if (done.filled.length) filledRelation.set(i, done.filled);
     if (done.sources !== src) e.sources = [...(Array.isArray(e.sources) ? e.sources : e.sources ? [e.sources] : []), `user:${authors[0]}`];
     entries[i] = e = { ...e, relation: done.relation };
@@ -226,6 +228,11 @@ const problems = entries.map((e, i) => {
   // a relationship block that is incomplete does not cost the note: the note is saved, the relationship is not, and the line says what it needs
   if (relationErrors.length && e.relation && !e.customer) { droppedRelation.set(i, relationErrors.join("; ")); const { relation, ...rest } = e; entries[i] = e = rest; }
   else if (relationErrors.length) return `${at(n)}${relationErrors.join("; ")}`;
+  // a correction from the chat that cites no outside record is the person's word, as a three-field save is: it may
+  // withdraw or replace what the person said without a user: source spelled out (a source refresh still may not)
+  if ((e.supersedes || e.retracts) && (!e.relation || e.relation.basis === "user") && authors[0] && !sourceOf(e).some(s => s.kind === "user" || !(s.kind === "memory" || isChatSource(s)))
+    && lib.readMemories(root, ctx).some(m => [e.supersedes, e.retracts].includes(m.id) && m.relation?.basis === "user"))
+    entries[i] = e = { ...e, sources: [...(Array.isArray(e.sources) ? e.sources : e.sources ? [e.sources] : []), `user:${authors[0]}`] };
   try { lib.guardRelationCorrection(root, ctx, { ...e, source: sourceOf(e) }); }
   catch (err) { return `${at(n)}${err.message}`; }
   const ruled = ourRules.saveRefusals(root, e, { siblings: entries }); if (ruled.length) return `${at(n)}${ruled.join("; ")}`;
@@ -421,6 +428,9 @@ for (let i = 0; i < entries.length; i++) {
   // one current link at a time where SCHEMA.md says so: the previous one gets an ended note dated to this one
   let endedBefore = [];
   if (rec.relation) { try { endedBefore = lib.endPreviousRelations(root, ctx, rec); } catch (err) { endedBefore = []; lines.push(`${at(n)}warning: the earlier ${rec.relation.type} was not ended (${err.message})`); } }
+  // and back: a note that ended a link only because of the note withdrawn or replaced here is withdrawn with it
+  let unended = [];
+  if (rec.supersedes || rec.retracts) { try { unended = lib.withdrawEndedBy(root, ctx, rec); } catch (err) { unended = []; lines.push(`${at(n)}warning: a link that note had ended is still marked ended (${err.message})`); } }
   if (rec.meeting) anchors.set(meetingSourceKey(rec.meeting.reference), rec.meeting_id || rec.id);
   if (pool) { pool = pool.filter(m => m.id !== rec.supersedes); pool.push(rec); }
   if (e.customer?.reference) lib.addName(root, rec.customer.entity, { references: [e.customer.reference], sources: sourceOf(e) });
@@ -432,6 +442,8 @@ for (let i = 0; i < entries.length; i++) {
   lines.push(`${at(n)}saved in ${titleOf(ctx)}: ${shown.length > 100 ? shown.slice(0, 97) + "..." : shown}`);
   if (endedBefore.length) { const reg = lib.readNames(root), nm = v => v === "us" ? "us" : reg.find(x => x.id === v || x.previous_ids?.includes(v))?.name || v;
     for (const x of endedBefore) lines.push(`${at(n)}ended ${nm(x.relation.from)} ${x.relation.type} ${nm(x.relation.to)} (${x.id}): one current ${x.relation.type} at a time, so that one ended on ${String(x.relation.observed_at).slice(0, 10)}. Nothing to do.`); }
+  if (unended.length) { const reg = lib.readNames(root), nm = v => v === "us" ? "us" : reg.find(x => x.id === v || x.previous_ids?.includes(v))?.name || v;
+    for (const x of unended) lines.push(`${at(n)}withdrew ${x.id} with it: it had ended ${nm(x.relation.from)} ${x.relation.type} ${nm(x.relation.to)} only because of that note, so it no longer counts as ended. Nothing to do.`); }
   if (droppedRelation.has(i)) lines.push(`${at(n)}the note is saved and says it in words; its relationship block was left out (${droppedRelation.get(i)}). Do not save the note again and do not add a second note for it.`);
   if (guessed.has(i)) lines.push(`${at(n)}filed under ${titleOf(ctx)} as the best guess (${guessed.get(i)}). Do not ask about it; if the person says it belongs elsewhere, remember a correction with that context.`);
   if (changes) lines.push(`${at(n)}${changes.beside ? checks.mayChangeLine(changes, titleOf(changes.changed.context)) : checks.changedLine(changes, titleOf(ctx), rec.id)}`);
@@ -451,7 +463,8 @@ for (let i = 0; i < entries.length; i++) {
   // facts for Codex to judge (connect-dots.md): what this note may answer, the meetings around it, what changed
   // one sentence from the person, not a batch of meeting notes or a background run: those would be noise
   const curious = !batched && !e.meeting && !process.env.GTM_BRAIN_RUN;
-  const everything = curious ? lib.listContexts(root).flatMap(c => lib.effectiveMemories(lib.readMemories(root, c.slug))) : [];
+  // (never the ended note this save wrote itself: it is this note's own consequence, not something said before)
+  const everything = curious ? lib.listContexts(root).flatMap(c => lib.effectiveMemories(lib.readMemories(root, c.slug))).filter(m => !m.tags?.includes(`ended-by:${rec.id}`)) : [];
   const open = dots.openQuestions(everything, rec);
   if (open.length) lines.push(`${at(n)}open questions this note may answer: ${open.map(q => `"${q.content.replace(/\s+/g, " ").slice(0, 120)}" (${q.id}, in ${q.context})`).join("; ")}. If it answers one, remember the answer in that question's context with retracts: its id and kind decision, and say so in one line; if not, say nothing about it.`);
   const knownIds = rec.people.map(p => names.find(x => x.name === p)).filter(x => x && !added.includes(x.name)).map(x => x.id);
