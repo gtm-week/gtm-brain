@@ -10,14 +10,21 @@ on:
 permissions:
   contents: read
 
+# A new push to a pull request replaces the run before it; a run on main is never cancelled.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
+      # Node 22.16 and 24: the first releases whose node:sqlite has FTS5 (not 22.13-22.15, not 23).
+      # A pull request runs Linux on both and macOS on one; main runs all four. The second macOS job took
+      # 25 to 35 minutes and in the runs of 16 November found nothing the other three had not.
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        node: ["22.16", "24"]  # the first releases whose node:sqlite has FTS5 (not 22.13-22.15, not 23)
+        include: ${{ fromJSON(github.event_name == 'pull_request' && '[{"os":"ubuntu-latest","node":"22.16"},{"os":"ubuntu-latest","node":"24"},{"os":"macos-latest","node":"24"}]' || '[{"os":"ubuntu-latest","node":"22.16"},{"os":"ubuntu-latest","node":"24"},{"os":"macos-latest","node":"22.16"},{"os":"macos-latest","node":"24"}]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

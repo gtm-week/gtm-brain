@@ -685,11 +685,11 @@ test("the skill tool creates, lists, and removes a person's own skill in the bra
   execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "Reflow", "--one-liner", "returns", "--owner", "Marta Nowak <marta@reflow.io>", "--dashboard", "on-demand"], { cwd: root, stdio: "ignore", env: { ...process.env, PLUGIN_ROOT: P, GTM_BRAIN_NO_OPEN: "1" } });
   const tools = (await rpc("tools/list")).result.tools.map(t => t.name); assert.ok(tools.includes("skill"));
   const made = await call("skill", { brain: root, action: "create", title: "Circle event", description: "Create a Circle event from a meeting note.", body: "1. Ask for the date.", by: "marta-nowak" });
-  assert.equal(made.isError, false); assert.match(made.text, /created gtm-brain-circle-event/);
-  const listed = await call("skill", { brain: root, action: "list" }); assert.match(listed.text, /gtm-brain-circle-event/);
+  assert.equal(made.isError, false); assert.match(made.text, /created gtmb-circle-event/);
+  const listed = await call("skill", { brain: root, action: "list" }); assert.match(listed.text, /gtmb-circle-event/);
   const dup = await call("skill", { brain: root, action: "create", title: "todo", description: "x", body: "y" }); assert.equal(dup.isError, true); assert.match(dup.text, /shipped/);
-  const gone = await call("skill", { brain: root, action: "remove", id: "gtm-brain-circle-event" }); assert.equal(gone.isError, false);
-  assert.equal(existsSync(join(root, ".agents", "skills", "gtm-brain-circle-event")), false);
+  const gone = await call("skill", { brain: root, action: "remove", id: "gtmb-circle-event" }); assert.equal(gone.isError, false);
+  assert.equal(existsSync(join(root, ".agents", "skills", "gtmb-circle-event")), false);
 });
 
 test("the document tool creates, lists, shows, updates and removes a document, query (status) names them, and guideline still answers hidden", async () => {
