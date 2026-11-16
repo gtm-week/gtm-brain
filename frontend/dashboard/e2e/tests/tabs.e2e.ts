@@ -81,7 +81,7 @@ test('a document opens rendered; Edit starts editing in the layout last used; Do
   await expect(browser.locator('#doc-sections > summary')).toBeVisible();
   await expect(browser.locator('#doc-outline')).toBeHidden();
   const body = await box('#doc-body'), read = await box('#doc-preview');
-  expect(read.width).toBeGreaterThan(body.width - 4);
+  expect(read.left - body.left).toBeLessThan(4);   // no column to the left of the text any more
   // Edit: the text area beside the preview, focused, with the formatting toolbar; nothing to save yet
   await edit.tap();
   await expect(view).toHaveAttribute('data-doc-mode', 'split');
