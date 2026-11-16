@@ -37,6 +37,9 @@ A question never saves preferences, configures tools or applies approvals.
 | Changing context rules | Use proposed rule; Customize. Show the actual rule before the choice. Setup uses the starting rules without a separate interview. |
 | Changing dashboard opening | Every chat (Recommended); Only when asked. Setup explains the default without asking. |
 | Chrome for website work during setup | Explain login reuse, then ask `Set up your logged-in Chrome for website work?`: Set up Chrome (Recommended); Skip for now. This is personal setup, not dashboard configuration or permission to read websites. |
+| Schema, at the close | Show the fields per kind first. Looks right (Recommended); up to two proposed additions by name, only ones discovery supports, none marked required; Later. With no addition: Looks right (Recommended); Later. The typed answer is the person's own addition. Not asked of someone who is not the owner. |
+| Rules, at the close | Show the rules in a few lines first. The defaults are fine (Recommended); Later. The typed answer is the rule to add. Not asked of someone who is not the owner. |
+| Documents, at the close | Say that rules and schema came first. Voice and ICP now (Recommended); All five, one at a time; Just the voice; Later. Not asked of someone who is not the owner. |
 | Resume onboarding | Continue onboarding; Skip for now. |
 
 Choices do not replace security approvals. Native Codex command permission prompts and
