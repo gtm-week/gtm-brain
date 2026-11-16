@@ -2,7 +2,7 @@
 
 # GTM Brain
 
-[Website](https://gtm-brain.ai/) · [Install](#install-in-codex) · [Configure](#configure-your-brain) · [Screenshots](#the-dashboard) · [Architecture](#how-it-fits-together) · [Workflows](#built-in-workflows)
+[Website](https://gtm-brain.ai/) · [Start here](#start-here) · [Install](#install-in-codex) · [Configure](#configure-your-brain) · [Screenshots](#the-dashboard) · [Architecture](#how-it-fits-together) · [Workflows](#built-in-workflows)
 
 **For GTM engineers building research, account and campaign workflows in Codex.**
 
@@ -34,6 +34,48 @@ of the shipped app, not mockups. No customer or private workspace data is shown.
 ![GTM Brain dashboard showing the shared contexts and their summaries](diagrams/screenshots/dashboard-contexts.png)
 
 ![A context with its summary, evidence and related people and companies](diagrams/screenshots/context-evidence.png)
+
+## Start here
+
+**New to GTM Brain**
+
+1. Install it: [Install in Codex](#install-in-codex), one message to Codex.
+2. Open a new Codex chat in an empty folder and send `/gtmb-start`. It creates the brain, asks
+   about your business and connects your tools.
+3. Work as usual. Say what happened ("just got off a call with ..."), ask what you need
+   ("brief me on Acme", "what should I focus on this week?"), and say "open the dashboard" to
+   see what the brain holds.
+
+**Already using it (0.35 or earlier)**
+
+1. Everyone on the team says "update GTM Brain" in Codex, then quits and reopens Codex.
+2. Start a new chat in the brain folder and read the first reply: it says what was refreshed.
+3. The skills are now `/gtmb-<name>` (they were `/gtm-brain-<name>`). An old name still works:
+   Codex runs the new skill and tells you its name. If your brain's own files still use old
+   names, Codex offers once to update them.
+4. If the reply says the brain can be upgraded, the owner says "upgrade the brain". Only after
+   everyone has updated: a teammate on an older version cannot use an upgraded brain.
+
+Details: [Updating to 0.36](plugins/gtm-brain/MANUAL.md#updating-to-036-short-skill-names) ·
+[Updating to 0.35](plugins/gtm-brain/MANUAL.md#updating-to-035).
+
+**How the brain works, in six lines**
+
+- **It is a folder of plain files in git on your computer.** Nothing is stored anywhere else.
+- **You talk, Codex saves.** What happened, was decided or is open becomes a dated note with
+  its source. Notes are never edited; a correction replaces the old note and keeps it.
+- **People, companies and products are linked across notes,** with their relationships and
+  history (who worked where, who is a customer).
+- **Your base documents steer the work:** strategy, ideal customer profile, tone of voice,
+  design system. Codex reads them before the work they apply to.
+- **Your rules and schema decide** what Codex saves and asks, where files go, and what is kept
+  about each person and company.
+- **The dashboard shows the same files:** what needs you, housekeeping, entities, notes,
+  workflows and configuration. Documents, entities and notes can be edited there.
+
+More: [How GTM Brain works](#how-gtm-brain-works) · [How a brain works](plugins/gtm-brain/MANUAL.md).
+
+**Configure it:** one table of commands in [Configure your brain](#configure-your-brain).
 
 ## Install in Codex
 
