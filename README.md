@@ -2,7 +2,7 @@
 
 # GTM Brain
 
-[Website](https://gtm-brain.ai/) · [Start here](#start-here) · [Install](#install-in-codex) · [Configure](#configure-your-brain) · [Screenshots](#the-dashboard) · [Architecture](#how-it-fits-together) · [Workflows](#built-in-workflows)
+[Website](https://gtm-brain.ai/) · [Start here](#start-here) · [Install](#install-in-codex) · [Configure](#configure-your-brain) · [Put it to work](#put-it-to-work) · [Dashboard](#the-dashboard) · [Architecture](#how-it-fits-together) · [Workflows](#built-in-workflows)
 
 **For GTM engineers building research, account and campaign workflows in Codex.**
 
@@ -12,28 +12,6 @@ and playbook progress in local files that your agent can use across chats and li
 
 It installs as the **`gtm-brain` plugin**. Open source under [MIT](LICENSE).
 [Codex](#install-in-codex) is the primary host; [Claude Code support is in beta](#claude-code-beta).
-
-## What it solves
-
-| The work you keep repeating | What GTM Brain does |
-| --- | --- |
-| **Re-explaining who you sell to and why you win.** Every research or campaign chat needs the same ICP, offer, proof and messaging rules. | Keeps those as standing documents and shared context. Linked project folders use the same brain, so a new project can reuse what you have already established. |
-| **Reconstructing an account from CRM records, emails and call notes.** The useful detail is scattered, and yesterday's summary may miss today's change. | Builds a sourced account brief from retained evidence and targeted reads of connected tools: where things stand, who is involved, what happened and what remains unanswered. |
-| **Losing the state of a multi-step GTM playbook.** The prompt is saved, but which step ran, what is due and what needs approval are not. | Keeps reusable playbooks with tracked runs, steps, dates and approval gates. Resume a run in chat with its recorded progress. |
-| **Getting a GTM recommendation you cannot check.** Market claims lack evidence; CAC and LTV use incompatible inputs. | Runs sourced market research and unit-economics reviews that expose evidence, assumptions and missing inputs. You can inspect the basis for the conclusion. |
-
-## The dashboard
-
-The dashboard makes the agent's working knowledge inspectable: contexts, source-backed memories,
-people and companies, decisions, open questions and workflow progress. Work happens in chat;
-the dashboard is a read-only view of the same files.
-
-**Actual GTM Brain dashboard, populated with fictional demo data.** These are captures
-of the shipped app, not mockups. No customer or private workspace data is shown.
-
-![GTM Brain dashboard showing the shared contexts and their summaries](diagrams/screenshots/dashboard-contexts.png)
-
-![A context with its summary, evidence and related people and companies](diagrams/screenshots/context-evidence.png)
 
 ## Start here
 
@@ -202,6 +180,29 @@ called out. The review makes a recommendation; budget and campaign changes remai
 Keep your own skills in the brain and use them from linked project folders. Plugin updates
 preserve them. See the [command reference](COMMANDS.md) for all twenty-six workflows, including
 strategy, source sync, documents and project setup.
+
+## What it solves
+
+| The work you keep repeating | What GTM Brain does |
+| --- | --- |
+| **Re-explaining who you sell to and why you win.** Every research or campaign chat needs the same ICP, offer, proof and messaging rules. | Keeps those as standing documents and shared context. Linked project folders use the same brain, so a new project can reuse what you have already established. |
+| **Reconstructing an account from CRM records, emails and call notes.** The useful detail is scattered, and yesterday's summary may miss today's change. | Builds a sourced account brief from retained evidence and targeted reads of connected tools: where things stand, who is involved, what happened and what remains unanswered. |
+| **Losing the state of a multi-step GTM playbook.** The prompt is saved, but which step ran, what is due and what needs approval are not. | Keeps reusable playbooks with tracked runs, steps, dates and approval gates. Resume a run in chat with its recorded progress. |
+| **Getting a GTM recommendation you cannot check.** Market claims lack evidence; CAC and LTV use incompatible inputs. | Runs sourced market research and unit-economics reviews that expose evidence, assumptions and missing inputs. You can inspect the basis for the conclusion. |
+
+## The dashboard
+
+The dashboard shows what the brain holds, from the same files Codex reads: what needs you and
+what to tidy, the people and companies with their relationships and history, the notes with
+their sources, the workflows, and the configuration. Most work happens in chat; documents,
+entities and notes can also be edited here.
+
+**Actual GTM Brain dashboard, populated with fictional demo data.** These are captures
+of the shipped app, not mockups. No customer or private workspace data is shown.
+
+![The Overview tab: what is coming up and what to tidy, each with a link that prepares the work in Codex](diagrams/screenshots/dashboard-overview.png)
+
+![The Entities tab with a company opened: its relation to us, its details, the people who work there, what it uses and its history](diagrams/screenshots/dashboard-entity.png)
 
 ## How GTM Brain works
 
