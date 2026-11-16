@@ -2,6 +2,7 @@
 import { resolve } from 'node:path';
 import { readMemories, effectiveMemories, readContext, appendMemory, currentPerson, teamHandle, bigFiles } from './brain.mjs';
 import { host } from './host.mjs';
+import { isOwner, ownerOf } from './owner.mjs';
 
 export const ONBOARDING_VERSION = 2;
 const STEPS = [
@@ -94,7 +95,7 @@ export function onboardingInstruction(root, { project, unattended = !!process.en
       ...(person ? { sources: [`user:${person}`] } : {}),
     })}. ${person ? '' : 'Use the confirmed current person as by. '}Verify the saved state is completed, then continue their request.`;
   // Completed onboarding needs no step-by-step state in every chat: the one sentence below says it.
-  if (!state.required) return (state.status === 'completed' ? '' : `Onboarding state: ${JSON.stringify(state)}\n`)
+  if (!state.required) return (state.status === 'completed' ? closingLine(root, { state, person }) : `Onboarding state: ${JSON.stringify(state)}\n`)
     + (state.status === 'pending' ? 'Saved onboarding is from a different workflow version and is inactive until the person explicitly asks to resume. '
       : state.status ? `Onboarding is ${state.status}. ` : 'No active onboarding request is recorded. ')
     + 'Use this state internally to choose the workflow. Do not mention onboarding or its completion in ordinary greetings or business answers unless the person asks about onboarding. Continue ordinary work. Do not start or offer onboarding because of a plugin update, missing markers or newer steps. This state takes precedence over stale onboarding reminders in summaries or previous chats. ' + completion;
@@ -104,6 +105,7 @@ export function onboardingInstruction(root, { project, unattended = !!process.en
   return `ONBOARDING ${state.status || 'never started'} · steps done: ${[...new Set(state.steps.map(s => s.n))].join(', ') || 'none'} · next: ${state.next.n} (${state.next.title}).\n`
     + `Onboarding state: ${JSON.stringify(state)}\n`
     + bigFilesLine(root)
+    + closingLine(root, { state, person })
     + 'On a greeting or return after restart, follow gtmb-start now from this saved step. Say what is already done and carry out the next action or ask its one necessary question. Do not ask whether to continue and do not wait for the words continue onboarding. '
     + `Resume link: ${onboardingResumeLink(root)}\n`
     + 'A business request or general status question takes priority; answer it without mentioning onboarding or adding an onboarding question, and do not restart onboarding afterward. ' + completion
@@ -128,6 +130,43 @@ function bigFilesLine(root) {
   const c = bigFilesChoice(root);
   if (!c.asked) return `Big files: not asked yet. Ask once, in discovery Step 1 before the workplace draft, where recordings and files over 25 MB go (gtmb-start/references/discovery.md), and save the answer as the note "${bigFilesAnswer('google-drive')}" or "${bigFilesAnswer('local')}" in ${readContext(root, 'company') ? 'company' : 'gtm'}.\n`;
   return `Big files: answered (${c.choice})${c.approval ? '; brain/admin.md still says big_files: ' + c.setting + ', so the workplace draft for APPROVE carries big_files: local' : ''}. Do not ask again.\n`;
+}
+
+/* The close of onboarding (gtmb-start/references/skills-tour.md): after the last step outcome the person is
+   taken through the schema, then the rules, then the base documents, one question each, and only then gets the
+   first task. Each answer, a Later and a "told, not asked" included, is a note in the onboarding context:
+   `Onboarding closing: schema looks right.` A step with a note is settled and is never asked again, in this
+   chat or a resumed one. Someone who is not the brain's owner (layout 3, lib/owner.mjs) is not asked about the
+   schema or the rules: a change of theirs there becomes a proposal for the owner, so they are told that in one
+   line. A brain without owner rules has no such person. */
+export const CLOSING_STEPS = ['schema', 'rules', 'documents'];
+const CLOSING_NOTE = /^Onboarding closing: (schema|rules|documents)\b[\s:]*([\s\S]*)/;
+export const closingAnswer = (step, outcome) => `Onboarding closing: ${step} ${String(outcome || 'later').trim().replace(/\.+$/, '')}.`;
+export function closingSteps(root, person = currentPerson(root)) {
+  const records = [...readMemories(root, 'gtm'), ...readMemories(root, 'company')], settled = {};
+  for (const m of effectiveMemories(records).sort((a, b) => Date.parse(a.at) - Date.parse(b.at))) {
+    const c = m.content.match(CLOSING_NOTE);
+    if (c) settled[c[1]] = c[2].trim().replace(/\.+$/, '') || 'asked';
+  }
+  const owner = isOwner(root, person);
+  // ask: one question in the form. tell: one line, no question (the schema and the rules for someone not the owner).
+  const steps = CLOSING_STEPS.map(step => ({ step, outcome: settled[step] ?? null, settled: step in settled, how: owner || step === 'documents' ? 'ask' : 'tell' }));
+  return { steps, owner, owner_handle: ownerOf(root), next: steps.find(s => !s.settled) || null };
+}
+/* For the onboarding instruction: while onboarding is pending, the order and what is settled; once it is
+   completed, only when the close was started and not finished (an interrupted close), for the person who
+   onboarded. A brain completed before 0.36.1 has no closing notes and is never asked. */
+function closingLine(root, { state, person }) {
+  const c = closingSteps(root, person), done = c.steps.filter(s => s.settled), open = c.steps.filter(s => !s.settled);
+  if (!open.length) return state.required ? 'Close of onboarding: schema, rules and documents are settled. Do not ask them again; give the first task.\n' : '';
+  if (!state.required && (!done.length || !person || !state.authors.some(a => teamHandle(root, a) === person))) return '';
+  const say = s => `${s.step}${s.how === 'tell' ? ' (not the owner: tell, do not ask)' : ''}`;
+  return `Close of onboarding${state.required ? ', after the last step outcome' : ' was interrupted'}: schema, then rules, then documents, one question each, then the first task (gtmb-start/references/skills-tour.md). `
+    + `Settled, never ask again: ${done.map(s => `${s.step} (${s.outcome})`).join(', ') || 'none'}. Still open, in this order: ${open.map(say).join(', ')}. `
+    + (c.owner ? '' : `This person is not the brain's owner${c.owner_handle ? ` (${c.owner_handle})` : ''}: say in one line that a change to the schema or the rules goes to the owner as a proposal, and ask neither question. `)
+    + `Save each answer, a Later included, as the note "${closingAnswer('<step>', '<answer>')}" in ${state.context}. `
+    + (state.required ? '' : 'On a greeting or a return to setup, take up the next open one once; a business request comes first and is not followed by it. ')
+    + 'Never in a scheduled or background run.\n';
 }
 
 export function onboardingResumeLink(root) {

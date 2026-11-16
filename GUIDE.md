@@ -28,6 +28,10 @@ does not copy your data.
    the check and a read test on demand: **"connect my tools."**
 3. The dashboard opens alongside your chat. Your company facts live in Our company; customer
    and competitor names appear under Entities, linked to notes in the relevant contexts.
+4. Setup ends with three short questions, each with Later as a choice: what the brain keeps
+   about people, companies and products (the schema), whether Codex should always ask before
+   saving something or never save it (the rules), and which base documents to fill now. Then it
+   gives you one first task. The walkthrough is in [ONBOARDING.md](ONBOARDING.md#then-schema-rules-documents).
 
 ## Every chat
 

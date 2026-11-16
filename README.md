@@ -19,7 +19,8 @@ It installs as the **`gtm-brain` plugin**. Open source under [MIT](LICENSE).
 
 1. Install it: [Install in Codex](#install-in-codex), one message to Codex.
 2. Open a new Codex chat in an empty folder and send `/gtmb-start`. It creates the brain, asks
-   about your business and connects your tools.
+   about your business and connects your tools, then takes you through the schema, the rules
+   and the base documents, one short question each.
 3. Work as usual. Say what happened ("just got off a call with ..."), ask what you need
    ("brief me on Acme", "what should I focus on this week?"), and say "open the dashboard" to
    see what the brain holds.
