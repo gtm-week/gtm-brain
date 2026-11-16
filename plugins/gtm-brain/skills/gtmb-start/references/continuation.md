@@ -24,7 +24,13 @@ choices and explicit skips. Never repeat setup, overwrite a pending proposal, or
 an offered automation or an untested connector as completed work. If all six outcomes
 exist but the marker is pending, the live state recognizes completion from the outcomes.
 Finish the closing bookkeeping in this onboarding chat without another question or restart;
-a later ordinary chat does not reopen it. Version 1 had five outcomes and does not need the
+a later ordinary chat does not reopen it. The close itself (schema, rules, documents:
+[skills-tour](skills-tour.md#the-close-in-order)) is remembered step by step: each answer, a
+Later included, is an `Onboarding closing: <step> <answer>.` note, and the opening lines list
+which steps are settled. Never ask a settled one again. When the close was started and then
+interrupted, even before its first answer, the opening lines say so: resume it once, on a
+greeting or a return to setup, never after a business request, saving `offered again` for
+every open step before the first form. Version 1 had five outcomes and does not need the
 newer project step. Before any optional closing offer, read the saved import outcome; never
 re-offer a handoff that was already imported or declined.
 

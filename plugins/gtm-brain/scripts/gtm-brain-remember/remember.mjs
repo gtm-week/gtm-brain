@@ -634,7 +634,7 @@ for (let i = 0; i < entries.length; i++) {
   // The last step outcome closes onboarding in the same commit: no separate marker to forget.
   const closed = /^Onboarding step [1-6][ :]/.test(rec.content) ? lib.closeOnboardingFromOutcomes(root, rec.authors) : null;
   const closedIn = closed && lib.readOnboarding(root).context;
-  if (closed) lines.push(`${at(n)}all onboarding steps saved: recorded "${closed.content}" in ${closedIn} (${closed.id}); do not write another completion marker. Onboarding just finished in this chat: end this reply with the closing gtmb-start describes (what connected, what was learned, the first task).`);
+  if (closed) lines.push(`${at(n)}all onboarding steps saved: recorded "${closed.content}" in ${closedIn} (${closed.id}); do not write another completion marker. Onboarding just finished in this chat: end this reply with the closing gtmb-start describes (what connected, what was learned, what is running), then its close, one question at a time: the schema, the rules, the documents question (gtmb-start/references/skills-tour.md), and only then the first task.`);
   // one commit per memory: git history stays readable as one commit, one memory
   const closedPath = closed ? [`brain/contexts/${closedIn}/memories.jsonl`] : [];
   lines.push(`${at(n)}${lib.commit(root, [`brain/contexts/${ctx}/memories.jsonl`, ...closedPath, ...lib.ENTITIES_PATHS], `remember: ${ctx} ${rec.kind} by ${rec.authors.join(",")}`).note}`);
