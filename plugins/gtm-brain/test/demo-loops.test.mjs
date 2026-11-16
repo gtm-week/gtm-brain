@@ -352,15 +352,15 @@ test("demo runner: connectors mode judges each turn on the calls its fixtures tr
   assert.match(run.stdout, /connectors: clay:clay_find_people > clay:clay_enrich_person/);
 });
 
-test("presenter text: GUIDE.md carries the sentences the live run checks, word for word, within a page", () => {
-  const guide = readFileSync(fileURLToPath(new URL("../../../GUIDE.md", import.meta.url)), "utf8");
+test("presenter text: docs/GUIDE.md carries the sentences the live run checks, word for word, within a page", () => {
+  const guide = readFileSync(fileURLToPath(new URL("../../../docs/GUIDE.md", import.meta.url)), "utf8");
   const section = guide.slice(guide.indexOf("## Workshop demo: the two loops"), guide.indexOf("## Workshop demo on stub tools"));
   const stubs = guide.slice(guide.indexOf("## Workshop demo on stub tools"), guide.indexOf("## Three habits"));
   assert.ok(guide.indexOf("## Workshop demo on stub tools") > guide.indexOf("## Workshop demo: the two loops"), "the stub tools section follows the demo");
   for (const said of ["--connectors", "gtm-connectors-fixture.mjs", "--stub", "stub-gtm-tools.mjs", "--fail expired_key", "--fail empty", "sign-in", "rate limits", "cost", "data shapes"]) assert.ok(stubs.includes(said), `stub tools section: ${said}`);
   assert.doesNotMatch(stubs, /[\u2013\u2014]/);
   const flat = section.replace(/\s+/g, " ");
-  for (const s of STEPS) assert.ok(flat.includes(`*${s.say}*`), `${s.id}: the sentence in GUIDE.md differs from the one the live run types`);
+  for (const s of STEPS) assert.ok(flat.includes(`*${s.say}*`), `${s.id}: the sentence in docs/GUIDE.md differs from the one the live run types`);
   assert.ok(section.split("\n").length <= 60, `${section.split("\n").length} lines`);
   assert.doesNotMatch(section, /[\u2013\u2014]/);
 });

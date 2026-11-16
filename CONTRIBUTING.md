@@ -2,7 +2,7 @@
 
 GTM Brain installs as the `gtm-brain` plugin. This guide covers the plugin's architecture,
 source layout and release checks. Start with [AGENTS.md](AGENTS.md) for contributor invariants
-and [SETUP.md](SETUP.md) for local installation and verification.
+and [SETUP.md](docs/SETUP.md) for local installation and verification.
 
 ## How it fits together
 
@@ -161,7 +161,7 @@ matrix for both runtime and tests. Before editing the brain template, snapshot i
 contents as `templates/legacy/AGENTS-<old version>.md` and add the manifest entry. Identical
 releases may share one file (0.8.1 and 0.8.2 do). These are immutable fixtures, excluded from
 policy generation: exact comparison lets upgrades preserve personal instruction edits.
-Bump the plugin version and the paths in SETUP.md and COMMANDS.md when shipping changes.
+Bump the plugin version and the paths in docs/SETUP.md and docs/COMMANDS.md when shipping changes.
 For each module release, follow the update invariants and release checks:
 users start fresh on the first participant release; preserve their data and entry points through
 subsequent releases, validate before installation, and keep brain refresh repeatable.
