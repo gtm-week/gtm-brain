@@ -69,12 +69,12 @@ no upgrade command:
 
 ```bash
 git clone git@github.com:gtm-week/gtm-brain.git && cd gtm-brain
-./dev-install.sh                              # switches the marketplace to this folder and installs
-./dev-install.sh                              # again after any change, then start a new chat
-./dev-reset.sh                                # wipe the test brain AND refresh, to run onboarding from zero
+./scripts/dev-install.sh                      # switches the marketplace to this folder and installs
+./scripts/dev-install.sh                      # again after any change, then start a new chat
+./scripts/dev-reset.sh                        # wipe the test brain AND refresh, to run onboarding from zero
 ```
 
-`dev-reset.sh` wipes the test brain (default `~/Desktop/test-brain`, or pass a path), stops
+`scripts/dev-reset.sh` wipes the test brain (default `~/Desktop/test-brain`, or pass a path), stops
 its dashboard server, refreshes the plugin from the checkout, and leaves the folder empty
 and ready. It only wipes folders it created itself (recorded in the gitignored
 `.dev-brains`) or empty ones; a real brain it refuses to touch. After it runs: start a
@@ -431,14 +431,14 @@ workflows/*.md                          the workflows
   new chat, then quit and reopen the app. If it persists: `codex plugin add gtm-brain@gtm-brain` again.
 - No opening lines in a chat: the chat start runs on the chat's first GTM Brain call, so a chat
   that never calls a GTM Brain tool gets none. Ask for the brain's status to trigger it.
-- A local install (`./dev-install.sh`) works in chats but GTM Brain is missing from the app's Plugins
+- A local install (`./scripts/dev-install.sh`) works in chats but GTM Brain is missing from the app's Plugins
   tab: the tab lists a local marketplace only when its folder is a trusted project. Open the
   checkout as a project in Codex and accept the trust prompt. `codex plugin list` shows the truth
   either way.
 - A local install goes back to an older version every time the app starts: a second checkout
   that Codex trusts still has `.agents/plugins/marketplace.json` with the marketplace name
   `gtm-brain`, and the app reinstalls from it at launch whatever `config.toml` says. Rename or remove
-  that manifest in the other checkout, then run `./dev-install.sh` again.
+  that manifest in the other checkout, then run `./scripts/dev-install.sh` again.
 - `codex exec` hangs: add `</dev/null`.
 - Pre-commit says the plugin is not installed: `git config gtm-brain.lib <path to plugins/gtm-brain/lib/brain.mjs>`,
   or open the folder in Codex once (the chat start sets it).

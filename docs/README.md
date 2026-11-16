@@ -17,3 +17,6 @@ Not part of the reading order:
 
 - [WALKTHROUGH.md](WALKTHROUGH.md): the step-by-step setup with troubleshooting, kept as the source text of the Circle onboarding guide.
 - [DESIGN.md](DESIGN.md): the brand and design rules for the GTM Brain name, logo and pages.
+- [skill-template/](skill-template/README.md): for contributors, the folder to copy for a skill that ships with the plugin.
+- [releases/template/](releases/template/README.md): the release graphic, its style rules and the script that renders it.
+- [images/](images/): the picture and the dashboard screenshots the top-level README shows.
