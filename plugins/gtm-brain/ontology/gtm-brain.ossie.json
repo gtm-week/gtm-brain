@@ -835,26 +835,33 @@
                           "participants": {
                             "type": "array",
                             "items": {
-                              "type": "object",
-                              "properties": {
-                                "name": {
-                                  "type": "string",
-                                  "minLength": 1
+                              "anyOf": [
+                                {
+                                  "type": "string"
                                 },
-                                "role": {
-                                  "type": "string",
-                                  "enum": [
-                                    "attended",
-                                    "invited",
-                                    "mentioned"
-                                  ]
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "role": {
+                                      "type": "string",
+                                      "enum": [
+                                        "attended",
+                                        "invited",
+                                        "mentioned"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "name",
+                                    "role"
+                                  ],
+                                  "additionalProperties": false
                                 }
-                              },
-                              "required": [
-                                "name",
-                                "role"
-                              ],
-                              "additionalProperties": false
+                              ]
                             }
                           },
                           "series": {
@@ -1439,27 +1446,34 @@
                     "participants": {
                       "type": "array",
                       "items": {
-                        "type": "object",
-                        "description": "Only explicit attendance evidence permits attended. Names resolve through existing identities.",
-                        "properties": {
-                          "name": {
-                            "type": "string",
-                            "minLength": 1
+                        "anyOf": [
+                          {
+                            "type": "string"
                           },
-                          "role": {
-                            "type": "string",
-                            "enum": [
-                              "attended",
-                              "invited",
-                              "mentioned"
-                            ]
+                          {
+                            "type": "object",
+                            "description": "Only explicit attendance evidence permits attended.",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "role": {
+                                "type": "string",
+                                "enum": [
+                                  "attended",
+                                  "invited",
+                                  "mentioned"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "role"
+                            ],
+                            "additionalProperties": false
                           }
-                        },
-                        "required": [
-                          "name",
-                          "role"
-                        ],
-                        "additionalProperties": false
+                        ]
                       }
                     },
                     "series": {

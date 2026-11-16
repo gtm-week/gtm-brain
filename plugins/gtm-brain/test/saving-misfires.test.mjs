@@ -547,3 +547,107 @@ test("a cited note is evidence only for a relationship it names; customer status
   assert.match(c.stderr, /customer source evidence needs an external source pointer/);
   assert.equal(b.all().length, before);
 });
+
+test("a call the person tells about is saved in one call: names as participants, a date as observed_at, a sentence as source", () => {
+  const b = brain();
+  // the shape Codex sent in the app (16 Nov): three refusals before, one save now
+  const entry = { context: "company", content: "Kasia Nowak, Northfold's new Head of Partnerships, said she wants Northfold to sponsor the Berlin workshop. The budget is around EUR 5,000, and Northfold expects to decide by the end of November 2026.",
+    people: ["Kasia Nowak"], companies: ["Northfold"], new_names: ["Kasia Nowak", "Northfold"], sources: ["User's firsthand account of the call with Kasia Nowak on 2026-11-16"],
+    meeting: { basis: "user", capture: "partial", evidence: "recollection", observed_at: "2026-11-16", occurred_at: "2026-11-16", occurrence: "happened", participants: ["Kasia Nowak"], reference: { account: "user", kind: "user", ref: "2026-11-16 call with Kasia Nowak from Northfold" }, title: "Call with Kasia Nowak from Northfold" } };
+  b.say("Just had a call with Kasia Nowak from Northfold, save what came of it.");
+  const r = b.batch([entry]);
+  assert.equal(r.status, 0, r.stderr + r.stdout);
+  assert.match(r.stdout, /left out of sources: "User's firsthand account[^\n]*This chat is the note's source/, "the reply says which source was left out");
+  const rec = b.live().find(m => /Kasia Nowak/.test(m.content));
+  assert.ok(rec, "the note is kept");
+  assert.deepEqual(rec.meeting.participants, [{ name: "Kasia Nowak", role: "attended" }]);
+  assert.match(rec.meeting.observed_at, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);
+  assert.ok(!rec.source.some(s => /firsthand/.test(s.ref || "")), "a sentence is not kept as a source");
+  assert.ok(rec.source.some(s => s.kind === "user"), "the person's word is the source");
+  // a planned call from a calendar keeps its names as invited, never attended
+  const planned = b.batch([{ context: "company", content: "Planning call with Northfold on 20 November 2026 about the booth.", sources: ["google-calendar:evt-9"], meeting: { basis: "source", capture: "complete", evidence: "calendar", observed_at: "2026-11-16T09:00:00Z", occurred_at: null, scheduled_at: "2026-11-20", occurrence: "planned", participants: ["Kasia Nowak"], reference: { account: "artur@week.test", kind: "google-calendar", ref: "evt-9" }, title: "Northfold booth planning" } }]);
+  assert.equal(planned.status, 0, planned.stderr + planned.stdout);
+  assert.deepEqual(b.live().find(m => /Planning call with Northfold/.test(m.content)).meeting.participants, [{ name: "Kasia Nowak", role: "invited" }]);
+  // a recorder's list of names is not attendance evidence: a bare name from a source is mentioned, in a chat and in a run
+  const recorded = { context: "company", content: "Northfold asked for a second booth at the Berlin workshop.", sources: ["granola:note-7"], meeting: { basis: "source", capture: "complete", evidence: "summary", observed_at: "2026-11-16T09:00:00Z", occurred_at: "2026-11-15", occurrence: "happened", participants: ["Kasia Nowak", { name: "Ola Testowa", role: "attended" }], reference: { account: "artur@week.test", kind: "granola", ref: "note-7" }, title: "Northfold booth call" } };
+  const rs = b.batch([recorded]);
+  assert.equal(rs.status, 0, rs.stderr + rs.stdout);
+  assert.deepEqual(b.live().find(m => /second booth/.test(m.content)).meeting.participants, [{ name: "Kasia Nowak", role: "mentioned" }, { name: "Ola Testowa", role: "attended" }]);
+});
+
+test("only a plain sentence is left out of sources, only in a chat, and the reply names it", () => {
+  const b = brain(), one = (content, sources, env) => { const f = join(b.root, "work", `one-${Math.random()}.json`); mkdirSync(join(b.root, "work"), { recursive: true }); writeFileSync(f, JSON.stringify([{ context: "company", content, sources }]));
+    return spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "artur-wala", "--batch", f], { cwd: b.root, env: { ...process.env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1", ...env }, encoding: "utf8" }); };
+  const kept = text => b.live().find(m => m.content === text);
+  // no chat yet: nothing stands in for the sentence, so it is refused as any malformed source is
+  const early = one("The Berlin venue holds 80 people.", ["What the person said about the venue"]);
+  assert.notEqual(early.status, 0); assert.match(early.stdout + early.stderr, /provider:reference/); assert.ok(!kept("The Berlin venue holds 80 people."));
+  b.say("The Berlin venue holds 80 people, and the catering quote is in my mail.");
+  // a space after the colon is still a pointer (lib.parseSources trims it)
+  const spaced = one("The catering quote is EUR 2,400.", ["gmail: msg-123"]);
+  assert.equal(spaced.status, 0, spaced.stderr + spaced.stdout);
+  assert.deepEqual(kept("The catering quote is EUR 2,400.").source.filter(s => s.kind !== "codex"), [{ kind: "gmail", ref: "msg-123" }]);
+  assert.doesNotMatch(spaced.stdout, /left out of sources/);
+  // a file path, an email address and a provider with nothing after the colon are refused, never dropped
+  for (const bad of ["notes/call-x.md", "ops@week.test", "gmail:", "see notes/call x.md here"]) {
+    const r = one("The florist needs two days of notice.", [bad]);
+    assert.notEqual(r.status, 0, bad); assert.match(r.stdout + r.stderr, /nothing remembered|provider:reference/, bad);
+  }
+  assert.ok(!kept("The florist needs two days of notice."));
+  // a sentence in a chat: left out, said so, and the chat is the source
+  const said = one("The Berlin venue holds 80 people.", ["What the person said about the venue", "gmail:msg-9"]);
+  assert.equal(said.status, 0, said.stderr + said.stdout);
+  assert.match(said.stdout, /left out of sources: "What the person said about the venue"/);
+  assert.deepEqual(kept("The Berlin venue holds 80 people.").source.map(s => s.kind).sort(), ["codex", "gmail"]);
+  // a background run is nobody's chat: the sentence is refused there, not dropped to an empty source
+  const run = one("The projector is rented from the venue.", ["What the summary run read today"], { GTM_BRAIN_RUN: "1" });
+  assert.notEqual(run.status, 0); assert.ok(!kept("The projector is rented from the venue."));
+});
+
+test("the person corrects a call they told about: one call, the conversation's record kept", () => {
+  const b = brain();
+  const meeting = { basis: "user", capture: "partial", evidence: "recollection", observed_at: "2026-11-16", occurred_at: "2026-11-16", occurrence: "happened", participants: ["Kasia Nowak"], reference: { account: "user", kind: "user", ref: "2026-11-16 call with Kasia Nowak" }, title: "Call with Kasia Nowak" };
+  b.say("Actually the Northfold budget Kasia Nowak mentioned is around EUR 8,000.");
+  assert.equal(b.batch([{ context: "company", content: "Kasia Nowak of Northfold said the sponsorship budget is around EUR 5,000.", people: ["Kasia Nowak"], companies: ["Northfold"], new_names: ["Kasia Nowak", "Northfold"], meeting }]).status, 0);
+  const old = b.live().find(m => /5,000/.test(m.content));
+  const fix = b.batch([{ context: "company", content: "Kasia Nowak of Northfold said the sponsorship budget is around EUR 8,000.", people: ["Kasia Nowak"], companies: ["Northfold"], sources: ["User's correction of the budget in this chat"], supersedes: old.id }]);
+  assert.equal(fix.status, 0, fix.stderr + fix.stdout);
+  const now = b.live().filter(m => /Kasia Nowak of Northfold/.test(m.content));
+  assert.equal(now.length, 1); assert.match(now[0].content, /8,000/); assert.equal(now[0].meeting.title, "Call with Kasia Nowak");
+  // a correction that cites an outside record is a source refresh: refused, and what the person said stays live
+  const mail = b.batch([{ context: "company", content: "Kasia Nowak of Northfold said the sponsorship budget is around EUR 3,000.", people: ["Kasia Nowak"], companies: ["Northfold"], sources: ["gmail:msg-55"], supersedes: now[0].id }]);
+  assert.notEqual(mail.status, 0, mail.stdout);
+  assert.match(mail.stdout + mail.stderr, /Source refresh cannot replace user meeting evidence/);
+  const after = b.live().filter(m => /Kasia Nowak of Northfold/.test(m.content));
+  assert.equal(after.length, 1); assert.equal(after[0].id, now[0].id);
+});
+
+test("a job change saved as two relationships with the context given once beside the batch is kept in that call", async () => {
+  const b = brain();
+  const { createFilesBackend } = await import(`${P}/server/files-backend.mjs`);
+  const env = { ...process.env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1" };
+  const run = async (cwd, file, args = []) => { const r = spawnSync(process.execPath, [`${P}/scripts/${file}`, ...args], { cwd, env, encoding: "utf8" }); return { code: r.status, out: (r.stdout || "").trim(), err: (r.stderr || "").trim() }; };
+  const backend = createFilesBackend({ run }), call = args => backend.act("remember", { by: "artur-wala", ...args }, { brain: b.root });
+  lib.addName(b.root, "Tomek Zielony"); lib.addName(b.root, "Lumio", { kind: "company" }); lib.addName(b.root, "Brightdesk", { kind: "company" });
+  // their earlier notes sit in Our company, so a guess would place a note about them there
+  assert.equal(b.remember("--context", "company", "--content", "Tomek Zielony of Lumio will speak at the Berlin workshop.", "--people", "Tomek Zielony", "--companies", "Lumio").status, 0);
+  assert.equal(b.remember("--context", "company", "--content", "Tomek Zielony asked for the Lumio logo on the workshop page.", "--people", "Tomek Zielony", "--companies", "Lumio").status, 0);
+  // the shape Codex sent headless (16 Nov): the plain note first, then the same turn as two relationships
+  const sources = [{ kind: "user", ref: "User message in this chat, 2026-11-16" }];
+  const first = await call({ context: "strategy", content: "Tomek Zielony left Lumio on 1 November 2026 and joined Brightdesk as VP Product.", people: ["Tomek Zielony", "Lumio", "Brightdesk"], sources });
+  assert.equal(first.outcome, "ok", first.message);
+  const note = b.live().find(m => /Tomek Zielony left Lumio/.test(m.content));
+  assert.ok(lib.readMemories(b.root, "strategy").some(m => m.id === note.id));
+  const second = await call({ context: "strategy", memories: [
+    { content: "Tomek Zielony left Lumio on 1 November 2026.", people: ["Tomek Zielony", "Lumio"], supersedes: note.id, relation: { from: "Tomek Zielony", to: "Lumio", type: "works_at", status: "ended", basis: "user", observed_at: "2026-11-01" }, sources },
+    { content: "Tomek Zielony joined Brightdesk as VP Product.", people: ["Tomek Zielony", "Brightdesk"], relation: { from: "Tomek Zielony", to: "Brightdesk", type: "works_at", status: "current", basis: "user", observed_at: "2026-11-16" }, sources }] });
+  assert.equal(second.outcome, "ok", second.message);
+  assert.match(second.result, /kept 2 of 2/);
+  const strategy = lib.effectiveMemories(lib.readMemories(b.root, "strategy")).filter(m => /Tomek Zielony/.test(m.content));
+  assert.deepEqual(strategy.map(m => m.relation?.status).sort(), ["current", "ended"]);
+  assert.ok(!strategy.some(m => m.id === note.id), "the plain note is replaced by the one that ends the old job");
+  // an entry's own context still wins over the shared one
+  const own = await call({ context: "strategy", memories: [{ context: "company", content: "Brightdesk moved its office to Gdansk in November 2026.", companies: ["Brightdesk"], sources }] });
+  assert.equal(own.outcome, "ok", own.message);
+  assert.ok(lib.readMemories(b.root, "company").some(m => /Gdansk/.test(m.content)));
+});

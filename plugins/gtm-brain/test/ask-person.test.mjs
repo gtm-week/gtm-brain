@@ -10,7 +10,6 @@ import { spawn, execFileSync } from "node:child_process";
 import { createInterface } from "node:readline";
 import { buildForm, readForm, askPerson, answerText, noAnswerText, properties, required } from "../server/ask-person.mjs";
 import { questionInput, NOT_SHOWN_MS } from "../server/question-input.mjs";
-import { SOMETHING_ELSE } from "../scripts/gtm-brain-learn-company/question.mjs";
 import { host } from "../lib/host.mjs";
 
 const P = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
@@ -31,21 +30,26 @@ function transport(answers, { capabilities = { elicitation: { form: {} } }, ms =
 }
 const ask = async (a, answers, options) => { const t = transport(answers, options); return { ...(await askPerson(t.q, a, 1)), forms: t.sent.filter(m => m.method === "elicitation/create").map(m => m.params) }; };
 
-test("the form for choices: one single-select field, the choices in order, the typed answer last, no default", () => {
+test("the form for choices is one step: the choices in order, then a text field for the person's own answer, no default", () => {
   const form = buildForm(args);
   assert.equal(form.params.mode, "form");
   assert.equal(form.params.message, `${args.question}\n\n${args.why}`, "the question, then the line on why it matters");
-  assert.deepEqual(Object.keys(form.params.requestedSchema.properties), ["choice"], "one field: a host shows one field per page");
-  const field = form.params.requestedSchema.properties.choice;
-  assert.equal(field.type, "string"); assert.equal(field.title, args.question);
-  assert.deepEqual(field.enum, [...args.choices, SOMETHING_ELSE], "recommended first, as passed");
+  // Codex shows both fields in one form and orders them by key (seen in the app, 16 Nov): the choices sort first
+  const keys = Object.keys(form.params.requestedSchema.properties);
+  assert.deepEqual(keys, ["choice", "your_answer"]); assert.deepEqual([...keys].sort(), keys, "the text field stays last when a host sorts the keys");
+  const field = form.params.requestedSchema.properties.choice, own = form.params.requestedSchema.properties.your_answer;
+  assert.equal(field.type, "string"); assert.equal(field.title, "Pick one", "the question is the form's message, not repeated over the choices");
+  assert.deepEqual(field.enum, args.choices, "recommended first, as passed, and no choice that opens a second screen");
+  assert.equal(own.type, "string"); assert.equal(own.enum, undefined); assert.equal(own.title, "Or type your own answer");
+  assert.doesNotMatch(JSON.stringify(form.params), /next screen/);
   assert.equal(field.default, undefined); assert.deepEqual(form.params.requestedSchema.required, []);
   assert.doesNotMatch(JSON.stringify(form.params), /autoResolution|timeout/i, "no timeout that could stand in for an answer");
   // own_answer false: nothing but the listed choices
-  assert.deepEqual(buildForm({ ...args, own_answer: false }).params.requestedSchema.properties.choice.enum, args.choices);
-  // the model's own Other is the typed answer, offered once; four real choices fit
-  assert.deepEqual(buildForm({ question: "Which?", choices: ["A", "B", "Other"], own_answer: false }).params.requestedSchema.properties.choice.enum, ["A", "B", SOMETHING_ELSE]);
-  assert.equal(buildForm({ question: "Which?", choices: ["A", "B", "C", "D"] }).offered.length, 5);
+  assert.deepEqual(Object.keys(buildForm({ ...args, own_answer: false }).params.requestedSchema.properties), ["choice"]);
+  // the model's own Other is the text field, never a choice; four real choices fit
+  const other = buildForm({ question: "Which?", choices: ["A", "B", "Other"], own_answer: false }).params.requestedSchema.properties;
+  assert.deepEqual(other.choice.enum, ["A", "B"]); assert.ok(other.your_answer);
+  assert.equal(buildForm({ question: "Which?", choices: ["A", "B", "C", "D"] }).offered.length, 4);
   assert.equal(buildForm({ question: "Which?", choices: ["A", "B"] }).params.message, "Which?", "no why, no empty line");
 });
 
@@ -78,15 +82,14 @@ test("a picked choice comes back as the person's answer, marked as theirs", asyn
   assert.match(r.text, /approves nothing/);
 });
 
-test("a typed answer: the last choice opens a text form, and its text is the answer", async () => {
-  const r = await ask(args, [{ action: "accept", content: { choice: SOMETHING_ELSE } }, { action: "accept", content: { text: "  Different, but Kowalska is her married name  " } }]);
-  assert.equal(r.forms.length, 2);
-  assert.deepEqual(Object.keys(r.forms[1].requestedSchema.properties), ["text"]);
-  assert.equal(r.forms[1].message, args.question);
+test("a typed answer comes back from the same form, and wins over a choice left selected", async () => {
+  const r = await ask(args, [{ action: "accept", content: { your_answer: "  Different, but Kowalska is her married name  " } }]);
+  assert.equal(r.forms.length, 1, "one step");
   assert.match(r.text, /^The person's answer \(typed in the form\): "Different, but Kowalska is her married name"\n/);
-  // a host that shows both fields on one page may send the text with the choice: one form is enough
-  const one = await ask(args, [{ action: "accept", content: { choice: SOMETHING_ELSE, text: "Ask Marta" } }]);
-  assert.equal(one.forms.length, 1); assert.match(one.text, /typed in the form\): "Ask Marta"/);
+  const both = await ask(args, [{ action: "accept", content: { choice: args.choices[0], your_answer: "Ask Marta" } }]);
+  assert.equal(both.forms.length, 1); assert.match(both.text, /typed in the form\): "Ask Marta"/);
+  // only blanks typed: the picked choice stands
+  assert.match((await ask(args, [{ action: "accept", content: { choice: args.choices[0], your_answer: "   " } }])).text, /picked in the form\): "No, they are different people"/);
   // free text without choices
   const free = await ask({ question: "What is the website?" }, [{ action: "accept", content: { answer: "reflow.io" } }]);
   assert.equal(free.forms.length, 1); assert.match(free.text, /typed in the form\): "reflow.io"/);
@@ -100,9 +103,6 @@ test("a closed, declined, empty or timed-out form is no answer: ask once in plai
     assert.match(r.text, /Ask the same question once as plain chat text .* and end the turn\.$/);
     assert.doesNotMatch(r.text, /The person's answer/);
   }
-  // closing the typed-answer form is no answer either, never a choice of "Something else"
-  const closed = await ask(args, [{ action: "accept", content: { choice: SOMETHING_ELSE } }, { action: "cancel" }]);
-  assert.match(closed.text, /^no answer \(the person chose to type an answer and closed the form without one\)/);
   // the host cancels the tool call (its timeout, or the person stops the turn): the pending form resolves as no answer
   const sent = [], q = questionInput(m => sent.push(m)); q.initialize({ elicitation: {} });
   const waiting = askPerson(q, args, 7); await new Promise(r => setImmediate(r)); q.cancel(7);
@@ -129,7 +129,7 @@ test("APPROVE is never a choice of ask_person, and a typed APPROVE is only an an
   for (const word of ["APPROVE", "approve", " Approve. ", "Approved"]) assert.throws(() => buildForm({ question: "Apply the change?", choices: [word, "Not now"] }), /APPROVE is never a choice here/, word);
   const refused = await ask({ question: "Apply the change?", choices: ["APPROVE", "Not now"] }, []);
   assert.equal(refused.isError, true); assert.equal(refused.forms.length, 0);
-  const typed = await ask({ question: "Apply the change?", choices: ["Yes, go ahead", "No, skip it"] }, [{ action: "accept", content: { choice: SOMETHING_ELSE } }, { action: "accept", content: { text: "APPROVE" } }]);
+  const typed = await ask({ question: "Apply the change?", choices: ["Yes, go ahead", "No, skip it"] }, [{ action: "accept", content: { your_answer: "APPROVE" } }]);
   assert.match(typed.text, /typed in the form\): "APPROVE"/);
   assert.match(typed.text, /approves nothing: a workplace or interaction change still goes only through approve_change/);
   assert.equal(readForm(buildForm(args), { action: "accept", content: { choice: "APPROVE" } }).status, "none", "a choice that was not offered is no answer");
@@ -179,7 +179,7 @@ test("the server lists ask_person on both hosts and answers it with no brain fol
     assert.equal(tool.inputSchema.properties.choices.maxItems, 4); assert.equal(tool.annotations.readOnlyHint, true);
     const r = await c.call("ask_person", args);   // no brain passed
     assert.ok(!r.isError, r.text); assert.match(r.text, /^The person's answer \(picked in the form\): "No, they are different people"/);
-    assert.equal(c.forms.length, 1); assert.deepEqual(c.forms[0].requestedSchema.properties.choice.enum, [...args.choices, SOMETHING_ELSE]);
+    assert.equal(c.forms.length, 1); assert.deepEqual(c.forms[0].requestedSchema.properties.choice.enum, args.choices); assert.ok(c.forms[0].requestedSchema.properties.your_answer);
     assert.match((await c.call("ask_person", { ...args, brain: "/nonexistent/folder" })).text, /^The person's answer/, "a folder that is no brain does not stop a question");
   }
   // a client without forms: the instructions say so, and a call is no answer
@@ -198,7 +198,7 @@ test("an ask_person answer of APPROVE applies nothing: the proposal waits and th
   const memories = () => execFileSync("git", ["-C", root, "status", "--porcelain"], { encoding: "utf8" });
   const clean = memories();
   // the person types APPROVE into ask_person's own-answer form
-  const c = client((p, n) => n === 1 ? { action: "accept", content: { choice: SOMETHING_ELSE } } : { action: "accept", content: { text: "APPROVE" } });
+  const c = client(() => ({ action: "accept", content: { your_answer: "APPROVE" } }));
   await c.init();
   const r = await c.call("ask_person", { brain: root, question: "Apply the change to what we sell?", why: "It changes the workplace info.", choices: ["Yes, go ahead", "No, skip it"] });
   assert.match(r.text, /typed in the form\): "APPROVE"/); assert.match(r.text, /approves nothing/);
@@ -207,7 +207,7 @@ test("an ask_person answer of APPROVE applies nothing: the proposal waits and th
   assert.equal(head(), commit, "nothing was committed"); assert.equal(memories(), clean, "nothing was written in the brain");
   // and APPROVE cannot be offered as a choice
   const offered = await c.call("ask_person", { brain: root, question: "Apply the change?", choices: ["APPROVE", "Not now"] });
-  assert.equal(offered.isError, true); assert.match(offered.text, /not asked: APPROVE is never a choice here/); assert.equal(c.forms.length, 2, "no form for it");
+  assert.equal(offered.isError, true); assert.match(offered.text, /not asked: APPROVE is never a choice here/); assert.equal(c.forms.length, 1, "no form for it");
   assert.equal(readFileSync(file, "utf8"), before);
 });
 

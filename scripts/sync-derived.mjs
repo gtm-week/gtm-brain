@@ -41,6 +41,7 @@ const properties = remember.input_schema.properties;
 const slim = (schema, keep) => { const { description, ...rest } = schema; const out = keep ? { ...schema } : rest;
   if (out.properties) out.properties = Object.fromEntries(Object.entries(out.properties).map(([k, v]) => [k, slim(v, false)]));
   if (out.items && typeof out.items === "object") out.items = slim(out.items, false);
+  if (Array.isArray(out.anyOf)) out.anyOf = out.anyOf.map(v => slim(v, false));
   return out; };
 properties.memories.items.properties = Object.fromEntries(Object.entries(properties)
   .filter(([name]) => !["by", "project", "memories"].includes(name)).map(([name, schema]) => [name, slim(schema, ["content", "sources"].includes(name))]));
