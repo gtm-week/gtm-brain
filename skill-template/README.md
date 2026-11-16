@@ -38,7 +38,7 @@ a notes file or the interactions file is put back at the next chat start or save
      in "the person can ask for ... shipped workflows". The test compares a sorted list, so put the id in
      alphabetical order.
    - The skill tables in `README.md`, `docs/COMMANDS.md` and `docs/ONBOARDING.md`: one row each.
-   - The skill count ("twenty") in `README.md`, `CLAUDE.md`, `CONTRIBUTING.md` and
+   - The skill count ("twenty") in `README.md`, `.claude/CLAUDE.md`, `CONTRIBUTING.md` and
      `docs/USER-SKILLS.md`, plus the skill list in the layout blocks of `README.md` and `CONTRIBUTING.md`.
    - A skill whose work overlaps another: say "Not ..." in both descriptions, as define-icp
      does about market desk research and campaign execution.
