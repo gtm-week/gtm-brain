@@ -112,8 +112,8 @@ const sources = (who, q) => { const seen = new Set(), out = []; for (const s of 
 // "Who is Anna?" is answered where the note it is about gets relinked: one run of the remember script, as the tool does it.
 function answerName(root, q, { answer, who, people, companies }) {
   const registry = lib.readNames(root), fresh = [...people, ...companies].filter(n => !lib.exactName(registry, n));
-  mkdirSync(join(root, "work"), { recursive: true });
-  const batch = join(root, "work", `remember-${randomUUID()}.json`);
+  mkdirSync(lib.workDir(root), { recursive: true });
+  const batch = join(lib.workDir(root), `remember-${randomUUID()}.json`);
   try {
     writeFileSync(batch, JSON.stringify([{ context: q.context, retracts: q.id, kind: "decision", content: answer, people, companies, ...(fresh.length ? { new_names: fresh } : {}) }]));
     const r = spawnSync(process.execPath, ["--disable-warning=ExperimentalWarning", fileURLToPath(new URL("../gtm-brain-remember/remember.mjs", import.meta.url)), root, "--by", who, "--batch", batch], { cwd: root, encoding: "utf8", timeout: 120000, maxBuffer: 1 << 22 });
@@ -194,6 +194,6 @@ export function answerQuestion(root, args) {
     if (!done.line) throw error;
     throw new Error(`${done.line} The answer itself was not saved (${error.message}): call answer_question again with question and answer only.`);
   }
-  const commit = lib.commit(root, [`brain/contexts/${q.context}/memories.jsonl`, ...lib.ENTITIES_PATHS], `answer: ${q.context} decision by ${who}`);
+  const commit = lib.commit(root, [...lib.notesPaths(root, q.context), ...lib.entitiesPaths(root)], `answer: ${q.context} decision by ${who}`);
   return { changed: true, text: `answered ${q.id} in ${q.title}: the question is closed by ${rec.id}. ${done.line ? `${done.line} ` : ""}Recorded (${commit.note}); do not save a note about this${done.merged ? " or about the merge" : ""}, and do not ask it again.${still}\nNext: tell the person in one line.` };
 }

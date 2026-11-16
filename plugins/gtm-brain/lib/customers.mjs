@@ -5,6 +5,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as lib from "./brain.mjs";
 import { CHAT_KINDS } from "./host.mjs";
+import { workDir } from './brain-paths.mjs';
 
 export const CUSTOMER_STATUSES = ["customer", "prospect", "former_customer", "not_customer", "unknown"];
 const object = (v, keys) => v && typeof v === "object" && !Array.isArray(v) && Object.keys(v).every(k => keys.includes(k));
@@ -88,7 +89,7 @@ export function customerOverview(root, { registry = lib.readNames(root), context
 }
 
 export function customerSearchSuggestions(root, coverage = []) {
-  const file = join(root, "work", "tools.json");
+  const file = join(workDir(root), "tools.json");
   let states = {}; if (existsSync(file)) { try { states = JSON.parse(readFileSync(file, "utf8")); } catch { return []; } }
   const suggestions = [];
   const patterns = [

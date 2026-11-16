@@ -11,6 +11,7 @@ import { createInterface } from "node:readline";
 import { buildForm, readForm, askPerson, answerText, noAnswerText, properties, required } from "../server/ask-person.mjs";
 import { questionInput, NOT_SHOWN_MS } from "../server/question-input.mjs";
 import { host } from "../lib/host.mjs";
+import * as lib from "../lib/brain.mjs";
 
 const P = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 const env = { ...process.env, PLUGIN_ROOT: P, CODEX_HOME: mkdtempSync(join(tmpdir(), "gtm-brain-ask-codex-")), HOME: mkdtempSync(join(tmpdir(), "gtm-brain-ask-home-")),
@@ -191,8 +192,8 @@ test("the server lists ask_person on both hosts and answers it with no brain fol
 test("an ask_person answer of APPROVE applies nothing: the proposal waits and the workplace file is unchanged", async () => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "gtm-brain-ask-"))); roots.push(root);
   execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "Reflow", "--one-liner", "returns automation", "--owner", "Marta Nowak <marta@reflow.io>"], { cwd: root, env, stdio: "ignore" });
-  const file = ["brain/admin.md", "config/settings.yaml"].map(f => join(root, f)).find(existsSync), before = readFileSync(file, "utf8");
-  const proposal = join(root, "work", "admin.proposed.md");
+  const file = join(root, lib.settingsFile(root)), before = readFileSync(file, "utf8");
+  const proposal = join(root, lib.settingsProposal(root));
   writeFileSync(proposal, before.replace("returns automation", "returns automation for UK retailers"));
   const head = () => execFileSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).trim(), commit = head();
   const memories = () => execFileSync("git", ["-C", root, "status", "--porcelain"], { encoding: "utf8" });

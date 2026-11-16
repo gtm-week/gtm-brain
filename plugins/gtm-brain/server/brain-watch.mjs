@@ -8,8 +8,9 @@ import {fileURLToPath} from 'node:url';
 import * as lib from '../lib/brain.mjs';
 import { assetRows, resolveAssetFile } from '../lib/assets.mjs';
 import { pagePaths } from '../lib/layout.mjs';
+import { workDir } from '../lib/brain-paths.mjs';
 const root=resolve(process.argv[2]||'.'),mode=process.argv[3];
-const work=join(root,'work'),stateFile=join(work,'brain-watch.json'),lock=join(work,'brain-watch.lock');
+const work=workDir(root),stateFile=join(work,'brain-watch.json'),lock=join(work,'brain-watch.lock');
 const state=()=>{try{return JSON.parse(readFileSync(stateFile,'utf8'))}catch{return null}};
 const alive=pid=>{try{process.kill(pid,0);return true}catch{return false}};
 if(mode==='--stop'){
@@ -33,10 +34,10 @@ const finish=()=>{if(state()?.pid===process.pid){rmSync(stateFile,{force:true});
 process.on('SIGTERM',finish);process.on('SIGINT',finish);
 let attachmentKey = '', attachments = [];
 function fingerprint(){
- const files=[lib.settingsFile(root),'brain/entities.md','AGENTS.md','work/projects.json','work/asset-machine.json'];
- try{for(const d of readdirSync(join(root,'brain','contexts'),{withFileTypes:true}))if(d.isDirectory()&&!d.isSymbolicLink()){
-  files.push(`brain/contexts/${d.name}/context.md`,`brain/contexts/${d.name}/memories.jsonl`);
- }}catch{}
+ const work=lib.workName(root);
+ const files=[lib.settingsFile(root),'brain/entities.md','AGENTS.md',`${work}/projects.json`,`${work}/asset-machine.json`];
+ // every cover and every file of notes, wherever this brain's layout keeps them (lib/brain-paths.mjs)
+ try{for(const slug of lib.contextSlugs(root))files.push(lib.coverFile(root,slug));files.push(...lib.noteFiles(root))}catch{}
  try{files.push(...pagePaths(root))}catch{}
  const key = JSON.stringify(files.sort().map(file=>{try{const s=statSync(join(root,file));return[file,s.mtimeMs,s.size]}catch{return[file,null]}}));
  if (key !== attachmentKey) { try { attachments = assetRows(root).map(({id,entity,label,role,status,file}) => ({id,asset:{entity,label,role,status,file}})); attachmentKey = key; } catch {} }

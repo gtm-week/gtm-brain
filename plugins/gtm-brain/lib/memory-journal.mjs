@@ -2,6 +2,7 @@
 import { statSync, readFileSync, appendFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { workDir } from './brain-paths.mjs';
 
 export function memoryStamp(path) {
   try {
@@ -9,11 +10,11 @@ export function memoryStamp(path) {
     return { key: [s.dev, s.ino, s.size, s.mtimeNs, s.ctimeNs].join(':'), size: Number(s.size) };
   } catch (e) { if (e.code === 'ENOENT') return null; throw e; }
 }
-const receiptPath = (root, slug) => join(root, 'work/memory-appends', encodeURIComponent(slug) + '.json');
-const checkpointPath = (root, slug) => join(root, 'work/memory-appends', encodeURIComponent(slug) + '.checkpoint');
+const receiptPath = (root, slug) => join(workDir(root), 'memory-appends', encodeURIComponent(slug) + '.json');
+const checkpointPath = (root, slug) => join(workDir(root), 'memory-appends', encodeURIComponent(slug) + '.checkpoint');
 export function recordMemoryCheckpoint(root, slug, key) {
   try {
-    mkdirSync(join(root, 'work/memory-appends'), { recursive: true });
+    mkdirSync(join(workDir(root), 'memory-appends'), { recursive: true });
     const path = checkpointPath(root, slug), temporary = path + '.' + randomUUID() + '.tmp';
     writeFileSync(temporary, key); renameSync(temporary, path);
   } catch { /* Losing a checkpoint receipt only requires source verification. */ }
@@ -43,7 +44,7 @@ export function appendMemoryBytes(root, slug, path, text) {
     let checkpoint; try { checkpoint = readFileSync(checkpointPath(root, slug), 'utf8'); } catch {}
     if (checkpoint && (checkpoint === key || trustedMemoryAppend(root, slug, checkpoint, key))) chain = [{ before: checkpoint, after: key }];
     chain.push({ before: key, after: after.key });
-    mkdirSync(join(root, 'work/memory-appends'), { recursive: true });
+    mkdirSync(join(workDir(root), 'memory-appends'), { recursive: true });
     const receipt = receiptPath(root, slug), temporary = receipt + '.' + randomUUID() + '.tmp';
     writeFileSync(temporary, JSON.stringify(chain)); renameSync(temporary, receipt);
   } catch { /* The canonical append succeeded. Cache bookkeeping must never undo it. */ }

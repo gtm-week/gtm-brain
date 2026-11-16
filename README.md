@@ -35,7 +35,9 @@ It installs as the **`gtm-brain` plugin**. Open source under [MIT](LICENSE).
    two after what they do: `/gtmb-icp` and `/gtmb-market-research`. An old name still works:
    Codex runs the new skill and tells you its name. If your brain's own files still use old
    names, Codex offers once to update them.
-4. If the reply says the brain can be upgraded, say "upgrade the brain".
+4. If the reply says the brain can be upgraded, say "upgrade the brain". Since 0.37 that moves
+   the brain's files into four folders, the tabs of the dashboard; nothing moves before you say
+   yes ([Updating to 0.37](plugins/gtm-brain/MANUAL.md#updating-to-037-the-four-folders)).
 
 If several people use the same brain, everyone updates the plugin before anyone says "upgrade
 the brain".
@@ -150,9 +152,9 @@ around them.
 
 | Part | What it is | On disk | Dashboard tab | Changed with |
 | --- | --- | --- | --- | --- |
-| [Configuration](#configuration) | What is allowed and what the work must follow: rules, schema, settings, base documents | `config/`, `about-us/` | Configuration | `/gtmb-rules`, `/gtmb-schema`, `/gtmb-configure`, the document commands |
-| [Entities](#entities) | Who and what the notes are about: people, companies, products, events | `brain/entities/<kind>/` | Entities | what you say in chat, or the Entities tab |
-| [Memories](#memories) | What happened, was decided or is open: dated notes, grouped by topic | `brain/contexts/<topic>/` | Memories | what you say in chat, or the Memories tab |
+| [Configuration](#configuration) | What is allowed and what the work must follow: rules, schema, settings, base documents | `configuration/` | Configuration | `/gtmb-rules`, `/gtmb-schema`, `/gtmb-configure`, the document commands |
+| [Entities](#entities) | Who and what the notes are about: people, companies, products, events | `entities/<kind>/` | Entities | what you say in chat, or the Entities tab |
+| [Memories](#memories) | What happened, was decided or is open: dated notes, grouped by topic | `memories/` (a file per month; `topics/` for each topic's summary) | Memories | what you say in chat, or the Memories tab |
 | [Workflows](#workflows) | The part that acts: processes with steps, gates and a trigger | `workflows/` | Workflows | `/gtmb-workflow` |
 
 How the parts act on each other:
@@ -174,14 +176,14 @@ Four things, read at the start of every chat.
 
 | File | What it holds | Change it with |
 | --- | --- | --- |
-| `config/rules.md` | Three parts: Where things go, Ask the source, Our rules | `/gtmb-rules`, or edit the file |
-| `config/schema.md` | The fields per kind, organization subtypes, relationship types | `/gtmb-schema`, or edit the file |
-| `config/settings.yaml` | Company and one-liner, team (handles and emails), tools, settings | `/gtmb-configure`; applies on APPROVE |
-| `about-us/*.md` | Base documents: strategy, ICP, voice, market, design system, and yours | their commands, "add pricing as a base file", or Edit in the dashboard |
+| `configuration/rules.md` | Three parts: Where things go, Ask the source, Our rules | `/gtmb-rules`, or edit the file |
+| `configuration/schema.md` | The fields per kind, organization subtypes, relationship types | `/gtmb-schema`, or edit the file |
+| `configuration/settings.yaml` | Company and one-liner, team (handles and emails), tools, settings | `/gtmb-configure`; applies on APPROVE |
+| `configuration/about-us/*.md` | Base documents: strategy, ICP, voice, market, design system, and yours | their commands, "add pricing as a base file", or Edit in the dashboard |
 
 #### Rules
 
-`config/rules.md`: your rules, followed over GTM Brain's defaults. A change applies from the next chat; an update never overwrites a file you edited.
+`configuration/rules.md`: your rules, followed over GTM Brain's defaults. A change applies from the next chat; an update never overwrites a file you edited.
 
 - **Where things go:** a table of where each kind of file lands. Codex files everything by it
   and names the row it used; when no row fits it asks and offers a new row. Ask "why is this
@@ -202,7 +204,7 @@ Four things, read at the start of every chat.
 
 #### Schema
 
-`config/schema.md`: what the brain keeps about each kind.
+`configuration/schema.md`: what the brain keeps about each kind.
 
 - **Kinds.** Seven ship: person, organization, product, offering (what we sell), event, tool,
   meeting. Add your own with a `## <Kind>` section and a field table ("track venues"). A
@@ -229,17 +231,17 @@ Base documents and your other documents. Detail: [DOCUMENTS.md](docs/DOCUMENTS.m
 - Before work of a listed kind Codex reads the matching document in full, follows it and says
   which one. A draft is the best available guidance, and Codex says so; only your word approves
   it ("approve the strategy"). A starter nobody has written yet shows as not filled.
-- **Base documents** live in `about-us/`. Add your own with "add pricing as
+- **Base documents** live in `configuration/about-us/`. Add your own with "add pricing as
   a base file" (starters: pricing, positioning, competitors, objections).
 - **Any other document** stays in a folder you name (`talks/talk-draft.md`). A Markdown file you dropped in is not read before work until you say
   "add pricing.md as a document".
-- A document's files sit in a folder of the same name (`strategy/deck.pdf`). The design system
-  is also a page, `design-system.html`: one self-contained file shown on the dashboard's Visual
-  tab and kept in step with `design-system.md`.
+- A document's files sit in a folder of the same name beside it (`strategy/deck.pdf`). The
+  design system is also a page, `design-system.html`: one self-contained file shown on the
+  dashboard's Visual tab and kept in step with `design-system.md`.
 
 #### Settings
 
-`config/settings.yaml` replaces `brain/admin.md`. Beside company, team and tools it holds:
+`configuration/settings.yaml`. Beside company, team and tools it holds:
 dashboard timing (`dashboard: always` or `on-demand`), the save reminder (`save_nudge: off`),
 workflows on or off (`workflows: off`) and where big files go (`big_files: google-drive` or
 `local`). A change is shown first and applies only when you click APPROVE.
@@ -249,7 +251,7 @@ workflows on or off (`workflows: off`) and where big files go (`big_files: googl
 ### Entities
 
 One page per person, organization, product, offering, event, tool or meeting, at
-`brain/entities/<kind>/<name>-<short id>.md`. Facts stay in the notes; the page is the identity
+`entities/<kind>/<name>-<short id>.md` (`entities/people/anna-lind-3f9a2c.md`). Facts stay in the notes; the page is the identity
 and a cited brief built from them.
 
 | What | How it works | Say |
@@ -262,15 +264,16 @@ and a cited brief built from them.
 | Relation to us | Team, customer, partner, investor, prospect or other, worked out from your notes | "show the customers' VPs of Sales" |
 | Meetings | A meeting is saved as what came of it and gets a page listing those notes and who attended. The transcript stays in its tool, linked from the page | "just got off a call with Acme: ..." |
 
-Each kind's folder has a generated `index.md`: never edit it. A page's own Markdown may be
-edited by hand; say "save" afterwards. Renames, merges and kind changes are shown under History
+A page's own Markdown may be edited by hand; say "save" afterwards. Files that belong to an
+entity sit in a folder of the same name beside its page. Renames, merges and kind changes are shown under History
 on the page. Detail: [How a brain works: Saving](plugins/gtm-brain/MANUAL.md#saving-what-you-say-what-it-keeps).
 
 ![The Entities tab with a company opened: its relation to us, its details, the people who work there, what it uses and its history](diagrams/screenshots/dashboard-entity.png)
 
 ### Memories
 
-A memory is a note: one dated line in a topic's `memories.jsonl`, never edited afterwards.
+A memory is a note: one dated line in the file of its month (`memories/2026-11.jsonl`), never
+edited afterwards. Each note names its topic.
 
 - **What a note is.** A note, a decision or a question, with its author, date, the people and
   companies it names, tags (a project is the tag `project:<slug>`) and its source: the exact
@@ -284,9 +287,9 @@ A memory is a note: one dated line in a topic's `memories.jsonl`, never edited a
 - **Topics** (contexts). Notes are grouped by topic: Our company, Strategy, Market, Target
   customers, Our offer, and yours. A note lands where its meaning fits, answers search every
   topic, and a new topic is made only on your yes. Rename, archive or fork one in chat.
-- **Personal topic.** `brain/contexts/personal-<handle>/` holds your role and working
-  preferences; setup makes it.
-- **A topic's cover** (`context.md`) has three parts: your standing rule ("change the rule of
+- **Personal topic.** The topic `personal-<handle>` holds your role and working preferences;
+  setup makes it.
+- **A topic's cover** (`memories/topics/<topic>.md`) has three parts: your standing rule ("change the rule of
   Our offer to ..."), a short summary where every sentence cites its notes, and working
   guidance Codex learned there.
 - **Summaries are written when you ask:** load the topic, "where do we stand on pricing?" or
@@ -359,7 +362,7 @@ Three things sit beside the four parts and are easy to confuse with a workflow.
 | Shipped skill | One sitting of work. Twenty-seven ship with the plugin as `/gtmb-<name>`: [the list](#shipped-skills). Not yours to edit | the plugin |
 | Your own skill | The same, made by you. Kept in the brain and through updates | `.agents/skills/gtmb-<name>/` |
 | Workflow | Skills chained into steps, with gates and a trigger | `workflows/` |
-| Interaction | One approved action in your own tool, done and recorded the same way every time | `brain/ontology.ossie.json` |
+| Interaction | One approved action in your own tool, done and recorded the same way every time | `configuration/interactions.json` |
 | Project | A folder for files plus a tag on notes; never a second brain | `projects/<slug>/`, or a folder linked from elsewhere |
 
 - **Your own skills.** Say "make this a skill" after a piece of work. Codex shows the draft
@@ -368,7 +371,7 @@ Three things sit beside the four parts and are easy to confuse with a workflow.
   from GitHub; "list my skills" and "remove the skill ..." manage them. Detail:
   [USER-SKILLS.md](docs/USER-SKILLS.md).
 - **Interactions.** Say "propose an interaction for moving a deal in HubSpot". After your
-  APPROVE it is kept in `brain/ontology.ossie.json`. Each time it runs, Codex does it in the
+  APPROVE it is kept in `configuration/interactions.json`. Each time it runs, Codex does it in the
   tool first and saves the note only when the tool confirms; a failed write is saved as a failure.
 - **Projects.** "create a project for the Berlin event" makes `projects/berlin-event/` in the
   brain. "link this folder" connects a folder where it already lives, such as a code
@@ -522,8 +525,8 @@ flowchart TB
 
   subgraph workspace["Your brain: one folder in git"]
     files["Source files<br/>Markdown, YAML and append-only JSONL"]
-    index["SQLite FTS5 index<br/>Rebuildable search cache in work/"]
-    view["Rendered dashboard<br/>work/home/"]
+    index["SQLite FTS5 index<br/>Rebuildable search cache in .gtm-brain/"]
+    view["Rendered dashboard<br/>.gtm-brain/home/"]
   end
 
   operations --> files
@@ -544,14 +547,14 @@ calls small MCP operations; operation scripts use shared library readers, valida
 record with `supersedes`; a withdrawal or an answered question uses `retracts`. Old records
 stay. Entity pages link those records across topics without copying the facts into a second store.
 
-**The file format validates three record types:** a topic's cover (`context.md`), a note (a line
-of `memories.jsonl`) and an entity page. Configuration and workflows are plain Markdown and YAML
+**The file format validates three record types:** a topic's cover (`memories/topics/<topic>.md`), a note
+(a line of a month's file in `memories/`) and an entity page. Configuration and workflows are plain Markdown and YAML
 read beside them. The model to keep in mind is still
 [the four parts](#the-four-parts-of-a-brain).
 
 **The index makes recall practical.** A local SQLite FTS5 index supports keyword search,
 alias expansion, exact filters and read-only SQL for counts, joins and dates. It is a rebuildable
-cache under `work/`; Markdown and JSONL remain authoritative.
+cache under `.gtm-brain/`; Markdown and JSONL remain authoritative.
 
 **The dashboard renders the same state.** A Node renderer builds the page from the brain's
 files. A local server serves it, with revision events so an open page updates. The server's
@@ -603,26 +606,26 @@ and the dashboard's tabs show the same parts.
 
 ```text
 your-brain/
-  about-us/                         Base documents: what the work must follow
-    strategy.md  icp.md  voice.md  market.md
-    design-system.md  design-system.html
-  config/                           How the brain behaves
+  configuration/                    What is allowed and what the work must follow
+    about-us/                       Base documents
+      strategy.md  icp.md  voice.md  market.md
+      design-system.md  design-system.html
     rules.md                        Where things go, Ask the source, Our rules
     schema.md                       Fields per kind, organization subtypes, relationship types
     settings.yaml                   Company, team, tools and settings
-  brain/
-    entities/                       One page per person, company, product, event, tool, meeting
-      people/  organizations/  products/  events/  tools/  meetings/  offerings/
-    contexts/                       Memories, grouped by topic
-      company/  icp/  market/  offer/  strategy/  personal-<handle>/
-        memories.jsonl              The notes: one per line, never edited
-        context.md                  The topic's standing rule, summary and working guidance
-    ontology.ossie.json             Your company's own interactions, once one is approved
+    interactions.json               Your company's own interactions, once one is approved
+  entities/                         One page per person, company, product, event, tool, meeting
+    people/  organizations/  products/  events/  tools/  meetings/  offerings/
+  memories/                         The notes: one per line, never edited
+    2026-11.jsonl                   One file per month; each note names its topic
+    topics/                         Per topic: the standing rule, summary and working guidance
+      company.md  icp.md  market.md  offer.md  strategy.md  personal-<handle>.md
   workflows/                        Processes with steps; a run's state is kept as notes
   projects/                         Working folders for an event, a campaign, a client
   .agents/skills/                   Skills you made
+  layout.json                       The file layout of this brain (4)
   AGENTS.md  CLAUDE.md  README.md   Written by GTM Brain and refreshed on update
-  work/                             This computer only, not in git: search index, dashboard, caches
+  .gtm-brain/                       This computer only, not in git: search index, dashboard, caches
 ```
 
 What you may edit by hand:
@@ -630,14 +633,14 @@ What you may edit by hand:
 | File | A hand edit |
 | --- | --- |
 | Entity pages, your own documents, workflows | Kept. Say "save" afterwards |
-| `about-us/`, `config/rules.md`, `config/schema.md` | Kept and recorded |
-| `config/settings.yaml` | Change it through APPROVE. A file deleted or left without its company or team is put back |
-| `memories.jsonl`, `brain/ontology.ossie.json` | Put back; your version is kept in `work/manual-edits/protected/`. Correct a note in chat instead |
+| `configuration/about-us/`, `configuration/rules.md`, `configuration/schema.md` | Kept and recorded |
+| `configuration/settings.yaml` | Change it through APPROVE. A file deleted or left without its company or team is put back |
+| A month's notes (`memories/*.jsonl`), `configuration/interactions.json` | Put back; your version is kept in `.gtm-brain/manual-edits/protected/`. Correct a note in chat instead |
 | `AGENTS.md`, `CLAUDE.md` | Rewritten on update. Your own lines stay under "This brain's own additions" |
-| A generated `index.md` | Rewritten with the pages |
 
-A brain made before 0.35 keeps the base documents and `RULES.md`, `SCHEMA.md` at the top and its
-settings in `brain/admin.md` until you say "upgrade the brain"
+A brain made before 0.37 keeps the same files in other places (a `brain/` folder for notes and
+entities, `work/` for this computer's files; before 0.35 also `RULES.md` and `SCHEMA.md` at the
+top and its settings in `brain/admin.md`) and works as it is until you say "upgrade the brain"
 ([Updating and upgrading](#updating-and-upgrading)).
 
 The plugin's source and your brain are separate folders. Updating the plugin does not replace
@@ -650,7 +653,8 @@ outside git, and the note keeps the link.
 CRM, email, calendar and meeting sources come through the host's connected integrations,
 with their own accounts and permissions. GTM Brain retains useful findings and exact source
 references; it does not mirror every record. Broad source sync runs on request or on an
-approved schedule. A targeted live read follows the Ask the source table in `config/rules.md`.
+approved schedule. A targeted live read follows the Ask the source table in
+`configuration/rules.md`.
 
 Customer evidence can exist without a CRM record. Meeting records distinguish scheduled events
 from evidence that a conversation happened, and distinguish available notes or transcripts
@@ -671,12 +675,12 @@ Naming a tool in the settings does not connect it. A tool has three states:
 
 | State | What it means | How it gets there |
 | --- | --- | --- |
-| Declared | Named in `config/settings.yaml` | a settings change, through APPROVE |
+| Declared | Named in `configuration/settings.yaml` | a settings change, through APPROVE |
 | Installed | Its connector is in your Codex, signed in by you | "connect my tools": Codex checks each tool and installs the ones you pick |
 | Tested | A small read returned data (one deal, three subjects, titles only) | the read test; it never writes to a tool and is never saved as knowledge |
 
 - **You do this once per computer.** Sign-in is yours and the result stays on your computer
-  (`work/tools.json`). Codex suggests the floor: email, calendar, CRM. A tool you decline is
+  (`.gtm-brain/tools.json`). Codex suggests the floor: email, calendar, CRM. A tool you decline is
   not proposed again, and one with no official plugin works by export or paste.
 - **Every chat opens with the tools' status.** GTM Brain cannot see other connectors' calls.
 - **Sync.** "catch up" reads what changed in each connected, tested tool since its last sync
@@ -685,7 +689,7 @@ Naming a tool in the settings does not connect it. A tool has three states:
 - **Daily sync.** "sync every morning" schedules it in Codex, 09:00 by default. It reads only
   the approved sources, asks nothing and sends nothing, and it runs only while your computer
   is on and Codex is running. The alternatives are "sync manually" and "summaries only".
-- **Live reads.** The Ask the source table in `config/rules.md` says which questions go to a
+- **Live reads.** The Ask the source table in `configuration/rules.md` says which questions go to a
   tool and how old a saved note may be ([Configuration](#configuration)).
 - **Tool setup skills.** Say "Set up Clay for me" (or Freckle, Woodpecker, Surfer, HeyReach;
   for ZYNT, paste ZYNT's own setup prompt). Each connects on your yes, never keeps a key, does
@@ -700,21 +704,25 @@ Two separate steps. Updating the plugin moves nothing in your brain.
 
 | Step | Say | What happens | Order |
 | --- | --- | --- | --- |
-| Update the plugin | "update GTM Brain", then quit and reopen Codex | The first reply of the next chat refreshes `AGENTS.md`, and the README, rules and schema you did not edit, with a backup in `work/upgrades/` | first |
-| Upgrade the brain, move 1 | "upgrade the brain" | Asks first, then moves entity pages into a folder per kind | second |
-| Upgrade the brain, move 2 | "upgrade the brain" | Asks first, then moves base documents into `about-us/` and rules, schema and settings into `config/` | third |
+| Update the plugin | "update GTM Brain", then quit and reopen Codex | The first reply of the next chat refreshes `AGENTS.md`, and the README, rules and schema you did not edit, with a backup in `.gtm-brain/upgrades/` (`work/upgrades/` in a brain not yet in the four folders) | first |
+| Upgrade the brain | "upgrade the brain" | Asks first, then moves the files into the four folders: `configuration/`, `entities/`, `memories/` (one file of notes per month) and `workflows/`. Every note keeps its text and its id | second |
 
-- **Update before you upgrade.** A computer whose plugin is still on 0.34 cannot read an
-  upgraded brain: it loses known people and companies after the first move and sees "is not a
-  brain" after the second. The fix is to update, never to run setup.
+- **Update before you upgrade.** A computer whose plugin is older than 0.37 finds no brain in
+  an upgraded folder: it reads nothing and saves nothing there. The fix is to update, never to
+  run setup.
+- **A brain from 0.34 or 0.35** is asked once and goes through the earlier moves (entity pages
+  into a folder per kind; base documents, rules, schema and settings into their folders) in the
+  same run.
 - **A new chat alone is not enough** after an update: quit and reopen Codex.
-- **Going back.** Each move is one git commit and can be reverted; no note is touched.
+- **Going back.** The move is two git commits that can be reverted, cleanly until the next note
+  is saved; a full copy of the files as they were stays in `.gtm-brain/upgrades/`.
 - **0.36 only renames the skills** to `/gtmb-<name>`; 0.36.1 renames two more (`/gtmb-icp`,
   `/gtmb-market-research`) and adds `/gtmb-market`. An old name still runs. If your brain's
   own files still use old names, Codex offers once to rewrite them.
 - An update on offer appears once at chat start and as a card on the dashboard's Overview.
 
-Detail: [Updating to 0.36](plugins/gtm-brain/MANUAL.md#updating-to-036-short-skill-names) ·
+Detail: [Updating to 0.37](plugins/gtm-brain/MANUAL.md#updating-to-037-the-four-folders) ·
+[Updating to 0.36](plugins/gtm-brain/MANUAL.md#updating-to-036-short-skill-names) ·
 [Updating to 0.35](plugins/gtm-brain/MANUAL.md#updating-to-035) · [RELEASE-0.35.md](docs/releases/RELEASE-0.35.md).
 
 ## Shipped skills

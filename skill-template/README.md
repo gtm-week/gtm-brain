@@ -19,7 +19,7 @@ agents/openai.yaml    the name, one line and the default prompt Codex shows
 The skill never touches brain files directly. It reads with `query`, `load_context` and
 `document`, asks in Codex's question box or plain chat text, and writes with `remember` or
 `document`. Those tools keep the brain valid and commit every write; a direct edit of
-`brain/admin.md` or a `memories.jsonl` is put back at the next chat start or save.
+a notes file or the interactions file is put back at the next chat start or save.
 
 ## Steps
 

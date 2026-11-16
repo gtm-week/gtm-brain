@@ -24,6 +24,7 @@ import { fileURLToPath } from "node:url";
 import * as lib from "../lib/brain.mjs";
 import * as dots from "../lib/dots.mjs";
 import * as checks from "../lib/note-checks.mjs";
+import { workDir } from '../lib/brain-paths.mjs';
 
 export const MEMORY_EDIT_TEXT_MAX = 8000;            // characters in one note written from the page
 export const MEMORY_EDIT_MAX = 64 * 1024;            // the request: that text as JSON at its longest escaping, plus the other fields
@@ -47,8 +48,8 @@ export function createMemoryEdit({ root, token, json, log = () => {} }) {
     .replace(/^(#\d+ )?(not remembered yet|nothing remembered|not remembered|not kept \(\d+ of \d+\)):\s*/, "").replace(/\s+(Whatever is still unclear|No question needed|Fix these and call again|Then remember)\b[\s\S]*$/, "").trim().slice(0, 600);
   // the one remember call: the entries go in a batch file, as the MCP tool passes them
   const remember = async (by, entries) => {
-    mkdirSync(join(root, "work"), { recursive: true });
-    const batch = join(root, "work", `remember-${randomUUID()}.json`);
+    mkdirSync(workDir(root), { recursive: true });
+    const batch = join(workDir(root), `remember-${randomUUID()}.json`);
     try {
       writeFileSync(batch, JSON.stringify(entries));
       const out = await run(["--by", by, "--batch", batch]);

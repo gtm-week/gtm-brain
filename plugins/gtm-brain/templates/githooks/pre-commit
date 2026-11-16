@@ -1,11 +1,13 @@
 #!/bin/sh
-# gtm-brain v0 pre-commit: every staged memories.jsonl must be valid, line by line, and must keep
-# what HEAD already has as an unchanged prefix (append-only). Installed by setup and upgrade
+# gtm-brain v0 pre-commit: every staged file of notes must be valid, line by line, and must keep
+# what HEAD already has as an unchanged prefix (append-only). A file of notes is
+# brain/contexts/<context>/memories.jsonl (layouts 1 to 3) or memories/<month>.jsonl (layout 4).
+# Installed by setup and upgrade
 # via: git config core.hooksPath .githooks
 # A memories file is never deleted or renamed: that would drop or move records.
-gone="$(git diff --cached --name-status | grep -E '^(D|R[0-9]*)[[:space:]]' | grep -E 'brain/contexts/[^/]+/memories\.jsonl' || true)"
+gone="$(git diff --cached --name-status | grep -E '^(D|R[0-9]*)[[:space:]]' | grep -E '(brain/contexts/[^/]+/memories\.jsonl|[[:space:]]memories/[^/]+\.jsonl)' || true)"
 [ -n "$gone" ] && { echo "gtm-brain: memories are append-only; a deleted or renamed memories file is refused:" >&2; echo "$gone" | sed 's/^/    /' >&2; exit 1; }
-staged="$(git diff --cached --name-only --diff-filter=ACM | grep -E '^brain/contexts/[^/]+/memories\.jsonl$')"
+staged="$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(brain/contexts/[^/]+/memories\.jsonl|memories/[^/]+\.jsonl)$')"
 [ -z "$staged" ] && exit 0
 # The lib: GTM_BRAIN_LIB, else git config gtm-brain.lib (set by setup, upgrade and every session start),
 # else the newest installed gtm-brain plugin. A clone without the plugin cannot validate, so it refuses.
@@ -16,11 +18,13 @@ tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 fail=0
 for f in $staged; do
   git show ":$f" > "$tmp/next"; git show "HEAD:$f" > "$tmp/prev" 2>/dev/null || : > "$tmp/prev"
+  # a context's own file holds only that context's notes; a month's file holds every topic's
+  case "$f" in memories/*) ctx="" ;; *) ctx="$(basename "$(dirname "$f")")" ;; esac
   out="$(node -e '
     import(process.argv[1]).then(l => {
       const fs = require("fs"); const errs = l.validateMemoriesFile(process.argv[3], process.argv[4]);
       const v = l.appendOnlyViolation(fs.readFileSync(process.argv[2], "utf8"), fs.readFileSync(process.argv[3], "utf8")); if (v) errs.push(v);
       if (errs.length) { console.log(errs.join("\n")); process.exit(1); }
-    })' "$lib" "$tmp/prev" "$tmp/next" "$(basename "$(dirname "$f")")" 2>&1)" || { echo "gtm-brain: $f is not valid:"; echo "$out" | sed 's/^/    /'; fail=1; }
+    })' "$lib" "$tmp/prev" "$tmp/next" "$ctx" 2>&1)" || { echo "gtm-brain: $f is not valid:"; echo "$out" | sed 's/^/    /'; fail=1; }
 done
 exit $fail

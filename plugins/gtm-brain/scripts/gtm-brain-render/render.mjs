@@ -16,18 +16,19 @@ import { refreshIndexedPages } from '../../lib/entity-pages.mjs';
 import { hasMemoryIndex, openDatabase } from '../../lib/memory-index-store.mjs';
 import { readJSON, writeJSON, renderQueue } from '../../lib/dashboard-refresh.mjs';
 import { randomUUID } from 'node:crypto';
+import { workDir, workName } from '../../lib/brain-paths.mjs';
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const root = resolve(process.argv[2] || ".");
 const admin = lib.readAdmin(root); if (!admin) { console.error("no brain here"); process.exit(1); }
-mkdirSync(join(root, 'work'), { recursive: true });
+mkdirSync(workDir(root), { recursive: true });
 mkdirSync(renderQueue(), { recursive: true, mode: 0o700 });
 const renderSlot = hasMemoryIndex() ? openDatabase(join(renderQueue(), 'renderer.sqlite')) : null;
 if (renderSlot) { renderSlot.exec('PRAGMA busy_timeout=55000; BEGIN IMMEDIATE'); process.on('exit', () => renderSlot.close()); }
 // Explicit renders and queued renders publish through the same gate. A killed
 // process releases it automatically, and writers never need this lock to save.
-const renderLock = hasMemoryIndex() ? openDatabase(join(root, 'work', 'render-lock.sqlite')) : null;
+const renderLock = hasMemoryIndex() ? openDatabase(join(workDir(root), 'render-lock.sqlite')) : null;
 if (renderLock) { renderLock.exec('PRAGMA busy_timeout=55000; BEGIN IMMEDIATE'); process.on('exit', () => renderLock.close()); }
-const renderRequest = readJSON(join(root, 'work', 'render-request.json'));
+const renderRequest = readJSON(join(workDir(root), 'render-request.json'));
 const loaded = lib.readLoaded(root);
 const reg = lib.readNames(root);
 const snapshot = hasMemoryIndex() ? dashboardData(root, reg) : null;
@@ -39,7 +40,7 @@ const teamNames = new Set((admin.team || []).map(p => String(p.name || "").toLow
 const graph = snapshot?.graph || entityGraph(reg, sourceContexts);
 const entityIndex = snapshot ? null : lib.entityEvidenceIndex(reg, sourceContexts);
 const views = new Map(), detailFolder = 'entities-' + randomUUID();
-const detailDir = join(root, 'work', 'home', detailFolder); mkdirSync(detailDir, { recursive: true });
+const detailDir = join(workDir(root), 'home', detailFolder); mkdirSync(detailDir, { recursive: true });
 if (snapshot) refreshIndexedPages(root, reg, (n, facts, _changed, index) => {
   const brief = { stale: facts.stale, compiledAt: facts.compiled_at, latestEvidenceAt: facts.latest_evidence_at, compilation: facts.stale ? null : facts.previous,
     fileNotes: facts.file_notes?.markdown ?? null, timeline: facts.timeline, timelineTotal: facts.timeline_total,
@@ -62,18 +63,18 @@ const names = reg.map((n, i) => {
 });
 const identities = new Map(reg.map(n => [n.name, { name: n.name, kind: n.kind }]));
 for (const c of contexts) c.entityNames = graph.nodes.filter(n => n.contexts.some(r => r.context === c.slug && (r.cover || r.evidence.length))).map(n => identities.get(n.name));
-let toolState = {}; try { toolState = JSON.parse(readFileSync(join(root, "work", "tools.json"), "utf8")); } catch {}
+let toolState = {}; try { toolState = JSON.parse(readFileSync(join(workDir(root), "tools.json"), "utf8")); } catch {}
 const key = t => String(t).toLowerCase().replace(/\s*\(.*\)\s*$/, "").trim();
 // Suggested candidates (email, calendar, the CRM: the pulse) live in tools.json before admin.md names them.
 const extraTools = Object.values(toolState).filter(s => s && s.tool && !(admin.tools || []).some(t => key(t) === key(s.tool))).map(s => s.tool);
 const toolRows = [...(admin.tools || []), ...extraTools].map(t => { const s = toolState[key(t)] || {}; return { tool: t, plugin: s.plugin || null, status: s.status || "not checked", test: s.test || null, note: s.note || "", at: s.at || null, suggested: !!s.suggested, declined: !!s.declined }; });
-let proposal = null; try { const prop = readFileSync(join(root, "work", "admin.proposed.md"), "utf8"), cur = lib.adminText(root); if (prop !== cur) proposal = { diff: lib.lineDiff(cur, prop), lines: lib.lineDiff(cur, prop).filter(l => !l.startsWith("  ")).length }; } catch {}
-let interaction = null; try { const p = JSON.parse(readFileSync(join(root, "work", "interaction.proposed.json"), "utf8")); const current = lib.readInteractions(root); if (!current.error && !lib.validateInteraction(root, p, { existing: current.actions }).length) { const props = p.input_schema?.properties || {}, req = p.input_schema?.required || []; interaction = { name: p.name, title: p.title || p.name, tool: p.external === false ? "record only" : p.tool, operation: p.external === false ? "Nothing in a tool: the note is recorded at once." : p.operation, description: p.description || "", inputs: Object.keys(props).map(k => req.includes(k) ? k : `${k}?`), context: p.record?.context || "", records: lib.renderTemplate(p.record?.content, Object.fromEntries(Object.keys(props).map(k => [k, `[${k}]`]))) }; } } catch {}
+let proposal = null; try { const prop = readFileSync(join(workDir(root), "admin.proposed.md"), "utf8"), cur = lib.adminText(root); if (prop !== cur) proposal = { diff: lib.lineDiff(cur, prop), lines: lib.lineDiff(cur, prop).filter(l => !l.startsWith("  ")).length }; } catch {}
+let interaction = null; try { const p = JSON.parse(readFileSync(join(workDir(root), "interaction.proposed.json"), "utf8")); const current = lib.readInteractions(root); if (!current.error && !lib.validateInteraction(root, p, { existing: current.actions }).length) { const props = p.input_schema?.properties || {}, req = p.input_schema?.required || []; interaction = { name: p.name, title: p.title || p.name, tool: p.external === false ? "record only" : p.tool, operation: p.external === false ? "Nothing in a tool: the note is recorded at once." : p.operation, description: p.description || "", inputs: Object.keys(props).map(k => req.includes(k) ? k : `${k}?`), context: p.record?.context || "", records: lib.renderTemplate(p.record?.content, Object.fromEntries(Object.keys(props).map(k => [k, `[${k}]`]))) }; } } catch {}
 const dash = lib.readDash(root), session = lib.readSession(root);
 const merges = lib.suggestMerges(reg);
 const compileState = lib.readCompileState(root), compileMode = lib.compileMode(root), busy = lib.compileBusy(root), gaveUp = lib.compileGaveUp(root);
 for (const c of contexts) c.updating = !!(!c.manualEdit && c.stale && compileMode === "background" && busy && (!compileState.contexts || compileState.contexts.split(" ").includes(c.slug) || compileState.state === "queued"));
-let plugin = null; try { plugin = JSON.parse(readFileSync(join(root, "work", "plugin-version.json"), "utf8")); } catch {}
+let plugin = null; try { plugin = JSON.parse(readFileSync(join(workDir(root), "plugin-version.json"), "utf8")); } catch {}
 // The page shows the plugin that renders it. A cached check made by an older version is for that
 // version: its "latest" may still be newer, its "checked" date is not a check of this one (ALL-211).
 const running = JSON.parse(readFileSync(new URL("../../.codex-plugin/plugin.json", import.meta.url), "utf8")).version;
@@ -88,7 +89,7 @@ for (const m of [...data.questions, ...data.decisions, ...data.actions, ...data.
 const threads = {};
 for (const id of new Set([...all.flatMap(m => m.source.filter(s => s.kind === "codex").map(s => s.ref)), ...(compileState && compileState.thread ? [compileState.thread] : [])])) { const t = lib.resolveThread(id, root); if (t) threads[id] = t; }
 data.threads = threads;
-const outDir = join(root, "work", "home"); mkdirSync(outDir, { recursive: true });
+const outDir = join(workDir(root), "home"); mkdirSync(outDir, { recursive: true });
 data.skills = skillCatalog(undefined, root);
 const allDocs = listDocuments(root); data.documents = allDocs.map(({ body, ...d }) => ({ ...d, files: documentFiles(root, d, allDocs).length }));
 data.entityGraph = graph;
@@ -141,7 +142,7 @@ if (snapshot && snapshot.revision !== dashboardSourceRevision(root)) throw new E
 let previous; try { previous = JSON.parse(readFileSync(join(outDir, 'data.json'), 'utf8')); } catch {}
 publish("index.html", tpl.replace("__DATA__", serialized));
 publish("data.json", serialized);
-if (renderRequest && readJSON(join(root, 'work', 'render-request.json'))?.id === renderRequest.id) writeJSON(join(root, 'work', 'render-state.json'), { request: renderRequest.id, status: 'ready', completedAt: data.generatedAt });
+if (renderRequest && readJSON(join(workDir(root), 'render-request.json'))?.id === renderRequest.id) writeJSON(join(workDir(root), 'render-state.json'), { request: renderRequest.id, status: 'ready', completedAt: data.generatedAt });
 // Keep the current and previous immutable snapshots for readers crossing a
 // revision event. Only renderer-owned folders are eligible for retirement.
 const keep = new Set([data, previous].filter(Boolean).flatMap(d => [
@@ -152,4 +153,4 @@ const keep = new Set([data, previous].filter(Boolean).flatMap(d => [
 ]));
 for (const entry of readdirSync(outDir, { withFileTypes: true })) if (entry.isDirectory() && /^entities-[a-f0-9-]{36}$/.test(entry.name) && !keep.has(entry.name)) rmSync(join(outDir, entry.name), { recursive: true });
 if (existsSync(join(outDir, 'history'))) for (const entry of readdirSync(join(outDir, 'history'), { withFileTypes: true })) if (entry.isDirectory() && /^[a-z0-9-]+-[a-f0-9]{20}$/.test(entry.name) && !keep.has('history/' + entry.name)) rmSync(join(outDir, 'history', entry.name), { recursive: true });
-console.log(`rendered work/home/index.html · ${contexts.length} contexts (${contexts.filter(c => c.stale && c.status === "active").length} behind) · ${snapshot?.totals.memories ?? all.length} memories · ${snapshot?.totals.questions ?? data.questions.length} open questions · ${names.length} people${dash ? ` · live at ${dash.url}` : ""}`);
+console.log(`rendered ${workName(root)}/home/index.html · ${contexts.length} contexts (${contexts.filter(c => c.stale && c.status === "active").length} behind) · ${snapshot?.totals.memories ?? all.length} memories · ${snapshot?.totals.questions ?? data.questions.length} open questions · ${names.length} people${dash ? ` · live at ${dash.url}` : ""}`);

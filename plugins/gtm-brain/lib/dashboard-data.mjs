@@ -9,12 +9,13 @@ import * as lib from './brain.mjs';
 import { entityStamp } from './entity-stamp.mjs';
 import { memoryStamp } from './memory-journal.mjs';
 import { listRuns } from './workflows.mjs';
+import { workDir } from './brain-paths.mjs';
 const PAGE = 50, PAGE_BYTES = 512 * 1024;
 const hash = text => createHash('sha256').update(text).digest('hex').slice(0, 20);
 const visible = "m.effective=1 AND NOT EXISTS(SELECT 1 FROM forks f JOIN memories c ON c.rowid=f.memory WHERE f.target=m.id AND c.effective=1)";
 const current = "m.effective=1 AND json_extract(m.raw,'$.retracts') IS NULL";
 export function dashboardSourceRevision(root) {
-  return hash(JSON.stringify([entityStamp(root), lib.listContexts(root, { includeMemories: false }).map(c => [c.slug, memoryStamp(c.path)?.key, memoryStamp(join(c.dir, 'memories.jsonl'))?.key])]));
+  return hash(JSON.stringify([entityStamp(root), lib.listContexts(root, { includeMemories: false }).map(c => [c.slug, memoryStamp(c.path)?.key]), lib.noteSources(root).map(f => [f.file, memoryStamp(f.path)?.key])]));
 }
 function atomic(path, value) { const tmp = path + '.' + process.pid + '.tmp'; writeFileSync(tmp, JSON.stringify(value)); renameSync(tmp, path); }
 function limited(statement, ...args) {
@@ -35,7 +36,7 @@ export function dashboardData(root, registry) {
   try {
     profile("index");
     const db = index.db, contexts = lib.listContexts(root, { includeMemories: false });
-    const home = join(root, 'work', 'home'); mkdirSync(join(home, 'history'), { recursive: true });
+    const home = join(workDir(root), 'home'); mkdirSync(join(home, 'history'), { recursive: true });
     const specialContexts = [], cited = new Set();
     for (const e of registry) for (const id of (JSON.stringify(e._compilation) || '').match(/m_[0-9a-f]{6,12}/g) || []) cited.add(id);
     for (const c of contexts) for (const id of (c.summary + ' ' + c.now).match(/m_[0-9a-f]{6,12}/g) || []) cited.add(id);

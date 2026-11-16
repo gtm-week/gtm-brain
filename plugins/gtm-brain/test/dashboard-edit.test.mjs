@@ -21,7 +21,7 @@ for (const k of ["GTM_BRAIN_NO_COMMIT", "GTM_BRAIN_RUN", "GTM_BRAIN_APPROVAL_TIC
 const root = realpathSync(mkdtempSync(join(tmpdir(), "gtm-brain-edit-")));
 execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "Reflow", "--one-liner", "returns automation", "--owner", "Marta Nowak <marta@reflow.io>", "--team", "Tomek Zielinski <tomek@reflow.io>"], { cwd: root, env, stdio: "ignore" });
 const lib = await import(`${P}/lib/brain.mjs`), docs = await import(`${P}/lib/documents.mjs`);
-const as = handle => writeFileSync(join(root, "work", "person.json"), JSON.stringify({ handle }) + "\n");
+const as = handle => writeFileSync(join(lib.workDir(root), "person.json"), JSON.stringify({ handle }) + "\n");
 const node = (script, ...args) => execFileSync(process.execPath, [`${P}/${script}`, root, ...args], { encoding: "utf8", env, cwd: root }).trim();
 const dash = (extra = {}, ...a) => execFileSync(process.execPath, [`${P}/server/dash.mjs`, root, ...a], { encoding: "utf8", env: { ...env, ...extra } }).trim();
 after(() => { try { dash({}, "--stop"); } catch {} for (const r of [root, env.CODEX_HOME, env.HOME]) { try { rmSync(r, { recursive: true, force: true }); } catch {} } });
@@ -32,12 +32,12 @@ lib.writeNames(root, [...lib.readNames(root), { name: "Amdahl Systems", kind: "o
 lib.appendMemory(root, "company", { authors: ["marta-nowak"], content: "Notes from the Berlin workshop with Amdahl Systems: John Smith wants a pilot in March.", people: ["John Smith", "Amdahl Systems"], at: new Date(Date.now() - 2 * 864e5).toISOString() });
 lib.appendMemory(root, "company", { authors: ["marta-nowak"], content: "Pricing review moved to next quarter.", at: new Date(Date.now() - 864e5).toISOString() });
 node("scripts/gtm-brain-render/render.mjs");
-const D = JSON.parse(readFileSync(join(root, "work", "home", "data.json"), "utf8"));
+const D = JSON.parse(readFileSync(join(lib.workDir(root), "home", "data.json"), "utf8"));
 
 const PORT = 48931, url = dash({}, "--start", `--port=${PORT}`), origin = `http://127.0.0.1:${PORT}`;
 const html = await (await fetch(url, { headers: { connection: "close" } })).text();
 const token = html.match(/<meta name="gtm-brain-edit" content="([a-f0-9]{64})">/)?.[1];
-const playbook = "sales/sales-playbook.md", base = docs.listDocuments(root).find(d => d.base && d.path.startsWith("about-us/")).path;
+const playbook = "sales/sales-playbook.md", base = docs.listDocuments(root).find(d => d.base && d.path.startsWith(`${lib.aboutDir(root)}/`)).path;
 const sha = path => createHash("sha256").update(readFileSync(join(root, path))).digest("hex");
 const bodyOf = path => docs.parseDocument(root, path).body;
 // node's fetch refuses to set Origin and Host, so the requests are made by hand
@@ -50,7 +50,7 @@ const commits = () => execFileSync("git", ["-C", root, "log", "--format=%s"], { 
 
 test("the page carries the save token only when this server serves it, and a new one at each start", () => {
   assert.match(token || "", /^[a-f0-9]{64}$/);
-  assert.match(readFileSync(join(root, "work", "home", "index.html"), "utf8"), /<meta name="gtm-brain-edit" content="">/, "the copy on disk has none");
+  assert.match(readFileSync(join(lib.workDir(root), "home", "index.html"), "utf8"), /<meta name="gtm-brain-edit" content="">/, "the copy on disk has none");
 });
 
 test("a save from the page goes through the document script: written, committed, the header kept", async () => {
@@ -86,7 +86,7 @@ test("anything that is not the page is refused, and nothing is written", async (
   ];
   for (const [name, r, status] of cases) assert.equal(r.status, status, `${name}: ${r.text}`);
   for (const method of ["GET", "PUT", "PATCH", "DELETE"]) assert.ok([404, 405].includes((await send(method, "/document", { headers: { origin, "x-gtm-brain-token": token } })).status), method);
-  for (const path of ["brain/admin.md", "config/settings.yaml", "config/rules.md", "RULES.md", "../outside.md", "/etc/passwd", "sales/../sales/sales-playbook.md", "sales/sales-playbook", "brain/contexts/company/memories.jsonl", "workflows/outbound.md", "AGENTS.md", ""])
+  for (const path of ["brain/admin.md", "config/settings.yaml", "config/rules.md", "configuration/settings.yaml", "configuration/rules.md", "configuration/interactions.json", "memories/2026-11.jsonl", "memories/topics/company.md", "layout.json", "RULES.md", "../outside.md", "/etc/passwd", "sales/../sales/sales-playbook.md", "sales/sales-playbook", "brain/contexts/company/memories.jsonl", "workflows/outbound.md", "AGENTS.md", ""])
     assert.equal((await save({ path, body: "Overwritten.", hash: "0".repeat(64) })).status, path ? 404 : 404, path);
   assert.equal(readFileSync(join(root, playbook), "utf8"), before); assert.equal(commits().length, n);
 });
@@ -171,7 +171,7 @@ test("page: the search forgives typos, missing letters, part words and word orde
 });
 
 test("page: every filter box uses the one scorer: Entities, Memories, the rules and the schema", async () => {
-  const calls = [], fetcher = async path => { calls.push(String(path)); return { ok: true, status: 200, json: async () => String(path).startsWith("/search") ? { ok: true, notes: [], more: 0 } : String(path).endsWith("notes.json") ? JSON.parse(readFileSync(join(root, "work", "home", D.pillars.memories.file), "utf8")) : D }; };
+  const calls = [], fetcher = async path => { calls.push(String(path)); return { ok: true, status: 200, json: async () => String(path).startsWith("/search") ? { ok: true, notes: [], more: 0 } : String(path).endsWith("notes.json") ? JSON.parse(readFileSync(join(lib.workDir(root), "home", D.pillars.memories.file), "utf8")) : D }; };
   const p = page(D, { live: true, fetcher }), type = (id, value) => p.listeners.input.forEach(fn => fn({ target: { id, value, selectionStart: value.length } }));
   // the three examples, on the scorer itself
   for (const [q, text] of [["amdal", "Amdahl Systems"], ["jon smi", "John Smith"], ["berln workshp", "Notes from the Berlin workshop with Amdahl Systems"]]) assert.ok(p.run(`fzMatch(${JSON.stringify(q)},[[${JSON.stringify(text)},1]])`), q);
@@ -237,6 +237,7 @@ test("page: a document opens in the page; the editor shows only with this server
   // the rules, the schema and the settings are never offered for editing
   for (const path of [D.pillars.configuration.rules.path, D.pillars.configuration.schema.path, D.pillars.configuration.settings.path]) { await editor.run(`openDoc(${JSON.stringify(path)})`); assert.equal(editor.run("docState.editable"), false, path); }
   assert.equal(editor.run(`docInfo("brain/contexts/company/memories.jsonl")`), null);
+  assert.equal(editor.run(`docInfo("memories/2026-11.jsonl")`), null);
 });
 
 test("page: the layout click is read from the layout buttons only, never from #doc-view, which carries the same attribute", () => {

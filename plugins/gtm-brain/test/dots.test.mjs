@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // Connecting the dots (new-brain test, 2026-11-12): six plain sentences, each checked for what the brain
 // settles itself (a date with one reading, the one project a known person is in) and what it asks, in one
 // question (a date with two readings, a new company's website, several projects). Nothing is guessed.

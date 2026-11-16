@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 process.env.GTM_BRAIN_NO_WATCH = "1";
 // Lane S1 (0.35.0): topic summaries are written on demand, in the chat that asks, and cached until new notes
 // arrive. No background model run starts after a save; no reply promises a summary "shortly"; a failed write

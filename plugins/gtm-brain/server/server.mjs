@@ -32,6 +32,7 @@ import { layoutBlock } from "../lib/layout-version.mjs";
 import { relativeDates } from "../lib/dots.mjs";
 import { rulePageAnswer, pageForCall, rulePageText, rulePageIndex, rulePages } from "../lib/rule-pages.mjs";
 import { foldStatus as foldStatusText } from "../lib/opening.mjs";
+import { workDir } from '../lib/brain-paths.mjs';
 
 const P = dirname(dirname(fileURLToPath(import.meta.url)));
 const lib = await import(join(P, "lib", "brain.mjs"));
@@ -49,7 +50,7 @@ const text = (s, isError = false) => ({ content: [{ type: "text", text: s.trim()
 const result = r => text([r.out, r.err].filter(Boolean).join("\n"), r.code !== 0);
 const isBrain = p => lib.isBrain(p);
 const VERSION = (() => { try { return JSON.parse(readFileSync(join(P, ".codex-plugin", "plugin.json"), "utf8")).version || "0.0.0"; } catch { return "0.0.0"; } })();
-const brainError = p => text(`${p || "(no path)"} is not a brain: no brain/admin.md there. Pass the workspace folder you are in, or run setup_brain in an empty folder.`, true);
+const brainError = p => text(`${p || "(no path)"} is not a brain: no settings file there (configuration/settings.yaml; config/settings.yaml or brain/admin.md in an older brain). Pass the workspace folder you are in, or run setup_brain in an empty folder.`, true);
 const projectError = (brain, project) => { if (!project) return null; const known = lib.readProjects(brain).map(p => p.slug); return known.includes(project) ? null : text(`no project ${project}; projects: ${known.join(", ") || "none"}. The chat's opening lines name the project; omit it in the brain's own chat.`, true); };
 const list = a => (Array.isArray(a) ? a : String(a || "").split(",")).map(s => String(s).trim()).filter(Boolean);
 
@@ -80,7 +81,7 @@ const TOOLS = [
       let tools = "";
       // work/tools.json is an object keyed by tool: { attio: { tool, plugin, status, test, note } }
       try {
-        const t = JSON.parse(readFileSync(join(brain, "work", "tools.json"), "utf8")), keys = new Set(((lib.readAdmin(brain) || {}).tools || []).map(lib.toolKey));
+        const t = JSON.parse(readFileSync(join(workDir(brain), "tools.json"), "utf8")), keys = new Set(((lib.readAdmin(brain) || {}).tools || []).map(lib.toolKey));
         tools = Object.entries(t).filter(([k]) => keys.has(k)).map(([, x]) => `${x.tool}: ${x.status}${x.test ? ` (read test ${x.test})` : ""}`).join(", ");
       } catch {}
       return text(`${r.out}${r.err}\nLoaded in this ${project ? `project (${project})` : "chat"}: ${loaded.length ? loaded.join(", ") : "nothing (admin only)"}${tools ? `\nTools: ${tools}` : ""}\n${docs.documentsLine(brain)}\nSummaries: written when asked; load_context of a topic whose summary is behind gives the notes and as_of to write it once with compile_apply` + companyLine(brain) + `\n${lib.onboardingInstruction(brain, { project })}`, r.code !== 0);
@@ -126,7 +127,7 @@ const TOOLS = [
       const started = await run(brain, "../server/dash.mjs", ["--start", ...viewing]);
       const url = started.out.trim().split("\n").pop() || "";
       const r = await run(brain, "gtm-brain-render/render.mjs");
-      if (!/^http:/.test(url)) return text(`${r.out}${started.err}\nThe dashboard server did not start; the page is at work/home/index.html.`, true);
+      if (!/^http:/.test(url)) return text(`${r.out}${started.err}\nThe dashboard server did not start; the page is at ${lib.workName(brain)}/home/index.html.`, true);
       return text(`${r.out}\n${host().texts.dashboardOpened(url)}`);
     } },
   { name: "advise", title: "Checking how the brain is doing", readOnly: true,
@@ -158,8 +159,8 @@ const TOOLS = [
     description: "Propose new workplace settings: pass the complete proposed file (brain/admin.md, or config/settings.yaml where the brain has config/; the opening lines name it). It is written to work/admin.proposed.md and the diff comes back. Use the diff internally to explain every substantive change in plain language, including old and new values and removals; do not paste raw diffs unless requested. Then call approve_change: its form shows the person the change with an APPROVE choice, and only their click applies it. Never ask for APPROVE in the chat.",
     inputSchema: schema({ content: str("The complete proposed settings file, plain hyphens only") }, ["brain", "content"]),
     async call({ brain, content }) {
-      mkdirSync(join(brain, "work"), { recursive: true });
-      writeFileSync(join(brain, "work", "admin.proposed.md"), String(content));
+      mkdirSync(workDir(brain), { recursive: true });
+      writeFileSync(join(workDir(brain), "admin.proposed.md"), String(content));
       return result(await run(brain, "gtm-brain-approve/approve.mjs", ["--diff"]));
     } },
   { name: "share_brain", title: "Sharing the brain on GitHub", readOnly: false,
@@ -326,8 +327,8 @@ const TOOLS = [
       const { actions, error } = lib.readInteractions(brain); if (error) return text(`error: ${error}`, true);
       const errs = lib.validateInteraction(brain, interaction, { existing: actions });
       if (errs.length) return text(`refused: ${errs.join("; ")}`, true);
-      mkdirSync(join(brain, "work"), { recursive: true });
-      writeFileSync(join(brain, "work", "interaction.proposed.json"), JSON.stringify(interaction, null, 2) + "\n");
+      mkdirSync(workDir(brain), { recursive: true });
+      writeFileSync(join(workDir(brain), "interaction.proposed.json"), JSON.stringify(interaction, null, 2) + "\n");
       lib.rerender(brain);
       return text(`proposed: ${interaction.name} (${interaction.external === false ? "no tool step, recorded at once" : interaction.tool}); then call approve_change with kind interaction: its form asks the person for APPROVE. It records in ${interaction.record.context}: ${interaction.record.content}`);
     } },
@@ -362,9 +363,9 @@ const TOOLS = [
       }
       const admin = kind !== "interaction";
       // Layout 3: a settings change by anyone but the owner is kept for the owner, no form (nothing is applied).
-      if (admin && own.ownerRules(brain) && !own.isOwner(brain, own.personHere(brain, by)) && existsSync(join(brain, "work", "admin.proposed.md"))) return result(await run(brain, "gtm-brain-approve/approve.mjs", ["--propose", "--by", String(by || "")]));
-      const file = join(brain, "work", admin ? "admin.proposed.md" : "interaction.proposed.json");
-      if (!existsSync(file)) return text(`nothing to approve: no ${admin ? "work/admin.proposed.md (propose_admin_change writes it)" : "work/interaction.proposed.json (propose_interaction writes it)"}.`, true);
+      if (admin && own.ownerRules(brain) && !own.isOwner(brain, own.personHere(brain, by)) && existsSync(join(workDir(brain), "admin.proposed.md"))) return result(await run(brain, "gtm-brain-approve/approve.mjs", ["--propose", "--by", String(by || "")]));
+      const file = join(workDir(brain), admin ? "admin.proposed.md" : "interaction.proposed.json");
+      if (!existsSync(file)) return text(`nothing to approve: no ${lib.workName(brain)}/${admin ? "admin.proposed.md (propose_admin_change writes it)" : "interaction.proposed.json (propose_interaction writes it)"}.`, true);
       let what;
       if (admin) { const d = await run(brain, "gtm-brain-approve/approve.mjs", ["--diff"]); if (d.code) return result(d); what = d.out.replace(/\n*Apply it with approve_change[^\n]*\s*$/, "").trim(); }
       else { try { const i = JSON.parse(readFileSync(file, "utf8")); what = `Interaction ${i.name} (${i.external === false ? "no tool step: the note is recorded at once, without a tool confirming anything" : `${i.tool}: ${i.operation}`}). It records in ${i.record?.context}: ${i.record?.content}`; } catch (e) { return text(`the proposal is not valid JSON: ${e.message}`, true); } }
@@ -651,7 +652,7 @@ function logCall(args, name, res) {
   if (!isBrain(args.brain)) return;
   const said = (res?.content || []).map(c => c.text || "").join("\n");
   const line = { at: new Date().toISOString().replace(/\.\d+Z$/, "Z"), session: "", project: typeof args.project === "string" ? args.project : "", tool: `mcp__gtm_brain__${name}`, server: "gtm_brain", name, computer: false, title: TOOLS.find(t => t.name === name)?.title || "", error: !!res?.isError, empty: READS.has(name) && /nothing about |no rows|unknown: |^Not found: /m.test(said) };
-  try { appendFileSync(join(args.brain, "work", "tool-usage.jsonl"), JSON.stringify(line) + "\n"); } catch {}
+  try { appendFileSync(join(workDir(args.brain), "tool-usage.jsonl"), JSON.stringify(line) + "\n"); } catch {}
 }
 
 /* ---------- The save nudge ---------- */

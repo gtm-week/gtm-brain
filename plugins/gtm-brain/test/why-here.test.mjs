@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // Why is this here (Artur, 2026-11-11: files scattered without asking): save's placed records the RULES.md
 // row and reason in the commit, query why reads it back, and a file that arrived without one is named
 // at the next chat start.

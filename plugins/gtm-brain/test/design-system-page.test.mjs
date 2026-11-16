@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // The design system as a page: design-system.html beside design-system.md. The shipped starter is one self-contained
 // file; setup writes it in a new brain (layout 3 and layout 2), an upgrade adds it once where it is missing and never
 // touches one that is there; an older starter text still counts as not written; the dashboard row says when the page

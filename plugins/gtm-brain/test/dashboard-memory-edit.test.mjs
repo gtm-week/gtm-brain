@@ -23,7 +23,7 @@ execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "Ref
 const lib = await import(`${P}/lib/brain.mjs`);
 const { MEMORY_EDIT_OPS, MEMORY_EDIT_TEXT_MAX } = await import(`${P}/server/memory-edit.mjs`);
 const { noteIndex, wholeTexts } = await import(`${P}/lib/dashboard-pillars.mjs`);
-writeFileSync(join(root, "work", "person.json"), JSON.stringify({ handle: "marta-nowak" }) + "\n");
+writeFileSync(join(lib.workDir(root), "person.json"), JSON.stringify({ handle: "marta-nowak" }) + "\n");
 const dash = (extra = {}, ...a) => execFileSync(process.execPath, [`${P}/server/dash.mjs`, root, ...a], { encoding: "utf8", env: { ...env, ...extra } }).trim();
 after(() => { try { dash({}, "--stop"); } catch {} for (const r of [root, env.CODEX_HOME, env.HOME]) { try { rmSync(r, { recursive: true, force: true }); } catch {} } });
 
@@ -61,7 +61,7 @@ const send = (method, path, { headers = {}, body = null } = {}) => new Promise((
   req.on("error", reject); if (body !== null) req.write(body); req.end();
 });
 const edit = (input, headers = {}) => send("POST", "/memory-edit", { headers: { origin, "content-type": "application/json", "x-gtm-brain-token": token, ...headers }, body: typeof input === "string" ? input : JSON.stringify(input) });
-const lines = ctx => { const f = join(root, "brain", "contexts", ctx, "memories.jsonl"); return existsSync(f) ? readFileSync(f, "utf8").split("\n").filter(Boolean) : []; };
+const lines = ctx => lib.readMemories(root, ctx).map(m => JSON.stringify(m));   // a topic's notes, wherever this layout keeps them
 const logs = () => ({ company: lines("company"), pipeline: lines("pipeline") });
 const grown = (before, by) => { const now = logs(); for (const c of Object.keys(before)) { assert.deepEqual(now[c].slice(0, before[c].length), before[c], `${c}: no line was changed or removed`); assert.equal(now[c].length - before[c].length, by[c] || 0, `${c}: lines added`); } };
 const commits = () => execFileSync("git", ["-C", root, "log", "--format=%s"], { encoding: "utf8" }).trim().split("\n").length;
@@ -205,9 +205,9 @@ test("the page data marks an exact copy of an earlier note in force, and carries
   assert.equal(of(long.id).more, true); assert.equal(of(first.id).more, undefined);
   assert.equal(wholeTexts(lib.listContexts(root))[long.id], long.content); assert.equal(wholeTexts(lib.listContexts(root))[first.id], undefined);
   render();
-  const D = JSON.parse(readFileSync(join(root, "work", "home", "data.json"), "utf8"));
+  const D = JSON.parse(readFileSync(join(lib.workDir(root), "home", "data.json"), "utf8"));
   assert.match(D.pillars.memories.whole, /^entities-[a-f0-9-]{36}\/notes-whole\.json$/);
-  assert.equal(JSON.parse(readFileSync(join(root, "work", "home", D.pillars.memories.whole), "utf8")).texts[long.id], long.content);
+  assert.equal(JSON.parse(readFileSync(join(lib.workDir(root), "home", D.pillars.memories.whole), "utf8")).texts[long.id], long.content);
 });
 
 // ---------- the page: the shipped client in the DOM harness ----------
@@ -218,8 +218,8 @@ const tick = () => new Promise(r => setTimeout(r, 5));
 test("page: each menu action sends exactly one named operation, a refused save keeps what was typed, and nothing shows off the live page", async () => {
   add("company", { kind: "question", content: "Is the Berlin pilot paid for by the customer?" }, 0.1);
   render();
-  const D = JSON.parse(readFileSync(join(root, "work", "home", "data.json"), "utf8")), all = JSON.parse(readFileSync(join(root, "work", "home", D.pillars.memories.file), "utf8")).notes;
-  const whole = JSON.parse(readFileSync(join(root, "work", "home", D.pillars.memories.whole), "utf8"));
+  const D = JSON.parse(readFileSync(join(lib.workDir(root), "home", "data.json"), "utf8")), all = JSON.parse(readFileSync(join(lib.workDir(root), "home", D.pillars.memories.file), "utf8")).notes;
+  const whole = JSON.parse(readFileSync(join(lib.workDir(root), "home", D.pillars.memories.whole), "utf8"));
   const sent = []; let answer = () => ({ ok: true, note: "Saved." });
   const fetcher = async (path, opts) => {
     if (path === "/memory-edit") { sent.push({ headers: opts.headers, method: opts.method, body: JSON.parse(opts.body) }); const j = answer(sent.at(-1).body); return { ok: j.ok, status: j.ok ? 200 : 422, json: async () => j }; }
@@ -330,9 +330,9 @@ test("page: each menu action sends exactly one named operation, a refused save k
 
 test("nobody known at this computer, or a scheduled or background run: no note is changed", async () => {
   const before = logs(), id = inForce("company").find(m => !m.relation && m.kind === "note").id;
-  rmSync(join(root, "work", "person.json")); execFileSync("git", ["-C", root, "config", "user.email", "nobody@users.noreply.github.com"]);
+  rmSync(join(lib.workDir(root), "person.json")); execFileSync("git", ["-C", root, "config", "user.email", "nobody@users.noreply.github.com"]);
   const anon = await edit({ op: "retract", id }); assert.equal(anon.status, 403); assert.match(anon.json.note, /does not know who is at this computer/);
-  writeFileSync(join(root, "work", "person.json"), JSON.stringify({ handle: "marta-nowak" }) + "\n");
+  writeFileSync(join(lib.workDir(root), "person.json"), JSON.stringify({ handle: "marta-nowak" }) + "\n");
   dash({}, "--stop");
   dash({ GTM_BRAIN_RUN: "1" }, "--start", `--port=${PORT}`);
   const fresh = (await (await fetch(url, { headers: { connection: "close" } })).text()).match(/gtm-brain-edit" content="([a-f0-9]{64})"/)[1];

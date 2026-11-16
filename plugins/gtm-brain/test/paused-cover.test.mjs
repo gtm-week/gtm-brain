@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // A summary edited by hand is paused until reviewed, and no run touches it. Artur's ICP summary stayed on
 // 2026-10-15 for a month with nobody told (2026-11-11 sync): health, the chat start and the run log now say so.
 import { test } from "node:test";

@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // Review of the slim rulebook (0.35.0): the ways it could look right and be wrong. A search that returns a page
 // for a word no page is about; a status reply folded although the opening lines never arrived whole; a tool named
 // by a page that does not exist; a person's own additions that leave the upgrader refusing forever.

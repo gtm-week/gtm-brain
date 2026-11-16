@@ -5,14 +5,15 @@
 // takes readerLock exclusively: no open snapshot ever outlives the files it reads.
 import { existsSync, mkdirSync, renameSync, rmSync, lstatSync, writeFileSync, appendFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { workDir } from './brain-paths.mjs';
 let DatabaseSync;
 try { ({ DatabaseSync } = await import('node:sqlite')); } catch {}
 // Node 22.13-22.15 and 23 ship node:sqlite without FTS5; the index needs both.
 const fts5 = () => { const db = new DatabaseSync(':memory:'); try { db.exec('CREATE VIRTUAL TABLE t USING fts5(x)'); return true; } catch { return false; } finally { db.close(); } };
 let indexable;
 export const hasMemoryIndex = () => indexable ??= typeof DatabaseSync?.prototype.function === 'function' && fts5();
-export const indexPath = root => join(root, 'work/memory-index.sqlite');
-const resetPath = root => join(root, 'work/memory-index.reset');
+export const indexPath = root => join(workDir(root), 'memory-index.sqlite');
+const resetPath = root => join(workDir(root), 'memory-index.reset');
 export const cacheResetPending = root => existsSync(resetPath(root));
 export function openDatabase(path, { readOnly = false } = {}) {
   if (existsSync(path) && lstatSync(path).isSymbolicLink()) throw new Error(`Memory index must not be a symbolic link: ${path}`);
@@ -32,9 +33,9 @@ function trace(root, event, since) {
 export function cacheLock(root, timeoutMs = 1000) {
   if (!Number.isInteger(timeoutMs) || timeoutMs < 0 || timeoutMs > 60000) throw new Error('Invalid memory cache lock timeout');
   if (!hasMemoryIndex()) throw new Error('Indexed search requires Node 22.16+ or 24+ (SQLite with FTS5). Update Node.');
-  mkdirSync(join(root, 'work'), { recursive: true });
+  mkdirSync(workDir(root), { recursive: true });
   let db;
-  try { db = openDatabase(join(root, 'work/memory-index-lock.sqlite')); }
+  try { db = openDatabase(join(workDir(root), 'memory-index-lock.sqlite')); }
   catch (e) { throw new Error(`Cannot open memory index coordination file: ${e.message}. Stop all GTM Brain sessions before repairing the local coordination file; a live cache must not be removed.`); }
   const asked = performance.now();
   try { db.exec(`PRAGMA busy_timeout=${timeoutMs}; BEGIN IMMEDIATE`); }
@@ -47,8 +48,8 @@ export function cacheLock(root, timeoutMs = 1000) {
 // exactly a readers-writer lock, and a killed process releases its lock with its descriptors.
 function readersFile(root, timeoutMs) {
   if (!Number.isInteger(timeoutMs) || timeoutMs < 0 || timeoutMs > 60000) throw new Error('Invalid memory cache lock timeout');
-  mkdirSync(join(root, 'work'), { recursive: true });
-  const path = join(root, 'work/memory-index-readers.sqlite');
+  mkdirSync(workDir(root), { recursive: true });
+  const path = join(workDir(root), 'memory-index-readers.sqlite');
   if (existsSync(path) && lstatSync(path).isSymbolicLink()) throw new Error(`Memory index coordination file must not be a symbolic link: ${path}`);
   const db = new DatabaseSync(path);
   db.exec(`PRAGMA busy_timeout=${timeoutMs}`);
@@ -75,7 +76,7 @@ function replace(root) {
   if (existsSync(resetPath(root)) && lstatSync(resetPath(root)).isSymbolicLink()) throw new Error('Memory index reset marker must not be a symbolic link');
   writeFileSync(resetPath(root), 'reset in progress\n');
   for (const suffix of ['', '-wal', '-shm']) {
-    const current = indexPath(root) + suffix, prior = join(root, 'work/memory-index.previous.sqlite') + suffix;
+    const current = indexPath(root) + suffix, prior = join(workDir(root), 'memory-index.previous.sqlite') + suffix;
     for (const path of [current, prior]) if (existsSync(path) && lstatSync(path).isSymbolicLink()) throw new Error(`Memory index must not be a symbolic link: ${path}`);
     rmSync(prior, { force: true });
     if (existsSync(current)) renameSync(current, prior);

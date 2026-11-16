@@ -22,7 +22,7 @@ if [ -e "$BRAIN" ]; then
     exit 1
   fi
   # Stop the dashboard server the old brain may have left running, then wipe.
-  [ -f "$BRAIN/work/dash.json" ] && node "$R/plugins/gtm-brain/server/dash.mjs" "$BRAIN" --stop 2>/dev/null || true
+  { [ -f "$BRAIN/work/dash.json" ] || [ -f "$BRAIN/.gtm-brain/dash.json" ]; } && node "$R/plugins/gtm-brain/server/dash.mjs" "$BRAIN" --stop 2>/dev/null || true
   rm -rf "$BRAIN"
   echo "wiped $BRAIN"
 fi
