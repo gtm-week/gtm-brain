@@ -900,40 +900,31 @@ paths need updating. [MIGRATING.md](MIGRATING.md) contains the full compatibilit
 
 ## Source layout
 
-```
-.agents/plugins/marketplace.json
-plugins/gtm-brain/
-  .codex-plugin/plugin.json
-  session/                    the chat start the MCP server runs on a chat's first call (list
-                              contexts, put back direct edits of protected files); no hooks
-  .mcp.json  server/          the operations as MCP tools (Remembering, Searching the brain, ...);
-                              dash.mjs serves the dashboard, revision events and its three guarded edits
-  lib/                        shared readers, validators, writers, search and identity logic; Node built-ins
-  skills/                     the twenty-six skills a person can ask for (all prefixed gtmb-): start,
-                              todo, sync, workflow, deepdive, strategy, unit-economics, define-icp,
-                              market-desk-research, voice, zynt-setup, freckle-setup, clay-setup,
-                              woodpecker-setup, surfer-setup, heyreach-setup,
-                              project, design-system, add-section,
-                              build-landing-page, publish-website, configure, skill, rules, schema,
-                              use-brain; what
-                              they used to be as separate skills lives on as their references
-    gtmb-use-brain/references/    load, create and edit contexts, remember, recall, names, compile,
-                              dashboard, manual save
-    gtmb-configure/references/ workplace approval, connect tools, update plugin
-    gtmb-start/references/  onboarding, the handoff import
-  scripts/gtm-brain-*/           the operation scripts the MCP server, session scripts and skills run (no SKILL.md)
-  starters/web-design-system/ Brian and Peakout's unchanged starter source and its preservation manifest
-  templates/                  AGENTS.md, the rules, schema and base document starters, .gitignore, the pre-commit hook
-  test/                       node --test 'plugins/gtm-brain/test/*.test.mjs'
-frontend/dashboard/           React dashboard source; built assets ship with the plugin
-scripts/sync-derived.mjs       generate shared policy blocks, schemas and host declarations
-dev-install.sh                install this checkout into Codex, no GitHub round trip
+For contributors. This is the plugin's repository, not a brain.
+
+```text
+plugins/gtm-brain/              everything that ships
+  .codex-plugin/plugin.json     the manifest and the version; the Claude Code files are generated from it
+  skills/gtmb-*/                the shipped skills, one folder each: SKILL.md and its references/
+  server/                       the MCP server (server.mjs) and the dashboard server (dash.mjs)
+  scripts/gtm-brain-*/          one folder per operation the server runs: remember, load, compile,
+                                render, setup, approve, upgrade, ...
+  lib/                          the file format and the only write path: notes, entities, documents,
+                                search, owner rules, paths; Node built-ins only
+  session/                      what runs at a chat's first call: the opening lines, the refresh
+  ontology/                     the plugin's own tools, described once and generated as MCP tools
+  policies/                     shared instruction text, copied into the marked blocks by sync-derived
+  templates/                    what setup writes into a new brain; legacy/ holds every shipped rulebook
+  starters/                     the website design system starter
+  test/                         node --test 'plugins/gtm-brain/test/*.test.mjs'; live/ and e2e/ are benchmarks
+frontend/dashboard/             dashboard frontend source and browser tests; built assets ship with the plugin
+scripts/sync-derived.mjs        regenerates derived text, schemas and the Claude Code declarations
+diagrams/                       the pictures and screenshots in this README
+dev-install.sh  dev-reset.sh    install this checkout into Codex; wipe and reinstall a test brain
 ```
 
-The plugin ships from `gtm-week/gtm-brain`, branch `main`.
-
-Describe a feature in its owning reference and link to it from the other guides. Shared
-agent policies are embedded automatically where an agent needs a self-contained document.
+The plugin ships from `gtm-week/gtm-brain`, branch `main`. Describe a feature once, in its owning
+document, and link to it from the others. More in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Before pushing to main
 
