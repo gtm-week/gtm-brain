@@ -87,7 +87,7 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
 - Shared question and Computer Use policies are authored in `plugins/gtm-brain/policies/`.
   Run `node scripts/sync-derived.mjs` after editing them or the single-memory input fields
   in the ontology. It refreshes the marked instruction blocks and batch schema; tests
-  enforce `--check`. Historical templates are excluded. See [CONTRIBUTING.md](CONTRIBUTING.md#maintaining-shared-text-and-schemas).
+  enforce `--check`. Historical templates are excluded. See [CONTRIBUTING.md](.github/CONTRIBUTING.md#maintaining-shared-text-and-schemas).
 - Three formal ontology objects: contexts, memories and entities. Entity kinds come from the
   brain's schema (`configuration/schema.md`): every `## <Kind>` section with a field table is a kind, and person,
   organization, product, offering, event, tool and meeting are the defaults that always exist (`lib/kinds.mjs`,
@@ -121,7 +121,7 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
   in this computer's folder (`.gtm-brain/`; `work/` before layout 4) and the committed version restored;
   `lib/brain-paths.mjs` `protectedFiles` is the list. The server logs its own calls to `tool-usage.jsonl` there; it
   does not see other connectors' calls, so the model marks an untested tool with `mark_tool`.
-  After any change to the plugin, re-run `./dev-install.sh` to install it.
+  After any change to the plugin, re-run `./scripts/dev-install.sh` to install it.
 - A change under `plugins/gtm-brain/` that people should receive bumps the version in
   `.codex-plugin/plugin.json`. `check-version.mjs` compares that number with the installed one,
   and the dashboard, the chat start and the advisor all read its answer: everything shipped without a
@@ -174,7 +174,7 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
   start. Run them before every commit that touches `lib/`, a skill script, a server or the session scripts.
   Before a push to `main`, `.githooks/pre-push` runs them and, when what ships changed,
   `test/live/harness-bench.mjs`: the plugin must not cost Codex solved tasks on work that is not
-  GTM (see CONTRIBUTING.md, Before pushing to main).
+  GTM (see .github/CONTRIBUTING.md, Before pushing to main).
 - The model reaches the skills through the MCP server (`server/server.mjs`, one tool per
   operation, each runs the skill's script in the brain). The server runs outside the sandbox, so
   every writer commits what it wrote at once (`lib.commit`, pushed in the background when there
@@ -207,7 +207,7 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
   the question ID through retracts and refresh the viewer without waiting for compilation.
   Only questions tagged brain-question enter the pending brain-question list; CRM tasks and
   business follow-ups remain context information. Keep chat choices in native Codex forms.
-- Install from this checkout with `./dev-install.sh`, then start a new chat in Codex (restart
+- Install from this checkout with `./scripts/dev-install.sh`, then start a new chat in Codex (restart
   the app only if old skills linger). No push needed to test. `${PLUGIN_ROOT}` is not
   substituted in `.mcp.json`; use `cwd: "./"`.
 - One commit path: every writer calls `lib.commit()` and prints its note. One cover writer:
