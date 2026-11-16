@@ -8,12 +8,13 @@ import {fileURLToPath} from 'node:url';
 const plugin=fileURLToPath(new URL('../',import.meta.url));
 function fixture(t, data) {
  const scratch=mkdtempSync(join(tmpdir(),'gtm-compile-recovery-')),root=join(scratch,'brain'),fake=join(scratch,'plugin'),bin=join(scratch,'bin');
- t.after(()=>rmSync(scratch,{recursive:true,force:true}));
- for(const p of [join(root,'brain'),join(root,'work'),join(fake,'lib'),bin,...['gtm-brain-compile','gtm-brain-schedule','gtm-brain-entities','gtm-brain-render'].map(s=>join(fake,'scripts',s))])mkdirSync(p,{recursive:true});
+ t.after(()=>{ try { rmSync(scratch,{recursive:true,force:true}); } catch {} });
+ for(const p of [join(root,'brain'),join(root,'work'),join(fake,'lib'),join(fake,'session'),bin,...['gtm-brain-compile','gtm-brain-schedule','gtm-brain-entities','gtm-brain-render'].map(s=>join(fake,'scripts',s))])mkdirSync(p,{recursive:true});
  writeFileSync(join(root,'AGENTS.md'),'# Fixture');writeFileSync(join(root,'brain/admin.md'),'# Fixture');
  for(const file of ['background-compile.sh','compile-status.mjs','worker-lock.mjs','run-bounded.mjs','run-usage.mjs','run-args.mjs'])copyFileSync(join(plugin,'scripts/gtm-brain-compile',file),join(fake,'scripts/gtm-brain-compile',file));
  copyFileSync(join(plugin,'scripts/gtm-brain-schedule/scheduled-run.sh'),join(fake,'scripts/gtm-brain-schedule/scheduled-run.sh'));
  copyFileSync(join(plugin,'lib/process-lock.mjs'),join(fake,'lib/process-lock.mjs'));
+ copyFileSync(join(plugin,'session/resolve.sh'),join(fake,'session/resolve.sh'));   // the shell scripts ask it whether this is a brain
  const dataPath=join(root,'work/test-data.json');writeFileSync(dataPath,JSON.stringify({contexts:['sales'],entities:[],calls:0,...data}));
  for(const [file,field,id] of [['gtm-brain-compile/compile.mjs','contexts','slug'],['gtm-brain-entities/compile-entity.mjs','entities','id']])writeFileSync(join(fake,'scripts',file),`import fs from 'node:fs'; const d=JSON.parse(fs.readFileSync('work/test-data.json','utf8')); if(d.bad==='${field}'){console.error('Cannot parse fixture ${field}');process.exit(7)} console.log(JSON.stringify(d.${field}.map(x=>({${id}:x})))); if(d.badExit==='${field}')process.exit(7);`);
  writeFileSync(join(fake,'scripts/gtm-brain-render/render.mjs'),`import fs from 'node:fs'; if(fs.existsSync('work/compile.json'))fs.appendFileSync('work/states.jsonl',fs.readFileSync('work/compile.json','utf8')+'\\n');`);
@@ -65,7 +66,7 @@ test('empty argument generation is rejected before codex starts',t=>{
  assert.match(readFileSync(join(f.root,'work/hooks.log'),'utf8'),/failed: invalid compilation arguments or prompt/);
 });
 test('bounded run sends only its prompt and EOF while caller stdin remains open',async t=>{
- const root=mkdtempSync(join(tmpdir(),'gtm-prompt-input-'));t.after(()=>rmSync(root,{recursive:true,force:true}));
+ const root=mkdtempSync(join(tmpdir(),'gtm-prompt-input-'));t.after(()=>{ try { rmSync(root,{recursive:true,force:true}); } catch {} });
  const prompt=join(root,'prompt'),output=join(root,'received'),script=join(root,'reader.cjs');
  writeFileSync(prompt,'Expected prompt.');
  writeFileSync(script,`const fs=require('node:fs');fs.writeFileSync(${JSON.stringify(output)},fs.readFileSync(0,'utf8'));`);
@@ -86,7 +87,7 @@ test('hung model runs time out, exhaust retries and release the lock',t=>{
  const result=f.run();assert.equal(result.status,1,result.stderr);assert.ok(f.data().calls>=1 && f.data().calls<=3);assert.equal((result.stdout.match(/Compilation timed out/g)||[]).length,3,result.stdout);assert.equal(f.state().attempt,3);assert.equal(f.state().state,'failed');assert.equal(existsSync(join(f.root,'work/compile.lock')),false);assert.match(result.stdout,/timed out/);
 });
 test('the timeout kills a TERM-resistant descendant even when the group leader exits', {skip:process.platform==='win32'},async t=>{
- const root=mkdtempSync(join(tmpdir(),'gtm-process-timeout-'));t.after(()=>rmSync(root,{recursive:true,force:true}));
+ const root=mkdtempSync(join(tmpdir(),'gtm-process-timeout-'));t.after(()=>{ try { rmSync(root,{recursive:true,force:true}); } catch {} });
  const beats=join(root,'beats'),script=join(root,'leader.cjs'),prompt=join(root,'prompt');writeFileSync(prompt,'');
  writeFileSync(script,`const {spawn}=require('node:child_process');spawn(process.execPath,['-e',${JSON.stringify(`const fs=require('node:fs');process.on('SIGTERM',()=>{});setInterval(()=>fs.appendFileSync(${JSON.stringify(beats)},'x'),20);`)}],{stdio:'inherit'});setInterval(()=>{},1000);`);
  const result=spawnSync(process.execPath,[join(plugin,'scripts/gtm-brain-compile/run-bounded.mjs'),'--prompt-file',prompt,process.execPath,script],{env:{...process.env,GTM_BRAIN_COMPILE_TIMEOUT_MS:'750'},encoding:'utf8',timeout:10000});

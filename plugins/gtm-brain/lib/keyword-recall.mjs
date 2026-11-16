@@ -2,6 +2,7 @@
 import * as lib from './brain.mjs';
 import { assetSummary } from './assets.mjs';
 import { withMemoryIndex, MAX_RESULT_BYTES } from './memory-index.mjs';
+import { askSourceLines } from './ask-source.mjs';
 
 export function keywordRecall(root, query, project = null) {
   query = String(query || '').trim();
@@ -31,12 +32,15 @@ export function keywordRecall(root, query, project = null) {
           out.push(`\n${project ? '### ' : '## '}${context}${loaded.includes(context) ? ' (loaded)' : ' (not loaded)'} · ${hits.length}`);
           for (const m of hits) {
             const tag = m.tags.find(t => t.startsWith('project:'));
-            out.push(`- ${lib.memoryTimeText(m)} · ${m.kind}${tag ? ` · [${m.context} · ${tag.slice(8)}]` : ''} · ${m.authors.join(', ')}${m.people.length ? ' · ' + m.people.join(', ') : ''}\n  ${m.content}${assetSummary(root, m)}${m.source.length ? '\n  source: ' + lib.sourceText(m.source) : ''}`);
+            out.push(`- ${m.id} · ${lib.memoryTimeText(m)} · ${m.kind}${tag ? ` · [${m.context} · ${tag.slice(8)}]` : ''} · ${m.authors.join(', ')}${m.people.length ? ' · ' + m.people.join(', ') : ''}\n  ${m.content}${assetSummary(root, m)}${m.source.length ? '\n  source: ' + lib.sourceText(m.source) : ''}`);
           }
         }
       }
       const unloaded = [...new Set(result.groups.flat().map(h => h.context))].filter(c => !loaded.includes(c));
       if (unloaded.length) out.push(`\nHits in contexts not loaded: ${unloaded.join(', ')}. Load one to work there.`);
+      // RULES.md Ask the source: hits from a connected tool older than its row allows send Codex to the tool
+      const ask = askSourceLines(root, result.groups.flat(), { day: at => lib.localDateTime(at).slice(0, 10) });
+      if (ask.length) out.push(`\n${ask.join('\n')}`);
     }
     const text = out.join('\n');
     if (Buffer.byteLength(text) > MAX_RESULT_BYTES) throw new Error('Recall results exceed 2 MiB. Use more specific keywords; no partial result was returned.');

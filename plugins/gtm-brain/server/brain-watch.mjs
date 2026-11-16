@@ -7,6 +7,7 @@ import {spawn} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import * as lib from '../lib/brain.mjs';
 import { assetRows, resolveAssetFile } from '../lib/assets.mjs';
+import { pagePaths } from '../lib/layout.mjs';
 const root=resolve(process.argv[2]||'.'),mode=process.argv[3];
 const work=join(root,'work'),stateFile=join(work,'brain-watch.json'),lock=join(work,'brain-watch.lock');
 const state=()=>{try{return JSON.parse(readFileSync(stateFile,'utf8'))}catch{return null}};
@@ -14,7 +15,7 @@ const alive=pid=>{try{process.kill(pid,0);return true}catch{return false}};
 if(mode==='--stop'){
  const old=state();if(old?.pid&&alive(old.pid))process.kill(old.pid);process.exit(0);
 }
-if(!existsSync(join(root,'brain','admin.md')))process.exit(1);
+if(!lib.isBrain(root))process.exit(1);
 mkdirSync(work,{recursive:true});
 if(mode==='--start'){
  const old=state();if(old?.pid&&alive(old.pid)&&old.script===fileURLToPath(import.meta.url))process.exit(0);
@@ -32,11 +33,11 @@ const finish=()=>{if(state()?.pid===process.pid){rmSync(stateFile,{force:true});
 process.on('SIGTERM',finish);process.on('SIGINT',finish);
 let attachmentKey = '', attachments = [];
 function fingerprint(){
- const files=['brain/admin.md','brain/entities.md','AGENTS.md','work/projects.json','work/asset-machine.json'];
+ const files=[lib.settingsFile(root),'brain/entities.md','AGENTS.md','work/projects.json','work/asset-machine.json'];
  try{for(const d of readdirSync(join(root,'brain','contexts'),{withFileTypes:true}))if(d.isDirectory()&&!d.isSymbolicLink()){
   files.push(`brain/contexts/${d.name}/context.md`,`brain/contexts/${d.name}/memories.jsonl`);
  }}catch{}
- try{for(const d of readdirSync(join(root,'brain','entities'),{withFileTypes:true}))if(d.isFile()&&d.name.endsWith('.md'))files.push(`brain/entities/${d.name}`)}catch{}
+ try{files.push(...pagePaths(root))}catch{}
  const key = JSON.stringify(files.sort().map(file=>{try{const s=statSync(join(root,file));return[file,s.mtimeMs,s.size]}catch{return[file,null]}}));
  if (key !== attachmentKey) { try { attachments = assetRows(root).map(({id,entity,label,role,status,file}) => ({id,asset:{entity,label,role,status,file}})); attachmentKey = key; } catch {} }
  // Stat only explicitly attached files, never scan the folders they live in.
@@ -44,7 +45,7 @@ function fingerprint(){
 }
 let observed=fingerprint(),rendered='',stableAt=Date.now();
 function tick(){
- if(!existsSync(join(root,'brain','admin.md')))return; // An editor can temporarily rename this file.
+ if(!lib.isBrain(root))return; // An editor can temporarily rename this file.
  const current=fingerprint();
  if(current!==observed){observed=current;stableAt=Date.now();return}
  if(current===rendered||Date.now()-stableAt<500)return;

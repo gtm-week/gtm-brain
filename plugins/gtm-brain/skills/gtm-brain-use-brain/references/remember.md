@@ -48,7 +48,7 @@ Each entry takes:
 - `people`: every entity the text names, as written in the source: people, and just as much
   companies, products and teams (Castorama, ByteDance, Wispr Flow). A name left out here is not
   an entity anywhere. A new name lands in the registry as a person; if it is not one, follow
-  with `add_name` and its `kind` (organization, product; company/team are organization subtypes), without asking when the note makes
+  with `add_name` and its `kind` (organization, product, offering, event, tool; company/team are organization subtypes), without asking when the note makes
   it plain. If the tool answers *possibly entities, not recorded as such: "Castorama"*, do that
   now for each one that is an entity. Compile collects these names, with their kinds, into the
   context's cover, and the dashboard counts them from the text as well once they are known.
@@ -79,8 +79,14 @@ The tool assigns the existing `at` timestamp to when the memory is recorded. A h
 import is recorded now, with its relevant historical dates in the text. Correct a date with
 a new memory using `supersedes`. Structured event dates belong to the future event abstraction.
 
-If exactly one context is loaded, `context` can be omitted. The tool answers "kept" (or "kept
-and shared"): the note is in the company memory; nothing to save, nothing to add. For several
+`context` can be omitted: the note goes to the single loaded context, else to the one active
+context where its people or companies already have notes. With no unique answer the entry is held
+and the candidate contexts are listed in one line; send it again with `context`. Each kept note
+starts with one short line for the person: `saved in <Context title>: <the note>`. The tool
+answers "kept" (or "kept, not shared yet" when the brain has a remote: the push runs in the
+background and records its result, and the chat start says when one failed): the note is in the
+company memory; nothing to save, nothing to add. Never tell the person a note reached teammates
+before a push succeeded. For several
 entries it answers `kept 3 of 4` and numbers each line `#1`, `#2` by the entry's position, so you
 can see which landed and which did not.
 
@@ -106,11 +112,20 @@ name). A first name shared by two known entities is asked about like any look-al
 Before saving, connect the note to what the brain knows: [connect the dots](connect-dots.md).
 
 A first name alone that nobody known has is never saved as a new person (rule P3 in the brain's
-README): the entry is held with *"Max" is one word and nobody known has it*. When the note or its
-source plainly says it is a company, product or team, send it in `companies` (or `new_names` and
-`add_name` with its kind) without asking. A person: ask once for the full name, all held names in
-one question (*"Max who? The full name, so the brain knows him later"*), then `remember` with the
-full name in `people`. The note keeps how each name matched and by which rule (P1-P4), and the
+README). When the note or its source plainly says it is a company, product or team, send it in
+`companies` (or `new_names` and `add_name` with its kind) and nothing is asked. Otherwise the note
+is saved first, with the name as written and no person made for it, and the reply carries the
+question right under the saved line: *Who is Anna? Full name or company.* A first name several
+known people have is saved the same way and asked *Which Anna: Anna Kowalska or Anna Nowak?* The
+question is kept in the note's context as a pending brain question (tags `brain-question`,
+`name-question`, `about:<note id>`), so it shows on the dashboard and survives the chat. Ask it,
+in the one question of the turn, and wait. When the person answers, `remember` one entry in that
+context with `retracts:` the question's id, kind `decision`, the answer in their words, and the
+full name in `people` (someone new: also in `new_names`), or the company in `companies`. The brain
+then writes a note that supersedes the saved one, with the same words and the name attached; the
+old line is never edited. Sending the saved note again word for word (with `new_names` when the
+person insists on the one word) also replaces it and closes the question. A relative date or a
+look-alike name in the same note still holds the whole entry, with every name in the one question. The note keeps how each name matched and by which rule (P1-P4), and the
 person's brief shows it under *How this name was matched*: that is the answer to "who is Max, and
 why do you think so".
 
@@ -184,6 +199,12 @@ read with no new information adds nothing, while a read that reveals a new fact 
 from its result before recording it as completed; a request, failure, or ambiguous response is
 not proof of success. A failure can itself reveal a finding or unresolved issue worth recording.
 Agent proposals are not user decisions until the user adopts them.
+
+After three reads in a chat with nothing saved (`query`, `load_context`), the read's reply ends with
+one line, "Nothing saved in this chat since <time>: ...": check the turn against the triggers above
+and save what it established, or carry on when it established nothing. The line comes back only
+after five more reads, never in a scheduled or background run, and a brain turns it off with
+`save_nudge: off` in `brain/admin.md`.
 
 Some completed actions are not company knowledge and are not recorded unless the person asks
 to keep them: an unsent draft (record the email once it is sent), an event or reminder on the

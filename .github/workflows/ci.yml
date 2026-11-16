@@ -65,3 +65,26 @@ jobs:
         run: |
           drift="$(git status --porcelain plugins/gtm-brain/scripts/gtm-brain-render/ui/)"
           [ -z "$drift" ] || { echo "$drift"; echo "Rebuild the dashboard: npm run build --prefix frontend/dashboard, then commit plugins/gtm-brain/scripts/gtm-brain-render/ui/"; exit 1; }
+
+  # The dashboard in headless Chromium (SETUP.md, Checking the dashboard in a browser). Informational: a
+  # failure shows on the run but does not fail it, and the job stops after five minutes.
+  dashboard-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/dashboard/package-lock.json
+      - run: npm ci --prefix frontend/dashboard
+      - run: npm run test:e2e:install --prefix frontend/dashboard -- --with-deps
+      - run: npm run test:e2e --prefix frontend/dashboard
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: dashboard-browser-results
+          path: frontend/dashboard/.e2e/results/
+          retention-days: 7

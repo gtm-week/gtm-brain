@@ -3,10 +3,11 @@
 import { readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
-import { MemoryIndex } from './memory-index.mjs';
+import { openForRead } from './memory-index.mjs';
 import { identity, editedBody, schemaFacts } from './entities.mjs';
 import { readSchema } from './schema.mjs';
 import { entityStamp } from './entity-stamp.mjs';
+import { askSourceRevision } from './ask-source.mjs';
 import { memoryStamp } from './memory-journal.mjs';
 import * as lib from './brain.mjs';
 
@@ -23,13 +24,12 @@ export function refreshIndexedPages(root, registry, publish, { readOnly = false 
   let saved; try { saved = JSON.parse(readFileSync(path, 'utf8')); } catch {}
   const contexts = lib.listContexts(root, { includeMemories: false });
   const sources = () => digest(contexts.map(c => [c.slug, memoryStamp(join(c.dir, 'context.md'))?.key, memoryStamp(join(c.dir, 'memories.jsonl'))?.key]));
-  const sourceRevision = sources(), schemaRevision = readSchema(root).schema?.hash || readSchema(root).error?.message || null;
-  if (!readOnly && saved?.format === 1 && saved.sources === sourceRevision && saved.identities === entityStamp(root) && (saved.schema ?? null) === schemaRevision) return [];
-  // A source write must not fail merely because a background view currently
-  // reads the cache. Readers keep their short retry window; writers wait for it.
-  const index = new MemoryIndex(root, { lockTimeoutMs: readOnly ? 1000 : 30000 }), changed = [], checkpoints = {};
+  const sourceRevision = sources(), schemaRevision = readSchema(root).schema?.hash || readSchema(root).error?.message || null, askRevision = askSourceRevision(root);
+  if (!readOnly && saved?.format === 1 && saved.sources === sourceRevision && saved.identities === entityStamp(root) && (saved.schema ?? null) === schemaRevision && saved.ask === askRevision) return [];
+  // A pinned snapshot: the cache lock is held only while the cache catches up, not while
+  // the pages are built and written, so neither a save nor a read waits on a render.
+  const index = openForRead(root), changed = [], checkpoints = {};
   try {
-    index.sync(); index.requireReady();
     const db = index.db;
     const epoch = index.meta('started_at');
     if (saved?.format !== 1 || saved.epoch !== epoch) saved = null;
@@ -47,15 +47,19 @@ export function refreshIndexedPages(root, registry, publish, { readOnly = false 
     const version = db.prepare('SELECT version FROM entity_versions WHERE id=?');
     const covers = new Map(contexts.map(c => [c.slug, { context: c.slug, title: c.title, status: c.status, rule: c.rule, refreshed_at: c.compiledAt }]));
     let refreshed = 0;
+    // Registry positions by ID, so the unchanged-page check below costs its few neighbors, not
+    // a pass over the registry for every entity. Same neighbors in the same (registry) order.
+    const position = new Map(registry.map((n, i) => [n.id, i]));
+    const inRegistry = ids => ids.map(id => position.get(id)).filter(i => i !== undefined).sort((a, b) => a - b).map(i => registry[i]);
     for (const e of registry.filter(e => readOnly || e._path)) {
       const previous = saved?.pages?.[e.id], revision = version.get(JSON.stringify(e.id))?.version || 0;
       const notes = editedBody(e) ? { path: e._path, markdown: e._body } : null;
-      const signatureFor = (related, scoped) => digest([identity(e), related, scoped, notes, revision, e._fm?.compilation, e._fm?.compiled_as_of, e._fm?.compiled_at, e._fm?.compiled_fields, e._fm?.compiled_schema, schemaRevision]);
+      const signatureFor = (related, scoped) => digest([identity(e), e._path, related, scoped, notes, revision, e._fm?.compilation, e._fm?.compiled_as_of, e._fm?.compiled_at, e._fm?.compiled_fields, e._fm?.compiled_schema, schemaRevision, e.kind === 'tool' ? askRevision : null]);
       // Most writes do not change this entity's evidence, its known neighbors or
       // its context covers. Check those recorded dependencies before any history
       // query. The index bumps both old and new owners on every relink/correction.
       if (!readOnly && previous?.contexts && previous?.related) {
-        const related = registry.filter(n => previous.related.includes(n.id)).map(identity);
+        const related = inRegistry([...new Set(previous.related)]).map(identity);
         const scoped = contexts.filter(c => previous.contexts.includes(c.slug)).map(c => covers.get(c.slug));
         if (previous.signature === signatureFor(related, scoped) && previous.text === digest(e._text)) {
           checkpoints[e.id] = previous; continue;
@@ -77,7 +81,7 @@ export function refreshIndexedPages(root, registry, publish, { readOnly = false 
     if (readOnly) return changed;
     const temporary = path + '.' + process.pid + '.tmp';
     if (sources() !== sourceRevision) throw new Error('Context files changed during entity refresh. Retry the save.');
-    writeFileSync(temporary, JSON.stringify({ format: 1, epoch, pages: checkpoints, sources: sourceRevision, identities: entityStamp(root), schema: schemaRevision, refreshed, checked: registry.length, at: new Date().toISOString() }));
+    writeFileSync(temporary, JSON.stringify({ format: 1, epoch, pages: checkpoints, sources: sourceRevision, identities: entityStamp(root), schema: schemaRevision, ask: askRevision, refreshed, checked: registry.length, at: new Date().toISOString() }));
     renameSync(temporary, path);
     return changed;
   } finally { index.close(); }
@@ -100,7 +104,7 @@ function pageFacts(root, e, related, contexts, notes, records) {
       if (count++) hash.update(',');
       hash.update(row.raw);
       const m = JSON.parse(row.raw);
-      if (cited.has(m.id) || m.relation || m.customer) retained.set(m.id, m);
+      if (cited.has(m.id) || m.relation || m.customer || (m.meeting && e.kind === 'meeting')) retained.set(m.id, m);
       if (m.retracts) recent(withdrawals, m, 20);
       else {
         total++; recent(local, m, 3); if (row.timeline_visible) recent(latest, m, ENTITY_TIMELINE_LIMIT);

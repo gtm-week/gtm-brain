@@ -73,7 +73,7 @@ test("supported methods can be written after an empty result and cleared after t
   lib.appendMemory(f.root, "offer", { authors: ["ann-lee"], content: "The previous field mapping is withdrawn; no replacement is verified.", retracts: lesson.id });
   const current = f.facts();
   assert.ok(current.includes(guidance), "prior prose is available for reassessment");
-  assert.ok(!current.split("## All effective memories, recording order (oldest first)")[1].includes(lesson.id));
+  assert.ok(!current.split("## Effective notes since the last compile")[1].includes("- " + lesson.id));
   const records = lib.readMemories(f.root, "offer");
   f.apply("--now", "");
   assert.equal(lib.readContext(f.root, "offer").now, "");

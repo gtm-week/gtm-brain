@@ -1,3 +1,6 @@
+// These tests read and write the root files of a layout 2 brain: setup and the lib play a plugin that writes layout 2 at most
+// (lib/layout-version.mjs GTM_BRAIN_TEST_LAYOUT). Layout 3 (about-us/, config/) is covered by config-folders.test.mjs.
+process.env.GTM_BRAIN_TEST_LAYOUT = "2";
 process.env.GTM_BRAIN_NO_WATCH = "1";
 process.env.GTM_BRAIN_NO_SESSION_MAINTENANCE = "1"; // Covered by session-maintenance.test.mjs.
 process.env.GTM_BRAIN_NO_COMPILE = "1"; // Model runs are opt-in through test doubles.
@@ -10,6 +13,7 @@ import { join } from "node:path";
 import { tmpdir, homedir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { trackBrain } from "./helpers/dash-cleanup.mjs";
+import { wholeRulebook } from "../lib/rule-pages.mjs";
 const P = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 // Existing manual demos may legitimately live in temporary folders. Detect new leaks from
 // this run without rejecting or modifying the person's pre-existing registered brains.
@@ -378,7 +382,7 @@ test("recall groups a project's hits before it limits them; without a project it
   assert.match(withProject, /## elsewhere · 40 of 45\n/);
   const withoutProject = script(root, "gtm-brain-recall/recall.mjs", "sprocket");
   assert.match(withoutProject, /^46 memories match "sprocket"/m);
-  assert.equal((withoutProject.match(/^- Recorded: \d{4}-\d{2}-\d{2}/gm) || []).length, 40, "still capped at 40 without a project");
+  assert.equal((withoutProject.match(/^- (?:m_[0-9a-z]+ · )?Recorded: \d{4}-\d{2}-\d{2}/gm) || []).length, 40, "still capped at 40 without a project");
 });
 
 const hook = (cwd, name, input, extra = {}) => execFileSync("bash", [`${P}/session/${name}`], { cwd, encoding: "utf8", env: { ...env, ...extra }, input: JSON.stringify({ hook_event_name: "SessionStart", session_id: "thread-p1", cwd, ...input }) });
@@ -411,14 +415,14 @@ test("the session hook in the brain leaves out what the chat already has: the po
   script(root, "gtm-brain-load/load.mjs", "icp", "--only");
   const brainOut = hook(root, "session-start.sh", {});
   for (const policy of policies) assert.ok(!brainOut.includes(policy), "the brain's AGENTS.md already carries the generated policy");
-  assert.match(brainOut, /references\/questions\.md once/, "the pointer to the question procedure stays");
+  assert.match(brainOut, /questions rule page once/, "the pointer to the question procedure stays");
   const rule = lib.readContext(root, "icp").rule;
   assert.equal(brainOut.split(rule).length - 1, 1, "a re-loaded context's standing rule reaches the chat once, from the load");
   assert.match(brainOut, /Target customers \(icp\) · [^\n]*loaded in this chat\n/, "the list still names it on one line");
   assert.ok(brainOut.includes(lib.readContext(root, "market").rule), "a context that is not loaded keeps its rule in the list for routing");
   const projectOut = hook(ext, "session-start.sh", {});
   for (const policy of policies) assert.ok(projectOut.includes(policy), "a linked folder's AGENTS.md is only a pointer, so the hook supplies the policy");
-  const agents = join(root, "AGENTS.md"); writeFileSync(agents, readFileSync(agents, "utf8").replace(/<!-- generated: computer-use[\s\S]*?<!-- \/generated: computer-use -->\n?/, ""));
+  const agents = join(root, "AGENTS.md"); writeFileSync(agents, readFileSync(agents, "utf8").replace(/<!-- generated: computer-use[\s\S]*?<!-- \/generated: computer-use -->\n?/, "").replace("## Rule pages", "## Pages"));   // an older rulebook: neither the blocks nor the rule pages
   const olderOut = hook(root, "session-start.sh", {});
   for (const policy of policies) assert.ok(olderOut.includes(policy), "rules without the generated blocks still get the policies");
   execFileSync(process.execPath, [`${P}/server/dash.mjs`, root, "--stop"], { cwd: root, stdio: "ignore", env });
@@ -486,10 +490,10 @@ test("the skill exists, is listed, and asks before it writes", () => {
 });
 
 test("the model, the contributors and the participants are told", () => {
-  const tpl = readFileSync(`${P}/templates/AGENTS.md`, "utf8");
+  const tpl = readFileSync(`${P}/templates/AGENTS.md`, "utf8"), book = wholeRulebook(tpl);
   assert.match(tpl, /^1c\. \*\*A chat in a project works in that project\.\*\*/m);
-  assert.match(tpl, /pass it as `project` in every GTM Brain call/); assert.match(tpl, /never its folder path/);
-  assert.match(tpl, /`link_project`, `unlink_project`\)/); assert.match(tpl, /`gtm-brain-project`/);
+  assert.match(tpl, /pass it as `project` in every GTM Brain call/); assert.match(book, /never its\s+folder path/);
+  assert.match(book, /`link_project`, `unlink_project`\)/); assert.match(book, /`gtm-brain-project`/);
   const contrib = readFileSync(join(P, "..", "..", "AGENTS.md"), "utf8");
   assert.match(contrib, /A project is a tag and a local pointer, never an object/); assert.match(contrib, /never below cwd/);
   for (const doc of ["ONBOARDING.md", "GUIDE.md"]) assert.match(readFileSync(join(P, "..", "..", doc), "utf8"), /## Work in your own folders/, doc);
@@ -499,7 +503,7 @@ test("the model, the contributors and the participants are told", () => {
 test("interact from a project tags the memory with it and cites the project's own chat", async () => {
   const root = brain(); const a = folder(); project(root, "--link", a, "--slug", "curriculum", "--contexts", "icp");
   lib.writeSession(root, { session_id: "brain-thread", cwd: root }); lib.writeSession(root, { session_id: "project-thread", cwd: a }, "curriculum");
-  lib.writeInteractions(root, [{ name: "note_result", title: "Noting a result", tool: "gmail", operation: "Nothing to do in gmail.", description: "A result.", input_schema: { type: "object", properties: { what: { type: "string" } }, required: ["what"], additionalProperties: false }, record: { context: "icp", kind: "note", companies: [], people: [], content: "Result: {what}", action: "gmail:noted:{what}", tags: ["result"] } }]);
+  lib.writeInteractions(root, [{ name: "note_result", title: "Noting a result", external: false, description: "A result.", input_schema: { type: "object", properties: { what: { type: "string" } }, required: ["what"], additionalProperties: false }, record: { context: "icp", kind: "note", companies: [], people: [], content: "Result: {what}", action: "gmail:noted:{what}", tags: ["result"] } }]);
   // the server's interact, driven the way server.test drives tools: one JSON-RPC call over stdio
   const { spawn } = await import("node:child_process");
   const call = (name, args) => new Promise((res, rej) => { const p = spawn(process.execPath, [`${P}/server/server.mjs`], { env: { ...env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_SESSION_START: "1" } }); let out = ""; p.stdout.on("data", d => out += d); p.on("close", () => { const lines = out.split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); const r = lines.find(l => l.id === 2); r ? res(r.result) : rej(new Error(out)); }); p.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {} } }) + "\n"); p.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name, arguments: args } }) + "\n"); p.stdin.end(); });

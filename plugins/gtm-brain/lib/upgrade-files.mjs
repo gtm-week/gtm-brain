@@ -1,7 +1,14 @@
 // Protect locally edited instructions before refreshing plugin-owned files.
 import { existsSync, readFileSync, readdirSync, mkdirSync, copyFileSync, writeFileSync, mkdtempSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { readAdmin, readNames, commit } from "./brain.mjs";
+import { readAdmin, readNames, commit, currentPerson } from "./brain.mjs";
+import { withOwnAdditions, splitOwn, joinOwn } from "./rule-pages.mjs";
+import { readLayout, layoutBlock, layoutPlan, writeLayout, writesLayout } from "./layout-version.mjs";
+import { diskLayout, pagePaths, isKindPagePath } from "./layout.mjs";
+import { ensureRules } from "./where.mjs";
+import { ensureSchema } from "./schema.mjs";
+import { basePath, rulesFile, schemaFile, inConfigFolders } from "./brain-paths.mjs";
+import { configMoveWhat, layoutReadme } from "./config-folders.mjs";
 
 // Shared with the upgrade matrix tests. Aliases point to the same immutable snapshot.
 export const legacyTemplates = JSON.parse(readFileSync(new URL("../templates/legacy/manifest.json", import.meta.url), "utf8"));
@@ -23,7 +30,7 @@ const shippedMatches = (templates, company, current) => {
 export function rulesReasons(root, templates) {
   const company = readAdmin(root)?.company; const path = join(root, "AGENTS.md");
   if (!company || !existsSync(path)) return { from: null, reasons: [] };
-  const current = readFileSync(path, "utf8");
+  const current = splitOwn(readFileSync(path, "utf8")).rules;   // the rules part: a person's own additions come after it
   if (current === readFileSync(join(templates, "AGENTS.md"), "utf8").replaceAll("{{COMPANY}}", company)) return { from: null, reasons: [] };
   const matches = shippedMatches(templates, company, current);
   if (!matches.length) return { from: null, reasons: [] };
@@ -52,7 +59,7 @@ export function autoRefresh(root, templates) {
     const prepared = prepareUpgrade(root, templates);
     if (!prepared.ready) return rulesOffer(root, templates);
     backup = prepared.backup;
-    writeFileSync(join(root, "AGENTS.md"), readFileSync(join(templates, "AGENTS.md"), "utf8").replaceAll("{{COMPANY}}", readAdmin(root).company));
+    writeRules(root, templates);
   } catch { return rulesOffer(root, templates); }
   commit(root, ["AGENTS.md"], "upgrade: rules refreshed");
   const why = reasons.length ? reasons.join("; ") : "they name tools and habits the plugin has moved on from";
@@ -64,7 +71,7 @@ export function autoRefresh(root, templates) {
 export function refreshReadme(root, templates) {
   const company = readAdmin(root)?.company, path = join(root, "README.md");
   if (process.env.GTM_BRAIN_RUN || !company || !existsSync(path)) return false;
-  const render = file => readFileSync(file, "utf8").replaceAll("{{COMPANY}}", company);
+  const render = file => layoutReadme(readFileSync(file, "utf8").replaceAll("{{COMPANY}}", company), root);
   const current = readFileSync(path, "utf8"), next = render(join(templates, "README.md")), shipped = join(templates, "legacy", "readme");
   if (current === next || !readdirSync(shipped).some(f => f.endsWith(".md") && render(join(shipped, f)) === current)) return false;
   writeFileSync(path, next);
@@ -78,9 +85,18 @@ export function rulesState(root, templates) {
   const company = readAdmin(root)?.company; if (!company) return "missing";
   const path = join(root, "AGENTS.md"); if (!existsSync(path)) return "missing";
   const render = file => readFileSync(file, "utf8").replaceAll("{{COMPANY}}", company);
-  const current = readFileSync(path, "utf8");
+  const current = splitOwn(readFileSync(path, "utf8")).rules;   // own additions after the rules do not make them edited
   if (current === render(join(templates, "AGENTS.md"))) return "current";
   return [...new Set(Object.values(legacyTemplates))].some(file => current === render(join(templates, "legacy", file))) ? "legacy" : "custom";
+}
+/* Write the shipped rules into the brain's AGENTS.md, the person's own additions (under their heading) carried over
+   word for word. True when the file changed. Only after prepareUpgrade said ready. */
+export function writeRules(root, templates) {
+  const path = join(root, "AGENTS.md"), target = readFileSync(join(templates, "AGENTS.md"), "utf8").replaceAll("{{COMPANY}}", readAdmin(root).company);
+  const current = existsSync(path) ? readFileSync(path, "utf8") : null;
+  const next = joinOwn(target, current === null ? "" : splitOwn(current).own);
+  if (current === next) return false;
+  writeFileSync(path, next); return true;
 }
 export function prepareUpgrade(root, templates) {
   const company = readAdmin(root)?.company;
@@ -90,7 +106,8 @@ export function prepareUpgrade(root, templates) {
   readNames(root);
   const render = file => readFileSync(file, "utf8").replaceAll("{{COMPANY}}", company);
   const target = render(join(templates, "AGENTS.md"));
-  const current = existsSync(join(root, "AGENTS.md")) ? readFileSync(join(root, "AGENTS.md"), "utf8") : null;
+  const whole = existsSync(join(root, "AGENTS.md")) ? readFileSync(join(root, "AGENTS.md"), "utf8") : null;
+  const current = whole === null ? null : splitOwn(whole).rules;   // the rules part; own additions are carried over
   const previous = [...new Set(Object.values(legacyTemplates))].map(file => render(join(templates, "legacy", file)));
   const files = ["AGENTS.md", ".githooks/pre-commit", ".gitignore"];
   const needsChange = current !== target || files.slice(1).some(file => {
@@ -114,8 +131,91 @@ export function prepareUpgrade(root, templates) {
   }
   if (current !== null && current !== target && !previous.includes(current)) {
     const proposal = join(backup, "AGENTS.proposed.md");
-    writeFileSync(proposal, target);
+    writeFileSync(proposal, withOwnAdditions(target, whole, previous));   // the person's own lines stay, under their own heading
     return { ready: false, backup, proposal };
   }
   return { ready: true, backup };
+}
+
+/* The starter documents setup writes (GTM week sync, 2026-11-13). An upgrade adds the ones a brain lacks, at
+   the root or in a folder of their own name, and brain/layout.json records every starter as given, so one
+   the person deleted afterwards is never brought back. A file already there is the person's. */
+export const STARTERS = ["strategy", "icp", "voice", "design-system", "market"];
+/* The design system is a page too (0.35): design-system.html beside design-system.md, the version people look at.
+   A new brain gets the starter page with the Markdown; an older one gets it once, beside its Markdown wherever that
+   lies, and only when no page is there: a page the team made is never touched. It is recorded as given under its
+   own name, so one the person deleted is not brought back. */
+export const STARTER_PAGES = [{ doc: "design-system", file: "design-system.html" }];
+export const GIVEN = [...STARTERS, ...STARTER_PAGES.map(p => p.file)];
+const escapeHtml = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+export function addStarters(root, templates, { version = "", date = new Date().toISOString().slice(0, 10) } = {}) {
+  const company = readAdmin(root)?.company || "", given = new Set(readLayout(root).starters || []), added = [];
+  for (const doc of STARTERS) {
+    const template = join(templates, `${doc}.md`), at = basePath(root, `${doc}.md`);
+    if (given.has(doc) || !existsSync(template) || existsSync(join(root, at)) || existsSync(join(root, basePath(root, `${doc}/${doc}.md`)))) continue;
+    mkdirSync(dirname(join(root, at)), { recursive: true });
+    writeFileSync(join(root, at), readFileSync(template, "utf8").replaceAll("{{COMPANY}}", company).replaceAll("{{DATE}}", date).replaceAll("{{VERSION}}", version));
+    added.push(at);
+  }
+  for (const { doc, file } of STARTER_PAGES) {
+    const template = join(templates, file);
+    if (given.has(file) || !existsSync(template)) continue;
+    // beside the Markdown: at the base folder, or inside the document's own folder when it moved there
+    const md = [basePath(root, `${doc}.md`), basePath(root, `${doc}/${doc}.md`)].find(p => existsSync(join(root, p)));
+    if (!md) continue;
+    const at = `${dirname(md) === "." ? "" : `${dirname(md)}/`}${file}`;
+    if ([at, basePath(root, file), file].some(p => existsSync(join(root, p)))) continue;
+    writeFileSync(join(root, at), readFileSync(template, "utf8").replaceAll("{{COMPANY}}", escapeHtml(company)));
+    added.push(at);
+  }
+  return added;
+}
+
+/* upgrade.sh, before anything is backed up or replaced: BLOCKED\t<line> for a brain on a newer layout,
+   ASK\t<question> for a layout change without the person's yes, CHANGE\t<from>\t<to> with it, "" otherwise.
+   The change 0.35 brings is the move of a flat brain's entity pages into kind folders (layout 1 to 2): the
+   question says how many pages move. A brain whose pages are in kind folders already has nothing to ask
+   about, whatever its file says (the upgrade records 2). A scheduled or background run never changes the
+   layout, with or without the flag: nobody is there to have said yes. */
+export function layoutStep(root, confirmed) {
+  const blocked = layoutBlock(root);
+  if (blocked) return `BLOCKED\t${blocked}`;
+  const admin = readAdmin(root) || {}, names = Object.fromEntries((admin.team || []).map(p => [p.handle, p.name]));
+  const me = currentPerson(root), owner = admin.owner ? String(admin.owner) : null;
+  // Layout 3 moves the base files and the settings into the owner's folders: only the owner says yes to it.
+  // Anyone else upgrades to layout 2 at most, and the rest of the upgrade goes on.
+  const target = !owner || me === owner ? writesLayout() : Math.min(writesLayout(), 2);
+  const on = diskLayout(root), flat = on < 2 ? pagePaths(root).filter(p => !isKindPagePath(p)).length : 0;
+  const kinds = on < 2 ? `It moves ${flat} entity page${flat === 1 ? "" : "s"} into a folder per kind (brain/entities/people/, organizations/, ...). A teammate still on GTM Brain 0.34 gets no warning: their notes keep saving, but their GTM Brain no longer finds these pages (a known person or company looks unknown to it) and writes a flat page of its own for each name it saves, which the next save from an updated GTM Brain folds back in. No note is lost.` : "";
+  const config = target >= 3 && !inConfigFolders(root) ? configMoveWhat(root) : "";
+  const plan = layoutPlan(root, { me, names, on, target, what: [kinds, config].filter(Boolean).join(" "), older: config ? "they will need to update GTM Brain: until then their GTM Brain does not find this brain." : kinds ? "they should update GTM Brain before you say yes: until they do, their GTM Brain keeps saving notes but does not find the entity pages." : "" });
+  if (!plan.changes) return target < writesLayout() && on < writesLayout() && on >= target ? `NOTE\tOne more move is waiting: the base documents into about-us/ and the rules, schema and settings into config/. It is the owner's (${names[owner] || owner}) to say yes to, in their own chat ("upgrade this brain"); nothing of it was asked or moved here.` : "";
+  if (process.env.GTM_BRAIN_RUN) return `ASK\t${plan.summary} A scheduled or background run never changes the layout: the person says "upgrade the brain" in a chat.`;
+  return confirmed ? `CHANGE\t${plan.from}\t${plan.to}` : `ASK\t${plan.line}`;
+}
+
+/* The chat start's line for a brain whose files are still arranged as an older GTM Brain kept them, when the
+   person in this checkout is the one who can say yes to the move (anyone for the entity pages, only the owner for
+   about-us/ and config/): the brain needs an upgrade, Codex offers it and asks before anything moves, and
+   upgrade_brain does it. "" for a brain that is current, a brain this plugin must not write, a teammate whose
+   only pending move is the owner's, and a scheduled or background run. Nothing is read beyond what layoutStep reads. */
+export function layoutOffer(root) {
+  if (process.env.GTM_BRAIN_RUN) return "";
+  let step; try { step = layoutStep(root, false); } catch { return ""; }
+  if (!step.startsWith("ASK\t")) return "";
+  const pages = diskLayout(root) < 2, base = step.includes("about-us/");
+  const what = [pages && "the entity pages into a folder per kind", base && "the base documents into about-us/ and the rules, schema and settings into config/"].filter(Boolean).join(", and ");
+  return `GTM Brain: this brain needs an upgrade. Its files are still arranged as an older GTM Brain kept them, and this version can move ${what}. Nothing has moved, and reading and saving work as before. Offer the upgrade once, in one line at the end of your first reply ("This brain can be upgraded to the 0.35 file arrangement. Say: upgrade this brain."), and never start it unasked. On yes, call upgrade_brain: it changes nothing and returns what would move and which teammates must update GTM Brain first; put that to the person as one yes/no question, and only on their yes call upgrade_brain again with confirm: true.`;
+}
+
+/* upgrade.sh: what a brain lacks, as three lines: the starters added, RULES.md and SCHEMA.md written, and
+   the line to print when brain/layout.json was written. The layout is recorded last, after the starters it
+   lists. The move into kind folders has recorded its own layout by now (said: upgrade.sh printed that line);
+   here the number only rises to what this plugin writes for a brain in kind folders, and a flat brain keeps 1. */
+export function deliverMissing(root, templates, version, said = false) {
+  const starters = addStarters(root, templates, { version });
+  const files = [ensureRules(root, templates) && rulesFile(root), ensureSchema(root, templates) && schemaFile(root)].filter(Boolean);
+  const before = readLayout(root), written = writeLayout(root, { starters: GIVEN, layout: diskLayout(root) >= 2 ? diskLayout(root) : undefined }), after = readLayout(root).layout;
+  const layout = !written ? "" : before.layout !== after ? `changed the brain's file layout to ${after}` : said ? "" : "recorded the brain's file layout (brain/layout.json)";
+  return [starters.join(" "), files.join(" "), layout].join("\n");
 }

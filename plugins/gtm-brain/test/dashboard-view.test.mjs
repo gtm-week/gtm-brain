@@ -18,7 +18,7 @@ test('older context pages append to the visible list and retain usable citations
  assert.match(p.run('citePill("m_cccccc")'),/data-mem="m_cccccc"/);
 });
 test(`the complete viewer has no write controls and opens a scoped draft in the brain folder`,()=>{
- const D=data();const p=page(D);
+ const D=data();const p=page(D);p.run('show("home");updateChatLink()');
  const rendered=[...p.nodes.values()].map(n=>n.innerHTML).join('\n');assert.doesNotMatch(rendered,/<form|data-say=|>Add<|>Answer<|>Drop<|>Approve</);
  assert.match(rendered,/Move deal/);assert.match(rendered,/data-exact/);
  let link=new URL(p.run('chatDraft().href'));assert.equal(link.protocol,'codex:');assert.equal(link.hostname,'threads');assert.equal(link.pathname,'/new');assert.equal(link.searchParams.get('path'),D.brain);
@@ -126,7 +126,7 @@ test(`review notices distinguish older summaries from edited or damaged files`,(
  for(const {statuses,heading} of cases){
   const D=data();
   D.manualEdits=statuses.map((status,i)=>({slug:i===0?'market':'icp',status,hash:'example'}));
-  const p=page(D),html=p.node('#manual-edits').innerHTML;
+  const p=page(D);p.run('show("home")');const html=p.node('#manual-edits').innerHTML;
   assert.ok(html.includes(`<b>${heading}</b>`),html);
   if(statuses.includes('untracked'))assert.ok(html.includes('Tracking information is missing or inconsistent'),html);
   if(statuses.every(s=>s==='untracked')){
@@ -144,7 +144,7 @@ test(`dashboard refresh, compilation failure and damaged files have distinct rec
  const D=data();
  D.compile={state:'failed',gaveUp:true,contexts:'market',attempt:3,tries:3};
  D.manualEdits=[{slug:'icp',status:'invalid',reason:'summary must be text <script>alert(1)</script>'}];
- const p=page(D,{live:true});await new Promise(r=>setImmediate(r));
+ const p=page(D,{live:true});await new Promise(r=>setImmediate(r));p.run('show("home")');
  assert.ok(p.node('#freshness').textContent.startsWith('Dashboard refreshed: '));
  const notice=p.node('#compile-notice').innerHTML;
  assert.ok(notice.includes('Your notes are saved'));
@@ -182,7 +182,7 @@ test(`optional chat stays short and excludes unrelated attention items`,()=>{
 test(`empty lists hide unusable controls and populated lists retain search recovery`,()=>{
  const D=data();D.contexts.forEach(c=>c.memories=[]);D.questions=[];
  const empty=page(D);
- assert.equal(empty.node('#project-picker').hidden,false);
+ assert.equal(empty.node('#project-picker').hidden,true,'a project is never a control over the whole page');
  assert.match(empty.node('#project-detail').innerHTML,/No projects linked|Brak podłączonych projektów/);
  assert.equal(empty.node('#memory-filter').hidden,true);
  assert.match(empty.node('#mem-list').innerHTML,/No notes yet|Nie ma jeszcze notatek/);
@@ -190,9 +190,9 @@ test(`empty lists hide unusable controls and populated lists retain search recov
  assert.equal(empty.node('#people-toolbar').hidden,true);
  // A newly linked project restores the complete picker; removing the last link hides it again.
  empty.run('D.projects=[{slug:"website",title:"Website",path:"/tmp/website",contexts:[],loaded:[],pointer:true}];renderProject()');
- assert.equal(empty.node('#project-picker').hidden,false);
+ assert.equal(empty.node('#project-picker').hidden,true,'a project is never a control over the whole page');
  assert.match(empty.node('#project-select').innerHTML,/Website/);
- empty.run('D.projects=[];renderProject()');assert.equal(empty.node('#project-picker').hidden,false);
+ empty.run('D.projects=[];renderProject()');assert.equal(empty.node('#project-picker').hidden,true,'a project is never a control over the whole page');
  const populated=data();
  populated.names=[{name:'Example',kind:'company',aliases:[],emails:[],contexts:[],mentions:0}];
  const full=page(populated);

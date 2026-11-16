@@ -48,14 +48,21 @@ Read it, then `approve the strategy`.
 
 ## Out of the box
 
-Setup writes four starters at the top of the brain: `strategy.md`, `icp.md`, `voice.md` and
-`design-system.md`. Each holds headings and no guidance yet, and the chat line shows it as
+Setup writes five starters at the top of the brain: `strategy.md`, `icp.md`, `voice.md`,
+`design-system.md` and `market.md`. Each holds headings and no guidance yet, and the chat line shows it as
 `[not filled]` until someone fills it (a hand edit counts). The end of onboarding asks once which
 to fill now; "Later" is a fine answer. Say `fill in our tone of voice` (or the ICP, the strategy,
 the design system) at any time: the strategy runs the strategic intake, the ICP the Define ICP
 interview, and voice and design system are drafted from the website and what you drop in the
 chat. Each is filled where it lies, never as a second document. There is no separate documents
 skill since 0.33.10: these requests are part of everyday work (gtm-brain-use-brain).
+
+The design system is a page as well: setup writes `design-system.html` beside
+`design-system.md`, and an upgrade adds it once to a brain that has none (a page already there is
+never replaced). It is one self-contained HTML file, with no scripts and nothing loaded from the
+network, shown on the dashboard's Visual tab; the page is the source for how things look, and
+the Markdown lists the same tokens and rules in words for Codex. `fill in our design system`
+writes both from the website and your brand files, shows you the page and saves on your yes.
 
 ## Making one
 
@@ -66,6 +73,20 @@ and Target customers). It shows the title, the place and the first rules, and as
 approved", "Add it as a draft", or "Change something". Nothing is written before you answer.
 An approved document is a rule; a draft one is followed as the best available guidance and
 Codex says so.
+
+### Your own base files
+
+`add pricing as a base file`, `we need a positioning document`, `make a competitors file`. Codex
+first checks whether a file you have already covers the subject (by title, what it applies to,
+its headings and its text) and then offers a section there before a new file. It drafts from
+your notes and the people and companies the brain knows, under the headings of a ready starter
+for pricing, positioning, competitors and objections, and lists the notes it drew on. When the
+brain knows nothing about it, it says so and asks for the two or three facts it needs. It shows
+the draft in full and asks one thing: what work should follow it. Picking one saves it as a draft.
+
+A Markdown you drop at the top of the folder by hand shows in `list the documents` and once in
+the health line as "pricing.md is here but the brain does not use it yet". Adopting it asks what
+work it governs and adds only the frontmatter, shown to you first; your text stays as it is.
 
 Files: `add this to the design system` with a path or a dropped file lands it in
 `brand/design-system/`. A logo or a deck about one company goes with that company:
@@ -94,7 +115,8 @@ are opened only when the work needs them.
 
 ## Managing
 
-- `list the documents`: one line per document with status, what it applies to, path, files.
+- `list the documents`: one line per document with its state (not filled, draft, approved),
+  what it applies to, path and the day it last changed.
 - `show the strategy`: the file as it is. `what files does the design system have`: its files.
 - `update the voice: ...`: Codex quotes the line that changes, confirms, rewrites only that.
   `approve the design system` sets the status; only your word does.
@@ -127,3 +149,8 @@ to companies before stay in `files/` and their links keep working.
   not fit it.
 - The `README.md` at the top of the brain folder says what goes where: documents and their
   files, project folders, `brain/`. Nothing else belongs at that level.
+- A document can also be read and edited in the dashboard: click it under Configuration (base
+  documents) or at the end of Memories (other documents). Save there writes the file the way
+  `document.mjs --update` does, with the same checks and commit; if the file changed since you
+  opened it, nothing is overwritten and both versions are shown. COMMANDS.md lists what the
+  dashboard server checks before a save.

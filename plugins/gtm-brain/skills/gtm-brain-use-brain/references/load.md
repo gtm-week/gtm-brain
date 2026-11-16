@@ -17,11 +17,12 @@ usually wants when they drift between contexts. "switch to marketing", "only mar
 1. Call it. The returned block is your working context for the rest of the conversation, on top
    of `AGENTS.md` and `brain/admin.md`. Treat **When loaded** as instructions.
 2. Reply in one line using displayed names, for example "I'll use Strategy for this plan."
-   Mention summary freshness only when it affects the request, using the dashboard's words
-   ("summary up to date", "summary behind", "summary updating"). A summary that is
-   behind updates by itself in a separate run; handle the person's request from the memories
-   and never offer to compile. Only when they ask for it, follow the
-   [compilation procedure](compile.md).
+   Mention summary freshness only when it affects the request, using the words the load prints
+   ("summary up to date (as of ...)", "summary as of ..., N newer notes (written when asked)").
+   A load whose summary is behind ends with **Summary behind: write it now, in this chat**: say
+   so in one line, answer from the notes it gives, then write the summary once with
+   `compile_apply` as the [compilation procedure](compile.md) says. Nothing is promised for
+   later: no run writes it by itself.
    An explicit request to update summaries already authorizes the compilation procedure.
 
 ## Hard rules

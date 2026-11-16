@@ -2,14 +2,15 @@
 // The advisor: a health check of the brain from its own files, and three things to do about it.
 //   node advisor.mjs <root>            the report, in plain words, for the model to relay
 //   node advisor.mjs <root> --json     the findings as data (tests, the dashboard later)
-// Reads the brain. The one thing it does: a summary run that should have gone and did not is started again (work/, never brain/).
+// Reads the brain only. Since 0.35.0 a topic summary behind its notes is normal (it is written when asked), so it is no finding.
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const us = await import(new URL("../../lib/user-skills.mjs", import.meta.url));
 const rc = await import(new URL("../../lib/rules-check.mjs", import.meta.url));
+const { summaryRuns } = await import(new URL("../../lib/health-line.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
-if (!existsSync(join(root, "brain", "admin.md"))) { console.error("no brain here"); process.exit(1); }
+if (!lib.isBrain(root)) { console.error("no brain here"); process.exit(1); }
 const now = Date.parse(process.env.GTM_BRAIN_NOW || new Date().toISOString());
 const days = iso => Math.floor((now - Date.parse(iso)) / 86400000);
 const words = s => String(s || "").trim().split(/\s+/).filter(Boolean).length;
@@ -17,23 +18,21 @@ const admin = lib.readAdmin(root) || {};
 const contexts = lib.listContexts(root), active = contexts.filter(c => c.status === "active");
 const names = lib.readNames(root);
 let tools = {}; try { tools = JSON.parse(readFileSync(join(root, "work", "tools.json"), "utf8")); } catch {}
-const compile = lib.readCompileState(root), busy = lib.compileBusy(root), gaveUp = lib.compileGaveUp(root), plan = lib.compilePlan(root, { now });
+const compile = lib.readCompileState(root), gaveUp = lib.compileGaveUp(root);
 const personal = c => /^personal-/.test(c.slug);   // a teammate's own context: never archived, never a finding about quiet
-const oldestPending = c => { const p = lib.effectiveMemories(c.memories).filter(m => !c.compiledAt || lib.newer(m.at, c.compiledAt)).map(m => m.at).sort(); return p[0] || null; };
 
 /* every finding: what, why it matters, what to do (a sentence the person can say, or a button on the page), and a weight for the order */
 const F = [];
 const add = (weight, key, what, why, do_) => F.push({ weight, key, what, why, do: do_ });
 
 // 1. summaries: a run that gave up, or a context whose oldest waiting note is a day old with nothing running and no run due
-if (gaveUp) add(100, "summary-failed", `The summary run failed ${compile.attempt || 1} time(s) and gave up (${(compile.contexts || "").replace(/ /g, ", ") || "no context named"}); ${active.filter(c => c.stale).map(c => c.title).join(", ")} still wait.`, "Until it works, the context summaries stop reflecting the notes.", "This one needs a hand: say \"update the summaries now\" in the chat (Codex writes them itself this once); if that fails too, work/hooks.log says why.");
+if (gaveUp) add(100, "summary-failed", `The summary run failed ${compile.attempt || 1} time(s) and gave up (${(compile.contexts || "").replace(/ /g, ", ") || "no context named"}); ${active.filter(c => c.stale).map(c => c.title).join(", ")} still wait.`, "Until it works, the context summaries stop reflecting the notes.", "Say \"where do we stand on <the topic>\" in a chat: Codex writes that summary there, from the notes.");
 // a summary paused by a hand edit: no run touches it until the edit is reviewed, so it is never "the run starts next"
 const paused = lib.pausedCovers(root), isPaused = c => paused.some(p => p.slug === c.slug);
 if (paused.length) add(95, "summary-paused", `${paused.map(p => `${p.title}'s summary is paused (last updated ${p.since ? String(p.since).slice(0, 10) : "never"}${p.waiting ? `, ${p.waiting} note${p.waiting === 1 ? "" : "s"} waiting` : ""})`).join("; ")}: it was edited by hand, so no summary run updates it until the edit is reviewed.`, "A paused summary stays on its old date while notes pile up, and every chat reads the old one.", `Say: review the ${paused[0].title} summary edit (Codex shows it, keeps what matters as notes, then asks before releasing it).`);
-const stalled = c => { const o = oldestPending(c); return !isPaused(c) && c.stale && o && days(o) >= 1 && !busy && !(plan.wait !== null && plan.wait > 0) && !gaveUp; };
-// a summary that should have been written and was not is the machine's fault, never the person's todo: the run is started again here
-const stalledOnes = active.filter(stalled);
-if (stalledOnes.length) { const started = process.env.GTM_BRAIN_NOW ? false : lib.kickCompile(root, { force: true }); add(90, "behind", `${stalledOnes.map(c => c.title).join(", ")} ${stalledOnes.length === 1 ? "has" : "have"} had notes waiting for a summary for ${Math.max(...stalledOnes.map(c => days(oldestPending(c))))} day(s)${stalledOnes.some(c => !c.compiledAt) ? " (never summarised yet)" : ""}.`, "The summary is what every chat reads first; without it a chat reads raw notes, or nothing.", started ? "Nothing: a summary run was started just now and lands in a minute or two." : "Nothing to do by hand; the run starts at the next note or chat."); }
+// a summary is written on demand (0.35.0): one behind its notes is no finding; one whose writing failed is, with what to do
+const lastRun = summaryRuns(root).error;
+if (lastRun && !gaveUp) add(90, "summary-failed", `The last summary${lastRun.context ? ` (${(active.find(c => c.slug === lastRun.context) || {}).title || lastRun.context})` : ""} was not saved: ${lastRun.what}.`, "That topic's summary stays on its old date until it is written again.", lastRun.todo[0].toUpperCase() + lastRun.todo.slice(1) + ".");
 // 2. open questions nobody answered
 for (const c of active) for (const m of lib.effectiveMemories(c.memories).filter(m => m.kind === "question" && m.tags.includes("brain-question"))) if (days(m.at) >= 14) add(80, "old-question", `A question in ${c.title} is ${days(m.at)} days old: "${m.content.slice(0, 90)}${m.content.length > 90 ? "..." : ""}"`, "Open questions are the work the brain is waiting on; old ones are either answered elsewhere or dead.", "Review it in its context; answer or drop it in Codex.");
 // 2b. a newer plugin where this install came from (work/plugin-version.json, written by the hook's daily check)

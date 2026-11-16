@@ -8,6 +8,8 @@ import { acquireProcessLock, releaseProcessLock } from '../lib/process-lock.mjs'
 import { writeJSON } from '../lib/dashboard-refresh.mjs';
 import * as lib from '../lib/brain.mjs';
 
+import { pullTeammates } from './sync.mjs';
+
 const root = resolve(process.argv[2] || '.');
 const plugin = fileURLToPath(new URL('..', import.meta.url));
 const work = join(root, 'work');
@@ -55,7 +57,7 @@ if (process.argv[3] === '--start') {
       // branch first (it also sends commits whose background push failed), which sets the upstream.
       const upstream = spawnSync('git', ['rev-parse', '--abbrev-ref', '@{u}'], { cwd: root, timeout: 2000, stdio: 'ignore' });
       if (upstream.status !== 0) run('push', 'git', [...lib.PUSH, remote, 'HEAD']);
-      run('pull', 'git', ['pull', '--ff-only', '--quiet']);
+      pullTeammates(root, remote, failures);
     }
     run('tools', process.execPath, [join(plugin, 'scripts/gtm-brain-connect/connect.mjs'), root, '--check']);
     // Workflow steps whose gate date passed become a due step and a gate question; deterministic, no model.

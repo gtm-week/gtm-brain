@@ -10,9 +10,13 @@ compiled paragraph. Identity metadata is maintained by add_name, never by compil
 
 ## Read the evidence
 
-In a chat, `compile_entity` is not offered: stale briefs are rebuilt by the background run,
-which the compile procedure queues through the shell. `entity_facts` stays available to read the
-evidence behind a brief. The steps below are for that run.
+In a chat (0.35.0), a brief read (`query` object brief) whose overview is behind its notes says
+**Overview behind** with the entity id and `as_of`: after answering, write the brief once with
+`compile_entity` from the notes that page cites, reusing kept claims whose notes still stand. It
+is cached until new notes arrive. Relationships, customer status, the timeline and claims whose
+notes are still in force are on the page without any compile; only the prose overview, the
+per-context perspectives and SCHEMA.md field values need writing. `entity_facts` (all evidence)
+is offered to scheduled and hand-started runs; the steps below are for them.
 
 Call `entity_facts` without `entity` to list stale briefs. With `entity` = a name, alias,
 email or stable ID, it returns identity, all relevant effective memories grouped by context,

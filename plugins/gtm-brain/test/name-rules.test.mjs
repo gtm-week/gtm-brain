@@ -11,19 +11,21 @@ const P = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 process.env.CODEX_HOME = mkdtempSync(join(tmpdir(), "gtm-brain-test-home-"));   // never the real brains registry
 const lib = await import(`${P}/lib/brain.mjs`);
 
-test("a bare first name is held and asked about; a full name is kept with where it came from; who is Max names the rule", () => {
+test("a bare first name is saved as written and asked about; a full name is kept with where it came from; who is Max names the rule", () => {
   const root = mkdtempSync(join(tmpdir(), "gtm-brain-names-")); execFileSync("git", ["init", "-q", root]);
   execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "X", "--one-liner", "y", "--owner", "Ann Lee <ann@b.c>"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P } });
   const env = { ...process.env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1" };
   const remember = (...a) => spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann-lee", "--context", "company", ...a], { cwd: root, env, encoding: "utf8" });
 
-  // P3: nobody is called Max yet; nothing is written, and the reply asks for the full name once
+  // P3: nobody is called Max yet; the note is saved with the name as written, nobody is made a person,
+  // and the reply asks for the full name once (0.35.0: save, then ask; save-then-ask.test.mjs has the answer)
   const held = remember("--content", "Max will run the GTM-OS demo.", "--people", "Max");
-  assert.equal(held.status, 2);
-  assert.match(held.stderr, /"Max" is one word and nobody known has it \(rule P3/);
-  assert.match(held.stderr, /ask for the full name/);
+  assert.equal(held.status, 0, held.stderr);
+  assert.match(held.stdout, /"Max" is one word and nobody known has it \(rule P3\)/);
+  assert.match(held.stdout, /^Who is Max\? Full name or company\.$/m);
   assert.ok(!lib.readNames(root).some(e => e.name === "Max"));
-  assert.ok(!lib.readMemories(root, "company").some(m => /Max/.test(m.content)));
+  const asked = lib.readMemories(root, "company").find(m => /Max will run/.test(m.content));
+  assert.deepEqual(asked.people, []);
 
   // a company named in one word is not held when the note says it is a company
   const acme = remember("--content", "Acme signed.", "--companies", "Acme");
@@ -37,7 +39,7 @@ test("a bare first name is held and asked about; a full name is kept with where 
   assert.equal(later.status, 0, later.stderr);
   assert.match(later.stdout, /took "Max" as Max Kowalski \(rule P2/);
   const max = lib.readNames(root).find(e => e.name === "Max Kowalski");
-  const notes = lib.readMemories(root, "company").filter(m => m.entity_mentions && /Max/.test(m.content));
+  const notes = lib.readMemories(root, "company").filter(m => m.entity_mentions && m.kind !== "question" && /Max/.test(m.content));
   assert.deepEqual(notes.map(m => m.entity_mentions), [
     [{ mention: "Max Kowalski", entity: max.id, resolution: "new", rule: "P1" }],
     [{ mention: "Max", entity: max.id, resolution: "inferred_first_name", rule: "P2" }],
@@ -54,13 +56,17 @@ test("a bare first name is held and asked about; a full name is kept with where 
   const typo = remember("--content", "Max Kowalsky joined.", "--people", "Max Kowalsky");
   assert.equal(typo.status, 2);
   assert.match(typo.stderr, /"Max Kowalsky" looks like Max Kowalski \(P4\)/);
-  assert.match(typo.stderr, /decide by P4\. One or two letters off a known name: ask "same as X\?".*A clearly different surname: someone else, send it in new_names without asking/);
-  assert.equal(remember("--content", "Max Weber joined.", "--people", "Max Weber").status, 2);
-  assert.equal(remember("--content", "Max Weber joined.", "--people", "Max Weber", "--new", "Max Weber").status, 0);
-  // a second Max makes "Max" ambiguous again: held, never guessed
+  assert.match(typo.stderr, /"Max Kowalsky": ask "same as X\?"\. Yes: add_name with aliases \[this spelling\]\. No: resend with new_names\. Ask one question, /);
+  // the same first name with a clearly different surname is someone else (P4): saved at once, no new_names and no question
+  const weber = remember("--content", "Max Weber joined.", "--people", "Max Weber");
+  assert.equal(weber.status, 0, weber.stderr + weber.stdout);
+  assert.doesNotMatch(weber.stdout + weber.stderr, /looks like/);
+  assert.match(weber.stdout, /new person in entities\/: Max Weber/);
+  // a second Max makes "Max" ambiguous again: never guessed; the note is saved and the question names both (0.35.0)
   const two = remember("--content", "Max called.", "--people", "Max");
-  assert.equal(two.status, 2);
-  assert.match(two.stderr, /"Max" looks like Max Kowalski or Max Weber \(P4\)/);
+  assert.equal(two.status, 0, two.stderr);
+  assert.match(two.stdout, /^Which Max: Max Kowalski or Max Weber\?$/m);
+  assert.deepEqual(lib.readMemories(root, "company").find(m => m.content === "Max called.").people, []);
 
   // the brain's README explains the same four rules
   assert.match(readFileSync(join(root, "README.md"), "utf8"), /## How we name people[\s\S]*\*\*P3\*\* A first name alone is never saved as a new person/);
@@ -78,29 +84,36 @@ test("a person kept by one word on the person's word, and notes from before, say
   assert.match(brief, /Not recorded: the notes about this entity were saved before/);
   // asked first ("Zed who?"), then the person insists on the one word: saved, and the note says it was their word
   const zedArgs = [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann-lee", "--context", "company", "--content", "Zed is our designer.", "--people", "Zed", "--new", "Zed"];
-  assert.equal(spawnSync(process.execPath, zedArgs, { cwd: root, env, encoding: "utf8" }).status, 2);
+  const first = spawnSync(process.execPath, zedArgs, { cwd: root, env, encoding: "utf8" });
+  assert.equal(first.status, 0, first.stderr);
+  assert.match(first.stdout, /^Who is Zed\? Full name or company\.$/m);
+  assert.ok(!lib.readNames(root).some(e => e.name === "Zed"));
   const ok = spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann-lee", "--context", "company", "--content", "Zed is our designer.", "--people", "Zed", "--new", "Zed"], { cwd: root, env, encoding: "utf8" });
   assert.equal(ok.status, 0, ok.stderr);
   const zed = lib.readNames(root).find(e => e.name === "Zed");
-  assert.deepEqual(lib.readMemories(root, "company").at(-1).entity_mentions, [{ mention: "Zed", entity: zed.id, resolution: "confirmed_new", rule: "P3" }]);
+  assert.deepEqual(lib.effectiveMemories(lib.readMemories(root, "company")).find(m => m.content === "Zed is our designer.").entity_mentions, [{ mention: "Zed", entity: zed.id, resolution: "confirmed_new", rule: "P3" }]);
   assert.ok(existsSync(join(root, "README.md")));
 });
 
-test("a one-word name sent in new_names before anyone asked is still held; after the question it is the person's answer", () => {
+test("a one-word name sent in new_names before anyone asked is not made a person; after the question it is the person's answer", () => {
   const root = mkdtempSync(join(tmpdir(), "gtm-brain-names-")); execFileSync("git", ["init", "-q", root]);
   execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "X", "--one-liner", "y", "--owner", "Ann Lee <ann@b.c>"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P } });
   const env = { ...process.env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1" };
   const remember = (...a) => spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann-lee", "--context", "company", ...a], { cwd: root, env, encoding: "utf8" });
 
   // Codex in new-brain, 2026-11-12: "Max will run the demo next Tuesday (2026-11-17)." went straight in with new_names ["Max"]
+  // the note is saved, but Max is not made a person on Codex's word: the question is asked first
   const guess = remember("--content", "Max will run the demo next Tuesday (2026-11-17).", "--people", "Max", "--new", "Max");
-  assert.equal(guess.status, 2);
-  assert.match(guess.stderr, /"Max" is one word and nobody known has it \(rule P3/);
+  assert.equal(guess.status, 0, guess.stderr);
+  assert.match(guess.stdout, /"Max" is one word and nobody known has it \(rule P3\)/);
   assert.ok(!lib.readNames(root).some(e => e.name === "Max"));
 
-  // the person was asked and insists on the one word: now it is kept, and the note says P3 confirmed_new
+  // the person was asked and insists on the one word: the note is sent again, replaces the first, and says P3 confirmed_new
   const insisted = remember("--content", "Max will run the demo next Tuesday (2026-11-17).", "--people", "Max", "--new", "Max");
   assert.equal(insisted.status, 0, insisted.stderr);
-  const note = lib.readMemories(root, "company").find(m => /next Tuesday/.test(m.content));
-  assert.deepEqual(note.entity_mentions.map(x => [x.mention, x.resolution, x.rule]), [["Max", "confirmed_new", "P3"]]);
+  const live = lib.effectiveMemories(lib.readMemories(root, "company"));
+  const notes = live.filter(m => m.kind === "note" && /next Tuesday/.test(m.content));
+  assert.equal(notes.length, 1, "one note, not two");
+  assert.deepEqual(notes[0].entity_mentions.map(x => [x.mention, x.resolution, x.rule]), [["Max", "confirmed_new", "P3"]]);
+  assert.ok(!live.some(m => m.kind === "question" && m.tags.includes("brain-question")), "the question is closed");
 });

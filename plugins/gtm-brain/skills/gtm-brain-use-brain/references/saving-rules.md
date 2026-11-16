@@ -24,14 +24,19 @@ says ask, ask once, everything in one question.
 
 - **P1** A name, alias or email that belongs to exactly one known person, company or product is that one.
 - **P2** A first name alone ("Max") is a known person only when exactly one known person has it;
-  with several, ask which. A typo of a known name ("lorian") is the same rule.
-- **P3** A first name alone is never saved as a new person: ask for the full name ("Max who?").
+  with several, the note is saved without a guess and the tool asks which ("Which Max: Max Kowalski
+  or Max Weber?"). A typo of a known name ("lorian") is the same rule.
+- **P3** A first name alone is never saved as a new person. The note is saved with the name as
+  written, and the tool's reply ends with the question ("Who is Anna? Full name or company."). Ask
+  it and stop. The question stays in the brain as a pending brain question; the answer is a
+  `remember` with `retracts:` its id, kind `decision`, and the full name in `people`, and the brain
+  attaches the name to the saved note by itself.
 - **P4** A name that looks like a known one is never merged on a guess. A spelling one or two letters
   off ("Lena Dumas", "Lena Dumos") is asked: same as X? The same first name with a clearly different
   surname ("Florian Kim", "Florian Weber") is someone else: send it in `new_names`, no question.
-- **C1** A company the note plainly names is saved as a company (`companies`); a new one is asked for
-  its website once, unless the person already gave it ("Northwind (northwind.com)"): then that is
-  its website, no question. Our own company is never asked.
+- **C1** A company the note plainly names is saved as a company (`companies`). Do not ask for its
+  website on a save. When the person gives it ("Northwind (northwind.com)"), that is its website:
+  keep it with add_name and references.
 
 ## Dates
 

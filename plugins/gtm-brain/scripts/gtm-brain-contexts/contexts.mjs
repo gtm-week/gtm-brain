@@ -9,9 +9,10 @@ import { host } from "../../lib/host.mjs";
 import { existsSync, readdirSync } from "node:fs";
 import * as dots from "../../lib/dots.mjs";
 import { join } from "node:path";
+import { lastNoteAgo, quietBrainLine } from "../../lib/staleness.mjs";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
-if (!existsSync(join(root, "brain", "admin.md"))) { console.error("no brain here (brain/admin.md missing). Run setup."); process.exit(1); }
+if (!lib.isBrain(root)) { console.error("no brain here (brain/admin.md missing). Run setup."); process.exit(1); }
 // --project <slug>: this chat runs in a linked folder; its loaded set is its own (lib.readLoaded(root, project))
 let project = null; { const pi = args.indexOf("--project"); if (pi >= 0) { project = args[pi + 1] || ""; args.splice(pi, 2); const known = lib.readProjects(root).map(p => p.slug); if (!known.includes(project)) { console.error(`no project ${project}; projects: ${known.join(", ") || "none"}`); process.exit(2); } } }
 
@@ -22,9 +23,13 @@ if (args[0] === "--new") {
   // X1-X3 are judgment (saving-rules.md): the brain states what exists, Codex decides, and says why the new one is
   // distinct before it is created ("berlin-event" for the project berlin-event-2026 slipped past a name match, 2026-11-12)
   const di = args.indexOf("--distinct"), distinct = di > 0 ? (args[di + 1] || "").trim() : "";
+  const projects = [...new Set([...lib.readProjects(root).map(p => p.slug), ...(existsSync(join(root, "projects")) ? readdirSync(join(root, "projects"), { withFileTypes: true }).filter(d => d.isDirectory()).map(d => d.name) : [])])];
+  // X1 by name, with or without a reason: the same slug, or one that is the other's start at a word
+  // ("berlin-event" and berlin-event-2026), is that project (the live scenario run of 2026-11-15 gave a reason and created it).
+  const sameProject = projects.find(p => p === slug || p.startsWith(slug + "-") || slug.startsWith(p + "-"));
+  if (sameProject) { console.error(`not created: "${title}" is the project ${sameProject} (X1: a project is not a context). Save its notes in the context their meaning fits, with the project tag (project: ${sameProject}); say so in one line.`); process.exit(2); }
   if (!distinct) {
     const ctxs = lib.listContexts(root).map(c => `${c.title} (${c.slug}${c.status === "archived" ? ", archived" : ""})`);
-    const projects = [...new Set([...lib.readProjects(root).map(p => p.slug), ...(existsSync(join(root, "projects")) ? readdirSync(join(root, "projects"), { withFileTypes: true }).filter(d => d.isDirectory()).map(d => d.name) : [])])];
     console.error(`not created yet: check "${title}" against what exists. Contexts: ${ctxs.join(", ") || "none"}. Projects: ${projects.join(", ") || "none"}. X1: a project (by any shorter or longer name) is not a context. X3: a topic an existing or archived context covers is that context. If it is one of these, do not create it: say which, and ask the person only when it is unclear (Q1). If it is a new lasting topic (X2) and the person agreed, call new_context again with distinct set to one line on why no context or project above covers it.${dots.rulebookOnce(root, lib.readSession(root, project)?.session_id)}`);
     process.exit(2);
   }
@@ -77,8 +82,8 @@ if (args[0] === "--fork") {
 
 const cs = lib.listContexts(root);
 if (args.includes("--json")) { console.log(JSON.stringify(cs.map(c => ({ slug: c.slug, title: c.title, rule: c.rule, status: c.status, summary: c.summary, memories: lib.effectiveMemories(c.memories).length, stored: c.memories.length, lastMemory: c.lastMemory, compiledAt: c.compiledAt, stale: c.stale, people: c.people, tools: c.tools, related: c.related })), null, 1)); process.exit(0); }
-// Same words as the dashboard: "summary up to date" / "summary updating (shortly)", "loaded in this chat"; "out of date" only after 2 days behind.
-console.log("admin: brain/admin.md (always loaded)");
+// lib.summaryState's words: "summary up to date", "summary as of <date>, N newer notes (written when asked)", "loaded in this chat".
+console.log(`admin: ${lib.settingsFile(root)} (always loaded)`);
 const loadedNow = lib.readLoaded(root, project); const busy = lib.compileBusy(root);
 // --brief-loaded: the chat start prints each loaded context in full right after this list, so its
 // summary excerpt and standing rule are left out here instead of reaching the chat twice.
@@ -86,8 +91,10 @@ const briefLoaded = args.includes("--brief-loaded");
 for (const c of cs.filter(c => c.status === "active")) {
   const eff = lib.effectiveMemories(c.memories); const fresh = c.compiledAt ? eff.filter(m => lib.newer(m.at, c.compiledAt)).length : eff.length;
   const state = lib.summaryState(c, busy);
-  console.log(`• ${c.title} (${c.slug}) · ${eff.length} memories · ${state}${loadedNow.includes(c.slug) ? (project ? " · loaded in this project" : " · loaded in this chat") : ""}${eff.length && !c.stale && !(briefLoaded && loadedNow.includes(c.slug)) ? `  ${c.summary.slice(0, 80)}` : ""}`);
+  console.log(`• ${c.title} (${c.slug}) · ${eff.length} memories · ${state}${loadedNow.includes(c.slug) ? `${project ? " · loaded in this project" : " · loaded in this chat"}${eff.length ? ` · ${lastNoteAgo(eff)}` : ""}` : ""}${eff.length && !c.stale && !(briefLoaded && loadedNow.includes(c.slug)) ? `  ${c.summary.slice(0, 80)}` : ""}`);
   if (c.rule && !(briefLoaded && loadedNow.includes(c.slug))) console.log(`  ${c.rule}`);
 }
 const archived = cs.filter(c => c.status !== "active");
 if (archived.length) console.log(`archived (searchable, not offered): ${archived.map(c => `${c.slug} (${lib.effectiveMemories(c.memories).length} memories)`).join(", ")}`);
+// a brain nobody saved to for more than a week says so once, here: status and the chat start both print this list
+{ const quiet = quietBrainLine(cs, at => lib.localDateTime(at).slice(0, 10)); if (quiet) console.log(quiet); }

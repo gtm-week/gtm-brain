@@ -1,7 +1,11 @@
+// These tests read and write the root files of a layout 2 brain: setup and the lib play a plugin that writes layout 2 at most
+// (lib/layout-version.mjs GTM_BRAIN_TEST_LAYOUT). Layout 3 (about-us/, config/) is covered by config-folders.test.mjs.
+process.env.GTM_BRAIN_TEST_LAYOUT = "2";
 process.env.GTM_BRAIN_NO_WATCH = "1";
 process.env.GTM_BRAIN_NO_COMPILE = "1"; // Model runs are opt-in through test doubles.
 process.env.GTM_BRAIN_NO_SESSION_MAINTENANCE = "1"; // Dedicated worker tests exercise asynchronous startup.
-// The dashboard server serves the page and revision events. Mutating requests are refused.
+// The dashboard server serves the page and revision events. Mutating requests are refused, except a document saved
+// from the page (POST /document, covered in dashboard-edit.test.mjs).
 // A fake `codex` on PATH records what it was asked to do.
 // Run: node --test 'plugins/gtm-brain/test/*.test.mjs'
 import { test, after } from "node:test";
@@ -37,10 +41,10 @@ test("the session hook keeps edits made by hand outside Codex", () => {
   const out = execFileSync("bash", [`${P}/session/session-start.sh`], { cwd: root, encoding: "utf8", env, input: JSON.stringify({ session_id: "thread-123", cwd: root }) });
   for (const name of ["questions", "computer-use"]) {
     const policy = readFileSync(join(P, `policies/${name}.md`), "utf8");
-    assert.ok(readFileSync(join(root, "AGENTS.md"), "utf8").includes(policy), `the brain's AGENTS.md carries the shared ${name} policy`);
-    assert.ok(!out.includes(policy), `the brain hook does not repeat the ${name} policy the chat already has`);
+    assert.ok(!readFileSync(join(root, "AGENTS.md"), "utf8").includes(policy), `the brain's slim AGENTS.md leaves the ${name} policy to its rule page`);
+    assert.ok(!out.includes(policy), `the brain hook does not print the ${name} policy: it is a rule page`);
   }
-  assert.match(out, /references\/questions\.md once/);
+  assert.match(out, /questions rule page once \(query, object rules, search questions\)/);
   assert.match(out, /maintenance requested in the background/);
   execFileSync(process.execPath, [`${P}/session/session-maintenance.mjs`, root, '--run'], { env });
   assert.equal(execFileSync("git", ["-C", root, "status", "--short", "--", "brain"], { encoding: "utf8" }).trim(), "", "nothing left unkept");
@@ -73,11 +77,11 @@ test("the chat start records the chat id from its stdin", () => {
   assert.match(chrome, /Codex pane/);
   assert.doesNotMatch(chrome, /Chrome opening is handled/);
   setAdmin(admin, readFileSync(admin, "utf8").replace("dashboard_browser: chrome\n", ""));
-  // a loaded context behind at chat start: the hook starts the background run
+  // a loaded context behind at chat start: no background run and no promise (0.35.0: written when loaded in full)
   execFileSync(process.execPath, [`${P}/scripts/gtm-brain-load/load.mjs`, ".", "icp"], { cwd: root, env });
   execFileSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "marta", "--context", "icp", "--content", "First note."], { cwd: root, env: { ...env, GTM_BRAIN_NO_COMPILE: "1" } });
   const bgo = execFileSync("bash", [`${P}/session/session-start.sh`], { cwd: root, encoding: "utf8", env: { ...env, GTM_BRAIN_NO_COMPILE: "1" }, input: JSON.stringify({ session_id: "thread-123", cwd: root }) });
-  assert.match(bgo, /compile: background \(brain\/admin.md\): the summaries that are behind will be updated by a separate run/);
+  assert.doesNotMatch(bgo, /separate run|shortly/); assert.match(bgo, /written when this context is loaded in full/);
 });
 
 test("a separate run's session hook keeps the person's chat and records its own thread for the dashboard", () => {
@@ -111,6 +115,17 @@ test("the server serves the viewer, rejects all writes, and never launches Codex
   assert.equal(dash("--open"),url);
   assert.equal(dash("--open-chrome"),url);
   dash("--stop");assert.equal(dash("--url"),"");assert.equal(dash("--start"),url);
+});
+
+test("a server another plugin version started is replaced on start, on the same port", () => {
+  const url = dash("--start"), stateFile = join(root, "work", "dash.json"), s = JSON.parse(readFileSync(stateFile, "utf8"));
+  assert.equal(s.version, JSON.parse(readFileSync(join(P, ".codex-plugin", "plugin.json"), "utf8")).version, "the server records its plugin version");
+  assert.equal(dash("--start"), url); assert.equal(JSON.parse(readFileSync(stateFile, "utf8")).pid, s.pid, "the same version is reused");
+  writeFileSync(stateFile, JSON.stringify({ ...s, version: "0.0.1" }));   // as if an older install started it
+  assert.equal(dash("--start"), url, "the same address");
+  const n = JSON.parse(readFileSync(stateFile, "utf8"));
+  assert.notEqual(n.pid, s.pid, "a new server"); assert.equal(n.version, s.version);
+  assert.throws(() => process.kill(s.pid, 0), "the old one is gone");
 });
 
 test("legacy dashboard open flags never launch an external browser (ALL-207)", () => {

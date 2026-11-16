@@ -71,14 +71,15 @@ Offer optional personal Chrome setup for logged-in website work during the conne
 following create-brain.md; do not ask for a dashboard browser choice. Reuse anything
 already known (what Step 2 will find if you prefer to run its pull
 first). The person's name and email are theirs to give: never take them from git, GitHub or
-the machine, and never accept a noreply or GitHub address as someone's email. Summaries update in the background by default; say so in one line, never as a
+the machine, and never accept a noreply or GitHub address as someone's email. A topic's summary is written when someone asks about it; say so in one line, never as a
 question. The starting contexts are explained together, not interviewed one by one.
 
 ## Step 2: get to know the business
 
 Follow [discovery](references/discovery.md) from its Step 0: pull what the machine and the
-already connected tools know, research the website, draft the workplace info and show it for
-APPROVE, propose the tools to connect, read them for a first snapshot, propose one or two
+already connected tools know, research the website, ask once where big files go (recordings and
+files over 25 MB; [big files](../gtm-brain-use-brain/references/big-files.md) is what happens with
+each one later), draft the workplace info and show it for APPROVE, propose the tools to connect, read them for a first snapshot, propose one or two
 automations, ask which existing Codex projects to follow using
 [existing projects](references/projects.md), then write the completion marker. The dashboard's
 onboarding card follows each step. A completed v1 onboarding stays complete. New project

@@ -12,6 +12,7 @@ import { existsSync, mkdirSync, writeFileSync, readFileSync, appendFileSync } fr
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { questionInput } from "./question-input.mjs";
+import { askPerson, properties as ASK_PERSON, required as ASK_PERSON_REQUIRED } from "./ask-person.mjs";
 import { createInterface } from "node:readline";
 import { loadOntology, buildTools, instructionsText } from "../lib/ontology/index.mjs";
 import { createFilesBackend } from "./files-backend.mjs";
@@ -20,6 +21,17 @@ import { host } from "../lib/host.mjs";
 import { validateValue } from "../lib/ontology/validation.mjs";
 import { placementTrailers, whyHere, WHY_TRAILER } from "../lib/where.mjs";
 import { rulesReport } from "../lib/rules-check.mjs";
+import { housekeepingText } from "../lib/housekeeping.mjs";
+import { splitNames } from "../lib/entity-cards.mjs";
+import { scopedReport, replyRules, entryScopes, entityScope, createShownOnce } from "../lib/our-rules.mjs";
+import { askSourceLines } from "../lib/ask-source.mjs";
+import { readSchema, fieldsFor } from "../lib/schema.mjs";
+import { hasMemoryIndex } from "../lib/memory-index-store.mjs";
+import { createSaveNudge } from "../lib/save-nudge.mjs";
+import { layoutBlock } from "../lib/layout-version.mjs";
+import { relativeDates } from "../lib/dots.mjs";
+import { rulePageAnswer, pageForCall, rulePageText, rulePageIndex, rulePages } from "../lib/rule-pages.mjs";
+import { foldStatus as foldStatusText } from "../lib/opening.mjs";
 
 const P = dirname(dirname(fileURLToPath(import.meta.url)));
 const lib = await import(join(P, "lib", "brain.mjs"));
@@ -35,7 +47,7 @@ const run = (cwd, file, args = [], { timeout = 60000, env = {} } = {}) => new Pr
 });
 const text = (s, isError = false) => ({ content: [{ type: "text", text: s.trim() || "(nothing to report)" }], ...(isError ? { isError: true } : {}) });
 const result = r => text([r.out, r.err].filter(Boolean).join("\n"), r.code !== 0);
-const isBrain = p => !!p && existsSync(join(p, "brain", "admin.md"));
+const isBrain = p => lib.isBrain(p);
 const VERSION = (() => { try { return JSON.parse(readFileSync(join(P, ".codex-plugin", "plugin.json"), "utf8")).version || "0.0.0"; } catch { return "0.0.0"; } })();
 const brainError = p => text(`${p || "(no path)"} is not a brain: no brain/admin.md there. Pass the workspace folder you are in, or run setup_brain in an empty folder.`, true);
 const projectError = (brain, project) => { if (!project) return null; const known = lib.readProjects(brain).map(p => p.slug); return known.includes(project) ? null : text(`no project ${project}; projects: ${known.join(", ") || "none"}. The chat's opening lines name the project; omit it in the brain's own chat.`, true); };
@@ -71,7 +83,7 @@ const TOOLS = [
         const t = JSON.parse(readFileSync(join(brain, "work", "tools.json"), "utf8")), keys = new Set(((lib.readAdmin(brain) || {}).tools || []).map(lib.toolKey));
         tools = Object.entries(t).filter(([k]) => keys.has(k)).map(([, x]) => `${x.tool}: ${x.status}${x.test ? ` (read test ${x.test})` : ""}`).join(", ");
       } catch {}
-      return text(`${r.out}${r.err}\nLoaded in this ${project ? `project (${project})` : "chat"}: ${loaded.length ? loaded.join(", ") : "nothing (admin only)"}${tools ? `\nTools: ${tools}` : ""}\n${docs.documentsLine(brain)}\nSummaries: updated by themselves in the background (after each saved change); a chat never compiles; when asked, queue the background worker as the compile procedure says` + companyLine(brain) + `\n${lib.onboardingInstruction(brain, { project })}`, r.code !== 0);
+      return text(`${r.out}${r.err}\nLoaded in this ${project ? `project (${project})` : "chat"}: ${loaded.length ? loaded.join(", ") : "nothing (admin only)"}${tools ? `\nTools: ${tools}` : ""}\n${docs.documentsLine(brain)}\nSummaries: written when asked; load_context of a topic whose summary is behind gives the notes and as_of to write it once with compile_apply` + companyLine(brain) + `\n${lib.onboardingInstruction(brain, { project })}`, r.code !== 0);
     } },
   { name: "list_contexts", title: "Listing the contexts", readOnly: true,
     description: "List the contexts: title, stable slug, standing rule, memory count, summary state and whether loaded in this chat. Choose by title, rule and summary; the rule includes purpose and boundaries. Show titles to the person and use slugs in tool calls. Our company describes the organization that owns this brain; external company findings belong in the relevant topic's context.",
@@ -90,7 +102,7 @@ const TOOLS = [
     inputSchema: schema({ entity: str("Entity name, alias or stable ID; omit to list stale briefs") }),
     call: ({ brain, entity }) => run(brain, "gtm-brain-entities/compile-entity.mjs", entity ? ["--facts", entity] : []).then(result) },
   { name: "compile_facts", title: "Reading a context's memories", readOnly: true,
-    description: "Without context: which contexts are behind (memories newer than the last compile). With context: everything needed to rewrite its cover (rule, current summary, previous working guidance, people, tools, questions, decisions, every effective memory with IDs and source/action references) and the as_of id to pass to compile_apply.",
+    description: "Without context: which contexts are behind (memories newer than the last compile). With context: everything needed to rewrite its cover (rule, current summary, previous working guidance, people, tools, questions, decisions, the effective memories since the last compile with IDs and source/action references; older ones through query) and the as_of id to pass to compile_apply.",
     inputSchema: schema({ context: str("Context slug; omit to list what is behind") }),
     call: ({ brain, context }) => run(brain, "gtm-brain-compile/compile.mjs", context ? ["--facts", context] : ["--stale"]).then(result) },
   { name: "meeting_overview", title: "Reviewing meetings", readOnly: true,
@@ -121,9 +133,13 @@ const TOOLS = [
     description: "A health check of the brain from its files: summaries behind or failing, questions nobody answered, tools listed but not connected, names that may be one entity, quiet or empty contexts, people known by a first name only, notes without sources, rules that grew, what every chat loads. Returns three things worth doing and one for this week. Reads only.",
     inputSchema: schema({}),
     call: ({ brain }) => run(brain, "gtm-brain-advisor/advisor.mjs", []).then(result) },
+  { name: "capture_chats", title: "Capturing outcomes from chats", readOnly: false,
+    description: "The nightly chat capture: outcomes said in this brain's chats and never saved, saved as notes tagged captured. mode run starts a pass in the background and returns at once (only after the person said yes); undo withdraws the captured notes the chat start listed (the person said undo captured); status shows the last pass; off and on switch it for this machine; cap and chat_cap set its input token caps.",
+    inputSchema: schema({ mode: str("run | undo | status | off | on", { enum: ["run", "undo", "status", "off", "on"] }), cap: { type: "integer", minimum: 1000, description: "Input tokens per pass, default 200000" }, chat_cap: { type: "integer", minimum: 1000, description: "Input tokens per chat, default 50000" } }, ["brain", "mode"]),
+    call: ({ brain, mode, cap, chat_cap }) => run(brain, "gtm-brain-schedule/capture.mjs", [{ run: "--start", undo: "--undo", status: "--status", off: "--off", on: "--on" }[mode] || "--status", ...(cap ? ["--cap", String(cap)] : []), ...(chat_cap ? ["--chat-cap", String(chat_cap)] : [])]).then(result) },
   { name: "who_is", title: "Looking up who is who", readOnly: true,
     description: "Read saved identity first: exact name, alias, email or stable ID resolves it; partial names, accents and typos return ranked candidates with reasons, emails and source references, never automatic identity changes. Omit name to list everyone. Optional candidates ranks a bounded shortlist already returned by a CRM; it makes no connector calls and saves nothing. For live name search prefer the connector's fuzzy/full-text capability, not equality filters. Zero results never justify merging. Use recall with a confirmed entity ID for its brief.",
-    inputSchema: schema({ name: str("Name, alias, email or stable ID; required when ranking source candidates", { minLength: 1, maxLength: 256 }), limit: { type: "integer", minimum: 1, maximum: 10, description: "Candidate limit, default 5; output reports truncation" }, candidates: { type: "array", maxItems: 100, description: "Optional already retrieved CRM shortlist. Preserve returned IDs, names and source references; never invent candidates. Results remain unconfirmed.", items: { type: "object", properties: { id: str("Record ID from the source", { minLength: 1 }), name: str("Returned name", { minLength: 1, maxLength: 256 }), kind: str("Entity kind", { enum: ["person", "organization", "product"] }), aliases: strs("Known source aliases"), emails: strs("Returned email addresses"), reference: { type: "object", properties: { kind: str("Source connector/account", { minLength: 1 }), ref: str("Exact source record URL or scoped ID", { minLength: 1 }) }, required: ["kind", "ref"], additionalProperties: false } }, required: ["id", "name", "reference"], additionalProperties: false } } }),
+    inputSchema: schema({ name: str("Name, alias, email or stable ID; required when ranking source candidates", { minLength: 1, maxLength: 256 }), limit: { type: "integer", minimum: 1, maximum: 10, description: "Candidate limit, default 5; output reports truncation" }, candidates: { type: "array", maxItems: 100, description: "Optional already retrieved CRM shortlist. Preserve returned IDs, names and source references; never invent candidates. Results remain unconfirmed.", items: { type: "object", properties: { id: str("Record ID from the source", { minLength: 1 }), name: str("Returned name", { minLength: 1, maxLength: 256 }), kind: str("Entity kind, a kind in SCHEMA.md", { minLength: 1, maxLength: 40 }), aliases: strs("Known source aliases"), emails: strs("Returned email addresses"), reference: { type: "object", properties: { kind: str("Source connector/account", { minLength: 1 }), ref: str("Exact source record URL or scoped ID", { minLength: 1 }) }, required: ["kind", "ref"], additionalProperties: false } }, required: ["id", "name", "reference"], additionalProperties: false } } }),
     call(args) {
       const invalid = validateValue(TOOLS.find(t => t.name === "who_is").inputSchema, args);
       if (invalid) return text(invalid, true);
@@ -139,8 +155,8 @@ const TOOLS = [
     inputSchema: schema({ tool: str("Tool id, e.g. hubspot"), status: str("ok | fail | skip", { enum: ["ok", "fail", "skip"] }), note: str("What the read test returned, one line (for skip: their words)") }, ["brain", "tool", "status", "note"]),
     call: ({ brain, tool, status, note }) => run(brain, "gtm-brain-connect/connect.mjs", status === "skip" ? ["--skip", tool] : ["--mark", tool, status, note]).then(result) },
   { name: "propose_admin_change", title: "Proposing a change to the workplace info", readOnly: false,
-    description: "Propose a new brain/admin.md: pass the complete proposed file. It is written to work/admin.proposed.md and the diff comes back. Use the diff internally to explain every substantive change in plain language, including old and new values and removals; do not paste raw diffs unless requested. Then call approve_change: its form shows the person the change with an APPROVE choice, and only their click applies it. Never ask for APPROVE in the chat.",
-    inputSchema: schema({ content: str("The complete proposed admin.md, plain hyphens only") }, ["brain", "content"]),
+    description: "Propose new workplace settings: pass the complete proposed file (brain/admin.md, or config/settings.yaml where the brain has config/; the opening lines name it). It is written to work/admin.proposed.md and the diff comes back. Use the diff internally to explain every substantive change in plain language, including old and new values and removals; do not paste raw diffs unless requested. Then call approve_change: its form shows the person the change with an APPROVE choice, and only their click applies it. Never ask for APPROVE in the chat.",
+    inputSchema: schema({ content: str("The complete proposed settings file, plain hyphens only") }, ["brain", "content"]),
     async call({ brain, content }) {
       mkdirSync(join(brain, "work"), { recursive: true });
       writeFileSync(join(brain, "work", "admin.proposed.md"), String(content));
@@ -180,7 +196,7 @@ const TOOLS = [
       const [assistant, git] = await Promise.all([host().environment(sh), sh("git", ["--version"])]);
       const dir = folder || brain || process.cwd(); let what = "not there";
       // the same test setup applies: .git, a README, .gitignore and the plugin's own work/session.json do not count
-      try { const files = lib.setupBlockers(dir); what = existsSync(join(dir, "brain", "admin.md")) ? "a brain (set up already)" : files.length ? `not empty (${files.slice(0, 5).join(", ")}${files.length > 5 ? ", ..." : ""}): setup needs an empty folder` : "empty: ready for setup"; } catch {}
+      try { const files = lib.setupBlockers(dir); what = lib.isBrain(dir) ? "a brain (set up already)" : files.length ? `not empty (${files.slice(0, 5).join(", ")}${files.length > 5 ? ", ..." : ""}): setup needs an empty folder` : "empty: ready for setup"; } catch {}
       const lines = [`node ${process.version}`, ...assistant, git ? git.replace(/^git version /, "git ") : "git: not found (setup needs it)", `folder ${dir}: ${what}`];
       if (isBrain(dir)) lines.push(lib.onboardingInstruction(dir));
       return text(lines.join("\n"), !git);
@@ -218,25 +234,38 @@ const TOOLS = [
       const args = action === "list" ? ["--list"] : action === "remove" ? ["--remove", String(id || "")] : action === "install" ? ["--install", "--repo", String(repo || ""), "--path", String(path || ""), ...(ref ? ["--ref", ref] : []), ...(title ? ["--title", title] : [])] : ["--create", "--title", String(title || ""), "--description", String(description || ""), "--body", String(body || "")];
       return run(brain, "gtm-brain-skills/skill.mjs", [...args, ...(by ? ["--by", by] : [])], { timeout: 120000 }).then(result);
     } },
+  { name: "answer_question", title: "Answering an open question", readOnly: false,
+    description: "Close an open question with the person's answer, in this one call: the answer is saved as the note that retracts the question, so no remember, no merge_entities and no second read is needed. Pass question (its id) and answer (their words). When the question asks whether two names are the same person, company or product, also pass outcome with name and other: same merges the two entities, or makes name another name of other when it is not an entity yet; different registers name as its own entity (kind, default the kind of other) and marks the two as kept separate, so they are not suggested as one again. For a question about who a first name is (Who is Anna?), pass the full name in people, or the company in companies. Without question it lists the open questions with their id, topic, age and what each is about, and writes nothing.",
+    inputSchema: schema({ question: str("The id of the open question (m_...), from the opening lines or from this tool's list. Omit to list the open questions."), answer: str("The person's answer in their own words"), by: str("Team member handle of the person answering; omit to use the person in this chat"),
+      outcome: str("Only for a question whether two names are the same: same or different", { enum: ["same", "different"] }), name: str("outcome: the name the question is about, or its entity ID"), other: str("outcome: the known entity it is compared with, name or ID; for same it is the one that stays"),
+      kind: str("outcome different, a name that is new: its kind (person, organization, product, ...); default the kind of other"), subtype: str("outcome different, a name that is new: organization subtype (company, team)"),
+      people: strs("A question about who someone is: the full name"), companies: strs("A question about who someone is: the company, when the name is one"),
+      resolution: { type: "object", description: "outcome same, only after this tool asked for a choice: as in merge_entities (allow_distinct, references)" } }),
+    call: ({ brain, ...args }) => run(brain, "gtm-brain-entities/lifecycle.mjs", ["answer_question", JSON.stringify(args)], { timeout: 150000 }).then(result) },
   { name: "document", title: "Documents", readOnly: false,
-    description: "The documents the work must follow, kept as Markdown at the brain root or in folders the person names (strategy.md, brand/voice.md, pricing/pricing.md), each with a kind: document marker; a document's files live in a folder of its name beside it. action create writes one from a title, applies_to (the kinds of work it governs: copy, outreach, posts, landing pages, design, proposals, planning) and the body, or from a prepared file (a Markdown already at the brain root is adopted in place); list shows them with file counts; show returns one in full; files lists what one owns; update rewrites only the fields given and keeps hand edits; remove deletes one (its files folder stays). Status is draft unless the person approved it. Confirm the draft with the person before create. Before work of a listed kind, read the matching file and follow it (AGENTS.md rule 11). Land a file for a document with add-file.mjs --document.",
-    inputSchema: schema({ action: str("What to do", { enum: ["create", "list", "show", "files", "update", "remove"] }), title: str("create/update: the document's title; its slug is the file name"), applies_to: strs("create/update: the kinds of work this document governs, lowercase, at most 12"), body: str("create/update: the document text, Markdown, under 64 KB"), file: str("create/update: instead of body, the path of a Markdown or text file the person prepared; one already at the brain root is adopted where it is"), folder: str("create: the folder to put it in (brand, market/battle-cards); omit for the root"), status: str("create/update: draft (default) or approved, only on the person's word", { enum: ["draft", "approved"] }), ref: str("show/files/update/remove: the document's slug (voice) or path (brand/voice)"), by: str("The current person's handle") }, ["brain", "action"]),
-    call: ({ brain, action, title, applies_to, body, file, folder, status, ref, by }) => {
-      const fields = [...(title !== undefined ? ["--title", String(title)] : []), ...(applies_to !== undefined ? ["--applies-to", Array.isArray(applies_to) ? applies_to.join(", ") : String(applies_to)] : []), ...(body !== undefined ? ["--body", String(body)] : []), ...(file !== undefined ? ["--file", String(file)] : []), ...(folder !== undefined ? ["--folder", String(folder)] : []), ...(status !== undefined ? ["--status", String(status)] : [])];
-      const args = action === "list" ? ["--list"] : ["show", "files", "remove"].includes(action) ? [`--${action}`, String(ref || "")] : action === "update" ? ["--update", String(ref || ""), ...fields] : ["--create", ...fields];
+    description: "The documents the work must follow, kept as Markdown at the brain root or in folders the person names (strategy.md, brand/voice.md, pricing/pricing.md), each with a kind: document marker; a document's files live in a folder of its name beside it. action create writes one from a title, applies_to (the kinds of work it governs: copy, outreach, posts, landing pages, design, proposals, planning) and the body, or from a prepared file (a Markdown already at the brain root is adopted in place); list shows them with file counts; show returns one in full; files lists what one owns; update rewrites only the fields given and keeps hand edits; remove deletes one (its files folder stays). A base file the person asks for (add pricing as a base file) starts with prepare (title, or file for a Markdown dropped at the root): what already covers it, a starter, the brain's notes on it and the one question; update with append adds a section and keeps the rest; preview shows a write without making it. Adopting keeps the file's text byte for byte. Status is draft unless the person approved it. Show the draft in full and save only on the person's pick or yes. Before work of a listed kind, read the matching file and follow it (AGENTS.md rule 11). Land a file for a document with add-file.mjs --document.",
+    inputSchema: schema({ action: str("What to do", { enum: ["prepare", "create", "list", "show", "files", "update", "remove"] }), title: str("prepare/create/update: the document's title (prepare: the subject); its slug is the file name"), applies_to: strs("create/update: the kinds of work this document governs, lowercase, at most 12"), body: str("create/update: the document text, Markdown, under 64 KB"), file: str("prepare/create/update: instead of body, the path of a Markdown or text file the person prepared; one already at the brain root is adopted where it is"), folder: str("create: the folder to put it in (brand, market/battle-cards); omit for the root"), status: str("create/update: draft (default) or approved, only on the person's word", { enum: ["draft", "approved"] }), ref: str("show/files/update/remove: the document's slug (voice) or path (brand/voice)"), append: str("update: a section added at the end; everything above it stays as it is"), preview: { type: "boolean", description: "create/update: return what would be written and write nothing" }, base: { type: "boolean", description: "create/update: true makes it a base file (what the company's work must follow: pricing, positioning), false an ordinary document (a talk draft, a brief); only on the person's word" }, by: str("The current person's handle") }, ["brain", "action"]),
+    call: ({ brain, action, title, applies_to, body, file, folder, status, ref, append, preview, base, by }) => {
+      const fields = [...(title !== undefined ? ["--title", String(title)] : []), ...(applies_to !== undefined ? ["--applies-to", Array.isArray(applies_to) ? applies_to.join(", ") : String(applies_to)] : []), ...(body !== undefined ? ["--body", String(body)] : []), ...(file !== undefined ? ["--file", String(file)] : []), ...(folder !== undefined ? ["--folder", String(folder)] : []), ...(status !== undefined ? ["--status", String(status)] : []), ...(append !== undefined ? ["--append", String(append)] : []), ...(typeof base === "boolean" ? ["--base", base ? "yes" : "no"] : []), ...(preview ? ["--preview"] : [])];
+      const args = action === "list" ? ["--list"] : action === "prepare" ? ["--prepare", ...fields] : ["show", "files", "remove"].includes(action) ? [`--${action}`, String(ref || "")] : action === "update" ? ["--update", String(ref || ""), ...fields] : ["--create", ...fields];
       return run(brain, "gtm-brain-documents/document.mjs", [...args, ...(by ? ["--by", by] : [])]).then(result);
     } },
   { name: "workflow", title: "Workflows: runs that play out over time", readOnly: false,
-    description: "A workflow is a document in workflows/ (type: workflow) with a Before starting list, gated Steps and a Learn list; a run is its dated state, kept as memories in one context. A playbook is a workflow: a request for a playbook is answered with the workflows. list shows the workflows and the runs in progress; create writes a new one as a draft from a title and a body with the three headings (confirm the draft with the person first; an existing file is never replaced); start begins a run once every Before starting item is settled (ask through question first, one page per missing item, then confirm the brief); status shows a run's steps, due dates and open gate question; advance records the current step as done, with the connector actions taken in this chat, and opens the next one with its due date or gate question; skip and abandon say why; due marks the steps whose date passed and asks their gate question (session maintenance and the schedule call it). Never carries out a step itself: do the step through the connected tools, then advance. Skill gtm-brain-workflow.",
-    inputSchema: schema({ action: str("What to do", { enum: ["list", "create", "start", "status", "advance", "skip", "abandon", "due"] }), title: str("create: the workflow's title (Partner onboarding); its slug is the file name"), body: str("create: Markdown with ## Before starting (bullets **Label**: meaning), ## Steps (numbered: **Title** (tool: category). What to do. Gate: after N days | on YYYY-MM-DD | when ...) and ## Learn (bullets)"), applies_to: strs("create: the kinds of work it is for, lowercase (partner onboarding)"), slug: str("start: the workflow's slug, its file name in workflows/ (outbound, ads-then-outbound)"), context: str("start: the context the run belongs to"), handle: str("start: what this run is called, one to three words (the customer, the quarter)"), settled: { type: "object", description: "start: every Before starting label with its answer", additionalProperties: { type: "string" } }, run: str("status/advance/skip/abandon: the run id from list"), step: { type: "integer", description: "advance/skip: the current step's number" }, note: str("advance: what was done, one or two sentences"), answer: str("advance: the answer to the step's gate question, when there was one"), actions: strs("advance: connector actions taken, tool:action:ref"), learned: { type: "object", description: "advance on the last step: each Learn item, word for word, with what was read back", additionalProperties: { type: "string" } }, reason: str("skip/abandon: why"), today: str("due: the date to check against, YYYY-MM-DD; omit for today"), by: str("The current person's confirmed handle; schedule or session for the automatic due check") }, ["brain", "action"]),
-    call: ({ brain, action, title, body, applies_to, slug, context, handle, settled, run: id, step, note, answer, actions, learned, reason, today, by }) => {
-      const args = action === "list" ? ["--list"]
-        : action === "create" ? ["--create", String(title || ""), "--body", String(body || ""), ...(applies_to?.length ? ["--applies-to", list(applies_to).join(", ")] : [])]
-        : action === "start" ? ["--start", String(slug || ""), "--context", String(context || ""), "--handle", String(handle || ""), "--settled", JSON.stringify(settled || {})]
-        : action === "status" ? ["--status", String(id || "")]
-        : action === "advance" ? ["--advance", String(id || ""), "--step", String(step ?? ""), ...(note ? ["--note", String(note)] : []), ...(answer ? ["--answer", String(answer)] : []), ...(actions?.length ? ["--actions", list(actions).join(",")] : []), ...(learned ? ["--learned", JSON.stringify(learned)] : [])]
-        : action === "skip" ? ["--skip", String(id || ""), "--step", String(step ?? ""), "--reason", String(reason || "")]
-        : action === "abandon" ? ["--abandon", String(id || ""), "--reason", String(reason || "")]
+    description: "A workflow is a document in workflows/ (type: workflow): a header (status draft, active or paused; trigger manual, a schedule or a brain event; what it reads and writes), Before starting, numbered Steps (each may name a skill, has an optional gate and a milestone the brain can see) and Learn; a run is its dated state, kept as notes in one context. A playbook is a workflow. list shows workflows and runs; view is the people's read (also query object workflows); create writes a draft (confirm it first; an existing file is never replaced); check validates the header, schema, skills, milestones and trigger clash and dry-runs one real example, writing nothing; needs (slug: a workflow or a skill) returns one proposal of what SCHEMA.md and admin.md lack, changing nothing; activate (after check passes, on the person's word) and pause/resume switch a workflow; start begins a run once every Before starting item is settled, with event when the chat start offered one and the person said yes; dismiss records a no for an offered event; status shows a run; advance records the current step done with the connector actions taken; skip, move (to a date), fail, pause_run, resume_run and cancel say why; due is the automatic check (session maintenance and the schedule). Never carries out a step itself and never starts a run unasked. Skill gtm-brain-workflow.",
+    inputSchema: schema({ action: str("What to do", { enum: ["list", "view", "create", "check", "needs", "activate", "pause", "resume", "start", "dismiss", "status", "advance", "skip", "move", "fail", "pause_run", "resume_run", "cancel", "abandon", "due"] }), title: str("create: the workflow's title (Partner onboarding); its slug is the file name"), body: str("create: Markdown with ## Before starting (bullets **Label**: meaning), ## Steps (numbered: **Title** (tool: category) (skill: name). What to do. Milestone: a note tagged x | a link <type> created | field <kind>.<field> filled | the document <slug> written. Gate: after N days | on YYYY-MM-DD | when <milestone>) and ## Learn (bullets)"), applies_to: strs("create: the kinds of work it is for, lowercase (partner onboarding)"), trigger: str("create: manual (default), daily 09:00, every Monday 09:00, note about <kind>, link <type> created|ended, field <kind>.<field> changed, field <kind>.<field> missing for N days"), reads: strs("create: what it reads, kind:<kind> link:<type> field:<kind>.<field> tool:<category>"), writes: strs("create: what it writes, same items"), slug: str("create/check/needs/activate/pause/resume/start/dismiss: the workflow's slug (needs also takes a skill name)"), context: str("create: the context scheduled runs belong to; start: the context the run belongs to (an event start defaults to the event's)"), handle: str("start: what this run is called, one to three words (an event start defaults to the entity)"), settled: { type: "object", description: "start: every Before starting label with its answer", additionalProperties: { type: "string" } }, event: str("start/dismiss: the event id the chat start or view named"), run: str("status/advance/skip/move/fail/pause_run/resume_run/cancel: the run id"), step: { type: "integer", description: "advance/skip/move/fail: the current step's number" }, to: str("move: the new date, YYYY-MM-DD"), note: str("advance: what was done, one or two sentences"), answer: str("advance: the answer to the step's gate question, when there was one"), actions: strs("advance: connector actions taken, tool:action:ref"), learned: { type: "object", description: "advance on the last step: each Learn item, word for word, with what was read back", additionalProperties: { type: "string" } }, reason: str("skip/fail/pause_run/cancel/dismiss: why, in the person's words"), today: str("due: the date to check against, YYYY-MM-DD; omit for today"), by: str("The current person's confirmed handle; schedule or session for the automatic due check") }, ["brain", "action"]),
+    call: ({ brain, action, title, body, applies_to, trigger, reads, writes, slug, context, handle, settled, event, run: id, step, to, note, answer, actions, learned, reason, today, by }) => {
+      const s = String(slug || ""), r = String(id || ""), why = reason ? ["--reason", String(reason)] : [];
+      const args = action === "list" ? ["--list"] : action === "view" ? ["--view"]
+        : action === "create" ? ["--create", String(title || ""), "--body", String(body || ""), ...(applies_to?.length ? ["--applies-to", list(applies_to).join(", ")] : []), ...(trigger ? ["--trigger", String(trigger)] : []), ...(reads?.length ? ["--reads", list(reads).join(", ")] : []), ...(writes?.length ? ["--writes", list(writes).join(", ")] : []), ...(context ? ["--context", String(context)] : [])]
+        : ["check", "needs", "activate", "pause", "resume"].includes(action) ? [`--${action}`, s]
+        : action === "start" ? ["--start", s, ...(context ? ["--context", String(context)] : []), ...(handle ? ["--handle", String(handle)] : []), "--settled", JSON.stringify(settled || {}), ...(event ? ["--event", String(event)] : [])]
+        : action === "dismiss" ? ["--dismiss", s, "--event", String(event || ""), ...why]
+        : action === "status" ? ["--status", r]
+        : action === "advance" ? ["--advance", r, "--step", String(step ?? ""), ...(note ? ["--note", String(note)] : []), ...(answer ? ["--answer", String(answer)] : []), ...(actions?.length ? ["--actions", list(actions).join(",")] : []), ...(learned ? ["--learned", JSON.stringify(learned)] : [])]
+        : action === "skip" || action === "fail" ? [`--${action}`, r, "--step", String(step ?? ""), ...why]
+        : action === "move" ? ["--move", r, "--step", String(step ?? ""), "--to", String(to || ""), ...why]
+        : action === "pause_run" || action === "resume_run" ? [`--${action.replace("_", "-")}`, r, ...why]
+        : action === "cancel" || action === "abandon" ? [`--${action}`, r, ...why]
         : ["--due", ...(today ? ["--today", String(today)] : [])];
       return run(brain, "gtm-brain-workflow/workflow.mjs", [...args, ...(by ? ["--by", String(by)] : [])]).then(result);
     } },
@@ -250,25 +279,49 @@ const TOOLS = [
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
     call: () => { const b = lib.knownBrains(); return text(b.length ? b.map(x => `${x.company}: ${x.path} (last opened ${x.lastOpened.slice(0, 10)})`).join("\n") : "no brain known on this machine yet: open the brain folder in Codex once, or give its path."); } },
   { name: "interact", title: "Doing it and recording it", readOnly: false,
-    description: "Run one of this company's own interactions (list_objects shows them): the inputs are checked, the memory the interaction prescribes is recorded through remember (context, people, companies, action), and the reply says exactly what to do in the connector, or to confirm it was done. Never a plugin tool's name: call those directly. Never Computer Use for the connector step.",
-    inputSchema: schema({ by: str("The current person's confirmed handle, name or email"), name: str("The interaction's name, from list_objects"), params: { type: "object", description: "The interaction's inputs", additionalProperties: true }, project: PROJECT }, ["brain", "by", "name"]),
-    async call({ brain, by, name, params = {}, project }) {
+    description: "Run one of this company's own interactions (list_objects shows them) in two calls: check, act, then record. The first call checks the inputs and writes nothing: it returns the refusal rule and exactly what to do in the connector. Do that with the connector's own tools, then call interact again with the same name and params plus outcome: done with refs (the record ids or links the connector returned) records the note the interaction prescribes with those refs as its sources; failed with error records a failure note. An interaction with nothing to do in a connector records at once. Never a plugin tool's name: call those directly. Never Computer Use for the connector step.",
+    inputSchema: schema({ by: str("The current person's confirmed handle, name or email"), name: str("The interaction's name, from list_objects"), params: { type: "object", description: "The interaction's inputs; the same on the second call", additionalProperties: true },
+      outcome: str("Leave out on the first call. On the second, after the connector step: done when the connector confirmed it, failed when it refused or errored", { enum: ["done", "failed"] }),
+      refs: { type: "array", items: { anyOf: [{ type: "string" }, { type: "object" }] }, description: "With outcome: what the connector returned for the record it wrote. The exact direct URL when one was returned, else provider:id, or {kind, account, ref, url} with the portal, workspace or mailbox when known. A bare id is taken as the interaction's tool. Never invent one." },
+      error: str("With outcome failed: what the connector said, word for word"), project: PROJECT }, ["brain", "by", "name"]),
+    async call({ brain, by, name, params = {}, outcome, refs = [], error, project }) {
       const pe = projectError(brain, project); if (pe) return pe;
-      const { actions, error } = lib.readInteractions(brain);
-      if (error) return text(`error: ${error}`, true);
+      const { actions, error: bad } = lib.readInteractions(brain);
+      if (bad) return text(`error: ${bad}`, true);
       if (lib.RESERVED_TOOLS.has(name)) return text(`refused: ${name} is a tool of its own; call it`, true);
       const a = actions.find(x => x.name === name);
       if (!a) return text(`refused: no interaction "${name}" here; this company has: ${actions.map(x => x.name).join(", ") || "none yet (propose_interaction adds one)"}`, true);
-      const bad = validateValue(a.input_schema, params, name); if (bad) return text(`refused: ${bad}`, true);
-      const m = lib.interactionMemory(a, params);
-      const r = await run(brain, "gtm-brain-remember/remember.mjs", ["--by", by, "--via", "codex", "--context", m.context, "--kind", m.kind, "--content", m.content, ...(m.people.length ? ["--people", m.people.join(", ")] : []), ...(m.companies.length ? ["--companies", m.companies.join(", ")] : []), ...(m.tools.length ? ["--tools", m.tools.join(", ")] : []), ...m.actions.flatMap(x => ["--action", x]), ...(m.tags.length ? ["--tags", m.tags.join(", ")] : []), ...(project ? ["--project", project] : [])]);
+      const invalid = validateValue(a.input_schema, params, name); if (invalid) return text(`refused: ${invalid}; nothing recorded`, true);
+      if (outcome === null || outcome === "") outcome = undefined;   // an empty outcome is a first call, never a record
+      if (outcome !== undefined && outcome !== "done" && outcome !== "failed") return text(`refused: outcome is done or failed, not ${outcome}; nothing recorded`, true);
+      // a bare id (a number too: HubSpot ids are numbers) is the interaction's own tool; everything else is a source as remember reads it
+      const list = (Array.isArray(refs) ? refs : [refs]).filter(x => x !== undefined && x !== null && x !== "").map(x => typeof x === "number" ? String(x) : x)
+        .map(x => typeof x === "string" && a.tool && !/^https?:\/\//i.test(x.trim()) && !/^\s*\{/.test(x) && x.indexOf(":") < 1 ? { kind: a.tool, ref: x.trim() } : x);
+      let sources; try { sources = lib.parseSources(list); } catch (e) { return text(`refused: refs: ${e.message}; nothing recorded`, true); }
+      if (a.external && !outcome) {
+        // What would refuse the note after the connector has written is refused now, before anything is done.
+        const note = lib.interactionMemory(a, params), dated = relativeDates(note.content);
+        const why = !lib.teamHandle(brain, by) ? `"${by}" is not in admin.md team`
+          : note.context && !lib.listContexts(brain).some(c => c.slug === note.context && c.status === "active") ? `its context ${note.context} is not an active context here`
+          : /[\u2013\u2014\u2015\u2212]/.test(note.content) ? "its note would contain a long dash; use a plain hyphen in params"
+          : dated.length ? `its note would say ${dated.map(d => `"${d.word}"`).join(", ")}; give the date itself in params (${dated.map(d => d.means.join(" or ")).join("; ")})` : "";
+        if (why) return text(`refused: ${why}; nothing recorded, and do nothing in ${a.tool} yet`, true);
+        const rule = a.refuse_when ? `First check: refuse when ${a.refuse_when}. If it holds, stop and tell the person why; nothing is recorded.\n` : "";
+        return text(`checked: ${name}; nothing recorded yet.\n${rule}Now in ${a.tool}: ${a.operation}\nThen call interact again with the same name and params and outcome: done with refs (the record id or direct link ${a.tool} returned, with the account when known), or failed with error (what ${a.tool} said). Only that call records it.`);
+      }
+      // failed never records that it happened, whatever the interaction's external flag says
+      const failed = outcome === "failed";
+      const m = lib.interactionMemory(a, params, { outcome: failed ? "failed" : "done", error });
+      const r = await run(brain, "gtm-brain-remember/remember.mjs", ["--by", by, "--via", "codex", "--context", m.context, "--kind", m.kind, "--content", m.content, ...(m.people.length ? ["--people", m.people.join(", ")] : []), ...(m.companies.length ? ["--companies", m.companies.join(", ")] : []), ...(m.tools.length ? ["--tools", m.tools.join(", ")] : []), ...m.actions.flatMap(x => ["--action", x]), ...sources.flatMap(x => ["--source", JSON.stringify(x)]), ...(m.tags.length ? ["--tags", m.tags.join(", ")] : []), ...(project ? ["--project", project] : [])]);
       const said = [r.out, r.err].filter(Boolean).join("\n").trim();
       if (r.code !== 0) return text(`${r.code === 2 ? "refused" : "error"}: ${said}`, true);
-      return text(`ok: ${name}\n${said}\nNow in ${a.tool}: ${a.operation} If it is already done, nothing more; if it fails, remember the failure as a note.${a.refuse_when ? `\nRefuse when ${a.refuse_when}.` : ""}`);
+      if (failed) return text(`recorded failure: ${name} was not done in ${a.tool || "the tool"}\n${said}\nTell the person it failed and what ${a.tool || "the tool"} said; do not retry a create without checking whether it happened.`);
+      const noRef = a.external && !sources.length ? `\nNo reference from ${a.tool} was given; when one comes back, save it with remember: supersedes the note above, the same content, the reference as its source.` : "";
+      return text(`ok: ${name}\n${said}${noRef}`);
     } },
   { name: "propose_interaction", title: "Proposing an interaction", readOnly: false,
     description: "Propose one of this company's own interactions from the person's words: name, tool, the operation in words, inputs, and what it records. Validated, then written as work/interaction.proposed.json; then call approve_change with kind interaction: its form asks the person for APPROVE. Never edits brain/ontology.ossie.json.",
-    inputSchema: schema({ interaction: { type: "object", description: "name, title, tool, operation, description, input_schema, record {context, kind, content, people, companies, action, tags}, refuse_when", additionalProperties: true } }, ["brain", "interaction"]),
+    inputSchema: schema({ interaction: { type: "object", description: "name, title, tool, operation, description, input_schema, record {context, kind, content, people, companies, action, tags}, refuse_when; external false (and no tool) when nothing is done in a connector", additionalProperties: true } }, ["brain", "interaction"]),
     call({ brain, interaction }) {
       const { actions, error } = lib.readInteractions(brain); if (error) return text(`error: ${error}`, true);
       const errs = lib.validateInteraction(brain, interaction, { existing: actions });
@@ -276,30 +329,50 @@ const TOOLS = [
       mkdirSync(join(brain, "work"), { recursive: true });
       writeFileSync(join(brain, "work", "interaction.proposed.json"), JSON.stringify(interaction, null, 2) + "\n");
       lib.rerender(brain);
-      return text(`proposed: ${interaction.name} (${interaction.tool}); then call approve_change with kind interaction: its form asks the person for APPROVE. It records in ${interaction.record.context}: ${interaction.record.content}`);
+      return text(`proposed: ${interaction.name} (${interaction.external === false ? "no tool step, recorded at once" : interaction.tool}); then call approve_change with kind interaction: its form asks the person for APPROVE. It records in ${interaction.record.context}: ${interaction.record.content}`);
     } },
   { name: "keep_approved_file", title: "Keeping the approved file", readOnly: false,
-    description: "The person approves a file for a person, company or product: \"this is my photo, use it from now on\", \"this is our logo\", \"use this one instead\". Keeps the file in the owner's folder in the brain (brain/entities/<name>/), records it as the approved file for that role and replaces the previous one; every later chat starts with it. Call it in the same turn; never only say it is saved.",
+    description: "The person approves a file for a person, company or product: \"this is my photo, use it from now on\", \"this is our logo\", \"use this one instead\". Keeps the file in the owner's folder in the brain (brain/entities/<kind folder>/<name>-<short id>/, beside their page), records it as the approved file for that role and replaces the previous one; every later chat starts with it. Call it in the same turn; never only say it is saved.",
     inputSchema: schema({ by: str("The current person's handle"), entity: str("Whose file: the person, company or product, as named in the brain"), role: str("portrait for a person's photo, primary-logo for a logo, or another short role"), path: str("The file: the attachment's absolute path, or a path in the brain"), label: str("A few words on this file, e.g. Portrait, smiling"), context: str("The context for the note; default company") }, ["brain", "by", "entity", "role", "path"]),
     async call({ brain, by, entity, role, path, label, context }) {
       let kept; try { kept = (await import("../lib/assets.mjs")).ownerCopy(brain, entity, path); } catch (e) { return text(`not kept: ${e.message}`, true); }
       return TOOLS.find(t => t.name === "remember").call({ brain, by, context: context || "company", content: `${entity} approved this file as the ${role} to use (${label || role}).`, asset: { entity, label: label || role, role, status: "approved", path: kept } });
     } },
   { name: "approve_change", title: "Asking for APPROVE", readOnly: false,
-    description: "Apply a proposal once the person approves it: kind admin applies work/admin.proposed.md (propose_admin_change) to brain/admin.md, kind interaction adds work/interaction.proposed.json (propose_interaction) to the company's interactions. A form shows the person what changes, with an APPROVE choice; only their click applies it, and every other outcome leaves the proposal waiting. Call it right after explaining the proposal; never ask for APPROVE in the chat and never apply a proposal any other way.",
-    inputSchema: schema({ kind: str("admin | interaction", { enum: ["admin", "interaction"] }), by: str("The current person's handle: the approver") }, ["brain", "kind", "by"]),
-    async call({ brain, kind, by }, requestId) {
+    description: "Apply a proposal once the person approves it: kind admin applies work/admin.proposed.md (propose_admin_change) to the workplace settings, kind interaction adds work/interaction.proposed.json (propose_interaction) to the company's interactions, kind proposal (with id) applies or declines a teammate's proposal for the owner. A form shows the person what changes, with an APPROVE choice; only their click applies it, and every other outcome leaves the proposal waiting. In a brain with about-us/ and config/ only the owner approves; anyone else's settings change is kept as a proposal for the owner, with no form. Every approval is recorded as a decision note. Call it right after explaining the proposal; never ask for APPROVE in the chat and never apply a proposal any other way.",
+    inputSchema: schema({ kind: str("admin | interaction | proposal", { enum: ["admin", "interaction", "proposal"] }), id: str("For kind proposal: its id (p_...), from the opening lines or query object approvals"), by: str("The current person's handle: the approver") }, ["brain", "kind", "by"]),
+    async call({ brain, kind, by, id }, requestId) {
+      const own = await import(join(P, "lib", "owner.mjs"));
+      if (kind === "proposal") {
+        if (!id) return text("kind proposal needs id: the proposal's id (p_...), from the opening lines or query object approvals.", true);
+        const d = await run(brain, "gtm-brain-approve/approve.mjs", ["--proposal", String(id), "--diff"]); if (d.code) return result(d);
+        const who = own.personHere(brain, by);
+        if (!own.isOwner(brain, who)) return text(`not applied: only the owner (${own.ownerOf(brain)}) decides on proposal ${id}; it stays waiting for them. Tell the person in one line.`);
+        const args = mode => ["--proposal", String(id), mode, "--by", String(by || who || "")];
+        const terminal = `node ${join(P, "scripts", "gtm-brain-approve", "approve.mjs")} ${brain} ${args("--apply").join(" ")}`;
+        if (!questions.available()) return text(`This host cannot show the APPROVE form. Nothing was applied. Ask the owner to run this in a terminal themselves; it asks them to type APPROVE: ${terminal}`);
+        const ask = "Apply this teammate's proposal?", what = d.out.replace(/\n*Apply it with approve_change[^\n]*\s*$/, "").trim();
+        const more = " ... (more in the proposal, as explained in the chat)", room = 500 - ask.length - 2, shown = what.length > room ? what.slice(0, room - more.length) + more : what;
+        const answer = await questions.ask({ question: `${ask}\n\n${shown}`, options: ["APPROVE", "Decline", "Not now"] }, requestId);
+        if (answer.status === "not_shown") return text(`not applied: the host closed the form before the owner saw it. Ask them to run this in a terminal themselves; it asks them to type APPROVE: ${terminal}`);
+        const picked = answer.status === "answered" ? answer.selections || [] : [];
+        if (picked.includes("APPROVE")) return result(await run(brain, "gtm-brain-approve/approve.mjs", args("--apply"), { env: { GTM_BRAIN_APPROVAL_TICKET: lib.issueApproval(brain, "proposal") } }));
+        if (picked.includes("Decline")) return result(await run(brain, "gtm-brain-approve/approve.mjs", args("--drop"), { env: { GTM_BRAIN_APPROVAL_TICKET: lib.issueApproval(brain, "proposal") } }));
+        return text(`not applied (${answer.status === "answered" ? `the owner chose ${[...picked, answer.text].filter(Boolean).join(", ")}` : answer.status}); proposal ${id} stays waiting.`);
+      }
       const admin = kind !== "interaction";
+      // Layout 3: a settings change by anyone but the owner is kept for the owner, no form (nothing is applied).
+      if (admin && own.ownerRules(brain) && !own.isOwner(brain, own.personHere(brain, by)) && existsSync(join(brain, "work", "admin.proposed.md"))) return result(await run(brain, "gtm-brain-approve/approve.mjs", ["--propose", "--by", String(by || "")]));
       const file = join(brain, "work", admin ? "admin.proposed.md" : "interaction.proposed.json");
       if (!existsSync(file)) return text(`nothing to approve: no ${admin ? "work/admin.proposed.md (propose_admin_change writes it)" : "work/interaction.proposed.json (propose_interaction writes it)"}.`, true);
       let what;
       if (admin) { const d = await run(brain, "gtm-brain-approve/approve.mjs", ["--diff"]); if (d.code) return result(d); what = d.out.replace(/\n*Apply it with approve_change[^\n]*\s*$/, "").trim(); }
-      else { try { const i = JSON.parse(readFileSync(file, "utf8")); what = `Interaction ${i.name} (${i.tool}: ${i.operation}). It records in ${i.record?.context}: ${i.record?.content}`; } catch (e) { return text(`the proposal is not valid JSON: ${e.message}`, true); } }
+      else { try { const i = JSON.parse(readFileSync(file, "utf8")); what = `Interaction ${i.name} (${i.external === false ? "no tool step: the note is recorded at once, without a tool confirming anything" : `${i.tool}: ${i.operation}`}). It records in ${i.record?.context}: ${i.record?.content}`; } catch (e) { return text(`the proposal is not valid JSON: ${e.message}`, true); } }
       const apply = ["--by", String(by || ""), admin ? "--apply" : "--interaction"];
       const terminal = `node ${join(P, "scripts", "gtm-brain-approve", "approve.mjs")} ${brain} ${apply.join(" ")}`;
       if (!questions.available()) return text(`This host cannot show the APPROVE form. Nothing was applied. Ask the person to run this in a terminal themselves; it asks them to type APPROVE: ${terminal}`);
       // A form question holds 500 characters: the change as far as it fits, the rest named (you explained it before the form).
-      const ask = admin ? "Apply this change to the workplace info (brain/admin.md)?" : "Add this interaction to the company's tools?";
+      const ask = admin ? `Apply this change to the workplace info (${lib.settingsFile(brain)})?` : "Add this interaction to the company's tools?";
       const more = " ... (more in the proposal, as explained in the chat)", room = 500 - ask.length - 2;
       const shown = what.length > room ? what.slice(0, room - more.length) + more : what;
       const answer = await questions.ask({ question: `${ask}\n\n${shown}`, options: ["APPROVE", "Not now"] }, requestId);
@@ -307,23 +380,29 @@ const TOOLS = [
       if (answer.status !== "answered" || !answer.selections?.includes("APPROVE")) return text(`not applied (${answer.status === "answered" ? `the person chose ${[...(answer.selections || []), answer.text].filter(Boolean).join(", ")}` : answer.status}); the proposal stays in ${file}.`);
       return result(await run(brain, "gtm-brain-approve/approve.mjs", apply, { env: { GTM_BRAIN_APPROVAL_TICKET: lib.issueApproval(brain, admin ? "admin" : "interaction") } }));
     } },
-  { name: "upgrade_brain", title: "Refreshing the brain's rules", readOnly: false,
-    description: "After a plugin update: refresh managed rules, preserving local edits. Migrate legacy identity registries into permanent entity files, backing up originals and leaving memories unchanged.",
-    inputSchema: schema({}),
-    call: ({ brain }) => run(brain, "gtm-brain-upgrade/upgrade.sh", []).then(result) },
+  { name: "ask_person", title: "Asking you a question", readOnly: true, noBrain: true,
+    description: host().texts.askPerson(),
+    inputSchema: schema(ASK_PERSON, ASK_PERSON_REQUIRED),
+    call: (args, requestId) => askPerson(questions, args, requestId).then(r => text(r.text, r.isError)) },
+  { name: "upgrade_brain", title: "Upgrading the brain", readOnly: false,
+    description: "After a plugin update: refresh managed rules, preserving local edits; add the rules, schema and starter documents a brain lacks, never replacing a file the person has. Migrate legacy identity registries into permanent entity files, backing up originals and leaving memories unchanged. When the brain's files are still arranged as an older GTM Brain kept them, it changes nothing and says what would move (entity pages into a folder per kind; for the owner also the base documents into about-us/ and the rules, schema and settings into config/) and which teammates must update GTM Brain first; ask the person yes or no, and only on yes call it again with confirm: true. A teammate who is not the owner is asked about the entity pages only. Never pass confirm in a scheduled or background run.",
+    inputSchema: schema({ confirm: { type: "boolean", description: "true only after the person said yes, in this chat, to the layout change the previous run described" } }),
+    call: ({ brain, confirm }) => run(brain, "gtm-brain-upgrade/upgrade.sh", confirm === true ? ["--confirm"] : []).then(result) },
 ];
-// Compilation belongs to the scheduled and background runs (they export GTM_BRAIN_RUN before codex exec).
-// A chat never sees these tools: it queues the worker instead (ALL-204 step 1). tools/call still works.
-const RUN_ONLY_TOOLS = new Set(["compile_facts", "compile_apply", "compile_entity", "entity_facts"]);
+// Tools that write only work/ (gitignored, this machine): they go on in a brain on a newer file layout.
+const LOCAL_ONLY = new Set(["load_context", "render_dashboard", "open_dashboard", "memory_index"]);
+// Since 0.35.0 a summary is written on demand, in the chat that asks (lib/summaries.mjs): load_context and a
+// brief read give the notes and as_of, compile_apply and compile_entity write once, and compile_facts serves an
+// explicit "rewrite the summary". So a chat sees those three. entity_facts (all evidence, large) stays with the
+// scheduled and background runs (GTM_BRAIN_RUN); tools/call still answers it.
+const RUN_ONLY_TOOLS = new Set(["entity_facts"]);
 // The reads that query covers (ALL-204 step 2b): never listed; still answering, marked deprecated, for one release.
 const RETIRED_READS = { recall: "query (memories with search, or object brief)", who_is: "query (entities with search)", list_contexts: "query (contexts)", list_projects: "query (projects)", list_brains: "query (brains)", customer_overview: "query (customers)", meeting_overview: "query (meetings)", advise: "query (health)", where_we_are: "query (status)", why_here: "query (why)", check_rules: "query (rules)", guideline: "document" };
 // A summary run (GTM_BRAIN_TOOLSET=compile, set by scripts/gtm-brain-compile/run-args.mjs) is listed only what it
 // calls: every other description is re-sent with each of its requests and is pure cost there.
-const COMPILE_TOOLSET = new Set([...RUN_ONLY_TOOLS, "render_dashboard"]);
-// With Codex's own question box on in ordinary chats, it asks instead: the free text sits on the same screen.
+const COMPILE_TOOLSET = new Set(["compile_facts", "compile_apply", "compile_entity", "entity_facts", "render_dashboard", "query"]);   // query: --facts is a digest, older notes are looked up
+// How to ask: ask_person's form first, then the host's own question box, then chat text (lib/host.mjs holds the words).
 const NATIVE_QUESTIONS = (() => { try { return host().nativeQuestions(); } catch { return false; } })();
-const NATIVE_LINE = "\nQuestions: GTM Brain shows no question forms of its own. This Codex has its own question box on, so ask every question with request_user_input: one question per call unless a procedure groups them, two or three concrete options, recommended first. It adds the free-text answer itself, so never add Other or Something else. It has no checkboxes: where several can apply, offer the likely combinations as options. APPROVE still goes only through approve_change.";
-const CHAT_LINE = "\nQuestions: GTM Brain shows no question forms of its own. When request_user_input is available in this chat (Plan mode, or a Codex where the question box is on by default), ask every question with it, two or three options, recommended first. Without it, ask as plain chat text and end the turn: one question, one line on why it matters, then two or three numbered options with the recommended first. The person answers with a number or in their own words, so never add Other or Something else. Where several can apply, say they can pick several numbers. In Plan mode use the host's own planning question tool. APPROVE still goes only through approve_change.";
 const offered = t => process.env.GTM_BRAIN_TOOLSET === "compile" ? COMPILE_TOOLSET.has(t.name)
   : !(RUN_ONLY_TOOLS.has(t.name) && !process.env.GTM_BRAIN_RUN) && !(t.name in RETIRED_READS);
 
@@ -337,12 +416,14 @@ const companyCatalog = ctx => {
   const { actions, error } = lib.readInteractions(ctx.brain);
   if (error) return `(this company's interactions could not be read: ${error})`;
   if (!actions.length) return "";
-  const sig = a => `${a.name}(${Object.keys(a.input_schema.properties || {}).map(k => (a.input_schema.required || []).includes(k) ? k : `${k}?`).join(", ")}) [${a.tool}]`;
+  const sig = a => `${a.name}(${Object.keys(a.input_schema.properties || {}).map(k => (a.input_schema.required || []).includes(k) ? k : `${k}?`).join(", ")}) [${a.external ? a.tool : "record only"}]`;
   return `Interactions of this company (run with interact):\n${actions.map(a => `- ${sig(a)}: ${a.description || a.title}`).join("\n")}`;
 };
 const companyLine = brain => { if (!isBrain(brain)) return ""; const { actions } = lib.readInteractions(brain); return actions.length ? `\nThis company's interactions: ${actions.map(a => `${a.name} (${a.tool})`).join(", ")}; list_objects shows them, interact runs them.` : ""; };
 const withCompanyLine = (brain, t) => { if (!t.isError && t.content?.[0]) t.content[0].text += companyLine(brain); return t; };
-const generated = buildTools(ontology, createFilesBackend({ run, memoryRead: memoryReader.read }), { scope: { name: "brain", schema: BRAIN }, extraCatalog: companyCatalog });
+// entities filter on the SCHEMA.md fields of the brain (role: VP Sales) as well as the ontology's own fields
+const schemaFilters = (object, ctx) => { if (object !== "entities" || !ctx.brain) return []; const s = readSchema(ctx.brain).schema; return s ? [...new Set(Object.keys(s.kinds).flatMap(k => fieldsFor(s, k).map(f => f.name)))] : []; };
+const generated = buildTools(ontology, createFilesBackend({ run, memoryRead: memoryReader.read }), { scope: { name: "brain", schema: BRAIN }, extraCatalog: companyCatalog, extraFilters: schemaFilters });
 for (const tool of generated) {
   if (TOOLS.some(t => t.name === tool.name)) throw new Error(`duplicate tool: ${tool.name}`);
   TOOLS.push({ ...tool, title: tool.title || tool.annotations.title, readOnly: tool.annotations.readOnlyHint, call: args => tool.call(args, {}) });
@@ -356,10 +437,24 @@ const SQL_SCHEMA = {
   memories: "rowid, id, context, kind, at, via, content, authors, people, tools, tags, entities, sources (json), supersedes, time. Only visible records: effective, not retracted, not superseded by a fork, and not a retraction note.",
   members: "memory_id, field (people | tools | tags | entities | authors), value. One row per member of a visible memory; join on memories.id.",
   contexts: "slug, title, status, summary, rule, loaded (1 when loaded in this chat).",
-  entities: "id, name, kind, subtype, aliases (json), emails (json). The identity registry.",
+  relations: "id (r_...), from_id, type, to_id (an entity id or us), status (current | ended), since, until, observed_at, memory (the note that set the state), raw (json with events). One row per relationship.",
+  relation_events: "relation (relations.id), at (observed), event (started | changed | ended | disputed), status, basis, memory, implied (1 when a later one-at-a-time link ended it).",
+  entity_events: "entity, at, change (rename | kind | merge | unmerge), from_value, to_value, by, raw. Renames, merges and kind changes, from brain/entities/.history/events.jsonl.",
+  entities: "id, name, kind, subtype, aliases (json), emails (json), status, relation_to_us (team | customer | partner | investor | prospect | other, people and organizations), short_id, path, last_mentioned, fields (json: the SCHEMA.md fields compiled on the page). The identity registry.",
   keywords: "the full-text index: JOIN keywords k ON k.rowid = m.rowid WHERE keywords MATCH 'word'.",
 };
+// The sql parameter's own description: the tables with their main columns, so no describe_object call comes first.
+const SQL_HELP = "One read-only SELECT (or WITH ... SELECT) over the memory index; at most limit rows (default 200). Tables: "
+  + "memories(id, context, kind, at, content, authors, people, tags, entities, sources, supersedes): the notes in force, at is ISO UTC, list columns are JSON. "
+  + "members(memory_id, field, value): one row per member of a note, field = people | tools | tags | entities | authors; for entities the value is the entity id. "
+  + "entities(id, name, kind, subtype, aliases, emails, status, relation_to_us, last_mentioned, fields). "
+  + "contexts(slug, title, status, summary, rule, loaded). "
+  + "relations(id, from_id, type, to_id, status, since, until, observed_at, memory): to_id is an entity id or us. "
+  + "relation_events(relation, at, event, status, basis, memory). entity_events(entity, at, change, from_value, to_value). "
+  + "keywords: full text, JOIN keywords k ON k.rowid = m.rowid WHERE keywords MATCH 'word'. "
+  + "Example, the notes naming any of several entities: SELECT m.id, m.at, m.context, e.name, substr(m.content, 1, 200) AS text FROM members v JOIN memories m ON m.id = v.memory_id JOIN entities e ON e.id = v.value WHERE v.field = 'entities' AND v.value IN ('e_1a2b3c4d5e6f7a8b', 'e_8b7a6f5e4d3c2b1a') ORDER BY m.at DESC";
 const byName = name => TOOLS.find(t => t.name === name);
+const rulesShown = createShownOnce({ quietMs: Number(process.env.GTM_BRAIN_OPEN_AGAIN_MS) || 30 * 60 * 1000 });
 const original = new Map(Object.keys(RETIRED_READS).map(name => [name, byName(name).call]));
 for (const [name, hint] of Object.entries(RETIRED_READS)) byName(name).call = async args => { const r = await original.get(name)(args); if (r?.content?.[0] && !r.isError) r.content[0].text = `deprecated: use ${hint}.\n${r.content[0].text}`; return r; };
 const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [columns.join(" | "), ...rows.map(r => columns.map(c => r[c] == null ? "" : typeof r[c] === "object" ? JSON.stringify(r[c]) : String(r[c])).join(" | ")), `(${rows.length} row${rows.length === 1 ? "" : "s"}${truncated ? ", truncated at the limit" : ""})`].join("\n");
@@ -367,29 +462,100 @@ const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [colu
   const query = byName("query"), describe = byName("describe_object"), objects = byName("list_objects");
   const datasets = [...query.inputSchema.properties.object.enum];
   const base = query.call, describeBase = describe.call, objectsBase = objects.call;
-  query.description = "The one read: rows of one object, newest first (exact filters, free-text search with alias expansion, limit), or one read-only SQL SELECT over the memory index (memories, members, contexts, entities, keywords; describe_object shows the columns) for counts, joins and dates. Derived reads by object: status (where we are: contexts, loaded set, tools, onboarding; call it first), brief (an entity's cited one-page view; search = the name; also the answer to who is X and why did you add X: when and from which note it was first saved, and the rule each spelling matched), deal (one deal's MEDDPICC rubric and every memory about it, to score with cited IDs; search = the company), relations (relationships from SCHEMA.md with their history; search = an entity, filters.type = one type), why (why a file or folder is where it is: the RULES.md row, reason, who and when; search = the path), rules (the brain checked against its naming and RULES.md rules, each finding with fixed choices; for: check the brain), projects, brains, customers, meetings, health (how the brain is doing). An entities search resolves a name, alias, email or typo to ranked candidates. Answer from the rows; no rows means say so.";
+  query.description = "To answer a question from the brain, call query with object answer and search = the question as asked: one call returns the best notes (text, date and age, id, source), the card and relationships of a person, company or product it names, or Not found stated plainly; answer from that reply, no context load, topic load or skill file first. Search again only for a different question, or with the limit its last line gives. Names and aliases resolve to their entity; a period (last week, in October), a kind (decisions) or #tag narrows first; words match stemmed, one typo is tolerated. Replies stay under 12 KB. Otherwise: rows of one object, newest first (exact filters, limit; a memories search is ranked like answer, same cap), or one read-only SQL SELECT (sql lists the tables) for counts, joins and dates. Derived reads by object: status (contexts, loaded set, tools, onboarding; call it first), brief (an entity's cited page; search = the name; also who is X, why did you add X), deal (a deal's MEDDPICC rubric and notes to score; search = the company), relations (relationships over time; search = an entity, filters.type, filters.at), why (why a file is where it is; search = the path), rules (the brain checked against its naming and RULES.md rules; for: check the brain), housekeeping (tidying, clean-up, duplicates: the work list with its evidence; start there), projects, brains, customers, meetings, health, population (notes per week, uncited notes), workflows (status, runs, waits), approvals (recorded, waiting). An entities search resolves a name, alias, email or typo to ranked candidates; filters: kind, subtype, relation_to_us (customer, partner, prospect), any schema field. Several people or companies in one call: entities with filters.name or filters.id as a list (up to 25), a card each: relation to us, employer, newest notes. Answer from the rows; no rows means say so.";
+  query.description = query.description.replace("status (contexts, loaded set, tools, onboarding; call it first)", "status (the chat's opening lines already carry it)").replace("rules (the brain checked against its naming and RULES.md rules; for: check the brain)", "rules (search = a topic: that rule page; search = rules for a kind, link <type> or a name: the Our rules that apply to it, filters.when = saving, drafting or reading, filters.text = a draft to check; no search: the brain checked against its rules)");
   query.inputSchema = { ...query.inputSchema, required: [], properties: { ...query.inputSchema.properties,
-    object: { ...query.inputSchema.properties.object, enum: [...datasets, ...Object.keys(VIEWS), "deal", "why", "rules", "relations"] },
-    sql: { type: "string", description: "One SELECT (or WITH ... SELECT) over memories, members, contexts, entities and keywords. Read-only; at most limit rows (default 200)." },
+    object: { ...query.inputSchema.properties.object, enum: [...datasets, "answer", ...Object.keys(VIEWS), "deal", "why", "rules", "housekeeping", "relations", "reference", "population", "workflows", "approvals"] },
+    sql: { type: "string", description: SQL_HELP },
     candidates: { type: "array", items: { type: "object", additionalProperties: true }, description: "With object entities and search: rank this bounded shortlist a CRM returned instead of the registry; no connector calls." },
     project: PROJECT } };
   query.call = async ({ brain, object, sql, search, filters, limit, project, candidates }) => {
     if (sql) { try { return text(table(await memoryReader.read(brain, "sql", { sql, limit }))); } catch (e) { return text(e.message, true); } }
     if (!object) return text("Pass object or sql: query needs one of them.", true);
-    if (object === "brief") return search ? original.get("recall")({ brain, entity: search, ...(filters?.context ? { context: filters.context } : {}), ...(project ? { project } : {}) }) : text("brief needs search: the entity name, alias, email or id.", true);
-    if (object === "rules") return original.get("check_rules")({ brain });
+    const memoryFields = new Set(ontology.dataset("memories").fields.map(f => f.name));
+    const knownFilters = !filters || (typeof filters === "object" && Object.keys(filters).every(k => memoryFields.has(k)));
+    if (object === "answer" && !knownFilters) return text(`memories has no field ${Object.keys(filters).filter(k => !memoryFields.has(k)).join(", ")}. Fields: ${[...memoryFields].join(", ")}`, true);
+    // one call for a question, and the ranked memories search (lib/memory-search.mjs, in the memory worker)
+    if (object === "answer") { if (!search || !String(search).trim()) return text("answer needs search: the question as asked.", true); try { return text(await memoryReader.read(brain, "answer", { search, ...(filters && typeof filters === "object" ? { filters } : {}), ...(limit ? { limit } : {}), ...(project ? { project } : {}) })); } catch (e) { return text(e.message, true); } }
+    if (object === "memories" && knownFilters && typeof search === "string" && search.trim() && hasMemoryIndex()) {
+      try { return withAskSource(brain, text(await memoryReader.read(brain, "search", { search, ...(filters && typeof filters === "object" ? { filters } : {}), ...(limit ? { limit } : {}), ...(project ? { project } : {}) }))); } catch (e) { return text(e.message, true); }
+    }
+    if (object === "brief") return search ? Promise.resolve(original.get("recall")({ brain, entity: search, ...(filters?.context ? { context: filters.context } : {}), ...(project ? { project } : {}) })).then(r => withRules(r, brain, project, rules => [entityScope(brain, search, { rules })].filter(Boolean), ["reading", "drafting"])) : text("brief needs search: the entity name, alias, email or id.", true);
+    if (object === "rules") {   // no search: the check. A rule page's own name: that page (lib/rule-pages.mjs). A kind, link <type> or a name, filters.when or filters.text: the Our rules that apply (lib/our-rules.mjs). Anything else: the page for that topic
+      if (!search && !filters?.when && !filters?.text) return original.get("check_rules")({ brain });
+      const asked = typeof search === "string" ? search.trim() : "", scopedAsk = !!(filters?.when || filters?.text) || /^(?:(?:our\s+)?rules\s+for|for|link|relationship)\s+/i.test(asked);
+      const named = asked.toLowerCase().replace(/\s+/g, "-"), byName = !scopedAsk && rulePages().some(pg => pg.slug === named || pg.slug === `${named}s` || `${pg.slug}s` === named);
+      if (byName) return text(rulePageAnswer(asked));
+      const r = scopedReport(brain, { search, when: filters?.when || null, text: filters?.text || null });
+      if (r.unknown && asked && !scopedAsk) return text(rulePageAnswer(asked));
+      return text(r.text, r.error);
+    }
+    // the work list with its evidence (lib/housekeeping.mjs): filters.offset pages, search = a group name narrows
+    if (object === "housekeeping") { try { return text(housekeepingText(brain, { search: typeof search === "string" ? search : "", offset: filters?.offset })); } catch (e) { return text(e.message, true); } }
+    // several entities in one read (lib/entity-cards.mjs): filters.id and/or filters.name as lists, or names typed
+    // into search with commas or "and"; one compact card each, in the order asked, under the answer read's cap
+    if (object === "entities" && !candidates) {
+      const f = filters && typeof filters === "object" ? filters : null, keys = f ? Object.keys(f) : [];
+      const listed = f && keys.length && keys.every(k => k === "id" || k === "name") && (Array.isArray(f.id) || Array.isArray(f.name));
+      const typed = !f && typeof search === "string" && /,|;|\band\b|&/i.test(search) && !lib.exactName(lib.readNamesShared(brain), search) ? splitNames(search) : [];
+      if (listed || typed.length > 1) {
+        if (!hasMemoryIndex()) return text("Reading several entities in one call needs the memory index (Node 22.16+ or 24+). Read them one at a time: query object entities with search = the name.", true);
+        try { return text(await memoryReader.read(brain, "entity_cards", listed ? { ids: f.id ?? [], names: f.name ?? [], ...(limit ? { limit } : {}) } : { names: typed, ...(limit ? { limit } : {}) })); } catch (e) { return text(e.message, true); }
+      }
+    }
     if (object === "why") return search ? original.get("why_here")({ brain, path: search }) : text("why needs search: the file or folder path.", true);
+    // the relationship log from the memory index (lib/relation-log.mjs): current and ended, as of filters.at, by
+    // filters.type, and for an entity its history with renames and merges; the files when the index cannot run
+    if (object === "relations" && hasMemoryIndex()) { try { return text(await memoryReader.read(brain, "relations", { search: typeof search === "string" ? search : "", type: filters?.type ? String(filters.type) : null, at: filters?.at ? String(filters.at) : null, limit: limit || null })); } catch (e) { return text(e.message, true); } }
     if (object === "relations") return run(brain, "gtm-brain-entities/entities.mjs", ["--relations", ...(search ? ["--entity", search] : []), ...(filters?.type ? ["--type", String(filters.type)] : [])]).then(result);
+    if (object === "reference") {   // a source pointer (kind:ref or a record URL): the entity that holds it and every note citing it
+      const p = lib.parsePointer(search); if (!p) return text("reference needs search: a kind:ref pointer (hubspot:0-1/42) or a record URL.", true);
+      // Looked up by kind:ref; an account in the search (a record link names its portal or workspace) then
+      // keeps the notes that cite that account or none, so a link finds a note saved as kind:ref and back.
+      const key = Buffer.from(lib.lookupKey({ kind: p.kind, ref: p.ref }), "utf8").toString("hex");   // a hex literal: no quote or semicolon of the reference reaches the SQL
+      try { const r = await memoryReader.read(brain, "sql", { sql: `SELECT m.id AS id, m.context AS context, m.at AS at, m.kind AS kind, m.content AS content, m.sources AS sources FROM members v JOIN memories m ON m.id=v.memory_id WHERE v.field='source' AND v.value=CAST(x'${key}' AS TEXT) ORDER BY m.time DESC`, limit: limit || 200 });
+        const cites = row => { if (!p.account) return true; try { return lib.citesPointer(typeof row.sources === "string" ? JSON.parse(row.sources) : row.sources, p); } catch { return true; } };
+        return text(lib.referenceText(p, lib.readNames(brain), r.rows.filter(cites))); } catch (e) { return text(e.message, true); }
+    }
+    if (object === "population") return run(brain, "gtm-brain-advisor/population.mjs", []).then(result);
+    if (object === "approvals") { try { const own = await import(join(P, "lib", "owner.mjs")); return text(own.approvalsText(brain, lib.listContexts(brain).flatMap(c => lib.effectiveMemories(lib.readMemories(brain, c.slug))))); } catch (e) { return text(e.message, true); } }   // every recorded approval, and the proposals waiting for the owner
+    if (object === "workflows") return run(brain, "gtm-brain-workflow/workflow.mjs", ["--view"]).then(result);   // per workflow: status, trigger, runs and what they wait for
     if (object === "deal") return search ? run(brain, "gtm-brain-recall/deal-health.mjs", ["--entity", search]).then(result) : text("deal needs search: the company name, alias or id.", true);
     if (VIEWS[object]) return original.get(VIEWS[object])(object === "brains" ? {} : { brain, ...(project ? { project } : {}), ...(filters && typeof filters === "object" ? filters : {}) });   // a view's options travel in filters (projects: include_available; meetings: its options)
     if (object === "entities" && search && !filters) return original.get("who_is")({ brain, name: search, ...(candidates ? { candidates } : {}) });
-    return base({ brain, object, ...(search !== undefined ? { search } : {}), ...(filters !== undefined ? { filters } : {}), ...(limit !== undefined ? { limit } : {}) });
+    const r = await base({ brain, object, ...(search !== undefined ? { search } : {}), ...(filters !== undefined ? { filters } : {}), ...(limit !== undefined ? { limit } : {}) });
+    return object === "memories" && !r.isError ? withAskSource(brain, r) : r;
   };
-  describe.inputSchema = { ...describe.inputSchema, properties: { ...describe.inputSchema.properties, name: { ...describe.inputSchema.properties.name, enum: [...datasets, ...Object.keys(VIEWS), "deal", "why", "rules", "relations"] } } };
+  // RULES.md Our rules: the rules for the entity in hand ride along with the reply, once per chat per rule and action.
+  // scopes is called only when Our rules has a rule, so a brain without any reads nothing more for a brief or a save.
+  const withRules = (r, brain, project, scopes, verb) => {
+    if (r?.isError || !r?.content?.[0] || process.env.GTM_BRAIN_RUN) return r;
+    const lines = replyRules(brain, { scopes, verb, shown: rulesShown, chatKey: `${resolve(brain)}\t${typeof project === "string" ? project : ""}` });
+    return lines ? { ...r, content: [{ ...r.content[0], text: `${r.content[0].text}\n\n${lines}` }, ...r.content.slice(1)] } : r;
+  };
+  {
+    const remember = byName("remember"), rememberBase = remember.call;
+    remember.call = async args => withRules(await rememberBase(args), args.brain, args.project, rules => entryScopes(args.brain, Array.isArray(args.memories) ? args.memories : [args], { rules }), "saving");
+  }
+  // RULES.md Ask the source: memory rows from a connected tool, older than their row allows, get one line per row
+  const withAskSource = (brain, r) => {
+    try {
+      const rows = (r.content?.[0]?.text || "").split("\n").filter(l => l.startsWith("{")).map(l => JSON.parse(l));
+      const lines = askSourceLines(brain, rows, { day: at => lib.localDateTime(at).slice(0, 10) });
+      return lines.length ? { ...r, content: [{ ...r.content[0], text: `${r.content[0].text}\n\n${lines.join("\n")}` }, ...r.content.slice(1)] } : r;
+    } catch { return r; }
+  };
+  describe.inputSchema = { ...describe.inputSchema, properties: { ...describe.inputSchema.properties, name: { ...describe.inputSchema.properties.name, enum: [...datasets, "answer", ...Object.keys(VIEWS), "deal", "why", "rules", "housekeeping", "relations", "reference", "population", "workflows", "approvals"] } } };
   describe.call = async args => {
-    if (args.name === "rules") return text("rules: a derived read (query with object rules). Checks the brain against its own rules: people known by a first name only (P3), look-alike names nobody confirmed (P4), top-level folders no RULES.md row names, files with no recorded reason (by folder), names with capitals or spaces. Each finding: the rule, the person or path, two or three fixed choices through existing tools. Reads only.");
+    if (args.name === "answer") return text("answer: a derived read (query with object answer, search = the question as asked; optional filters as for memories, limit = notes to show, default 8, project). Names, aliases, first names and emails resolve through the entity registry and narrow to that entity's notes; a period (today, yesterday, tomorrow, last or next week, this month, in October, since October, Q3, last quarter, 3 November, 2026-11-03, a weekday, next Thursday; a calendar word also matches notes that mention it), a kind (decisions, questions) and #tag narrow too, widening one step with a line saying so when nothing is left. Words are matched stemmed; a word no note has (five letters or more) is tried as the nearest spelling in the brain's word list, ranked below exact matches, with a line saying what was searched instead. Ranked: more of the words, the exact phrase, words near each other, then newer first; superseded and retracted notes never appear, and a relationship or customer status a later note contradicts is marked no longer current with that note shown next. Returns the best notes with text, date, age, id and source, the card of each named entity (kind, aliases, compiled overview, fields, current relationships, note count and age), and Not found plainly when nothing matches; under about 12 KB, with a last line saying how many more matched. Reads only.");
+    if (args.name === "rules") return text("rules: a derived read (query with object rules). With search = a topic, returns that rule page of the rulebook (" + rulePageIndex() + "); with search = rules for a kind, link <type> or a name, the Our rules that apply. Without search, checks the brain against its own rules: people known by a first name only (P3), look-alike names nobody confirmed (P4), top-level folders no RULES.md row names, files with no recorded reason (by folder), names with capitals or spaces. Each finding: the rule, the person or path, two or three fixed choices through existing tools; Our rules lines not filed yet come with a proposed tag line, an instruction that starts work with a workflow to create. With search (a kind, link <type>, general or an entity name) and optional filters.when (saving, drafting, reading) and filters.text (a draft): the Our rules that apply, and the check rules the draft breaks. Reads only.");
+    if (args.name === "housekeeping") return text(`housekeeping: a derived read (query with object housekeeping; for housekeeping, tidying, cleaning up the brain or its duplicates). The rules check's work list in three groups, each with its count: people known by a first name only, names that may be the same person or company, other findings (files, folders, names, SCHEMA.md gaps, Our rules lines). For the first 5 items of each group it carries the evidence to ask the person without another read: for a first-name person the notes that mention them (id, date, 200 characters) and the companies and emails in those notes; for a pair both cards side by side (kind, ids, note counts, emails, newest note), what a merge would keep and the exact tool calls. filters.offset returns the next items; search = first names, same names or other returns one group. Under about 12 KB. Its last line is the instruction to follow: one item at a time, ask the person, never the web. Reads only.`);
     if (args.name === "why") return text("why: a derived read (query with object why, search = a path inside the brain). Returns the RULES.md row and reason recorded when the file or folder was saved (save's placed), who put it there and when; for a folder, the reasons for what is inside; with no reason recorded, when it arrived and that the person should be asked. Reads only.");
-    if (args.name === "relations") return text("relations: a derived read (query with object relations; search = an entity for its relationships only; filters.type = one type). Every relationship recorded with remember's relation block, typed by SCHEMA.md: from, type, to (an entity or us), current or ended, said by the person or from a source, the observed date, the note it rests on, the history (oldest notes stay) and source records that disagree. Customer status is included read-only as customer_of. A type removed from SCHEMA.md is kept and marked. Reads only.");
+    if (args.name === "reference") return text("reference: a derived read (query with object reference; search = a source pointer as kind:ref, kind:account/ref or a record URL). Kinds are normalized (HubSpot, hubspot and an app.hubspot.com link are one pointer). Returns the entity whose references include it and every note whose sources cite it, newest first. Reads only.");
+    if (args.name === "relations") return text("relations: a derived read from the memory index (query with object relations; search = an entity for its relationships and its history; filters.type = one type; filters.at = a date or time: only the relationships current then). A relationship is a record with a stable id (r_ plus a hash of its two ends and its type); every note with a relation block for it is an event: started, changed (said again while current), ended. Each line: from, type, to (an entity or us), current or ended, said by the person or from a source, the observed date, the note it rests on, the history with note ids, and source records that disagree. Where SCHEMA.md keeps one at a time (works_at, reports_to), a later current one ends the earlier one. With search, the entity's history follows, newest first: relationship events and its renames, merges and kind changes from brain/entities/.history/events.jsonl. Customer status is included read-only as customer_of, attendance as attended. A type removed from SCHEMA.md is kept and marked. Reads only.");
+    if (args.name === "workflows") return text("workflows: a derived read (query with object workflows). Per workflow in workflows/: its status (draft, active, paused, or held when SCHEMA.md lost something it names), trigger, what it reads and writes, each run with its step, what it waits for and until when, and the last result, then the events waiting to start it. Reads only; the workflow tool changes them.");
+    if (args.name === "approvals") return text("approvals: a derived read (query with object approvals). Every recorded approval, newest first: the decision note saying which file changed, who asked, who approved, a one-line summary and the commit; then the teammates' proposals waiting for the owner (about-us/ and config/), with their ids for approve_change kind proposal. Reads only.");
+    if (args.name === "population") return text("population: a derived read (query with object population). Deterministic numbers from the brain's files: notes saved in the last 7 days and the weekly average of the 4 weeks before; exact duplicates (same normalized content) and near duplicates (same source record, same day, same context); entities no note mentions; entities missing a field SCHEMA.md marks required; notes no compiled summary or entity brief cites (of those recorded before their context's last summary); the share of notes without a source pointer. Each with its range and whether it is out of range. Capture rate and noise rate are not measured. Cached in work/population.json for the hour. Reads only.");
     if (args.name === "deal") return text("deal: a derived read (query with object deal, search = the company). Returns the MEDDPICC rubric and every memory about that company, newest first, with IDs; score each element confirmed, weak or missing from those memories only, citing IDs, then ask about what is missing. Reads only. Off when brain/admin.md has deal_scoring: off.");
     if (VIEWS[args.name]) return text(`${args.name}: a derived read (query with object ${args.name}${args.name === "brief" ? ", search = the entity; filters.context for one perspective" : ""}). ${byName(VIEWS[args.name]).description}`);
     const r = await describeBase(args);
@@ -403,9 +569,26 @@ const table = ({ columns, rows, truncated }) => !rows.length ? "no rows" : [colu
   };
 }
 
-const INSTRUCTIONS = "GTM Brain: the company brain in this workspace. Pass the workspace folder as brain. In a folder with brain/admin.md, or one whose AGENTS.md names a GTM Brain project, start every chat with query (object status) before your first answer: it refreshes the brain and returns the chat's opening lines, which you follow. In a folder without a brain, a request to set up GTM Brain follows the gtm-brain-start skill (check_environment first). Tools return plain text meant for you: report the outcome in one or two sentences in your own words, never paste tool output. Everything a tool writes is kept at once; never ask the person to save, never mention git. Files you create, edit, move or delete in the brain folder yourself (a graphic, a brief, RULES.md), not through a GTM Brain tool, are kept by save: call it once when that task is done, with a one-line message and, for each new file or folder, placed (path, RULES.md row, why). Why is this file here: query (object why, search: the path). A proposal is applied only through approve_change, whose form asks the person for APPROVE. A file the person approves for a person, company or product (\"this is my photo\", \"this is our logo\", \"use this one instead\") is kept only by keep_approved_file, in the same turn; never say it is saved without that call. A note or a tag alone is never used again.";
+// The core rules: one text, policies/core.md, which sync-derived also writes as the first section of every brain's
+// AGENTS.md, so a chat that never reads that file still gets them here. They come right after the opening lines:
+// Claude Code keeps only the first 2048 characters of a server's instructions (MAX_MCP_DESCRIPTION_LENGTH), so the
+// order below is the order of what must arrive, and rules-core.test.mjs holds the core inside that cut.
+const CORE = `Core rules (first in a brain's AGENTS.md):\n${readFileSync(join(P, "policies", "core.md"), "utf8").trimEnd()}\n`;
+// The five most common operations, one line each, so no chat spends a round on tool declarations, a status call
+// or a rule page before them (a manual run on 2026-11-15 took 6 to 9 rounds a turn). rules-core.test.mjs holds
+// the lines; the tools and arguments other lanes add (housekeeping, answer_question, ask_person, confirmed) are
+// written as agreed. The first is the read the query tool's own description opens with (object answer: the
+// notes and the card of who is named, in one call); naming another object here made two instructions for one job.
+const CALL_SHAPES = `Call shapes for the common jobs (each takes brain too). Use them as written: no list_objects, describe_object, status or rule page first.
+- Answer from the brain: query {object: "answer", search: "<the question as asked>"}
+- Save a note: remember {content, people: [names], sources}; the answer to a question the brain asked: answer_question
+- Read several people or companies in one call: query {object: "entities", filters: {name: ["A", "B"]}} (or filters.id)
+- Housekeeping, only when the person asks for it: query {object: "housekeeping"}, then the first item only, asked with ask_person
+- Merge two entities the person confirmed are one: merge_entities {source, target, confirmed: true}
+`;
+const INSTRUCTIONS = "GTM Brain: the company brain in this workspace. Pass the workspace folder as brain. In a folder with brain/admin.md, or one whose AGENTS.md names a GTM Brain project, the chat's first GTM Brain call, whatever it is, returns the chat's opening lines with its result; follow them. Make it the call the request needs (query answer with search for a question, remember for a save): no separate status call. Without a brain, setting up GTM Brain follows the gtm-brain-start skill (check_environment first).\n" + CORE + "Tools return plain text meant for you. Everything a tool writes is kept at once; never ask the person to save, never mention git. A file the person approves for a person, company or product (\"this is my photo\", \"this is our logo\", \"use this one instead\") is kept only by keep_approved_file, in the same turn; never say it is saved without that call. A note or a tag alone is never used again.\n" + CALL_SHAPES + "Files you create, edit, move or delete in the brain folder yourself (a graphic, a brief, RULES.md), not through a GTM Brain tool, are kept by save: call it once when that task is done, with a one-line message and, for each new file or folder, placed (path, RULES.md row, why). Why is this file here: query (object why, search: the path). Housekeeping, tidying or cleaning up the brain (duplicates included) starts with query (object housekeeping): its reply carries the items, their evidence and the one next step, so no skill file, rule page or per-person lookup comes first. Several people or companies are read in one query (object entities, filters.name or filters.id as a list), never one call each.";
 
-const WORKFLOWS = `During company work, read ${join(P, "skills/gtm-brain-use-brain/SKILL.md")} and the internal procedure relevant to the task. Asked how the brain works, what it can or cannot do, how to change it, or why something looks wrong: read ${join(P, "MANUAL.md")} and answer from it in a few lines. Read ${join(P, "skills/gtm-brain-configure/SKILL.md")} for workplace changes and APPROVE. Read ${join(P, "skills/gtm-brain-configure/references/update-plugin.md")} for plugin updates or brain refresh. Internal operations remain tools; the person does not need to invoke a separate skill for each one.`;
+const WORKFLOWS = `Ordinary questions and saving need no skill file and no rule page: the tool descriptions, the call shapes above and the opening lines carry what they need, and a tool attaches its rule page to its reply when one matters. Never read a skill file, a references file or a rule page in the middle of a save, a read or a confirmed action. Skills are for the workflows a person asks for by name. Asked how the brain works, what it can or cannot do, how to change it, or why something looks wrong: read ${join(P, "MANUAL.md")} and answer from it in a few lines. Read ${join(P, "skills/gtm-brain-configure/SKILL.md")} for workplace changes and APPROVE. Read ${join(P, "skills/gtm-brain-configure/references/update-plugin.md")} for plugin updates or brain refresh. Internal operations remain tools; the person does not need to invoke a separate skill for each one.`;
 
 /* ---------- The start of a chat ---------- */
 // What session/session-start.sh prints (the project line, loaded contexts, tools, documents, update offer)
@@ -426,6 +609,7 @@ async function opening(args) {
   const key = `${resolve(args.brain)}\t${project}`, last = opened.get(key);
   opened.set(key, Date.now());
   if (last && Date.now() - last < OPEN_AGAIN_MS) return null;
+  attached.delete(key);   // a new start: the rule pages ride along again
   const linked = project && lib.readProjects(args.brain).find(p => p.slug === project)?.path;
   const cwd = linked && existsSync(linked) ? linked : args.brain;
   let chat = null; try { chat = host().currentChat(cwd); } catch {}
@@ -437,14 +621,48 @@ async function opening(args) {
   return out ? `GTM Brain chat start (once per chat; follow it):\n${out}` : null;
 }
 
+/* ---------- The rule pages that ride along ---------- */
+// A tool's own rule page (lib/rule-pages.mjs, the attach line of each page) goes with its first reply of a chat,
+// once per brain and project, the way the saving rules ride along with the chat start: the rulebook keeps one
+// line per rule, and the detail arrives at the moment it matters. Never in a separate run or the compile toolset.
+const attached = new Map();
+function rulePageFor(args, name, res) {
+  if (res?.isError || process.env.GTM_BRAIN_RUN || process.env.GTM_BRAIN_TOOLSET === "compile" || process.env.GTM_BRAIN_NO_RULE_PAGES || process.env.GTM_BRAIN_NO_SESSION_START || !isBrain(args.brain)) return "";   // no chat start (tests that parse a reply as one text): no pages either
+  const page = pageForCall(name, args); if (!page) return "";
+  const key = `${resolve(args.brain)}\t${typeof args.project === "string" ? args.project : ""}`;
+  const sent = attached.get(key) || new Set(); attached.set(key, sent);
+  if (sent.has(page.slug)) return "";
+  sent.add(page.slug); return rulePageText(page);
+}
+
+/* A status call as the first call of a chat: its reply keeps only the lines the opening lines lack (lib/opening.mjs). */
+function foldStatus(name, args, r, start) {
+  if (!start || name !== "query" || args.object !== "status" || r?.isError || !r?.content?.[0]?.text) return r;
+  return { ...r, content: [{ ...r.content[0], text: foldStatusText(r.content[0].text, start) }, ...r.content.slice(1)] };
+}
+
 /* ---------- What this chat called ---------- */
 // One line per GTM Brain call in work/tool-usage.jsonl: the advisor reads which calls recur, failed or found nothing.
 const READS = new Set(["recall", "query", "who_is"]);
 function logCall(args, name, res) {
   if (!isBrain(args.brain)) return;
   const said = (res?.content || []).map(c => c.text || "").join("\n");
-  const line = { at: new Date().toISOString().replace(/\.\d+Z$/, "Z"), session: "", project: typeof args.project === "string" ? args.project : "", tool: `mcp__gtm_brain__${name}`, server: "gtm_brain", name, computer: false, title: TOOLS.find(t => t.name === name)?.title || "", error: !!res?.isError, empty: READS.has(name) && /nothing about |no rows|unknown: /.test(said) };
+  const line = { at: new Date().toISOString().replace(/\.\d+Z$/, "Z"), session: "", project: typeof args.project === "string" ? args.project : "", tool: `mcp__gtm_brain__${name}`, server: "gtm_brain", name, computer: false, title: TOOLS.find(t => t.name === name)?.title || "", error: !!res?.isError, empty: READS.has(name) && /nothing about |no rows|unknown: |^Not found: /m.test(said) };
   try { appendFileSync(join(args.brain, "work", "tool-usage.jsonl"), JSON.stringify(line) + "\n"); } catch {}
+}
+
+/* ---------- The save nudge ---------- */
+// A chat that reads and reads and saves nothing gets one line with a read's reply (lib/save-nudge.mjs holds the
+// counts and the words). Only reads carry it; never in a separate run or the compile toolset; off with
+// save_nudge: off in brain/admin.md.
+const nudges = createSaveNudge({ quietMs: OPEN_AGAIN_MS });
+function saveNudge(args, name, res) {
+  if (process.env.GTM_BRAIN_RUN || process.env.GTM_BRAIN_TOOLSET === "compile" || process.env.GTM_BRAIN_NO_SAVE_NUDGE || !isBrain(args.brain)) return "";   // NO_SAVE_NUDGE: tests that parse a read as one text
+  const project = typeof args.project === "string" ? args.project : "";
+  const line = nudges.note(`${resolve(args.brain)}\t${project}`, name, { ok: !res?.isError });
+  if (!line) return "";
+  try { if (String(lib.readAdmin(args.brain)?.save_nudge ?? "on").toLowerCase() === "off") return ""; } catch {}
+  return line;
 }
 
 /* ---------- JSON-RPC over stdio ---------- */
@@ -462,7 +680,7 @@ async function handle(req) {
   const { id, method, params = {} } = req;
   if (method === "initialize") questions.initialize(params.capabilities);
   if (method === "notifications/cancelled") { questions.cancel(params.requestId); return; }
-  if (method === "initialize") return reply(id, { protocolVersion: params.protocolVersion || "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "gtm-brain", title: "GTM Brain", version: VERSION }, instructions: INSTRUCTIONS + (NATIVE_QUESTIONS ? NATIVE_LINE : CHAT_LINE) + "\n" + instructionsText(ontology) + "\n" + WORKFLOWS + "\nGTM Brain speaks English. Author brain records in English. Preserve names, IDs, source quotes, and the exact token APPROVE." });
+  if (method === "initialize") return reply(id, { protocolVersion: params.protocolVersion || "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "gtm-brain", title: "GTM Brain", version: VERSION }, instructions: INSTRUCTIONS + host().texts.questions({ form: questions.available(), boxOn: NATIVE_QUESTIONS }) + "\n" + instructionsText(ontology) + "\n" + WORKFLOWS + "\nGTM Brain speaks English. Author brain records in English. Preserve names, IDs, source quotes, and the exact token APPROVE." });
   if (method === "ping") return reply(id, {});
   if (method === "tools/list") return reply(id, { tools: TOOLS.filter(offered).map(t => ({ name: t.name, title: t.title, description: t.description, inputSchema: advertised(t.inputSchema), annotations: { title: t.title, readOnlyHint: t.readOnly, destructiveHint: false, openWorldHint: !!t.openWorld } })) });
   if (method === "tools/call") {
@@ -470,12 +688,20 @@ async function handle(req) {
     if (!tool) return fail(id, -32602, `unknown tool ${params.name}`);
     const args = params.arguments || {};
     if (!tool.noBrain && !isBrain(args.brain)) return reply(id, brainError(args.brain));
+    // A brain on a newer file layout than this plugin understands (lib/layout-version.mjs): every write is
+    // refused before it starts, reads go on with the line on top, and the chat start (which writes) is skipped.
+    // load_context and the dashboard and index tools write only this machine's work/, never the shared brain.
+    const blocked = !tool.noBrain && layoutBlock(args.brain);
+    if (blocked && !tool.readOnly && !LOCAL_ONLY.has(tool.name)) { const r = text(blocked, true); logCall(args, tool.name, r); return reply(id, r); }
     // Every writer script logs its change (lib.commit) and re-renders the dashboard itself.
     // The chat start runs first: it pulls, refreshes the rules and re-loads contexts the call then reads.
-    const start = await opening(args).catch(() => null);
+    const start = blocked ? null : await opening(args).catch(() => null);
     let r; try { r = await tool.call(args, id); } catch (e) { r = text(`${tool.name} failed: ${e.message}`, true); }
     logCall(args, tool.name, r);
-    return reply(id, start ? { ...r, content: [...(r.content || []), { type: "text", text: start }] } : r);
+    r = foldStatus(tool.name, args, r, start);
+    const extra = [saveNudge(args, tool.name, r), rulePageFor(args, tool.name, r), start].filter(Boolean).map(t => ({ type: "text", text: t }));
+    if (blocked) r = { ...r, content: [{ type: "text", text: blocked }, ...(r.content || [])] };
+    return reply(id, extra.length ? { ...r, content: [...(r.content || []), ...extra] } : r);
   }
   if (method === "prompts/list") return reply(id, { prompts: [] });
   if (method === "resources/list") return reply(id, { resources: [] });

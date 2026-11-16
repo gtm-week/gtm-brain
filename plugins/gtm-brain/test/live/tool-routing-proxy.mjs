@@ -2,7 +2,7 @@
 // plus a harmless simulated computer-use alternative. No application UI is accessed.
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
-import { appendFileSync, realpathSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { meetingFixtureTools, meetingFixtureResult, upcomingCalendarTool, upcomingCalendarResult } from './meeting-source-fixture.mjs';
@@ -22,6 +22,8 @@ const allowed = new Set(["memory_index", "check_environment", "list_projects", "
   "compile_facts", "compile_apply", "new_context", "fork_context", "edit_context", "archive_context", "add_name", "interact", "propose_interaction",
   "question", "configuration_question", "guideline", "document", "skill"]);   // the everyday question form and the two document tools the skill cases exercise
 if (meetingFixture === "projects") allowed.add("link_project");
+// a harness that needs more of the production catalog names it (demo-loops.mjs: workflow)
+for (const name of (process.env.GTM_BRAIN_EVAL_ALLOW || "").split(",").map(s => s.trim()).filter(Boolean)) allowed.add(name);
 // a simulated connector, the way a real environment has Attio's own tools: the doing has a legitimate path
 const connector = { name: "attio_move_deal", description: "Attio (simulated): move a deal to a stage. Returns ok. No real CRM is touched.", inputSchema: { type: "object", properties: { deal: { type: "string" }, stage: { type: "string" } }, required: ["deal", "stage"], additionalProperties: false }, annotations: { title: "Attio (simulated)", readOnlyHint: false, destructiveHint: false, openWorldHint: false } };   // open-world tools need an approval the eval never gives
 const fallback = { name: "computer_use", description: "Simulated computer interface for the synthetic GTM Brain fixture. Inspect its dashboard or attempt a UI action. This does not control a real application.", inputSchema: { type: "object", properties: { action: { type: "string" } }, required: ["action"], additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } };
@@ -30,6 +32,7 @@ const build = pluginBuild || process.env.GTM_BRAIN_PLUGIN;
 const serverFile = build ? `${build.replace(/\/?$/, "")}/server/server.mjs` : fileURLToPath(new URL("../../server/server.mjs", import.meta.url));
 const child = spawn(process.execPath, [serverFile], { stdio: ["pipe", "pipe", "inherit"], env: { ...process.env, ...(process.env.GTM_BRAIN_EVAL_PROFILE ? { CODEX_HOME: process.env.GTM_BRAIN_EVAL_PROFILE } : {}), GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_NO_COMMIT: process.env.GTM_BRAIN_EVAL_COMMIT === "1" ? "" : "1" } });
 const pending = new Map();
+mkdirSync(dirname(resolve(trace)), { recursive: true });   // a brain before setup has no work/ folder yet
 const log = record => appendFileSync(trace, JSON.stringify({ at: new Date().toISOString(), ...record }) + "\n");
 log({ kind: 'build', server: serverFile });
 const send = message => process.stdout.write(JSON.stringify(message) + "\n");

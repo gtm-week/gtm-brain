@@ -27,6 +27,7 @@ const proc = name => read(join(plugin, 'skills/gtm-brain-use-brain/references', 
 const prompt = [
   `You are the scheduled run of the gtm-brain-sync skill: compile summaries, nothing else. brain is ${JSON.stringify(process.cwd())}, by is ${by}. Call the GTM Brain tools directly, without listing or inspecting tools first:`,
   `- compile_facts {brain, context} returns the facts and an as_of id; then compile_apply {brain, context, by, as_of, summary, now} writes the summary (now: the learned working guidance, "" when none).`,
+  `- query {brain, object: "memories", filters: {context}, search} looks up older notes when the facts say some are not shown.`,
   `- entity_facts {brain, entity} returns an entity's evidence and as_of; then compile_entity {brain, entity, by, as_of, brief} writes its brief.`,
   `- render_dashboard {brain} at the end.`,
   'Batch independent calls (all compile_facts at once, then all compile_apply) when the host lets you run several in one step.',

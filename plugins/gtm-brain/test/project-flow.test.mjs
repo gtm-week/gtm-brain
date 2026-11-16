@@ -1,3 +1,6 @@
+// These tests read and write the root files of a layout 2 brain: setup and the lib play a plugin that writes layout 2 at most
+// (lib/layout-version.mjs GTM_BRAIN_TEST_LAYOUT). Layout 3 (about-us/, config/) is covered by config-folders.test.mjs.
+process.env.GTM_BRAIN_TEST_LAYOUT = "2";
 // Project integration from fresh MCP sessions through hooks, storage, HTTP, revision events,
 // and the actual dashboard client. Capture consent is assumed submitted before link_project;
 // native question widgets, OS deep-link dispatch and model compilation remain manual checks.
@@ -45,7 +48,7 @@ process.exit(Number(process.env.GTM_PROJECT_LAUNCH_STATUS || 0));
   };
   t.after(() => {
     try { if (existsSync(join(root, 'work/dash.json'))) run(process.execPath, [join(plugin, 'server/dash.mjs'), root, '--stop']); }
-    finally { rmSync(scratch, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 }); }
+    finally { try { rmSync(scratch, { recursive: true, force: true, maxRetries: 40, retryDelay: 100 }); } catch {} }   // a watcher still writing into work/ must not fail a passed test (ENOTEMPTY on macOS)
   });
   call('setup_brain', { folder: root, company: 'Project Flow', one_liner: 'Synthetic project testing',
     owner: 'Alex Example <alex@example.invalid>', dashboard: 'on-demand' });

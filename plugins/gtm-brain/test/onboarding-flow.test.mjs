@@ -1,3 +1,6 @@
+// These tests read and write the root files of a layout 2 brain: setup and the lib play a plugin that writes layout 2 at most
+// (lib/layout-version.mjs GTM_BRAIN_TEST_LAYOUT). Layout 3 (about-us/, config/) is covered by config-folders.test.mjs.
+process.env.GTM_BRAIN_TEST_LAYOUT = "2";
 process.env.GTM_BRAIN_NO_WATCH = "1";
 process.env.GTM_BRAIN_NO_SESSION_MAINTENANCE = "1"; // Covered by session-maintenance.test.mjs.
 process.env.GTM_BRAIN_NO_COMPILE = "1"; // Model runs are opt-in through test doubles.
@@ -86,7 +89,9 @@ createInterface({ input: process.stdin }).on('line', line => {
   });
   t.after(() => {
     try { if (existsSync(join(root, "brain"))) run(process.execPath, [join(P, "server/dash.mjs"), root, "--stop"]); }
-    finally { rmSync(scratch, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 }); }
+    // a render or index worker the last call started may still be writing work/: wait for it, and never fail a
+    // passed test because its scratch folder could not be removed (ENOTEMPTY on a slow CI runner)
+    finally { try { rmSync(scratch, { recursive: true, force: true, maxRetries: 40, retryDelay: 100 }); } catch {} }
   });
   return { scratch, root, bin, env, run, rpc, call, remember, render, hook };
 }
@@ -103,9 +108,11 @@ test("onboarding crosses fresh MCP contexts from setup to approved profile, expl
   }
   f.call("setup_brain", { folder: f.root, company: "Synthetic Example", one_liner: "Synthetic workflow testing",
     owner: "Alex Example <alex@example.invalid>", dashboard: "on-demand" });
-  assert.ok(readFileSync(join(f.root, "AGENTS.md"), "utf8")
-    .includes(readFileSync(join(P, "policies/questions.md"), "utf8")),
-    "setup carries the shared question policy into the generated brain instructions");
+  // 0.35.0: the brain's AGENTS.md names the question policy as a rule page; the server returns it whole
+  assert.match(readFileSync(join(f.root, "AGENTS.md"), "utf8"), /Pages: questions, computer-use/,
+    "setup's brain instructions point at the shared question policy");
+  assert.ok(f.call("query", { object: "rules", search: "questions" }).includes(readFileSync(join(P, "policies/questions.md"), "utf8").trim()),
+    "the question policy is served whole as the questions rule page");
   assert.match(f.hook(), /ONBOARDING pending/);
   const pending = readOnboarding(f.root).marker_id;
   assert.ok(pending, "setup saves progress without relying on a later model turn");

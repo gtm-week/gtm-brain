@@ -1,13 +1,17 @@
 // Explicit identity operations. Recovery snapshots live with the entity files;
 // context memories are never rewritten by an identity operation.
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import * as lib from "./brain.mjs";
-import { withEntityLock, entityType, identity, idOK, entityText, parseEntityText, editedBody, applyEntityChange, readEntityChange } from "./entities.mjs";
+import { pointerKey, sourceKind } from "./pointers.mjs";
+import { withEntityLock, entityType, identity, idOK, entityText, parseEntityText, editedBody, applyEntityChange, readEntityChange, pageTarget, changeText, keptBody } from "./entities.mjs";
+import { brainKinds } from "./schema.mjs";
+import { linkFrom, findPage } from "./layout.mjs";
 
 const hash = value => createHash("sha256").update(JSON.stringify(value)).digest("hex");
+const bodyHash = body => hash(body).slice(0, 16);   // a page's rendered_body_hash, as entities.mjs writes it
 const object = v => v && typeof v === "object" && !Array.isArray(v);
 const listFields = ["aliases", "emails", "not_same", "references", "identity_sources"];
 const listKey = field => field === "not_same" ? "not" : field;
@@ -47,7 +51,8 @@ function finish(root, record, result) {
   }
   return { ...result, changed: true, change_id, note: commit.note };
 }
-const change = (root, e, fm, body = e._body) => ({ path: e._path, before: e._text, after: entityText(e, fm, body) });
+// In a kind folder a new name or kind moves the page (lib/layout.mjs); a flat brain keeps the file name.
+const change = (root, e, fm, body = e._body) => { const path = pageTarget(root, { ...e, ...fm }); return { path, ...(path !== e._path ? { from: e._path } : {}), before: e._text, after: entityText(e, fm, body) }; };
 const updated = (e, fields) => ({ ...e._fm, ...fields, updated_at: new Date().toISOString() });
 
 export function updateEntity(root, { entity, by, set = {}, add = {}, remove = {} }) {
@@ -61,8 +66,8 @@ export function updateEntity(root, { entity, by, set = {}, add = {}, remove = {}
       if (typeof set.name !== "string" || !set.name.trim() || /[\r\n]/.test(set.name)) throw new Error("name must be a non-empty single line");
       next.name = set.name.trim();
     }
-    if (Object.hasOwn(set, "kind") && typeof set.kind !== "string") throw new Error("kind must be person, organization or product");
-    Object.assign(next, entityType(set.kind ?? e.kind, Object.hasOwn(set, "subtype") ? set.subtype : set.kind && set.kind !== e.kind ? null : e.subtype ?? null));
+    if (Object.hasOwn(set, "kind") && typeof set.kind !== "string") throw new Error("kind must be a kind in SCHEMA.md, such as person, organization, product, event or tool");
+    Object.assign(next, entityType(set.kind ?? e.kind, Object.hasOwn(set, "subtype") ? set.subtype : set.kind && set.kind !== e.kind ? null : e.subtype ?? null, brainKinds(root)));
     for (const field of listFields) {
       const key = listKey(field), values = [...(set[field] === undefined ? next[key] || [] : set[field])];
       if (field === "aliases" && next.name !== e.name) values.push(e.name);
@@ -93,7 +98,7 @@ function mergePlan(root, source, target, resolution) {
   if ([from, into].some(e => e.status === "archived")) throw new Error("Restore archived identities before merging them");
   if (!object(resolution) || Object.keys(resolution).some(k => !["kind", "subtype", "allow_distinct", "references"].includes(k))) throw new Error("Invalid merge resolution");
   if (resolution.allow_distinct !== undefined && typeof resolution.allow_distinct !== "boolean") throw new Error("allow_distinct must be a boolean");
-  if (Object.hasOwn(resolution, "kind") && typeof resolution.kind !== "string") throw new Error("kind must be person, organization or product");
+  if (Object.hasOwn(resolution, "kind") && typeof resolution.kind !== "string") throw new Error("kind must be a kind in SCHEMA.md, such as person, organization, product, event or tool");
   const conflicts = [], unresolved = [];
   for (const field of ["kind", "subtype"]) if ((from[field] ?? null) !== (into[field] ?? null)) {
     conflicts.push({ field, source: from[field] ?? null, target: into[field] ?? null });
@@ -101,19 +106,19 @@ function mergePlan(root, source, target, resolution) {
   }
   const distinct = (from.not || []).some(n => lib.exactName([into], n)) || (into.not || []).some(n => lib.exactName([from], n));
   if (distinct) { conflicts.push({ field: "not_same", source, target }); if (resolution.allow_distinct !== true) unresolved.push("allow_distinct"); }
-  const referenceConflicts = unique(from.references.filter(a => into.references.some(b => a.kind === b.kind && a.ref !== b.ref)).map(a => a.kind));
+  const referenceConflicts = unique(from.references.filter(a => into.references.some(b => sourceKind(a) === sourceKind(b) && pointerKey(a) !== pointerKey(b))).map(sourceKind));
   if (referenceConflicts.length) {
     conflicts.push({ field: "references", kinds: referenceConflicts, source: from.references, target: into.references });
     if (!["combine", "source", "target"].includes(resolution.references)) unresolved.push("references");
   }
   if (resolution.references !== undefined && !["combine", "source", "target"].includes(resolution.references)) throw new Error("references resolution must be combine, source or target");
-  const type = entityType(resolution.kind ?? into.kind, Object.hasOwn(resolution, "subtype") ? resolution.subtype : into.subtype ?? null);
+  const type = entityType(resolution.kind ?? into.kind, Object.hasOwn(resolution, "subtype") ? resolution.subtype : into.subtype ?? null, brainKinds(root));
   const merged = { ...structuredClone(into), ...type,
     aliases: unique([...into.aliases, from.name, ...from.aliases]).filter(n => n.toLowerCase() !== into.name.toLowerCase()),
     emails: unique([...into.emails, ...from.emails]),
     references: unique([
-      ...into.references.filter(r => resolution.references !== "source" || !referenceConflicts.includes(r.kind)),
-      ...from.references.filter(r => resolution.references !== "target" || !referenceConflicts.includes(r.kind)),
+      ...into.references.filter(r => resolution.references !== "source" || !referenceConflicts.includes(sourceKind(r))),
+      ...from.references.filter(r => resolution.references !== "target" || !referenceConflicts.includes(sourceKind(r))),
     ]),
     identity_sources: unique([...into.identity_sources, ...from.identity_sources]),
     previous_ids: unique([...into.previous_ids, source, ...from.previous_ids]),
@@ -138,8 +143,8 @@ export function mergeEntities(root, { source, target, by, as_of, resolution = {}
     const id = `ec_${randomUUID()}`;
     merged.merge_ids.push(id);
     const fm = updated(into, identity(merged));
-    const redirect = `\n# Merged identity\n\nMerged into [${into.id}](${into._path.split("/").at(-1)}). Recovery record: ${id}.\n` + (editedBody(from) ? from._body : "");
-    return finish(root, { id, operation: "merge", source, target, by: who, resolution, impact: preview.impact,
+    const redirect = `\n# Merged identity\n\nMerged into [${into.id}](${linkFrom(from._path, into._path)}). Recovery record: ${id}.\n` + (editedBody(from) ? from._body : "");
+    return finish(root, { id, operation: "merge", source, target, by: who, resolution, impact: preview.impact, event: { entity: target, change: "merge", from: from.name, to: into.name, merged_id: source },
       changes: [change(root, into, fm), change(root, from, updated(from, { redirect: target, merged_by: id }), redirect)] },
     { status: "merged", source, target, merge_id: id, entity: identity(merged) });
   });
@@ -147,18 +152,26 @@ export function mergeEntities(root, { source, target, by, as_of, resolution = {}
 
 // Compilers can refresh generated text after a merge. Identity changes, unknown
 // metadata and handwritten text must still match before automatic reversal is safe.
+// a link to an entity page is the same link wherever the page sits and whatever it is named (the upgrade moves pages)
+const sameLinks = markdown => markdown.replace(/\]\([^)\s]*\.md\)/g, "](page)");
 function authoredState(text, path) {
   const e = parseEntityText(text, path), fm = { ...e.fm };
   for (const field of ["compiled_at", "compiled_by", "compiled_as_of", "compilation", "rendered_body_hash", "evidence_as_of", "latest_evidence_at", "stale", "updated_at"]) delete fm[field];
-  return { fm, header: entityText({ _header: e.header, _fm: e.fm }, fm, ""), markdown: editedBody({ _fm: e.fm, _body: e.body }) ? e.body : null };
+  return { fm, header: entityText({ _header: e.header, _fm: e.fm }, fm, ""), markdown: editedBody({ _fm: e.fm, _body: e.body }) ? sameLinks(e.body) : null };
 }
 export function undoEntityMerge(root, { merge_id, by, as_of }) {
   return withEntityLock(root, () => {
     const rec = readEntityChange(root, merge_id);
     if (rec.operation !== "merge") throw new Error("Choose a merge operation to undo");
     const registry = lib.readNames(root), survivor = exact(registry, rec.target), contexts = lib.listContexts(root);
-    const current = rec.changes.map(c => ({ ...c, current: readFileSync(join(root, c.path), "utf8") }));
-    const conflicts = current.filter(c => !isDeepStrictEqual(authoredState(c.current, c.path), authoredState(c.after, c.path))).map(c => ({ path: c.path, problem: "Identity or handwritten metadata changed after this merge. Undo later merges first, or review those edits before splitting." }));
+    // a page renamed or moved to a kind folder since the merge is found by its id
+    const located = c => existsSync(join(root, c.path)) ? c.path : findPage(root, parseEntityText(c.after, c.path).fm.id) || c.path;
+    const current = rec.changes.map(c => { const at = located(c), text = readFileSync(join(root, at), "utf8");
+      return { ...c, at, current: text, after: changeText(rec, c, "after", parseEntityText(text, at).body), before: changeText(rec, c, "before"), keptAfter: keptBody(rec, c, "after"), keptBefore: keptBody(rec, c, "before") }; });
+    // a frontmatter-only record compares the identity, and the body only where it kept a handwritten one
+    const same = c => { const now = authoredState(c.current, c.path), then = authoredState(c.after, c.path);
+      return isDeepStrictEqual(now.fm, then.fm) && now.header === then.header && (c.keptAfter ? now.markdown === then.markdown : now.markdown === null); };
+    const conflicts = current.filter(c => !same(c)).map(c => ({ path: c.path, problem: "Identity or handwritten metadata changed after this merge. Undo later merges first, or review those edits before splitting." }));
     const beforeMemories = new Set(rec.impact.flatMap(i => i.memories));
     const later = contexts.flatMap(c => lib.effectiveMemories(c.memories)).filter(m => m.entities?.includes(survivor.id) && !beforeMemories.has(m.id)).map(m => ({ id: m.id, context: m.context, content: m.content }));
     const revision = "ecv_" + hash({ merge_id, current, registry: registry.map(identity), memories: contexts.map(c => c.memories) });
@@ -169,9 +182,13 @@ export function undoEntityMerge(root, { merge_id, by, as_of }) {
     if (as_of !== revision) throw new Error("Undo preview is stale; preview undo_entity_merge again");
     if (conflicts.length) throw new Error("Cannot undo without reviewing changes made after the merge: " + conflicts.map(c => c.path).join(", "));
     const changes = current.map(c => {
-      const before = parseEntityText(c.before, c.path);
-      return { path: c.path, before: c.current, after: entityText({ _fm: before.fm, _header: before.header }, { ...before.fm, updated_at: new Date().toISOString() }, before.body) };
+      // without a kept body the page restarts from its frontmatter: the brief is rebuilt at the next refresh
+      const before = parseEntityText(c.before, c.path), path = pageTarget(root, before.fm, c.at);
+      const body = c.keptBefore ? before.body : `\n# ${before.fm.name}\n\nNo compiled brief yet. Facts are kept in context memories.\n`;
+      const fm = { ...before.fm, updated_at: new Date().toISOString(), ...(c.keptBefore ? {} : { rendered_body_hash: bodyHash(body) }) };
+      return { path, ...(path !== c.at ? { from: c.at } : {}), before: c.current, after: entityText({ _fm: before.fm, _header: before.header }, fm, body) };
     });
-    return finish(root, { operation: "undo_merge", merge_id, source: rec.source, target: rec.target, by: who, changes }, { status: "unmerged", source: rec.source, target: rec.target, memories_kept_with_survivor: later });
+    const names = changes.map(c => parseEntityText(c.after, c.path).fm), was = id => names.find(fm => fm.id === id)?.name || id;
+    return finish(root, { operation: "undo_merge", merge_id, source: rec.source, target: rec.target, by: who, changes, event: { entity: rec.target, change: "unmerge", from: was(rec.source), to: was(rec.target), merged_id: rec.source } }, { status: "unmerged", source: rec.source, target: rec.target, memories_kept_with_survivor: later });
   });
 }

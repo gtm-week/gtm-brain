@@ -32,9 +32,10 @@ if (thread) try {
 } catch {}
 try {
   mkdirSync(join(root, 'work'), { recursive: true });
-  appendFileSync(join(root, 'work', 'runs.jsonl'), JSON.stringify({ at, by, thread, turns, ...usage }) + '\n');
+  const why = (failure || (!turns ? raw.slice(-2).join(' / ') : '')).replace(/\s+/g, ' ').slice(0, 300);
+  // the error rides on the run's own line too, for the chat start's health line (lib/health-line.mjs)
+  appendFileSync(join(root, 'work', 'runs.jsonl'), JSON.stringify({ at, by, thread, turns, ...usage, ...(why ? { error: why } : {}) }) + '\n');
   const stamp = new Date().toLocaleString('sv-SE').slice(0, 19);
   appendFileSync(join(root, 'work', 'hooks.log'), `${stamp}  scheduled-run  tokens in=${usage.input} cached=${usage.cached} out=${usage.output}${thread ? ` codex://threads/${thread}` : ''}\n`);
-  const why = (failure || (!turns ? raw.slice(-2).join(' / ') : '')).replace(/\s+/g, ' ').slice(0, 300);
   if (why) appendFileSync(join(root, 'work', 'hooks.log'), `${stamp}  scheduled-run  error: ${why}\n`);
 } catch {}

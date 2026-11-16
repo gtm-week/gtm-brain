@@ -5,7 +5,7 @@
 //   node test/live/scenarios.mjs [case ids, comma] [--brain <folder>]   (default: a clean brain built here)
 // codex exec has no question box: a question shows as text ending in "?". The box itself stays a manual check.
 import { execFileSync, spawn } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync, openSync } from "node:fs";
 import { join } from "node:path";
 import { homedir, tmpdir } from "node:os";
 
@@ -35,13 +35,21 @@ function fixture() {
 
 // expect: "ask" (a question, nothing new saved), "save" (a new note, no question) or "answer" (no save);
 // check(result) adds what must be true of the saved note or the reply
+// Dates from today, not from the day a check was written (12 Nov 2026 baked in 13, 14 and 21 Nov).
+const DAY = 864e5, today = new Date(new Date().toDateString());
+const ahead = (wd, from = today) => { const d = new Date(from); d.setDate(d.getDate() + ((wd - d.getDay() + 7) % 7 || 7)); return d; };
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const dateRe = d => new RegExp(`\\b${d.getDate()} ${MONTHS[d.getMonth()].slice(0, 3)}|${MONTHS[d.getMonth()]} ${d.getDate()}\\b|${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
+const friday = ahead(5), saturday = ahead(6), saturdayAfter = new Date(saturday.getTime() + 7 * DAY);
+// D2: "next Saturday" within the next two days can be this one or the one after (ask with both); further off, it is the coming one
+const saturdayClose = (saturday - today) / DAY <= 2;
 const CASES = [
   { id: "forget", say: "Forget that Lena runs the workshop.", setup: r => seed(r, "Lena Dumos will run the workshop.", "Lena Dumos"), expect: "save", check: x => x.added.some(m => m.retracts) || "withdrawn with retracts (F1)" },
-  { id: "next-saturday", say: "Can we meet next Saturday?", expect: "ask", check: x => /14/.test(x.reply) && /21/.test(x.reply) || "both dates offered (D2)" },
+  { id: "next-saturday", say: "Can we meet next Saturday?", expect: saturdayClose ? "ask" : "any", check: x => saturdayClose ? (dateRe(saturday).test(x.reply) && dateRe(saturdayAfter).test(x.reply) || "both dates offered (D2)") : (dateRe(saturday).test(x.reply) || `the coming Saturday, ${saturday.getDate()} ${MONTHS[saturday.getMonth()]} (D2 only within two days)`) },
   { id: "new-surname", say: "Florian Kim joined Globex as head of sales.", expect: "save", check: x => x.added.some(m => (m.people || []).includes("Florian Kim")) || "saved as Florian Kim (P4)" },
   { id: "which-florian", say: "lorian called me about the venue.", setup: r => seed(r, "Florian Kim joined Globex as head of sales.", "Florian Kim", ["--new", "Florian Kim"]), expect: "ask", check: x => /Weber/.test(x.reply) && /Kim/.test(x.reply) || "both Florians offered (P2, W1)" },
   { id: "typo-surname", say: "Lena Dumas will host the panel.", expect: "ask", check: x => /Dumos/.test(x.reply) || "same as Lena Dumos? (P4)" },
-  { id: "plain-friday", say: "Ola will send the deck on Friday.", expect: "save", check: x => x.added.some(m => /13 Nov|2026-11-13|November 13|13 November/.test(m.content)) || "Friday written as 13 Nov (D1)" },
+  { id: "plain-friday", say: "Ola will send the deck on Friday.", expect: "save", check: x => x.added.some(m => dateRe(friday).test(m.content)) || `Friday written as ${friday.getDate()} ${MONTHS[friday.getMonth()]} (D1)` },
   { id: "market-research", say: "Create a new context for market research", expect: "ask", check: x => !x.newContexts.length || `created ${x.newContexts} (X3)` },
   { id: "project-context", say: "Create a new context for the Berlin event", expect: "any", check: x => !x.newContexts.length || `created ${x.newContexts} (X1)` },
   { id: "how-it-works", say: "How does the brain work, and can I edit admin.md myself?", expect: "answer", check: x => /APPROVE/.test(x.reply) || "says APPROVE" },
@@ -56,7 +64,9 @@ async function run(c) {
   c.setup?.(root);
   const before = new Set(notes(root).map(m => m.id)), ctxBefore = new Set(readdirSync(join(root, "brain", "contexts")));
   const out = join(root, "..", `${c.id}-reply.txt`);
-  await new Promise(res => { const p = spawn("codex", ["exec", "--skip-git-repo-check", "-s", "workspace-write", "-o", out, c.say], { cwd: root, stdio: ["ignore", "ignore", "ignore"] }); p.on("close", res); });
+  // the steps Codex took go next to the reply (<id>-steps.jsonl), so a failure can be read, not guessed
+  const steps = openSync(join(root, "..", `${c.id}-steps.jsonl`), "w");
+  await new Promise(res => { const p = spawn("codex", ["exec", "--json", "--skip-git-repo-check", "-s", "workspace-write", "-o", out, c.say], { cwd: root, stdio: ["ignore", steps, "ignore"] }); p.on("close", res); });
   const reply = existsSync(out) ? readFileSync(out, "utf8").trim() : "";
   const added = notes(root).filter(m => !before.has(m.id)), newContexts = readdirSync(join(root, "brain", "contexts")).filter(d => !ctxBefore.has(d));
   const asked = /\?\s*(\n|$)|\?\s*\n\s*1[.)]/.test(reply) || /\n\s*1[.)] /.test(reply);

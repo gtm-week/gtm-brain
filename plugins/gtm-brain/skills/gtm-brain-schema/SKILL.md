@@ -20,14 +20,16 @@ Keep authored brain content in English. Preserve names, source quotes and the ex
 
 ## Step 1: read
 
-Call `query` (status) first: a chat's first GTM Brain call runs the chat start, which writes
+Make a GTM Brain call before reading it (any call, no status call needed): a chat's first
+GTM Brain call runs the chat start, which writes
 SCHEMA.md when it is missing and reports one that cannot be read, with a fix per line. Then read
 `SCHEMA.md` at the brain root:
 
 - `## Person`, `## Organization`, `## Product`: a table each, `| Field | What it means | Required |`.
 - Under Organization, `### Subtypes` (`| Subtype | What it is |`) and a `### <subtype>` field table
   for a subtype with fields of its own.
-- `## Relationships`: `| Type | From | To | What it means | Required |`, and a `Was called` column
+- `## Relationships`: `| Type | From | To | What it means | Required | One at a time |` (One at a
+  time yes: a new current one ends the previous one; left out, works_at and reports_to are), and a `Was called` column
   once a type has been renamed. `us` is our own company. `customer_of` is the customer status.
 
 When the chat start said SCHEMA.md cannot be read, show its fix and offer to apply it before
@@ -48,8 +50,10 @@ renamed or removed. Nothing else.
   always, every; no otherwise.
 - A subtype ("investors are a subtype"): a row under `### Subtypes`; fields of its own go in a
   `### <subtype>` table.
-- A relationship type ("track who introduced whom"): a row with from and to kinds (person,
-  organization, product; `us` as a target), what it means, required.
+- A relationship type ("track who introduced whom"): a row with from and to kinds (any kind in
+  the file; `us` as a target), what it means, required.
+- A kind ("track venues"): a `## <Kind>` section with a field table, one lowercase word or words
+  joined by `_`. Add it only when no existing kind or organization subtype fits.
 - Look first: never two rows for one thing. When it is unclear which kind, subtype or whether it
   is a field or a relationship, ask once (Q1, Q2), the exact row you would write as the first
   option.
@@ -70,15 +74,18 @@ header and separator lines as they are. Never touch the intro text unless the pe
 ## Step 3: keep it
 
 Call `save` with a message naming the change ("SCHEMA.md: every company has a budget owner").
-Then one line: what changed, and that briefs of that kind refill in the background. In this chat,
+Then one line: what changed, and that briefs of that kind are rewritten when someone asks about them. In this chat,
 follow it already. After a new required field, offer once to see who is missing it: `query` with
 object `rules` (its SCHEMA.md findings).
 
 ## Limits
 
-- The kinds are fixed: person, organization, product. A new kind ("event", "deal") is not
-  possible yet: say so in one line and offer the nearest thing, an organization subtype, or a
-  project folder for work like an event.
+- Person, organization, product, offering, event, tool and meeting always exist. A meeting
+  needs no section (its fields are built in); do not add a `## Meeting` section while a teammate
+  is on 0.34, which cannot read the file then. A project cannot be a kind: it is a tag. Company and team are
+  organization subtypes. Say so in one line and offer the nearest thing.
+- Do not remove a kind's section while entities of that kind exist: their files stop reading
+  until the section is back.
 - Subtypes exist only on organizations.
 - `customer_of` stays: it is the customer status (the customer notes). It can be described, not
   removed or renamed.

@@ -48,6 +48,16 @@ for (const choice of ['source', 'target', 'combine']) test(`merge ${choice} reso
   assert.deepEqual(get(root, target.id).references, refs);
 });
 
+test("merge compares reference kinds in their normalized spelling", () => {
+  const { root, source, target } = setup();
+  lib.updateEntity(root, { entity: source.id, by: 'ann', set: { references: [{ kind: 'HubSpot', ref: '0-1/1' }, { kind: 'Attio', ref: 'attio:people/9' }] } });
+  lib.updateEntity(root, { entity: target.id, by: 'ann', set: { references: [{ kind: 'hubspot', ref: '0-1/2' }, { kind: 'attio', ref: 'people/9' }] } });
+  const preview = lib.mergeEntities(root, { source: source.id, target: target.id, resolution: {} });
+  assert.deepEqual(preview.conflicts.find(c => c.field === 'references')?.kinds, ['hubspot']);   // the two Attio spellings are one record
+  const refs = merge(root, source, target, { references: 'target' }).entity.references;
+  assert.deepEqual(refs.filter(r => /hubspot/i.test(r.kind)), [{ kind: 'hubspot', ref: '0-1/2' }]);
+});
+
 test("explicit updates preserve identity, file edits and history while replacing, adding and removing metadata", () => {
   const { root, source } = setup(); note(root, source.id);
   const path = join(root, source._path);
@@ -162,13 +172,15 @@ test("archive hides active lists but keeps identity, citations and captured memo
 
 test("interrupted merge recovers complete identities; conflicting manual edits produce a repair proposal", () => {
   for (const edited of [false, true]) {
-    const { root, source, target } = setup(), merged = merge(root, source, target), rec = readEntityChange(root, merged.merge_id);
+    const { root, source, target } = setup(), original = readFileSync(join(root, source._path), "utf8"), into = readFileSync(join(root, target._path), "utf8"), merged = merge(root, source, target), rec = readEntityChange(root, merged.merge_id);
     const folder = join(root, "brain/entities/.history");
-    // Simulate a process dying after the target write but before the redirect write.
-    for (const [i, c] of rec.changes.entries()) writeFileSync(join(root, c.path), i === 0 ? c.after : c.before);
+    // Simulate a process dying after the target write but before the redirect write: the record keeps the
+    // frontmatter only, so the files on disk are the whole pages (the target written, the source as it was).
+    writeFileSync(join(root, source._path), original);
+    writeFileSync(join(root, target._path), rec.changes[0].after + into.slice(into.indexOf("\n---\n") + 5));
     renameSync(join(folder, rec.id + ".json"), join(folder, rec.id + ".pending"));
     if (edited) {
-      writeFileSync(join(root, source._path), rec.changes[1].before + "\nHuman edit during interruption.\n");
+      writeFileSync(join(root, source._path), original + "\nHuman edit during interruption.\n");
       const before = snapshot(root);
       assert.throws(() => lib.readNames(root), e => e.code === "ENTITY_FORMAT" && e.repair.field === "interrupted change");
       assert.deepEqual(snapshot(root), before);

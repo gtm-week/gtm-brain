@@ -230,7 +230,7 @@
           "name": "relation",
           "expression": "relation",
           "data_type": "Opaque",
-          "description": "A typed relationship from SCHEMA.md between two entities (to may be us): status current or ended, kept over time. Ended is a new note; a wrong one is corrected with supersedes. User evidence is never replaced by a source refresh."
+          "description": "A typed relationship from SCHEMA.md between two entities (to may be us): status current or ended, kept over time as a record whose notes are its events. Ended is a new note; a wrong one is corrected with supersedes. User evidence is never replaced by a source refresh."
         },
         {
           "name": "meeting",
@@ -269,7 +269,7 @@
       "primary_key": [
         "id"
       ],
-      "description": "A person, organization or product with a global stable identity. Stored in brain/entities/*.md with readable cited briefs. Evidence remains in context memories.",
+      "description": "A person, organization, product, offering, event, tool, meeting or another SCHEMA.md kind with a global stable identity. Stored in brain/entities/<kind folder>/ (one page each, with readable cited briefs). Evidence remains in context memories.",
       "ai_context": {
         "synonyms": [
           "people",
@@ -279,7 +279,7 @@
           "teams",
           "identity registry"
         ],
-        "instructions": "Use kind person, organization or product; teams and companies are organization subtypes. query entities with filters.contexts for a context perspective, or search a name/email/alias. Then query memories with filters.entities set to the returned ID and optionally filters.context. Use query (brief) for its readable brief. add_name creates identities or adds unclaimed aliases. update_entity edits by stable ID. merge_entities previews and applies explicit merges; archive_entity with undo restores archived identities, and undo_entity_merge reverses a recorded merge. Query defaults to active entities; filter status to include archives, or id for direct lookup; compile_entity refreshes a cited view. Never infer customer status or employment from identity kind or shared mentions."
+        "instructions": "Use kind person, organization, product, offering, event, tool, meeting or another kind in SCHEMA.md; teams and companies are organization subtypes. query entities with filters.contexts for a context perspective, or search a name/email/alias. Then query memories with filters.entities set to the returned ID and optionally filters.context. Use query (brief) for its readable brief. add_name creates identities or adds unclaimed aliases. update_entity edits by stable ID. merge_entities previews and applies explicit merges; archive_entity with undo restores archived identities, and undo_entity_merge reverses a recorded merge. Query defaults to active entities; filter status to include archives, or id for direct lookup; compile_entity refreshes a cited view. Never infer customer status or employment from identity kind or shared mentions."
       },
       "fields": [
         {
@@ -298,13 +298,25 @@
           "name": "kind",
           "expression": "kind",
           "data_type": "String",
-          "description": "person, organization or product. Customer, partner and employer are relationships, not kinds."
+          "description": "A kind in SCHEMA.md: person, organization, product, offering, event, tool, meeting or one the brain added. Customer, partner and employer are relationships, not kinds."
         },
         {
           "name": "subtype",
           "expression": "subtype",
           "data_type": "String",
           "description": "Optional organization category, e.g. company or team. Null when unspecified. Legacy company/team kinds map here."
+        },
+        {
+          "name": "relation_to_us",
+          "expression": "relation_to_us",
+          "data_type": "String",
+          "description": "Derived from the notes: team, customer, partner, investor, prospect or other (people through their employer); null for other kinds. Filter on it with kind and any SCHEMA.md field (role: VP Sales)."
+        },
+        {
+          "name": "short_id",
+          "expression": "short_id",
+          "data_type": "String",
+          "description": "The first six hex characters of id, the suffix of the page name (people/max-jendral-3f9a2c.md)."
         },
         {
           "name": "aliases",
@@ -466,14 +478,14 @@
             "title": "Remembering",
             "object": "memories",
             "returns": "Opaque",
-            "description": "Record what happened during work: a decision, an action done, a finding, a meeting, a question or its answer. The only memory writer, append-only. One memory per distinct outcome; pass a whole turn's findings in one call through memories, each entry with its own context. Write first when the context is clear, then confirm by quoting the note back as the tool echoes it, with its context, in one line. Corrections supersede an old id; withdrawals and answers retract it. An entry naming someone who may already be known, or with a bare relative date (Thursday), is held back: ask what the result says to ask, all in one question, and resend only that entry. Attachments (asset), customers (customer, customer_coverage) and meetings (meeting, meeting_id, meeting_capture, meeting_policy, meeting_coverage) follow the remember, customers and meetings references.",
+            "description": "Save a decision, commitment, finding, meeting outcome, question or answer. Append-only. When the person states a fact, call it at once, no reads first: the brain matches names, finds the context, says \"already kept\" for a fact it has and turns a changed date, amount, code or count into a correction. One statement about one event or one person is one note, even with several clauses; split only into separate outcomes about different people, deals or decisions. Never a note that only says a call or meeting happened: write what came of it; outcomes of one conversation share the meeting block. A whole turn in one call through memories. Quote the note back as echoed. Corrections supersede an id; withdrawals and answers retract it. A held entry: ask what the result says, once, resend only it. asset, customer, meeting imports: see their references.",
             "input_schema": {
               "type": "object",
               "properties": {
                 "by": {
                   "type": "string",
                   "minLength": 1,
-                  "description": "Handle, name or email of the person you work for (from brain/admin.md team). Several: comma separated."
+                  "description": "Omit for the person in this chat; else a team handle, name or email. Several: comma separated."
                 },
                 "project": {
                   "type": "string",
@@ -523,9 +535,16 @@
                       "sources": {
                         "type": "array",
                         "items": {
-                          "type": "string"
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object"
+                            }
+                          ]
                         },
-                        "description": "Where it comes from, provider:reference. When a connector returns a direct URL (url, web_url, webUrl, permalink), save that exact URL with its provider. If no direct URL is returned, keep provider:ID. Never invent a link. This chat is added automatically."
+                        "description": "Where it comes from, provider:reference. When a connector returns a direct URL (url, web_url, webUrl, permalink), save that exact URL with its provider. If no direct URL is returned, keep provider:ID. Never invent a link. Or an object {kind, account, ref} for a named mailbox or workspace. This chat is added automatically."
                       },
                       "actions": {
                         "type": "array",
@@ -678,10 +697,7 @@
                         "required": [
                           "from",
                           "type",
-                          "to",
-                          "status",
-                          "basis",
-                          "observed_at"
+                          "to"
                         ],
                         "additionalProperties": false
                       },
@@ -1070,7 +1086,7 @@
                 },
                 "context": {
                   "type": "string",
-                  "description": "Context slug; omit when exactly one is loaded"
+                  "description": "Context slug; omit when one is loaded or the people in the note have most of their notes in one context (the reply says where it went)"
                 },
                 "tools": {
                   "type": "array",
@@ -1096,9 +1112,16 @@
                 "sources": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "object"
+                      }
+                    ]
                   },
-                  "description": "Where it comes from, provider:reference. When a connector returns a direct URL (url, web_url, webUrl, permalink), save that exact URL with its provider. If no direct URL is returned, keep provider:ID. Never invent a link. This chat is added automatically."
+                  "description": "Where it comes from, provider:reference. When a connector returns a direct URL (url, web_url, webUrl, permalink), save that exact URL with its provider. If no direct URL is returned, keep provider:ID. Never invent a link. Or an object {kind, account, ref} for a named mailbox or workspace. This chat is added automatically."
                 },
                 "actions": {
                   "type": "array",
@@ -1231,7 +1254,7 @@
                 },
                 "relation": {
                   "type": "object",
-                  "description": "A SCHEMA.md relationship; see the relations reference.",
+                  "description": "A SCHEMA.md relationship: from, type and to are enough; status, basis and observed_at come from the note.",
                   "properties": {
                     "from": {
                       "type": "string",
@@ -1267,10 +1290,7 @@
                   "required": [
                     "from",
                     "type",
-                    "to",
-                    "status",
-                    "basis",
-                    "observed_at"
+                    "to"
                   ],
                   "additionalProperties": false
                 },
@@ -1333,7 +1353,7 @@
                 },
                 "meeting": {
                   "type": "object",
-                  "description": "A sourced conversation observation (kind note); the first write creates the anchor, the same reference reuses it. See the meetings reference.",
+                  "description": "The conversation an outcome came from; content says what came of it. Outcomes of one conversation share it in one call and link to one anchor. Imports: see the meetings reference.",
                   "properties": {
                     "title": {
                       "type": "string",
@@ -1662,9 +1682,7 @@
                   "additionalProperties": false
                 }
               },
-              "required": [
-                "by"
-              ],
+              "required": [],
               "anyOf": [
                 {
                   "required": [
@@ -1686,7 +1704,7 @@
             "title": "Writing the summary",
             "object": "contexts",
             "returns": "Opaque",
-            "description": "Write the current summary and Working guidance from effective memories. Summary: 2 to 4 sentences covering the situation, what is open and supported immediate next steps; end every sentence with the ids of the notes it rests on in brackets ([m_...]); absolute dates only, never next Tuesday or tomorrow. Refused otherwise, with the reason. Working guidance (now): only reusable methods learned from memories, including evidenced tool usage, with memory IDs for each method. Revalidate prior methods and remove unsupported or superseded advice; pass an empty string when none remain. Do not repeat standing instructions, current status or one-off tasks in guidance. Older guidance may mix methods and actions: keep supported actions in the summary and their source follow-ups. Keeps the standing rule. Refuses if memories or Markdown changed after compile_facts. Manual edits pause compilation until reviewed in Codex; never overwrite them silently.",
+            "description": "Write a context's summary and Working guidance, once, when load_context or compile_facts says it is behind and gives as_of; it is cached until new notes arrive. Summary: 2 to 4 sentences on the situation, what is open and supported next steps, each ending with the note ids it rests on ([m_...]), absolute dates only. now: reusable methods from the notes with their ids, or an empty string. Refused with the reason otherwise, or when notes changed after as_of, or while a manual edit awaits review.",
             "input_schema": {
               "type": "object",
               "properties": {
@@ -1700,11 +1718,11 @@
                 },
                 "by": {
                   "type": "string",
-                  "description": "Your handle: the person's handle, or schedule"
+                  "description": "The person's handle (schedule in a scheduled run)"
                 },
                 "as_of": {
                   "type": "string",
-                  "description": "The as_of id from compile_facts"
+                  "description": "The as_of id from load_context or compile_facts"
                 },
                 "summary": {
                   "type": "string",
@@ -1866,7 +1884,7 @@
             "tool_name": "add_name",
             "title": "Adding a name",
             "returns": "Opaque",
-            "description": "Create an Entity or add unclaimed aliases, emails and references. This never merges two existing identities: use merge_entities for that. For renaming, replacing or removing metadata use update_entity with a current stable ID. Kinds: person, organization, product; legacy company/team map to organization subtypes. Facts and relationships stay in context memories. Never infer an identity match.",
+            "description": "Create an Entity or add unclaimed aliases, emails and references. This never merges two existing identities: use merge_entities for that. For renaming, replacing or removing metadata use update_entity with a current stable ID. Kinds: person, organization, product, event, tool and any kind in SCHEMA.md; legacy company/team map to organization subtypes. Facts and relationships stay in context memories. Never infer an identity match.",
             "input_schema": {
               "type": "object",
               "properties": {
@@ -1891,14 +1909,9 @@
                 },
                 "kind": {
                   "type": "string",
-                  "description": "person (default), organization or product. Legacy company and team are accepted and normalized to organization with that subtype.",
-                  "enum": [
-                    "person",
-                    "organization",
-                    "product",
-                    "company",
-                    "team"
-                  ]
+                  "description": "person (default), organization, product, offering, event, tool, meeting or another kind in SCHEMA.md. Legacy company and team are accepted and normalized to organization with that subtype.",
+                  "minLength": 1,
+                  "maxLength": 40
                 },
                 "not_same": {
                   "type": "array",
@@ -1964,7 +1977,7 @@
             "tool_name": "compile_entity",
             "title": "Compiling an entity brief",
             "returns": "Opaque",
-            "description": "Compile a permanent entity brief from entity_facts. Every claim cites current relevant memory IDs; context perspectives cite only that context. Keep dates, scope, interpretations and disagreements explicit. Does not create facts or rewrite memories. Refuses outdated as_of. Follow the entity compilation procedure in gtm-brain-use-brain.",
+            "description": "Write an entity brief's overview, once, when a brief read says it is behind and gives as_of (or from entity_facts in a run); cached until new notes arrive. Every claim cites current relevant memory IDs; context perspectives cite only that context. Keep dates, scope, interpretations and disagreements explicit. Does not create facts or rewrite memories. Refuses outdated as_of. Follow the entity compilation procedure in gtm-brain-use-brain.",
             "input_schema": {
               "type": "object",
               "properties": {
@@ -2176,11 +2189,9 @@
                     },
                     "kind": {
                       "type": "string",
-                      "enum": [
-                        "person",
-                        "organization",
-                        "product"
-                      ]
+                      "description": "A kind in SCHEMA.md: person, organization, product, offering, event, tool, meeting or one the brain added",
+                      "minLength": 1,
+                      "maxLength": 40
                     },
                     "subtype": {
                       "anyOf": [
@@ -2392,21 +2403,25 @@
             "tool_name": "merge_entities",
             "title": "Merging entities",
             "returns": "Opaque",
-            "description": "Join two existing identities only when the person has confirmed they are the same. First omit as_of to preview source into target: target ID and name survive. Review affected contexts and conflicts; resolve differences explicitly and preview again. Then apply with the returned as_of, same resolution, and by. Preserves retired IDs, source file notes and memory history. Returns a durable merge_id for undo_entity_merge.",
+            "description": "Join two existing identities. When the person has already said they are the same, pass confirmed true: this one call merges source into target (target ID, name and kind survive) and returns one line saying what was kept; the merge record carries who confirmed it, so save no note about it and do not read again to verify. When something needs the person's choice (two different records in the same tool, or the two were marked as different earlier), nothing is merged and the reply carries the one question to ask and the call for its answer. Without confirmed it is a read-only preview; apply that with its as_of, the same resolution, and by. Preserves retired IDs, source file notes and memory history. Returns a durable merge_id for undo_entity_merge.",
             "input_schema": {
               "type": "object",
               "properties": {
                 "source": {
                   "type": "string",
-                  "description": "Current stable entity ID from query entities. Resolve retired IDs before writing."
+                  "description": "Current stable entity ID, or the exact name when only one entity has it. The source is merged away."
                 },
                 "target": {
                   "type": "string",
-                  "description": "Current stable entity ID from query entities. Resolve retired IDs before writing."
+                  "description": "Current stable entity ID, or the exact name when only one entity has it. The target survives."
                 },
                 "by": {
                   "type": "string",
-                  "description": "Team member handle recording the change; required when applying."
+                  "description": "Team member handle recording the change; required when applying with as_of. With confirmed, omit to use the person in this chat."
+                },
+                "confirmed": {
+                  "type": "boolean",
+                  "description": "true when the person has said these two are the same: preview and merge in this one call. Never set it on a guess or a similarity."
                 },
                 "as_of": {
                   "type": "string",
@@ -2417,11 +2432,9 @@
                   "properties": {
                     "kind": {
                       "type": "string",
-                      "enum": [
-                        "person",
-                        "organization",
-                        "product"
-                      ]
+                      "description": "A kind in SCHEMA.md: person, organization, product, offering, event, tool, meeting or one the brain added",
+                      "minLength": 1,
+                      "maxLength": 40
                     },
                     "subtype": {
                       "anyOf": [

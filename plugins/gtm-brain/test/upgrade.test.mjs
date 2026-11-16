@@ -1,3 +1,6 @@
+// These tests read and write the root files of a layout 2 brain: setup and the lib play a plugin that writes layout 2 at most
+// (lib/layout-version.mjs GTM_BRAIN_TEST_LAYOUT). Layout 3 (about-us/, config/) is covered by config-folders.test.mjs.
+process.env.GTM_BRAIN_TEST_LAYOUT = "2";
 process.env.GTM_BRAIN_NO_WATCH = "1";
 process.env.GTM_BRAIN_NO_COMPILE = "1"; // Model runs are opt-in through test doubles.
 import { test } from "node:test";
@@ -9,6 +12,7 @@ import { spawnSync } from "node:child_process";
 import * as lib from "../lib/brain.mjs";
 import { legacyTemplates, rulesWhy, rulesReasons, rulesState, autoRefresh } from "../lib/upgrade-files.mjs";
 import { removeBrain } from "./helpers/dash-cleanup.mjs";
+import { wholeRulebook } from "../lib/rule-pages.mjs";
 
 const plugin = new URL("../", import.meta.url).pathname;
 function fixture(t, version = null) {
@@ -272,7 +276,7 @@ test("upgrade moves brain/guidelines/*.md to root documents, keeps a slug the ro
 
 test("upgrade adds the strategy document a pre-0.27 brain lacks and ends with a report of what it did and what stays", t => {
   const { root, run } = fixture(t);
-  for (const f of ["strategy.md", "icp.md", "voice.md", "design-system.md"]) rmSync(join(root, f), { force: true }); // a pre-0.27 brain had no starters
+  for (const f of ["strategy.md", "icp.md", "voice.md", "design-system.md", "brain/layout.json"]) rmSync(join(root, f), { force: true }); // a pre-0.27 brain had no starters and no layout file
   mkdirSync(join(root, "brain", "guidelines"), { recursive: true });
   writeFileSync(join(root, "brain", "guidelines", "voice.md"), "---\ntitle: Voice\napplies_to: [copy]\nstatus: draft\n---\n# Voice\n\nShort.\n");
   mkdirSync(join(root, "files", "2026-08"), { recursive: true }); writeFileSync(join(root, "files", "2026-08", "deck.pdf"), "pdf"); writeFileSync(join(root, "files", "2026-08", "logo.svg"), "<svg/>");
@@ -300,7 +304,7 @@ test("upgrade pulls a document into the folder of its own name that sits beside 
 });
 
 test("setup refuses a folder too broad for a brain, before writing anything, and says where to go", t => {
-  const home = mkdtempSync(join(tmpdir(), "gtm-broad-home-")); t.after(() => rmSync(home, { recursive: true, force: true }));
+  const home = mkdtempSync(join(tmpdir(), "gtm-broad-home-")); t.after(() => { try { rmSync(home, { recursive: true, force: true }); } catch {} });
   const desktop = join(home, "Desktop"), fine = join(home, "Documents", "Reflow Brain"); mkdirSync(desktop); mkdirSync(fine, { recursive: true });
   const setup = cwd => spawnSync("bash", [join(plugin, "scripts/gtm-brain-setup/setup.sh"), "--company", "Reflow", "--one-liner", "Testing", "--owner", "Ann Lee <ann@example.test>"], { cwd, env: { ...process.env, HOME: home, CODEX_HOME: join(home, "profile"), GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_COMPILE: "1" }, encoding: "utf8" });
   for (const [cwd, name] of [[home, "your home folder"], [desktop, "Desktop"], [join(home, "Documents"), "Documents"]]) {
@@ -312,7 +316,7 @@ test("setup refuses a folder too broad for a brain, before writing anything, and
 });
 
 test("the rules say RULES.md decides where work output goes, inside its project", () => {
-  const rules = readFileSync(join(plugin, "templates/AGENTS.md"), "utf8").replace(/\s+/g, " ");
+  const rules = wholeRulebook(readFileSync(join(plugin, "templates/AGENTS.md"), "utf8")).replace(/\s+/g, " ");   // the files rule page holds the detail
   assert.match(rules, /`RULES\.md` at the brain root decides where every file goes, and the person edits it/);
   assert.match(rules, /a task that belongs to a listed project goes in that project, never in a folder of its own/);
   assert.match(rules, /Never put a deliverable in `work\/` or a new folder at the brain root/);
@@ -337,6 +341,59 @@ test("the session hook refreshes a README a release wrote in a commit of its own
   const scheduled = fixture(t); writeFileSync(join(scheduled.root, "README.md"), old);
   sessionHook(scheduled, { GTM_BRAIN_RUN: "1" });
   assert.equal(readFileSync(join(scheduled.root, "README.md"), "utf8"), old);
+});
+
+test("upgrade moves a flat brain's entity pages into a folder per kind in one commit, as renames", t => {
+  const { root, env } = fixture(t);
+  const git = (...a) => spawnSync("git", ["-C", root, ...a], { encoding: "utf8" });
+  // a brain from before 0.35: pages flat in brain/entities, a merge and a company's files folder
+  const acme = lib.addName(root, "Acme", { kind: "organization", subtype: "company" }), chris = lib.addName(root, "Chris"), kp = lib.addName(root, "Krzysztof Pawlak", { aliases: ["KP"], emails: ["kp@acme.test"], references: [{ kind: "hubspot", ref: "contact/42" }] });
+  lib.appendMemory(root, "offer", { authors: ["ann-lee"], people: ["Krzysztof Pawlak"], content: "Krzysztof Pawlak runs the Acme pilot." });
+  const preview = lib.mergeEntities(root, { source: chris.id, target: kp.id });
+  lib.mergeEntities(root, { source: chris.id, target: kp.id, by: "ann-lee", as_of: preview.as_of });
+  const flat = {};
+  for (const p of lib.entityPagePaths(root)) flat[p] = `brain/entities/${p.split("/").pop().replace(/-[0-9a-f]{6}\.md$/, "")}.md`;
+  for (const [from, to] of Object.entries(flat)) { writeFileSync(join(root, to), readFileSync(join(root, from), "utf8").replace(/\]\(\.\.\/\.\.\/contexts\//g, "](../contexts/")); rmSync(join(root, from)); }
+  for (const f of ["people", "organizations", "products", "events", "tools", "meetings", "offerings"]) rmSync(join(root, "brain/entities", f), { recursive: true, force: true });
+  mkdirSync(join(root, "brain/entities/acme")); writeFileSync(join(root, "brain/entities/acme/logo.svg"), "<svg/>");
+  writeFileSync(join(root, "brain/layout.json"), JSON.stringify({ layout: 1, starters: [] }) + "\n");   // as every brain up to 0.34: flat is layout 1
+  assert.equal(lib.entityLayout(root), "flat");
+  const ids = lib.readNames(root).map(n => [n.id, n.name, n.aliases, n.emails, n.references, n.previous_ids]);
+  const notes = () => Object.fromEntries(readdirSync(join(root, "brain/contexts")).map(c => [c, existsSync(join(root, "brain/contexts", c, "memories.jsonl")) ? readFileSync(join(root, "brain/contexts", c, "memories.jsonl"), "utf8") : null]));
+  const notesBefore = notes();
+  git("add", "-A"); git("-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "commit", "-qm", "flat brain");
+  const { GTM_BRAIN_NO_COMMIT, ...committing } = env;
+  // the move asks first: without the person's yes the upgrade says what it would do and changes nothing
+  const head = git("rev-parse", "HEAD").stdout;
+  const asked = spawnSync("bash", [join(plugin, "scripts/gtm-brain-upgrade/upgrade.sh"), root], { cwd: root, env: committing, encoding: "utf8" });
+  assert.equal(asked.status, 0, asked.stderr);
+  assert.match(asked.stdout, /not upgraded yet: This upgrade changes the brain's file layout from 1 to 2\. It moves \d+ entity pages into a folder per kind/);
+  assert.equal(lib.entityLayout(root), "flat");
+  assert.equal(JSON.parse(readFileSync(join(root, "brain/layout.json"), "utf8")).layout, 1);
+  assert.equal(git("rev-parse", "HEAD").stdout, head);
+  assert.equal(git("status", "--porcelain").stdout.trim(), "");
+  const result = spawnSync("bash", [join(plugin, "scripts/gtm-brain-upgrade/upgrade.sh"), root, "--confirm"], { cwd: root, env: committing, encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /moved \d+ entity pages into a folder per kind/);
+  assert.match(result.stdout, /changed the brain's file layout to 2/);
+  assert.equal(JSON.parse(readFileSync(join(root, "brain/layout.json"), "utf8")).layout, 2);
+  assert.match(git("show", "--name-status", "-M", "--format=", "HEAD").stdout, /^M\s+brain\/layout\.json$/m, "layout 2 is recorded in the commit of the move");
+  assert.equal(lib.entityLayout(root), "kinds");
+  assert.deepEqual(lib.readNames(root).map(n => [n.id, n.name, n.aliases, n.emails, n.references, n.previous_ids]), ids, "ids, aliases, emails and references are kept");
+  assert.deepEqual(notes(), notesBefore, "notes are untouched");
+  assert.equal(lib.resolveEntity(lib.readNames(root), chris.id).id, kp.id, "the retired id still resolves");
+  assert.ok(existsSync(join(root, `brain/entities/organizations/acme-${acme.id.slice(2, 8)}/logo.svg`)));
+  assert.ok(existsSync(join(root, "brain/entities/people/index.md")));
+  const status = git("show", "--name-status", "-M", "--format=", "HEAD").stdout;
+  assert.match(status, new RegExp(`^R\\d+\\s+brain/entities/acme\\.md\\s+brain/entities/organizations/acme-${acme.id.slice(2, 8)}\\.md$`, "m"));
+  assert.match(status, /^R\d+\s+brain\/entities\/acme\/logo\.svg\s+brain\/entities\/organizations\/acme-[0-9a-f]{6}\/logo\.svg$/m);
+  assert.equal(git("status", "--porcelain", "brain").stdout.trim(), "", "everything moved is in that commit");
+  const tree = git("ls-files", "-s", "brain").stdout;
+  const again = spawnSync("bash", [join(plugin, "scripts/gtm-brain-upgrade/upgrade.sh"), root], { cwd: root, env: committing, encoding: "utf8" });
+  assert.equal(again.status, 0, again.stderr);
+  assert.doesNotMatch(again.stdout, /entity pages? into a folder per kind|meeting pages?/);
+  assert.equal(git("ls-files", "-s", "brain").stdout, tree, "a second run changes no brain file");
+  assert.equal(git("status", "--porcelain", "brain").stdout.trim(), "", "and leaves nothing uncommitted");
 });
 
 test("the README does not call work/ safe to delete", () => {

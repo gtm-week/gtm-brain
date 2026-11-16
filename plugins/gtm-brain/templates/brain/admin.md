@@ -7,6 +7,7 @@ team:
 tools: [{{TOOLS}}]
 dashboard: {{DASHBOARD}}
 deal_scoring: on
+big_files: google-drive
 protected: true
 ---
 
@@ -27,4 +28,8 @@ protected: true
   it explains the change, the form shows the diff, your click applies and commits it.
 - The dashboard opens in the Codex pane and needs no login. The legacy browser setting is
   ignored. `dashboard: always | on-demand` controls its timing guidance; change it in Codex,
-  then APPROVE. Summaries update in the background after each saved change.
+  then APPROVE. A topic summary is written when someone asks about it.
+- A file over 25 MB never goes into git. `big_files: google-drive` moves it to the shared drive
+  and links it; `big_files: local` keeps it in a folder on this computer outside git (not
+  shared, linked as a `file:` path; `big_files_folder:` names the folder). Change it in Codex,
+  then APPROVE.

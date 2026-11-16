@@ -7,7 +7,8 @@ set -u -o pipefail
 P="${PLUGIN_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 BY="${GTM_BRAIN_COMPILE_BY:-schedule}"   # schedule (launchd, cron) or background (kicked by a note)
 BRAIN="${1:-.}"; cd "$BRAIN" || exit 1
-[ -f AGENTS.md ] && [ -f brain/admin.md ] || { echo "not a brain: $BRAIN"; exit 1; }
+. "$P/session/resolve.sh"
+[ -f AGENTS.md ] && gtm_brain_is . || { echo "not a brain: $BRAIN"; exit 1; }
 mkdir -p work
 printf '%s  scheduled-run  start\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log
 # Workflow steps whose gate date passed become a due step and a gate question (lib/workflows.mjs): deterministic, no model.
@@ -15,6 +16,12 @@ if due_out="$(node --disable-warning=ExperimentalWarning "$P/scripts/gtm-brain-w
   printf '%s  scheduled-run  workflows: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$(printf '%s' "$due_out" | tr '\n' ';')" >> work/hooks.log
 else
   printf '%s  scheduled-run  workflows: due check failed: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$(printf '%s' "$due_out" | tr '\n' ';')" >> work/hooks.log
+fi
+# The nightly chat capture (lib/capture.mjs): outcomes said in this brain's chats and never saved, before the
+# compile so the summaries include them. Only the scheduled run, never the run a saved note kicks; it logs and
+# records its own result (work/capture.json), and a failed pass never stops the compile.
+if [ "$BY" = "schedule" ]; then
+  node --disable-warning=ExperimentalWarning "$P/scripts/gtm-brain-schedule/capture.mjs" . --run >/dev/null 2>&1 || true
 fi
 PENDING="$(node "$P/scripts/gtm-brain-compile/compile-status.mjs" .)" || { printf '%s  scheduled-run  failed: cannot inspect pending compilation\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> work/hooks.log; exit 1; }
 STALE="${PENDING%%|*}"; ENTITIES="${PENDING#*|}"

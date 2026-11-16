@@ -1,3 +1,6 @@
+// These tests read and write the root files of a layout 2 brain: setup and the lib play a plugin that writes layout 2 at most
+// (lib/layout-version.mjs GTM_BRAIN_TEST_LAYOUT). Layout 3 (about-us/, config/) is covered by config-folders.test.mjs.
+process.env.GTM_BRAIN_TEST_LAYOUT = "2";
 // RULES.md: where every file goes, one table the person reads and edits and Codex follows.
 // Run: node --test plugins/gtm-brain/test/where.test.mjs
 import { test } from "node:test";
@@ -118,8 +121,9 @@ test("a video over 25 MB is never committed: save keeps the rest and names it, t
   assert.match(r.note, /Too big for git, not kept \(over 25 MB\): projects\/berlin-event-2026\/sources\/Keynote Recording\.mov \(30 MB\)/);
   assert.match(lib.save(root, "again").note, /^nothing else to save\nToo big for git/);
   const out = start(root);
-  assert.match(out, /Offer to move each to the shared drive \(Google Drive\) and link it from its project's README\.md/);
-  assert.match(out, /If Google Drive is not connected in this Codex, offer to connect it first \(connect my tools\); if they decline, the file stays on this computer only/);
+  assert.match(out, /Follow the big-files walk-through \(gtm-brain-use-brain\/references\/big-files\.md\): offer to move each to the shared drive \(Google Drive\), in the folder "[^"]+ GTM Brain files"/);
+  assert.match(out, /save its pointer \{kind: google-drive, account, ref, url\} on the note/);
+  assert.match(out, /If Google Drive is not connected in this Codex, say so and ask for the file's Drive link instead \(connect my tools connects it\); without a link the file stays on this computer only/);
   assert.match(out, /Name folders and files in lowercase words joined by hyphens/);
   assert.match(out, /\n  7\. Video, audio, recordings, any file over 25 MB: the shared drive/);
 });

@@ -38,3 +38,12 @@ Keep authored brain content in English. Preserve names, source quotes and the ex
   start or save.
 - One proposal at a time. A new proposal replaces the pending one.
 - Plain hyphens only.
+
+## Owner-only (a brain with about-us/ and config/)
+
+- The settings are `config/settings.yaml`, and only the owner approves. For anyone else
+  `approve_change` keeps the change as a proposal for the owner and shows no form: say in one line
+  that it waits for the owner.
+- The owner's chat start names a waiting proposal and its id: explain it, then call
+  `approve_change` with kind `proposal` and that id; the form offers APPROVE, Decline or Not now.
+- Every approval is recorded as a decision note; `query` object `approvals` lists them.

@@ -156,6 +156,20 @@ If `brain/` does not exist yet, create it now with the `setup_brain` tool and th
 values (company, one line, owner), defaults for the rest; never run the setup script yourself. Context rules and the dashboard setting are point-of-need questions for later
 sessions, not part of discovery.
 
+**Where big files go: the one question before the draft.** The opening lines and
+`check_environment` say `Big files: answered` or `not asked yet`; when answered, do not ask. Else
+ask once, following [questions](questions.md), with the reason in one line: "Git cannot keep
+recordings or files over 25 MB, so they need one home and the brain keeps a link to it."
+Choices, recommended first: "Google Drive, shared with the team", "This computer only". Save the
+answer at once with `remember` in the onboarding context, kind `note`, content exactly
+`Big files: google-drive.` or `Big files: local.`, tags `onboarding` and `big-files`, source
+`user:<handle>`. Google Drive changes nothing in the draft (a new brain already says
+`big_files: google-drive`) and puts Google Drive among the Step 2 candidates when it is not
+connected. This computer puts `big_files: local` in the draft below, plus `big_files_folder:`
+only when the person named a folder, so the same APPROVE covers it. A skip saves nothing: the
+default stays and the question comes once more with the first big file. What happens with each
+file later is [big files](../../gtm-brain-use-brain/references/big-files.md).
+
 Show the drafted workplace info and all proposed changes in plain language, without raw file diffs, and invite corrections
 like this:
 
@@ -412,8 +426,8 @@ moves the card.
 ## Step 6: close
 
 Include a one-time refresh of the starting summaries in the snapshot confirmation: explain
-that accepting the snapshot also prepares those summaries for the next chat; from then on they
-update by themselves in the background.
+that accepting the snapshot also prepares those summaries for the next chat; from then on each
+is written again when someone asks about its topic.
 
 Do not mark Running for you complete while an accepted daily sync still has an unconfigured
 or unverified automation. Keep the accepted choice as continuation with its blocker; a
@@ -432,11 +446,11 @@ the snapshot are linked in the registry before announcing completion.
 Finish with a short confirmation in three parts: what connected, what was learned (and
 filed where), what is now running. Base the running-status sentence on submitted choices and
 verified results. When the one-time summary refresh was declined, say "The initial summary
-refresh is deferred, as requested." Do not replace that outcome with a generic "summaries are
-updating shortly" promise from the normal save workflow. Tell the user they can change any of
+refresh is deferred, as requested." Do not replace that outcome with a promise that the summaries
+update later by themselves. Tell the user they can change any of
 it later and where the ten-minute guide is.
 End this closing reply with [the documents question](skills-tour.md#the-documents-question):
-which of the four starters (strategy, ICP, voice, design system) to fill now, or later. After
+which of the five starters (strategy, ICP, voice, design system, market) to fill now, or later. After
 that answer is handled, give [the first task](skills-tour.md): one concrete sentence to send,
 built from what onboarding verified, and one line on where every workflow is listed. The first
 task is guidance, not another onboarding question or an action to run for the person.

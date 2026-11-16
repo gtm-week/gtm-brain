@@ -151,7 +151,7 @@ test('only the bare words count as the typed-answer choice: "Other company" is a
   for (const real of ['Other company', 'Something else entirely', 'None of these apply to us yet']) assert.deepEqual(enumOf(['Yes', real]), ['Yes', real, SOMETHING_ELSE], real);
 });
 
-test("GTM Brain lists no question forms: Codex's own box when it is on, chat text when it is off; APPROVE keeps its form", async t => {
+test("the old question forms stay off; ask_person asks first, then Codex's own box, then chat text; APPROVE keeps its form", async t => {
   const profile = mkdtempSync(join(tmpdir(), 'gtm-brain-native-q-'));
   writeFileSync(join(profile, 'config.toml'), 'model = "x"\n\n[features]\nhooks = true\ndefault_mode_request_user_input = true\n\n[mcp_servers.a]\ncommand = "a"\n');
   const listed = async home => {
@@ -168,14 +168,17 @@ test("GTM Brain lists no question forms: Codex's own box when it is on, chat tex
   const native = await listed(profile);
   for (const name of ['onboarding_question', 'configuration_question', 'question']) assert.ok(!native.names.includes(name), `${name} is off`);
   assert.ok(native.names.includes('approve_change'), 'APPROVE keeps its own form');
-  assert.match(native.instructions, /ask every question with request_user_input/);
+  assert.ok(native.names.includes('ask_person'), 'the one question tool');
+  assert.match(native.instructions, /ask every question with ask_person/);
+  assert.match(native.instructions, /Only where ask_person is not available, ask with request_user_input \(this Codex has its question box on\)/);
   assert.match(native.instructions, /never add Other or Something else/);
-  // the flag off, or outside [features]: still no forms; the questions go to chat text
+  // the flag off, or outside [features]: the same order; the box only where the chat has it
   writeFileSync(join(profile, 'config.toml'), '[features]\ndefault_mode_request_user_input = false\n[other]\ndefault_mode_request_user_input = true\n');
   const chat = await listed(profile);
   for (const name of ['onboarding_question', 'configuration_question', 'question']) assert.ok(!chat.names.includes(name), `${name} is off`);
   assert.ok(chat.names.includes('approve_change'), 'APPROVE keeps its own form');
-  // the box can still be there in this chat (Plan mode): use it when it is, plain chat text only without it
-  assert.match(chat.instructions, /When request_user_input is available in this chat .*ask every question with it/);
-  assert.match(chat.instructions, /Without it, ask as plain chat text and end the turn/);
+  assert.ok(chat.names.includes('ask_person'));
+  // the box can still be there in this chat (Plan mode): after ask_person, plain chat text only without both
+  assert.match(chat.instructions, /ask every question with ask_person.*Only where ask_person is not available, ask with request_user_input when this chat has it/);
+  assert.match(chat.instructions, /without that, ask as plain chat text and end the turn/);
 });

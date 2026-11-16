@@ -71,7 +71,9 @@ The dashboard opens next to the chat, with a card showing these six steps and wh
    Then it creates the brain in your folder.
 2. **Company profile.** It researches your website and what is already on the machine, and
    drafts your workplace info. You correct what is wrong, then choose **APPROVE** in the form Codex shows.
-   Nothing about your company is saved as fact without that choice from you.
+   Nothing about your company is saved as fact without that choice from you. Just before the
+   draft it asks once where big files go (recordings, anything over 25 MB): Google Drive,
+   shared with the team, or this computer only. Git never keeps them; the brain keeps a link.
 3. **Tools.** It proposes connecting your work email, calendar and CRM first (HubSpot, or
    Attio if that is yours), then the other tools it noticed. You choose; you sign in when
    asked. Each connection gets one read test so you know it works.
@@ -115,8 +117,8 @@ what you confirm is filed with its source. Workplace facts still go through APPR
 ## Your first week
 
 Just talk to Codex in plain language: "remember this", "what do we know about Acme?",
-"where are we with the pilot?". It records new information as it appears, and summaries
-update by themselves in the background. When you want a specific workflow:
+"where are we with the pilot?". It records new information as it appears, and a topic's
+summary is written when you ask about it. When you want a specific workflow:
 
 | You want to | Type |
 |---|---|
@@ -127,9 +129,12 @@ update by themselves in the background. When you want a specific workflow:
 | Assess a market, its segments and competitors against what you can prove today | `/gtm-brain-market-desk-research` |
 | Define who to target: company fit, buying roles and readiness, kept as one draft | `/gtm-brain-define-icp` |
 | Fill in the strategy the brain starts with (`strategy.md`), in a 10-15 minute conversation | `/gtm-brain-strategy` |
+| Draft a tone of voice: first whose it is (the company's, yours or a team's), then from writing that fits, tested on one fresh email or post; `voice.md` for the company; offered at the end of setup, skippable, run again any time | `/gtm-brain-voice` |
+| Set up ZYNT from what the brain knows: paste the prompt ZYNT gives you after "Set up with my AI agent" | `/gtm-brain-zynt-setup` |
 | Add a PDF, image or deck to the brain | drop it in the chat and say what it belongs to; no command |
+| Keep a recording or a file over 25 MB | drop it in the chat; it goes to Google Drive or a folder outside git, and the note keeps the link |
 | Change company info, team or tools | `/gtm-brain-configure` |
-| Fill in the voice, ICP or design system the brain starts with (`voice.md`, `icp.md`, `design-system.md`) | "fill in our tone of voice" |
+| Fill in the voice, ICP, design system or market the brain starts with (`voice.md`, `icp.md`, `design-system.md`, `market.md`) | "fill in our tone of voice" |
 | Turn something you do repeatedly into a reusable skill | `/gtm-brain-skill` |
 | Build a website design system from your existing brand (Brian Woloszczak and Peakout's starter) | `/gtm-brain-design-system` |
 | Add a reusable section to that website | `/gtm-brain-add-section` |
@@ -190,6 +195,7 @@ add that folder. Then start a new chat in it.
 
 ## Read next
 
-- `GUIDE.md`: the ten-minute guide to daily use.
+- `GUIDE.md`: the ten-minute guide to daily use. Showing GTM Brain to a room: the
+  [workshop demo](GUIDE.md#workshop-demo-the-two-loops), outreach and content in a dozen sentences.
 - `COMMANDS.md`: every workflow and what it touches.
 - `SETUP.md`: the technical manual, for whoever maintains your installation.

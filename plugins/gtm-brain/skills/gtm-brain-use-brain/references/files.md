@@ -29,13 +29,19 @@ or three most likely documents or entities, then run, through the shell:
 node "$PLUGIN_ROOT/skills/gtm-brain-add-file/add-file.mjs" <brain> --file "<path>" [--document <ref> | --entity "<name>"]
 ```
 
+With `--document design-system --page` the file is not put in the files folder: it becomes the
+design system's page, `design-system.html` beside the Markdown, replacing the one there
+([the design system page](documents.md#the-design-system-page)).
+
 It prints one JSON object. `path` is where the file now lives, relative to `base` (`brain`, or
 `project` with the project slug); `copied` says whether it was copied or referenced where it
 already was; `owner` names the document or entity it landed beside; `kind` is image, pdf,
 document or other; `text` is the extracted text file when there is one; `note` explains
 anything unusual (already in the brain, no text extractor). It refuses folders, missing files,
-a file with no owner, an unknown document or entity (register one with `add_name` first) and
-anything over 25 MB, with the reason: pass that reason on in one line and stop.
+a file with no owner, an unknown document or entity (register one with `add_name` first), and a
+recording or anything over 25 MB, with the reason. For those two, follow
+[big files](big-files.md) instead: the file goes to the shared drive or a folder outside git, and
+the note keeps a pointer. Any other refusal: pass the reason on in one line and stop.
 
 ## Step 3: attach it (entity files)
 
@@ -65,3 +71,25 @@ what it is attached to (entity, role, status) when it is an entity file, what wa
 - Never move, rename or delete the person's original file; a file from outside lands in the brain as a copy.
 - Never overwrite a file in the brain; a different file with the same name gets a suffix.
 - The extraction under `work/` is derived and disposable; the notes cite the file, not it.
+
+## From the brain rules: attachments
+
+A file the person hands over lands beside
+its owner (a document's files folder, or `brain/entities/<id>/` for a person, company or product;
+a file with no owner is refused, so ask what it belongs to; a project file stays in its project
+folder), an entity file is attached, and its content is noted. Under the hood attachments are
+`remember` with its optional `asset` field. Each attachment belongs
+to an existing entity and one memory; one file can have several entity relationships. Use a
+readable label, role and draft/approved/retired status. File paths remain references: no upload
+or folder scan; a file in `work/` is copied beside its owner when attached. Read the remember
+workflow reference before attaching or replacing.
+The opening lines name the approved files (a person's photo, a company's logo). Use exactly those
+for a graphic, page or deck, never a copy in a task folder or a package's own asset list; ask if
+several approved files match or only drafts exist. When the person says use another photo or logo,
+that is the new approved file for the same role: attach it in the same turn, and it replaces the
+old one in every chat. "Where is this set" is answered with the person's or company's page on the
+dashboard and how to change it, in one line.
+Resolve relative paths against the recorded brain or linked project, never this chat's cwd.
+Retire with a new memory that supersedes the current attachment in its context.
+Never delete the source file. Missing files are repaired through Codex. The dashboard is a
+read-only view of these fields, with previews, file links and collapsed attachment history.

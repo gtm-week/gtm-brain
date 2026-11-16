@@ -35,14 +35,18 @@ interaction_policy() {
 # carries generated copies of both policies: printing them again costs every request of the chat. A
 # linked project folder's AGENTS.md is only a pointer, and an old brain may predate the generated
 # blocks or the CLAUDE.md import, so those still get them.
+# A rulebook from 0.35.0 on carries neither block: both are rule pages the server returns (query, object rules), so
+# the chat gets one pointer line instead of the two policies.
 brain_interaction_policy() {
-  if [ -z "$project" ] && node "$H" rulebook "$root" 2>/dev/null && grep -q '<!-- generated: questions' "$root/AGENTS.md" 2>/dev/null && grep -q '<!-- generated: computer-use' "$root/AGENTS.md" 2>/dev/null; then
+  if [ -z "$project" ] && node "$H" rulebook "$root" 2>/dev/null && grep -q '^## Rule pages' "$root/AGENTS.md" 2>/dev/null && ! grep -q '<!-- generated: questions' "$root/AGENTS.md" 2>/dev/null; then
+    echo "Before the first question you ask the person, read the questions rule page once (query, object rules, search questions); not before a plain answer, and not again later."
+  elif [ -z "$project" ] && node "$H" rulebook "$root" 2>/dev/null && grep -q '<!-- generated: questions' "$root/AGENTS.md" 2>/dev/null && grep -q '<!-- generated: computer-use' "$root/AGENTS.md" 2>/dev/null; then
     echo "Before the first question you ask the person, read $P/skills/gtm-brain-start/references/questions.md once; not before a plain answer, and not again later."
   else
     interaction_policy
   fi
 }
-if [ -z "$where" ] || [ ! -f "$root/brain/admin.md" ]; then
+if [ -z "$where" ] || ! gtm_brain_is "$root"; then
   # An almost empty folder is ready for the person's explicit start request: only there does setup
   # need the question policy. Any other folder (someone's code repo) gets no GTM Brain rules at all.
   # Preserve this real hook session before setup; never infer it from an inherited env.
@@ -56,17 +60,31 @@ if [ -z "$where" ] || [ ! -f "$root/brain/admin.md" ]; then
   exit 0
 fi
 mkdir -p "$root/work"
+# A brain on a newer file layout than this plugin understands (brain/layout.json, lib/layout-version.mjs) is
+# read-only here: one line and nothing else, since every step below may write into it.
+if [ -f "$root/brain/layout.json" ]; then
+  blocked="$(node -e 'const v=await import(process.argv[1]);process.stdout.write(v.layoutBlock(process.argv[2]))' "$(dirname "${BASH_SOURCE[0]}")/../lib/layout-version.mjs" "$root" 2>/dev/null || true)"
+  [ -n "$blocked" ] && { echo "$blocked"; exit 0; }
+fi
+# Entity pages in kind folders while brain/layout.json says 1 or is missing (a 0.35 pre-release moved them and
+# did not record it): the file is set to 2 in a commit of its own and said in one line, once (lib.healLayout).
+# lib.commit does the same with the first write; here a chat that only reads repairs it too. Node starts only
+# for a brain that looks like that, so a healthy chat start pays nothing.
+if { ! grep -qs '"layout": *[2-9]' "$root/brain/layout.json" && ls "$root"/brain/entities/*/index.md >/dev/null 2>&1; } || { gtm_brain_layout3 "$root" && ! grep -qs '"layout": *[3-9]' "$root/brain/layout.json"; }; then
+  node -e 'const l=await import(process.argv[1]);const t=l.healLayout(process.argv[2]);if(t)console.log(t)' "$(dirname "${BASH_SOURCE[0]}")/../lib/brain.mjs" "$root" 2>/dev/null || true
+fi
 # Remember which Codex chat this is (work/session.json): the dashboard shows which chat is linked.
 [ -n "${PLUGIN_ROOT:-}" ] && printf '%s' "$input" | node "$PLUGIN_ROOT/session/session.mjs" "$root" "$project" 2>/dev/null || true
 # This machine has opened this brain: known to /gtm-brain-project when it offers the skill elsewhere.
 node -e 'const l=await import(process.argv[1]);l.registerBrain(process.argv[2])' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
-# A direct edit of a protected file is put back before anything reads or commits it (lib.guardProtected).
-node -e 'const l=await import(process.argv[1]);const t=l.restoredNotice(l.guardProtected(process.argv[2]));if(t)console.log(t)' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
+# A direct edit of a protected file is put back before anything reads or commits it (lib.guardProtected); in layout 3
+# a hand edit under about-us/ or config/ by someone other than the owner becomes a proposal for the owner (lib/owner.mjs).
+node -e 'const l=await import(process.argv[1]);const t=l.guardAtStart(process.argv[2]);if(t)console.log(t)' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
 # Every change in the brain is kept: a project folder an older version kept out of git is shared now; the
 # background maintenance then keeps what changed since the last save (lib.save covers the whole brain).
 node "$P/skills/gtm-brain-project/project.mjs" "$root" --share >/dev/null 2>&1 || true
 # A file too big for git (a video, a recording) is never committed: Codex is told, to offer the shared drive.
-node -e 'const l=await import(process.argv[1]);const g=l.largeUnsaved(process.argv[2]);if(g.length)console.log(l.largeNote(g))' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
+node -e 'const l=await import(process.argv[1]);const g=l.largeUnsaved(process.argv[2]);if(g.length)console.log(l.largeNote(g,process.argv[2]))' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
 P="${PLUGIN_ROOT:-}"
 # A clone has no local git config: point the pre-commit hook at this plugin's lib every session.
 if [ -n "$P" ] && [ -f "$P/lib/brain.mjs" ] && [ -d "$root/.githooks" ]; then
@@ -93,7 +111,14 @@ elif [ -n "$url" ] && [ "$mode" = "always" ]; then
 elif [ -n "$url" ]; then
   node "$H" text dashboardOnDemand "$url"
 fi
-echo "brain: $(basename "$root")  ·  admin: brain/admin.md (always loaded)"
+# Which brain, said whole: the first call of a chat is no longer a status call, so the name and the folder to pass are here.
+company="${company:-$(node -e 'const l=await import(process.argv[1]);console.log((l.readAdmin(process.argv[2])||{}).company||"")' "$P/lib/brain.mjs" "$root" 2>/dev/null)}"
+echo "brain: $(basename "$root")${company:+ ($company)} at $root  ·  admin: $(gtm_brain_settings "$root") (always loaded)"
+# Sharing, said honestly: a failed last push, or a teammate merge that conflicted (lib.syncNotice).
+# Node starts only when one of the two state files records a problem, so a healthy chat start pays nothing.
+if grep -qs '"ok": *false' "$root/work/push.json" || grep -qs '"status": *"conflict"' "$root/work/teammates.json"; then
+  node --input-type=module -e 'const l=await import(process.argv[1]);const n=l.syncNotice(process.argv[2]);if(n)console.log(n)' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
+fi
 # Other chats are linked, never entered: the person opens them, or not.
 node "$H" text chats
 # The other assistant's home is its own memory, reads included; IMPORT.md is the only way across.
@@ -101,10 +126,12 @@ node "$H" text foreign
 # Claude Code reads CLAUDE.md: without its AGENTS.md import (a brain from before 0.30) the rulebook is named here.
 rules_dir="$root"; [ -n "$project" ] && rules_dir="$cwd"
 node "$H" rulebook "$rules_dir" 2>/dev/null || node "$H" text rulebook "$root"
-node -e 'const l=await import(process.argv[1]);const p=l.currentPerson(process.argv[2]);if(p)console.log("Current person: "+p+" (resolved from this checkout and validated against the team). Reuse this as by; do not ask who the user is again.")' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
+node -e 'const l=await import(process.argv[1]);const p=l.currentPerson(process.argv[2]);if(p)console.log("Current person: "+p+" (resolved from this checkout and validated against the team). Reuse this as by; do not ask who the user is again.");const w=l.layoutStartLine(process.argv[2]);if(w)console.log(w);const o=l.ownerStartLine(process.argv[2]);if(o)console.log(o)' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
 brain_interaction_policy
 node -e 'const d=await import(process.argv[1]);console.log(d.datesLine())' "$P/lib/dots.mjs" 2>/dev/null || true
 node -e 'const s=await import(process.argv[1]);const t=s.scheduleNotice(process.argv[2]);if(t)console.log(t)' "$P/lib/schedule.mjs" "$root" 2>/dev/null || true
+# The nightly chat capture (lib/capture.mjs): the notes it saved, once, and the offer when a pass is late or failed, at most daily.
+node -e 'const c=await import(process.argv[1]);const t=c.captureNotice(process.argv[2]);if(t)console.log(t)' "$P/lib/capture.mjs" "$root" 2>/dev/null || true
 node -e 'const d=await import(process.argv[1]);const l=await import(process.argv[2]);const t=d.rulebookText(process.argv[3]);if(t){console.log(t);d.markRulebookSent(process.argv[3],l.readSession(process.argv[3],process.argv[4]||null)?.session_id)}' "$P/lib/dots.mjs" "$P/lib/brain.mjs" "$root" "$project" 2>/dev/null || true
 echo "Answer the person's request using relevant saved evidence. Never open, inspect or refresh the dashboard before an ordinary answer. Maintenance runs in the background; external source sync runs only when requested or by an approved schedule. An explicit dashboard or sync request follows its normal workflow."
 # A handoff another assistant wrote by following IMPORT.md waits under ~/.gtm-brain until it is imported
@@ -127,16 +154,9 @@ brief=""; [ -n "$loaded" ] && [ -f "$P/scripts/gtm-brain-load/load.mjs" ] && bri
 if [ -n "$loaded" ] && [ -f "$P/scripts/gtm-brain-load/load.mjs" ]; then
   echo; echo "Re-loading what was loaded last time${project:+ in project $project}: $loaded"
   lo="$( cd "$root" && node "$P/scripts/gtm-brain-load/load.mjs" . $loaded --only --last 0 ${project:+--project "$project"} 2>/dev/null )"; printf '%s\n' "$lo"
-  # compile: background: a separate run updates them; the chat never compiles and never offers to
-  if printf '%s' "$lo" | grep -q 'summary updating' && ! node "$H" can compile; then
-    echo; node "$H" text noCompile
-  elif printf '%s' "$lo" | grep -q 'summary updating'; then
-    ( cd "$root" && node -e 'const l=await import(process.argv[1]);l.kickCompile(".")' "$P/lib/brain.mjs" >/dev/null 2>&1 & )
-    echo; echo "compile: background (brain/admin.md): the summaries that are behind will be updated by a separate run shortly (after each saved change). Use those words, 'summary updating shortly'; never 'behind', never compile or offer to compile in this chat."
-  fi
   echo; echo "If the person starts on something else, switch: load the fitting context, or offer a new one (AGENTS.md rule 1)."
 else
-  echo "Nothing loaded yet. If a pending onboarding instruction above applies, follow its next step. Otherwise infer a context from the request; ask what they are working on only when no task is known (AGENTS.md rule 1)."
+  echo "Nothing loaded yet. If a pending onboarding instruction above applies, follow its next step. A question needs no load: search with query and answer from the hits. For work that writes, infer a context from the request; ask what they are working on only when no task is known (AGENTS.md rule 1)."
 fi
 # Cached connector status is sufficient for orientation. The worker refreshes it.
 if [ -f "$root/work/tools.json" ]; then
@@ -145,29 +165,14 @@ if [ -f "$root/work/tools.json" ]; then
 else
   node "$H" text toolsUnchecked
 fi
-# Why meetings may be missing: said to the model, so a bare count is never read as "no meetings".
-node -e 'const l=await import(process.argv[1]);const r=process.argv[2],s=l.meetingCaptureStatus(r,l.meetingOverview(r,{by:l.currentPerson(r)||undefined}));if(s)console.log(`meeting capture: ${s} Say this if the person asks about meetings or a meeting is missing; do not raise it otherwise.`)' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
-# The documents (root Markdown with kind: document): what the work must follow, named every chat so rule 11
-# has something to point at; absolute paths in a linked project, where the landing pages get built.
-node -e 'const d=await import(process.argv[1]);console.log(d.documentsLine(process.argv[2],{absolute:!!process.argv[3]}))' "$P/lib/documents.mjs" "$root" "$project" 2>/dev/null || true
-# The approved files (a person's photo, a company's logo): named every chat, so a graphic never takes an old copy (lib/assets.mjs).
-node -e 'const a=await import(process.argv[1]);const l=a.assetsLine(process.argv[2]);if(l)console.log(l)' "$P/lib/assets.mjs" "$root" 2>/dev/null || true
-# Workflow runs in progress (lib/workflows.mjs): named once, so a due step is mentioned and "next step" follows the skill.
-node -e 'const w=await import(process.argv[1]);const l=w.runsLine(process.argv[2]);if(l)console.log(l)' "$P/lib/workflows.mjs" "$root" 2>/dev/null || true
-# Folders at the top GTM Brain does not use (a migrated brain's company/, assets/): named once per set, never touched.
-[ -z "$project" ] && { node -e 'const d=await import(process.argv[1]);const h=d.strayFoldersHint(process.argv[2]);if(h)console.log(h)' "$P/lib/documents.mjs" "$root" 2>/dev/null || true; }
-# Rules from an older GTM Brain keep naming tools and habits the plugin has moved on from (ALL-204).
-# Unedited ones are refreshed here; edited ones get the offer. Both say why: what the newer rules change.
-node -e 'const u=await import(process.argv[1]);const o=u.autoRefresh(process.argv[2],process.argv[3]);if(o)console.log(o)' "$P/lib/upgrade-files.mjs" "$root" "$P/templates" 2>/dev/null || true
-node -e 'const u=await import(process.argv[1]);u.refreshReadme(process.argv[2],process.argv[3])' "$P/lib/upgrade-files.mjs" "$root" "$P/templates" 2>/dev/null || true
-# Where things go (RULES.md, the person's to edit; an older WHERE.md is merged into it once) and the projects under projects/: a deliverable goes into its project.
-node -e 'const w=await import(process.argv[1]);w.ensureRules(process.argv[2],process.argv[3]);const l=w.whereLine(process.argv[2]);if(l)console.log(l)' "$P/lib/where.mjs" "$root" "$P/templates" 2>/dev/null || true
-# What the brain keeps per person, organization and product, and the relationship types (SCHEMA.md, the person's to edit).
-node -e 'const s=await import(process.argv[1]);s.ensureSchema(process.argv[2],process.argv[3]);const l=s.schemaLine(process.argv[2]);if(l)console.log(l)' "$P/lib/schema.mjs" "$root" "$P/templates" 2>/dev/null || true
-# A summary paused by a hand edit never updates by itself: said once per set, so the person hears it in the chat.
-node -e 'const l=await import(process.argv[1]);const h=l.pausedCoversHint(process.argv[2]);if(h)console.log(h)' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
-# New files that arrived with no recorded reason (made by shell, saved by background maintenance): named once per set.
-node -e 'const w=await import(process.argv[1]);const h=w.unplacedHint(process.argv[2]);if(h)console.log(h)' "$P/lib/where.mjs" "$root" 2>/dev/null || true
+# The closing lines, in one node (session/start-lines.mjs): one health line (why meetings may be missing, the
+# last summary run and error, the last sync per tool, the open meeting gaps, a Markdown at the root not used yet;
+# lib/health-line.mjs); the documents (rule 11 points at them; absolute paths in a linked project); the approved
+# files (a graphic never takes an old copy); the workflow runs in progress; folders at the top GTM Brain does not
+# use (named once per set, never touched); rules from an older GTM Brain (ALL-204: unedited ones refreshed, edited
+# ones offered); RULES.md and the projects; Ask the source; SCHEMA.md; summaries paused by a hand edit; new files
+# with no recorded reason.
+node "$P/session/start-lines.mjs" "$root" "$project" "$P/templates" 2>/dev/null || true
 # A newer GTM Brain where this install came from: checked in the background at most once a day (a shallow
 # fetch of one ref, never in the hook's own time); the last result is said here and shown on the page.
 if [ -z "${GTM_BRAIN_NO_VERSION_CHECK:-}" ] && [ -f "$P/scripts/gtm-brain-update-plugin/check-version.mjs" ] && node "$H" can update-check; then

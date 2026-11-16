@@ -11,6 +11,7 @@ import { contextGraph } from "../../lib/context-graph.mjs";
 import { entityGraph } from "../../lib/entity-graph.mjs";
 import { dashboardData, dashboardSourceRevision } from '../../lib/dashboard-data.mjs';
 import { listRuns } from '../../lib/workflows.mjs';
+import { pillarData, pillarFiles, firstNotes, wholeTexts } from '../../lib/dashboard-pillars.mjs';
 import { refreshIndexedPages } from '../../lib/entity-pages.mjs';
 import { hasMemoryIndex, openDatabase } from '../../lib/memory-index-store.mjs';
 import { readJSON, writeJSON, renderQueue } from '../../lib/dashboard-refresh.mjs';
@@ -66,8 +67,8 @@ const key = t => String(t).toLowerCase().replace(/\s*\(.*\)\s*$/, "").trim();
 // Suggested candidates (email, calendar, the CRM: the pulse) live in tools.json before admin.md names them.
 const extraTools = Object.values(toolState).filter(s => s && s.tool && !(admin.tools || []).some(t => key(t) === key(s.tool))).map(s => s.tool);
 const toolRows = [...(admin.tools || []), ...extraTools].map(t => { const s = toolState[key(t)] || {}; return { tool: t, plugin: s.plugin || null, status: s.status || "not checked", test: s.test || null, note: s.note || "", at: s.at || null, suggested: !!s.suggested, declined: !!s.declined }; });
-let proposal = null; try { const prop = readFileSync(join(root, "work", "admin.proposed.md"), "utf8"), cur = readFileSync(join(root, "brain", "admin.md"), "utf8"); if (prop !== cur) proposal = { diff: lib.lineDiff(cur, prop), lines: lib.lineDiff(cur, prop).filter(l => !l.startsWith("  ")).length }; } catch {}
-let interaction = null; try { const p = JSON.parse(readFileSync(join(root, "work", "interaction.proposed.json"), "utf8")); const current = lib.readInteractions(root); if (!current.error && !lib.validateInteraction(root, p, { existing: current.actions }).length) { const props = p.input_schema?.properties || {}, req = p.input_schema?.required || []; interaction = { name: p.name, title: p.title || p.name, tool: p.tool, operation: p.operation, description: p.description || "", inputs: Object.keys(props).map(k => req.includes(k) ? k : `${k}?`), context: p.record?.context || "", records: lib.renderTemplate(p.record?.content, Object.fromEntries(Object.keys(props).map(k => [k, `[${k}]`]))) }; } } catch {}
+let proposal = null; try { const prop = readFileSync(join(root, "work", "admin.proposed.md"), "utf8"), cur = lib.adminText(root); if (prop !== cur) proposal = { diff: lib.lineDiff(cur, prop), lines: lib.lineDiff(cur, prop).filter(l => !l.startsWith("  ")).length }; } catch {}
+let interaction = null; try { const p = JSON.parse(readFileSync(join(root, "work", "interaction.proposed.json"), "utf8")); const current = lib.readInteractions(root); if (!current.error && !lib.validateInteraction(root, p, { existing: current.actions }).length) { const props = p.input_schema?.properties || {}, req = p.input_schema?.required || []; interaction = { name: p.name, title: p.title || p.name, tool: p.external === false ? "record only" : p.tool, operation: p.external === false ? "Nothing in a tool: the note is recorded at once." : p.operation, description: p.description || "", inputs: Object.keys(props).map(k => req.includes(k) ? k : `${k}?`), context: p.record?.context || "", records: lib.renderTemplate(p.record?.content, Object.fromEntries(Object.keys(props).map(k => [k, `[${k}]`]))) }; } } catch {}
 const dash = lib.readDash(root), session = lib.readSession(root);
 const merges = lib.suggestMerges(reg);
 const compileState = lib.readCompileState(root), compileMode = lib.compileMode(root), busy = lib.compileBusy(root), gaveUp = lib.compileGaveUp(root);
@@ -97,6 +98,28 @@ data.assets = assetRows(root, snapshot?.specialContexts || sourceContexts);
 data.customers = lib.customerOverview(root, { registry: reg, contexts: snapshot?.specialContexts || sourceContexts });
 data.meetings = lib.meetingOverview(root, { by: lib.currentPerson(root) || undefined, registry: reg, contexts: snapshot?.specialContexts || sourceContexts });
 data.meetings.captureStatus = lib.meetingCaptureStatus(root, data.meetings);
+// The front page's four tabs by pillar. The whole note list goes to a side file in the detail folder;
+// the page carries its first page and fetches the rest when a filter or a scroll needs it.
+// The tabs never stop the render: if they cannot be read at all the page says so and More still works.
+try {
+  const pillarsStarted = performance.now();
+  const pillars = pillarData(root, { registry: reg, admin, contexts: snapshot ? lib.listContexts(root) : sourceContexts, meetings: data.meetings, tools: toolRows, plugin: data.plugin, compileMode });
+  const notes = pillars.memories.notes; delete pillars.memories.notes;
+  writeFileSync(join(detailDir, 'notes.json'), JSON.stringify({ notes }));
+  Object.assign(pillars.memories, { first: firstNotes(notes), file: detailFolder + '/notes.json' });
+  // the whole text of the notes the page shows shortened: read when one is corrected on the Memories tab
+  try { writeFileSync(join(detailDir, 'notes-whole.json'), JSON.stringify({ texts: wholeTexts(snapshot ? lib.listContexts(root) : sourceContexts) })); pillars.memories.whole = detailFolder + '/notes-whole.json'; } catch {}
+  // each entity's fields, links and brief lines: read by the Entities tab when a name is opened
+  const entityDetails = pillars.entities.details || {}; delete pillars.entities.details;
+  writeFileSync(join(detailDir, 'entity-details.json'), JSON.stringify({ details: entityDetails }));
+  pillars.entities.file = detailFolder + '/entity-details.json';
+  pillars.files = pillarFiles(pillars);
+  data.pillars = pillars;
+  if (process.env.GTM_BRAIN_RENDER_PROFILE) console.error(JSON.stringify({ stage: 'pillars', ms: Math.round(performance.now() - pillarsStarted) }));
+} catch (error) {
+  data.pillars = null; data.pillarsUnread = true;
+  console.error(`The front page tabs could not be read: ${error?.message || error}`);
+}
 for (const c of contexts) c.summaryPlaceholder = !c.compiledAt && c.summary === "Nothing here yet.";
 // Prebuilt frontend assets keep installation and rendering independent of npm.
 mkdirSync(join(outDir, 'ui', 'fonts'), {recursive:true});
@@ -123,6 +146,7 @@ if (renderRequest && readJSON(join(root, 'work', 'render-request.json'))?.id ===
 // revision event. Only renderer-owned folders are eligible for retirement.
 const keep = new Set([data, previous].filter(Boolean).flatMap(d => [
   ...(d.names || []).map(n => n.brief?.detail?.split('/')[0]).filter(Boolean),
+  ...(d.pillars?.memories?.file ? [d.pillars.memories.file.split('/')[0]] : []),
   ...(d.contexts || []).flatMap(c => (c.history || []).map(p => p.split('/').slice(0, 2).join('/'))),
   ...Object.values(d.listHistory || {}).flatMap(paths => paths.map(p => p.split('/').slice(0, 2).join('/'))),
 ]));

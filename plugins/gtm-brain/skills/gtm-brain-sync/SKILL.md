@@ -31,8 +31,12 @@ non-actionable runs; report meaningful changes, source failures and required use
 
 ## Step 0: what is connected, and since when
 
-Call `query` (status): the tools line says which tools are installed and tested. Read the last
-sync time from `work/sync.json` (`Read`; absent means "the last 7 days"). Nothing connected:
+Call `query` (status): the tools line says which tools are installed and tested. Read the
+checkpoints from `work/sync.json` (`Read`). Each source has its own under `sources`, keyed by
+its pointer kind and account as in a note's `sources` (`gmail`, `hubspot:12345`,
+`gmail:ann@example.com` for a second mailbox). A source reads from its own `at` (the key with its
+account, else the kind alone); a source without one reads from the top-level `at` (an older brain
+has only that); no file means "the last 7 days". Nothing connected:
 in an interactive chat offer `gtm-brain-configure`; in a scheduled run report the blocker
 and continue compilation without advancing the sync checkpoint.
 
@@ -44,7 +48,7 @@ Transcription records and direct notes drive capture; historical calendar recons
 a prerequisite. Use the full requested source scope without the 20-item activity cap. Match
 calendar references only when supported. A daily run refreshes selected calendars and continues
 with other sources and compilation if that refresh fails. Keep saved per-source coverage as
-the retry checkpoint; the overall sync timestamp below never overrides incomplete meeting scopes.
+the retry checkpoint; the activity checkpoints below never override incomplete meeting scopes.
 
 ## Step 1: one subagent per tool, in parallel
 
@@ -56,7 +60,7 @@ churn. Record relationships through `remember.customer` and scoped coverage in a
 call after checking kept/held counts. Preserve user corrections and show disagreements.
 
 This skill authorises sub-agents. For each connected tool spawn one agent with this task:
-read only what changed since the sync time (the tool's smallest recent-items read: new
+read only what changed since that source's checkpoint (the tool's smallest recent-items read: new
 threads, events in the next 7 days and the past 2, deals that moved, notes created), keep it
 to the 20 most relevant activity items. Separately return new/updated meeting source records with stable account/record IDs, exact links, source dates, participants and their evidenced roles, content availability and pagination. Do not extract attendance from an invitation or discard a source because it has no calendar/CRM match. Separately check that tool's known customer scopes:
 resume incomplete rosters and capture the full named list when it has not yet been captured;
@@ -86,18 +90,23 @@ in the fitting context with `people`, `tools`, `sources`, and `kind: question` w
 something to answer. Record what happened, never what should happen next: no to-dos, reminders
 or plans for the future, and no follow-up notes for the person. A date the source itself names
 (a deadline in an email, a meeting set) stays inside the sourced finding, not as a task.
-Skip noise (newsletters, notifications, internal chatter). Capture the run-start UTC instant before reading sources. Advance `work/sync.json` only
-when every in-scope activity read and its corresponding memory writes succeeded, using
-`{"at": "<run-start ISO>", "tools": [...]}` with the `Write` tool. Keeping run-start rather
-than finish avoids missing records that arrive during the read. On partial failure retain
-the previous checkpoint (or its absence), report which sources need retry, and deduplicate
-already recorded findings on the next run. Meeting and customer coverage keep their own
+Skip noise (newsletters, notifications, internal chatter). Capture the run-start UTC instant before reading sources. Update `work/sync.json`
+with the `Write` tool, keeping every key already there:
+
+    {"at": "<run-start ISO>", "tools": [...], "sources": {"gmail": {"at": "<run-start ISO>"}, "hubspot:12345": {"at": "<run-start ISO>", "window_days": 2}}}
+
+Advance a source's own entry only when its in-scope activity read and its memory writes
+succeeded; advance the top-level `at` and `tools` only when every source did. A scheduled daily
+run sets `window_days: 2` on the sources it reads (the health line marks a source older than its
+window; the default is 7 days). Keeping run-start rather than finish avoids missing records that
+arrive during the read. A failed source keeps its previous entry (or its absence); report which
+sources need retry, and deduplicate already recorded findings on the next run. Meeting and customer coverage keep their own
 source-specific checkpoints. Then call `render_dashboard`.
 
 ## Step 3: say what changed
 
 Three to six lines, grouped by context: what was recorded, what needs an answer, what was
-skipped as noise (one line). Summaries update by themselves after the notes land. Then stop:
+skipped as noise (one line). A summary is written the next time someone asks about its topic. Then stop:
 no next step, no reminder, no to-do offer (the brain is not the person's to-do system).
 
 ## Hard rules

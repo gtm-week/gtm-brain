@@ -6,10 +6,11 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import * as lib from "../lib/brain.mjs";
+import { wholeRulebook } from "../lib/rule-pages.mjs";
 const plugin = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 
 function brain(t) {
-  const root = mkdtempSync(join(tmpdir(), "gtm-capture-")); t.after(() => rmSync(root, { recursive: true, force: true }));
+  const root = mkdtempSync(join(tmpdir(), "gtm-capture-")); t.after(() => { try { rmSync(root, { recursive: true, force: true }); } catch {} });
   const env = { ...process.env, CODEX_HOME: join(root, "profile"), GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_COMPILE: "1" };
   const setup = spawnSync("bash", [join(plugin, "scripts/gtm-brain-setup/setup.sh"), "--company", "Capture Co", "--one-liner", "Testing", "--owner", "Ann Lee <ann@example.test>"], { cwd: root, env, encoding: "utf8" });
   assert.equal(setup.status, 0, setup.stderr);
@@ -38,7 +39,7 @@ test("the chat start and the rendered page carry the status", t => {
 });
 
 test("the rules no longer defer meetings and capture one read for another task", () => {
-  const rules = readFileSync(join(plugin, "templates/AGENTS.md"), "utf8").replace(/\s+/g, " ");
+  const rules = wholeRulebook(readFileSync(join(plugin, "templates/AGENTS.md"), "utf8")).replace(/\s+/g, " ");
   assert.doesNotMatch(rules, /meetings\/events are deferred/);
   assert.match(rules, /a draft stays unrecorded, the meeting behind it is captured/);
 });

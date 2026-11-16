@@ -39,6 +39,8 @@ of the shipped app, not mockups. No customer or private workspace data is shown.
 
 Already using the previous plugin? Follow the [rename migration](MIGRATING.md) to keep your existing brain and switch installations safely.
 
+Coming from 0.34? [What is new in 0.35 and how to update](RELEASE-0.35.md).
+
 Requires the **Codex desktop app** and **Node 22.16+ (22.x) or Node 24+**. The guided installer checks your environment.
 
 Open a new Codex chat and send:
@@ -92,7 +94,7 @@ called out. The review makes a recommendation; budget and campaign changes remai
 > Make this research process a skill I can reuse in our other projects.
 
 Keep your own skills in the brain and use them from linked project folders. Plugin updates
-preserve them. See the [command reference](COMMANDS.md) for all nineteen workflows, including
+preserve them. See the [command reference](COMMANDS.md) for all twenty-one workflows, including
 strategy, source sync, documents and project setup.
 
 ## How GTM Brain works
@@ -277,7 +279,7 @@ does not mean offline AI processing.
 
 ## Built-in workflows
 
-Ask for an outcome in ordinary language, or invoke one of the nineteen shipped skills:
+Ask for an outcome in ordinary language, or invoke one of the twenty-one shipped skills:
 
 | Command | Use it for |
 | --- | --- |
@@ -288,6 +290,8 @@ Ask for an outcome in ordinary language, or invoke one of the nineteen shipped s
 | `/gtm-brain-define-icp` | Define company fit, buying roles and readiness with Chris Pawlak's interview; keep one draft ICP. |
 | `/gtm-brain-unit-economics` | Compare CAC, LTV, payback and retention with explicit inputs and gaps. |
 | `/gtm-brain-strategy` | Work through a strategic intake and maintain the strategy document. |
+| `/gtm-brain-voice` | Draft a tone of voice: whose it is first (company, person or team), then from writing that fits, tested on one fresh piece; the company's is `voice.md`. |
+| `/gtm-brain-zynt-setup` | Set up ZYNT buying signals from the brain when you paste ZYNT's setup prompt; ZYNT then shows in the brain's tools. |
 | `/gtm-brain-workflow` | Create a playbook, start a run and advance through its steps and gates. |
 | `/gtm-brain-sync` | Pull relevant updates from connected sources and retain useful findings. |
 | `/gtm-brain-todo` | Review what is waiting on you across the brain and connected tools. |
@@ -376,9 +380,9 @@ plugins/gtm-brain/
   .mcp.json  server/          the operations as MCP tools (Remembering, Searching the brain, ...);
                               dash.mjs serves the read-only dashboard and revision events
   lib/                        shared readers, validators, writers, search and identity logic; Node built-ins
-  skills/                     the nineteen workflows a person can ask for (all prefixed gtm-brain-): start,
+  skills/                     the twenty-one workflows a person can ask for (all prefixed gtm-brain-): start,
                               todo, sync, workflow, deepdive, strategy, unit-economics, define-icp,
-                              market-desk-research, project, design-system, add-section,
+                              market-desk-research, voice, zynt-setup, project, design-system, add-section,
                               build-landing-page, publish-website, configure, skill, rules, schema,
                               use-brain; what
                               they used to be as separate skills lives on as their references
@@ -424,6 +428,9 @@ without writing; the normal test suite runs that check too.
   The script fills marked blocks in contributor instructions, installation instructions,
   the brain template and the question reference. The chat start reads these sources
   directly for both empty folders and existing brains.
+- The core rules source, [plugins/gtm-brain/policies/core.md](plugins/gtm-brain/policies/core.md), fills
+  only the first section of the brain template; the MCP server reads the same file into its
+  instructions, so a chat that never reads AGENTS.md still gets the core.
 - In [the ontology](plugins/gtm-brain/ontology/gtm-brain.ossie.json), edit the single-memory fields
   under `remember.input_schema.properties`. The script derives `memories.items.properties`
   from them, excluding the call-level `by`, `project` and batch envelope. The static JSON

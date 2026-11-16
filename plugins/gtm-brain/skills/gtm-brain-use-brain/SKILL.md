@@ -1,18 +1,16 @@
 ---
 name: gtm-brain-use-brain
 description: |
-  Work with an existing GTM Brain company brain: resume a context, answer questions from its
-  memories, and keep new findings while working. Use during company work in a brain, including
-  MCP results, decisions, meeting notes, and open questions; also for "where are we",
-  "remember this", "forget that", "what do we know about", "update the summaries", or
-  "show the dashboard". Context creation and organization belong to gtm-brain-use-brain;
-  workplace settings and personal language belong to gtm-brain-configure.
-  Also "load pipeline", "which contexts are there", "switch to marketing" (loading), "new context
-  NAME", "fork X out of Y", "archive NAME" (creating), "rename pipeline", "change the rule for
-  gtm" (editing), and "open the dashboard", "refresh the dashboard", "where does this number
-  come from" (the page). Also the documents the work must follow: "add our tone of voice",
-  "fill in our design system", "approve the strategy", "list the documents", "check this against
-  our documents" (references/documents.md).
+  The procedures behind GTM Brain's tools, read only for the piece of work that needs one:
+  "new context NAME", "fork X out of Y", "archive NAME", "rename pipeline", "change the rule
+  for gtm" (contexts), "update the summaries" (compile), "open the dashboard", "refresh the
+  dashboard", "where does this number come from" (the page), a file to add, an import, a merge
+  of two names, and the documents the work must follow: "add our tone of voice", "fill in our
+  design system", "approve the strategy", "check this against our documents". An ordinary
+  question ("what do we know about", "where are we") or save ("remember this", "forget that")
+  needs no skill file: call query and remember directly; their descriptions and the chat's
+  opening lines carry what recall and saving need. Workplace settings belong to
+  gtm-brain-configure.
 allowed-tools: [Bash, Read]
 ---
 
@@ -45,8 +43,11 @@ Before producing copy, outreach, posts, landing pages, creatives, proposals, a d
 read the document that applies (the opening lines and `query` (status) list the documents at the
 brain root with what each applies to) and follow it, saying which one in one line; AGENTS.md
 rule 11. Adding, filling or changing one: follow [documents](references/documents.md). Setup
-writes `strategy.md`, `icp.md`, `voice.md` and `design-system.md` as starters; one shown as
-`[not filled]` holds no guidance yet.
+writes `strategy.md`, `icp.md`, `voice.md`, `design-system.md` and `market.md` as starters; one shown as
+`[not filled]` holds no guidance yet. The design system is also a page, `design-system.html`
+beside the Markdown: the page is the source for how things look, the Markdown the same in
+words, and "fill in our design system" writes both
+([the design system page](references/documents.md#the-design-system-page)).
 
 What the brain keeps about each person, organization and product, and the relationship types,
 are in `SCHEMA.md` (the chat start lists them; `/gtm-brain-schema` changes them). A relationship
@@ -54,6 +55,7 @@ is a note with a `relation` block: follow [relationships](references/relations.m
 
 A file in the chat (a path, a dropped PDF or image, "save this deck", "add this to the design
 system"): follow [files](references/files.md). No skill to invoke; it is part of everyday work.
+A recording or a file over 25 MB never goes into git: follow [big files](references/big-files.md).
 
 When asked to create subprojects or a workspace structure in a linked folder, follow
 [project structure](../gtm-brain-project/references/structure.md): propose separate projects
@@ -97,12 +99,13 @@ recording a note from refreshing its summary. Report failures or partial complet
 Do not paste file diffs, raw records, file paths or commit output unless explicitly requested.
 The host app may still expose its own review UI; these instructions do not disable it.
 
-Before the first question, read [question handling](../gtm-brain-start/references/questions.md) once; a plain answer needs no reading.
+A question needs no reading first: the chat already holds the question rule (the server's
+instructions), and [question handling](../gtm-brain-start/references/questions.md) is only for a grouped form.
 This applies after onboarding too: every question in everyday work (which context, same as X?,
 is this a company?, what is the answer?, which direction or photo?) is asked
 with two or three concrete options, recommended first.
-This company's own interactions: `list_objects` lists them, `interact` runs them (it records and
-says what to do in the connector); propose one with `propose_interaction` when the same thing
+This company's own interactions: `list_objects` lists them, `interact` runs them (the first call
+says what to do in the connector; the second, with the outcome and the connector's refs, records it); propose one with `propose_interaction` when the same thing
 keeps being done by hand. Keep one pending question alive until answered or cancelled;
 never send a final response while an async widget is pending. Ask only for missing information
 that affects the task, not identity or maintenance already resolved by the brain.
@@ -142,12 +145,14 @@ changes refresh it, and do not open another dashboard tab. Use the saved persona
 
 ## Working context and memory
 
-For operational status, priorities, follow-ups or recommendations, read
-[operational evidence](references/operational-evidence.md). Ground the answer in specific
+For operational status, priorities, follow-ups or recommendations, ground the answer in specific
 memories and relevant live MCP results: name the work, the evidence, and the next action.
 Check changeable external state before presenting an old next step as current. If access is
-missing, date the recorded facts and say what remains unverified.
+missing, date the recorded facts and say what remains unverified. One answer needs no file read
+first; [operational evidence](references/operational-evidence.md) is for a full review.
 
+For "where do we stand on <topic>" about one known topic, call `load_context` for it: one call
+gives the summary and the notes, and when the summary is behind, the `as_of` to write it once.
 For "where are we", "what is new" or a company overview, call `query` (status) to locate
 relevant contexts, then read the supporting memories as described in operational evidence.
 For a company-wide request, include relevant contexts beyond the loaded set. Answer with a
@@ -156,10 +161,12 @@ memory counts and summary-update status are not a substitute for the company's a
 For the default contexts, follow [starting contexts](../gtm-brain-start/references/contexts.md).
 Our company (`company`) describes the organization that owns this brain. File external
 company findings by topic, linking their names with `remember.companies`.
-Before company work, use the loaded context or read [loading](references/load.md) to select
-the relevant context. Read [memory recording](references/remember.md) before an explicit note,
-correction, withdrawal, or answer to a recorded question, and when work is producing findings
+For company work, use the loaded context or the one whose purpose fits; [loading](references/load.md)
+is only for switching what is loaded. An explicit note, a correction (`supersedes`), a withdrawal
+(`retracts`) or an answer to a recorded question (`retracts` = the question's id) is one
+`remember` call from the tool's own description, with no file read first, and so is a finding
 worth keeping: a decision, a commitment, a change to a customer or deal.
+[Memory recording](references/remember.md) is for the rare cases: a batch, a move between contexts.
 
 A quick lookup is not company work that needs a context or a memory: "what was the last
 message in #general", "what is on my calendar", "who emailed me today". Answer it with the
@@ -175,7 +182,7 @@ customer, a deal, a partner or a decision.
 Inspect tool results, check for duplicates, and keep a brief, a change, or a descriptive source
 pointer. When the destination is clear, write first and confirm after. Honor exclusions.
 Before finishing, check for missed information from the turn. Compilation follows the brain's
-summaries update by themselves; broad capture does not change that.
+summaries are written when someone asks about the topic; broad capture does not change that.
 
 When the conversation changes topic, use `gtm-brain-use-brain` to check the destination.
 Reuse an existing context first. Create only after an explicit creation request or agreement
@@ -201,8 +208,8 @@ one already read in this chat is still in context, so reuse it instead of readin
 | Find prior knowledge, count or join it, or build a person view | [Recall](references/recall.md) | `query` (memories with search; `sql` for counts, joins and dates; brief for a person view) |
 | How healthy a deal is, what is missing before the next call | [Deal health](references/deal-health.md) | `query` (deal; search = the company) |
 | Resolve, update, merge, archive, restore or split an identity; open its brief | [Entities](references/entities.md) | `query` (entities), `add_name`, `update_entity`, `merge_entities`, `archive_entity`, `undo_entity_merge`; `query` (brief) |
-| Refresh a cited entity brief | [Entity compilation](references/entity-compile.md) | the background run; `query` (memories by entity) to read the evidence |
-| Update a summary, or release one paused by a manual edit | [Compilation](references/compile.md) | the background worker, queued through the shell; no compile tool in a chat |
+| Refresh a cited entity brief | [Entity compilation](references/entity-compile.md) | `compile_entity` once, from a brief read that says its overview is behind; `query` (memories by entity) to read more evidence |
+| Update a summary, or release one paused by a manual edit | [Compilation](references/compile.md) | `compile_apply` once, from a `load_context` that says the summary is behind; `compile_facts` first for an explicit rewrite |
 | Open or refresh the dashboard, or trace a wrong sentence to its note | [Dashboard](references/dashboard.md) | `open_dashboard`, `render_dashboard` |
 | Keep edits the person made by hand, when requested | [Saving manual edits](references/save.md) | `save` |
 

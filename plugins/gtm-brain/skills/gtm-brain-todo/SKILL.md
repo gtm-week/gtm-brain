@@ -4,7 +4,7 @@ description: |
   What should I do now: gather everything that waits on the person across the brain (open
   questions, follow-ups named in the summaries, a proposal to approve, tools to connect,
   look-alike names to settle, Slack messages waiting on a reply), order it, and walk through it
-  one item at a time. Never a summary: those update by themselves. Triggers:
+  one item at a time. Never a summary: those are written when a topic is asked about. Triggers:
   "/gtm-brain-todo", "todo", "what should I do now", "what is waiting on me", "my list".
   Also "what's waiting on me in Slack", "Slack replies", "who do I owe a reply" (the Slack part alone).
   Also "what's next in pipeline", "where are we with X", "what is pending" (a context's next
@@ -19,9 +19,14 @@ Keep authored brain content in English. Preserve names, source quotes and the ex
 > For humans: the brain knows what is pending. This turns it into a short ordered list and
 > goes through it with you: answer, do, drop, or leave for later.
 
+Not for housekeeping ("let's do housekeeping", "tidy the brain": names, files and gaps to settle):
+that is `query` with object `housekeeping`, then its first item only, one at a time with the
+person, with no skill file read and nothing looked up on the web.
+
 ## Step 1: gather
 
-Read [operational evidence](../gtm-brain-use-brain/references/operational-evidence.md).
+Ground each item in a specific note and its date; an old question or a sent proposal is not
+proof someone still owes an answer.
 Call `query` (status), then `query` on `memories` with `filters: { "kind": "question" }`
 for current open questions. Load relevant contexts to read their summaries and newer
 notes. Use targeted `query` searches for the people and work items those results name.

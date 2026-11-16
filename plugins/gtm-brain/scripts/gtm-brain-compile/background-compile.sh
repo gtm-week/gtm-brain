@@ -3,7 +3,8 @@
 set -u
 P="${PLUGIN_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 BRAIN="${1:-.}"; cd "$BRAIN" || exit 1
-[ -f AGENTS.md ] && [ -f brain/admin.md ] || exit 1
+. "$P/session/resolve.sh"
+[ -f AGENTS.md ] && gtm_brain_is . || exit 1
 mkdir -p work
 STATE=work/compile.json; LOCK=work/compile.lock
 now() { date -u +%Y-%m-%dT%H:%M:%SZ; }

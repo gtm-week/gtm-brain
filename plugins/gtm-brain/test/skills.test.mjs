@@ -1,3 +1,6 @@
+// These tests read and write the root files of a layout 2 brain: setup and the lib play a plugin that writes layout 2 at most
+// (lib/layout-version.mjs GTM_BRAIN_TEST_LAYOUT). Layout 3 (about-us/, config/) is covered by config-folders.test.mjs.
+process.env.GTM_BRAIN_TEST_LAYOUT = "2";
 process.env.GTM_BRAIN_NO_WATCH = "1";
 process.env.GTM_BRAIN_NO_COMPILE = "1"; // Model runs are opt-in through test doubles.
 // End-to-end tests of the skill scripts on a brain made by setup.sh. Run: node --test plugins/gtm-brain/test
@@ -7,7 +10,8 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawnSync, spawn } from "node:child_process";
+import { wholeRulebook } from "../lib/rule-pages.mjs";
 const P = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 // Keep real installation preferences out of synthetic test brains.
 process.env.CODEX_HOME = mkdtempSync(join(tmpdir(), "gtm-brain-test-profile-"));
@@ -83,7 +87,7 @@ test("a background run that keeps failing tries three times and then says it gav
   assert.match(run(gu, "advisor", "advisor.mjs"), /gave up/);
 });
 
-test("the advisor ranks what the brain needs: failed or behind summaries first, old questions, tools, look-alikes, quiet channels, first names", () => {
+test("the advisor ranks what the brain needs: failed summaries first, old questions, tools, look-alikes, quiet channels, first names", () => {
   const ad = mkdtempSync(join(tmpdir(), "gtm-brain-adv-")); execFileSync("git", ["init", "-q", ad]); execFileSync("git", ["-C", ad, "config", "commit.gpgsign", "false"]);
   run(ad, "setup", "setup.sh", "--company", "X", "--one-liner", "y", "--owner", "Ann Lee <ann@x.io>", "--tools", "Attio (CRM), Gmail");
   const [a, b] = lib.listContexts(ad).map(c => c.slug);
@@ -94,9 +98,9 @@ test("the advisor ranks what the brain needs: failed or behind summaries first, 
   lib.addName(ad, "Bo"); lib.addName(ad, "Nestle", { kind: "company" }); lib.addName(ad, "Nestle Poland", { kind: "company" });
   const j = JSON.parse(run(ad, "advisor", "advisor.mjs", "--json"));
   const keys = j.findings.map(f => f.key);
-  for (const k of ["behind", "old-question", "tool-unchecked", "look-alike", "quiet", "first-name"]) assert.ok(keys.includes(k), k + " in " + keys.join(","));
-  assert.ok(!keys.includes("never-compiled"), "a channel without a summary is one finding, not two");
-  assert.match(j.findings.find(f => f.key === "behind").do, /^Nothing/, "a stalled summary is the machine's job: the advisor restarts the run, the person does nothing");
+  for (const k of ["old-question", "tool-unchecked", "look-alike", "quiet", "first-name"]) assert.ok(keys.includes(k), k + " in " + keys.join(","));
+  // 0.35.0: a summary behind its notes is written when asked, so it is no finding and the advisor starts no run
+  assert.ok(!keys.includes("never-compiled") && !keys.includes("behind"), "a summary behind is no finding");
   assert.ok(keys.indexOf("old-question") < keys.indexOf("quiet"), "an old question outranks a quiet channel");
   const out = run(ad, "advisor", "advisor.mjs");
   assert.match(out, /Three things worth doing:\n1\. /); assert.match(out, /This week: /); assert.match(out, /Bo/);
@@ -111,11 +115,11 @@ test("the advisor ranks what the brain needs: failed or behind summaries first, 
   const k2 = j2.findings.map(f => f.key);
   for (const k of ["tool-disabled", "tool-blocked", "tool-manual", "tool-unchecked", "tool-failing"]) assert.ok(k2.includes(k), k + " in " + k2.join(","));
   assert.ok(!k2.includes("empty") || !j2.findings.some(f => f.key === "empty" && f.what.includes(personalSlug)), "no archive advice for a personal context: " + JSON.stringify(j2.findings.filter(f => f.key === "empty")));
-  // three fresh notes are the background run's job, not a finding; a two-day-old backlog with nothing running is
+  // notes waiting for a summary are no finding, however old: the summary is written when someone asks (0.35.0)
   for (let i = 0; i < 3; i++) lib.appendMemory(fresh, c0, { authors: ["ann-lee"], content: `Fresh note ${i}.` });
-  assert.ok(!JSON.parse(run(fresh, "advisor", "advisor.mjs", "--json")).findings.some(f => f.key === "behind"), "fresh notes wait for the run");
+  assert.ok(!JSON.parse(run(fresh, "advisor", "advisor.mjs", "--json")).findings.some(f => f.key === "behind"), "fresh notes are no finding");
   const j3 = JSON.parse(execFileSync(process.execPath, [`${P}/scripts/gtm-brain-advisor/advisor.mjs`, ".", "--json"], { cwd: fresh, encoding: "utf8", env: { ...process.env, GTM_BRAIN_NOW: new Date(Date.now() + 2 * 86400000).toISOString() } }));
-  assert.ok(j3.findings.some(f => f.key === "behind"), "two days later with no run it is a finding");
+  assert.ok(!j3.findings.some(f => f.key === "behind"), "two days later it is still no finding");
   // a recorded failure is not a finding once nothing is behind any more
   writeFileSync(join(fresh, "work", "compile.json"), JSON.stringify({ state: "failed", at: new Date().toISOString(), contexts: c0, attempt: 3, tries: 3 }));
   const k = lib.snapshotKey ? null : null; run(fresh, "compile", "compile.mjs", "--apply", c0, "--by", "ann", "--as-of", run(fresh, "compile", "compile.mjs", "--facts", c0).match(/as_of: (s_[0-9a-f]+)/)[1], "--summary", "Fresh notes.", "--now", "Go.");
@@ -458,7 +462,7 @@ test("remember holds a note whose name looks like a known one until the person a
   const out = run(root, "remember", "remember.mjs", "--by", "marta", "--context", "icp", "--people", "Pierre Aubart", "--new", "Pierre Aubart", "--content", "Pierre Aubart joined the call.");
   assert.match(out, /people: Pierre Aubart/); assert.match(out, /new person in entities\/: Pierre Aubart/);
   const missed = run(root, "remember", "remember.mjs", "--by", "marta", "--context", "icp", "--people", "Pierre Aubart", "--content", "Pierre Aubart said Castorama will sign the NDA with ByteDance next Monday (2026-11-16).");
-  assert.match(missed, /words in this note not linked to anything in the brain: "Castorama", "ByteDance"\. Decide what each is, by connect-dots\.md: a person, company or product/);
+  assert.match(missed, /words in this note not linked to anything in the brain: "Castorama", "ByteDance"\. Only one that is a person, company or product the note is about gets add_name/);
   assert.match(run(root, "entities", "entities.mjs", "--add", "Pierre Aubirt"), /looks like Pierre Aub[ae]rt, Pierre Aub[ae]rt already in the registry/);
   run(root, "entities", "entities.mjs", "--add", "Nestle", "--kind", "company"); run(root, "entities", "entities.mjs", "--add", "Nestle Poland", "--kind", "company");
   assert.match(run(root, "entities", "entities.mjs"), /Might be the same: Nestle and Nestle Poland\. Ask the person; then "Nestle Poland is Nestle"/);
@@ -466,7 +470,7 @@ test("remember holds a note whose name looks like a known one until the person a
   assert.doesNotMatch(run(root, "entities", "entities.mjs"), /Might be the same/);
 });
 
-test("compile: background: a note kicks a separate run that updates the summary and the page says updating meanwhile", async () => {
+test("compile: a worker started by hand (or by a schedule) updates the summary and the brief; a note alone starts none (0.35.0)", async () => {
   const bg = mkdtempSync(join(tmpdir(), "gtm-brain-bg-")); execFileSync("git", ["init", "-q", bg]); execFileSync("git", ["-C", bg, "config", "commit.gpgsign", "false"]);
   run(bg, "setup", "setup.sh", "--company", "X", "--one-liner", "y", "--owner", "Ann Lee <ann@x.io>");
   settleSetup(bg);
@@ -495,10 +499,13 @@ const P = ${JSON.stringify(P)};
   const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, PLUGIN_ROOT: P, GTM_BRAIN_NO_COMPILE: "", GTM_BRAIN_COMPILE_DELAY: "0" };
   run(bg, "load", "load.mjs", "icp", "--only");
   const out = execFileSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann", "--people", "Bo Chan", "--content", "Met Bo."], { cwd: bg, encoding: "utf8", env });
-  assert.match(out, /the summaries update by themselves/); assert.doesNotMatch(out, /compile: auto/);
+  assert.doesNotMatch(out, /update by themselves|shortly|compile: auto/);
+  await new Promise(r => setTimeout(r, 800));
+  assert.equal(existsSync(join(bg, "work", "compile.json")), false, "the save started no run");
+  spawn("bash", [`${P}/scripts/gtm-brain-compile/background-compile.sh`, bg], { detached: true, stdio: "ignore", env }).unref();
   const state = () => { try { return JSON.parse(readFileSync(join(bg, "work", "compile.json"), "utf8")); } catch { return null; } };
   const page = () => { try { return JSON.parse(readFileSync(join(bg, "work", "home", "data.json"), "utf8")).compile; } catch { return null; } };
-  for (let i = 0; i < 150 && !(state() && state().state === "done" && page() && page().state === "done"); i++) await new Promise(r => setTimeout(r, 200));
+  for (let i = 0; i < 300 && !(state() && state().state === "done" && page() && page().state === "done"); i++) await new Promise(r => setTimeout(r, 200));
   assert.equal(state().state, "done", JSON.stringify(state())); assert.equal(state().contexts, "icp");
   assert.equal(lib.readContext(bg, "icp").summary, "Bo is in.", "the separate run wrote the cover");
   assert.equal(lib.entityBrief(bg, "Bo Chan").stale, false, "the same run also compiled the entity brief");
@@ -530,12 +537,13 @@ test("compilation exposes tool evidence and prior guidance, then reloads revised
   add({ content: "Acme's renewal owner is confirmed." });
   f = facts();
   assert.ok(f.includes(guidance), "prior guidance is available for reassessment");
-  assert.ok(f.split("## All effective memories, recording order (oldest first)")[1].includes(lesson.id), "older supporting evidence is still supplied");
+  assert.ok(f.split("## Older notes the current summary and working guidance cite")[1].includes("- " + lesson.id), "older supporting evidence is still supplied");
   const correction = add({ content: "The renewal field has changed to renewal_end.", tools: ["attio"],
     source: [{ kind: "attio", ref: "schema/renewals-v2" }], supersedes: lesson.id });
   f = facts();
-  const effective = f.split("## All effective memories, recording order (oldest first)")[1];
-  assert.ok(!effective.includes(lesson.id), "superseded evidence is excluded from effective facts");
+  const effective = f.split("## Effective notes since the last compile")[1];
+  assert.ok(!effective.includes("- " + lesson.id), "superseded evidence is excluded from effective facts");
+  assert.match(effective, new RegExp("No longer in force [^\\n]*" + lesson.id), "a cited note that was superseded is named");
   assert.ok(effective.includes(correction.id) && effective.includes("attio:schema/renewals-v2"));
   const revised = `Use renewal_end for renewals (${correction.id}).`;
   apply(f, revised);
@@ -667,12 +675,15 @@ test("remember attaches the chat it was called from as a codex: source, and only
   const b = mkdtempSync(join(tmpdir(), "gtm-brain-thread-src-")); execFileSync("git", ["init", "-q", b]); execFileSync("git", ["-C", b, "config", "commit.gpgsign", "false"]);
   run(b, "setup", "setup.sh", "--company", "X", "--one-liner", "y", "--owner", "Ann Lee <ann@x.io>");
   const env = { ...process.env, PLUGIN_ROOT: P, GTM_BRAIN_NO_COMPILE: "1" };
-  const rem = (extra, e = env) => { execFileSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann", "--context", "icp", "--content", "A fact.", ...extra], { cwd: b, encoding: "utf8", env: e }); return lib.readMemories(b, "icp").at(-1).source; };
+  let k = 0; const rem = (extra, e = env) => { execFileSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann", "--context", "icp", "--content", `Fact number ${++k}: the buyer asked about returns.`, ...extra], { cwd: b, encoding: "utf8", env: e }); return lib.readMemories(b, "icp").at(-1).source; };
   assert.deepEqual(rem([]), [], "no chat recorded yet: nothing is guessed");
   lib.writeSession(b, { session_id: "01a0-chat", cwd: b });
   assert.deepEqual(rem([]), [{ kind: "codex", ref: "01a0-chat" }], "the chat from work/session.json is the source");
   assert.deepEqual(rem(["--source", "gmail:19fa"]), [{ kind: "gmail", ref: "19fa" }, { kind: "codex", ref: "01a0-chat" }], "tool sources keep their place, the chat comes last");
   assert.deepEqual(rem(["--source", "codex:01a0-named"]), [{ kind: "codex", ref: "01a0-named" }], "a codex source given by hand is not doubled");
+  assert.deepEqual(rem(["--source", '{"kind":"Gmail","account":"Sales@X.io","ref":"19fa"}', "--source", "https://app.hubspot.com/contacts/123456/record/0-1/42"]),
+    [{ kind: "gmail", account: "sales@x.io", ref: "19fa" }, { kind: "hubspot", account: "123456", ref: "0-1/42", url: "https://app.hubspot.com/contacts/123456/record/0-1/42" }, { kind: "codex", ref: "01a0-chat" }], "a source object names its account; a record link is one entry with its url");
+  assert.throws(() => rem(["--source", '{"kind":"gmail","account":"","ref":"19fa"}']), /source account/);
   assert.deepEqual(rem([], { ...env, GTM_BRAIN_RUN: "background" }), [], "a separate run is not the person's chat: no source is attached");
 });
 
@@ -712,7 +723,7 @@ test("the page and load link a codex: source and the summary run's thread, resol
   assert.match(html, /href="\$\{esc\(t\.url\)\}"|codex:\/\/threads\//, "the page renders thread sources as links");
   assert.doesNotMatch(html, /location\.href\s*=\s*[^;]*codex:|window\.open\([^)]*codex:/, "nothing on the page opens a thread by itself");
   const out = execFileSync(process.execPath, [`${P}/scripts/gtm-brain-load/load.mjs`, ".", "icp", "--only"], { cwd: b, encoding: "utf8", env });
-  assert.match(out, /source: codex:01a0-chat \(codex:\/\/threads\/01a0-chat\)/, "load hands the link over as text");
+  assert.match(out, /sources?: codex:01a0-chat \(codex:\/\/threads\/01a0-chat\)/, "load hands the link over as text");
 });
 
 test("recall hands over each hit's sources, with the chat it came from as a link", () => {
@@ -730,11 +741,15 @@ test("recall hands over each hit's sources, with the chat it came from as a link
   assert.match(person, /Pierre Aubert signs in October/); assert.match(person, /contexts\/icp\/memories.jsonl/); assert.match(person, /codex:\/\/threads\/01a0-chat/, "the entity brief traces claims to memories and sources");
 });
 
-test("GTM Brain has no question forms: questions go to Codex's own box or plain chat text, and no procedure names a removed tool (2026-11-11)", () => {
+test("questions go to ask_person's form first, then Codex's own box, then plain chat text, and no procedure names a removed tool (2026-11-11, 2026-11-15)", () => {
   const policy = readFileSync(`${P}/policies/questions.md`, "utf8");
-  assert.match(policy, /no question forms of its own/);
+  assert.match(policy, /First `ask_person`/);
   assert.match(policy, /`request_user_input`/);
-  assert.match(policy, /plain chat text and\s+end the turn/);
+  assert.match(policy, /plain chat text that ends\s+the turn/);
+  assert.ok(policy.indexOf("`ask_person`") < policy.indexOf("`request_user_input`") && policy.indexOf("`request_user_input`") < policy.indexOf("plain chat text"), "the form, the host's box, chat text");
+  assert.match(policy, /never stands in for APPROVE, an `ask_person` answer\s+included/);
+  for (const file of ["templates/AGENTS.md", "skills/gtm-brain-start/references/questions.md"]) { const t = readFileSync(`${P}/${file}`, "utf8"); assert.ok(t.includes("`ask_person`") && t.indexOf("`ask_person`") < t.indexOf("question box"), `${file}: ask_person first`); }
+  assert.ok(Buffer.byteLength(readFileSync(`${P}/templates/AGENTS.md`)) < 32768, "the rulebook fits what Codex reads of AGENTS.md");
   assert.match(policy, /`approve_change`/, "APPROVE keeps its own form");
   let found = ""; try { found = execFileSync("grep", ["-rlE", "onboarding_question|configuration_question", `${P}/skills`, `${P}/policies`, `${P}/templates/AGENTS.md`, "--include=*.md"], { encoding: "utf8" }); } catch {}
   const named = found.trim().split("\n").filter(Boolean);
@@ -742,7 +757,7 @@ test("GTM Brain has no question forms: questions go to Codex's own box or plain 
 });
 
 test("sync and resolution end without a next step, a reminder or a to-do; the brain is not the person's to-do system (ALL-208)", () => {
-  const template = readFileSync(`${P}/templates/AGENTS.md`, "utf8");
+  const template = wholeRulebook(readFileSync(`${P}/templates/AGENTS.md`, "utf8"));
   assert.match(template, /not the person's to-do system/);
   assert.match(template, /Not after `gtm-brain-sync` or a dashboard resolution/);
   const sync = readFileSync(`${P}/skills/gtm-brain-sync/SKILL.md`, "utf8");
@@ -763,18 +778,18 @@ test("adding a file is one obvious pathway: everyday work through use-brain's fi
   assert.ok(!existsSync(`${P}/skills/gtm-brain-document`), "documents are part of everyday work, not a skill of their own (2026-11-13)");
   assert.match(readFileSync(`${P}/skills/gtm-brain-use-brain/SKILL.md`, "utf8"), /\[documents\]\(references\/documents\.md\)/);
   assert.doesNotMatch(readFileSync(join(P, "..", "..", "COMMANDS.md"), "utf8"), /`gtm-brain-document`/);
-  const template = readFileSync(`${P}/templates/AGENTS.md`, "utf8");
-  assert.match(template, /goes through gtm-brain-use-brain's references\/files\.md/); assert.doesNotMatch(template, /gtm-brain-add-file/);
+  const template = wholeRulebook(readFileSync(`${P}/templates/AGENTS.md`, "utf8"));
+  assert.match(template, /goes through gtm-brain-use-brain's\s+references\/files\.md/); assert.doesNotMatch(template, /gtm-brain-add-file/);
 });
 
-test("a chat never compiles: the procedure queues the background worker, and the template and tables say so (ALL-204 step 1)", () => {
+test("a summary is written on demand in the chat that asks: the procedure says so and no longer queues the worker (0.35.0, lane S1)", () => {
   const compile = readFileSync(`${P}/skills/gtm-brain-use-brain/references/compile.md`, "utf8");
-  assert.match(compile, /^## In a chat/m); assert.match(compile, /background-compile\.sh/); assert.match(compile, /--release/);
-  assert.doesNotMatch(compile, /Never compile in the chat and never offer to; the steps below are for when the person asks/);
+  assert.match(compile, /^## On demand, in the chat that asks/m); assert.match(compile, /Summary behind: write it now, in this chat/); assert.match(compile, /--release/);
+  assert.doesNotMatch(compile, /queue the worker through the shell|A chat never compiles/);
   const useBrain = readFileSync(`${P}/skills/gtm-brain-use-brain/SKILL.md`, "utf8");
   assert.doesNotMatch(useBrain, /\| `compile_facts`, `compile_apply` \|/);
   assert.doesNotMatch(useBrain, /\| `entity_facts`, `compile_entity` \|/);
-  const template = readFileSync(`${P}/templates/AGENTS.md`, "utf8");
+  const template = wholeRulebook(readFileSync(`${P}/templates/AGENTS.md`, "utf8"));
   assert.match(template, /compile tools are offered only to the scheduled and background runs/i);
   assert.doesNotMatch(template, /`load_context`, `remember`, `recall`, `compile_facts`,\n`compile_apply`,/);
 });
@@ -784,7 +799,8 @@ test("a chat is told one read tool: no skill, policy or template names a retired
   const runProcedures = ["references/compile.md", "references/entity-compile.md"];
   const files = execFileSync("grep", ["-rlE", "`(recall|who_is|entity_facts|list_contexts|list_projects|list_brains|customer_overview|meeting_overview|advise|where_we_are)`", `${P}/skills`, `${P}/policies`, `${P}/templates/AGENTS.md`, "--include=*.md"], { encoding: "utf8" }).trim().split("\n").filter(Boolean).filter(f => !f.includes("/legacy/") && !runProcedures.some(r => f.endsWith(r)));
   assert.deepEqual(files, [], "retired read tools are still named in these files");
-  assert.match(readFileSync(`${P}/templates/AGENTS.md`, "utf8"), /`query` \(status\)/);
+  assert.match(readFileSync(`${P}/templates/AGENTS.md`, "utf8"), /`query` with a search for a question/);
+  assert.doesNotMatch(readFileSync(`${P}/templates/AGENTS.md`, "utf8"), /`query` \(status\)/, "no status call first");
   assert.doesNotMatch(readFileSync(`${P}/templates/AGENTS.md`, "utf8"), retired);
 });
 
@@ -793,7 +809,7 @@ test("remember confirms with the note itself, and the schema guidance lives in t
   assert.match(remember, /quote the note as written/i, "the confirmation is the note, not a list of names");
   assert.match(remember, /do not invent dates/i, "guidance that lived only in the schema moved here");
   assert.match(readFileSync(`${P}/skills/gtm-brain-use-brain/references/customers.md`, "utf8"), /separate call/);
-  assert.match(readFileSync(`${P}/templates/AGENTS.md`, "utf8"), /note text in quotes with its context/);
+  assert.match(readFileSync(`${P}/templates/AGENTS.md`, "utf8"), /note text in\s+quotes with its context/);
 });
 
 test("retired skills live on as references of the eight, and nothing names them as skills any more (ALL-204 step 4)", () => {

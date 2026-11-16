@@ -4,6 +4,9 @@ type: workflow
 title: Outbound
 applies_to: [outbound campaign]
 status: draft
+trigger: manual
+reads: ["kind:organization", "kind:person", "tool:crm", "tool:sequencer"]
+writes: ["tool:sequencer"]
 by: ""
 updated: {{DATE}}
 gtm-brain: {{VERSION}}
@@ -25,12 +28,13 @@ with GTM Brain as a draft; edit it to the way this company works.
 ## Steps
 
 1. **Build the target list** (tool: crm). Pull the accounts and contacts that match the ICP;
-   save the list as a file of this run.
+   save the list as a file of this run. Milestone: a note tagged target-list.
 2. **Write the sequence** (tool: sequencer). Three to four touches, the offer in the first,
-   following the tone of voice document when there is one.
+   following the tone of voice document when there is one. Milestone: a note tagged sequence-written.
 3. **Launch** (tool: sequencer). Load the list, start the sequence, note the start date.
+   Milestone: a note tagged sequence-launched.
 4. **Read replies and book** (tool: crm). Replies, meetings booked, bounces; hand warm
-   replies to the owner. Gate: after 10 days.
+   replies to the owner. Milestone: a note tagged replies-read. Gate: after 10 days.
 
 ## Learn
 

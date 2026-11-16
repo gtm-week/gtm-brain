@@ -12,7 +12,7 @@ import { verifyRuntime } from "../lib/plugin-runtime.mjs";
 const script = new URL("../scripts/gtm-brain-update-plugin/update.mjs", import.meta.url).pathname;
 function run(t, mode, config = {}) {
   const root = mkdtempSync(join(tmpdir(), "gtm-brain-update-"));
-  t.after(() => rmSync(root, { recursive: true, force: true }));
+  t.after(() => { try { rmSync(root, { recursive: true, force: true }); } catch {} });
   const log = join(root, "calls.jsonl"), home = join(root, "profile"), market = join(root, "marketplace");
   const candidate = config.candidate || "0.4.0";
   mkdirSync(home, { recursive: true });
@@ -121,7 +121,7 @@ test("a failed move puts the retired source back instead of leaving none", t => 
 });
 test("a Git update stops when Codex's copy of the marketplace is behind GitHub, and says how to sign git in", t => {
   // "GitHub" holds 0.5.0; Codex's marketplace snapshot stayed at 0.4.0 because git had no credentials to fetch
-  const repo = mkdtempSync(join(tmpdir(), "gtm-brain-remote-")); t.after(() => rmSync(repo, { recursive: true, force: true }));
+  const repo = mkdtempSync(join(tmpdir(), "gtm-brain-remote-")); t.after(() => { try { rmSync(repo, { recursive: true, force: true }); } catch {} });
   mkdirSync(join(repo, "plugins/gtm-brain/.codex-plugin"), { recursive: true });
   writeFileSync(join(repo, "plugins/gtm-brain/.codex-plugin/plugin.json"), JSON.stringify({ name: "gtm-brain", version: "0.5.0" }));
   const git = (...a) => { const r = spawnSync("git", ["-C", repo, "-c", "user.name=t", "-c", "user.email=t@t.t", ...a], { encoding: "utf8" }); assert.equal(r.status, 0, r.stderr); };

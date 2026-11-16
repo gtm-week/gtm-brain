@@ -2,6 +2,7 @@ import { host } from "./host.mjs";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ownRules } from "./where.mjs";
+import { startRules } from "./our-rules.mjs";
 /* Connecting the dots on a note (2026-11-12, new-brain test): what the brain can settle by itself it
    settles and says in one line; what has two answers it asks, all in one question. Nothing here guesses.
    - dates: "Thursday", "tomorrow", "next week" mean nothing a week later, so a note never keeps them bare.
@@ -124,7 +125,8 @@ export function summaryCheck(summary, ids) {
    first save's reply, it came one step late and the RULES.md offer and F2 were missed). */
 export function rulebookText(root) {
   let page = ""; try { page = readFileSync(new URL("../skills/gtm-brain-use-brain/references/saving-rules.md", import.meta.url), "utf8").trim(); } catch { return ""; }
-  const own = ownRules(root, new URL("../templates", import.meta.url).pathname);
+  // once a rule is filed (a tag line under it), the chat start carries the general ones and a count; the rest come with the reply that needs them
+  const own = startRules(root) ?? ownRules(root, new URL("../templates", import.meta.url).pathname);
   return `--- The saving rules for this chat (a refusal quotes them by number) ---\n${page}${own ? `\n\n## This brain's own rules (Our rules in RULES.md, written by its people; they win over the rules above)\n\n${own}` : ""}\n---`;
 }
 const sentFile = root => join(root, "work", "rulebook-sent.json");

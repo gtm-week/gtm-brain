@@ -5,6 +5,8 @@ description: |
   brain knows, in order, plus what the connected tools show live, with open questions and a
   suggested next step. Triggers: "/gtm-brain-deepdive", "deep dive on Nestle", "brief me on
   Pierre Dupont", "everything about the Berlin expansion", "prepare me for the call with".
+metadata:
+  needs: "kind:organization, kind:person, link:works_at"
 allowed-tools: [Bash, Read, WebSearch, WebFetch]
 ---
 

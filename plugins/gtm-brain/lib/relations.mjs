@@ -3,10 +3,15 @@
 // on a note. "Ended" is a new note, "that was wrong" a correction, so memories.jsonl is the history,
 // shared through git. The types come from SCHEMA.md (lib/schema.mjs) and are checked when a note is
 // written, never when an old one is read: removing a type later leaves its notes valid.
+import { recordKeys, sourceKind } from "./pointers.mjs";
 import * as lib from "./brain.mjs";
 import { CHAT_KINDS } from "./host.mjs";
 import { readSchema, relationType, US } from "./schema.mjs";
 import { customerOverview } from "./customers.mjs";
+import { meetingOverview } from "./meetings.mjs";
+import { meetingAnchors } from "./meeting-entities.mjs";
+import { buildRelationLog, relationsToEnd } from "./relation-log.mjs";
+export { completeRelation, relationId, buildRelationLog, statusAt } from "./relation-log.mjs";
 
 export const RELATION_STATUSES = ["current", "ended"];
 const object = (v, keys) => v && typeof v === "object" && !Array.isArray(v) && Object.keys(v).every(k => keys.includes(k));
@@ -59,9 +64,10 @@ export function relationOverview(root, { registry = lib.readNames(root), context
   let relations = [...grouped.values()].map(({ from, to, type, notes }) => {
     notes.sort(latest);
     const user = notes.filter(m => m.relation.basis === "user").sort((a, b) => Date.parse(b.at) - Date.parse(a.at) || b.id.localeCompare(a.id))[0], chosen = user || notes[0];
-    const bySource = new Map();
-    for (const m of notes.filter(m => m.relation.basis === "source")) {
-      const k = m.relation.reference ? JSON.stringify(m.relation.reference) : [...new Set(m.source.filter(s => ![...CHAT_KINDS, "memory"].includes(s.kind)).map(s => s.kind))].sort().join("|");
+    const bySource = new Map(), sourced = notes.filter(m => m.relation.basis === "source"), referenced = sourced.filter(m => m.relation.reference);
+    const recordKey = new Map(recordKeys(referenced.map(m => m.relation.reference)).map((key, i) => [referenced[i], key]));
+    for (const m of sourced) {
+      const k = m.relation.reference ? recordKey.get(m) : [...new Set(m.source.filter(s => ![...CHAT_KINDS, "memory"].includes(s.kind)).map(sourceKind))].sort().join("|");
       if (!bySource.has(k)) bySource.set(k, m);
     }
     return { from, type, to, status: chosen.relation.status, basis: chosen.relation.basis, observed_at: chosen.relation.observed_at, recorded_at: chosen.at,
@@ -73,6 +79,17 @@ export function relationOverview(root, { registry = lib.readNames(root), context
     if (!["customer", "prospect", "former_customer"].includes(c.status)) continue;
     relations.push({ from: { id: c.id, name: c.name, kind: c.kind }, type: "customer_of", to: { id: null, name: US, kind: US }, status: c.status === "former_customer" ? "ended" : "current", customer_status: c.status,
       basis: c.basis, observed_at: c.observed_at, recorded_at: c.recorded_at, context: c.context, memory: c.memory, summary: c.summary, in_schema: true, conflicts: c.conflicts, history: c.history });
+  }
+  // attended, read-only from the meeting records: each participant who attended links to the meeting's entity
+  const meetingOf = new Map(registry.flatMap(e => meetingAnchors(e).map(a => [a, e])));
+  if (meetingOf.size) for (const m of meetingOverview(root, { registry, contexts }).meetings) {
+    const meeting = meetingOf.get(m.id), record = m.evidence.find(x => x.meeting) || null;
+    if (!meeting || m.occurrence !== "happened") continue;
+    for (const p of m.participants.filter(p => p.role === "attended")) {
+      const person = lib.resolveEntity(registry, p.name); if (!person || person.kind !== "person") continue;
+      relations.push({ from: { id: person.id, name: person.name, kind: person.kind }, type: "attended", to: { id: meeting.id, name: meeting.name, kind: "meeting" }, status: "current",
+        basis: record?.meeting?.basis || "source", observed_at: m.occurred_at || record?.meeting?.observed_at || m.recorded_at, recorded_at: m.recorded_at, context: m.context, memory: record?.id || m.id, summary: m.title, in_schema: true, from_meeting: true, conflicts: [], history: [] });
+    }
   }
   if (focus) relations = relations.filter(r => r.from.id === focus.id || r.to.id === focus.id);
   if (type) { const t = schema ? relationType(schema, type)?.type || type : type; relations = relations.filter(r => r.type === t); }
@@ -86,4 +103,47 @@ export function relationsText(overview) {
   if (!overview.relations.length) return `relations: none recorded yet.${overview.schema_error ? ` SCHEMA.md cannot be read: ${overview.schema_error}` : ""}`;
   const line = r => `${r.from.name} ${r.type}${r.customer_status ? ` (${r.customer_status})` : ""} ${r.to.name}: ${r.status}, ${r.basis}, observed ${String(r.observed_at).slice(0, 10)} (${r.memory} in ${r.context})${r.in_schema ? "" : " [type not in SCHEMA.md]"}${r.conflicts.length ? `; ${r.conflicts.length} source record(s) disagree` : ""}${r.history.length > 1 ? `; history: ${r.history.map(h => `${h.status} ${String(h.observed_at).slice(0, 10)}`).join(", ")}` : ""}`;
   return [`relations (${overview.relations.length}):`, ...overview.relations.map(r => `  ${line(r)}`), overview.notice, ...(overview.schema_error ? [`SCHEMA.md cannot be read: ${overview.schema_error}`] : [])].join("\n");
+}
+
+/* One at a time (SCHEMA.md): after a note with a new current link of such a type is written, each other current
+   link of that type from the same entity gets an ended note, dated to the new one, in the same context, so the
+   log says when it ended and both stay. Returns the notes written. The caller commits the context's file. */
+export function endPreviousRelations(root, context, rec) {
+  if (!rec?.relation || rec.relation.status !== "current") return [];
+  const { schema = null } = readSchema(root);
+  if (!schema) return [];
+  const registry = lib.readNames(root), byRef = new Map(registry.flatMap(e => [e.id, ...(e.previous_ids || [])].map(id => [id, e])));
+  const resolve = v => { const e = byRef.get(v) || lib.resolveEntity(registry, v); return e ? { id: e.id, kind: e.kind } : null; };
+  const canon = { ...rec, relation: { ...rec.relation, from: resolve(rec.relation.from)?.id || rec.relation.from, to: rec.relation.to === US ? US : resolve(rec.relation.to)?.id || rec.relation.to } };
+  const notes = lib.hideForkCopies(lib.listContexts(root).flatMap(c => lib.effectiveMemories(c.memories))).filter(m => m.relation && m.id !== rec.id);
+  const { relations } = buildRelationLog(notes, { resolve, schema });
+  const name = id => id === US ? US : byRef.get(id)?.name || id, words = t => t.replace(/_/g, " ");
+  return relationsToEnd(relations, canon, schema).map(old => lib.appendMemory(root, context, {
+    authors: rec.authors, via: rec.via, kind: "note", tools: [], people: [name(old.from), name(old.to)].filter(n => n !== US),
+    // the date is when the newer note was observed, never a start date nobody gave
+    content: `${name(old.from)} no longer ${words(old.type)} ${name(old.to)}: a newer note (${rec.id}, ${String(rec.relation.observed_at).slice(0, 10)}) says ${name(old.from)} ${words(old.type)} ${name(canon.relation.to)}, and SCHEMA.md keeps one current ${old.type} at a time.`,
+    source: rec.source, actions: [], supersedes: null, retracts: null, tags: [`${ENDED_BY}${rec.id}`],
+    relation: { from: old.from, type: old.type, to: old.to, status: "ended", basis: rec.relation.basis, observed_at: rec.relation.observed_at },
+  }).rec);
+}
+export const ENDED_BY = "ended-by:";
+
+/* The other way round: a note that ended a link only because of note X goes when X goes. rec withdraws or replaces
+   X (retracts, supersedes); each live ended-by:X note in the context is withdrawn with it, unless rec itself is a
+   new current link of that type from the same entity to another end (the person corrected which employer, and the
+   old one is still over). Returns the notes withdrawn. The caller commits the context's file. */
+export function withdrawEndedBy(root, context, rec) {
+  const gone = [rec?.supersedes, rec?.retracts].filter(Boolean);
+  if (!gone.length) return [];
+  const ended = lib.effectiveMemories(lib.readMemories(root, context)).filter(m => m.relation && !m.retracts && m.id !== rec.id && m.tags?.some(t => t.startsWith(ENDED_BY) && gone.includes(t.slice(ENDED_BY.length))));
+  if (!ended.length) return [];
+  const registry = lib.readNames(root), byRef = new Map(registry.flatMap(e => [e.id, ...(e.previous_ids || [])].map(id => [id, e])));
+  const id = v => v === US ? US : byRef.get(v)?.id || v, name = v => v === US ? US : byRef.get(v)?.name || v, words = t => t.replace(/_/g, " ");
+  const { schema = null } = readSchema(root), type = t => (schema && relationType(schema, t)?.type) || t;
+  const still = m => rec.relation?.status === "current" && id(rec.relation.from) === id(m.relation.from) && type(rec.relation.type) === type(m.relation.type) && id(rec.relation.to) !== id(m.relation.to);
+  return ended.filter(m => !still(m)).map(m => (lib.appendMemory(root, context, {
+    authors: rec.authors, via: rec.via, kind: "note", tools: [], people: [name(m.relation.from), name(m.relation.to)].filter(n => n !== US),
+    content: `Withdrawn with ${gone.join(", ")}: ${m.id} ended ${name(m.relation.from)} ${words(m.relation.type)} ${name(m.relation.to)} only because of that note.`,
+    source: rec.source, actions: [], supersedes: null, retracts: m.id, tags: [],
+  }), m));
 }

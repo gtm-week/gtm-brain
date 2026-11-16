@@ -27,6 +27,16 @@ test('real source URLs open separately and disclose their actual host; Codex sou
  assert.match(html,/data-thread-copy="codex:\/\/threads\/known-task"/);assert.match(html,/Source conversation: “Pricing discussion”/);assert.match(html,/Paste the link into Codex chat/);
  assert.doesNotMatch(html,/<a[^>]*href="codex:/);assert.match(html,/Copy conversation link/);
 });
+test('a source that kept its direct link as url opens that link; one without it shows none',()=>{
+ const hs='https://app.hubspot.com/contacts/123456/record/0-1/42',attio='https://app.attio.com/acme/person/0a1b2c3d-4e5f-6789-abcd-ef0123456789/overview';
+ const html=render()([{kind:'hubspot',account:'123456',ref:'0-1/42',url:hs},{kind:'attio',account:'acme',ref:'people/0a1b2c3d-4e5f-6789-abcd-ef0123456789',url:attio},{kind:'hubspot',ref:'0-1/43'}]);
+ assert.match(html,/Sources · 3/);assert.match(html,new RegExp('href="'+hs.replace(/[.\/]/g,'\\$&')+'" target="_blank" rel="noopener noreferrer"'));
+ assert.match(html,new RegExp('href="'+attio.replace(/[.\/]/g,'\\$&')+'"'));assert.match(html,/Opens app.hubspot.com in a new tab/);assert.match(html,/Opens app.attio.com in a new tab/);
+ assert.equal((html.match(/<a /g)||[]).length,2);assert.equal((html.match(/No direct link saved/g)||[]).length,1);
+ // an unsafe url on an entry never becomes a link
+ const unsafe=render()([{kind:'hubspot',ref:'0-1/42',url:'javascript:alert(1)'},{kind:'attio',ref:'r',url:'https://user:secret@example.com/x'}]);
+ assert.doesNotMatch(unsafe,/<a /);assert.doesNotMatch(unsafe,/javascript:|secret/);
+});
 test('untrusted references stay escaped and cannot create executable or credential-bearing links',()=>{
  const html=render()([{kind:'gmail',ref:'javascript:alert(1)'},{kind:'attio',ref:'https://user:secret@example.com/path'},{kind:'<img onerror=alert(1)>',ref:'"><script>alert(1)</script>'},{kind:'url',ref:'data:text/html,test'}]);
  assert.doesNotMatch(html,/<a |<script|<img/);assert.match(html,/&lt;script&gt;/);

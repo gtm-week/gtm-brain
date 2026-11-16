@@ -23,7 +23,7 @@ Keep authored brain content in English. Preserve names, source quotes and the ex
     Pending: <verified owner and date, or explicitly unknown>. New: <what the newer notes or
     checked source changed>. Link supporting records or cite the context and memory date.
 
-4. Use newer evidence even while the summary updates in the background. Do not make summary
+4. Use newer evidence even when the summary is older than it. Do not make summary
    maintenance a prerequisite to answering. If the person wants to act on an item, hand over
    to `gtm-brain-todo`.
 

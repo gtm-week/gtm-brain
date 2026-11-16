@@ -1,0 +1,611 @@
+{
+ "release": "0.35.0",
+ "branch": "release/0.35.0",
+ "node": "v25.2.1",
+ "note": "release/0.35.0 = e2e-join plus lanes A, B, B2, C, D, E, G (merge --no-ff, in that order). Run on 2026-11-14 between 14:29 and 14:58 on a shared machine (load average 20 to 120). Compare pass, fail and known_gap, not ms. small and medium ran on the final code (bd60174 plus nothing in lib after it).",
+ "suite": "Whole suite on 4b5961a (all lanes merged, version bumped): 867 tests, 862 pass, 5 fail. Four were real interactions between lanes and are fixed in bd60174 (each rerun alone: pass); the fifth, 'saving a Codex answer publishes a revision...', passes alone (load timing).",
+ "shapes": {
+  "small": {
+   "before": {
+    "shape": "small",
+    "notes": 100,
+    "total": 49,
+    "pass": 44,
+    "fail": 0,
+    "known_gap": 5,
+    "ms": 63202
+   },
+   "after": {
+    "shape": "small",
+    "notes": 100,
+    "total": 49,
+    "pass": 46,
+    "fail": 0,
+    "known_gap": 3,
+    "ms": 4740
+   },
+   "changed": [
+    {
+     "id": "search.note_ids_on_lines",
+     "before": "known_gap",
+     "after": "pass"
+    },
+    {
+     "id": "load_context.icp",
+     "before": "known_gap",
+     "after": "pass"
+    }
+   ],
+   "failed": [],
+   "note": "Run on the final code. Before: baseline 44 pass, 0 fail, 5 known gaps."
+  },
+  "medium": {
+   "before": null,
+   "after": {
+    "shape": "medium",
+    "notes": 5000,
+    "total": 51,
+    "pass": 45,
+    "fail": 3,
+    "known_gap": 3,
+    "ms": 39346
+   },
+   "changed": [
+    {
+     "id": "search.single_word",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "search.multi_word",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "search.stemmed",
+     "before": null,
+     "after": "known_gap",
+     "note": "missing 2/3"
+    },
+    {
+     "id": "search.typo",
+     "before": null,
+     "after": "known_gap",
+     "note": "missing 3/3"
+    },
+    {
+     "id": "search.recall_tool",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "search.name",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "search.alias",
+     "before": null,
+     "after": "pass",
+     "note": "Liz Richter -> Elizabeth Richter"
+    },
+    {
+     "id": "search.no_match",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "search.note_ids_on_lines",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "search.superseded_hidden",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "search.retracted_hidden",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "search.sql_count",
+     "before": null,
+     "after": "pass",
+     "note": "sql 4567, effective 4757"
+    },
+    {
+     "id": "search.sql_kinds",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "search.sql_subtypes",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "entities.by_name",
+     "before": null,
+     "after": "pass",
+     "note": "resolved"
+    },
+    {
+     "id": "entities.by_id",
+     "before": null,
+     "after": "pass",
+     "note": "resolved"
+    },
+    {
+     "id": "entities.by_alias",
+     "before": null,
+     "after": "pass",
+     "note": "resolved"
+    },
+    {
+     "id": "entities.typo",
+     "before": null,
+     "after": "pass",
+     "note": "Grnaite Partners"
+    },
+    {
+     "id": "entities.by_email",
+     "before": null,
+     "after": "pass",
+     "note": "resolved"
+    },
+    {
+     "id": "brief.facts",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "brief.cited_ids",
+     "before": null,
+     "after": "pass",
+     "note": "45 ids"
+    },
+    {
+     "id": "brief.size_bounded",
+     "before": null,
+     "after": "pass",
+     "note": "30909 bytes for 43 notes"
+    },
+    {
+     "id": "brief.entity_facts",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "relations.hub",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "relations.ended_partnership",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "relations.history_dates",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "relations.history_ids",
+     "before": null,
+     "after": "known_gap",
+     "note": "missing 1/2"
+    },
+    {
+     "id": "relations.job_change",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "relations.all",
+     "before": null,
+     "after": "fail",
+     "note": "6 of 20 sampled missing"
+    },
+    {
+     "id": "customers.listed",
+     "before": null,
+     "after": "fail",
+     "note": "9 of 10 missing"
+    },
+    {
+     "id": "customers.former",
+     "before": null,
+     "after": "pass",
+     "note": "40 former"
+    },
+    {
+     "id": "customers.demo_excluded",
+     "before": null,
+     "after": "pass",
+     "note": "Umber Interiors"
+    },
+    {
+     "id": "meetings.listed",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "meetings.planned",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "meetings.by_entity",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "deal.hub",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "rules.check",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "status.view",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "status.health",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "status.list_contexts",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "compile.facts_full",
+     "before": null,
+     "after": "pass",
+     "note": "digest: 100 shown + 2433 counted of 2533, 85213 chars"
+    },
+    {
+     "id": "compile.facts_mcp",
+     "before": null,
+     "after": "pass",
+     "note": "digest: 100 shown + 868 counted of 968"
+    },
+    {
+     "id": "compile.stale",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "remember.without_load",
+     "before": null,
+     "after": "pass",
+     "note": "ok: remember\nsaved in Our offer: E2E probe: pricing page gets a store calculator (e2eprobeone).\nremembered m_cd645405222b in offer · note · marta-nowak · \"E2E p"
+    },
+    {
+     "id": "load_context.icp",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "load_context.size",
+     "before": null,
+     "after": "pass",
+     "note": "9396 bytes"
+    },
+    {
+     "id": "remember.single",
+     "before": null,
+     "after": "pass"
+    },
+    {
+     "id": "remember.batch_mcp",
+     "before": null,
+     "after": "fail",
+     "note": "true,true,false"
+    },
+    {
+     "id": "remember.batch_script",
+     "before": null,
+     "after": "pass",
+     "note": "true,true"
+    },
+    {
+     "id": "corrections.supersede",
+     "before": null,
+     "after": "pass",
+     "note": "m_d22803e965bf"
+    },
+    {
+     "id": "corrections.retract",
+     "before": null,
+     "after": "pass"
+    }
+   ],
+   "failed": [
+    {
+     "id": "relations.all",
+     "note": "6 of 20 sampled missing"
+    },
+    {
+     "id": "customers.listed",
+     "note": "9 of 10 missing"
+    },
+    {
+     "id": "remember.batch_mcp",
+     "note": "true,true,false"
+    }
+   ],
+   "note": "First medium run anywhere (baseline.json has none), so no before. Real shape: 5,000 notes, 1,742 entities. 3 plain failures not diagnosed before the deadline: relations.all and customers.listed (the views omit sampled names at this size, possibly a listing cap, possibly also on main) and remember.batch_mcp (third batch note not found by query right after the save). A debug rerun produced no output in time."
+  },
+  "messy": {
+   "before": null,
+   "after": null,
+   "note": "not run: generation of a medium-sized brain took about 15 minutes, no time left before the deadline"
+  },
+  "large": {
+   "before": null,
+   "after": null,
+   "note": "not run: 50,000 notes is impractical on this code"
+  }
+ },
+ "live": {
+  "before": {
+   "base": "main 7890c69 (plugin 0.34.3)",
+   "brain": "the seeded routing brain of tool-routing.mjs (setup.sh plus its seed), not the medium shape",
+   "note": "Unchanged main code; run one case at a time through test/live (mentor-shapes.mjs for deepdive, todo, define-icp, strategy; tool-routing.mjs for the capture cases) on 2026-11-14 with load average about 200. No judge: no OpenAI key. The medium shape was not used: generating it ran at about 3.6 s per note under this load (62 of 4,990 notes after about 5 minutes) and was stopped. skill-deepdive and skill-todo first failed with spawnSync bash ETIMEDOUT in setup (30 s limit) and the rows here are the reruns after raising it to 180 s.",
+   "cases": [
+    {
+     "name": "skill-define-icp-interview",
+     "status": "fail",
+     "finished": "2026-11-14T13:04:39.352Z",
+     "seconds": 146,
+     "tokens": {
+      "input": 484099,
+      "cached": 443648,
+      "output": 2207
+     },
+     "failed": [
+      "route",
+      "state"
+     ],
+     "tools": [
+      "query",
+      "load_context",
+      "query",
+      "query",
+      "document",
+      "document"
+     ]
+    },
+    {
+     "name": "mentor-strategy",
+     "status": "fail",
+     "finished": "2026-11-14T13:07:45.795Z",
+     "seconds": 131,
+     "tokens": {
+      "input": 388292,
+      "cached": 350464,
+      "output": 2659
+     },
+     "failed": [
+      "route"
+     ],
+     "tools": [
+      "query",
+      "query",
+      "load_context"
+     ]
+    },
+    {
+     "name": "capture-call",
+     "status": "pass",
+     "finished": "2026-11-14T13:11:07.745Z",
+     "seconds": 153,
+     "tokens": {
+      "input": 566013,
+      "cached": 519552,
+      "output": 3274
+     },
+     "failed": [],
+     "tools": [
+      "query",
+      "query",
+      "query",
+      "query",
+      "query",
+      "query",
+      "remember"
+     ]
+    },
+    {
+     "name": "capture-decision",
+     "status": "fail",
+     "finished": "2026-11-14T13:13:52.126Z",
+     "seconds": 114,
+     "tokens": {
+      "input": 379359,
+      "cached": 333184,
+      "output": 1787
+     },
+     "failed": [
+      "route",
+      "state"
+     ],
+     "tools": [
+      "query",
+      "query",
+      "query",
+      "query"
+     ]
+    },
+    {
+     "name": "capture-draft-unsent",
+     "status": "pass",
+     "finished": "2026-11-14T13:16:20.896Z",
+     "seconds": 100,
+     "tokens": {
+      "input": 255536,
+      "cached": 219392,
+      "output": 1141
+     },
+     "failed": [],
+     "tools": [
+      "query"
+     ]
+    },
+    {
+     "name": "skill-deepdive",
+     "status": "pass",
+     "finished": "2026-11-14T13:19:10.012Z",
+     "seconds": 126,
+     "tokens": {
+      "input": 498775,
+      "cached": 457472,
+      "output": 2687
+     },
+     "failed": [],
+     "tools": [
+      "query",
+      "query",
+      "query"
+     ]
+    },
+    {
+     "name": "skill-todo",
+     "status": "fail",
+     "finished": "2026-11-14T13:21:37.899Z",
+     "seconds": 110,
+     "tokens": {
+      "input": 309029,
+      "cached": 267520,
+      "output": 2140
+     },
+     "failed": [
+      "route"
+     ],
+     "tools": [
+      "query",
+      "load_context",
+      "query",
+      "query"
+     ]
+    }
+   ]
+  },
+  "after": {
+   "brain": "the seeded routing brain of tool-routing.mjs, the same brain as the baseline (not the medium shape)",
+   "note": "Release code, one case at a time, 14:29 to 14:38. No judge: no OpenAI key. Each case ran once. Overall 3 pass, 4 fail: the same cases pass and fail as in the baseline, with the same failed checks.",
+   "cases": [
+    {
+     "name": "skill-deepdive",
+     "status": "pass",
+     "seconds": 74,
+     "tokens": {
+      "input": 567712,
+      "cached": 528128,
+      "output": 2995
+     },
+     "failed": []
+    },
+    {
+     "name": "skill-todo",
+     "status": "fail",
+     "seconds": 67,
+     "tokens": {
+      "input": 463129,
+      "cached": 421632,
+      "output": 2439
+     },
+     "failed": [
+      "route"
+     ]
+    },
+    {
+     "name": "skill-define-icp-interview",
+     "status": "fail",
+     "seconds": 50,
+     "tokens": {
+      "input": 297691,
+      "cached": 251392,
+      "output": 1722
+     },
+     "failed": [
+      "route",
+      "state"
+     ]
+    },
+    {
+     "name": "mentor-strategy",
+     "status": "fail",
+     "seconds": 71,
+     "tokens": {
+      "input": 398525,
+      "cached": 349312,
+      "output": 2985
+     },
+     "failed": [
+      "route"
+     ]
+    },
+    {
+     "name": "capture-call",
+     "status": "pass",
+     "tokens": {
+      "input": 451619,
+      "cached": 411648,
+      "output": 3078
+     },
+     "failed": [],
+     "tools": [
+      "query",
+      "query",
+      "query",
+      "remember",
+      "remember",
+      "remember"
+     ]
+    },
+    {
+     "name": "capture-decision",
+     "status": "fail",
+     "tokens": {
+      "input": 280733,
+      "cached": 236544,
+      "output": 1373
+     },
+     "failed": [
+      "route",
+      "state"
+     ],
+     "tools": [
+      "query",
+      "query",
+      "query"
+     ]
+    },
+    {
+     "name": "capture-draft-unsent",
+     "status": "pass",
+     "tokens": {
+      "input": 184394,
+      "cached": 150400,
+      "output": 950
+     },
+     "failed": [],
+     "tools": [
+      "query"
+     ]
+    }
+   ]
+  }
+ }
+}

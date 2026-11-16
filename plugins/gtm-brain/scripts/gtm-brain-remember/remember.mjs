@@ -7,6 +7,9 @@
 //        [--kind note|decision|question]          default note
 //        [--tools "attio, gmail"] [--people "Pierre Aubert, Ingrid Solberg"]
 //        [--source gmail:19faef...]  (repeatable)   [--action "gmail:sent email:19faef..."] (repeatable)
+//          a source is provider:reference, a direct URL, or an object as JSON text
+//          ('{"kind":"gmail","account":"sales@acme.com","ref":"19faef"}') when the record lives in a
+//          named mailbox, workspace or portal; in a batch file the object is given as it is
 //        [--supersedes m_xxxxxx] [--retracts m_xxxxxx] [--tags "synthetic"]
 //        [--new "Pierre Dupont"]  names the person confirmed as new, when one looked like a known name
 //
@@ -22,17 +25,28 @@
 // already known holds back only itself; the rest are written and the report names it by position.
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { prepareAsset, assetSummary, assetRows, currentApproved } from '../../lib/assets.mjs';
-import { meetingOverview } from '../../lib/meetings.mjs';
+import { meetingOverview, meetingSourceKey } from '../../lib/meetings.mjs';
 import { join } from "node:path";
+import { spawn } from "node:child_process";
 import { isChatSource, host } from "../../lib/host.mjs";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const dots = await import(new URL("../../lib/dots.mjs", import.meta.url));
+const checks = await import(new URL("../../lib/note-checks.mjs", import.meta.url));
+const ourRules = await import(new URL("../../lib/our-rules.mjs", import.meta.url));   // RULES.md Our rules tagged check (S4)
 // One-word names held under P3, so a later new_names for the same word is the person's answer, not a guess.
 const ASKED_DAYS = 7, askedFile = () => join(root, "work", "asked-names.json"), fold = n => String(n).trim().toLowerCase();
 const readAsked = () => { try { return JSON.parse(readFileSync(askedFile(), "utf8")); } catch { return {}; } };
 const wasAsked = (name, days = ASKED_DAYS) => { const at = readAsked()[fold(name)]; return !!at && Date.now() - Date.parse(at) < days * 86400000; };
 const foldName = fold;
 const noteAsked = names => { if (!names.length) return; const m = readAsked(); for (const n of names) m[fold(n)] = new Date().toISOString(); try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(askedFile(), JSON.stringify(m, null, 2) + "\n"); } catch {} };
+// Save, then ask (0.35.0): a note naming someone by a bare first name nobody known has (P3), or one several
+// known people have (P2), is saved with the name as written, and the brain keeps the question "Who is Anna?"
+// as a brain-question memory tagged about:<note id>. The answer retracts that question; the brain then writes a
+// note that supersedes the first one with the name attached (the same words, never an edit of the old line).
+const NAME_Q = "name-question";
+const tagValues = (m, key) => (m.tags || []).filter(t => t.startsWith(`${key}:`)).map(t => t.slice(key.length + 1));
+const wordsOf = q => [...tagValues(q, "name"), ...tagValues(q, "pick")];
+const openNameQuestions = ctx => lib.effectiveMemories(lib.readMemories(root, ctx)).filter(m => m.kind === "question" && !m.retracts && (m.tags || []).includes(NAME_Q));
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
 const opt = { source: [], action: [] };
 for (let i = 0; i < args.length; i++) if (args[i].startsWith("--")) { const k = args[i].slice(2), v = args[i + 1]; if (k === "source" || k === "action") opt[k].push(v); else opt[k] = v; i++; }
@@ -57,26 +71,109 @@ const loaded = lib.readLoaded(root, project);
 // The chat this note came from is a source too: codex:<thread id> or claude:<session id>, from
 // work/session.json (the chat start writes it with its host). A separate run (GTM_BRAIN_RUN: the
 // background summary run, a dashboard job, a scheduled run) is nobody's conversation, so it attaches nothing.
+// A note's source object with keys the format does not take (text, title, id, name) is cleaned, not refused: one
+// save cost five calls on them (live benchmark, 2026-11-15). One of them stands in for a missing ref. Only here:
+// lib.parseSources stays strict for every other caller (interact records a business action and refuses on it).
+const cleanSource = v => {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return v;
+  const out = {}; for (const k of ["kind", "account", "ref", "url"]) if (v[k] !== undefined && v[k] !== null) out[k] = v[k];
+  if (typeof out.ref !== "string" || !out.ref.trim()) { const stand = ["id", "title", "name", "text"].map(k => v[k]).find(x => typeof x === "string" && x.trim()); if (stand) out.ref = stand.trim().slice(0, 200); }
+  return out;
+};
+for (const e of entries || []) if (e && e.sources !== undefined && e.sources !== null) e.sources = Array.isArray(e.sources) ? e.sources.map(cleanSource) : cleanSource(e.sources);
 const session = process.env.GTM_BRAIN_RUN ? null : lib.readSession(root, project);
 const chat = session?.session_id || null, chatKind = session?.host || "codex";
 const authors = list(opt.by).map(w => { const h = lib.teamHandle(root, w); if (!h) die(`"${w}" is not in admin.md team`); return h; });
-if (!authors.length) die("need --by <person>");
+// by is optional: the person in this chat is known (work/person.json, else the brain's git identity), so a save needs no read of admin.md first
+const named = authors.length === 1 ? authors[0] : null;
+if (!authors.length) { const me = lib.currentPerson(root); if (me) authors.push(me); }
+// The first save that names its one author in a checkout where nobody is selected settles who works here
+// (work/person.json, this machine only), so the next save needs no by and no second call. Never from a
+// scheduled or background run, which is nobody's chat.
+if (named && !process.env.GTM_BRAIN_RUN && !lib.currentPerson(root)) { try { lib.selectPerson(root, named); } catch {} }
+// Nobody selected here (a fresh clone of a shared brain, before its first chat start): a team of one is that
+// person; otherwise the refusal carries the handles, so the same call repeats once with by and no note is lost
+// (live benchmark on a real brain, 2026-11-15: 12 of 14 saves were refused and never repeated).
+if (!authors.length) {
+  const team = (lib.readAdmin(root)?.team || []).map(p => p.handle).filter(Boolean);
+  if (team.length === 1) authors.push(team[0]);
+  else die(`nothing saved yet: this brain does not know who is in this chat. Call remember again now, with the same content and by = the handle of the person speaking, one of: ${team.join(", ") || "(no team in admin.md)"}. If the chat does not say who that is, ask once: "Who is saving this?"`);
+}
+// the speaker is known from the session: their own name is never an unclear name (s07: "which Artur?" asked of Artur himself)
+const speakers = (lib.readAdmin(root)?.team || []).filter(p => p && authors.includes(p.handle) && p.name).map(p => p.name);
 
+// a conversation the person told (meeting basis user) rests on their word: the user source is the author, added
+// when it is missing, so the outcome is not refused for a field the brain already knows
+if (!process.env.GTM_BRAIN_RUN) for (const e of entries) if (e && e.meeting?.basis === "user") {
+  let src = []; try { src = lib.parseSources(e.sources); } catch { continue; }
+  if (!src.some(s => s.kind === "user" && s.ref)) e.sources = [...(Array.isArray(e.sources) ? e.sources : e.sources ? [e.sources] : []), `user:${authors[0]}`];
+}
 // numbering only where it helps: one note reads exactly as it always did
 const batched = entries.length > 1;
 if (entries.some(e => e?.customer) && entries.some(e => e?.customer_coverage)) die("Record customer coverage in a separate call after checking which customer entries were kept or held.");
 const kept = [], held = [], failed = [], lines = [], asks = [];
+const keptRecords = []; // the records written in this call, for the moved-note line (R2)
+const toolsNamed = []; // the tools and source kinds of the notes kept in this call, for the tools check below
 const esc = t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const personText = chat && !process.env.GTM_BRAIN_RUN ? (host().lastPersonText?.(chat) || "") : "";
 // where the one question goes: Codex's own question box when the person turned it on, else plain chat text
-const askIn = host().nativeQuestions?.() ? "in Codex's question box (request_user_input), numbered parts as its options" : "in Codex's question box (request_user_input) when that tool is available in this chat (Plan mode, or a Codex where it is on by default), otherwise as plain chat text with numbered parts, then end the turn";
-const waitingForReply = !!personText && wasAsked(`reply:${personText}`, 1 / 24);   // read once, before this call holds anything
+const askIn = host().nativeQuestions?.() ? "in Codex's question box (request_user_input)" : "in Codex's question box (request_user_input) when this chat has it, otherwise as numbered chat text";
+// what the held entries of this message waited on: only a resend of one of those waits for the person's reply (Q3),
+// an unrelated note in the same turn is written (s09: three outcomes refused while one name was asked about).
+// Only a hold the person alone can settle is written here (which Florian, Max who, same as X, which Thursday):
+// a refusal the model corrects itself (a company under people, a malformed block, a missing context) leaves no
+// mark, so its corrected resend in the same turn is saved (manual run, 2026-11-15: refused twice, then the person
+// was asked the question they had just answered). asked: the questions kept under this message.
+const heldFile = () => join(root, "work", "held-replies.json");
+const readHeld = () => { try { return JSON.parse(readFileSync(heldFile(), "utf8")); } catch { return {}; } };
+const fresh = h => h && Date.now() - Date.parse(h.at) < 3600000;
+const heldBefore = personText && fresh(readHeld()[personText]) ? readHeld()[personText] : null;   // read once, before this call holds anything
+const markHeld = (words, text, asked = []) => {
+  if (!personText) return;
+  const all = readHeld(), h = fresh(all[personText]) ? all[personText] : { words: [], texts: [] };
+  all[personText] = { at: new Date().toISOString(), words: [...new Set([...h.words, ...words.filter(Boolean)])], texts: [...new Set([...h.texts, ...(text ? [String(text)] : [])])], asked: [...new Set([...(h.asked || []), ...asked])] };
+  const keep = Object.entries(all).sort((a, b) => Date.parse(b[1].at) - Date.parse(a[1].at)).slice(0, 20);
+  try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(heldFile(), JSON.stringify(Object.fromEntries(keep), null, 1) + "\n"); } catch {}
+};
 const FORGET = /\b(forget|scratch|withdraw|never ?mind|disregard|ignore that|delete that|remove that|drop that|undo that)\b/i;
 // the saving rules ride along once per chat, on whichever reply comes first (saving-rules.md)
 let rulesText; const rules = () => rulesText ??= (process.env.GTM_BRAIN_RUN ? "" : dots.rulebookOnce(root, chat));
 const at = n => batched ? `#${n} ` : "";
 // every entry is checked before the first one is written: a bad entry in the middle must not leave the ones before it kept and unreported
-const ctxOf = e => e.context || opt.context || (loaded.length === 1 ? loaded[0] : null);
+// The context is optional: the one named, else the single loaded one, else the one context where the
+// note's people and companies already have evidence. Anything else is held with the candidates in one
+// line, never guessed.
+const evidenceCtx = new Map();
+let evidenceBase;   // read once per call: a batch of placeless entries must not re-read every context each time
+const evidenceOf = e => {
+  if (evidenceCtx.has(e)) return evidenceCtx.get(e);
+  evidenceBase ??= { reg: lib.readNames(root), active: lib.listContexts(root).filter(c => c.status === "active").map(c => ({ slug: c.slug, notes: lib.effectiveMemories(c.memories).filter(m => !m.retracts).map(m => new Set(m.people || [])) })) };
+  const { reg, active } = evidenceBase;
+  // the speaker is in most of their own notes: never evidence of where a note belongs
+  const wanted = new Set([...list(e.people), ...list(e.companies), ...(e.customer?.entity ? [e.customer.entity] : [])]
+    .map(n => lib.exactName(reg, n) || lib.inferredName(reg, n)).filter(n => n && !speakers.includes(n)));
+  const counted = !wanted.size ? [] : active.map(c => ({ slug: c.slug, n: c.notes.filter(p => [...wanted].some(w => p.has(w))).length })).filter(c => c.n).sort((a, b) => b.n - a.n);
+  const homes = counted.map(c => c.slug);
+  // several homes: the one that holds most of their notes, when it clearly does (three or more, at least twice the next)
+  const clear = counted.length === 1 || (counted.length > 1 && counted[0].n >= 3 && counted[0].n >= 2 * counted[1].n);
+  const found = { slug: clear ? homes[0] : null, candidates: homes, why: clear ? (counted.length === 1 ? "the people in it have their notes there" : `the people in it have most of their notes there (${counted[0].n} of ${counted.reduce((a, c) => a + c.n, 0)})`) : null };
+  evidenceCtx.set(e, found); return found;
+};
+const ctxOf = e => e.context || opt.context || (loaded.length === 1 ? loaded[0] : null) || (loaded.length ? null : evidenceOf(e).slug);
+const titleOf = slug => { try { return lib.readContext(root, slug, { includeMemories: false })?.title || slug; } catch { return slug; } };
+// entries with no context to go to: held with the candidates named; the rest of the call is still written
+const placeless = new Map();
+const guessed = new Map();   // entry index -> why its context was a best guess
+const droppedRelation = new Map();   // entry index -> why its relationship block was left out
+const filledRelation = new Map();   // entry index -> the relation fields the plugin filled in
+const fromNotes = new Map();   // entry index -> the note ids a relationship or customer status was recorded from
+let citedNotes;   // every note, read once, when an entry cites notes as its evidence
+// "looks already recorded" is said once per content: work/restated-shown.json holds a hash and a time for an hour
+const shownFile = () => join(root, "work", "restated-shown.json");
+const hashOf = text => { let h = 5381; for (const ch of String(text).replace(/\s+/g, " ").trim().toLowerCase()) h = ((h * 33) ^ ch.codePointAt(0)) >>> 0; return h.toString(16); };
+const readShown = () => { try { const all = JSON.parse(readFileSync(shownFile(), "utf8")) || {}; return Object.fromEntries(Object.entries(all).filter(([, at]) => Date.now() - Date.parse(at) < 3600000)); } catch { return {}; } };
+const shownBefore = text => !!readShown()[hashOf(text)];
+const noteShown = text => { try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(shownFile(), JSON.stringify({ ...readShown(), [hashOf(text)]: new Date().toISOString() }) + "\n"); } catch {} };
 if (entries.some(e => e?.meeting_coverage) && entries.some(e => e?.meeting || e?.meeting_id)) die("Record meeting coverage in a separate call after checking kept, held and failed entries.");
 const preparedAssets = new Map(), changedAssets = new Set();
 const sourceOf = e => lib.parseSources(e.sources);
@@ -101,8 +198,23 @@ const problems = entries.map((e, i) => {
   if (/[\u2013\u2014\u2015\u2212]/.test(e.content)) return `${at(n)}contains a long dash; use a plain hyphen`;
   if (e.kind && !lib.KINDS.includes(e.kind)) return `${at(n)}kind must be one of ${lib.KINDS.join(", ")}`;
   try { lib.parseSources(e.sources); } catch (err) { return `${at(n)}${err.message}`; }
-  const ctx = ctxOf(e);
-  if (!ctx) return loaded.length > 1 ? `${at(n)}several contexts loaded (${loaded.join(", ")}); name the context` : `${at(n)}no context loaded and none given. Load a context first.`;
+  let ctx = ctxOf(e);
+  if (!ctx && !process.env.GTM_BRAIN_ASK_CONTEXT) {
+    // Never sent back to ask which context (live benchmark, 2026-11-15: 7 of 10 refused first calls were this
+    // question, each a second round trip). A context is a tag on the note: the best guess is used and named in
+    // the reply, so the person can move it in one sentence. The guess: where the note's people have most notes,
+    // else the first loaded context, else Our company, else the first active context.
+    const { candidates } = loaded.length > 1 ? { candidates: loaded } : evidenceOf(e);
+    const active = lib.listContexts(root, { includeMemories: false }).filter(c => c.status === "active" && !c.personal_owner).map(c => c.slug);
+    const guess = candidates[0] || (active.includes("company") ? "company" : active[0]) || null;
+    if (guess) { e.context = ctx = guess; entries[i] = e; guessed.set(i, candidates.length > 1 ? `its people have notes in ${candidates.map(titleOf).join(" and ")}` : candidates.length ? "its people have notes there" : "nothing in the note points at one context"); }
+  }
+  if (!ctx) {
+    const { candidates } = loaded.length > 1 ? { candidates: loaded } : evidenceOf(e);
+    const pool = candidates.length ? candidates : lib.listContexts(root, { includeMemories: false }).filter(c => c.status === "active").map(c => c.slug);
+    placeless.set(i, { n, why: `needs a context: ${pool.map(s => `${titleOf(s)} (${s})`).join(" or ")}. Resend with context: the slug that fits what the person said`, mentions: [], ask: false });
+    return null;
+  }
   if (!existsSync(join(root, "brain", "contexts", ctx, "context.md"))) return `${at(n)}no such context: ${ctx}`;
   try { entries[i] = e = lib.prepareMeetingMemory(root, ctx, { ...e, authors, source: sourceOf(e) }); }
   catch (err) { return `${at(n)}${err.message}`; }
@@ -110,17 +222,58 @@ const problems = entries.map((e, i) => {
   if (customerErrors.length) return `${at(n)}${customerErrors.join("; ")}`;
   try { lib.guardCustomerCorrection(root, ctx, { ...e, source: sourceOf(e) }); }
   catch (err) { return `${at(n)}${err.message}`; }
+  // A relationship or customer status read out of notes already in the brain (a backfill): the cited notes are its
+  // evidence (2026-11-15: 18 of 18 backfilled relations were left out and each note was saved twice). What those
+  // notes rest on becomes this note's evidence too, their outside records or the word of the person who said them,
+  // so the stored block keeps the two bases every released reader knows (source, user).
+  // Only a note that names an end of the relationship is evidence for it, and every end must be named by one: a
+  // cited id that says nothing about them proves nothing, and the block is left out as before. Customer status is
+  // never read from notes: validateCustomerEvidence above asks for an outside record or the person's word.
+  for (const key of ["relation"]) {
+    const block = e[key]; if (!block || typeof block !== "object" || Array.isArray(block) || block.basis === "user" || (key === "relation" && e.customer)) continue;
+    const src0 = sourceOf(e), outside = s => !!s && !!s.ref && !(s.kind === "memory" || s.kind === "user" || isChatSource(s));
+    const ids = src0.filter(s => s.kind === "memory" && s.ref).map(s => s.ref.replace(/^.*\//, ""));
+    if (!ids.length || src0.some(outside)) continue;
+    citedNotes ??= lib.listContexts(root).flatMap(c => c.memories);
+    const reg = lib.readNames(root), ends = [block.from, block.to].filter(x => typeof x === "string" && x && x !== "us").map(x => { const k = lib.resolveEntity(reg, x); return [x, k?.name, ...(k?.aliases || [])].filter(Boolean).map(fold); });
+    const names = m => { const text = ` ${fold(m.content).replace(/[^\p{L}\p{N}]+/gu, " ")} `, linked = (m.people || []).map(fold); return end => end.some(w => linked.includes(w) || text.includes(` ${w.replace(/[^\p{L}\p{N}]+/gu, " ").trim()} `)); };
+    const found = ids.map(id => citedNotes.find(m => m.id === id)).filter(m => m && ends.some(names(m)));
+    if (!found.length || !ends.every(end => found.some(m => names(m)(end)))) continue;
+    const records = found.flatMap(m => (m.source || []).filter(outside)), said = found.flatMap(m => (m.source || []).filter(s => s.kind === "user" && s.ref));
+    const add = (records.length ? records : [said[0] || { kind: "user", ref: found[0].authors?.[0] || authors[0] }]).map(s => ({ kind: s.kind, ref: s.ref, ...(s.account ? { account: s.account } : {}), ...(s.url ? { url: s.url } : {}) }));
+    entries[i] = e = { ...e, [key]: { ...block, basis: records.length ? "source" : "user" }, sources: [...(Array.isArray(e.sources) ? e.sources : e.sources ? [e.sources] : []), ...add.filter(a => !src0.some(s => s.kind === a.kind && s.ref === a.ref))] };
+    fromNotes.set(i, found.map(m => m.id));
+  }
+  // a relationship needs only from, type and to: the plugin fills status, observed_at and basis from the note (ALL-711)
+  if (e.relation && typeof e.relation === "object" && !Array.isArray(e.relation) && !e.customer) {
+    // the ending words count where the note names the other end, under any name the brain knows it by
+    const other = e.relation.to === "us" ? e.relation.from : e.relation.to, known = typeof other === "string" ? lib.resolveEntity(lib.readNames(root), other) : null;
+    const src = sourceOf(e), done = lib.completeRelation(e.relation, { content: String(e.content), sources: src, author: authors[0], names: [other, known?.name, ...(known?.aliases || [])], person: !process.env.GTM_BRAIN_RUN });
+    if (done.filled.length) filledRelation.set(i, done.filled);
+    if (done.sources !== src) e.sources = [...(Array.isArray(e.sources) ? e.sources : e.sources ? [e.sources] : []), `user:${authors[0]}`];
+    entries[i] = e = { ...e, relation: done.relation };
+  }
   const relationErrors = lib.validateRelationEvidence({ ...e, source: sourceOf(e) }, { stored: false });
-  if (relationErrors.length) return `${at(n)}${relationErrors.join("; ")}`;
+  // a relationship block that is incomplete does not cost the note: the note is saved, the relationship is not, and the line says what it needs
+  if (relationErrors.length && e.relation && !e.customer) { droppedRelation.set(i, relationErrors.join("; ")); const { relation, ...rest } = e; entries[i] = e = rest; }
+  else if (relationErrors.length) return `${at(n)}${relationErrors.join("; ")}`;
+  // a correction from the chat that cites no outside record is the person's word, as a three-field save is: it may
+  // withdraw or replace what the person said without a user: source spelled out (a source refresh still may not)
+  if ((e.supersedes || e.retracts) && !process.env.GTM_BRAIN_RUN && (!e.relation || e.relation.basis === "user") && authors[0] && !sourceOf(e).some(s => s.kind === "user" || !(s.kind === "memory" || isChatSource(s)))
+    && lib.readMemories(root, ctx).some(m => [e.supersedes, e.retracts].includes(m.id) && m.relation?.basis === "user"))
+    entries[i] = e = { ...e, sources: [...(Array.isArray(e.sources) ? e.sources : e.sources ? [e.sources] : []), `user:${authors[0]}`] };
   try { lib.guardRelationCorrection(root, ctx, { ...e, source: sourceOf(e) }); }
   catch (err) { return `${at(n)}${err.message}`; }
+  const ruled = ourRules.saveRefusals(root, e, { siblings: entries }); if (ruled.length) return `${at(n)}${ruled.join("; ")}`;
   // a correction points at a note that exists, in this context: readers resolve supersedes and
   // retracts per context, so a pointer into another one corrects nothing and the brain says both
   for (const [field, verb] of [["supersedes", "replace"], ["retracts", "withdraw"]]) {
     const id = e[field]; if (!id) continue;
     const home = lib.listContexts(root).find(c => c.memories.some(m => m.id === id));
     if (!home) return `${at(n)}no memory ${id} to ${verb}`;
-    if (home.slug !== ctx) return `${at(n)}${id} is in ${home.slug}, not ${ctx}: a correction lives with the note it corrects; remember it in ${home.slug}`;
+    if (home.slug !== ctx) return field === "supersedes"
+      ? `${at(n)}${id} is in ${home.slug}, not ${ctx}. To move it to ${ctx} ("that should go to ..."), send both in one call: an entry in ${home.slug} with retracts ${id}, and the note as a new entry in ${ctx}. A correction that stays in ${home.slug} supersedes it there`
+      : `${at(n)}${id} is in ${home.slug}, not ${ctx}: withdraw it in ${home.slug}`;
   }
   if (e.asset !== undefined) {
     try {
@@ -134,18 +287,57 @@ const problems = entries.map((e, i) => {
   }
   return null;
 }).filter(Boolean);
+// every note in force across the brain, read once per call, for the restatement check
+let pool = null; const factsCache = new Map(), anchors = new Map();
+const poolOf = () => pool ??= lib.listContexts(root).flatMap(c => lib.effectiveMemories(c.memories).map(m => ({ ...m, context: m.context || c.slug }))).filter(m => !lib.isForkCopy(m));
+// a conversation record the person told (a meeting block with basis user), or a chat note that narrates a call, with no outcome in it
+const NARRATES = /\b(recounted|had (?:a|the|our) (?:call|meeting|chat)|(?:call|meeting|conversation|chat) with|met with|spoke (?:with|to)|talked (?:with|to))\b/i;
+const shell = e => !!e && !e.supersedes && !e.retracts && (e.kind || "note") === "note" && !e.asset && !e.customer && !e.relation && !e.meeting_capture && !e.meeting_policy && !e.meeting_coverage && !e.customer_coverage
+  && ((e.meeting && e.meeting.basis === "user" && e.meeting.occurrence === "happened") || (!e.meeting && !!personText && NARRATES.test(e.content)))
+  && checks.statesNoOutcome({ ...e, people: list(e.people), companies: list(e.companies) }, { speakers });
 const withChat = source => chat && !source.some(isChatSource) ? [...source, { kind: chatKind, ref: chat }] : source;
 if (problems.length) die(`nothing remembered: ${problems.join("; ")}. Fix these and call again with all the entries.`);
 for (let i = 0; i < entries.length; i++) {
   const e = entries[i] || {}, n = i + 1;
+  if (placeless.has(i)) { held.push(placeless.get(i)); continue; }
   // a held question needs the person's reply: while their last message is still the one the question was
   // held on, a resend is the model answering for them (new-brain rerun, 2026-11-12: "Thursday" sent back as the
   // 19th with no reply). Only when the chat can be read; an answer in the same message passes.
-  if (waitingForReply) { held.push({ n, why: "the person has not answered the question yet (their last message is the one this was held on): ask it and wait for their reply; never pick the answer yourself (Q3)", mentions: [], ask: true }); continue; }
+  // Not when this entry answers a question the brain asked before this message: the message is the answer, and
+  // whatever was refused on the way was the model's to repair. And not when the model's repair is to file the held
+  // word as a company (relatedToHeld).
+  // Never when the resend itself settles what was held: the held spelling still under people or new_names, or a
+  // new name for a held first name that neither the person nor the question spelled out ("Bo" answered with
+  // new_names ["Bo"], a look-alike confirmed as someone new): that is the model answering for the person.
+  const earlier = (() => { try { const q = !!e.retracts && !!heldBefore && !(heldBefore.asked || []).includes(e.retracts) && lib.readMemories(root, ctxOf(e)).find(m => m.id === e.retracts); return q && q.kind === "question" ? q : null; } catch { return null; } })();
+  const heldWords = (heldBefore?.words || []).map(fold), spoken = fold(`${personText} ${earlier?.content || ""}`);
+  const settlesHeld = [...list(e.people), ...list(e.new_names)].some(x => heldWords.includes(fold(x)))
+    || list(e.new_names).some(x => !spoken.includes(fold(x)) && heldWords.some(w => w.split(/\s+/)[0] === fold(x).split(/\s+/)[0]));
+  const answersEarlier = !!earlier && !settlesHeld;
+  if (heldBefore && !answersEarlier && checks.relatedToHeld({ ...e, people: list(e.people), companies: list(e.companies), new_names: list(e.new_names) }, heldBefore)) { held.push({ n, why: "the person has not answered the question yet: ask it once and end the turn, do not resend this before their reply", mentions: [], ask: true }); continue; }
   // "forget that Lena runs the workshop" withdraws the note; a supersedes with "Lena does not run the workshop"
   // puts a claim in the brain the person never made (scenario run, 2026-11-12)
-  if (e.supersedes && !e.retracts && FORGET.test(personText)) { held.push({ n, why: `the person asked to forget it, not to correct it: send retracts: ${e.supersedes} (not supersedes), with content saying what was withdrawn and why in their words, never the opposite claim (F1)`, mentions: [], withdraw: true }); continue; }
-  const ctx = ctxOf(e);
+  if (e.supersedes && !e.retracts && FORGET.test(personText)) { held.push({ n, why: `the person asked to forget it: resend with retracts: ${e.supersedes} (not supersedes) and content saying what was withdrawn, in their words`, mentions: [], withdraw: true }); continue; }
+  // a note that says only that a conversation happened, while the person said what came of it or the call
+  // carries the outcomes beside it, is refused with the reason: the outcome goes into the note (s09, s14)
+  if (shell(e) && (checks.saidMore(personText, [e.content], [...list(e.people), ...list(e.companies), ...speakers]) || entries.some(o => o && o !== e && !shell(o) && !checks.statesNoOutcome(o, { speakers })))) {
+    held.push({ n, why: checks.noOutcomeLine(e.content), mentions: [], ask: false }); continue;
+  }
+  let ctx = ctxOf(e);
+  // a correction of a note something already replaced (the brain linked the name itself, s04): the newer note is the one to change
+  if (e.supersedes && !e.retracts && !e.asset && !e.customer && !e.relation && !e.meeting && !e.meeting_id) {
+    const here = lib.readMemories(root, ctx), by = here.find(m => m.supersedes === e.supersedes);
+    if (by && !lib.effectiveMemories(here).some(m => m.id === e.supersedes)) { kept.push({ n, id: by.id, ctx }); lines.push(`${at(n)}${e.supersedes} was already replaced by ${by.id} in ${titleOf(ctx)}: "${String(by.content).replace(/\s+/g, " ").slice(0, 160)}". Nothing written; if this still changes it, remember again with supersedes: ${by.id}.`); continue; }
+  }
+  // the answer to "Who is Anna?": an entry that retracts the name question; the brain links the name to the note after it is written
+  const answering = e.retracts ? openNameQuestions(ctx).find(q => q.id === e.retracts) || null : null;
+  // the same note sent again word for word while its name question is open is the answer, not a second note
+  // (decided below, once the names are read: a resend that settles nothing writes nothing)
+  let resent = null;
+  if (!e.supersedes && !e.retracts) {
+    const mine = lib.effectiveMemories(lib.readMemories(root, ctx)), same = String(e.content).trim();
+    resent = openNameQuestions(ctx).find(q => tagValues(q, "about").some(id => mine.find(m => m.id === id)?.content === same)) || null;
+  }
 
   const companies = list(e.companies);
   let customerName;
@@ -160,30 +352,68 @@ for (let i = 0; i < entries.length; i++) {
     const first = name.split(/\s+/)[0], known = lib.readNames(root);
     return lib.exactName(known, name) === name && new RegExp(`\\b${esc(first)}\\b`).test(personText) && lib.inferredName(known, first) === name ? first : name;
   };
-  const mapped = name => e.customer && name === e.customer.entity ? customerName : typed(name);
+  // the speaker's own name, or their first name when the person did not type it, is the speaker: never asked about (s07)
+  const speaker = name => {
+    const f = fold(name); if (!f) return null;
+    const full = speakers.find(s => fold(s) === f); if (full) return full;
+    if (/\s/.test(f) || (personText && new RegExp(`\\b${esc(String(name).trim())}\\b`, "i").test(personText))) return null;
+    const firsts = speakers.filter(s => fold(s).split(/\s+/)[0] === f); return firsts.length === 1 ? firsts[0] : null;
+  };
+  const mapped = name => e.customer && name === e.customer.entity ? customerName : speaker(name) || typed(name);
   // Codex picked one of several people with that first name although the person never wrote the full name
   // or the surname ("lorian called me about the venue" saved as Florian Kim; Florian Weber is known too; new-brain, 2026-11-12)
+  // The note this one answers or replaces names its people in full: "no, they are different" to the question "is
+  // Wojciech Stach the same person as Wojciech Niemiec?" picks nobody (a manual run on 2026-11-15 was refused here,
+  // then refused again as unanswered, and Codex asked the person the question they had just answered).
+  let answered = ""; try { const t = e.retracts || e.supersedes; if (t) answered = lib.readMemories(root, ctx).find(m => m.id === t)?.content || ""; } catch {}
+  // A company listed under people is the company it is, never a new person and never a question (manual run,
+  // 2026-11-15: a third prompt because a company stood between two people). Known as an organization or product: it is
+  // linked as that. Unknown, and it reads as a company beside a full personal name: no person is created for it.
+  const knownOrgs = [], notPeople = [];
+  { const reg = lib.readNames(root), sent = list(e.people), declared = new Set([...companies, ...list(e.new_names)].map(fold));
+    const entryOf = name => { const c = lib.exactName(reg, name); return c ? reg.find(x => x.name === c) || null : null; };
+    const beside = sent.some(p => /\s/.test(p.trim()) && (entryOf(p)?.kind || "person") === "person" && !checks.looksLikeCompany(p, e.content));
+    e.people = sent.filter(name => {
+      const known = entryOf(name);
+      if (known) { if (known.kind !== "person" && !knownOrgs.some(k => k.name === known.name)) knownOrgs.push(known); return true; }
+      if (!beside || declared.has(fold(name)) || speaker(name) || lib.inferredName(reg, name) || !checks.looksLikeCompany(name, e.content) || lib.similarNames(reg, name).length) return true;
+      notPeople.push(name); return false;
+    });
+  }
   const picked = !personText ? [] : list(e.people).filter(name => {
+    if (speaker(name)) return false;
     const parts = String(name).trim().split(/\s+/); if (parts.length < 2) return false;
-    const said = new RegExp(`\\b${esc(name)}\\b|\\b${esc(parts[parts.length - 1])}\\b`, "i"); if (said.test(personText)) return false;
+    const said = new RegExp(`\\b${esc(name)}\\b|\\b${esc(parts[parts.length - 1])}\\b`, "i"); if (said.test(personText) || said.test(answered)) return false;
     return lib.readNames(root).filter(x => x.kind === "person" && x.name.split(/\s+/)[0].toLowerCase() === parts[0].toLowerCase()).length > 1 && !wasAsked(`pick:${name}`, 1 / 24);   // asked within the hour: the reply ("2", "Kim") is the answer
   });
   if (picked.length) {
     const first = picked[0].split(/\s+/)[0], all = lib.readNames(root).filter(x => x.kind === "person" && x.name.split(/\s+/)[0].toLowerCase() === first.toLowerCase()).map(x => x.name);
-    noteAsked([`reply:${personText}`, ...picked.map(p => `pick:${p}`)]);
-    held.push({ n, why: `the person did not write which ${first}: ${all.join(" or ")} (W1, P2: a first name with several known people is asked, never taken from the chat so far)`, mentions: [], ask: true }); continue;
+    noteAsked(picked.map(p => `pick:${p}`)); markHeld([first, ...picked], e.content);
+    held.push({ n, why: `the person did not write which ${first}: ${all.join(" or ")}. Ask which one`, mentions: [], ask: true }); continue;
   }
   const mappedCompanies = companies.map(mapped);
   // P3: a one-word name in new_names counts only after it was held and asked about ("Max who?"); listing it
   // up front skips the question (2026-11-12, Codex sent new_names ["Max"] on the first try).
   const confirmed = list(e.new_names).map(mapped).filter(name => /\s/.test(String(name).trim()) || mappedCompanies.includes(name) || wasAsked(name));
-  const { people, added, similar, unnamed, inferred, mentions } = lib.normalisePeople(root, [...list(e.people).map(mapped), ...(e.meeting?.participants || []).map(p => p.name), ...mappedCompanies, ...(customerName ? [customerName] : []), ...(e.relation ? [e.relation.from, e.relation.to].filter(x => x && x !== "us").map(mapped) : []), ...(preparedAssets.has(i) ? [preparedAssets.get(i).entity] : [])], { confirmedNew: confirmed, companies: mappedCompanies, trusted: [...(customerName ? [customerName] : []), ...(preparedAssets.has(i) ? [preparedAssets.get(i).entity] : [])] });
+  // only a plain note is saved before the name is settled: an answer, a customer, a relationship or an attachment needs it resolved first
+  const saveUnclear = !answering && !e.customer && !e.relation && !preparedAssets.has(i);
+  const { people, added, similar: alike, unnamed: loose, inferred, mentions, unclear } = lib.normalisePeople(root, [...list(e.people).map(mapped), ...(e.meeting?.participants || []).map(p => speaker(p.name) || p.name), ...mappedCompanies, ...(customerName ? [customerName] : []), ...(e.relation ? [e.relation.from, e.relation.to].filter(x => x && x !== "us").map(mapped) : []), ...(preparedAssets.has(i) ? [preparedAssets.get(i).entity] : [])], { confirmedNew: confirmed, companies: mappedCompanies, trusted: [...(customerName ? [customerName] : []), ...(preparedAssets.has(i) ? [preparedAssets.get(i).entity] : [])], saveUnclear });
+  // held for another reason: the unclear names go in the same one question, as before
+  const heldAnyway = alike.length || loose.length || (!e.retracts && dots.relativeDates(e.content).length);
+  const similar = [...alike, ...(heldAnyway ? unclear.filter(u => u.candidates.length).map(u => ({ mention: u.mention, matches: u.candidates.map(name => ({ name, kind: "person" })) })) : [])];
+  const unnamed = [...loose, ...(heldAnyway ? unclear.filter(u => !u.candidates.length).map(u => u.mention) : [])];
+  if (resent && !heldAnyway) {
+    const about = tagValues(resent, "about")[0], open = wordsOf(resent).map(fold).sort().join("|");
+    // still the same unclear names: the note and its question are already there, a second copy would only close and reopen it
+    if (unclear.length && unclear.map(u => fold(u.mention)).sort().join("|") === open) { kept.push({ n, id: about, ctx }); lines.push(`${at(n)}already recorded ${about} in ${ctx}; its question is still open (${resent.id}): ${String(resent.content).split(" (about ")[0]} Ask it and wait for the person's answer.`); continue; }
+    e.supersedes = about;
+  }
   // a bare "Thursday" means nothing next week: the note carries the date, or the person is asked which
   const dated = e.retracts ? [] : dots.relativeDates(e.content), sourced = !!e.meeting || lib.parseSources(e.sources).some(s => !isChatSource(s));
   if (similar.length || unnamed.length || dated.length) {
     noteAsked(unnamed);
-    if (personText && (similar.length || unnamed.length || dated.some(d => d.ask))) noteAsked([`reply:${personText}`]);
-    held.push({ n, why: [...similar.map(s => `"${s.mention}" looks like ${s.matches.map(x => `${x.name}${x.kind !== "person" ? ` (${x.kind})` : ""}`).join(" or ")} (P4)`), ...unnamed.map(u => `"${u}" is one word and nobody known has it (rule P3: a first name alone is never a new person)`), ...(dated.length ? [dots.datesHold(dated, { sourced })] : [])].join("; "), mentions: [...similar.map(s => s.mention), ...unnamed], unnamed, ask: similar.length + unnamed.length > 0 || dated.some(d => d.ask) });
+    if (similar.length || unnamed.length || dated.some(d => d.ask)) markHeld([...similar.map(s => s.mention), ...unnamed, ...dated.filter(d => d.ask).map(d => d.word)], e.content);
+    held.push({ n, why: [...similar.map(s => `"${s.mention}" looks like ${s.matches.map(x => `${x.name}${x.kind !== "person" ? ` (${x.kind})` : ""}`).join(" or ")} (P4)`), ...unnamed.map(u => `"${u}" is one word and nobody known has it (rule P3)`), ...(dated.length ? [dots.datesHold(dated, { sourced })] : [])].join("; "), mentions: [...similar.map(s => s.mention), ...unnamed], unnamed, ask: similar.length + unnamed.length > 0 || dated.some(d => d.ask) });
     continue;
   }
   // a note about known people whose notes all sit in one project belongs there too; several: ask
@@ -209,9 +439,37 @@ for (let i = 0; i < entries.length; i++) {
   if (relation) {
     const reg = lib.readNames(root), id = v => v === "us" ? "us" : lib.resolveEntity(reg, v)?.id;
     const prior = lib.effectiveMemories(lib.readMemories(root, ctx)).find(m => m.relation && !m.retracts && m.content === e.content.trim() && m.relation.type === relation.type &&
-      id(m.relation.from) === id(relation.from) && id(m.relation.to) === id(relation.to) && ["status", "basis", "observed_at"].every(k => m.relation[k] === relation[k]) && !e.supersedes && !e.retracts);
+      id(m.relation.from) === id(relation.from) && id(m.relation.to) === id(relation.to) && ["status", "basis", "observed_at"].filter(k => !(filledRelation.get(i) || []).includes(k)).every(k => m.relation[k] === relation[k]) && !e.supersedes && !e.retracts);
     if (prior) { kept.push({ n, id: prior.id, ctx }); lines.push(`${at(n)}already recorded ${prior.id} in ${ctx}`); continue; }
   }
+  // the same fact said again, anywhere in the brain: "already kept", nothing written; the same fact with another
+  // value of one type: a correction that replaces the kept note (s08: a coupon's terms saved twice)
+  let changes = null;
+  // a meeting record sent again word for word keeps its own check ("already recorded"); reworded, it is a restatement too (s07)
+  const plainEntry = !e.supersedes && !e.retracts && !answering && !resent && !e.asset && !e.customer && !e.relation && !e.customer_coverage && !e.meeting_capture && !e.meeting_policy && !e.meeting_coverage && (e.kind || "note") !== "question";
+  if (plainEntry) {
+    let found = checks.restatement(poolOf(), { content: e.content, people, sources: lib.parseSources(e.sources), tags: [...list(e.tags), ...(project ? [`project:${project}`] : []), ...(where.one ? [`project:${where.one}`] : [])] }, { speakers, cache: factsCache });
+    if (e.meeting && (found?.changed || String(found?.kept?.content || "").trim() === String(e.content).trim())) found = null;
+    if (found?.kept) { kept.push({ n, id: found.kept.id, ctx: found.kept.context }); lines.push(`${at(n)}${checks.keptLine(found.kept, titleOf(found.kept.context))}`); continue; }
+    // the same thing in other words: shown once; the same content sent again within the hour is saved
+    if (found?.candidate) {
+      if (!shownBefore(e.content)) { noteShown(e.content); held.push({ n, why: checks.candidateLine(found.candidate, titleOf(found.candidate.context)), mentions: [], ask: false }); continue; }
+      found = null;
+    }
+    // worded as a correction, sent without supersedes: the kept note it corrects is shown once
+    if (found?.corrects) {
+      if (!shownBefore(e.content)) { noteShown(e.content); held.push({ n, why: checks.correctsLine(found.corrects, titleOf(found.corrects.context)), mentions: [], ask: false }); continue; }
+      found = null;
+    }
+    if (found?.changed && found.auto && (!(e.meeting || e.meeting_id) || found.changed.context === ctx)) { changes = found; e.supersedes = found.changed.id; ctx = found.changed.context; }
+    else if (found?.changed) changes = { ...found, beside: true };
+  }
+  // the answer reads on its own: the question it answers, then the person's words ("Fabian Struck, the Zauber one" alone says nothing, s05)
+  // (only the asked word: "Which Fabian?", never the candidates, so the answer links nobody it rules out)
+  if (answering) { const ask = String(answering.content).split(" (about ")[0].replace(/\b(Which [^:?]+):[^?]*\?/g, "$1?").replace(/\s*Full name or company\.$/, "").trim(); if (ask && !String(e.content).includes(ask)) e.content = `${ask} ${String(e.content).trim()}`; }
+  // outcomes of one conversation in one call: the first one written is the meeting, the others link to it
+  // (an outcome carries meeting_id and no meeting block of its own: with the block it would read as a revision of the meeting, not an outcome of it)
+  if (e.meeting && !e.meeting_id && anchors.has(meetingSourceKey(e.meeting.reference))) { e.meeting_id = anchors.get(meetingSourceKey(e.meeting.reference)); delete e.meeting; }
   let rec, warnings, alreadyRecorded;
   try {
     ({ rec, warnings, alreadyRecorded } = lib.appendMemory(root, ctx, {
@@ -227,11 +485,32 @@ for (let i = 0; i < entries.length; i++) {
     }));
   } catch (err) { failed.push({ n, why: err.message }); lines.push(`${at(n)}not remembered: ${err.message}`); continue; }
   if (alreadyRecorded) { kept.push({ n, id: rec.id, ctx }); lines.push(`${at(n)}already recorded ${rec.id} in ${ctx}`); continue; }
+  // one current link at a time where SCHEMA.md says so: the previous one gets an ended note dated to this one
+  let endedBefore = [];
+  if (rec.relation) { try { endedBefore = lib.endPreviousRelations(root, ctx, rec); } catch (err) { endedBefore = []; lines.push(`${at(n)}warning: the earlier ${rec.relation.type} was not ended (${err.message})`); } }
+  // and back: a note that ended a link only because of the note withdrawn or replaced here is withdrawn with it
+  let unended = [];
+  if (rec.supersedes || rec.retracts) { try { unended = lib.withdrawEndedBy(root, ctx, rec); } catch (err) { unended = []; lines.push(`${at(n)}warning: a link that note had ended is still marked ended (${err.message})`); } }
+  if (rec.meeting) anchors.set(meetingSourceKey(rec.meeting.reference), rec.meeting_id || rec.id);
+  if (pool) { pool = pool.filter(m => m.id !== rec.supersedes); pool.push(rec); }
   if (e.customer?.reference) lib.addName(root, rec.customer.entity, { references: [e.customer.reference], sources: sourceOf(e) });
 
   // The person sees this line through the model: the note itself, so they know what landed (ALL-209)
   const said = String(rec.content).replace(/\s+/g, " ").trim(), shown = said.length > 240 ? said.slice(0, 237) + "..." : said;
   if (replacing.has(i)) lines.push(`${at(n)}replaced the approved ${replacing.get(i).role} of ${replacing.get(i).entity} (${replacing.get(i).label}, ${replacing.get(i).id}): every chat now uses the new file`);
+  // one short line for the person; the detail line after it is for the model
+  lines.push(`${at(n)}saved in ${titleOf(ctx)}: ${shown.length > 100 ? shown.slice(0, 97) + "..." : shown}`);
+  if (endedBefore.length) { const reg = lib.readNames(root), nm = v => v === "us" ? "us" : reg.find(x => x.id === v || x.previous_ids?.includes(v))?.name || v;
+    for (const x of endedBefore) lines.push(`${at(n)}ended ${nm(x.relation.from)} ${x.relation.type} ${nm(x.relation.to)} (${x.id}): one current ${x.relation.type} at a time, so that one ended on ${String(x.relation.observed_at).slice(0, 10)}. Nothing to do.`); }
+  if (unended.length) { const reg = lib.readNames(root), nm = v => v === "us" ? "us" : reg.find(x => x.id === v || x.previous_ids?.includes(v))?.name || v;
+    for (const x of unended) lines.push(`${at(n)}withdrew ${x.id} with it: it had ended ${nm(x.relation.from)} ${x.relation.type} ${nm(x.relation.to)} only because of that note, so it no longer counts as ended. Nothing to do.`); }
+  if (fromNotes.has(i) && (rec.relation || rec.customer)) lines.push(`${at(n)}${rec.relation ? "relationship" : "customer status"} recorded from notes ${fromNotes.get(i).join(", ")}: say so in your one line.`);
+  for (const k of knownOrgs) lines.push(`${at(n)}"${k.name}" is a known ${k.kind}: linked as that, not as a person.`);
+  if (notPeople.length) lines.push(`${at(n)}${notPeople.map(x => `"${x}"`).join(", ")} in people ${notPeople.length > 1 ? "read as companies" : "reads as a company"}: no person created, nothing to ask. If the note is about ${notPeople.length > 1 ? "them" : "it"}, add_name with kind organization.`);
+  if (droppedRelation.has(i)) lines.push(`${at(n)}the note is saved and says it in words; its relationship block was left out (${droppedRelation.get(i)}). Do not save the note again.`);
+  if (guessed.has(i)) lines.push(`${at(n)}filed under ${titleOf(ctx)} as the best guess (${guessed.get(i)}). Do not ask about it; if the person says it belongs elsewhere, remember a correction with that context.`);
+  if (changes) lines.push(`${at(n)}${changes.beside ? checks.mayChangeLine(changes, titleOf(changes.changed.context)) : checks.changedLine(changes, titleOf(ctx), rec.id)}`);
+  else if (!e.context && !opt.context && !(loaded.length === 1 && loaded[0] === ctx) && evidenceOf(e).why) lines.push(`${at(n)}put in ${titleOf(ctx)}: ${evidenceOf(e).why}.`);
   lines.push(`${at(n)}remembered ${rec.id} in ${ctx} · ${rec.kind} · ${rec.authors.join(", ")}${rec.people.length ? " · people: " + rec.people.join(", ") : ""} · "${shown}"`);
   if (rec.asset) lines.push(assetSummary(root, rec).trim());
   for (const w of warnings) lines.push(`${at(n)}warning: ${w}`);
@@ -242,14 +521,13 @@ for (let i = 0; i < entries.length; i++) {
   }
   if (where.one) lines.push(`${at(n)}tagged project:${where.one}: ${known.join(", ")}'s notes are all in that project. Say so in your reply; if this note is not about it, remember a correction.`);
   if (where.several.length) asks.push(`which project is "${shown.slice(0, 60)}" about: ${where.several.join(" or ")}, or none? (then remember a correction with the project tag)`);
-  // every company in the note with no website is asked once, however it was added (add_name first or here);
-  // our own company and one already asked ("don't know") are not asked again
-  const own = foldName(lib.readAdmin(root)?.company || "");
-  for (const a of rec.people) { const ent = names.find(x => x.name === a); if (ent && ent.kind === "organization" && foldName(a) !== own && !dots.hasWebsite(ent) && !wasAsked(`website:${a}`, Infinity)) { noteAsked([`website:${a}`]); asks.push(`${a}'s website, so the brain knows which ${a} this is ("don't know" is a fine answer; with a website: add_name ${a} with references [{kind: "website", ref: the URL}], then offer a short look-up)`); } }
+  // A company with no website is no longer asked about on a save (live benchmark, 2026-11-15: the question
+  // ended 5 of 14 replies and set off extra reads). It stays a gap on the entity's page and in the rules check.
   // facts for Codex to judge (connect-dots.md): what this note may answer, the meetings around it, what changed
   // one sentence from the person, not a batch of meeting notes or a background run: those would be noise
   const curious = !batched && !e.meeting && !process.env.GTM_BRAIN_RUN;
-  const everything = curious ? lib.listContexts(root).flatMap(c => lib.effectiveMemories(lib.readMemories(root, c.slug))) : [];
+  // (never the ended note this save wrote itself: it is this note's own consequence, not something said before)
+  const everything = curious ? lib.listContexts(root).flatMap(c => lib.effectiveMemories(lib.readMemories(root, c.slug))).filter(m => !m.tags?.includes(`ended-by:${rec.id}`)) : [];
   const open = dots.openQuestions(everything, rec);
   if (open.length) lines.push(`${at(n)}open questions this note may answer: ${open.map(q => `"${q.content.replace(/\s+/g, " ").slice(0, 120)}" (${q.id}, in ${q.context})`).join("; ")}. If it answers one, remember the answer in that question's context with retracts: its id and kind decision, and say so in one line; if not, say nothing about it.`);
   const knownIds = rec.people.map(p => names.find(x => x.name === p)).filter(x => x && !added.includes(x.name)).map(x => x.id);
@@ -260,8 +538,8 @@ for (let i = 0; i < entries.length; i++) {
     if (before.length) lines.push(`${at(n)}the brain last said about ${p}: ${before.map(m => `"${m.content.replace(/\s+/g, " ").slice(0, 100)}" (${m.at.slice(0, 10)})`).join("; ")}. If this note changes one of these, say what changed in one line.`);
   }
   for (const inf of inferred) lines.push(`${at(n)}took "${inf.mention}" as ${inf.name} (rule P2: the one known person with that first name). If it is someone else, say so: remember again with new_names ["${inf.mention}"].`);
-  const missed = lib.candidateEntities(e.content, people, names);
-  if (missed.length) lines.push(`${at(n)}words in this note not linked to anything in the brain: ${missed.map(x => `"${x}"`).join(", ")}. Decide what each is, by connect-dots.md: a person, company or product the note is about gets add_name with its kind (company and team are organization subtypes; ask only when it is not plain); a place, event, project or plain word gets nothing.`);
+  const missed = answering ? [] : lib.candidateEntities(e.content, people, names).filter(x => !notPeople.some(c => fold(c) === fold(x)));   // an answer's words are the question's, already settled
+  if (missed.length) lines.push(`${at(n)}words in this note not linked to anything in the brain: ${missed.map(x => `"${x}"`).join(", ")}. Only one that is a person, company or product the note is about gets add_name with its kind (company and team are organization subtypes; ask only when it is not plain); a place, event, project, code or plain word needs nothing, and no read is needed to decide.`);
   // The last step outcome closes onboarding in the same commit: no separate marker to forget.
   const closed = /^Onboarding step [1-6][ :]/.test(rec.content) ? lib.closeOnboardingFromOutcomes(root, rec.authors) : null;
   const closedIn = closed && lib.readOnboarding(root).context;
@@ -269,27 +547,120 @@ for (let i = 0; i < entries.length; i++) {
   // one commit per memory: git history stays readable as one commit, one memory
   const closedPath = closed ? [`brain/contexts/${closedIn}/memories.jsonl`] : [];
   lines.push(`${at(n)}${lib.commit(root, [`brain/contexts/${ctx}/memories.jsonl`, ...closedPath, ...lib.ENTITIES_PATHS], `remember: ${ctx} ${rec.kind} by ${rec.authors.join(",")}`).note}`);
-  kept.push({ n, id: rec.id, ctx });
+  kept.push({ n, id: rec.id, ctx }); keptRecords.push(rec); toolsNamed.push(...(rec.tools || []), ...(rec.source || []).filter(s => s && !isChatSource(s)).map(s => s.kind));
+  const memPaths = [`brain/contexts/${ctx}/memories.jsonl`, ...lib.ENTITIES_PATHS];
+  const sharing = w => { const s = lib.readNames(root).filter(x => x.kind === "person" && [x.name, ...(x.aliases || [])].some(a => fold(a).split(/\s+/)[0] === fold(w))).map(x => x.name); return s.length > 1 ? s : []; };
+  // the question about a saved note, kept in the brain until the person answers it: on the first save, for the
+  // names an answer left out, and for a correction that named nobody
+  const askNames = (about, list) => {
+    const ask = list.map(u => u.candidates.length ? `Which ${u.mention}: ${u.candidates.join(" or ")}?` : `Who is ${u.mention}?`).join(" ") + (list.some(u => !u.candidates.length) ? " Full name or company." : "");
+    const quote = String(about.content).replace(/\s+/g, " ").trim(), several = list.some(u => u.candidates.length);
+    const { rec: q } = lib.appendMemory(root, ctx, { authors, via: e.via || opt.via || "codex", kind: "question", tools: [], people: [], content: `${ask} (about ${about.id}: "${quote.length > 120 ? quote.slice(0, 117) + "..." : quote}")`, source: rec.source, actions: [], supersedes: null, retracts: null,
+      tags: ["brain-question", NAME_Q, `about:${about.id}`, ...list.map(u => `${u.candidates.length ? "pick" : "name"}:${u.mention}`), ...about.tags.filter(t => t.startsWith("project:"))] });
+    lines.push(`${at(n)}${lib.commit(root, memPaths, `remember: ${ctx} question by ${q.authors.join(",")}`).note}`);
+    noteAsked([...list.map(u => u.mention), ...list.flatMap(u => u.candidates.map(c => `pick:${c}`))]); markHeld(list.map(u => u.mention), null, [q.id]);
+    // the person's line, right under "saved in ...": the question follows the confirmation
+    const savedAt = lines.findIndex(l => l.startsWith(`${at(n)}saved in `));
+    lines.splice(savedAt + 1, 0, `${at(n)}${ask}`);
+    lines.push(`${at(n)}${list.map(u => `"${u.mention}"`).join(", ")} ${several ? "could be several known people" : `${list.length > 1 ? "are each" : "is"} one word and nobody known has it`} (rule ${several ? "P2" : "P3"}): the note is saved with the name as written and no new person; the question is kept as ${q.id} in ${ctx}, a pending brain question. Never answer it yourself. When the person answers: remember one entry with context: ${ctx}, retracts: ${q.id}, kind decision, content: their answer in their words, and the full name in people (someone new: new_names too), or the company in companies; ${about.meeting || about.meeting_id ? `then remember ${about.id} again with supersedes: ${about.id} and that name in people (a meeting note is not relinked by the brain)` : `the brain then attaches it to ${about.id} by itself`}.`);
+    if (!asks.includes(ask)) asks.unshift(ask);   // two notes in one call about the same name: one part of the question
+  };
+  // the answer to a name question: the note it was about, again, with the name attached
+  if (answering) {
+    const about = tagValues(answering, "about")[0], words = wordsOf(answering), picks = tagValues(answering, "pick");
+    const note = lib.effectiveMemories(lib.readMemories(root, ctx)).find(m => m.id === about);
+    // a name question is about a person: the people the answer names, not the company it adds ("Jakub Sadowski, from SurferSEO", s04)
+    const reg = lib.readNames(root), newly = rec.people.filter(p => !(note?.people || []).includes(p) && !speakers.includes(p));
+    const persons = newly.filter(p => reg.find(r => r.name === p)?.kind === "person"), named = persons.length ? persons : newly;
+    const first = p => foldName(p).split(/\s+/)[0];
+    // each word asked about takes the name that starts with it; one word and one name need no match (a nickname, a company).
+    // Anyone else the answer names ("she reports to Piotr Nowak") stays with the answer, not with the note.
+    const answered = words.map(w => ({ w, name: named.find(p => first(p) === foldName(w)) || (words.length === 1 && named.length === 1 ? named[0] : null) })).filter(x => x.name);
+    const plain = note && !note.asset && !note.customer && !note.relation && !note.meeting && !note.meeting_id;
+    if (plain && answered.length) {
+      const kept0 = (note.entity_mentions || []).map(x => ({ mention: x.mention, name: reg.find(r => r.id === x.entity)?.name, resolution: x.resolution, rule: x.rule })).filter(x => x.name);
+      const attach = [...new Set(answered.map(x => x.name))];
+      // resolution stays one a released lib reads (confirmed_new: on the person's word); a new value would stop an older teammate's index
+      const said = answered.map(({ w, name }) => ({ mention: w, name, resolution: "confirmed_new", rule: picks.includes(w) ? "P2" : "P3" }));
+      try {
+        // the note that replaces it reads with the full name: "Fabian says" becomes "Fabian Struck says", "Kuba agreed" becomes "Jakub Sadowski (Kuba) agreed"
+        let content = note.content;
+        for (const { w, name } of answered) {
+          if (new RegExp(`\\b${esc(name)}\\b`, "i").test(content)) continue;
+          content = content.replace(new RegExp(`\\b${esc(w)}\\b`), first(name) === foldName(w) ? name : `${name} (${w})`);
+        }
+        const { rec: linked } = lib.appendMemory(root, ctx, { authors: note.authors, via: note.via, kind: note.kind, tools: note.tools, people: [...note.people, ...attach], mentions: [...kept0, ...said], content, source: note.source, actions: note.actions, supersedes: note.id, retracts: null, tags: note.tags });
+        lines.push(`${at(n)}linked ${answered.map(x => `"${x.w}"`).join(", ")} in ${note.id} to ${attach.join(", ")}: ${linked.id} replaces it, now reading "${String(linked.content).replace(/\s+/g, " ").slice(0, 160)}". Say so in one line; nothing else to save for this answer.`);
+        lines.push(`${at(n)}${lib.commit(root, memPaths, `remember: ${ctx} ${linked.kind} by ${linked.authors.join(",")}`).note}`);
+        // a name the answer left out is still asked, now about the note that replaced the first one
+        const rest = words.filter(w => !answered.some(x => x.w === w));
+        if (rest.length) askNames(linked, rest.map(w => ({ mention: w, candidates: picks.includes(w) ? sharing(w) : [] })));
+      } catch (err) { lines.push(`${at(n)}the question is closed, but ${note.id} could not be linked (${err.message}): remember it again with supersedes: ${note.id} and the full name in people.`); }
+    } else if (note) lines.push(`${at(n)}the question is closed; ${!named.length ? "no new name came with the answer, so" : !plain ? `${note.id} is not a plain note, so` : `the answer does not say which of ${named.join(", ")} is ${words.map(w => `"${w}"`).join(", ")}, so`} attach it by remembering ${note.id} again with supersedes: ${note.id} and the full name in people.`);
+  }
+  // a note replaced or withdrawn by hand closes the name question about it
+  if (!answering && (e.supersedes || e.retracts)) for (const q of openNameQuestions(ctx).filter(q => tagValues(q, "about").includes(e.supersedes || e.retracts))) {
+    // a correction that still has the word and names nobody new has not said who it is: the question moves to the new note
+    const old = e.supersedes ? lib.readMemories(root, ctx).find(m => m.id === e.supersedes) : null;
+    const carried = !old || rec.people.some(p => !(old.people || []).includes(p)) ? [] : wordsOf(q).filter(w => fold(rec.content).includes(fold(w)));
+    for (const w of carried) if (!unclear.some(u => fold(u.mention) === fold(w))) unclear.push({ mention: w, candidates: tagValues(q, "pick").includes(w) ? sharing(w) : [] });
+    const again = wordsOf(q).some(w => unclear.some(u => fold(u.mention) === fold(w)));
+    const { rec: closedQ } = lib.appendMemory(root, ctx, { authors, via: e.via || opt.via || "codex", kind: "decision", tools: [], people: rec.people.filter(p => names.find(x => x.name === p)?.kind === "person"), content: e.retracts ? `Not asked any more: ${e.retracts} was withdrawn (${rec.id}).` : again ? `Asked again about ${rec.id}, which replaces ${e.supersedes}.` : `Answered by ${rec.id}, which replaces ${e.supersedes}${rec.people.length ? ` and names ${rec.people.join(", ")}` : ""}.`, source: rec.source, actions: [], supersedes: null, retracts: q.id, tags: [] });
+    lines.push(`${at(n)}closed the name question ${q.id} (${closedQ.id}).`);
+    lines.push(`${at(n)}${lib.commit(root, memPaths, `remember: ${ctx} ${closedQ.kind} by ${closedQ.authors.join(",")}`).note}`);
+  }
+  // saved with the name as written: the question is kept in the brain until the person answers it
+  if (unclear.length && !heldAnyway) askNames(rec, unclear);
 }
 
 /* what the brain cannot settle by itself, for one question with numbered parts */
 /* the look-alike names, in one place, so only the entries that need an answer are re-sent */
+// P4 stays Codex's call (13 Nov): the tool only says how far the surnames are, so a clearly different one
+// ("Florian Kim", "Florian Weber") is not pushed towards a question (live scenario new-surname, 15 Nov).
+function surnameGap(mention, x) {
+  if (!x || x.kind !== "person") return 0;
+  const w = s => fold(s).split(/\s+/).filter(Boolean), a = w(mention), b = w(x.name);
+  if (a.length < 2 || b.length < 2 || a[0] !== b[0]) return 0;
+  const s = a[a.length - 1], u = b[b.length - 1], d = Array.from({ length: s.length + 1 }, (_, i) => [i, ...Array(u.length).fill(0)]);
+  for (let j = 1; j <= u.length; j++) d[0][j] = j;
+  for (let i = 1; i <= s.length; i++) for (let j = 1; j <= u.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (s[i - 1] === u[j - 1] ? 0 : 1));
+  return d[s.length][u.length];
+}
 const holdReport = () => { const loose = held.flatMap(h => h.unnamed || []), alike = held.flatMap(h => h.mentions.filter(m => !(h.unnamed || []).includes(m)));
+  const q = list => list.map(m => `"${m}"`).join(", ");
   const decide = [
-    alike.length ? `${alike.map(m => `"${m}"`).join(", ")}: decide by P4. One or two letters off a known name: ask "same as X?" (yes: add_name with aliases [this spelling]; no: new_names). A clearly different surname: someone else, send it in new_names without asking` : "",
-    loose.length ? `${loose.map(m => `"${m}"`).join(", ")}: decide by P3. A company, product or team the note plainly names goes in companies (or new_names with add_name for its kind); a person: ask for the full name ("${loose[0]} who?")` : "",
+    alike.length ? `${q(alike)}: ask "same as X?". Yes: add_name with aliases [this spelling]. No: resend with new_names` : "",
+    loose.length ? `${q(loose)}: a company, product or team goes in companies, no question; a person needs the full name, so ask "${loose[0]} who?"` : "",
   ].filter(Boolean);
-  return `${batched ? `not kept (${held.length} of ${entries.length})` : "not remembered yet"}: ${held.map(h => `${at(h.n)}${h.why}`).join(batched ? "\n" : "; ")}.${decide.length ? ` ${decide.join(". ")}.` : ""} ${held.some(h => h.ask) || alike.length || loose.length ? `Whatever is still unclear: one question (Q2), ${askIn} (Q1), and wait for the reply (Q3).` : "No question needed: change the note as the rule says and send it again."} Then remember ${batched ? "the held-back entries" : "again"}.${rules()}`; };
+  // a question only for what the person alone knows; everything else is fixed and resent without one
+  const person = held.some(h => h.ask) || alike.length || loose.length;
+  return `${batched ? `not kept (${held.length} of ${entries.length})` : "not remembered yet"}: ${held.map(h => `${at(h.n)}${h.why}`).join(batched ? "\n" : "; ")}.${decide.length ? ` ${decide.join(". ")}.` : ""} ${person ? `Ask one question, ${askIn}, and wait for the reply.` : "No question needed: fix it and resend."}${batched ? " Resend only the held entries." : ""}${rules()}`; };
 
 if (!kept.length) { console.error(held.length ? holdReport() : lines.join("\n") + rules()); process.exit(2); }
 
 if (batched) console.log(`kept ${kept.length} of ${entries.length}: ${kept.map(k => `${k.id} in ${k.ctx}`).join(", ")}${failed.length ? `; not kept: ${failed.map(f => "#" + f.n).join(", ")} (see below; call again with only those)` : ""}`);
 for (const l of lines) console.log(l);
 if (held.length) console.log(holdReport());
-if (asks.length) console.log(`Ask the person once, ${askIn}, after quoting the note${held.some(h => h.ask) ? ", in the same question as the held entries" : ""}, one numbered part each: ${asks.map((a, k) => `${k + 1}) ${a}`).join(" ")}. Never more than this one question.`);
+if (asks.length) console.log(`Ask the person one question, ${askIn}, after quoting the note${held.some(h => h.ask) ? ", together with the held entries" : ""}: ${asks.map((a, k) => `${k + 1}) ${a}`).join(" ")}`);
 
-// once for the whole call, not once per memory
-// The shared refresh path starts compilation for saved changes.
-if (!process.env.GTM_BRAIN_NO_COMPILE) console.log("the summaries update by themselves after each saved change; do not compile in this chat and do not offer to.");
+// 0.35.0: no summary is promised after a save; a topic's summary is written when someone asks (lib/summaries.mjs)
+// a plain save needs one line back, not this output repeated (replies were as long as before, benchmark 2026-11-15)
+// R2: a note withdrawn from one context and written into another in the same call was moved because the person
+// questioned where it was saved ("that should go to Strategy"): the rule they named is offered, not left to memory.
+let movedNote = null;
+{ const words = s => String(s || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const moved = keptRecords.filter(r => r.retracts).flatMap(r => { const home = lib.listContexts(root).find(c => c.memories.some(m => m.id === r.retracts)); const old = home && home.memories.find(m => m.id === r.retracts);
+    return old ? keptRecords.filter(x => !x.retracts && x.context !== home.slug && (words(x.content).includes(words(old.content)) || words(old.content).includes(words(x.content)))).map(x => ({ from: home.slug, to: x.context })) : []; });
+  if (moved.length) movedNote = `moved from ${moved[0].from} to ${moved[0].to}: the person questioned where it was saved. After fixing it, offer once to keep the rule in RULES.md under "## Our rules" (R2), in their words, for example "Keynote speakers go to Strategy", with Yes, add the rule and No, just this once.`; }
+if (movedNote) console.log(movedNote + " Apart from that offer, reply in one line and do not repeat this output.");
+else if (kept.length && !held.length && !failed.length && !asks.length && !process.env.GTM_BRAIN_RUN) console.log("Reply to the person in one line: what was saved. Do not repeat this output or add offers.");
 if (!held.length && rules()) console.log(rules().trim());
+// A note from a tool the brain's tools list does not know yet (MagicPath, ZYNT): check the tools in the
+// background, so the dashboard lists it without waiting for someone to ask (connect.mjs: "a memory came from it").
+if (!process.env.GTM_BRAIN_NO_TOOLS_CHECK && !process.env.GTM_BRAIN_NO_COMMIT && !process.env.NODE_TEST_CONTEXT) {   // never from tests or dry runs
+  let known = []; try { known = Object.entries(JSON.parse(readFileSync(join(root, "work", "tools.json"), "utf8"))).flatMap(([k, s]) => [k, s && s.tool, s && s.plugin, s && s.display]); } catch {}
+  const flat = s => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const has = new Set(known.map(flat).filter(Boolean)), NEVER = new Set(["memory", "file", "url", "web", "person", "manual", "document"]);
+  if (toolsNamed.map(flat).some(x => x.length >= 3 && !NEVER.has(x) && !has.has(x))) spawn(process.execPath, [new URL("../gtm-brain-connect/connect.mjs", import.meta.url).pathname, root, "--check"], { detached: true, stdio: "ignore", env: { ...process.env, GTM_BRAIN_CODEX_TIMEOUT: "20000" } }).unref();
+}
 lib.rerender(root);

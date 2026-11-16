@@ -9,6 +9,7 @@ description: |
   saving an ICP already written (gtm-brain-use-brain, references/documents.md).
 metadata:
   author: Chris Pawlak
+  needs: "kind:organization, kind:person, field:organization.industry, field:organization.size"
 allowed-tools: [Bash, Read]
 ---
 

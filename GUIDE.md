@@ -33,7 +33,7 @@ does not copy your data.
 
 Codex opens with one line telling you where you are:
 
-> In Target customers. Two new notes: Pierre asked for a TCO, and Anna confirmed the buying team. The summary is updating in the background.
+> In Target customers. Two new notes: Pierre asked for a TCO, and Anna confirmed the buying team. The summary is written when you ask about the topic.
 
 Then you just talk. The things worth knowing:
 
@@ -133,6 +133,82 @@ is saved in the brain. Your reply style is learned from your own Slack replies, 
 before it is saved, and kept as a short description, never as your messages. The procedure is
 [slack-replies.md](plugins/gtm-brain/skills/gtm-brain-todo/references/slack-replies.md).
 
+## Workshop demo: the two loops
+
+Two stories show the brain end to end: an outreach lifecycle and a content loop. Build the demo
+brain with `node plugins/gtm-brain/test/live/demo-loops.mjs --brain-only` (a contributor
+checkout). It holds Reflow Fixture: a filled ICP, strategy and tone of voice, Zynt signals, customer
+words from two calls, and the project folders Outbound and Website. Open it as a Codex project.
+Nothing is sent or published. You tell Codex what Clay, Surfer, Gmail and Vercel returned. The same
+script without `--brain-only` types these sentences into Codex and checks every step. The summaries
+in this brain were never compiled, so Codex may end its first answer by offering to compile them.
+
+**Outreach.** Type each line in one chat:
+
+1. *We want to start outreach this week. From our ICP and the buying signals in the brain, which
+   two accounts should we contact first, and why? Name the person to write to if we know one. Do
+   not save anything yet.* Fernbrook Outdoor comes first: an ICP fit with a Head of Returns job
+   post. Umber Pharma, a pharmacy chain the ICP rules out, is not picked.
+2. *I ran Clay on Fernbrook Outdoor. It returned: 85 stores in Germany and Austria, about 1,400
+   employees, returns handled by hand in each store. Their Head of Operations is Lea Hoffmann,
+   lea.hoffmann@fernbrook-outdoor.example, based in Munich. Save what Clay found.* A note in the
+   brain; Lea Hoffmann appears under Entities.
+3. *Draft the first outreach email to Lea, tied to the Zynt signal, in our tone of voice. Draft
+   only: do not send anything. Put the draft as a Markdown file in the outbound project folder.* A
+   Markdown draft in `projects/outbound/`: short sentences, no exclamation marks, signed Marta.
+   Nothing is sent.
+4. *I sent that email to Lea from Gmail on 11 November. She replied on 13 November: "Interesting
+   timing. We are in the middle of an ERP migration until January. Ping me after 10 January."
+   Record both.* Two notes, with the follow-up date.
+5. *Draft the follow-up for 11 January that picks up her reply. Draft only, same folder.* A second
+   draft, about the migration.
+6. *Lea booked a pilot scoping call for 14 January. Fernbrook Outdoor is now a prospect for us.
+   Record the call and their status in the brain. Do not touch the CRM.* Fernbrook Outdoor shows as
+   a prospect in the dashboard's customers.
+7. In a **new chat**: *Where do we stand with Fernbrook Outdoor? Who is our contact, what happened
+   so far, and what is next? Do not save anything.* The whole thread comes back from the brain:
+   Lea, the migration, the 14 January call, prospect.
+
+**Content.** In another chat:
+
+1. *Plan our blog. Read our strategy, the market notes and what customers said on calls. Surfer
+   gave us these keywords (monthly searches, difficulty): 'returns automation for retailers' 1,900
+   / 34; 'reduce return rate retail' 880 / 22; 'store pickup returns' 320 / 12. Propose three posts
+   for the landing page blog, each with its keyword and the customer words it uses. Do not save
+   anything yet.* Three topics, each with its keyword and a customer's own words ("after Black
+   Friday we drown in return tickets").
+2. *Go with 'store pickup returns' first; save that as a decision. Then draft the post in our tone
+   of voice: about 600 words, an SEO title under 60 characters, a meta description under 155
+   characters, one H1, the keyword in the title and in the first paragraph. Put the draft in the
+   website project folder as Markdown, with title and description in its front matter.* A decision
+   note and a Markdown post in `projects/website/` that passes those checks.
+3. *The post went live today at https://reflow.example/blog/store-pickup-returns, deployed with the
+   landing page on Vercel. Remember that it was published.* A note with the URL.
+4. *Two weeks of numbers for that post: 1,240 visits, position 8 for 'store pickup returns', 3 demo
+   requests, one of them from Lumen Outdoor. Record what it produced.* A note linked to Lumen
+   Outdoor.
+5. In a **new chat**: *What has our blog produced so far, and which post should come next? Do not
+   save anything.* The results, and a post from a pillar still open: returns cost or peak season.
+
+## Workshop demo on stub tools
+
+`node plugins/gtm-brain/test/live/demo-loops.mjs --stub` runs the same loops, but Codex calls the
+outside tools instead of being told what they returned. `test/live/stub-gtm-tools.mjs` stands in for
+them: a company search and an enrichment (what Clay does), buying signals (Zynt), keyword research
+and a content score (Surfer). It is declared to Codex beside GTM Brain for that run only, never in
+your own Codex configuration. The outreach loop gains a first step, the company search by the ICP.
+After every step the check also asks: was the right tool called with criteria from the brain (the ICP
+document, the saved prospects), was what came back saved with a source pointing at the tool, does
+the brain's tools list show the tool as used, and was nothing sent. Every call is logged in
+`stub-calls.jsonl` beside the brain. Add `--fail expired_key`, `--fail empty` or `--fail rate_limit`
+(with `--step o2-enrich`, for example) to see what Codex tells the person when a tool fails. A failure
+run asks only the steps that call a tool, and passes when Codex says what failed, saves nothing the
+tool did not return and stops asking after three calls. On 15 November an empty result did not pass:
+Codex asked the same tool 16 and 42 times before it gave up.
+
+What the stubs do not prove: real sign-in and keys, the real tools' rate limits and cost per call,
+and the real tools' data shapes and quality. The fixture data is small and fits the demo brain.
+
 ## Three habits that make it work
 
 1. **Say where you are.** Load the context before you start; Codex keeps you there.
@@ -168,6 +244,8 @@ opened as a Codex project, say `/gtm-brain-project`: it asks which brain, whethe
 you do here, and which contexts this project touches. From then on a chat there starts with its
 own open contexts and every note is tagged with the project; everything is still in the one
 brain, searchable from anywhere. Ask "list projects" to see them, "unlink this project" to stop.
+People and companies are shared by every project, and a project is a folder plus a tag, not a
+second memory: see [One brain, many projects](plugins/gtm-brain/MANUAL.md#one-brain-many-projects).
 
 A linked code repository stays yours: its own `.claude/` and `brain/` paths are never blocked,
 and the brain's skill links are kept out of its `git status`. The link itself is a block in the
@@ -190,7 +268,7 @@ brain/entities/<id>.md               identity and cited briefs
 brain/contexts/<context>/context.md  the context summary and rules
 brain/contexts/<context>/memories.jsonl   the notes, one per line
 README.md                            what goes where; setup writes it, upgrade refreshes it while unedited
-strategy.md, icp.md, voice.md, ...  your documents (four from day one), files in a folder of the same name
+strategy.md, icp.md, voice.md, ...  your documents (five from day one), files in a folder of the same name
 RULES.md                             where every file goes and your own saving rules; you edit it
 SCHEMA.md                            fields kept per person, organization, product; relationship types
 projects/<project>/                  one folder per project (an event, a campaign), its deliverables inside
@@ -203,7 +281,22 @@ A project folder holds drafts and deliverables for one piece of work (the websit
 `brain/` is what Codex remembers: notes by topic, people, companies. Nothing else belongs at the
 top, and `README.md` says so: a `company/` folder with subfolders is a container nobody reads.
 A strategy is a document plus, once written, its decisions as notes in the Strategy context;
-say `add strategy.md as a document` to register one you wrote by hand.
+say `add strategy.md as a document` to register one you wrote by hand. `voice.md` is filled by
+`/gtm-brain-voice`: it asks whose voice it is, reads writing that fits (the company's own pages,
+posts and outbound mail; your own writing for a personal voice), tests the draft on one fresh
+piece you edit, and tells you the sentence to try in a new chat; run it again whenever the way
+you write changes.
+
+Your own base files: say `add pricing as a base file` (or positioning, competitors, objections,
+anything). Codex checks whether an existing file already covers it and offers a section there
+first, drafts from what the brain already knows with the notes it used listed (or asks you for
+two or three facts when it knows nothing), shows the draft in full and asks one thing: what work
+should follow it. Picking one saves it as a draft. A Markdown you drop at the top by hand is noticed
+("pricing.md is here but the brain does not use it yet") and adopted with only frontmatter added.
+
+Recordings and files over 25 MB never go into git. Drop one in the chat: Codex puts it in your
+Google Drive folder (or the folder outside git that you chose during setup, `big_files` in
+`brain/admin.md`) and the note about it keeps the link.
 
 A context's standing instructions (`rule`) describe its purpose, meaningful boundaries and
 how Codex should work there. The dashboard shows them as Instructions; change them in chat.

@@ -1,3 +1,6 @@
+// These tests read and write the root files of a layout 2 brain: setup and the lib play a plugin that writes layout 2 at most
+// (lib/layout-version.mjs GTM_BRAIN_TEST_LAYOUT). Layout 3 (about-us/, config/) is covered by config-folders.test.mjs.
+process.env.GTM_BRAIN_TEST_LAYOUT = "2";
 process.env.GTM_BRAIN_NO_WATCH = "1";
 process.env.GTM_BRAIN_NO_COMPILE = "1"; // Model runs are opt-in through test doubles.
 // The MCP server: handshake, tool list, and the tools on a brain made by setup_brain.
@@ -14,7 +17,7 @@ const lib = await import(`${P}/lib/brain.mjs`);
 // Keep real installation preferences out of synthetic test brains.
 process.env.CODEX_HOME = mkdtempSync(join(tmpdir(), "gtm-brain-test-profile-"));
 
-const server = spawn(process.execPath, [`${P}/server/server.mjs`], { stdio: ["pipe", "pipe", "pipe"], env: { ...process.env, GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_SESSION_START: "1" } });
+const server = spawn(process.execPath, [`${P}/server/server.mjs`], { stdio: ["pipe", "pipe", "pipe"], env: { ...process.env, GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_SESSION_START: "1", GTM_BRAIN_NO_SAVE_NUDGE: "1" } });
 const pending = new Map(); let seq = 0;
 createInterface({ input: server.stdout }).on("line", line => { const m = JSON.parse(line); const r = pending.get(m.id); if (r) { pending.delete(m.id); r(m); } });
 const rpc = (method, params = {}) => new Promise(res => { const id = ++seq; pending.set(id, res); server.stdin.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n"); });
@@ -183,11 +186,12 @@ test("handshake and tool list carry titles and the brain parameter", async () =>
   assert.deepEqual(update.inputSchema.required, ["mode"]);
   assert.equal(update.annotations.openWorldHint, true);
   for (const n of ["load_context", "remember", "query", "render_dashboard", "open_dashboard", "archive_context", "edit_context", "add_name", "propose_admin_change", "setup_brain"]) assert.ok(names.includes(n), n);
-  // compilation belongs to the scheduled and background runs: a chat never sees the tools (ALL-204 step 1)
-  for (const n of ["compile_facts", "compile_apply", "compile_entity"]) assert.ok(!names.includes(n), `${n} is not offered to a chat`);
+  // 0.35.0: summaries are written on demand in the chat that asks, so a chat sees the writers; entity_facts stays with the runs
+  for (const n of ["compile_facts", "compile_apply", "compile_entity"]) assert.ok(names.includes(n), `${n} is offered to a chat`);
+  assert.ok(!names.includes("entity_facts"), "entity_facts is not offered to a chat");
   const rem = result.tools.find(t => t.name === "remember");
   assert.equal(rem.title, "Remembering"); assert.equal(rem.annotations.readOnlyHint, false);
-  assert.deepEqual(rem.inputSchema.required, ["brain", "by"], "content or memories: a turn's findings go in one call");
+  assert.deepEqual(rem.inputSchema.required, ["brain"], "content or memories: a turn's findings go in one call; by is optional (the person in this chat)");
   assert.deepEqual(rem.inputSchema.properties.memories.items.required, ["content"]);
   // a root anyOf made Codex offer remember with no inputs at all (0.28.2): every root is a plain object
   for (const t of result.tools) assert.deepEqual(["anyOf", "oneOf", "allOf", "not", "enum"].filter(k => k in t.inputSchema), [], `${t.name}: root combinator in its advertised schema`);
@@ -387,7 +391,7 @@ test("the interactions are the ontology's: none hand-written twice, names and ti
   const { result } = await rpc("tools/list");
   const r = compareCatalog(onto, result.tools);
   assert.deepEqual(onto.actions.map(a => a.tool_name).sort(), ["add_name", "archive_context", "archive_entity", "compile_apply", "compile_entity", "edit_context", "fork_context", "merge_entities", "new_context", "remember", "undo_entity_merge", "update_entity"]);
-  assert.deepEqual(r.renameCandidates, [], "no act_ names"); assert.deepEqual(r.missingInHost.sort(), ["compile_apply", "compile_entity"], "only the run-only compile tools are hidden from a chat"); assert.deepEqual(r.duplicates, []);
+  assert.deepEqual(r.renameCandidates, [], "no act_ names"); assert.deepEqual(r.missingInHost.sort(), [], "every interaction is offered to a chat, the summary writers included (0.35.0)"); assert.deepEqual(r.duplicates, []);
   assert.ok(!r.extra.some(x => onto.actions.some(a => a.tool_name === x.name)), "a described interaction is not also hand-written");
   for (const [name, title] of [["new_context", "Opening a context"], ["add_name", "Adding a name"]]) assert.equal(result.tools.find(t => t.name === name).title, title);
   // and they run: a channel opened through the generated tool is a channel
@@ -443,21 +447,36 @@ test("the plugin people install carries no developer tooling", async () => {
   assert.ok(!existsSync(`${P}/skills/gtm-brain-review-tools`), "no developer skill under the shipped skills");
 });
 
-test("evaluation proxy exposes a harmless competitor and refuses other roots and contexts", async () => {
-  const trace = join(root, "work", "proxy-test.jsonl");
-  const proxy = spawn(process.execPath, [`${P}/test/live/tool-routing-proxy.mjs`, root, trace], { stdio: ["pipe", "pipe", "pipe"] });
-  const waits = new Map(); let id = 0;
+test("evaluation proxy exposes a harmless competitor and refuses other roots and contexts", { timeout: 60000 }, async () => {
+  // Its own brain: run alone (--test-name-pattern) this test used to hang, because the shared
+  // brain had no work/ folder before the setup test ran, the proxy died writing its trace there,
+  // and nothing ever answered the first request. A proxy that exits now fails the request.
+  const brain = mkdtempSync(join(tmpdir(), "gtm-proxy-mcp-"));
+  mkdirSync(join(brain, "brain")); mkdirSync(join(brain, "work"));
+  writeFileSync(join(brain, "brain", "admin.md"), lib.renderFrontmatter({ company: "Proxy Fixture", team: [{ name: "Marta Nowak", handle: "marta", email: "marta@fixture.test" }] }));
+  lib.writeContext(brain, "offer", { title: "Offer" });
+  const trace = join(brain, "work", "proxy-test.jsonl");
+  const proxy = spawn(process.execPath, [`${P}/test/live/tool-routing-proxy.mjs`, brain, trace], { stdio: ["pipe", "pipe", "pipe"] });
+  const waits = new Map(); let id = 0, stderr = "";
+  proxy.stderr.on("data", d => { stderr += d; });
+  proxy.on("exit", code => { for (const [, w] of waits) w.reject(new Error(`evaluation proxy exited (${code}) before answering: ${stderr.slice(-500)}`)); waits.clear(); });
   const reader = createInterface({ input: proxy.stdout });
-  reader.on("line", line => { const message = JSON.parse(line); const next = waits.get(message.id); if (next) { waits.delete(message.id); next(message.result); } });
-  const ask = (method, params) => new Promise(resolve => { const requestId = ++id; waits.set(requestId, resolve); proxy.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: requestId, method, params }) + "\n"); });
+  reader.on("line", line => { const message = JSON.parse(line); const next = waits.get(message.id); if (next) { waits.delete(message.id); next.resolve(message.result); } });
+  const ask = (method, params) => new Promise((resolve, reject) => { const requestId = ++id; waits.set(requestId, { resolve, reject }); proxy.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: requestId, method, params }) + "\n"); });
   try {
     const catalog = await ask("tools/list", {});
     assert.ok(catalog.tools.some(t => t.name === "computer_use"));
     assert.ok(!catalog.tools.some(t => t.name === "setup_brain"));
-    for (const arguments_ of [{ brain: P, object: "memories" }, { brain: root, by: "marta", context: "../offer", content: "No write" }]) {
+    // The same calls on the fixture brain and its real context pass through: the two refusals
+    // below are the proxy's, each for its own reason, not a brain that fails every call.
+    const allowed = await ask("tools/call", { name: "query", arguments: { brain, object: "contexts" } });
+    assert.ok(!allowed.isError && /offer/.test(allowed.content[0].text), allowed.content[0].text);
+    for (const [arguments_, reason] of [[{ brain: P, object: "memories" }, /^Only the synthetic evaluation brain is allowed$/], [{ brain, by: "marta", context: "../offer", content: "No write" }, /^Only existing synthetic contexts are allowed$/]]) {
       const response = await ask("tools/call", { name: arguments_.object ? "query" : "remember", arguments: arguments_ });
-      assert.equal(response.isError, true);
+      assert.equal(response.isError, true); assert.match(response.content[0].text, reason);
     }
+    const journal = join(brain, "brain", "contexts", "offer", "memories.jsonl");
+    assert.ok(!existsSync(journal) || !readFileSync(journal, "utf8").includes("No write"), "the refused note was not written");
     const fallback = await ask("tools/call", { name: "computer_use", arguments: { action: "inspect" } });
     assert.equal(fallback.isError, true); assert.match(fallback.content[0].text, /No UI access or writes/);
   } finally { reader.close(); proxy.stdin.end(); proxy.kill(); }
@@ -471,10 +490,14 @@ test("interact: the company's interaction records the prescribed memory and says
     record: { context: "pipeline", kind: "note", companies: ["deal"], people: [], content: "Moved {deal} to {stage}.{note? Note: {note}}", action: "attio:move deal:{deal}", tags: ["deal-stage"] } }]);
   const catalog = await call("list_objects", { brain: root });
   assert.match(catalog.text, /Interactions of this company \(run with interact\):\n- move_deal\(deal, stage, note\?\) \[attio\]: A deal changes stage\./);
-  const done = await call("interact", { brain: root, by: "marta", name: "move_deal", params: { deal: "Castorama", stage: "proposal", note: "asked for a discount" } });
-  assert.ok(!done.isError, done.text); assert.match(done.text, /^ok: move_deal/); assert.match(done.text, /remembered m_[0-9a-f]{12} in pipeline/); assert.match(done.text, /Now in attio: Move the deal to the given stage in Attio\./);
+  const asked = { brain: root, by: "marta", name: "move_deal", params: { deal: "Castorama", stage: "proposal", note: "asked for a discount" } };
+  const first = await call("interact", asked);
+  assert.ok(!first.isError, first.text); assert.match(first.text, /^checked: move_deal; nothing recorded yet/); assert.match(first.text, /Now in attio: Move the deal to the given stage in Attio\./);
+  assert.ok(!lib.readMemories(root, "pipeline").some(x => /Moved Castorama/.test(x.content)), "nothing recorded before the connector confirms");
+  const done = await call("interact", { ...asked, outcome: "done", refs: ["attio:deals/d-77"] });
+  assert.ok(!done.isError, done.text); assert.match(done.text, /^ok: move_deal/); assert.match(done.text, /remembered m_[0-9a-f]{12} in pipeline/);
   const m = lib.effectiveMemories(lib.readMemories(root, "pipeline")).find(x => /Moved Castorama to proposal/.test(x.content));
-  assert.ok(m, "the memory is in pipeline"); assert.deepEqual(m.actions, [{ tool: "attio", action: "move deal", ref: "Castorama" }]); assert.deepEqual(m.people, ["Castorama"]); assert.deepEqual(m.tools, ["attio"]); assert.deepEqual(m.tags, ["deal-stage"]); assert.match(m.content, /Note: asked for a discount/);
+  assert.ok(m, "the memory is in pipeline"); assert.deepEqual(m.actions, [{ tool: "attio", action: "move deal", ref: "Castorama" }]); assert.deepEqual(m.people, ["Castorama"]); assert.deepEqual(m.tools, ["attio"]); assert.deepEqual(m.tags, ["deal-stage"]); assert.match(m.content, /Note: asked for a discount/); assert.ok(m.source.some(s => s.kind === "attio" && s.ref === "deals/d-77"), "the connector's reference is the note's source");
   const missing = await call("interact", { brain: root, by: "marta", name: "move_deal", params: { deal: "Castorama" } });
   assert.equal(missing.isError, true); assert.match(missing.text, /stage/);
   const unknown = await call("interact", { brain: root, by: "marta", name: "close_deal", params: {} });
@@ -570,11 +593,27 @@ test("MCP capture preserves direct links through memory storage and the rendered
   const r=await call("remember",{brain:root,by:"marta",context:"icp",content:"Direct source capture verified.",sources:[`gmail:${gmail}`,`attio:${attio}`,"https://example.com/original?part=a,b#section"]});
   assert.ok(!r.isError,r.text);
   const memory=lib.readMemories(root,"icp").find(m=>m.content==="Direct source capture verified.");
-  const expected=[{kind:"gmail",ref:gmail},{kind:"attio",ref:attio},{kind:"url",ref:"https://example.com/original?part=a,b#section"}];
+  // An Attio record URL is one entry: the record pointer, its workspace as the account, and the link kept as url.
+  const expected=[{kind:"gmail",ref:gmail},{kind:"attio",account:"workspace",ref:"record/returned-id",url:attio},{kind:"url",ref:"https://example.com/original?part=a,b#section"}];
   assert.deepEqual(memory.source.filter(s=>s.kind!=="codex"),expected);
   await call("render_dashboard", { brain: root });
   const data=JSON.parse(readFileSync(join(root,"work/home/data.json"),"utf8"));
-  assert.deepEqual(data.contexts.find(c=>c.slug==="icp").memories.find(m=>m.id===memory.id).source.filter(s=>s.kind!=="codex"),expected);
+  const shown=data.contexts.find(c=>c.slug==="icp").memories.find(m=>m.id===memory.id).source.filter(s=>s.kind!=="codex");
+  assert.deepEqual(shown,expected);
+  // The dashboard data still carries a usable link for every source: url on the entry, or the ref itself.
+  assert.deepEqual(shown.map(s=>new URL(s.url||s.ref).href),[gmail,attio,"https://example.com/original?part=a,b#section"]);
+  // A source given as an object names its account; an http link may ride along as url.
+  const obj=await call("remember",{brain:root,by:"marta",context:"icp",content:"Object source capture verified.",sources:[{kind:"Gmail",account:"Sales@Fixture.test",ref:"thread-77"},{kind:"hubspot",account:"123456",ref:"0-1/42",url:"https://app.hubspot.com/contacts/123456/record/0-1/42"}]});
+  assert.ok(!obj.isError,obj.text);
+  assert.deepEqual(lib.readMemories(root,"icp").find(m=>m.content==="Object source capture verified.").source.filter(s=>s.kind!=="codex"),
+    [{kind:"gmail",account:"sales@fixture.test",ref:"thread-77"},{kind:"hubspot",account:"123456",ref:"0-1/42",url:"https://app.hubspot.com/contacts/123456/record/0-1/42"}]);
+  assert.match((await call("query",{brain:root,object:"reference",search:"gmail:sales@fixture.test/thread-77"})).text,/Notes citing it \(1\)[\s\S]*Object source capture verified/);
+  // a key the format does not take is left out of a note's source since 0.35.0 (it cost a save five calls); a missing ref and a script link are still refused
+  for(const sources of [[{kind:"gmail"}],[{kind:"gmail",ref:"t",url:"javascript:alert(1)"}]]){
+    const refused=await call("remember",{brain:root,by:"marta",context:"icp",content:"Must not be saved.",sources}).catch(e=>({isError:true,text:String(e)}));
+    assert.ok(refused.isError,JSON.stringify(sources));
+  }
+  assert.ok(!lib.readMemories(root,"icp").some(m=>m.content==="Must not be saved."));
   const before=lib.readMemories(root,"icp").length;
   const bad=await call("remember",{brain:root,by:"marta",memories:[{context:"icp",content:"Must not be partially saved.",sources:[`gmail:${gmail}`]},{context:"icp",content:"Malformed source.",sources:["gmail:"]}]});
   assert.equal(bad.isError,true);assert.match(bad.text,/nothing remembered/);assert.equal(lib.readMemories(root,"icp").length,before);
@@ -675,7 +714,7 @@ test("workflow: listed as a tool, lists the shipped workflows, refuses an unsett
   const { result: catalog } = await rpc("tools/list");
   const tool = catalog.tools.find(t => t.name === "workflow");
   assert.ok(tool, "workflow is in tools/list"); assert.ok(lib.RESERVED_TOOLS.has("workflow"));
-  assert.deepEqual(tool.inputSchema.properties.action.enum, ["list", "create", "start", "status", "advance", "skip", "abandon", "due"]);
+  assert.deepEqual(tool.inputSchema.properties.action.enum, ["list", "view", "create", "check", "needs", "activate", "pause", "resume", "start", "dismiss", "status", "advance", "skip", "move", "fail", "pause_run", "resume_run", "cancel", "abandon", "due"]);
   // the same bare brain the memory_index test builds: admin.md, one context, no git
   const brain = mkdtempSync(join(tmpdir(), "gtm-workflow-mcp-"));
   mkdirSync(join(brain, "brain")); mkdirSync(join(brain, "workflows"));
@@ -688,4 +727,38 @@ test("workflow: listed as a tool, lists the shipped workflows, refuses an unsett
   assert.equal(refused.isError, true); assert.match(refused.text, /not settled: Target accounts, Why now, Sequencer/);
   const started = await call("workflow", { brain, action: "start", slug: "outbound", context: "offer", handle: "Q4", settled: { "Target accounts": "list A", "Why now": "budget season", Owner: "Ann", Sequencer: "lemlist" }, by: "ann" });
   assert.ok(!started.isError, started.text); assert.match(started.text, /^started outbound-\d{4}-\d{2}-\d{2}-q4 in Our offer: step 1 of 4, Build the target list, due now/);
+});
+
+test("query object reference finds every note citing a source pointer, whatever its spelling", async () => {
+  const refRoot = mkdtempSync(join(tmpdir(), "gtm-reference-mcp-"));
+  mkdirSync(join(refRoot, "brain"));
+  writeFileSync(join(refRoot, "brain/admin.md"), lib.renderFrontmatter({ company: "Reference Fixture", team: [{ name: "Ann Lee", handle: "ann", email: "ann@fixture.test" }] }));
+  lib.writeContext(refRoot, "deals", { title: "Deals" });
+  const url = "https://app.attio.com/fixture/person/0a1b2c3d-4e5f-6789-abcd-ef0123456789/overview";
+  const one = await call("remember", { brain: refRoot, by: "ann", context: "deals", content: "Renewal moved to March.", sources: [url] }); assert.ok(!one.isError, one.text);
+  const two = await call("remember", { brain: refRoot, by: "ann", context: "deals", content: "Budget confirmed.", sources: ["Attio:attio:people/0a1b2c3d-4e5f-6789-abcd-ef0123456789"] }); assert.ok(!two.isError, two.text);
+  const stored = lib.readMemories(refRoot, "deals");
+  assert.deepEqual(stored.find(m => /Renewal/.test(m.content)).source.filter(s => s.kind !== "codex"), [{ kind: "attio", account: "fixture", ref: "people/0a1b2c3d-4e5f-6789-abcd-ef0123456789", url }]);
+  const found = await call("query", { brain: refRoot, object: "reference", search: "ATTIO:people/0a1b2c3d-4e5f-6789-abcd-ef0123456789" });
+  assert.ok(!found.isError, found.text);
+  assert.match(found.text, /Notes citing it \(2\)/); assert.match(found.text, /Renewal moved/); assert.match(found.text, /Budget confirmed/);
+  const byUrl = await call("query", { brain: refRoot, object: "reference", search: url });
+  assert.match(byUrl.text, /Notes citing it \(2\)/);
+  assert.ok((await call("query", { brain: refRoot, object: "reference" })).isError);
+  assert.match((await call("query", { brain: refRoot, object: "reference", search: "hubspot:0-1/1" })).text, /Notes citing it: none/);
+  // the entity that holds the pointer is named, and a source with an account is found with or without it
+  const person = lib.addName(refRoot, "Dana Reference");
+  lib.updateEntity(refRoot, { entity: person.id, by: "ann", add: { references: [{ kind: "Attio", ref: "people/0a1b2c3d-4e5f-6789-abcd-ef0123456789" }] } });
+  lib.appendMemory(refRoot, "deals", { authors: ["ann"], content: "Thread about the renewal.", source: [{ kind: "gmail", account: "sales@fixture.test", ref: "t1" }] });
+  const named = await call("query", { brain: refRoot, object: "reference", search: url });
+  assert.match(named.text, new RegExp(`Entity: Dana Reference \\(${person.id}\\)`)); assert.match(named.text, /Notes citing it \(2\)/);
+  for (const search of ["gmail:t1", "gmail:sales@fixture.test/t1", "mail:t1"]) assert.match((await call("query", { brain: refRoot, object: "reference", search })).text, /Notes citing it \(1\)[\s\S]*Thread about the renewal/, search);
+  // a note written by 0.35.0 (the pointer plus a separate url entry) is one citation, found by pointer and by link;
+  // a link into another workspace is another record
+  lib.appendMemory(refRoot, "deals", { authors: ["ann"], content: "Older two-entry note.", source: [{ kind: "attio", ref: "people/0a1b2c3d-4e5f-6789-abcd-ef0123456789" }, { kind: "url", ref: url }] });
+  for (const search of ["attio:people/0a1b2c3d-4e5f-6789-abcd-ef0123456789", url]) { const r = await call("query", { brain: refRoot, object: "reference", search }); assert.match(r.text, /Notes citing it \(3\)[\s\S]*Older two-entry note/, search); assert.equal(r.text.match(/Older two-entry note/g).length, 1, search); }
+  assert.match((await call("query", { brain: refRoot, object: "reference", search: url.replace("/fixture/", "/elsewhere/") })).text, /Notes citing it \(1\)[\s\S]*Budget confirmed/);
+  assert.match((await call("query", { brain: refRoot, object: "reference", search: "attio:fixture/people/0a1b2c3d-4e5f-6789-abcd-ef0123456789" })).text, /Notes citing it \(2\)[\s\S]*Older two-entry note[\s\S]*Renewal moved/);
+  const odd = await call("query", { brain: refRoot, object: "reference", search: "hubspot:it's; DROP x" });
+  assert.ok(!odd.isError, odd.text); assert.match(odd.text, /Notes citing it: none/);
 });

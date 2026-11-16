@@ -1,0 +1,4 @@
+interface:
+  display_name: "GTM Brain: Set up ZYNT"
+  short_description: "Set up ZYNT buying signals from the brain"
+  default_prompt: "Use $gtm-brain-zynt-setup to set up ZYNT from what the brain already knows."

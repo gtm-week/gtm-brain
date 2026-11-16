@@ -27,7 +27,7 @@ createInterface({ input: process.stdin }).on('line', line => {
   if (!msg.params.cursor) return reply({ data: [{ id: 'p1', name: 'Łódź Website', roots: [{ path: '/tmp/site' }, { path: '/tmp/docs' }], metadata: { private: 'must not leak' } }], nextCursor: 'second' });
   reply({ data: [{ id: 'p1', name: 'Łódź Website', roots: [{ path: '/tmp/site' }] }, { id: 'p2', name: 'Curriculum', roots: [{ path: '/tmp/course' }] }], nextCursor: null });
 });`);
-  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  t.after(() => { try { rmSync(dir, { recursive: true, force: true }); } catch {} });
   return { options: { command: process.execPath, args: [script] }, log };
 }
 

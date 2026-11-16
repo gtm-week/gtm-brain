@@ -94,6 +94,19 @@ test("briefs compile across contexts with citations and scoped reads leave loade
   assert.deepEqual(lib.readLoaded(root), before);
 });
 
+test("a source that kept its direct link opens that link in the brief; an entity file keeps account and url", () => {
+  const root = setup(), hs = "https://app.hubspot.com/contacts/123456/record/0-1/42", mail = "https://mail.google.com/mail/u/2/#inbox/FMfcgzQXJWbcdefgh";
+  const pointer = { kind: "hubspot", account: "123456", ref: "0-1/42", url: hs };
+  const e = lib.addName(root, "Chris", { references: [pointer], sources: [{ kind: "gmail", ref: "FMfcgzQXJWbcdefgh", url: mail }] });
+  note(root, "events", "Chris coordinates sponsors.", { source: [pointer, { kind: "hubspot", ref: "0-1/43" }] });
+  const saved = lib.resolveEntity(lib.readNames(root), e.id);
+  assert.deepEqual(saved.references, [pointer]); assert.deepEqual(saved.identity_sources, [{ kind: "gmail", ref: "FMfcgzQXJWbcdefgh", url: mail }]);
+  const view = lib.entityBrief(root, "Chris").markdown, at = text => view.indexOf(text);
+  assert.ok(at(`External records: [hubspot:0-1/42](${hs})`) > 0, view);
+  assert.ok(at(`Identity evidence: [Gmail](${mail})`) > 0, view);              // the saved link, not one rebuilt for mailbox 0
+  assert.ok(at(`\n- [hubspot:0-1/42](${hs})`) > 0 && at("\n- `hubspot:0-1/43`") > 0, view);   // without a url: as before
+});
+
 test("new backdated evidence invalidates a brief; stale compilation and wrong-context citations are rejected", () => {
   const root = setup(); lib.addName(root, "Chris");
   const a = note(root, "events", "Chris coordinates sponsors."), b = note(root, "partners", "Referral terms remain unresolved.");
@@ -104,8 +117,10 @@ test("new backdated evidence invalidates a brief; stale compilation and wrong-co
   note(root, "events", "Historical preference from May.", { at: "2026-05-01T10:00:00Z" });
   const view = lib.entityBrief(root, "Chris");
   assert.equal(view.stale, true);
-  assert.equal(view.compilation, null);
-  assert.doesNotMatch(view.markdown, /organizes sponsors and is discussing referrals/);
+  // 0.35.0: no background run rewrites it, so the claims whose notes still stand are kept, dated (lane S1)
+  assert.ok(view.compilation && view.compilation.overview.length, "carried, not dropped");
+  assert.match(view.markdown, /## Overview\n\nAs of \d{4}-\d{2}-\d{2}:\n\n- .*organizes sponsors and is discussing referrals/);
+  assert.match(view.markdown, /Its notes changed since the overview was written; claims below whose notes still stand are kept from it/, "a backdated note is not newer, but it changed the evidence");
   assert.throws(() => lib.compileEntity(root, "Chris", { by: "ann", as_of: facts.as_of, brief }), /changed/);
 });
 

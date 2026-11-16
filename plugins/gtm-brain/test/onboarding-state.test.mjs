@@ -8,7 +8,7 @@ import { readOnboarding, onboardingInstruction } from '../lib/onboarding.mjs';
 
 function fixture(t, entries) {
   const root = mkdtempSync(join(tmpdir(), 'gtm-onboarding-state-'));
-  t.after(() => rmSync(root, { recursive: true, force: true }));
+  t.after(() => { try { rmSync(root, { recursive: true, force: true }); } catch {} });
   const records = entries.map((entry, i) => ({
     id: `m_${(i + 1).toString(16).padStart(12, '0')}`, context: 'company',
     at: new Date(Date.UTC(2026, 8, 1, 0, i)).toISOString(), authors: ['alex'],

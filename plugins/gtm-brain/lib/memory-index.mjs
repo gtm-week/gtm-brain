@@ -1,5 +1,7 @@
 // Disposable disk-backed memory projection. The MCP host uses this API in a worker.
-import { openSync, closeSync, readSync } from 'node:fs';
+import { foldLatin } from './fold.mjs';
+import { sourceMembers } from './pointers.mjs';
+import { openSync, closeSync, readSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
@@ -7,13 +9,19 @@ import * as lib from './brain.mjs';
 import { validateAsset } from './assets.mjs';
 import { memoryStamp as stamp, trustedMemoryAppend, recordMemoryCheckpoint } from './memory-journal.mjs';
 import { entityStamp } from './entity-stamp.mjs';
-import { hasMemoryIndex, indexPath, openDatabase, cacheLock, retireCache, cacheResetPending } from './memory-index-store.mjs';
+import { relationsToUs } from './relation-to-us.mjs';
+import { buildRelationLog } from './relation-log.mjs';
+import { readEntityEvents, entityEventsStamp } from './entity-events.mjs';
+import { readSchema } from './schema.mjs';
+import { shortId } from './layout.mjs';
+import { meetingAnchors, anchorOf } from './meeting-entities.mjs';
+import { hasMemoryIndex, indexPath, openDatabase, cacheLock, readerLock, retireCache, cacheResetPending } from './memory-index-store.mjs';
 export { hasMemoryIndex };
 export const MAX_RECORD_BYTES = 4 * 1024 * 1024;
 export const MAX_RESULT_BYTES = 2 * 1024 * 1024;
-export const MEMORY_INDEX_VERSION = 4;
+export const MEMORY_INDEX_VERSION = 10;   // 5: source pointers as members (field source); 6: entity rows with relation to us and SCHEMA.md fields; 7: meeting ids as identity refs; 8: stemmed keywords, word list for typos; 9: relations, relation events and entity events (lib/relation-log.mjs)
 const VERSION = MEMORY_INDEX_VERSION;
-const normalizeMention = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const normalizeMention = s => foldLatin(s).replace(/[^a-z0-9]+/g, ' ').trim();
 function hashFile(path, size) {
   if (!size) return createHash('sha256').digest('hex');
   const fd = openSync(path, 'r'), hash = createHash('sha256'), buffer = Buffer.alloc(65536);
@@ -54,6 +62,7 @@ const matches = (row, filters) => Object.entries(filters).every(([key, expected]
   const actual = Array.isArray(row[key]) ? row[key] : [row[key]];
   return actual.some(v => (Array.isArray(expected) ? expected : [expected]).some(w => isDeepStrictEqual(v, w)));
 });
+export const ENTITY_COLUMNS = ['id', 'name', 'kind', 'subtype', 'status', 'relation_to_us', 'short_id'];
 const visible = alias => `${alias}.effective=1 AND NOT EXISTS (SELECT 1 FROM forks f JOIN memories c ON c.rowid=f.memory WHERE f.target=${alias}.id AND c.effective=1)`;
 const SCHEMA = `
  CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT);
@@ -73,11 +82,24 @@ const SCHEMA = `
  CREATE TABLE IF NOT EXISTS forks(memory INTEGER REFERENCES memories(rowid) ON DELETE CASCADE,target TEXT);
  CREATE INDEX IF NOT EXISTS fork_target ON forks(target,memory);
  CREATE INDEX IF NOT EXISTS fork_memory ON forks(memory);
- CREATE VIRTUAL TABLE IF NOT EXISTS keywords USING fts5(authors,people,tools,content,content='memories',content_rowid='rowid');
+ CREATE VIRTUAL TABLE IF NOT EXISTS keywords USING fts5(authors,people,tools,content,content='memories',content_rowid='rowid',tokenize='porter unicode61 remove_diacritics 2');
  CREATE TABLE IF NOT EXISTS keyword_rows(memory INTEGER PRIMARY KEY REFERENCES memories(rowid) ON DELETE CASCADE);
  CREATE VIRTUAL TABLE IF NOT EXISTS identity_text USING fts5(mention_text,content='memories',content_rowid='rowid');
+ CREATE VIRTUAL TABLE IF NOT EXISTS identity_vocab USING fts5vocab(identity_text,'row');
+ CREATE VIRTUAL TABLE IF NOT EXISTS keywords_vocab USING fts5vocab(keywords,'row');
  CREATE TABLE IF NOT EXISTS relinks(memory INTEGER PRIMARY KEY REFERENCES memories(rowid) ON DELETE CASCADE);
  CREATE TABLE IF NOT EXISTS entity_versions(id TEXT PRIMARY KEY,version INTEGER NOT NULL);
+ CREATE TABLE IF NOT EXISTS entity_rows(id TEXT PRIMARY KEY,name TEXT,kind TEXT,subtype TEXT,status TEXT,relation_to_us TEXT,short_id TEXT,path TEXT,last_mentioned TEXT,raw TEXT);
+ CREATE INDEX IF NOT EXISTS entity_row_kind ON entity_rows(kind,relation_to_us);
+ CREATE TABLE IF NOT EXISTS entity_fields(id TEXT,field TEXT,value TEXT);
+ CREATE INDEX IF NOT EXISTS entity_field_value ON entity_fields(field,value,id);
+ CREATE TABLE IF NOT EXISTS relations(id TEXT PRIMARY KEY,from_id TEXT,type TEXT,to_id TEXT,status TEXT,since TEXT,until TEXT,observed_at TEXT,memory TEXT,raw TEXT);
+ CREATE INDEX IF NOT EXISTS relation_from ON relations(from_id,type);
+ CREATE INDEX IF NOT EXISTS relation_to ON relations(to_id,type);
+ CREATE TABLE IF NOT EXISTS relation_events(relation TEXT,at TEXT,event TEXT,status TEXT,basis TEXT,memory TEXT,implied INTEGER);
+ CREATE INDEX IF NOT EXISTS relation_event_relation ON relation_events(relation,at);
+ CREATE TABLE IF NOT EXISTS entity_events(entity TEXT,at TEXT,change TEXT,from_value TEXT,to_value TEXT,by TEXT,raw TEXT);
+ CREATE INDEX IF NOT EXISTS entity_event_entity ON entity_events(entity,at);
  CREATE TRIGGER IF NOT EXISTS entity_member_insert AFTER INSERT ON members WHEN new.field='entities' BEGIN
    INSERT INTO entity_versions VALUES (new.value,1) ON CONFLICT(id) DO UPDATE SET version=version+1;
  END;
@@ -91,18 +113,26 @@ const SCHEMA = `
  END;
 `;
 export class MemoryIndex {
-  constructor(root, { rebuild = false, lockTimeoutMs = 1000 } = {}) {
+  constructor(root, { rebuild = false, lockTimeoutMs = 1000, pinned = false } = {}) {
     this.root = resolve(root);
     if (!lib.readAdmin(this.root)) throw new Error('no brain here');
     // Snapshot identities before taking the cache gate. Entity writers can use the
     // index while holding their own lock without an inverse lock order in readers.
     lib.withEntityLock(this.root, () => {
       this.identityRevision = entityStamp(this.root);
-      this.identitySnapshot = lib.readNames(this.root).map(({ id, name, aliases, emails, previous_ids }) => ({ id, name, aliases, emails, previous_ids }));
+      // the full entries, for an answer's entity card (lib/memory-search.mjs): the shared, frozen registry, never changed here
+      const names = this.entries = lib.readNamesShared(this.root);
+      // a meeting entity also carries its anchors: notes with that meeting id link to it
+      this.identitySnapshot = names.map(e => { const { id, name, aliases, emails, previous_ids } = e, meetings = meetingAnchors(e); return { id, name, aliases, emails, previous_ids, ...(meetings.length ? { meetings } : {}) }; });
+      // what query entities filters on: identity, the SCHEMA.md fields compiled on the page, and the page's dates
+      const compiled = e => { try { const f = JSON.parse(e._fm?.compiled_fields || '[]'); return Array.isArray(f) ? f.filter(x => x && typeof x.field === 'string' && typeof x.text === 'string') : []; } catch { return []; } };
+      this.entitySnapshot = names.map(e => ({ id: e.id, name: e.name, kind: e.kind || 'person', subtype: e.subtype ?? null, status: e.status || 'active', aliases: e.aliases || [], emails: e.emails || [], previous_ids: e.previous_ids || [],
+        path: e._path || null, last_mentioned: e._fm?.latest_evidence_at || null, fields: Object.fromEntries(compiled(e).map(f => [f.field, f.text])) }));
     });
-    this.release = cacheLock(this.root, lockTimeoutMs);
     this.path = indexPath(this.root);
     this.stats = { recordsRead: 0, filesRead: 0, rebuiltFiles: 0, hashedBytes: 0, trustedAppends: 0, relinkedRecords: 0, visibilityRows: 0, checkpoints: 0 };
+    if (pinned) { this.pinIfCurrent(); return; }
+    this.release = cacheLock(this.root, lockTimeoutMs);
     try {
       if (cacheResetPending(this.root)) retireCache(this.root);
       try {
@@ -122,12 +152,55 @@ export class MemoryIndex {
           this.setMeta('rebuilding', '1'); this.setMeta('started_at', new Date().toISOString()); this.db.exec('COMMIT');
         } catch (e) { this.db.exec('ROLLBACK'); throw e; }
       }
-      this.db.exec('CREATE TEMP TABLE touched(memory INTEGER PRIMARY KEY);');
-      this.db.function('extra_matches', (text, filters) => matches(JSON.parse(text), JSON.parse(filters)) ? 1 : 0);
-      this.db.function('text_matches', (text, terms) => JSON.parse(terms).some(t => text.toLowerCase().includes(t)) ? 1 : 0);
+      this.prepareConnection();
     } catch (e) { this.close(); throw e; }
   }
-  close() { try { this.db?.close(); this.db = null; } finally { this.release?.(); this.release = null; } }
+  prepareConnection() {
+    this.db.exec('CREATE TEMP TABLE touched(memory INTEGER PRIMARY KEY);');
+    this.db.function('extra_matches', (text, filters) => matches(JSON.parse(text), JSON.parse(filters)) ? 1 : 0);
+    this.db.function('text_matches', (text, terms) => JSON.parse(terms).some(t => text.toLowerCase().includes(t)) ? 1 : 0);
+  }
+  // Without the cache lock: a read snapshot of a cache that already matches every source
+  // file and the registry. Anything else (missing, old version, being replaced, behind)
+  // leaves this index not ready and closed; openForRead then takes the lock and refreshes.
+  pinIfCurrent() {
+    this.ready = false;
+    try { this.readers = readerLock(this.root, 200); } catch { return; }
+    try {
+      if (cacheResetPending(this.root) || !existsSync(this.path)) return this.close();
+      this.db = openDatabase(this.path);
+      if (this.db.prepare('PRAGMA user_version').get().user_version !== VERSION) return this.close();
+      this.db.exec('BEGIN'); this.pinned = true;
+      // current also means the entity rows match the pages and SCHEMA.md: a snapshot cannot rebuild them
+      const before = this.sourceState();
+      if (!this.current(before, JSON.stringify(this.identitySnapshot)) || this.meta('entity_rows') !== this.entityRowsKey(before)) return this.close();
+      this.prepareConnection();
+      this.names = JSON.parse(this.meta('registry')); this.ready = true;
+    } catch (e) { this.close(); if (![5, 11, 26].includes(e.errcode & 255)) throw e; }
+  }
+  // After sync, still holding the cache lock: take a read snapshot, then let the lock go.
+  // Later refreshes by other sessions commit beside this snapshot (WAL); none is visible here.
+  pinSnapshot() {
+    this.requireReady();
+    this.readers = readerLock(this.root);
+    this.db.exec('BEGIN'); this.pinned = true;
+    // Resolve aliases against the same snapshot as the records this read returns.
+    this.names = JSON.parse(this.meta('registry'));
+    this.release?.(); this.release = null;
+    return this;
+  }
+  close() {
+    try {
+      if (this.pinned && this.db) { this.pinned = false; try { this.db.exec('ROLLBACK'); } catch {} }
+      this.db?.close(); this.db = null;
+    } finally {
+      try { this.release?.(); this.release = null; } finally { this.readers?.(); this.readers = null; }
+    }
+  }
+  current(before, registry) {
+    const db = this.db, file = db.prepare('SELECT stamp FROM files WHERE file=?');
+    return this.meta('registry') === registry && this.meta('ready') === '1' && before.length === db.prepare('SELECT count(*) AS n FROM files').get().n && before.every(f => file.get(f.file)?.stamp === (f.state?.key || 'missing'));
+  }
   meta(key) { return this.db.prepare('SELECT value FROM meta WHERE key=?').get(key)?.value; }
   setMeta(key, value) { this.db.prepare('INSERT OR REPLACE INTO meta VALUES (?,?)').run(key, value); }
   sourceState() {
@@ -157,7 +230,7 @@ export class MemoryIndex {
     for (const id of changed) {
       linked.run(JSON.stringify(id));
       for (const n of [old.get(id), next.get(id)].filter(Boolean)) {
-        for (const ref of [n.id, ...(n.previous_ids || []), n.name, ...n.aliases, ...n.emails]) refs.add(ref.trim().toLowerCase());
+        for (const ref of [n.id, ...(n.previous_ids || []), n.name, ...n.aliases, ...n.emails, ...(n.meetings || []).map(a => `meeting:${a}`)]) refs.add(ref.trim().toLowerCase());
         for (const ref of [n.name, ...n.aliases]) { refs.add(ref.toLowerCase().split(/\s+/)[0]); const form = normalizeMention(ref); if (form.length >= 3 && !ref.includes('@')) forms.add(form); }
       }
     }
@@ -192,8 +265,8 @@ export class MemoryIndex {
     const project = r => ({ ...r, entities: [...new Set(mention(r))].map(n => byName.get(n)).filter(Boolean).sort((a, b) => a.order - b.order).map(n => n.id) });
     const asset = r => r.asset && !validateAsset(r.asset).length ? [lib.canonicalName(this.names, r.asset.entity) || r.asset.entity, r.asset.role, r.asset.status] : [null, null, null];
     const before = this.sourceState();
-    const unchanged = this.meta('registry') === registry && this.meta('ready') === '1' && before.length === db.prepare('SELECT count(*) AS n FROM files').get().n && before.every(f => db.prepare('SELECT stamp FROM files WHERE file=?').get(f.file)?.stamp === (f.state?.key || 'missing'));
-    if (unchanged) { this.ready = true; return this; }
+    if (this.current(before, registry)) { this.refreshEntities(before); this.ready = true; return this; }
+    if (!this.release) throw new Error('A pinned memory index snapshot cannot refresh the cache.');
     const exhausted = () => Date.now() - started >= budgetMs || this.stats.recordsRead + this.stats.relinkedRecords >= maxRecords;
     let transaction = false;
     const savedFiles = new Map();
@@ -237,7 +310,8 @@ export class MemoryIndex {
             const row = project(r);
             const rowid = insert.run(f.file, line, r.id, r.context, r.kind, r.via, r.at, Date.parse(r.at) || 0, JSON.stringify(r), JSON.stringify(row.entities), r.authors.join(' '), r.people.join(' '), r.tools.join(' '), r.content, ...asset(r), normalizeMention(r.content)).lastInsertRowid;
             for (const field of ['authors', 'people', 'tools', 'tags', 'entities']) for (const value of row[field]) member.run(rowid, field, JSON.stringify(value));
-            for (const ref of new Set([...(r.entities || []), ...r.people, ...(r.asset ? [r.asset.entity] : [])])) member.run(rowid, 'identity_ref', String(ref).trim().toLowerCase());
+            for (const ref of new Set([...(r.entities || []), ...r.people, ...(r.asset ? [r.asset.entity] : []), ...(anchorOf(r) ? [`meeting:${anchorOf(r)}`] : [])])) member.run(rowid, 'identity_ref', String(ref).trim().toLowerCase());
+            for (const key of sourceMembers(r.source)) member.run(rowid, 'source', JSON.stringify(key));
             touch.run(rowid);
             for (const target of [r.supersedes, r.retracts].filter(Boolean)) { correction.run(rowid, f.file, target); touchTarget.run(f.file, target); }
             if (lib.isForkCopy(r)) for (const source of r.source.filter(s => s.kind === 'memory')) fork.run(rowid, source.ref);
@@ -274,13 +348,108 @@ export class MemoryIndex {
       }
       for (const f of before) ensureStable(f);
       if (JSON.stringify(this.registry()) !== registry) throw new Error('Entity registry changed while indexing. Retry the read.');
-      this.setMeta('ready', '1'); this.setMeta('rebuilding', '0'); checkpoint(); this.ready = true; return this;
+      this.setMeta('ready', '1'); this.setMeta('rebuilding', '0'); checkpoint(); this.refreshEntities(before); this.ready = true; return this;
     } catch (e) { if (transaction) db.exec('ROLLBACK'); throw e; }
+  }
+  /* The entity rows query entities filters on, rebuilt when an identity or a memory file changed: relation to
+     us (lib/relation-to-us.mjs) from the visible relation and customer notes, and each compiled SCHEMA.md field. */
+  entityRowsKey(before) { return JSON.stringify([this.identityRevision, before.map(f => f.state?.key || 'missing'), readSchema(this.root).schema?.hash || null, entityEventsStamp(this.root)]); }
+  refreshEntities(before) {
+    const db = this.db, key = this.entityRowsKey(before);
+    if (this.meta('entity_rows') === key) return;
+    if (!this.release) throw new Error('A pinned memory index snapshot cannot refresh the cache.');
+    const linked = db.prepare(`SELECT m.raw FROM memories m WHERE ${visible('m')} AND (json_extract(m.raw,'$.relation') IS NOT NULL OR json_extract(m.raw,'$.customer') IS NOT NULL OR json_extract(m.raw,'$.meeting') IS NOT NULL)`).all().map(r => JSON.parse(r.raw));
+    const notes = linked.filter(m => m.relation || m.customer), schema = readSchema(this.root).schema || null;
+    const relation = relationsToUs({ registry: this.entitySnapshot, memories: notes, admin: lib.readAdmin(this.root), schema });
+    // the relationship log (lib/relation-log.mjs) and the entity log (lib/entity-events.mjs), rebuilt with the rows
+    const byRef = new Map(); for (const e of this.entitySnapshot) for (const id of [e.id, ...e.previous_ids]) byRef.set(id, e);
+    const resolve = v => { const e = byRef.get(v) || lib.resolveEntity(this.entries, v); return e ? { id: e.id, kind: e.kind || 'person' } : null; };
+    const meetings = new Map(this.identitySnapshot.flatMap(e => (e.meetings || []).map(a => [a, e.id])));
+    const { relations } = buildRelationLog(linked, { resolve, schema, meetingOf: a => meetings.get(a) || null, anchorOf });
+    const entityEvents = readEntityEvents(this.root);
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      db.exec('DELETE FROM entity_rows; DELETE FROM entity_fields; DELETE FROM relations; DELETE FROM relation_events; DELETE FROM entity_events;');
+      const rel = db.prepare('INSERT INTO relations VALUES (?,?,?,?,?,?,?,?,?,?)'), relEvent = db.prepare('INSERT INTO relation_events VALUES (?,?,?,?,?,?,?)'), entEvent = db.prepare('INSERT INTO entity_events VALUES (?,?,?,?,?,?,?)');
+      for (const r of relations) {
+        rel.run(r.id, r.from, r.type, r.to, r.status, r.since, r.until, r.observed_at, r.memory, JSON.stringify(r));
+        for (const e of r.events) relEvent.run(r.id, e.at, e.event, e.status, e.basis || null, e.memory, e.implied ? 1 : 0);
+      }
+      for (const e of entityEvents) entEvent.run(byRef.get(e.entity)?.id || e.entity, e.at, e.change, e.from, e.to, e.by || null, JSON.stringify(e));
+      const row = db.prepare('INSERT INTO entity_rows VALUES (?,?,?,?,?,?,?,?,?,?)'), field = db.prepare('INSERT INTO entity_fields VALUES (?,?,?)');
+      for (const e of this.entitySnapshot) {
+        const out = { id: e.id, name: e.name, kind: e.kind, subtype: e.subtype, status: e.status, relation_to_us: relation.get(e.id) || null, aliases: e.aliases, emails: e.emails, previous_ids: e.previous_ids, short_id: shortId(e.id), path: e.path, last_mentioned: e.last_mentioned, fields: e.fields };
+        row.run(e.id, e.name, e.kind, e.subtype, e.status, out.relation_to_us, out.short_id, e.path, e.last_mentioned, JSON.stringify(out));
+        for (const [k, v] of Object.entries(e.fields)) field.run(e.id, k, String(v).toLowerCase());
+      }
+      this.setMeta('entity_rows', key); db.exec('COMMIT');
+    } catch (e) { db.exec('ROLLBACK'); throw e; }
+  }
+  /* The relationship log, read from the index: every relation of an entity (either end), of a type, or all. */
+  relations({ entity = null, type = null } = {}) {
+    this.requireReady();
+    const where = [], params = [];
+    if (entity) { const id = this.entitySnapshot.find(e => e.id === entity || e.previous_ids.includes(entity))?.id || entity; where.push('(from_id=? OR to_id=?)'); params.push(id, id); }
+    if (type) { const t = (readSchema(this.root).schema && this.relationType(type)) || type; where.push('type=?'); params.push(t); }
+    const name = new Map(this.entitySnapshot.map(e => [e.id, e.name]));
+    return this.db.prepare(`SELECT raw FROM relations${where.length ? ' WHERE ' + where.join(' AND ') : ''}`).all(...params).map(r => JSON.parse(r.raw))
+      .sort((a, b) => (name.get(a.from) || a.from).localeCompare(name.get(b.from) || b.from) || a.type.localeCompare(b.type) || (name.get(a.to) || a.to).localeCompare(name.get(b.to) || b.to));
+  }
+  relationType(type) { const s = readSchema(this.root).schema, rel = s?.relations || {}; return rel[type] ? type : Object.entries(rel).find(([, r]) => r.formerly?.includes(type))?.[0] || null; }
+  /* An entity's renames, merges and kind changes, oldest first; a merged entity's past stays with the survivor. */
+  entityEvents(entity) {
+    this.requireReady();
+    const e = this.entitySnapshot.find(x => x.id === entity || x.previous_ids.includes(entity)); if (!e) return [];
+    const ids = [e.id, ...e.previous_ids];
+    return this.db.prepare(`SELECT raw FROM entity_events WHERE entity IN (${ids.map(() => '?').join(',')}) ORDER BY at`).all(...ids).map(r => JSON.parse(r.raw));
+  }
+  resolveEntity(ref) { return lib.resolveEntity(this.entries, ref); }
+  relationsToUs() { return new Map(this.db.prepare('SELECT id, relation_to_us FROM entity_rows WHERE relation_to_us IS NOT NULL').all().map(r => [r.id, r.relation_to_us])); }
+  /* query entities with filters, without reading a page: kind, subtype, status, relation_to_us, id, name, short_id
+     match exactly (a list means any of them; a retired id names its survivor); aliases and emails match a member;
+     any other key is a SCHEMA.md field compiled on the page, matched case-insensitively as a part of its value
+     ({ role: "VP Sales" } finds "VP Sales EMEA"). Active entities only unless status or id is given. */
+  entities({ filters = {}, limit = 50 } = {}) {
+    this.requireReady();
+    filters = { ...filters };
+    if (Object.hasOwn(filters, 'id')) { const canonical = id => this.entitySnapshot.find(e => e.id === id || e.previous_ids.includes(id))?.id || id; filters.id = Array.isArray(filters.id) ? filters.id.map(canonical) : canonical(filters.id); }
+    if (!Object.hasOwn(filters, 'id') && !Object.hasOwn(filters, 'status')) filters.status = 'active';
+    const clauses = [], params = [];
+    for (const [key, expected] of Object.entries(filters)) {
+      const choices = (Array.isArray(expected) ? expected : [expected]).map(v => v === null ? null : String(v));
+      if (!choices.length) { clauses.push('0'); continue; }
+      if (ENTITY_COLUMNS.includes(key)) {
+        const nulls = choices.includes(null), values = choices.filter(v => v !== null);
+        clauses.push(`(${[...(values.length ? [`e.${key} IN (${values.map(() => '?').join(',')})`] : []), ...(nulls ? [`e.${key} IS NULL`] : [])].join(' OR ')})`); params.push(...values);
+      } else if (key === 'aliases' || key === 'emails') {
+        clauses.push(`EXISTS(SELECT 1 FROM json_each(json_extract(e.raw,'$.${key}')) j WHERE lower(j.value) IN (${choices.map(() => '?').join(',')}))`); params.push(...choices.map(v => String(v).toLowerCase()));
+      } else {
+        clauses.push(`EXISTS(SELECT 1 FROM entity_fields f WHERE f.id=e.id AND f.field=? AND (${choices.map(() => "instr(f.value, ?) > 0").join(' OR ')}))`); params.push(key, ...choices.map(v => String(v).toLowerCase()));
+      }
+    }
+    params.push(Math.max(1, Math.min(500, Number(limit) || 50)));
+    return this.db.prepare(`SELECT e.raw FROM entity_rows e${clauses.length ? ' WHERE ' + clauses.join(' AND ') : ''} ORDER BY e.last_mentioned IS NULL, e.last_mentioned DESC, e.name, e.id LIMIT ?`).all(...params).map(r => JSON.parse(r.raw));
   }
   requireReady() { if (!this.ready) throw new Error('Memory index refresh is in progress. Call memory_index with mode refresh until status is ready, then retry the query. No partial search results were returned.'); }
   count() { this.requireReady(); return this.db.prepare(`SELECT count(*) AS n FROM memories m WHERE ${visible('m')}`).get().n; }
   query({ filters = {}, search = '', limit = 50 } = {}) {
     this.requireReady();
+    let { prefix, where, params } = this.filterSql(filters);
+    if (search.trim()) {
+      const query = search.trim(), terms = new Set([query.toLowerCase()]);
+      for (const term of [query, ...query.split(/\s+/)]) {
+        const canonical = lib.canonicalName(this.names, term);
+        if (canonical) { terms.add(canonical.toLowerCase()); for (const alias of this.names.find(n => n.name === canonical)?.aliases || []) terms.add(alias.toLowerCase()); }
+      }
+      where.push('text_matches(m.projected,?)'); params.push(JSON.stringify([...terms]));
+    }
+    params.push(Math.max(1, Math.min(501, Number(limit) || 50)));
+    return this.bounded(this.db.prepare(`${prefix}SELECT m.projected FROM memories m WHERE ${where.join(' AND ')} ORDER BY m.time DESC,m.id LIMIT ?`), params);
+  }
+  // The exact filters of query as SQL over memories m: a prefix (a WITH clause or ''), the WHERE
+  // terms and their parameters, with the same fork and correction handling. lib/memory-search.mjs
+  // adds its narrowing and full-text terms after these.
+  filterSql(filters = {}) {
     filters = { ...filters };
     if (Object.hasOwn(filters, 'entities')) {
       const canonical = id => lib.resolveEntity(this.names, id)?.id || id;
@@ -305,16 +474,7 @@ export class MemoryIndex {
       prefix = `WITH candidates AS MATERIALIZED(SELECT m.rowid,m.id FROM memories m WHERE ${clauses.join(' AND ')}) `;
       where = ['m.rowid IN (SELECT rowid FROM candidates)', 'NOT EXISTS(SELECT 1 FROM forks f JOIN candidates c ON c.rowid=f.memory WHERE f.target=m.id)'];
     } else if (!scoped) where.push(visible('m'));
-    if (search.trim()) {
-      const query = search.trim(), terms = new Set([query.toLowerCase()]);
-      for (const term of [query, ...query.split(/\s+/)]) {
-        const canonical = lib.canonicalName(this.names, term);
-        if (canonical) { terms.add(canonical.toLowerCase()); for (const alias of this.names.find(n => n.name === canonical)?.aliases || []) terms.add(alias.toLowerCase()); }
-      }
-      where.push('text_matches(m.projected,?)'); params.push(JSON.stringify([...terms]));
-    }
-    params.push(Math.max(1, Math.min(501, Number(limit) || 50)));
-    return this.bounded(this.db.prepare(`${prefix}SELECT m.projected FROM memories m WHERE ${where.join(' AND ')} ORDER BY m.time DESC,m.id LIMIT ?`), params);
+    return { prefix, where, params };
   }
   keywords(terms, project = null) {
     this.requireReady();
@@ -351,12 +511,10 @@ export class MemoryIndex {
       this.db.exec(`CREATE TEMP VIEW memories AS SELECT m.rowid AS rowid, m.id AS id, m.context AS context, m.kind AS kind, m.at AS at, m.via AS via, ${field('content')} AS content, ${field('authors')} AS authors, ${field('people')} AS people, ${field('tools')} AS tools, ${field('tags')} AS tags, ${field('entities')} AS entities, ${field('source')} AS sources, ${field('supersedes')} AS supersedes, m.time AS time FROM main.memories m WHERE ${visible};
         CREATE TEMP VIEW members AS SELECT m.id AS memory_id, v.field AS field, json_extract(v.value,'$') AS value FROM main.members v JOIN memories m ON m.rowid=v.memory;
         CREATE TEMP TABLE contexts(slug TEXT PRIMARY KEY, title TEXT, status TEXT, summary TEXT, rule TEXT, loaded INTEGER);
-        CREATE TEMP TABLE entities(id TEXT PRIMARY KEY, name TEXT, kind TEXT, subtype TEXT, aliases TEXT, emails TEXT);`);
+        CREATE TEMP VIEW entities AS SELECT e.id AS id, e.name AS name, e.kind AS kind, e.subtype AS subtype, json_extract(e.raw,'$.aliases') AS aliases, json_extract(e.raw,'$.emails') AS emails, e.status AS status, e.relation_to_us AS relation_to_us, e.short_id AS short_id, e.path AS path, e.last_mentioned AS last_mentioned, json_extract(e.raw,'$.fields') AS fields FROM main.entity_rows e;`);
       const loaded = new Set(lib.readLoaded(this.root));
       const putContext = this.db.prepare('INSERT INTO contexts VALUES (?,?,?,?,?,?)');
       for (const c of lib.listContexts(this.root, { includeMemories: false })) putContext.run(c.slug, c.title || c.slug, c.status || 'active', c.summary || '', c.rule || '', loaded.has(c.slug) ? 1 : 0);
-      const putEntity = this.db.prepare('INSERT INTO entities VALUES (?,?,?,?,?,?)');
-      for (const n of lib.readNames(this.root)) putEntity.run(n.id, n.name, n.kind || 'person', n.subtype || null, JSON.stringify(n.aliases || []), JSON.stringify(n.emails || []));
       this.viewsReady = true;
     }
     this.db.exec('PRAGMA query_only=1');
@@ -381,16 +539,25 @@ export class MemoryIndex {
     return rows;
   }
 }
+// A read never reports a busy cache to the model. A current cache is read at once, without
+// the lock. Otherwise short lock attempts with backoff, each followed by another look for a
+// cache another session has just refreshed, for up to READ_WAIT_MS; then one long wait for
+// the lock and a fresh refresh here. A session sees its own write: its save changed a
+// source stamp, so a snapshot older than the save is never current.
+export const READ_WAIT_MS = 5000;
+export function openForRead(root, { waitMs = READ_WAIT_MS, finalWaitMs = 25000 } = {}) {
+  const deadline = Date.now() + waitMs;
+  for (let step = 25; ; step = Math.min(step * 2, 400)) {
+    const current = new MemoryIndex(root, { pinned: true });
+    if (current.ready) return current;
+    const left = deadline - Date.now();
+    let index;
+    try { index = new MemoryIndex(root, { lockTimeoutMs: left > 0 ? Math.min(step, left) : finalWaitMs }); }
+    catch (e) { if (left > 0 && /Memory index is busy/.test(e.message)) continue; throw e; }
+    try { index.sync(); return index.pinSnapshot(); } catch (e) { index.close(); throw e; }
+  }
+}
 export function withMemoryIndex(root, fn) {
-  const index = new MemoryIndex(root);
-  try {
-    index.sync(); index.requireReady();
-    index.db.exec('BEGIN');
-    try {
-      // Another MCP process may have refreshed the cache after sync committed. Resolve
-      // aliases against the same SQL snapshot as the records returned by this read.
-      index.names = JSON.parse(index.db.prepare("SELECT value FROM meta WHERE key='registry'").get().value);
-      return fn(index);
-    } finally { index.db.exec('ROLLBACK'); }
-  } finally { index.close(); }
+  const index = openForRead(root);
+  try { return fn(index); } finally { index.close(); }
 }

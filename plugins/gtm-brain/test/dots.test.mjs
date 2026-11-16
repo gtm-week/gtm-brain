@@ -43,7 +43,8 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   const dinner = remember("--content", "The speaker dinner moved to Thursday.");
   assert.equal(dinner.status, 2);
   assert.match(dinner.stderr, /"Thursday" can be Thu 2026-11-12 or Thu 2026-11-19: ask which/);
-  assert.match(dinner.stderr, /Whatever is still unclear: one question \(Q2\), in Codex's question box \(request_user_input\) when that tool is available in this chat .*otherwise as plain chat text with numbered parts, then end the turn \(Q1\), and wait for the reply \(Q3\)/);
+  assert.match(dinner.stderr, /Ask one question, in Codex's question box \(request_user_input\) when this chat has it, otherwise as numbered chat text, and wait for the reply\./);
+  assert.ok(dinner.stderr.split("\n")[0].length < 420, "a refusal is one or two short lines");
   // the person turned Codex's question box on: the question goes there (new-brain rerun: plain text although it was on)
   writeFileSync(join(process.env.CODEX_HOME, "config.toml"), "[features]\ndefault_mode_request_user_input = true\n");
   assert.match(remember("--content", "The speaker dinner moved to Thursday.").stderr, /in Codex's question box \(request_user_input\)/);
@@ -52,7 +53,8 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   const deck = remember("--content", "Ola Nowak will send the deck on Friday.", "--people", "Ola Nowak");
   assert.equal(deck.status, 2);
   assert.match(deck.stderr, /"Friday" is Fri 2026-11-13 \(or Fri 2026-11-06 if it already happened; take it from the person's words/);
-  assert.match(deck.stderr, /write it into the note, no question \(D1\)\. No question needed: change the note as the rule says and send it again/);
+  assert.match(deck.stderr, /write it into the note, no question \(D1\)\. No question needed: fix it and resend\./);
+  assert.doesNotMatch(deck.stderr, /Ask one question|ask the person/i, "a refusal the model fixes never tells it to ask");
   assert.equal(remember("--content", "Ola Nowak will send the deck on Friday (2026-11-13).", "--people", "Ola Nowak").status, 0);
   // from an email: counted from the email's date, not today
   assert.match(remember("--content", "Acme will sign next week.", "--source", "gmail:msg-1").stderr, /counted from the source's own date/);
@@ -78,7 +80,7 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   assert.equal(remember("--content", "The speaker dinner moved to Thursday.").status, 2);
   const guessed = remember("--content", "The speaker dinner moved to Thursday 2026-11-19.");
   assert.equal(guessed.status, 2);
-  assert.match(guessed.stderr, /the person has not answered the question yet .* never pick the answer yourself/);
+  assert.match(guessed.stderr, /the person has not answered the question yet: ask it once and end the turn, do not resend this before their reply/);
   say("the 19th");
   assert.equal(remember("--content", "The speaker dinner moved to Thursday 2026-11-19.").status, 0);
   // "forget that" withdraws: a supersedes with the opposite claim is held (scenario run, 2026-11-12)
@@ -86,14 +88,14 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   say("Forget the speaker dinner");
   const flipped = remember("--content", "There is no speaker dinner.", "--supersedes", dinner19);
   assert.equal(flipped.status, 2);
-  assert.match(flipped.stderr, new RegExp(`asked to forget it, not to correct it: send retracts: ${dinner19} \\(not supersedes\\).*\\(F1\\)\\. No question needed: change the note as the rule says and send it again`));
+  assert.match(flipped.stderr, new RegExp(`asked to forget it: resend with retracts: ${dinner19} \\(not supersedes\\) and content saying what was withdrawn, in their words\\. No question needed: fix it and resend\\.`));
   assert.equal(remember("--content", "Withdrawn: the speaker dinner note (the person said forget it).", "--retracts", dinner19).status, 0);
   // two Florians: Codex may not pick one from the chat so far ("lorian called me", saved as Florian Kim; new-brain, 2026-11-12)
   lib.addName(root, "Florian Kim");
   say("lorian called me about the venue.");
   const pick = remember("--content", "Florian Kim called about the venue.", "--people", "Florian Kim");
   assert.equal(pick.status, 2);
-  assert.match(pick.stderr, /the person did not write which Florian: Florian (Weber|Kim) or Florian (Weber|Kim) \(W1, P2/);
+  assert.match(pick.stderr, /the person did not write which Florian: Florian (Weber|Kim) or Florian (Weber|Kim)\. Ask which one\. Ask one question, /);
   // Codex asked in its own question box before saving: the picked answer counts as the person's words, no second question
   writeFileSync(join(day, `rollout-2026-11-12T10-18-48-${id}.jsonl`), [{ type: "session_meta", payload: { cwd: root } },
     { type: "response_item", payload: { type: "message", role: "user", content: [{ type: "input_text", text: "lorian sent the agenda." }] } },
@@ -114,14 +116,15 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   // Codex tagged the project's slug without "project:": it is the project all the same
   assert.equal(remember("--content", "Booth plan drafted.", "--tags", "berlin-event-2026,booth").status, 0);
   assert.deepEqual(lib.readMemories(root, "company").at(-1).tags, ["project:berlin-event-2026", "booth"]);
-  // a new company: saved as a company under C1, and its website asked in the one question
+  // a new company: saved as a company under C1. Its website is no longer asked on a save (benchmark 2026-11-15:
+  // the question ended 5 of 14 replies and set off extra reads); it stays a gap on the entity's page.
   const acme = remember("--content", "Acme wants a booth at the Berlin event.", "--companies", "Acme", "--project", "berlin-event-2026");
   assert.equal(acme.status, 0, acme.stderr);
-  assert.match(acme.stdout, /Ask the person once, in Codex's question box \(request_user_input\) when that tool is available in this chat .*otherwise as plain chat text with numbered parts, then end the turn, after quoting the note, one numbered part each: 1\) Acme's website, so the brain knows which Acme this is/);
+  assert.doesNotMatch(acme.stdout, /website/);
   assert.deepEqual(lib.readMemories(root, "company").at(-1).entity_mentions.map(x => [x.mention, x.rule]), [["Acme", "C1"]]);
   // Codex adds the company first and saves the note second (new-brain rerun, 2026-11-12): still asked, once
   lib.addName(root, "Initech", { kind: "company" });
-  assert.match(remember("--content", "Initech wants a booth.", "--companies", "Initech").stdout, /1\) Initech's website/);
+  assert.doesNotMatch(remember("--content", "Initech wants a booth.", "--companies", "Initech").stdout, /website/);
   assert.doesNotMatch(remember("--content", "Initech confirmed the booth.", "--companies", "Initech").stdout, /website/);   // asked already
   assert.doesNotMatch(remember("--content", "X hired two people.", "--companies", "X").stdout, /website/);   // our own company
   // known with a website: never asked again
@@ -172,12 +175,14 @@ test("chat start: today's date, and each \"next <day>\" with two readings, for a
   assert.equal(dots.datesLine(new Date(2026, 10, 15)), "Today is Sunday, 15 November 2026.");
 });
 
-test("chat start: a summary behind for days with no scheduled run says so once a week; a working brain stays quiet", () => {
+test("chat start: a summary behind for days asks nothing since 0.35.0 (written when asked); the old weekly notice only behind GTM_BRAIN_SCHEDULE_NOTICE", () => {
   const sched = schedule;
   const root = mkdtempSync(join(tmpdir(), "gtm-brain-sched-")); execFileSync("git", ["init", "-q", root]); execFileSync("git", ["-C", root, "config", "commit.gpgsign", "false"]);
   execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "X", "--one-liner", "y", "--owner", "Ann Lee <ann@b.c>"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P } });
   lib.appendMemory(root, "icp", { authors: ["ann-lee"], content: "Mid-market SaaS fits best." });
   const later = new Date(Date.now() + 10 * 864e5);
+  assert.equal(sched.scheduleNotice(root, later), "", "topic summaries are written on demand: behind is normal");
+  process.env.GTM_BRAIN_SCHEDULE_NOTICE = "1";
   assert.equal(sched.scheduleNotice(root, new Date()), "", "behind for minutes: the compile after the save is still coming");
   const said = sched.scheduleNotice(root, later);
   assert.match(said, /^Summaries behind: Our company \(never compiled\), Target customers \(never compiled\); no weekly summary run is set up\. After answering the person.s request, ask this once/);
@@ -187,6 +192,7 @@ test("chat start: a summary behind for days with no scheduled run says so once a
   execFileSync("git", ["-C", root, "commit", "-q", "--allow-empty", "-m", "compile: company (3 memories, by schedule)"]);
   assert.equal(sched.scheduleNotice(root, new Date(Date.now() + 5 * 864e5)), "", "a scheduled run saved something this week");
   assert.equal(sched.scheduleNotice(root, new Date(Date.now() + 20 * 864e5)).includes("the weekly summary run last ran on"), true);
+  delete process.env.GTM_BRAIN_SCHEDULE_NOTICE;
 });
 
 test("contexts: a project or a look-alike is never a new context (X1, X3); a summary days behind says out of date", () => {
@@ -196,16 +202,24 @@ test("contexts: a project or a look-alike is never a new context (X1, X3); a sum
   const ctx = (...a) => spawnSync(process.execPath, [`${P}/scripts/gtm-brain-contexts/contexts.mjs`, ".", ...a], { cwd: root, env, encoding: "utf8" });
   mkdirSync(join(root, "projects", "website"), { recursive: true });
   // X1-X3 are Codex's judgment (saving-rules.md): the first call creates nothing and lists what exists to check against
-  const first = ctx("--new", "website", "Website", "rule");
-  assert.equal(first.status, 2); assert.match(first.stderr, /^not created yet: check "Website" against what exists\. Contexts: .*Market \(market\).*\. Projects: website\. X1: .* X3: /);
-  assert.ok(!existsSync(join(root, "brain", "contexts", "website")));
+  const first = ctx("--new", "launch-plan", "Launch plan", "rule");
+  assert.equal(first.status, 2); assert.match(first.stderr, /^not created yet: check "Launch plan" against what exists\. Contexts: .*Market \(market\).*\. Projects: website\. X1: .* X3: /);
+  assert.ok(!existsSync(join(root, "brain", "contexts", "launch-plan")));
+  // X1 by name, even with a reason: the project's own slug, or a shorter or longer form of it, is never a context
+  mkdirSync(join(root, "projects", "berlin-event-2026"), { recursive: true });
+  for (const [slug, title] of [["website", "Website"], ["berlin-event", "Berlin event"], ["website-launch-2026", "Website launch"]]) {
+    const r = ctx("--new", slug, title, "rule", "--distinct", "event planning and logistics");
+    assert.equal(r.status, 2, slug); assert.match(r.stderr, /^not created: ".+" is the project (website|berlin-event-2026) \(X1: a project is not a context\)/, slug);
+    assert.ok(!existsSync(join(root, "brain", "contexts", slug)), slug);
+  }
+  assert.equal(ctx("--new", "events", "Events", "rule", "--distinct", "every event we run, not one project").status, 0, "a word in a project name alone is not a match");
   assert.equal(ctx("--new", "market-research", "Market research", "rule", "--distinct", "research projects, not the market overview").status, 0);
   assert.ok(existsSync(join(root, "brain", "contexts", "market-research", "context.md")));
 
   lib.appendMemory(root, "icp", { authors: ["ann-lee"], content: "Mid-market SaaS fits best." });
   const c = () => lib.readContext(root, "icp");
-  assert.match(lib.summaryState(c()), /^summary updating shortly \(1 new\)$/);
-  assert.match(lib.summaryState(c(), false, Date.now() + 3 * 864e5), /^summary out of date: never compiled, 1 new not in it$/);
+  assert.match(lib.summaryState(c()), /^no summary yet, 1 newer note \(written when asked\)$/);
+  assert.match(lib.summaryState(c(), false, Date.now() + 3 * 864e5), /^no summary yet, 1 newer note \(written when asked\)$/, "never updating shortly, however old");
   assert.match(readFileSync(join(root, "README.md"), "utf8"), /## How contexts work[\s\S]*\*\*X1\*\* A project is not a context[\s\S]*\*\*L2\*\* Loading puts/);
 });
 
@@ -226,7 +240,7 @@ test("the rulebook: documents only through the document tool, a not filled one i
   assert.match(text, /Its content is never also saved as a note/);
   assert.match(text, /shown `\[not filled\]`, do the work, then end the reply with one line/);
   assert.match(text, /"How we sound, in three words" stays empty unless the person said the three\s+words/);
-  assert.match(text, /unless the person already gave it \("Northwind \(northwind\.com\)"\): then that is\s+its website, no question/);
+  assert.match(text, /Do not ask for its\s+website on a save\. When the person gives it \("Northwind \(northwind\.com\)"\), that is its website/);
 });
 
 test("the rulebook: another company's brand rule goes to partner-brands.md, not our design system (G1; Maciej, 2026-11-13)", () => {
@@ -235,4 +249,37 @@ test("the rulebook: another company's brand rule goes to partner-brands.md, not 
   assert.match(text, /goes to `partner-brands\.md`, one heading\s+per company: "Add to partner-brands\.md under OpenAI: <the line>\?"/);
   assert.match(text, /keeps `# Partner brands` as the only top heading;\s+each company is a `## <Company>` heading under it/);
   assert.match(text, /A file whose top heading is a company \(an older layout\) is\s+put right in the same update/);
+});
+
+test("R2 in the tool: a note moved to another context in one call asks for the RULES.md offer instead of no offers", () => {
+  const root = mkdtempSync(join(tmpdir(), "gtm-brain-r2-")); execFileSync("git", ["init", "-q", root]);
+  execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "X", "--one-liner", "y", "--owner", "Ann Lee <ann@b.c>"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P } });
+  const env = { ...process.env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_NO_WATCH: "1" };
+  const rem = (...a) => spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann-lee", ...a], { cwd: root, env, encoding: "utf8" });
+  assert.equal(rem("--context", "company", "--content", "The sponsor deck is due in December.").status, 0);
+  const old = lib.readMemories(root, "company").find(m => m.content === "The sponsor deck is due in December.");
+  const batch = join(root, "work", "move.json");
+  writeFileSync(batch, JSON.stringify([{ context: "company", content: "Moved to Our offer: the sponsor deck is due in December.", retracts: old.id }, { context: "offer", content: "The sponsor deck is due in December." }]));
+  const moved = rem("--batch", batch);
+  assert.equal(moved.status, 0, moved.stderr);
+  assert.match(moved.stdout, /moved from company to offer: .*RULES\.md under "## Our rules" \(R2\)/);
+  assert.doesNotMatch(moved.stdout, /or add offers/);
+  assert.match(rem("--context", "company", "--content", "Globex wants a booth.").stdout, /Do not repeat this output or add offers\./, "an ordinary save keeps the one-line reply");
+});
+
+test("P4: a surname more than two letters apart is another person, saved at once; a near one still asks", () => {
+  const root = mkdtempSync(join(tmpdir(), "gtm-brain-p4-")); execFileSync("git", ["init", "-q", root]);
+  execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "X", "--one-liner", "y", "--owner", "Ann Lee <ann@b.c>"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P } });
+  const env = { ...process.env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_NO_WATCH: "1" };
+  const rem = (...a) => spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann-lee", "--context", "company", ...a], { cwd: root, env, encoding: "utf8" });
+  rem("--content", "Florian Weber is our keynote speaker.", "--people", "Florian Weber", "--new", "Florian Weber");
+  rem("--content", "Lena Dumos joined the events team.", "--people", "Lena Dumos", "--new", "Lena Dumos");
+  // Since the save-flow lane (16 Nov) a shared first name with a clearly different surname is another person and is
+  // saved at once: the earlier version refused it with "no question needed" and cost one more call for the same result.
+  const kim = rem("--content", "Florian Kim joined Globex as head of sales.", "--people", "Florian Kim");
+  assert.equal(kim.status, 0, kim.stderr + kim.stdout);
+  assert.doesNotMatch(kim.stdout + kim.stderr, /looks like Florian Weber/);
+  const dumas = rem("--content", "Lena Dumas will host the panel.", "--people", "Lena Dumas");
+  assert.equal(dumas.status, 2, "one letter off a known name is still asked");
+  assert.match(dumas.stderr, /"Lena Dumas" looks like Lena Dumos \(P4\)/); assert.match(dumas.stderr, /"Lena Dumas": ask "same as X\?"/); assert.match(dumas.stderr, /Ask one question/);
 });

@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from '
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { indexedContextGraph } from './context-graph.mjs';
-import { MemoryIndex } from './memory-index.mjs';
+import { openForRead } from './memory-index.mjs';
 import * as lib from './brain.mjs';
 import { entityStamp } from './entity-stamp.mjs';
 import { memoryStamp } from './memory-journal.mjs';
@@ -29,9 +29,11 @@ function limited(statement, ...args) {
 export function dashboardData(root, registry) {
   const revision = dashboardSourceRevision(root);
   const started = performance.now(); const profile = stage => { if (process.env.GTM_BRAIN_RENDER_PROFILE) console.error(JSON.stringify({ stage, ms: performance.now()-started, rss: process.memoryUsage.rss() })); };
-  const index = new MemoryIndex(root);
+  // A pinned snapshot: the lock is held only while the cache catches up, never while the
+  // history pages are written, so a read right after a save is not kept waiting.
+  const index = openForRead(root);
   try {
-    index.sync(); index.requireReady(); profile("index");
+    profile("index");
     const db = index.db, contexts = lib.listContexts(root, { includeMemories: false });
     const home = join(root, 'work', 'home'); mkdirSync(join(home, 'history'), { recursive: true });
     const specialContexts = [], cited = new Set();

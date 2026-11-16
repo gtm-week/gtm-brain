@@ -55,7 +55,7 @@ for sustained work with useful separation. Ordinary customer records do not crea
 ## Create
 
 Call `setup_brain` with `folder`, `company`, `one_liner`, `owner` (Full Name <email>),
-optional `team` and `tools`. Summaries update by themselves in the background, so say that in one line, never as a question. Optional rule overrides are `company_rule`, `strategy`,
+optional `team` and `tools`. A topic's summary is written when someone asks about it, in that chat; say that in one line, never as a question. Optional rule overrides are `company_rule`, `strategy`,
 `market`, `icp` and `offer`. Setup always creates the creator's personal context. GTM Brain is English-only: there is no
 language to ask about or save.
 

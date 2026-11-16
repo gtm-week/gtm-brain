@@ -1,12 +1,18 @@
 # Schema
 
-What this brain keeps about each person, organization and product, and how they relate. Codex
-fills these fields from your notes, each value citing the notes it rests on, and lists a
-required field nobody has said yet as a gap to ask about. Edit freely, or say
+What this brain keeps about each person, organization, product, offering, event, tool and meeting,
+and how they relate. Codex fills these fields from your notes, each value citing the notes it rests on, and
+lists a required field nobody has said yet as a gap to ask about. Edit freely, or say
 `/gtm-brain-schema` and Codex changes it for you. GTM Brain never overwrites your edits.
 
-The kinds are fixed: person, organization, product. Add fields, organization subtypes and
-relationship types; a new kind is not possible yet.
+Every `## <Kind>` section with a field table is a kind. Person, organization, product, offering,
+event, tool and meeting always exist; add a section to add a kind. Add fields, organization subtypes and
+relationship types the same way. Projects are not kinds: a project is a tag.
+
+A meeting needs no section here: its fields are date (required), title, organizer and source (where
+the transcript or recording is; it stays in its tool), its page collects the notes saved with its
+meeting id, and everyone who attended links to it. Leave a `## Meeting` section out while a teammate
+is still on GTM Brain 0.34: that version cannot read a file with one.
 
 ## Person
 
@@ -50,17 +56,48 @@ relationship types; a new kind is not possible yet.
 | maker | Who makes it, if not us | no |
 | pricing | How it is priced | no |
 
+## Offering
+
+| Field | What it means | Required |
+| --- | --- | --- |
+| what_it_is | What we sell, in a sentence: a service, package or plan | yes |
+| price | What it costs the customer | no |
+| who_it_is_for | Who it is for: the buyer or segment | no |
+
+## Event
+
+| Field | What it means | Required |
+| --- | --- | --- |
+| date | When it takes place, as a date | yes |
+| location | City and venue, or online | no |
+| url | The event page | no |
+
+## Tool
+
+| Field | What it means | Required |
+| --- | --- | --- |
+| category | What kind of tool it is, for example CRM or email | yes |
+| vendor | Who makes it | no |
+| connector | The connector Codex uses to reach it, if any | no |
+| state | Whether we use it, are trying it, or stopped | no |
+| owner | Who on our team owns it | no |
+| cost | What it costs us | no |
+
 ## Relationships
 
 A relationship is a note with a type, kept over time: when one ends, a new note says so, and the
 history stays. `us` is our own company. Required means every person or organization on the From
-side should have a current one.
+side should have a current one. One at a time means a new current one ends the previous one, dated
+to the new note (a person has one employer); no means several at once.
 
-| Type | From | To | What it means | Required |
-| --- | --- | --- | --- | --- |
-| works_at | person | organization | Employed by, or a founder of | yes |
-| reports_to | person | person | Their manager | no |
-| partner_of | organization | us | A partner of ours: referrals, integrations, co-selling | no |
-| investor_in | person, organization | organization, us | Has invested in | no |
-| uses | person, organization | product | Uses this product, ours or another | no |
-| customer_of | person, organization | us | Customer status (customer, prospect, former customer), kept by the customer notes | no |
+| Type | From | To | What it means | Required | One at a time |
+| --- | --- | --- | --- | --- | --- |
+| works_at | person | organization | Employed by, or a founder of | yes | yes |
+| reports_to | person | person | Their manager | no | yes |
+| partner_of | organization | us | A partner of ours: referrals, integrations, co-selling | no | no |
+| investor_in | person, organization | organization, us | Has invested in | no | no |
+| uses | person, organization | product | Uses this product, ours or another | no | no |
+| speaker_at | person | event | Speaks or spoke at this event | no | no |
+| attended | person | event | Attends or attended this event (a meeting too, always) | no | no |
+| integrates_with | tool | tool | Connected to this other tool | no | no |
+| customer_of | person, organization | us | Customer status (customer, prospect, former customer), kept by the customer notes | no | yes |

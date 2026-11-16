@@ -25,6 +25,8 @@ Capture new/updated source evidence, refresh selected calendar references, and r
 per source. No questions. Continue with the steps below even when a connector fails. A task
 that only asks for compilation remains compilation-only.
 
+First call `capture_chats` with `mode: run` once: the nightly chat capture reads this brain's chats changed since its last pass and saves the outcomes nobody saved (it runs in the background and records its own result; never wait for it).
+
 For compilation, do exactly this:
 
 1. Call the GTM Brain tool `compile_facts` with no `context`. For each context that is behind,
@@ -66,7 +68,7 @@ bash "${PLUGIN_ROOT}/scripts/gtm-brain-schedule/scheduled-run.sh" /path/to/brain
 ```
 
 macOS `launchd` (weekly, Sunday 20:00): copy [launchd.plist.example](../../../../scripts/gtm-brain-schedule/launchd.plist.example) to
-`~/Library/LaunchAgents/io.gtm-brain.compile.plist`, replace the two paths, then
+`~/Library/LaunchAgents/io.gtm-brain.compile.plist`, replace the brain folder (the newest installed version runs, so an update needs no edit), then
 `launchctl load ~/Library/LaunchAgents/io.gtm-brain.compile.plist`. Linux: a cron line
 `0 20 * * 0 bash <plugin>/scripts/gtm-brain-schedule/scheduled-run.sh /path/to/brain`.
 

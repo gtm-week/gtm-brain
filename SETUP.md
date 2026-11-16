@@ -28,7 +28,7 @@ needed only if you later choose to share your own private company brain through 
 codex plugin marketplace add gtm-week/gtm-brain   # straight from GitHub (verified)
 codex plugin marketplace upgrade gtm-brain        # refresh an existing marketplace snapshot
 codex plugin add gtm-brain@gtm-brain
-codex plugin list | grep gtm-brain                                      # installed, enabled, 0.34.5
+codex plugin list | grep gtm-brain                                      # installed, enabled, 0.35.0
 ```
 
 The install is a snapshot of the configured branch. In the Codex app, say **"update GTM Brain"**
@@ -55,7 +55,9 @@ After these manual commands, run the installed `update.mjs --check` from the ver
 by `codex plugin list`, then quit and reopen Codex. The in-app update performs this check for you.
 
 Brains you already have keep working; open one in Codex and the chat start refreshes its
-git config, or say "upgrade the brain" to refresh its AGENTS.md and pre-commit hook too. A brain set up
+git config, or say "upgrade the brain" to refresh its AGENTS.md and pre-commit hook too. Coming from 0.34, the
+upgrade also offers to move files and asks first: see
+[Updating to 0.35](plugins/gtm-brain/MANUAL.md#updating-to-035). A brain set up
 before the full-name handles (`maciej` instead of `maciej-konczal`) gets a note from upgrade:
 say "change the team handles to full names" and choose APPROVE; old memories keep the old
 handle, and both resolve to the same person.
@@ -79,7 +81,7 @@ new chat in Codex on the test folder (restart the app only if old skills linger)
 Set this once in your shell; the scripts below use it:
 
 ```bash
-export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.34.5
+export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.35.0
 ```
 
 In a chat the skills run as GTM Brain tools: you see "Remembering", "Searching the brain",
@@ -256,6 +258,33 @@ work that needs existing logins; MCP connectors remain the first choice.
 Onboarding choices use native Codex forms. If multi-select is unavailable, offer concrete
 combinations in a single-select question. The progress card is view-only.
 
+### Checking the dashboard in a browser (contributors)
+
+The browser tests open the live dashboard of a generated brain in headless Chromium and check
+what a person sees: the four tabs and the health line, the base files with their state, entity
+counts per kind, an entity page with its notes, notes newest first with a replaced note, the
+workflows with their triggers and a run in progress, no edit or action anywhere, a saved note
+reaching the open page, and no console errors. They use the e2e framework
+(https://github.com/e2e-inc/e2e) with plain assertions only: no model, no API key. Node 22.22.3+
+or 24.8+.
+
+```bash
+npm ci --prefix frontend/dashboard
+npm run test:e2e:install --prefix frontend/dashboard   # once: the Chromium build the engine pins
+npm run test:e2e --prefix frontend/dashboard           # about 15 seconds
+```
+
+`frontend/dashboard/e2e/serve.mjs` makes the brain (`test/e2e/generate-brain.mjs`, small shape,
+plus an adopted document, a scheduled workflow and a run in progress) in a scratch folder under
+the system temp directory with its own `CODEX_HOME`, renders it and runs `server/dash.mjs` on a
+free port. The runner starts it and stops it when the run ends, passed or failed, and the scratch
+folder goes with it; no server or browser is left running. A run that was killed outright cannot
+clean up: the next run stops the server it left and removes its folder. A failed test leaves its trace,
+screen and screenshot in `frontend/dashboard/.e2e/results/` (gitignored). Rebuild the dashboard
+(`npm run build --prefix frontend/dashboard`) before running them after a change under
+`frontend/dashboard/src`. They are not part of `node --test`; CI runs them in their own job,
+which does not block a merge.
+
 ## 8. Recall (step 5)
 
 Search across every context, loaded or not. Uses Node's built-in SQLite full-text index,
@@ -291,7 +320,8 @@ cover changed in an editor, names fixed by hand). APPROVE commits the workplace 
 scheduled run's compile commits its covers; setup makes the first commit; upgrade keeps the rules
 it refreshed. Anything you had staged yourself stays out of these commits.
 
-Every writer ends with *kept* or *kept and shared*. There is nothing for you to do; the badge on
+Every writer ends with *kept*, or *kept, not shared yet* when the brain has a remote: the push runs
+in the background and the next chat start says so if it failed. There is nothing for you to do; the badge on
 the chat start keeps files changed outside Codex; ask Codex to save if needed. From a terminal the scripts commit by themselves, one commit per change (`git log`
 reads as a diary). `approve` commits in the app too, after you choose APPROVE in its form.
 
@@ -331,7 +361,7 @@ Weekly (Sunday 20:00) or nightly. Run it in the local project. Computer on, app 
 bash $PLUGIN_ROOT/scripts/gtm-brain-schedule/scheduled-run.sh ~/brain-try      # run it once by hand first
 ```
 
-Then the plist in `scripts/gtm-brain-schedule/launchd.plist.example` (replace the two paths, load with
+Then the plist in `scripts/gtm-brain-schedule/launchd.plist.example` (replace the brain folder, load with
 `launchctl`), or a cron line. Both call `codex exec`, so Codex must be signed in.
 
 Check: `git log --oneline | head` shows `scheduled: compile pipeline`; `work/hooks.log` has

@@ -1,3 +1,6 @@
+// These tests read and write the root files of a layout 2 brain: setup and the lib play a plugin that writes layout 2 at most
+// (lib/layout-version.mjs GTM_BRAIN_TEST_LAYOUT). Layout 3 (about-us/, config/) is covered by config-folders.test.mjs.
+process.env.GTM_BRAIN_TEST_LAYOUT = "2";
 // GTM Brain declares no Codex hooks. What they did now happens in the MCP server: the chat's opening lines
 // come with its first GTM Brain call, the server logs its own calls, the chat id comes from the host's own
 // session files, and APPROVE is a form only the person answers (approve_change).
@@ -55,7 +58,8 @@ test("the first GTM Brain call of a chat brings the opening lines after its resu
   const root = brain(); codexThread(root, "0199aaaa-bbbb-7ccc-8ddd-eeeeffff0001");
   const s = client(null); await s.init();
   const { result } = await s.rpc("initialize", { capabilities: {} });
-  assert.match(result.instructions, /start every chat with query \(object status\)/);
+  assert.match(result.instructions, /first GTM Brain call, whatever it is, returns the chat's opening lines/);
+  assert.doesNotMatch(result.instructions, /start every chat with query \(object status\)/);
   const first = await s.call("query", { brain: root, object: "status" });
   assert.ok(!first.isError, first.text);
   assert.equal(first.parts.length, 2, "the call's own result, then the opening lines");
@@ -91,7 +95,7 @@ test("approve_change applies admin.md only on the person's APPROVE in the form",
   assert.ok(!applied.isError, applied.text);
   assert.match(applied.text, /applied brain\/admin\.md, approved by marta-nowak/);
   assert.match(readFileSync(join(root, "brain", "admin.md"), "utf8"), /for retailers/);
-  assert.match(execFileSync("git", ["-C", root, "log", "-1", "--format=%s"], { encoding: "utf8" }), /^admin: change approved by marta-nowak/);
+  assert.match(execFileSync("git", ["-C", root, "log", "-2", "--format=%s"], { encoding: "utf8" }), /^approval recorded: brain\/admin\.md\nadmin: change approved by marta-nowak/, "the change, then its record");
   assert.equal(existsSync(join(root, "work", "admin.proposed.md")), false);
 });
 
@@ -129,13 +133,15 @@ test("\"this is my photo\": keep_approved_file copies it from Downloads into the
   assert.match(result.instructions, /is kept only by keep_approved_file, in the same turn/);
   const kept = await s.call("keep_approved_file", { brain: root, by: "marta-nowak", entity: "Marta Nowak", role: "portrait", label: "Portrait", path: join(downloads, "PXL_1.jpg") });
   assert.ok(!kept.isError, kept.text);
-  const file = join(root, "brain", "entities", "marta-nowak", "PXL_1.jpg");
+  // her folder sits beside her page: brain/entities/people/marta-nowak-<short id>/
+  const folder = `brain/entities/people/marta-nowak-${lib.readNames(root).find(n => n.name === "Marta Nowak").id.slice(2, 8)}`;
+  const file = join(root, folder, "PXL_1.jpg");
   assert.equal(readFileSync(file, "utf8"), "first", "a copy in her folder, in the brain");
-  assert.equal(execFileSync("git", ["-C", root, "ls-files", "--", "brain/entities/marta-nowak/PXL_1.jpg"], { encoding: "utf8" }).trim(), "brain/entities/marta-nowak/PXL_1.jpg", "committed");
+  assert.equal(execFileSync("git", ["-C", root, "ls-files", "--", `${folder}/PXL_1.jpg`], { encoding: "utf8" }).trim(), `${folder}/PXL_1.jpg`, "committed");
   const { assetsLine } = await import(`${P}/lib/assets.mjs`);
-  assert.match(assetsLine(root), /Marta Nowak · portrait: brain\/entities\/marta-nowak\/PXL_1\.jpg/);
+  assert.ok(assetsLine(root).includes(`Marta Nowak · portrait: ${folder}/PXL_1.jpg`));
   const again = await s.call("keep_approved_file", { brain: root, by: "marta-nowak", entity: "Marta Nowak", role: "portrait", label: "Portrait, newer", path: join(downloads, "PXL_2.jpg") });
   assert.match(again.text, /replaced the approved portrait of Marta Nowak/);
-  assert.match(assetsLine(root), /Marta Nowak · portrait: brain\/entities\/marta-nowak\/PXL_2\.jpg/); assert.doesNotMatch(assetsLine(root), /PXL_1/);
+  assert.ok(assetsLine(root).includes(`Marta Nowak · portrait: ${folder}/PXL_2.jpg`)); assert.doesNotMatch(assetsLine(root), /PXL_1/);
   assert.match((await s.call("keep_approved_file", { brain: root, by: "marta-nowak", entity: "Marta Nowak", role: "portrait", path: join(downloads, "nope.jpg") })).text, /not kept: no file at/);
 });

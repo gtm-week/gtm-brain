@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync, spawn } from 'node:child_process';
 import { acquireProcessLock, releaseProcessLock } from '../lib/process-lock.mjs';
-function fixture(t) { const root = mkdtempSync(join(tmpdir(), 'gtm-lock-test-')); t.after(() => rmSync(root, { recursive: true, force: true })); return join(root, 'lock'); }
+function fixture(t) { const root = mkdtempSync(join(tmpdir(), 'gtm-lock-test-')); t.after(() => { try { rmSync(root, { recursive: true, force: true }); } catch {} }); return join(root, 'lock'); }
 test('a live owner is never displaced by age and only its token can release the lock', t => {
   const path = fixture(t), token = acquireProcessLock(path);
   assert.ok(token); const old = new Date(Date.now() - 86400000); utimesSync(path, old, old);

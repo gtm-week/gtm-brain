@@ -13,6 +13,7 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { SHORT } from "../../lib/pointers.mjs";   // the connector short forms, shared with source kinds
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
 const admin = lib.readAdmin(root); if (!admin) { console.error("no brain here"); process.exit(1); }
@@ -98,7 +99,6 @@ for (const p of plugins.values()) if (!p.display) p.display = p.id.startsWith("a
 /* ---------- matching a tool name to a plugin ---------- */
 const norm = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]/g, "");
 // short forms people write that are not the plugin's name; the catalog still decides whether the plugin exists
-const SHORT = { calendar: "google-calendar", gcal: "google-calendar", drive: "google-drive", gdrive: "google-drive", contacts: "google-contacts", outlook: "outlook-email", email: "gmail", mail: "gmail", crm: null };
 const marketplaceOnly = [REMOTE];   // where the official integrations live; bundled/runtime plugins are Codex's own
 const candidates = () => [...plugins.values()].filter(p => marketplaceOnly.includes(p.marketplace));
 function findPlugin(tool) {
@@ -179,7 +179,7 @@ if (listed) for (const { re, ids, why } of SUGGEST) {
    Recomputed each run: uninstalled, it leaves the page. */
 const brainText = (() => {
   const recs = lib.listContexts(root).flatMap(c => lib.effectiveMemories(lib.readMemories(root, c.slug)));
-  return { tools: new Set(recs.flatMap(r => [...(r.tools || []), ...(r.source || []).map(x => x && x.kind)]).filter(Boolean).map(norm)), content: recs.map(r => String(r.content || "")).join("\n") };
+  return { recs, tools: new Set(recs.flatMap(r => [...(r.tools || []), ...(r.source || []).map(x => x && x.kind)]).filter(Boolean).map(norm)), content: recs.map(r => String(r.content || "")).join("\n") };
 })();
 // A plugin named with an everyday word (Sales, Sites) is in every GTM memory: a mention of it proves nothing.
 const COMMON = new Set(["sales", "sites", "notes", "tasks", "calendar", "contacts", "drive", "docs", "sheets", "slides", "files", "email", "mail", "messages", "search", "maps", "news", "meetings", "forms", "chat", "teams"]);
@@ -197,8 +197,42 @@ if (listed) {
     used.push({ tool: state[k].tool, why });
   }
 }
+/* Read through its HTTP API with a key the person pasted (ZYNT's setup), no plugin and no MCP server: on the page
+   once a read test was recorded (mark_tool) and a memory names it in tools or as its source. A failed test stays
+   visible as failed, so a key that expired never reads as connected. */
+// recomputed below; dropped here so a read test recorded since the last run counts, also when the plugin list failed
+for (const k of Object.keys(state)) if (state[k] && state[k].used === "a note came from it") delete state[k].used;
+for (const k of Object.keys(state)) {
+  const s = state[k]; if (!s || s.plugin || s.mcp || s.suggested || s.used || !s.test || s.test === "skip") continue;
+  if (![k, s.tool].some(x => brainText.tools.has(norm(x)))) continue;
+  state[k] = { ...s, status: "installed", api: true, used: "read through its API" };
+  if (!used.some(u => norm(u.tool) === norm(s.tool))) used.push({ tool: s.tool, why: "read through its API" });
+}
+/* A tool with no plugin, no remote MCP server and no read test (a local MCP server Codex runs; GTM Brain never sees
+   another server's calls): on the page once a note names it in tools and cites a record of its own kind, so the
+   data came from it. A note the person told about it cites them, not the tool, and does not count. A failed read
+   test stays on the page as failed; a declined tool stays off. Recomputed each run.
+   Only the notes of the person on this machine count: this file is this machine's list, and a teammate's note
+   arrives with a pull and proves their connection, not one here. A tool Codex has a plugin for follows the
+   plugin's state above (installed or not), never a note. */
+const CHAT = new Set(["user", "codex", "claude", "memory", "file", "url", "web", "document", "manual", "person"]);
+const me = lib.currentPerson(root);
+for (const r of me ? brainText.recs.filter(r => (r.authors || []).includes(me)) : []) for (const t of r.tools || []) {
+  // the server, not its tool: notes spell it server.tool, server:tool or server/tool, and one server is one row
+  const base = String(t).split(/[.:/]/)[0].trim(), nb = norm(base);
+  if (nb.length < 3 || COMMON.has(nb) || DEV.has(base.toLowerCase()) || findPlugin(base).plugin) continue;
+  if (!(r.source || []).some(s => s && !CHAT.has(String(s.kind || "").toLowerCase()) && norm(s.kind).length >= 3 && (nb.startsWith(norm(s.kind)) || norm(s.kind).startsWith(nb)))) continue;
+  const k = entryKey(state, base), s = state[k] || {};
+  if (s.plugin || s.mcp || s.used || s.declined || s.test === "skip" || (admin.tools || []).some(a => key(a) === k)) continue;
+  state[k] = { ...s, tool: s.tool || base, status: "installed", used: "a note came from it", suggested: false, mcp: false };
+  used.push({ tool: state[k].tool, why: "a note came from it" });
+}
 for (const k of Object.keys(state)) if (!(state[k] && (state[k].suggested || state[k].mcp || state[k].used)) && !(admin.tools || []).some(t => key(t) === k)) delete state[k]; // a tool removed from admin.md leaves the record
+// a tool that came or went redraws the dashboard (a background check after a save, gtm-brain-remember)
+const rowsOf = s => JSON.stringify(Object.entries(s || {}).map(([k, v]) => [k, v && v.status, v && v.test, v && v.used]).sort());
+let before = null; try { before = rowsOf(JSON.parse(readFileSync(wf, "utf8"))); } catch {}
 writeFileSync(wf, JSON.stringify(state, null, 1));
+if (before !== null && before !== rowsOf(state)) { const { requestDashboardRefresh } = await import(new URL("../../lib/dashboard-refresh.mjs", import.meta.url)); requestDashboardRefresh(root, fileURLToPath(new URL("../gtm-brain-render/render.mjs", import.meta.url))); }
 console.log(`tools in admin.md: ${rows.length}${listed ? "" : " · codex plugin list failed: install state as last checked, not re-checked now"}${catalogAt ? ` · catalog as of ${lib.localDateTime(catalogAt)}` : " · no catalog cache yet (open the Codex app once)"}`);
 for (const r of rows) {
   console.log(`- ${r.tool.padEnd(22)} ${r.status.padEnd(26)}${r.stale ? ` (as of ${lib.localDateTime(r.stale)})` : ""}${r.p && r.p.display && norm(r.p.display) !== norm(key(r.tool)) ? ` plugin "${r.p.display}"` : ""}${r.test ? ` read test: ${r.test}${r.note ? " (" + r.note + ")" : ""}` : ""}`);
