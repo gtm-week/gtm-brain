@@ -1,7 +1,11 @@
 # Internal working context: meeting notes, source material, screenshots, design docs,
 # and the reference workshop kit. Not tracked.
 gtm-week-context/
-docs/
+# docs/ at the top holds the tracked documentation (its Markdown files and releases/);
+# anything else in a docs/ folder is internal working material.
+**/docs/*
+!/docs/*.md
+!/docs/releases/
 !plugins/gtm-brain/starters/web-design-system/source/docs/
 !plugins/gtm-brain/starters/web-design-system/source/docs/**
 

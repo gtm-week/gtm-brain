@@ -513,6 +513,38 @@ const DRAFT_ASK = /^\W*(?:(?:please|can you|could you|would you|help me|i need y
 /* A request to write a piece of text (a message, a post, an email), as opposed to a question about one. */
 export const asksForDraft = question => { const q = String(question || ''); return /\bdraft (?:me |us )?(?:an?|the|our|my|some|\d+|two|three)\b/i.test(q) || (DRAFT_ASK.test(q) && DRAFT_PIECE.test(q)); };
 
+/* A question about a whole kind ("what events did we organize?", "which tools do we use?") that names no entity
+   is answered by the entities of that kind first: registered once, they are the list, and the notes under them are
+   only what matched the words. Without this the answer was pieced together from every note that names an event
+   (a real brain, 2026-11-16: 237 notes read, 54 seconds). Empty when the brain has none of the kind. */
+const KIND_LISTS = [['event', /\bevents\b/i, 'Events'], ['product', /\bproducts\b/i, 'Products'], ['offering', /\bofferings\b/i, 'Offerings'], ['tool', /\btools\b/i, 'Tools']];
+export const KIND_LIST_MAX = 25;
+function kindList(index, root, question, q, now, maxBytes = SEARCH_MAX_BYTES) {
+  if (q.entities.length) return [];
+  const asked = KIND_LISTS.find(([, re]) => re.test(question)); if (!asked) return [];
+  const [kind, , title] = asked, all = (index.entries || lib.readNames(root)).filter(e => e.kind === kind && e.status !== 'archived');
+  if (!all.length) return [];
+  const count = index.db.prepare(`SELECT count(*) AS n, max(m.time) AS newest FROM members v JOIN memories m ON m.rowid=v.memory WHERE v.field='entities' AND v.value=? AND m.effective=1`);
+  const rows = all.map(e => { const linked = count.get(JSON.stringify(e.id)); let fields = []; try { fields = e._fm?.compiled_fields ? JSON.parse(e._fm.compiled_fields) : []; } catch {}
+    return { e, n: linked.n, newest: linked.newest || 0, fields: (Array.isArray(fields) ? fields : []).filter(f => f && f.field && f.text).slice(0, 3) }; })
+    .sort((a, b) => b.newest - a.newest || a.e.name.localeCompare(b.e.name));
+  // each one's newest notes ride along (its date, what we did there), fewer when the list is long, so no read per event follows
+  const newest = index.db.prepare(`SELECT m.rowid AS r FROM members v JOIN memories m ON m.rowid=v.memory WHERE v.field='entities' AND v.value=? AND m.effective=1 ORDER BY m.time DESC LIMIT ?`), per = rows.length > 12 ? 1 : 2;
+  // the list takes at most 60% of the reply's cap: the notes that matched the words still follow it
+  const shown = []; let bytes = 0, listedN = 0;
+  for (const x of rows.slice(0, KIND_LIST_MAX)) {
+    const block = [`- ${x.e.name} · ${x.e.id}${x.e.aliases?.length ? ` · also: ${x.e.aliases.slice(0, 2).join(', ')}` : ''}${x.fields.length ? ` · ${x.fields.map(f => `${f.field}: ${clip(String(f.text), 60)}`).join('; ')}` : ''} · ${x.n} note${x.n === 1 ? '' : 's'}${x.newest ? `, newest ${ymd(new Date(x.newest))} (${age(x.newest, now)})` : ''}`,
+      ...newest.all(JSON.stringify(x.e.id), per).map(n => fetchRow(index, n.r)).map(m => `    ${m.id} · ${lib.localDateTime(m.at).slice(0, 10)}: ${clip(String(m.content).replace(/\s*\n\s*/g, ' '), 200)}`)];
+    const size = Buffer.byteLength(block.join('\n')) + 1;
+    if (listedN && bytes + size > maxBytes * 0.6) break;
+    shown.push(...block); bytes += size; listedN++;
+  }
+  return [`${title} in the brain (${rows.length}), each registered once, with ${per === 1 ? 'its newest note' : 'its two newest notes'}; this list is the base of the answer:`,
+    ...shown,
+    ...(rows.length > listedN ? [`${rows.length - listedN} more: query object entities with filters.kind ${kind}.`] : []),
+    `Answer from this list; what a note above does not say about one (its date, whether we ran, sponsored or attended it) is not recorded. All notes of one: query object answer with its name.`];
+}
+
 /* query (object answer): the question as asked, one reply. */
 export function answerText(index, root, question, { filters = {}, limit, project = null, now = nowDate(), relationsFor = () => [] } = {}) {
   question = String(question || '').trim();
@@ -523,7 +555,9 @@ export function answerText(index, root, question, { filters = {}, limit, project
   const out = [];
   const narrowing = describeNarrowing(q);
   const words = r.searched.map(g => g.word);
-  if (!r.rows.length) {
+  const listed = kindList(index, root, question, q, now, maxBytes);
+  if (!r.rows.length && listed.length) out.push(`Answer for "${question}": no note matches the words, and the brain has the list below (${r.total} notes searched).`);
+  else if (!r.rows.length) {
     out.push(`Not found: no note matches "${question}" (${r.total} notes searched${narrowing ? `; narrowed to ${narrowing}` : ''}${words.length ? `; words: ${words.join(', ')}` : ''}${r.missing.length ? `; no note has ${r.missing.map(w => `"${w}"`).join(', ')} or a spelling one letter off` : ''}).`);
     const given = Object.keys(filters || {});
     out.push(given.length ? `Nothing within the filters given (${given.join(', ')}); the brain was not searched outside them. The same question without filters searches all of it.`
@@ -531,6 +565,7 @@ export function answerText(index, root, question, { filters = {}, limit, project
   } else {
     out.push(`Answer for "${question}": ${r.rows.length} note${r.rows.length === 1 ? '' : 's'} match${r.rows.length === 1 ? 'es' : ''} of ${r.total}, best first${narrowing ? `; narrowed to ${narrowing}` : ''}.`);
   }
+  if (listed.length) out.push('', ...listed, '');
   out.push(...r.said);
   for (const a of q.ambiguous || []) out.push(`"${a.said}" could be ${a.names.join(' or ')}${a.more ? ` (and ${a.more} more)` : ''}; the notes below match the word, not one of them. If it matters, ask which one.`);
   if (r.widened) out.push(r.widened);

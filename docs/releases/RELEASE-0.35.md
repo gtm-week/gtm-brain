@@ -2,7 +2,7 @@
 
 Released from `main`. For a team already on 0.34: update the plugin, restart Codex, then let the
 owner say "upgrade this brain". The steps, what a teammate on the old version sees and how to go
-back are in [MANUAL.md, Updating to 0.35](plugins/gtm-brain/MANUAL.md#updating-to-035).
+back are in [MANUAL.md, Updating to 0.35](../../plugins/gtm-brain/MANUAL.md#updating-to-035).
 
 ## What is new
 
@@ -79,7 +79,7 @@ The first move (entity pages) can be agreed by anyone on the team. The second (`
 
 ## Updating
 
-Follow [Updating to 0.35](plugins/gtm-brain/MANUAL.md#updating-to-035). The one rule that
+Follow [Updating to 0.35](../../plugins/gtm-brain/MANUAL.md#updating-to-035). The one rule that
 matters: everyone updates the plugin before the owner says yes.
 
 Rehearsed for this release against 0.34.5: a brain built with the 0.34.5 scripts and a copy of a

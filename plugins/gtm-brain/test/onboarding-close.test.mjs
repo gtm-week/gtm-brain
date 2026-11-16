@@ -104,5 +104,5 @@ test("the skill says the same: one line for someone who is not the owner, no que
   assert.match(tour.slice(tour.indexOf("\n## The documents question\n")), /Someone who is not the brain's owner is\s+not asked/);
   assert.match(readFileSync(join(P, "skills/gtmb-start/SKILL.md"), "utf8"), /is told in one line that schema, rules and base document changes go to the\s+owner as proposals, and is not asked/);
   assert.match(readFileSync(join(P, "skills/gtmb-start/references/questions.md"), "utf8"), /\| Documents, at the close \|[^\n]*Not asked of someone who is not the owner\. \|/);
-  assert.match(readFileSync(join(P, "../../ONBOARDING.md"), "utf8"), /If you are not the brain's owner, Codex does not ask these three/);
+  assert.match(readFileSync(join(P, "../../docs/ONBOARDING.md"), "utf8"), /If you are not the brain's owner, Codex does not ask these three/);
 });

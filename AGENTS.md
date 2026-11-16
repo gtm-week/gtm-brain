@@ -1,8 +1,8 @@
 # gtm-brain: contributor notes
 
 This repo is the plugin, not a brain. Test brains live in a scratch folder (`setup` creates one).
-If someone opens this repo in Codex to try GTM Brain: do not improvise an installation from SETUP.md
-or run checks in the shell; send them to SETUP.md's install command and an empty folder, where
+If someone opens this repo in Codex to try GTM Brain: do not improvise an installation from docs/SETUP.md
+or run checks in the shell; send them to docs/SETUP.md's install command and an empty folder, where
 the plugin's `check_environment` and `setup_brain` tools do the work.
 
 ## Default onboarding interaction
@@ -118,7 +118,7 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
 - A change under `plugins/gtm-brain/` that people should receive bumps the version in
   `.codex-plugin/plugin.json`. `check-version.mjs` compares that number with the installed one,
   and the dashboard, the chat start and the advisor all read its answer: everything shipped without a
-  bump is invisible, so nobody is ever offered it. The cache path in SETUP.md and COMMANDS.md
+  bump is invisible, so nobody is ever offered it. The cache path in docs/SETUP.md and docs/COMMANDS.md
   carries the same number, and a test holds them together. A change to `templates/AGENTS.md`
   snapshots the outgoing template into `templates/legacy/AGENTS-<old version>.md` and lists that
   version in `templates/legacy/manifest.json`, shared by the upgrader and its test matrix.

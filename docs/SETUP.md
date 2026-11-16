@@ -28,7 +28,7 @@ needed only if you later choose to share your own private company brain through 
 codex plugin marketplace add gtm-week/gtm-brain   # straight from GitHub (verified)
 codex plugin marketplace upgrade gtm-brain        # refresh an existing marketplace snapshot
 codex plugin add gtm-brain@gtm-brain
-codex plugin list | grep gtm-brain                                      # installed, enabled, 0.36.3
+codex plugin list | grep gtm-brain                                      # installed, enabled, 0.36.5
 ```
 
 The install is a snapshot of the configured branch. In the Codex app, say **"update GTM Brain"**
@@ -57,7 +57,7 @@ by `codex plugin list`, then quit and reopen Codex. The in-app update performs t
 Brains you already have keep working; open one in Codex and the chat start refreshes its
 git config, or say "upgrade the brain" to refresh its AGENTS.md and pre-commit hook too. Coming from 0.34, the
 upgrade also offers to move files and asks first: see
-[Updating to 0.35](plugins/gtm-brain/MANUAL.md#updating-to-035). A brain set up
+[Updating to 0.35](../plugins/gtm-brain/MANUAL.md#updating-to-035). A brain set up
 before the full-name handles (`maciej` instead of `maciej-konczal`) gets a note from upgrade:
 say "change the team handles to full names" and choose APPROVE; old memories keep the old
 handle, and both resolve to the same person.
@@ -81,7 +81,7 @@ new chat in Codex on the test folder (restart the app only if old skills linger)
 Set this once in your shell; the scripts below use it:
 
 ```bash
-export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.36.3
+export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.36.5
 ```
 
 In a chat the skills run as GTM Brain tools: you see "Remembering", "Searching the brain",

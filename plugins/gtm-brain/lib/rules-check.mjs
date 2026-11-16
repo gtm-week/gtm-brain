@@ -11,6 +11,7 @@ import { strayFolders, listDocuments, filesDir } from "./documents.mjs";
 import { readSchema } from "./schema.mjs";
 import { readAskSource } from "./ask-source.mjs";
 import { ourRulesFindings } from "./our-rules.mjs";
+import { unregisteredKinds } from "./population.mjs";
 
 const git = (root, ...a) => { try { return execFileSync("git", ["--no-optional-locks", "-C", root, ...a], { encoding: "utf8", stdio: "pipe" }); } catch { return ""; } };
 const BAD_NAME = /[A-Z\s]/;
@@ -98,6 +99,10 @@ export function ruleFindings(root, shared = {}) {
     }
     if (gaps.length > 10) add(lib.schemaFile(root), "gap", "more", `${gaps.length - 10} more with required fields missing.`, [`Run the check again after the first ones are answered`]);
   }
+  // a kind SCHEMA.md defines that the notes name and nobody registered (lib/population.mjs unregisteredKinds)
+  let unregistered = []; try { unregistered = unregisteredKinds(root, { names, memories }); } catch {}
+  for (const u of unregistered) add(lib.schemaFile(root), "gap", u.kind, `${u.notes} notes name ${u.plural} (${u.examples.join(", ")}) and the brain has no ${u.kind}: a question about ${u.plural} is pieced together from notes every time.`, [
+    `Say: "${u.say}" (add_name with kind ${u.kind} for each, its date from the notes; later saves name it in ${u.plural})`]);
   return out;
 }
 

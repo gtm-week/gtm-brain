@@ -24,6 +24,6 @@ let was; try { was = version(git("show", `${base}:${MANIFEST}`)); } catch { cons
 const list = changed.slice(0, 10).map(f => `  ${f}`).join("\n") + (changed.length > 10 ? `\n  ... and ${changed.length - 10} more` : "");
 if (higher(now, was)) { console.log(`Version ${was} -> ${now}, ${changed.length} shipped file(s) changed.`); process.exit(0); }
 console.log(`These shipped files changed, but ${MANIFEST} is still ${now} (${base} has ${was}):\n${list}\n
-Bump the version in ${MANIFEST}, the same number in the cache paths in SETUP.md and COMMANDS.md,
+Bump the version in ${MANIFEST}, the same number in the cache paths in docs/SETUP.md and docs/COMMANDS.md,
 then run node scripts/sync-derived.mjs. Without a bump nobody is offered the change.`);
 process.exit(1);

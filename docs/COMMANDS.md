@@ -47,7 +47,7 @@ They are not additional discoverable skills. Tools show outcomes such as "Rememb
 "Searching the brain" in chat. Review proposals on the dashboard (it changes nothing but a document you edit and save there). APPROVE is a choice in the form `approve_change` shows; in a chat nothing else applies it.
 A question to you comes the same way: `ask_person` shows a form with the choices to click (or a field to type in) and hands your answer back to Codex. It records nothing and applies nothing. Where the host shows no form, Codex asks in its own question box, or in chat text with numbered options.
 Scripts retain their paths for terminal use with
-`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.36.3`.
+`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.36.5`.
 
 Legend for "writes": what files the command changes. Nothing else is ever touched.
 
@@ -89,6 +89,11 @@ with no unique answer it is saved under the best guess (where its people have mo
 Our company) and the reply says so, so the person can move it in one sentence. Each kept note
 starts with `saved in <Context title>: ...`. `by` is optional too: it defaults to the person
 selected in this brain (`work/person.json`, else the brain's git identity in the team).
+
+`events` (flag `--events "Northfold Summit | 2026-10-08"`) names the events the note is about: a
+known event links by name or alias; `{name, date}` registers a new one once (`brain/entities/events/`),
+and the date is kept as a note of its own when the note's text does not say it. A new event without
+a date is not registered: the note is saved and one reply line says what is missing.
 
 Before writing, the note is compared with the notes in force across the whole brain (same project
 only). The same fact again, with no value and no source the kept note lacks, writes nothing and
@@ -339,6 +344,8 @@ them; for a pair both cards side by side, what a merge would keep and the two to
 `filters.offset` returns the next items, `search` (first names, same names, other) one group. The
 reply stays under 12 KB and ends with the instruction the rules check also ends with
 (`ONE_AT_A_TIME` in `lib/rules-check.mjs`): one item at a time, ask the person, never the web.
+Among the other findings: three or more notes name events and the brain has no event entity
+(`unregisteredKinds` in `lib/population.mjs`), with up to three names and the sentence to send.
 Reads only. Writes: nothing.
 
 Several people or companies in one read: `query` with object `entities` and `filters.name` and/or
@@ -616,7 +623,7 @@ to the same component library, and plugin updates never rewrite a company's proj
 sections. `/gtmb-build-landing-page` uses the strategy, ICP, voice and offer, then
 composes registered sections. Both end at a local preview. `/gtmb-publish-website` runs
 only on its own request: a Vercel preview first, production on a separate decision. See the
-[preservation and packaging contract](plugins/gtm-brain/starters/web-design-system/README.md).
+[preservation and packaging contract](../plugins/gtm-brain/starters/web-design-system/README.md).
 
 ### connect
 *"connect my tools"*, *"is HubSpot connected?"*
@@ -673,7 +680,7 @@ left uncommitted and listed), `work/hooks.log`.
 
 Before it compiles, the scheduled run reads this brain's chats (brain folder and linked project folders
 only) changed since the last pass and saves, through `remember`, the outcomes nobody saved, each resting on
-an exact sentence of its chat (see [MANUAL.md](plugins/gtm-brain/MANUAL.md#chat-capture)). Capped at
+an exact sentence of its chat (see [MANUAL.md](../plugins/gtm-brain/MANUAL.md#chat-capture)). Capped at
 200,000 input tokens per pass and 50,000 per chat; what a cap leaves is read next time.
 
 Tool: `capture_chats` (`mode` run | undo | status | off | on, optional `cap`, `chat_cap`). Writes: notes
@@ -732,13 +739,13 @@ the yes says how many pages would move and names the teammates who saved notes i
 commit. `update_plugin` runs the upgrade without the yes, and a scheduled or background run never
 moves pages. A brain already in kind folders whose file says 1 or is missing is set to 2 by the
 upgrade, the next chat start or the next save, with nothing moved. What a teammate on an older
-version sees is in [MANUAL.md](plugins/gtm-brain/MANUAL.md#saving-what-you-say-what-it-keeps).
+version sees is in [MANUAL.md](../plugins/gtm-brain/MANUAL.md#saving-what-you-say-what-it-keeps).
 
 For the owner the same question also covers layout 3: the base files into `about-us/`, `RULES.md`,
 `SCHEMA.md` and `brain/admin.md` into `config/`, in a commit of its own. A teammate's yes moves the
 entity pages only. The chat start offers the upgrade in one line to whoever can say yes to a move
 still waiting. The order for a team, what a 0.34 teammate sees and how to go back are in
-[MANUAL.md, Updating to 0.35](plugins/gtm-brain/MANUAL.md#updating-to-035).
+[MANUAL.md, Updating to 0.35](../plugins/gtm-brain/MANUAL.md#updating-to-035).
 
 Tool: `upgrade_brain` (`confirm`, `skill_names`). Writes: `AGENTS.md`, `.githooks/pre-commit`, `.gitignore`,
 `RULES.md`, `SCHEMA.md`, missing starter documents, `brain/layout.json`, upgrade backups, and
@@ -750,7 +757,7 @@ workflow documents, base documents and the skills made in the brain) it rewrites
 of 0.35 and earlier, `gtm-brain-<name>`, to `gtmb-<name>`, and commits. Without it, the chat start
 names those files and Codex asks first. A teammate's run leaves `about-us/` and `config/` to the
 owner. Notes are never rewritten. See
-[MANUAL.md, Updating to 0.36](plugins/gtm-brain/MANUAL.md#updating-to-036-short-skill-names).
+[MANUAL.md, Updating to 0.36](../plugins/gtm-brain/MANUAL.md#updating-to-036-short-skill-names).
 `node $PLUGIN_ROOT/scripts/gtm-brain-upgrade/skill-names.mjs . [--apply] [--by <handle>]`
 
 ## What runs by itself

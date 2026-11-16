@@ -543,8 +543,8 @@ test('the close of onboarding goes schema, rules, documents, first task, in ever
   const close = discovery.slice(discovery.indexOf('End this closing reply with'));
   order(close, [/\[schema\]\(skills-tour\.md#schema\)/, /\[rules\]\(skills-tour\.md#rules\)/, /\[the documents question\]\(skills-tour\.md#the-documents-question\)/, /\[the first task\]\(skills-tour\.md#the-first-task\)/], 'discovery.md');
   order(skill, [/take the person through \[the close\]/, /the schema, then the rules, then the documents question/, /Then end with one first task/], 'SKILL.md');
-  order(readFileSync(join(P, '../../ONBOARDING.md'), 'utf8'), [/### Then: schema, rules, documents/, /\*\*Schema: what the brain keeps\.\*\*/, /\*\*Rules: how Codex saves\.\*\*/, /\*\*Base documents\.\*\*/, /one first thing to do/], 'ONBOARDING.md');
-  assert.match(readFileSync(join(P, '../../GUIDE.md'), 'utf8'), /\(the schema\),[\s\S]{0,120}\(the rules\),[\s\S]{0,60}base documents to fill now\. Then it\s+gives you one first task/);
+  order(readFileSync(join(P, '../../docs/ONBOARDING.md'), 'utf8'), [/### Then: schema, rules, documents/, /\*\*Schema: what the brain keeps\.\*\*/, /\*\*Rules: how Codex saves\.\*\*/, /\*\*Base documents\.\*\*/, /one first thing to do/], 'ONBOARDING.md');
+  assert.match(readFileSync(join(P, '../../docs/GUIDE.md'), 'utf8'), /\(the schema\),[\s\S]{0,120}\(the rules\),[\s\S]{0,60}base documents to fill now\. Then it\s+gives you one first task/);
   assert.deepEqual(CLOSING_STEPS, ['schema', 'rules', 'documents']);
   assert.match(readFileSync(join(P, 'scripts/gtm-brain-remember/remember.mjs'), 'utf8'), /the schema, the rules, the documents question \(gtmb-start\/references\/skills-tour\.md\), and only then the first task/);
   // the documents question says that rules and schema came first
@@ -569,9 +569,9 @@ test('each closing step is one question in one form, recommended choice first, L
   assert.match(schema, /propose none/);
   assert.match(schema, /With no\s+addition, the choices are "Looks right" and "Later"/);
   assert.match(schema, /A proposed field is not required,\s+unless the person says it must or always has to be there/);
-  assert.doesNotMatch(tour + questions + readFileSync(join(P, '../../ONBOARDING.md'), 'utf8') + startDoc('references/discovery.md'), /two or three\s+additions|the two strongest/);
+  assert.doesNotMatch(tour + questions + readFileSync(join(P, '../../docs/ONBOARDING.md'), 'utf8') + startDoc('references/discovery.md'), /two or three\s+additions|the two strongest/);
   assert.match(questions, /up to two proposed additions by name, only ones discovery supports, none marked required; Later\. With no addition: Looks right \(Recommended\); Later\./);
-  assert.match(readFileSync(join(P, '../../ONBOARDING.md'), 'utf8'), /proposes up to three additions, only ones backed by what\s+it saw during setup/);
+  assert.match(readFileSync(join(P, '../../docs/ONBOARDING.md'), 'utf8'), /proposes up to three additions, only ones backed by what\s+it saw during setup/);
   assert.match(schema, /\[gtmb-schema\]\(\.\.\/\.\.\/gtmb-schema\/SKILL\.md\), Add, then Keep it\)/);
   assert.match(schema, /"Looks right" or "Later": change nothing/);
   assert.match(rules, /"Is there something Codex should always ask before saving, or never\s+save\?"/);
