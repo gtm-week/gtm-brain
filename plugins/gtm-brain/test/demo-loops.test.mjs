@@ -237,6 +237,8 @@ test("connector fixtures: each server lists its tools, answers from the canned d
 
 // A stand-in for codex that answers every turn with the right words and does nothing: no tool call, no
 // file, no note. The runner must fail every step, exit 1, resume one session per loop and start the last turn fresh.
+// FAKE_CODEX_CALLS ("clay:clay_enrich_person,...") makes each turn call those tools on the connector servers its
+// argv declares, the way Codex would: the calls reach the runner only through the trace the fixture writes.
 function fakeCodex(more = {}) {
   const dir = mkdtempSync(join(tmpdir(), "gtm-demo-run-")), bin = join(dir, "bin"), log = join(dir, "argv.jsonl");
   mkdirSync(bin);
@@ -246,6 +248,10 @@ let stdin = ""; process.stdin.on("data", d => { stdin += d; }); process.stdin.on
   fs.appendFileSync(${JSON.stringify(log)}, JSON.stringify({ argv, stdin, home: process.env.CODEX_HOME || null }) + "\\n");
   // a real chat's first GTM Brain call starts the dashboard server of the brain; it outlives the chat
   if (process.env.FAKE_CODEX_DASH && argv.includes("-C")) require("node:child_process").spawnSync(process.execPath, [process.env.FAKE_CODEX_DASH, argv[argv.indexOf("-C") + 1], "--start"], { stdio: "ignore" });
+  for (const [server, name] of (process.env.FAKE_CODEX_CALLS || "").split(",").filter(Boolean).map(c => c.split(":"))) {
+    const declared = key => JSON.parse(argv.find((a, i) => argv[i - 1] === "-c" && a.startsWith("mcp_servers." + server + "." + key + "=")).split("=").slice(1).join("="));
+    require("node:child_process").spawnSync(declared("command"), declared("args"), { input: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: { name: "Lea Hoffmann", company: "Fernbrook Outdoor" } } }) + "\\n" });
+  }
   console.log(JSON.stringify({ type: "thread.started", thread_id: "thread-" + fs.readFileSync(${JSON.stringify(log)}, "utf8").split("\\n").filter(Boolean).length }));
   fs.writeFileSync(argv[argv.indexOf("-o") + 1], "Fernbrook Outdoor first, then Heron Home. Contact: Lea Hoffmann. ERP migration, call on 14 January, prospect. Posts: 'store pickup returns', 'reduce return rate retail'; customers say they drown after Black Friday. 1,240 visits, 3 demo requests. Next: peak season. Saved and drafted everything.");
 });
@@ -332,6 +338,18 @@ test("demo runner: connectors mode declares Clay, Zynt and Surfer beside GTM Bra
     assert.ok(t.stdin.endsWith(connectorStep(report.results[i].id).say));
   }
   assert.match(turns[0].stdin, /Clay, Zynt and Surfer are connected as test fixtures/);
+});
+
+test("demo runner: connectors mode judges each turn on the calls its fixtures traced, and a credit nobody asked for fails", { timeout: 180000 }, () => {
+  const fake = fakeCodex({ FAKE_CODEX_CALLS: "clay:clay_find_people,clay:clay_enrich_person" });
+  const run = fake.run(["--connectors", "--step", "o1-pick,o2-find"]);
+  assert.equal(run.status, 1, run.stdout + run.stderr);
+  const [pick, find] = fake.report().results;
+  // two turns of one loop share a trace file: each is judged on its own calls, not on the turn before
+  for (const r of [pick, find]) assert.deepEqual(r.connectors, ["clay:clay_find_people", "clay:clay_enrich_person"], r.id);
+  assert.match(pick.why, /did not read the signals in Zynt/);
+  assert.match(find.why, /spent a Clay credit nobody asked for/);
+  assert.match(run.stdout, /connectors: clay:clay_find_people > clay:clay_enrich_person/);
 });
 
 test("presenter text: GUIDE.md carries the sentences the live run checks, word for word, within a page", () => {

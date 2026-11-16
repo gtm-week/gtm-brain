@@ -81,9 +81,14 @@ result is an answer.
 
 ## 4. Brief on a yes, write on a second yes, never publish
 
-On the person's yes, create one Surfer document or content brief for the chosen topic and give its
-link. Generating a full article or images may spend the plan's credits or document limits: ask
-again first, naming what it will create. A yes covers that one article. This skill never publishes,
+Picking a topic is not a yes to create anything. Creating the brief uses one of the plan's Content
+Editor documents, so ask first and name that cost: "Create the Surfer brief for this topic? It
+uses one of your plan's Content Editor documents." with Yes, create the brief and No, not now. On
+that yes, create one Surfer document or content brief for the chosen topic and give its link. A
+yes covers one brief.
+
+Generating a full article or images may spend the plan's credits or document limits: ask again
+first, naming what it will create. A yes covers that one article. This skill never publishes,
 never connects a CMS and never changes a live page. Report what Surfer returned.
 
 ## 5. Keep the result
@@ -97,6 +102,6 @@ the person can take now: "Write the first draft of this brief in our voice".
 
 ## Boundaries
 
-Never publishes or schedules content, never connects or writes to a CMS and never spends credits
-on an article without a yes for it. Never invents a statistic, a customer or a quote. Customer
+Never publishes or schedules content, never connects or writes to a CMS and never creates a brief
+or an article without a yes for it. Never invents a statistic, a customer or a quote. Customer
 details stay in the brain, never in this skill.

@@ -48,7 +48,13 @@ document or a commit.
 HeyReach publishes no fixed tool list: read the tool descriptions before the first call, and use
 only the ones that read (campaigns, LinkedIn accounts, lists, stats, conversations). After the
 first call that works, call `mark_tool` with tool `HeyReach`, status `ok` and the number of
-campaigns in one line; on an error, status `fail` and the exact error, and stop there.
+campaigns in one line; on an error, status `fail` and the error with any URL or key removed (the
+HTTP status or the error class only), and stop there.
+
+Never run `codex mcp list`, `codex mcp get`, `claude mcp list` or `claude mcp get`, and never read
+the host's config files (`~/.codex/config.toml`, `~/.claude.json`), to check HeyReach: they print
+the Connection URL into the chat. When HeyReach's tools are still not listed after the person
+added the URL, tell them to check the URL in their own terminal and stop.
 
 ## 2. Read what the brain and HeyReach know
 

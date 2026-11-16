@@ -25,6 +25,13 @@ test("the Connection URL is a secret the person adds in a terminal, never throug
   assert.match(skill, /do not use it, repeat it or\s+write it anywhere: tell them to regenerate the key/);
 });
 
+test("the key in the URL stays out of the tools note and the chat: no exact error, no host config reads", () => {
+  assert.doesNotMatch(skill, /the exact error/);
+  assert.match(skill, /status `fail` and the error with any URL or key removed \(the\s+HTTP status or the error class only\)/);
+  assert.match(skill, /Never run `codex mcp list`, `codex mcp get`, `claude mcp list` or `claude mcp get`, and never read\s+the host's config files/);
+  assert.match(skill, /tell them to check the URL in their own terminal and stop/);
+});
+
 test("reads and drafts only: no sends, no leads, no campaign changes", () => {
   assert.match(skill, /use\s+only the ones that read/);
   assert.match(skill, /The drafts stay in the chat/);

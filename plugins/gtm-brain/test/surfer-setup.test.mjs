@@ -30,6 +30,11 @@ test("topics come from the brain, credits only on a second yes, nothing publishe
   assert.match(skill, /Never invent a statistic, a customer or a quote/);
   assert.match(skill, /## 4\. Brief on a yes, write on a second yes, never publish/);
   assert.match(skill, /Never publishes or schedules content/);
+  // the brief counts against the plan's documents: its own yes names that, and the topic choice is not that yes
+  assert.match(skill, /Picking a topic is not a yes to create anything/);
+  assert.match(skill, /uses one of your plan's Content Editor documents\." with Yes, create the brief and No, not now/);
+  assert.match(skill, /A\s+yes covers one brief\./);
+  assert.match(skill, /never creates a brief\s+or an article without a yes for it/);
 });
 
 test("Surfer ends up in the brain tools: mark_tool, a note naming it, then check_tools", () => {
