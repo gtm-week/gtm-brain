@@ -40,7 +40,8 @@ then say when it was first saved, by whom, from which note, and how each spellin
 A file or folder: `query` (why, search = the path).
 
 Before producing copy, outreach, posts, landing pages, creatives, proposals, a design or a plan,
-read the document that applies (the opening lines and `query` (status) list the documents at the
+and before recommending what comes next (the next post, account, campaign or priority: read
+`strategy` first, its plan decides what is next), read the document that applies (the opening lines and `query` (status) list the documents at the
 brain root with what each applies to) and follow it, saying which one in one line; AGENTS.md
 rule 11. Adding, filling or changing one: follow [documents](references/documents.md). Setup
 writes `strategy.md`, `icp.md`, `voice.md`, `design-system.md` and `market.md` as starters; one shown as

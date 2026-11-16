@@ -55,7 +55,11 @@ if (args[0] === "--used") {
 }
 
 if (args[0] === "--mark") {
-  const [tool, result, ...note] = args.slice(1); const k = entryKey(state, tool); const { declined, declined_at, ...was } = state[k] || {};
+  // the note lands in work/tools.json, the dashboard and the chat: an error that quotes a connector's URL must not
+  // carry its key there (HeyReach's key is part of its Connection URL), so a URL keeps its host only
+  const { redactSecrets } = await import(new URL("../../lib/capture.mjs", import.meta.url));
+  const [tool, result, ...said] = args.slice(1), text = redactSecrets(said.join(" ").replace(/\b(https?:\/\/)(?:[^\s\/@]*@)?([^\s\/?#]+)[^\s"'<>)\]]*/gi, "$1$2")), note = text ? [text] : [];
+  const k = entryKey(state, tool); const { declined, declined_at, ...was } = state[k] || {};
   // a test result is the person changing their mind about a tool they had declined: it is offered again
   state[k] = { ...was, tool: was.tool || tool, status: was.status || "not checked", test: result, note: note.join(" "), at: new Date().toISOString() };
   writeFileSync(wf, JSON.stringify(state, null, 1)); console.log(`${tool}: ${result}${note.length ? " · " + note.join(" ") : ""}${declined ? " (no longer declined)" : ""}`); process.exit(0);

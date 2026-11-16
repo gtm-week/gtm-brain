@@ -206,7 +206,15 @@ run asks only the steps that call a tool, and passes when Codex says what failed
 tool did not return and stops asking after three calls. On 15 November an empty result did not pass:
 Codex asked the same tool 16 and 42 times before it gave up.
 
-What the stubs do not prove: real sign-in and keys, the real tools' rate limits and cost per call,
+`--connectors` is the third run: Clay, Zynt and Surfer are declared under their own names, three
+stand-in servers with canned answers (`test/live/gtm-connectors-fixture.mjs`). The demo brain then
+holds no Fernbrook signal: Codex reads it in Zynt, finds the contact in Clay for free, and spends one
+Clay credit on her email only when the sentence allows it (the step `o2-find` comes before
+`o2-enrich`). Keywords and the content brief come from Surfer; Codex writes the post itself. A turn
+that calls a tool that spends a credit nobody asked for fails. Calls are logged in
+`<loop>-connectors.jsonl`. It does not combine with `--stub` or `--fail`.
+
+What neither stand-in proves: real sign-in and keys, the real tools' rate limits and cost per call,
 and the real tools' data shapes and quality. The fixture data is small and fits the demo brain.
 
 ## Three habits that make it work

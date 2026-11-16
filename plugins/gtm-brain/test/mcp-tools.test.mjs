@@ -68,6 +68,15 @@ test("a tool read through its API is on the page once a read test and a note bac
   assert.equal(f.state().zynt.test, "fail", "an expired key stays visible as failed, never connected");
 });
 
+// HeyReach's key is part of its MCP Connection URL, and a transport error quotes the URL (gtm-brain-heyreach-setup).
+test("a read test note never carries a connector's URL path, query or key into tools.json or the chat", t => {
+  const f = brain(t, ["HubSpot"]);
+  const out = spawnSync(process.execPath, [connect, f.root, "--mark", "heyreach", "fail", "error sending request for url (https://mcp.fixture.test/mcp/k9Zs3cret?key=abc123): 401, api key: Qw3rtyUiop12345"], { cwd: f.root, env: f.env, encoding: "utf8" }).stdout;
+  const note = JSON.parse(readFileSync(join(f.root, "work", "tools.json"), "utf8")).heyreach.note;
+  assert.equal(note, "error sending request for url (https://mcp.fixture.test): 401, api key: [secret removed]");
+  assert.doesNotMatch(out, /k9Zs3cret|abc123|Qw3rtyUiop12345/); assert.match(out, /heyreach: fail/);
+});
+
 // A tool the brain has no plugin, MCP url or read test for (a local MCP server, the demo's stub tools): a note
 // that names it in tools and cites a record of its own kind came from it, so the tools list shows it as used.
 // A note the person told about it (source user) does not, and a failed read test stays failed.
