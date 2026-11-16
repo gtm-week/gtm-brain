@@ -1,104 +1,87 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 860" role="img" aria-labelledby="t d">
-<title id="t">A GTM Brain in one picture</title><desc id="d">At the top, you in a Codex chat: you say what happened, ask, and shape the brain. Below, your brain, a folder of plain files in git on your computer, in three parts side by side: memories (dated notes with sources), configuration (rules and schema first, then the base documents) and entities (people, companies and products with their relationships). Workflows and your own skills sit under them. At the bottom: your connected tools, synced in with sources; the dashboard, which shows the same files; and your team, which shares the folder through git. Only the owner changes the configuration; others propose and the owner approves.</desc>
-<defs><marker id="a5d6670" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5d6670"/></marker><marker id="ab03a5b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b03a5b"/></marker><marker id="a1f8a6a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f8a6a"/></marker><marker id="ac27a12" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c27a12"/></marker><marker id="a4c5bd4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4c5bd4"/></marker></defs>
-<rect x="0" y="0" width="1240" height="860" rx="18" fill="#f6f6f3"/>
-<text x="36" y="50" font-size="24" font-weight="700" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">A GTM Brain in one picture</text>
-<text x="36" y="74" font-size="13.5" font-weight="400" fill="#5d6670" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">You talk to Codex. Codex keeps what matters in plain files that are yours, and reads them before it answers.</text>
-<rect x="36" y="98" width="1168" height="112" rx="14" fill="#ffffff" stroke="#c9cdc5" stroke-width="1.6"/>
-<text x="60" y="130" font-size="17" font-weight="700" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">You, in a Codex chat</text>
-<text x="60" y="152" font-size="11.5" font-weight="400" fill="#5d6670" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Questions come back as a form</text>
-<text x="60" y="168" font-size="11.5" font-weight="400" fill="#5d6670" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">with choices to click.</text>
-<rect x="300" y="116" width="3" height="76" rx="1.5" fill="#d9dcd6"/>
-<text x="318" y="138" font-size="13.5" font-weight="700" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Say what happened</text>
-<text x="318" y="160" font-size="12" font-weight="400" fill="#5d6670" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">"just got off a call with Anna</text>
-<text x="318" y="178" font-size="12" font-weight="400" fill="#5d6670" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">from Acme, she wants ..."</text>
-<rect x="600" y="116" width="3" height="76" rx="1.5" fill="#d9dcd6"/>
-<text x="618" y="138" font-size="13.5" font-weight="700" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Ask</text>
-<text x="618" y="160" font-size="12" font-weight="400" fill="#5d6670" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">"brief me on Acme"</text>
-<text x="618" y="178" font-size="12" font-weight="400" fill="#5d6670" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">"what should I focus on this week?"</text>
-<rect x="900" y="116" width="3" height="76" rx="1.5" fill="#d9dcd6"/>
-<text x="918" y="138" font-size="13.5" font-weight="700" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Shape it</text>
-<text x="918" y="160" font-size="12.5" font-weight="700" fill="#4c5bd4" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">/gtmb-rules   /gtmb-schema</text>
-<text x="918" y="180" font-size="11.5" font-weight="400" fill="#5d6670" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">the two commands to learn first</text>
-<path d="M214 210 L214 262" fill="none" stroke="#c27a12" stroke-width="2" marker-end="url(#ac27a12)"/>
-<text x="226" y="240" font-size="11.5" font-weight="600" fill="#c27a12" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">saves at once</text>
-<path d="M620 268 L620 216" fill="none" stroke="#4c5bd4" stroke-width="2" marker-end="url(#a4c5bd4)"/>
-<text x="632" y="240" font-size="11.5" font-weight="600" fill="#4c5bd4" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">reads before answering</text>
-<path d="M1026 210 L1026 262" fill="none" stroke="#1f8a6a" stroke-width="2" marker-end="url(#a1f8a6a)"/>
-<text x="1038" y="240" font-size="11.5" font-weight="600" fill="#1f8a6a" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">links names</text>
-<rect x="36" y="268" width="1168" height="424" rx="16" fill="#ffffff" stroke="#c9cdc5" stroke-width="1.6"/>
-<text x="60" y="300" font-size="19" font-weight="700" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Your brain</text>
-<text x="162" y="300" font-size="13" font-weight="400" fill="#5d6670" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">a folder of plain files in git, on your computer</text>
-<text x="1180" y="300" font-size="11.5" font-weight="400" fill="#5d6670" text-anchor="end" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Every change is committed at once. Nothing is stored anywhere else.</text>
-<rect x="56" y="318" width="356" height="286" rx="12" fill="#f8efe0" stroke="#c27a12" stroke-width="1.6"/>
-<rect x="56" y="318" width="6" height="286" rx="3" fill="#c27a12"/>
-<text x="78" y="350" font-size="17" font-weight="700" fill="#c27a12" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Memories</text>
-<text x="396" y="349" font-size="10.5" font-weight="400" fill="#5d6670" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">brain/contexts/</text>
-<text x="78" y="378" font-size="13" font-weight="400" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Dated notes, each with its source:</text>
-<text x="78" y="397" font-size="13" font-weight="400" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">what happened, what was decided,</text>
-<text x="78" y="416" font-size="13" font-weight="400" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">what is still open.</text>
-<text x="78" y="452" font-size="13" font-weight="700" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Never edited.</text>
-<text x="78" y="471" font-size="13" font-weight="400" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">A correction is a newer note that</text>
-<text x="78" y="490" font-size="13" font-weight="400" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">replaces the old one and keeps it.</text>
-<text x="78" y="526" font-size="12" font-weight="400" fill="#5d6670" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Grouped by topic: company, customers,</text>
-<text x="78" y="544" font-size="12" font-weight="400" fill="#5d6670" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">market, offer, strategy.</text>
-<text x="78" y="588" font-size="10.5" font-weight="400" fill="#5d6670" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">"Remember: ..."   "actually it was 8k"</text>
-<rect x="432" y="318" width="376" height="286" rx="12" fill="#f3f4fd" stroke="#4c5bd4" stroke-width="1.6"/>
-<rect x="432" y="318" width="6" height="286" rx="3" fill="#4c5bd4"/>
-<text x="454" y="350" font-size="17" font-weight="700" fill="#4c5bd4" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Configuration</text>
-<text x="792" y="349" font-size="10.5" font-weight="400" fill="#5d6670" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">config/  about-us/</text>
-<rect x="450" y="366" width="340" height="112" rx="10" fill="#e0e4fb" stroke="#4c5bd4" stroke-width="2.4"/>
-<text x="466" y="390" font-size="14.5" font-weight="700" fill="#4c5bd4" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Rules and schema</text>
-<rect x="696" y="376" width="78" height="19" rx="9.5" fill="#4c5bd4"/>
-<text x="735" y="389.5" font-size="9.5" font-weight="700" fill="#ffffff" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">SET FIRST</text>
-<text x="466" y="411" font-size="12" font-weight="400" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Rules: what Codex saves and asks, where files go.</text>
-<text x="466" y="429" font-size="12" font-weight="400" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Schema: what is kept per person and company.</text>
-<text x="466" y="458" font-size="12.5" font-weight="700" fill="#4c5bd4" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">/gtmb-rules   /gtmb-schema</text>
-<rect x="450" y="488" width="340" height="76" rx="10" fill="#ffffff" stroke="#b9bfee" stroke-width="1.2"/>
-<text x="466" y="510" font-size="13" font-weight="700" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Base documents</text>
-<text x="774" y="510" font-size="10.5" font-weight="400" fill="#5d6670" text-anchor="end" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">after that</text>
-<text x="466" y="529" font-size="12" font-weight="400" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Strategy, customer profile, voice, design system.</text>
-<text x="466" y="550" font-size="10.5" font-weight="400" fill="#5d6670" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">/gtmb-strategy  /gtmb-define-icp  /gtmb-voice</text>
-<text x="454" y="588" font-size="11.5" font-weight="600" fill="#b03a5b" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Only the owner changes these; others propose.</text>
-<rect x="828" y="318" width="356" height="286" rx="12" fill="#e5f3ee" stroke="#1f8a6a" stroke-width="1.6"/>
-<rect x="828" y="318" width="6" height="286" rx="3" fill="#1f8a6a"/>
-<text x="850" y="350" font-size="17" font-weight="700" fill="#1f8a6a" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Entities</text>
-<text x="1168" y="349" font-size="10.5" font-weight="400" fill="#5d6670" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">brain/entities/</text>
-<text x="850" y="378" font-size="13" font-weight="400" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">People, companies, products,</text>
-<text x="850" y="397" font-size="13" font-weight="400" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">events and tools: one page each.</text>
-<text x="850" y="433" font-size="13" font-weight="700" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Linked across every note</text>
-<text x="850" y="452" font-size="13" font-weight="400" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">that names them, with relationships</text>
-<text x="850" y="471" font-size="13" font-weight="400" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">and their history: who works where,</text>
-<text x="850" y="490" font-size="13" font-weight="400" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">who is a customer, since when.</text>
-<text x="850" y="526" font-size="12" font-weight="400" fill="#5d6670" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">The schema says which fields each</text>
-<text x="850" y="544" font-size="12" font-weight="400" fill="#5d6670" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">kind carries; gaps are asked.</text>
-<text x="850" y="588" font-size="10.5" font-weight="400" fill="#5d6670" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">"Chris is Krzysztof Pawlak"</text>
-<rect x="56" y="618" width="1128" height="58" rx="10" fill="#eef0ee" stroke="#55606b" stroke-width="1.2"/>
-<rect x="56" y="618" width="6" height="58" rx="3" fill="#55606b"/>
-<text x="78" y="642" font-size="14" font-weight="700" fill="#55606b" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Workflows and your own skills</text>
-<text x="78" y="662" font-size="12" font-weight="400" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Processes with steps, runs and approval gates; repeated work turned into a skill.</text>
-<text x="1168" y="642" font-size="10.5" font-weight="400" fill="#5d6670" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">workflows/  .agents/skills/</text>
-<text x="1168" y="662" font-size="10.5" font-weight="400" fill="#5d6670" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">/gtmb-workflow  /gtmb-skill</text>
-<rect x="36" y="736" width="356" height="100" rx="12" fill="#ffffff" stroke="#d9dcd6" stroke-width="1.2"/>
-<text x="58" y="764" font-size="15" font-weight="700" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Your connected tools</text>
-<text x="58" y="786" font-size="12" font-weight="400" fill="#5d6670" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">CRM, email, calendar, meeting notes,</text>
-<text x="58" y="803" font-size="12" font-weight="400" fill="#5d6670" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">outreach tools. Read on request; a write</text>
-<text x="58" y="820" font-size="12" font-weight="400" fill="#5d6670" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">or anything that costs asks first.</text>
-<rect x="432" y="736" width="376" height="100" rx="12" fill="#ffffff" stroke="#d9dcd6" stroke-width="1.2"/>
-<text x="454" y="764" font-size="15" font-weight="700" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Dashboard</text>
-<text x="454" y="786" font-size="12" font-weight="400" fill="#5d6670" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">The same files in your browser: Overview,</text>
-<text x="454" y="803" font-size="12" font-weight="400" fill="#5d6670" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Entities, Memories, Workflows, Configuration.</text>
-<text x="454" y="820" font-size="12" font-weight="400" fill="#5d6670" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Edit documents, entities and notes there.</text>
-<rect x="828" y="736" width="356" height="100" rx="12" fill="#ffffff" stroke="#d9dcd6" stroke-width="1.2"/>
-<text x="850" y="764" font-size="15" font-weight="700" fill="#1d2126" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">Your team</text>
-<text x="850" y="786" font-size="12" font-weight="400" fill="#5d6670" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">The same folder, shared through git.</text>
-<text x="850" y="803" font-size="12" font-weight="400" fill="#5d6670" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">One owner; everyone else saves notes</text>
-<text x="850" y="820" font-size="12" font-weight="400" fill="#5d6670" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">and proposes changes to configuration.</text>
-<path d="M214 736 L214 698" fill="none" stroke="#1f8a6a" stroke-width="2" marker-end="url(#a1f8a6a)"/>
-<text x="226" y="722" font-size="11.5" font-weight="600" fill="#1f8a6a" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">sync, with sources</text>
-<path d="M620 692 L620 730" fill="none" stroke="#5d6670" stroke-width="2" marker-end="url(#a5d6670)"/>
-<text x="632" y="716" font-size="11.5" font-weight="600" fill="#5d6670" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">shown</text>
-<path d="M1000 692 L1000 730" fill="none" stroke="#5d6670" stroke-width="2" marker-end="url(#a5d6670)"/>
-<path d="M1026 736 L1026 698" fill="none" stroke="#5d6670" stroke-width="2" marker-end="url(#a5d6670)"/>
-<text x="1038" y="716" font-size="11.5" font-weight="600" fill="#5d6670" text-anchor="start" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">git</text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-20 -22 1020 566" role="img" aria-label="Left to right: configuration on the left shapes entities and memories in the middle; Codex, the grey box, is where you talk and is the only thing that reads your tools, on the right, and saves into the brain; notes and entities keep links back to the tools; workflows sit underneath and act through the tools under the rules." font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect x="-20" y="-22" width="1020" height="566" rx="14" fill="#ffffff"/>
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1d2126"/></marker>
+        <marker id="arrW" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8a4fbf"/></marker>
+        <marker id="arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b03a5b"/></marker>
+        <marker id="arrC" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4c5bd4"/></marker>
+      </defs>
+      <!-- 1 configuration, left -->
+      <text x="70" y="12" text-anchor="middle" font-size="11.5" font-weight="600" fill="#b03a5b">You edit the file</text>
+      <path d="M70 18 L70 38" stroke="#b03a5b" stroke-width="1.6" fill="none" marker-end="url(#arrA)"/>
+      <path d="M690 138 L690 26 L160 26 L160 38" stroke="#b03a5b" stroke-width="1.5" stroke-dasharray="5 4" fill="none" marker-end="url(#arrA)"/>
+      <text x="420" y="19" text-anchor="middle" font-size="11.5" font-weight="600" fill="#b03a5b">You ask in chat: Codex proposes the change, you approve it</text>
+      <rect x="20" y="40" width="190" height="320" rx="10" fill="#4c5bd4" fill-opacity=".12" stroke="#4c5bd4" stroke-width="1.5"/>
+      <text x="115" y="68" text-anchor="middle" font-size="15" font-weight="600" fill="#4c5bd4">1 · Configuration</text>
+      <text x="115" y="100" text-anchor="middle" font-size="12" font-weight="600" fill="#1d2126">about-us/</text>
+      <text x="115" y="122" text-anchor="middle" font-size="12" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#1d2126">strategy · icp · market</text>
+      <text x="115" y="142" text-anchor="middle" font-size="12" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#1d2126">voice · design-system</text>
+      <text x="115" y="184" text-anchor="middle" font-size="12" font-weight="600" fill="#1d2126">config/</text>
+      <text x="115" y="206" text-anchor="middle" font-size="12" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#1d2126">rules.md · schema.md</text>
+      <text x="115" y="226" text-anchor="middle" font-size="12" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#1d2126">settings.yaml</text>
+      <text x="115" y="322" text-anchor="middle" font-size="11.5" opacity=".7" fill="#1d2126">what is allowed,</text>
+      <text x="115" y="338" text-anchor="middle" font-size="11.5" opacity=".7" fill="#1d2126">where things go</text>
+      <!-- 2 entities, 3 memories, middle -->
+      <rect x="300" y="40" width="240" height="130" rx="10" fill="#1f8a6a" fill-opacity=".12" stroke="#1f8a6a" stroke-width="1.5"/>
+      <text x="420" y="68" text-anchor="middle" font-size="15" font-weight="600" fill="#1f8a6a">2 · Entities</text>
+      <text x="420" y="92" text-anchor="middle" font-size="12.5" fill="#1d2126">people, organizations, tools,</text>
+      <text x="420" y="112" text-anchor="middle" font-size="12.5" fill="#1d2126">meetings, events, offerings</text>
+      
+      <rect x="300" y="230" width="240" height="130" rx="10" fill="#c27a12" fill-opacity=".12" stroke="#c27a12" stroke-width="1.5"/>
+      <text x="420" y="258" text-anchor="middle" font-size="15" font-weight="600" fill="#c27a12">3 · Memories</text>
+      <text x="420" y="282" text-anchor="middle" font-size="12.5" fill="#1d2126">notes, decisions, questions</text>
+      <text x="420" y="302" text-anchor="middle" font-size="12.5" fill="#1d2126">never edited, each with its source</text>
+      
+      <text x="420" y="344" text-anchor="middle" font-size="11" opacity=".7" fill="#1d2126">found through a search index</text>
+      <!-- configuration shapes both -->
+      <path d="M210 100 L298 100" stroke="#4c5bd4" stroke-width="1.6" fill="none" marker-end="url(#arrC)"/>
+      <text x="254" y="80" text-anchor="middle" font-size="11" fill="#1d2126">fields, kinds,</text><text x="254" y="93" text-anchor="middle" font-size="11" fill="#1d2126">link types</text>
+      <path d="M210 300 L298 300" stroke="#4c5bd4" stroke-width="1.6" fill="none" marker-end="url(#arrC)"/>
+      <text x="254" y="280" text-anchor="middle" font-size="11" fill="#1d2126">checks</text><text x="254" y="293" text-anchor="middle" font-size="11" fill="#1d2126">every save</text>
+      <!-- memories feed entities -->
+      <path d="M420 228 L420 172" stroke="#1d2126" stroke-width="1.6" fill="none" marker-end="url(#arr)"/>
+      <text x="430" y="204" text-anchor="start" font-size="11.5" fill="#1d2126">names resolve, links derive</text>
+      <!-- Codex, the grey box -->
+      <rect x="620" y="140" width="140" height="120" rx="10" fill="#1d2126" fill-opacity=".10" stroke="#1d2126" stroke-opacity=".55" stroke-width="1.5"/>
+      <text x="690" y="168" text-anchor="middle" font-size="15" font-weight="600" fill="#1d2126">Codex</text>
+      <text x="690" y="190" text-anchor="middle" font-size="12.5" fill="#1d2126">where you talk</text>
+      <text x="690" y="212" text-anchor="middle" font-size="11.5" opacity=".8" fill="#1d2126">it reads, saves</text>
+      <text x="690" y="228" text-anchor="middle" font-size="11.5" opacity=".8" fill="#1d2126">and acts for you</text>
+      <text x="690" y="248" text-anchor="middle" font-size="10.5" opacity=".65" fill="#1d2126">nothing else writes</text>
+      <!-- brain <-> Codex -->
+      <path d="M542 110 L618 165" stroke="#1d2126" stroke-width="1.6" fill="none" marker-end="url(#arr)"/>
+      <text x="590" y="122" text-anchor="start" font-size="11.5" fill="#1d2126">reads</text>
+      <path d="M618 235 L542 290" stroke="#1d2126" stroke-width="1.6" fill="none" marker-end="url(#arr)"/>
+      <text x="590" y="282" text-anchor="start" font-size="11.5" fill="#1d2126">saves</text>
+      <!-- tools, right -->
+      <rect x="820" y="40" width="140" height="320" rx="10" fill="none" stroke="#1d2126" stroke-opacity=".35" stroke-dasharray="5 4"/>
+      <text x="890" y="68" text-anchor="middle" font-size="14" font-weight="600" fill="#1d2126">Your tools</text>
+      <text x="890" y="86" text-anchor="middle" font-size="11" opacity=".7" fill="#1d2126">raw lives here</text>
+      <text x="890" y="116" text-anchor="middle" font-size="12.5" opacity=".85" fill="#1d2126">HubSpot · Attio</text>
+      <text x="890" y="138" text-anchor="middle" font-size="12.5" opacity=".85" fill="#1d2126">Gmail · Calendar</text>
+      <text x="890" y="160" text-anchor="middle" font-size="12.5" opacity=".85" fill="#1d2126">Granola · Slack</text>
+      <text x="890" y="182" text-anchor="middle" font-size="12.5" opacity=".85" fill="#1d2126">Google Drive</text>
+      <text x="890" y="322" text-anchor="middle" font-size="11" opacity=".7" fill="#1d2126">your own sign-in;</text>
+      <text x="890" y="338" text-anchor="middle" font-size="11" opacity=".7" fill="#1d2126">no passwords kept</text>
+      <path d="M818 200 L762 200" stroke="#1d2126" stroke-width="1.6" fill="none" marker-end="url(#arr)"/>
+      <text x="790" y="192" text-anchor="middle" font-size="11.5" fill="#1d2126">reads live</text>
+      <!-- links back to the tools -->
+      <path d="M542 70 L818 70" stroke="#1d2126" stroke-width="1.3" stroke-dasharray="4 4" fill="none" marker-end="url(#arr)"/>
+      <text x="612" y="62" text-anchor="middle" font-size="11.5" fill="#1d2126">link to its CRM record</text>
+      <path d="M542 335 C 640 372, 740 372, 818 335" stroke="#1d2126" stroke-width="1.3" stroke-dasharray="4 4" fill="none" marker-end="url(#arr)"/>
+      <text x="680" y="384" text-anchor="middle" font-size="11.5" fill="#1d2126">link to its source</text>
+      <!-- 4 workflows -->
+      <rect x="20" y="412" width="940" height="92" rx="10" fill="#8a4fbf" fill-opacity=".12" stroke="#8a4fbf" stroke-width="1.5"/>
+      <text x="490" y="438" text-anchor="middle" font-size="15" font-weight="600" fill="#8a4fbf">4 · Workflows</text>
+      <text x="490" y="460" text-anchor="middle" font-size="12.5" fill="#1d2126">a skill is one sitting of work (define ICP, strategy, voice, deep dive)</text>
+      <text x="490" y="479" text-anchor="middle" font-size="12.5" fill="#1d2126">a workflow is skills in sequence, with gates between the steps; a person, a schedule or a save starts it</text>
+      <text x="490" y="496" text-anchor="middle" font-size="12" opacity=".75" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#1d2126">workflows/ · skills</text>
+      <path d="M115 362 L115 408" stroke="#4c5bd4" stroke-width="1.6" fill="none" marker-end="url(#arrC)"/>
+      <text x="125" y="386" text-anchor="start" font-size="11.5" fill="#1d2126">rules bind every step</text>
+      <path d="M440 410 L440 364" stroke="#8a4fbf" stroke-width="1.6" fill="none" marker-end="url(#arrW)"/>
+      <text x="432" y="400" text-anchor="end" font-size="11.5" fill="#1d2126">each step saved as a note</text>
+      <path d="M500 362 L500 408" stroke="#8a4fbf" stroke-width="1.4" stroke-dasharray="4 4" fill="none" marker-end="url(#arrW)"/>
+      <text x="510" y="400" text-anchor="start" font-size="11.5" fill="#1d2126">a save or schedule starts one</text>
+      <path d="M690 410 L690 262" stroke="#8a4fbf" stroke-width="1.6" fill="none" marker-end="url(#arrW)"/>
+      <text x="700" y="300" text-anchor="start" font-size="11.5" fill="#1d2126">runs through</text><text x="700" y="314" text-anchor="start" font-size="11.5" fill="#1d2126">Codex</text>
+    </svg>
