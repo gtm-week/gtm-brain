@@ -86,6 +86,15 @@ person stops with gaps. Never claim that interview agreement validates the marke
 - Read the result through `document` (`action: show`) to verify the saved draft and link its
   actual returned path. Never claim a failed write succeeded.
 
+Where it saves: segments, exclusions and the buying committee are sections of `icp.md`; they
+are descriptions, never entities, so no person or organization is created for a segment or a
+persona. A real customer the person places in a segment, and a real person whose part in the
+buying decision they state, is said in one note in Target customers ("Acme Retail is in the
+mid-market retail segment", "Anna Lind is the decision maker at Acme Retail"), with the
+company and the person named: the schema's `segment` field on the organization and
+`buying_role` field on the person fill from those notes, with the note as their source. A
+brain whose schema lacks those fields keeps the notes all the same; offer `/gtmb-schema` once.
+
 Follow the document rule: do not duplicate the synthesized document as memories. Distinct new
 customer findings or explicit targeting decisions from the interview follow the ordinary
 [remember procedure](../gtmb-use-brain/references/remember.md) in Target customers, with

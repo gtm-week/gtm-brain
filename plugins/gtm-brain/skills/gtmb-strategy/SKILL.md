@@ -273,6 +273,10 @@ long written summary in chat.
   they have read it.
 - Remember the decisions the interview surfaced (the aspiration, the boundaries, what they say
   no to, the 90-day fix) as notes in the Strategy context, in the person's words.
+- Where it saves, in full: the document `strategy.md`; the decisions as notes in the Strategy
+  context (kind `decision` where the person decided); an offering the person names with its
+  price and buyer as an offering (`what_it_is`, `price`, `who_it_is_for` fill from the note).
+  No other entity is created by the intake.
 - After writing, return one short completion sentence with the path `strategy.md` and the
   offer to approve it. Do not create multiple strategy files for this first-pass intake.
 

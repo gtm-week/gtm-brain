@@ -1,0 +1,4 @@
+interface:
+  display_name: "GTM Brain: Interaction"
+  short_description: "Propose, list or run an approved action in your own tool"
+  default_prompt: "Use $gtmb-interaction to propose an interaction for an action I repeat in one of my tools."

@@ -199,7 +199,7 @@ test("page: the picked entity shows beside the list: relation to us, fields, lin
   fire(p, "keydown", { key: "Enter", target: { id: "ent-q" } });
   let pane = p.node("#ent-detail").innerHTML;
   assert.match(pane, /<h2 id="ent-title" tabindex="-1">Jan Zielinski<\/h2>/); assert.match(pane, />Person</);
-  assert.match(pane, /<dt>Role<\/dt><dd class="ent-unknown">not known yet<\/dd>/); assert.match(pane, /Also not recorded: location, linkedin, how we met\./);
+  assert.match(pane, /<dt>Role<\/dt><dd class="ent-unknown">not known yet<\/dd>/); assert.match(pane, /Also not recorded: location, linkedin, how we met, buying role\./);
   assert.match(pane, /<h4>Works at<\/h4>.*data-ent-id="[^"]+"[^>]*>.*Acme Retail.*ended/s);
   assert.match(pane, /<b>Ended<\/b>: Works at Acme Retail.*<b>Started<\/b>: Works at Acme Retail/s, "history, newest first");
   assert.match(pane, /Jan Zielinski is no longer at Acme Retail\..*Jan Zielinski joined Acme Retail as a buyer\./s, "notes, newest first");

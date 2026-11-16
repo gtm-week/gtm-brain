@@ -8,17 +8,22 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
-import { skillCatalog } from '../scripts/gtm-brain-render/skill-catalog.mjs';
+import { skillCatalog, skillsByRole, SKILL_ROLES } from '../scripts/gtm-brain-render/skill-catalog.mjs';
 import { page } from './helpers/dashboard-page.mjs';
 const plugin=fileURLToPath(new URL('../',import.meta.url));
 
-test('the real renderer publishes the skill catalog in both page and data',t=>{
- const scratch=mkdtempSync(join(tmpdir(),'gtm-skill-render-')),root=join(scratch,'brain-workspace');mkdirSync(root);
+// A brain made by setup and rendered by the real renderer; its dashboard data.
+function renderedBrain(t,prefix){
+ const scratch=mkdtempSync(join(tmpdir(),prefix)),root=join(scratch,'brain-workspace');mkdirSync(root);
  t.after(()=>{ try { rmSync(scratch,{recursive:true,force:true,maxRetries:5,retryDelay:100}); } catch {} });
  const env={...process.env,CODEX_HOME:join(scratch,'profile'),PLUGIN_ROOT:plugin,GTM_BRAIN_NO_OPEN:'1',GTM_BRAIN_NO_COMPILE:'1',GTM_BRAIN_NO_WATCH:'1',GTM_BRAIN_NO_VERSION_CHECK:'1'};
  execFileSync('git',['init','-q',root],{env});
  execFileSync('bash',[join(plugin,'scripts/gtm-brain-setup/setup.sh'),'--company','Skill Fixture','--one-liner','Test workflows','--owner','Alex Example <alex@example.invalid>','--language','en','--dashboard','on-demand'],{cwd:root,env,stdio:'pipe'});
  execFileSync(process.execPath,[join(plugin,'scripts/gtm-brain-render/render.mjs'),root],{env});
+ return root;
+}
+test('the real renderer publishes the skill catalog in both page and data',t=>{
+ const root=renderedBrain(t,'gtm-skill-render-');
  const data=JSON.parse(readFileSync(join(root,'work/home/data.json'),'utf8'));
  assert.deepEqual(data.skills,skillCatalog());
  for(const file of ['dashboard.js','dashboard.css'])assert.equal(readFileSync(join(root,'work/home/ui',file),'utf8'),readFileSync(join(plugin,'scripts/gtm-brain-render/ui',file),'utf8'));
@@ -30,7 +35,7 @@ test('the catalog covers exactly the shipped user skills',()=>{
  {
   const skills=skillCatalog();assert.deepEqual(skills.map(s=>s.id).sort(),shipped);
   assert.equal(new Set(skills.map(s=>s.id)).size,skills.length);assert.equal(skills.filter(s=>s.featured).length,4);
-  for(const s of skills){assert.equal(s.command,'/'+s.id);assert.ok(s.title&&s.description&&s.example);assert.ok(['daily','knowledge','projects','setup'].includes(s.group));
+  for(const s of skills){assert.equal(s.command,'/'+s.id);assert.ok(s.title&&s.description&&s.example);assert.ok(['mentor','daily','knowledge','projects','setup'].includes(s.group));assert.ok(SKILL_ROLES.includes(s.role),s.id+' has a role');assert.equal(s.group==='mentor',s.role==='mentor',s.id+': the mentor group is the mentor role');
    assert.match(readFileSync(join(plugin,'skills',s.id,'SKILL.md'),'utf8'),new RegExp('^name: '+s.id+'$','m'));
   }
  }
@@ -75,8 +80,44 @@ test('copy prompt copies the exact command and example without navigating',async
  assert.match(p.node('#copy-status-'+s.id).textContent,/Copied/);assert.equal(p.run('view'),'home','copying does not navigate away from the front page');
 });
 
-test('the person can ask for twenty-seven shipped workflows; internal procedures remain references',()=>{
- assert.deepEqual(skillCatalog().map(s=>s.id).sort(),['gtmb-add-section','gtmb-build-landing-page','gtmb-clay-setup','gtmb-configure','gtmb-deepdive','gtmb-design-system','gtmb-freckle-setup','gtmb-heyreach-setup','gtmb-icp','gtmb-market','gtmb-market-research','gtmb-project','gtmb-publish-website','gtmb-rules','gtmb-schema','gtmb-skill','gtmb-start','gtmb-strategy','gtmb-surfer-setup','gtmb-sync','gtmb-todo','gtmb-unit-economics','gtmb-use-brain','gtmb-voice','gtmb-woodpecker-setup','gtmb-workflow','gtmb-zynt-setup']);
+test('the person can ask for twenty-nine shipped workflows; internal procedures remain references',()=>{
+ assert.deepEqual(skillCatalog().map(s=>s.id).sort(),['gtmb-add-section','gtmb-build-landing-page','gtmb-clay-setup','gtmb-configure','gtmb-deepdive','gtmb-design-system','gtmb-freckle-setup','gtmb-heyreach-setup','gtmb-housekeeping','gtmb-icp','gtmb-interaction','gtmb-market','gtmb-market-research','gtmb-project','gtmb-publish-website','gtmb-rules','gtmb-schema','gtmb-skill','gtmb-start','gtmb-strategy','gtmb-surfer-setup','gtmb-sync','gtmb-todo','gtmb-unit-economics','gtmb-use-brain','gtmb-voice','gtmb-woodpecker-setup','gtmb-workflow','gtmb-zynt-setup']);
+});
+
+test('the catalogue is the one place that says which skills are mentors, everyday or setup; mentors lead and say what they fill',()=>{
+ const all=skillCatalog(),mentors=skillsByRole('mentor');
+ assert.deepEqual(mentors.map(s=>s.id),['gtmb-strategy','gtmb-icp','gtmb-market','gtmb-voice','gtmb-design-system','gtmb-market-research','gtmb-unit-economics','gtmb-deepdive','gtmb-build-landing-page']);
+ assert.deepEqual(all.slice(0,mentors.length),mentors,'mentors come first in the catalogue');
+ assert.deepEqual(skillsByRole('everyday').map(s=>s.id).sort(),['gtmb-add-section','gtmb-housekeeping','gtmb-interaction','gtmb-project','gtmb-publish-website','gtmb-skill','gtmb-sync','gtmb-todo','gtmb-use-brain','gtmb-workflow']);
+ assert.equal(skillsByRole('setup').length,10);assert.ok(skillsByRole('setup').some(s=>s.id==='gtmb-clay-setup'),'a tool setup skill is not a mentor');
+ assert.equal(mentors.length+skillsByRole('everyday').length+skillsByRole('setup').length,all.length);
+ const starters=['strategy','icp','voice','design-system','market'];
+ assert.deepEqual(mentors.filter(s=>s.fills).map(s=>s.fills).sort(),[...starters].sort(),'each of the five base documents has the mentor that fills it');
+ for(const s of mentors){assert.ok(s.promise&&s.promise.length>30,s.id+' says its promise');assert.ok(s.fills||s.produces,s.id+' fills a document or says what it produces');assert.ok(Array.isArray(s.reads));for(const r of s.reads)assert.ok(starters.includes(r),s.id+' reads a base document: '+r);
+  assert.doesNotMatch(s.promise+(s.produces||''),/[\u2013\u2014]/);}
+ for(const s of all.filter(s=>s.role!=='mentor'))assert.equal(s.promise,undefined,s.id+' is not a mentor');
+});
+
+test('the Help view and the Overview lead with the mentors: promise, the document and whether it is filled, a prepared chat and no action',t=>{
+ const D=JSON.parse(readFileSync(join(renderedBrain(t,'gtm-skill-mentors-'),'work/home/data.json'),'utf8')),docs=D.pillars.configuration.documents;
+ assert.deepEqual(docs.filter(d=>d.starter).map(d=>d.state),Array(5).fill('not written'),'setup leaves the five starters unfilled');
+ docs.find(d=>d.slug==='strategy').state='draft';docs.find(d=>d.slug==='voice').state='approved';
+ const p=page(D),mentors=D.skills.filter(s=>s.role==='mentor');
+ const ov=p.node('#ov-mentors').innerHTML;assert.match(ov,/Work with a mentor/);assert.equal((ov.match(/<article /g)||[]).length,mentors.length);
+ assert.ok(ov.indexOf('data-mentor="gtmb-icp"')<ov.indexOf('data-mentor="gtmb-strategy"'),'a mentor whose document is not filled yet comes first');
+ assert.match(ov,/Fills <b>Ideal customer profile<\/b> <span class="pl-state missing" data-mentor-doc="icp">not filled yet<\/span>/);assert.match(ov,/Fills <b>Strategy<\/b> <span class="pl-state draft" data-mentor-doc="strategy">draft<\/span>/);assert.match(ov,/Fills <b>[^<]+<\/b> <span class="pl-state ok" data-mentor-doc="voice">approved/);
+ assert.match(ov,/You get: <b>A one-page sourced brief<\/b>/);
+ for(const s of mentors){assert.ok(ov.includes(s.promise.replaceAll('&','&amp;')),s.id+' promise on the Overview');
+  const href=ov.slice(ov.indexOf('data-mentor="'+s.id+'"')).match(/href="([^"]+)"/)[1].replaceAll('&amp;','&'),url=new URL(href);assert.equal(url.protocol,'codex:');assert.equal(url.searchParams.get('prompt'),s.command+'\n\n'+s.example);}
+ assert.doesNotMatch(ov,/<form|<input|onclick=|https?:/,'the Overview group is links to a prepared chat, never an action');
+ const results=p.node('#skill-results').innerHTML,groups=p.node('#skill-groups').innerHTML;
+ assert.ok(groups.indexOf('Work with a mentor')>0&&groups.indexOf('Work with a mentor')<groups.indexOf('Everyday work'));
+ assert.ok(results.indexOf('Work with a mentor')<results.indexOf('Everyday work'),'the mentor group is the first group of the Help view');
+ assert.equal((results.match(/data-mentor="/g)||[]).length,mentors.length);assert.match(results,/data-mentor-doc="icp">not filled yet/);
+ p.run('skillGroup="mentor";renderSkillLibrary("")');assert.equal((p.node('#skill-results').innerHTML.match(/<article /g)||[]).length,mentors.length);
+ // an older data file without roles, or without the pillars, still renders: no group, no badge
+ const bare=fixture();for(const s of bare.skills){delete s.role;delete s.promise}const q=page(bare);assert.equal(q.node('#ov-mentors').innerHTML,'');
+ const noDocs=page(fixture());assert.match(noDocs.node('#ov-mentors').innerHTML,/Fills <b>Strategy<\/b><\/span>/);assert.doesNotMatch(noDocs.node('#ov-mentors').innerHTML,/data-mentor-doc/);
 });
 
 test('a brain with a skill of its own gets a "yours" group after the shipped ones; the shipped set is unchanged',()=>{

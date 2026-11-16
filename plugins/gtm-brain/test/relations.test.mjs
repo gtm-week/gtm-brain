@@ -82,7 +82,7 @@ test("a brief fills SCHEMA.md fields with citations, refuses one it does not lis
   const root = brain();
   const m = note(root, "Northwind sells logistics software.", undefined, { people: ["Northwind"] });
   let facts = lib.entityFacts(root, "Northwind");
-  assert.deepEqual(facts.schema.fields.map(f => f.name), ["website", "industry", "size", "hq"]);
+  assert.deepEqual(facts.schema.fields.map(f => f.name), ["website", "industry", "size", "hq", "segment"]);
   assert.equal(facts.schema_behind, true);
   const brief = { overview: [{ text: "Northwind sells logistics software.", memories: [m.id] }], contexts: [{ context: "company", summary: [{ text: "Sells logistics software.", memories: [m.id] }], open_threads: [] }], relationships: [] };
   assert.throws(() => lib.compileEntity(root, "Northwind", { as_of: facts.as_of, by: "marta-nowak", brief: { ...brief, fields: [{ field: "budget", text: "x", memories: [m.id] }] } }), /budget is not a field of this organization/);

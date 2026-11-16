@@ -77,6 +77,9 @@ Tone of voice: <name>`, their kinds of work); `voice.md` stays the company's. Re
 `action: show` before saying it is saved. The voice is a document, not notes: no `remember` call
 follows (saving rule G3).
 
+Where it saves: documents only (`voice.md`, or a person's or team's own); examples go in
+`voice/`. No entity, field or relationship.
+
 ## 5. Check that later chats use it
 
 The message after each save gives: the path; exactly which kinds of work it governs, from the

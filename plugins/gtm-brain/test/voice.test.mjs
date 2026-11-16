@@ -25,8 +25,8 @@ test('the voice skill follows the shipped-skill template: name, links, openai.ya
   assert.match(readFileSync(join(P, 'skills/gtmb-voice/agents/openai.yaml'), 'utf8'), /display_name: "GTM Brain: Voice"/);
   const catalog = JSON.parse(readFileSync(join(P, 'scripts/gtm-brain-render/skill-catalog.json'), 'utf8'));
   const i = catalog.findIndex(s => s.id === 'gtmb-voice');
-  assert.ok(i > 0 && catalog[i].group === 'setup' && catalog[i].featured === false);
-  assert.ok(catalog.slice(i + 1).every(s => s.group === 'setup'), 'after the last one of its group');
+  assert.ok(i > 0 && catalog[i].group === 'mentor' && catalog[i].role === 'mentor' && catalog[i].fills === 'voice' && catalog[i].featured === false);
+  assert.ok(catalog.slice(0, i).every(s => s.group === 'mentor'), 'among the mentors, which lead the catalogue');
   for (const doc of ['README.md', 'docs/COMMANDS.md', 'docs/ONBOARDING.md']) assert.match(readFileSync(join(R, doc), 'utf8'), /gtmb-voice/, doc);
   for (const doc of ['README.md', '.claude/CLAUDE.md', 'CONTRIBUTING.md', 'docs/USER-SKILLS.md']) assert.match(readFileSync(join(R, doc), 'utf8'), /twenty/, doc);
   assert.match(readFileSync(join(R, 'docs/GUIDE.md'), 'utf8'), /\/gtmb-voice/);
