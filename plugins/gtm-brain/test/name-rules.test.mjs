@@ -25,7 +25,7 @@ test("a bare first name is saved as written and asked about; a full name is kept
   const held = remember("--content", "Max will run the GTM-OS demo.", "--people", "Max");
   assert.equal(held.status, 0, held.stderr);
   assert.match(held.stdout, /"Max" is one word and nobody known has it \(rule P3\)/);
-  assert.match(held.stdout, /^Who is Max\? Full name or company\.$/m);
+  assert.match(held.stdout, / 1\) Who is Max\? Full name or company\.$/m);
   assert.ok(!lib.readNames(root).some(e => e.name === "Max"));
   const asked = lib.readMemories(root, "company").find(m => /Max will run/.test(m.content));
   assert.deepEqual(asked.people, []);
@@ -59,7 +59,7 @@ test("a bare first name is saved as written and asked about; a full name is kept
   const typo = remember("--content", "Max Kowalsky joined.", "--people", "Max Kowalsky");
   assert.equal(typo.status, 2);
   assert.match(typo.stderr, /"Max Kowalsky" looks like Max Kowalski \(P4\)/);
-  assert.match(typo.stderr, /"Max Kowalsky": ask "same as X\?"\. Yes: add_name with aliases \[this spelling\]\. No: resend with new_names\. Ask one question, /);
+  assert.match(typo.stderr, /"Max Kowalsky": ask "same as X\?"\. Yes: add_name with aliases \[this spelling\]\. No: resend with new_names\. Ask one question /);
   // the same first name with a clearly different surname is someone else (P4): saved at once, no new_names and no question
   const weber = remember("--content", "Max Weber joined.", "--people", "Max Weber");
   assert.equal(weber.status, 0, weber.stderr + weber.stdout);
@@ -68,7 +68,7 @@ test("a bare first name is saved as written and asked about; a full name is kept
   // a second Max makes "Max" ambiguous again: never guessed; the note is saved and the question names both (0.35.0)
   const two = remember("--content", "Max called.", "--people", "Max");
   assert.equal(two.status, 0, two.stderr);
-  assert.match(two.stdout, /^Which Max: Max Kowalski or Max Weber\?$/m);
+  assert.match(two.stdout, /(^| 1\) )Which Max: Max Kowalski or Max Weber\?$/m);
   assert.deepEqual(lib.readMemories(root, "company").find(m => m.content === "Max called.").people, []);
 
   // the brain's README explains the same four rules
@@ -89,7 +89,7 @@ test("a person kept by one word on the person's word, and notes from before, say
   const zedArgs = [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann-lee", "--context", "company", "--content", "Zed is our designer.", "--people", "Zed", "--new", "Zed"];
   const first = spawnSync(process.execPath, zedArgs, { cwd: root, env, encoding: "utf8" });
   assert.equal(first.status, 0, first.stderr);
-  assert.match(first.stdout, /^Who is Zed\? Full name or company\.$/m);
+  assert.match(first.stdout, / 1\) Who is Zed\? Full name or company\.$/m);
   assert.ok(!lib.readNames(root).some(e => e.name === "Zed"));
   const ok = spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann-lee", "--context", "company", "--content", "Zed is our designer.", "--people", "Zed", "--new", "Zed"], { cwd: root, env, encoding: "utf8" });
   assert.equal(ok.status, 0, ok.stderr);
