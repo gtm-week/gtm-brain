@@ -106,7 +106,7 @@ Every skill is `/gtmb-<name>`.
 | Create the brain in a folder | `/gtmb-start` | |
 | Company, team, tools, settings | `/gtmb-configure` | "connect my tools" |
 | Strategy | `/gtmb-strategy` | "run the strategic intake" |
-| Ideal customer profile | `/gtmb-define-icp` | "define our ICP" |
+| Ideal customer profile | `/gtmb-icp` | "define our ICP" |
 | Tone of voice | `/gtmb-voice` | "draft our voice" |
 | Design system | `/gtmb-design-system` | "build our design system" |
 
@@ -186,7 +186,7 @@ called out. The review makes a recommendation; budget and campaign changes remai
 > Make this research process a skill I can reuse in our other projects.
 
 Keep your own skills in the brain and use them from linked project folders. Plugin updates
-preserve them. See the [command reference](COMMANDS.md) for all twenty-six workflows, including
+preserve them. See the [command reference](COMMANDS.md) for all twenty-seven workflows, including
 strategy, source sync, documents and project setup.
 
 ## What it solves
@@ -394,15 +394,15 @@ does not mean offline AI processing.
 
 ## Built-in workflows
 
-Ask for an outcome in ordinary language, or invoke one of the twenty-six shipped skills:
+Ask for an outcome in ordinary language, or invoke one of the twenty-seven shipped skills:
 
 | Command | Use it for |
 | --- | --- |
 | `/gtmb-start` | Set up the brain and continue first-use discovery. |
 | `/gtmb-use-brain` | Recall evidence, save findings and resume everyday work. |
 | `/gtmb-deepdive` | Build a sourced brief on an account, person, deal or context. |
-| `/gtmb-market-desk-research` | Assess a segment, buying pains, alternatives and evidence for fit. |
-| `/gtmb-define-icp` | Define company fit, buying roles and readiness with Chris Pawlak's interview; keep one draft ICP. |
+| `/gtmb-market-research` | Assess a segment, buying pains, alternatives and evidence for fit. |
+| `/gtmb-icp` | Define company fit, buying roles and readiness with Chris Pawlak's interview; keep one draft ICP. |
 | `/gtmb-unit-economics` | Compare CAC, LTV, payback and retention with explicit inputs and gaps. |
 | `/gtmb-strategy` | Work through a strategic intake and maintain the strategy document. |
 | `/gtmb-voice` | Draft a tone of voice: whose it is first (company, person or team), then from writing that fits, tested on one fresh piece; the company's is `voice.md`. |
@@ -500,7 +500,7 @@ plugins/gtm-brain/
   .mcp.json  server/          the operations as MCP tools (Remembering, Searching the brain, ...);
                               dash.mjs serves the read-only dashboard and revision events
   lib/                        shared readers, validators, writers, search and identity logic; Node built-ins
-  skills/                     the twenty-six workflows a person can ask for (all prefixed gtm-brain-): start,
+  skills/                     the twenty-seven workflows a person can ask for (all prefixed gtmb-): start,
                               todo, sync, workflow, deepdive, strategy, unit-economics, define-icp,
                               market-desk-research, voice, zynt-setup, freckle-setup, clay-setup,
                               woodpecker-setup, surfer-setup, heyreach-setup,

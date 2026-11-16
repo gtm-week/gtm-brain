@@ -97,7 +97,7 @@ plugins/gtm-brain/
   .mcp.json  server/          the operations as MCP tools (Remembering, Searching the brain, ...);
                               dash.mjs serves the read-only dashboard and revision events
   lib/                        the file format: read, append, write covers, commit; no dependencies
-  skills/                     the twenty-six workflows a person can ask for (all prefixed gtm-brain-): start,
+  skills/                     the twenty-seven workflows a person can ask for (all prefixed gtmb-): start,
                               todo, sync, workflow, deepdive, strategy, unit-economics, define-icp,
                               market-desk-research, voice, zynt-setup, freckle-setup, clay-setup,
                               woodpecker-setup, surfer-setup, heyreach-setup,
@@ -124,7 +124,7 @@ agent policies are embedded automatically where an agent needs a self-contained 
 ## Adding a skill
 
 A skill that ships to every brain starts from [skill-template/](skill-template/README.md): a folder
-to copy, the rules it must follow, and every file to register it in. `gtmb-define-icp` is the
+to copy, the rules it must follow, and every file to register it in. `gtmb-icp` is the
 worked example.
 
 ## Before pushing to main

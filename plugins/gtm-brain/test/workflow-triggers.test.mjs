@@ -89,7 +89,7 @@ test("skills declare their needs in metadata; needs compares them with SCHEMA.md
   assert.match(proposal, /tool:crm: no crm tool in admin\.md/);
   assert.match(proposal, /only through \/gtmb-schema with the person's yes; nothing was changed/);
   assert.equal(readFileSync(join(root, "SCHEMA.md"), "utf8"), schema, "the schema is never changed by a needs check");
-  assert.match(run(root, "--needs", "gtmb-define-icp"), /skill gtmb-define-icp/);
+  assert.match(run(root, "--needs", "gtmb-icp"), /skill gtmb-icp/);
 });
 
 test("the check: header, schema items, named skills, milestones, the same trigger twice, and a dry run that writes nothing", () => {

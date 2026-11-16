@@ -40,7 +40,7 @@
     "example": "Can we spend more on growth? Here are our CAC, ARPU and churn."
   },
   {
-    "id": "gtmb-market-desk-research",
+    "id": "gtmb-market-research",
     "group": "daily",
     "featured": false,
     "title": "Research a market",
@@ -48,12 +48,20 @@
     "example": "Assess the market for our offering in the DACH mid-market."
   },
   {
-    "id": "gtmb-define-icp",
+    "id": "gtmb-icp",
     "group": "daily",
     "featured": false,
     "title": "Define our ICP",
     "description": "Chris Pawlak's interview on company fit, buying roles, awareness and readiness, kept as one working draft.",
     "example": "Define our ideal customer profile using what we already know."
+  },
+  {
+    "id": "gtmb-market",
+    "group": "daily",
+    "featured": false,
+    "title": "Fill in our market",
+    "description": "Who we compete with, how buyers choose and where we win, drafted from the brain and the competitors you name.",
+    "example": "Fill in our market document; our main competitors are Acme and Northfold."
   },
   {
     "id": "gtmb-use-brain",
