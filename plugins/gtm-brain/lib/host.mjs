@@ -212,9 +212,10 @@ const ADAPTERS = {
     },
     texts: {
       ...askTexts("request_user_input", on => on ? " (this Codex has its question box on)" : " when this chat has it (Plan mode, or a Codex where the question box is on by default)"),
-      dashboardAlways: url => `Dashboard: ${url} (saved view in the Codex pane; open only when asked using open_in_codex, never as a prerequisite to answering; no login or Chrome needed).`,
+      dashboardAlways: url => `Dashboard: ${url} (saved view in the Codex pane; open only when asked using open_in_codex; no login or Chrome needed).`,
       dashboardOnDemand: url => `Dashboard: ${url} (this brain opens it on demand in the Codex pane; only when someone asks; admin.md dashboard: on-demand).`,
-      dashboardOpened: url => `Dashboard: ${url}  Open it in the in-app browser using open_in_codex with target {type: "browser", url: this exact address}, reusing the dashboard tab. This local page needs no login. If the host cannot open the pane, give the URL as a link. Never use Computer Use, Chrome, shell open or web search for the dashboard.`,
+      // what open_dashboard's own description says in every chat (reuse the tab, no login, never Chrome or a search) is not said again here
+      dashboardOpened: url => `Dashboard: ${url}  Open it in the in-app browser using open_in_codex with target {type: "browser", url: this exact address}. If the host cannot open the pane, give the URL as a link.`,
       chats: () => "Never switch this chat to another Codex thread and never open one for the person. When another thread is worth checking (the summary run, a scheduled run, an onboarding run, the chat a memory came from as its codex: source), say it in one line and give its link, codex://threads/<id>; the click is theirs. Agents you delegate to report back here.",
       toolsUnchecked: () => "tools: not checked yet in this Codex. Say: connect my tools.",
       rulebook: () => "",
@@ -301,7 +302,7 @@ const ADAPTERS = {
     rulebookLoaded: dir => { try { return /^@AGENTS\.md\s*$/m.test(readFileSync(join(dir, "CLAUDE.md"), "utf8")); } catch { return false; } },
     texts: {
       ...askTexts("AskUserQuestion", () => " when this session has it"),
-      dashboardAlways: url => `Dashboard: ${url} (open only when asked: give this address as a link for the browser; no login needed; never as a prerequisite to answering).`,
+      dashboardAlways: url => `Dashboard: ${url} (open only when asked: give this address as a link for the browser; no login needed).`,
       dashboardOnDemand: url => `Dashboard: ${url} (this brain opens it on demand: only when someone asks, as a link for the browser; admin.md dashboard: on-demand).`,
       dashboardOpened: url => `Dashboard: ${url}  Give the person this exact address as a link to open in their browser. This local page needs no login. Open it yourself (open on macOS) only when they ask you to. Never use Computer Use or web search for the dashboard.`,
       chats: () => "Each chat is a Claude Code session; a memory saved here names it as its claude:<session id> source. To revisit one, the person runs claude --resume <id> in this folder; never resume or open another session yourself. Agents you delegate to report back here.",

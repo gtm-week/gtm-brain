@@ -129,7 +129,7 @@ export function entityCardsText(index, root, { ids = [], names = [], limit, now 
   if (cutCards.length) tail.push(`To fit one reply, fewer lines are shown for ${cutCards.length === shownCards.filter(c => c.notes.length).length ? 'every card' : cutCards.map(c => c.name).slice(0, 6).join(', ') + (cutCards.length > 6 ? ` and ${cutCards.length - 6} more` : '')}; a larger limit does not change that. Ask for fewer entities in one call to see three notes each.`);
   const dropped = [...cards.slice(kept).map((c, i) => taken[kept + i].said), ...beyond.map(a => a.said)];
   if (dropped.length) tail.push(`Not read (${beyond.length ? `one call reads at most ${CARDS_MAX_ENTITIES} entities` : 'the reply was full'}): ${dropped.slice(0, 30).join(', ')}${dropped.length > 30 ? ` and ${dropped.length - 30} more` : ''}. Read them with the same call and only these.`);
-  tail.push(`Answer from these cards; no second read per entity. What a card does not say is not recorded: say so, and never search the web to find out who a person is or where they work. All notes on one of them, only if the answer needs it: query object answer with search = the name.`);
+  tail.push(`Answer from these cards; no second read per entity. What a card does not say is not recorded: say so, and never search the web for it. All notes on one of them, only if the answer needs it: query object answer with search = the name.`);
   return [...out, '', ...tail].join('\n');
 }
 

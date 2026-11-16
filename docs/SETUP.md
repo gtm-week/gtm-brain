@@ -28,7 +28,7 @@ needed only if you later choose to share your own private company brain through 
 codex plugin marketplace add gtm-week/gtm-brain   # straight from GitHub (verified)
 codex plugin marketplace upgrade gtm-brain        # refresh an existing marketplace snapshot
 codex plugin add gtm-brain@gtm-brain
-codex plugin list | grep gtm-brain                                      # installed, enabled, 0.37.2
+codex plugin list | grep gtm-brain                                      # installed, enabled, 0.37.3
 ```
 
 The install is a snapshot of the configured branch. In the Codex app, say **"update GTM Brain"**
@@ -83,7 +83,7 @@ new chat in Codex on the test folder (restart the app only if old skills linger)
 Set this once in your shell; the scripts below use it:
 
 ```bash
-export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.37.2
+export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.37.3
 ```
 
 In a chat the skills run as GTM Brain tools: you see "Remembering", "Searching the brain",
@@ -156,7 +156,7 @@ In Codex:
 2. *"load pipeline"*. Expected: the cover, the rule, and "Last 0 of 0 memories".
 3. *"Remember that Pierre Aubert asked for a three-year TCO before the 12.09 steering meeting;
    source is the email from today."*
-   Expected: *remembered m_xxxxxx in pipeline · note · <your handle> · people: Pierre Aubert*.
+   Expected: *remembered m_xxxxxx in pipeline (Pipeline) · note · <your handle> · people: Pierre Aubert · "the note"*.
    `tail -1 memories/$(date -u +%Y-%m).jsonl` shows the JSON line, with `"context":"pipeline"`.
 4. *"Remember that we decided not to discount for Bergstrom."* Expected: kind `decision`.
 5. *"Forget memory m_xxxxxx, it was wrong."* Expected: a new record with `retracts`; `load

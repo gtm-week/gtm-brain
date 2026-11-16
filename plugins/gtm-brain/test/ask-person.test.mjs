@@ -101,7 +101,7 @@ test("a closed, declined, empty or timed-out form is no answer: ask once in plai
     const r = await ask(args, [answer]);
     assert.match(r.text, /^no answer \(/, JSON.stringify(answer)); assert.ok(!r.isError);
     assert.match(r.text, /neither an answer nor a refusal, and it authorizes nothing/);
-    assert.match(r.text, /Ask the same question once as plain chat text .* and end the turn\.$/);
+    assert.match(r.text, /Ask the same question once as plain chat text and end the turn\.$/);
     assert.doesNotMatch(r.text, /The person's answer/);
   }
   // the host cancels the tool call (its timeout, or the person stops the turn): the pending form resolves as no answer
@@ -115,7 +115,8 @@ test("a host that hides forms, or has none: no answer, the host's own box or cha
   const t = transport([{ action: "decline", _meta: { approvals_reviewer: "auto_review" } }]);
   const first = await askPerson(t.q, args, 1);
   assert.match(first.text, /^no answer \(the host closed the form before the person saw it\)/);
-  assert.match(first.text, /do not call ask_person again in this chat/);
+  assert.match(first.text, /Do not call ask_person again in this chat/);
+  assert.equal(first.text.split("the form").length - 1, 1, "that the host showed no form is said once");
   assert.match(first.text, /host's own question box when this chat has one; otherwise ask once as plain chat text/);
   const again = await askPerson(t.q, args, 2);
   assert.match(again.text, /^no answer \(the host closed the form/); assert.equal(t.sent.length, 1, "no further form into a host that hides them");

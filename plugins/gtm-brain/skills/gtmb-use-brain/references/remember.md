@@ -53,7 +53,7 @@ Each entry takes:
   companies, products and teams (Castorama, ByteDance, Wispr Flow). A name left out here is not
   an entity anywhere. A new name lands in the registry as a person; if it is not one, follow
   with `add_name` and its `kind` (organization, product, offering, event, tool; company/team are organization subtypes), without asking when the note makes
-  it plain. If the tool answers *possibly entities, not recorded as such: "Castorama"*, do that
+  it plain. If the tool answers *not linked to anything in the brain: "Castorama"*, do that
   now for each one that is an entity. Compile collects these names, with their kinds, into the
   context's cover, and the dashboard counts them from the text as well once they are known.
 - `new_names`: only after the tool held a name (it may be someone already known, or it is one
@@ -86,10 +86,10 @@ a new memory using `supersedes`. Structured event dates belong to the future eve
 `context` can be omitted: the note goes to the single loaded context, else to the one active
 context where its people or companies already have notes. With no unique answer the entry is held
 and the candidate contexts are listed in one line; send it again with `context`. Each kept note
-starts with one short line for the person: `saved in <Context title>: <the note>`. The tool
-answers "kept" (or "kept, not shared yet" when the brain has a remote: the push runs in the
-background and records its result, and the chat start says when one failed): the note is in the
-company memory; nothing to save, nothing to add. Never tell the person a note reached teammates
+is one line: `remembered <id> in <slug> (<Context title>) · <kind> · <author> · "<the note>"`.
+That line is the confirmation: the note is in the company memory; nothing to save, nothing to
+add. When the brain has a remote the tool adds "kept, not shared yet": the push runs in the
+background and records its result, and the chat start says when one failed. Never tell the person a note reached teammates
 before a push succeeded. For several
 entries it answers `kept 3 of 4` and numbers each line `#1`, `#2` by the entry's position, so you
 can see which landed and which did not.

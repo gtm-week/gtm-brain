@@ -49,7 +49,7 @@ They are not additional discoverable skills. Tools show outcomes such as "Rememb
 "Searching the brain" in chat. Review proposals on the dashboard (it changes nothing but a document you edit and save there). APPROVE is a choice in the form `approve_change` shows; in a chat nothing else applies it.
 A question to you comes the same way: `ask_person` shows a form with the choices to click (or a field to type in) and hands your answer back to Codex. It records nothing and applies nothing. Where the host shows no form, Codex asks in its own question box, or in chat text with numbered options.
 Scripts retain their paths for terminal use with
-`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.37.2`.
+`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.37.3`.
 
 Legend for "writes": what files the command changes. Nothing else is ever touched. The paths are
 those of a brain in the four folders (file layout 4, what setup makes since 0.37); a brain not
@@ -94,7 +94,7 @@ people). Kept at once. `context` is optional: the single loaded context, else th
 where the note's people or companies have their notes (most of them, when it clearly holds most);
 with no unique answer it is saved under the best guess (where its people have most notes, else
 Our company) and the reply says so, so the person can move it in one sentence. Each kept note
-starts with `saved in <Context title>: ...`. `by` is optional too: it defaults to the person
+is one line: `remembered <id> in <slug> (<Context title>) · <kind> · <author> · "<the note>"`. `by` is optional too: it defaults to the person
 selected in this brain (`.gtm-brain/person.json`, else the brain's git identity in the team).
 
 `events` (flag `--events "Northfold Summit | 2026-10-08"`) names the events the note is about: a
@@ -337,10 +337,10 @@ only and changes nothing; `query` with object `health` counts what it found.
 rule the brain's `AGENTS.md` keeps as one line (questions, computer-use, answers, saving, contexts,
 entities, files, documents, approve, meetings, customers, interactions, dashboard, projects,
 skills). The pages ship with the plugin in `plugins/gtm-brain/policies/rules/` (the first two are
-`policies/questions.md` and `policies/computer-use.md`). A tool also attaches its own page to its
-first reply of a chat, once: `load_context` and the other context tools the contexts page, the
-entity tools the entities page, `document` the documents page, `query` meetings and customers
-their pages, and so on. Writes: nothing.
+`policies/questions.md` and `policies/computer-use.md`). A tool also attaches its own page to the
+first reply of a chat that refuses, holds or fails, once, never to one that worked (the one exception: the answers page still comes with the first
+`query` memories search of a chat): `remember` the saving page, `load_context` and the other context tools the contexts page, the entity tools the
+entities page, `document` the documents page, and so on. Writes: nothing.
 
 *"Let's do housekeeping"*, *"tidy up"*, *"clean up the duplicates"* is `query` with object
 `housekeeping` (`lib/housekeeping.mjs`): the rules check's list in three groups with counts (people

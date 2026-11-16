@@ -235,7 +235,7 @@ test("load, remember (not committed by the server), recall, compile facts, rende
   const loaded = await call("load_context", { brain: root, contexts: ["icp"], mode: "only" });
   assert.match(loaded.text, /Loaded now: admin \+ icp/);
   const rem = await call("remember", { brain: root, by: "marta", kind: "decision", content: "No discount for Bergstrom.", people: ["Pierre Aubert"], tools: ["attio"], sources: ["attio:deal/1"] });
-  assert.ok(!rem.isError, rem.text); assert.match(rem.text, /remembered m_[0-9a-f]{12} in icp/); assert.match(rem.text, /^kept$/m, "kept at once, no remote so not shared");
+  assert.ok(!rem.isError, rem.text); assert.match(rem.text, /remembered m_[0-9a-f]{12} in icp/); assert.doesNotMatch(rem.text, /not committed|not shared yet|^kept$/m, "kept at once, no remote so not shared: the remembered line is the whole confirmation");
   assert.equal(execFileSync("git", ["-C", root, "status", "--short"], { encoding: "utf8" }).trim(), "", "nothing left to save");
   const hit = await call("query", { brain: root, object: "memories", search: "Bergstrom" });
   assert.match(hit.text, /No discount for Bergstrom/);
@@ -310,8 +310,8 @@ test("remember takes a turn's findings in one call and reports each entry by pos
   ] });
   assert.ok(!r.isError, r.text);
   assert.match(r.text, /kept 2 of 2/);
-  assert.match(r.text, /#1 remembered m_[0-9a-f]{12} in icp · decision/);
-  assert.match(r.text, /#2 remembered m_[0-9a-f]{12} in offer · question/);
+  assert.match(r.text, /#1 remembered m_[0-9a-f]{12} in icp \([^)]+\) · decision/);
+  assert.match(r.text, /#2 remembered m_[0-9a-f]{12} in offer \([^)]+\) · question/);
   const msgs = execFileSync("git", ["-C", root, "log", "--format=%s"], { encoding: "utf8" }).split("\n").filter(Boolean);
   assert.equal(msgs.length - before, 2, "one commit per memory, not one for the call");
 });
@@ -396,7 +396,7 @@ test("the interactions are the ontology's: none hand-written twice, names and ti
   for (const [name, title] of [["new_context", "Opening a context"], ["add_name", "Adding a name"]]) assert.equal(result.tools.find(t => t.name === name).title, title);
   // and they run: a channel opened through the generated tool is a channel
   const made = await call("new_context", { brain: root, slug: "pipeline", title: "Pipeline", rule: "Deals in flight.", distinct: "no context covers deals in flight" });
-  assert.ok(!made.isError, made.text); assert.match(made.text, /^ok: new_context/); assert.ok(existsSync(join(root, "brain", "contexts", "pipeline", "context.md")));
+  assert.ok(!made.isError, made.text); assert.match(made.text, /^created context pipeline/, "what the operation said, with no ok line above it"); assert.ok(existsSync(join(root, "brain", "contexts", "pipeline", "context.md")));
 });
 
 test("MCP captures stable identities, compiles cited briefs, and reads a context perspective", async () => {
@@ -666,7 +666,8 @@ test("a GTM Brain run (GTM_BRAIN_RUN set) is offered the compile tools that a ch
 test("remember echoes the note it wrote, in quotes, and its schema is small enough to read (ALL-209, ALL-204 step 3)", async () => {
   const rem = await call("remember", { brain: root, by: "marta", context: "icp", content: "Castorama asked for a 60-day pilot; Krzysztof owns the follow-up.", people: ["Krzysztof Pawlak"] });
   assert.ok(!rem.isError, rem.text);
-  assert.match(rem.text, /remembered m_[0-9a-f]{12} in icp · note · marta-nowak · people: Krzysztof Pawlak · "Castorama asked for a 60-day pilot; Krzysztof owns the follow-up\."/);
+  assert.match(rem.text, /remembered m_[0-9a-f]{12} in icp \([^)]+\) · note · marta-nowak · people: Krzysztof Pawlak · "Castorama asked for a 60-day pilot; Krzysztof owns the follow-up\."/);
+  assert.equal(rem.text.split("Castorama asked for a 60-day pilot").length - 1, 1, "once");
   assert.doesNotMatch(rem.text, /not recorded/, "a hint about unregistered names never reads as a failure");
   const { result } = await rpc("tools/list");
   const tool = result.tools.find(t => t.name === "remember");
