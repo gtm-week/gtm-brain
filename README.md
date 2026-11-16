@@ -63,7 +63,7 @@ Codex, under the rules, and leave each step as a note.
 - **The dashboard shows the same files:** what needs you, housekeeping, entities, notes,
   workflows and configuration. Documents, entities and notes can be edited there.
 
-More: [How GTM Brain works](#how-gtm-brain-works) · [How a brain works](plugins/gtm-brain/MANUAL.md).
+More: [The folders of a brain](#what-is-stored-on-disk) · [How GTM Brain works](#how-gtm-brain-works) · [How a brain works](plugins/gtm-brain/MANUAL.md).
 
 **Configure it:** one table of commands in [Configure your brain](#configure-your-brain).
 
@@ -338,34 +338,47 @@ automatic replacement until reviewed. Refreshing a summary is not a live check o
 
 ### What is stored on disk
 
+A brain is one folder. Each part of the picture above has its place in it, and the dashboard's
+tabs show the same parts.
+
 ```text
 your-brain/
-  AGENTS.md                         Workspace instructions for the agent
-  CLAUDE.md                         Claude Code entry point
+  about-us/                         Base documents: what the work must follow
+    strategy.md  icp.md  voice.md  market.md
+    design-system.md  design-system.html
+  config/                           How the brain behaves; only the owner changes it
+    rules.md                        What Codex saves and asks, where files go, which tool to ask
+    schema.md                       What is kept per person, company and product; relationship types
+    settings.yaml                   Company, owner, team, tools and settings
   brain/
-    admin.md                        Company, team, tools and settings
-    contexts/
-      icp/
-        context.md                  Summary, standing rules, working guidance
-        memories.jsonl              Append-only evidence, decisions and questions
-      offer/ ...                    Other shared contexts
-    entities/
-      <entity>.md                   Stable identity and cited cross-context brief
-      .history/                     Identity merge and recovery records
-  strategy.md                       A standing document (kind: document)
-  strategy/                         Files belonging to that document
-  workflows/
-    outbound.md                     Playbook definition; run state lives in memories
-  .agents/skills/                    Your own reusable skills
-  work/                             Local state and caches, ignored by version control
-    memory-index.sqlite             Rebuildable SQLite search index
-    loaded-contexts.json             Working context selection
-    home/                           Rendered dashboard and data
+    entities/                       One page per person, company, product, event, tool, meeting
+      people/  organizations/  products/  events/  tools/  meetings/  offerings/
+    contexts/                       Memories, grouped by topic
+      company/  icp/  market/  offer/  strategy/
+        memories.jsonl              The notes: one per line, never edited
+        context.md                  The topic's summary and working guidance
+    proposals/                      A teammate's change to about-us/ or config/, waiting for the owner
+  workflows/                        Processes with steps; a run's state is kept as notes
+  projects/                         Working folders for an event, a campaign, a client
+  .agents/skills/                   Skills your team made
+  AGENTS.md  CLAUDE.md  README.md   Written by GTM Brain; refreshed on update, never edited by hand
+  work/                             This computer only, not in git: search index, dashboard, caches
 ```
 
+| Dashboard tab | Folder | Changed with |
+| --- | --- | --- |
+| Configuration | `config/`, `about-us/` | `/gtmb-rules`, `/gtmb-schema`, `/gtmb-configure`, the document commands, or Edit in the dashboard |
+| Entities | `brain/entities/` | what you say in chat ("Chris is Krzysztof Pawlak"), or the Entities tab |
+| Memories | `brain/contexts/` | what you say in chat; a correction adds a note, it never rewrites one |
+| Workflows | `workflows/`, `.agents/skills/` | `/gtmb-workflow`, `/gtmb-skill` |
+
+A brain made before 0.35 keeps the base documents and `RULES.md`, `SCHEMA.md` at the top and its
+settings in `brain/admin.md` until its owner says "upgrade the brain"
+([Updating to 0.35](plugins/gtm-brain/MANUAL.md#updating-to-035)).
+
 The plugin's source and your brain are separate folders. Updating the plugin does not replace
-your memories, documents or custom skills. The brain keeps local version history; remote
-sharing and backup depend on how you configure your workspace.
+your memories, documents or custom skills. Every change is committed to the brain's own git
+history at once; sharing with a team and backup go through the git remote you give it.
 
 ### Sources, permissions and boundaries
 
