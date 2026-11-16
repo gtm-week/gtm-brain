@@ -58,6 +58,20 @@ test('Configuration: base documents open in the page; rules and schema are brows
   await parts.getByRole('tab', /^Schema/).tap();
   await expect(screen.getByRole('heading', 'Schema', { level: 2 })).toBeVisible();
   await expect(browser.locator('#cfg-schema article.cfg-kind').first()).toBeVisible();
+  // the "Show" selector shows one kind at a time, and picking another kind shows that one
+  const pick = browser.locator('#cfg-schema-kind'), cards = browser.locator('#cfg-schema article.cfg-kind');
+  await expect(cards).toHaveCount(1);
+  const kinds = await browser.evaluate(() => [...document.querySelectorAll('#cfg-schema-kind option')].map(o => (o as HTMLOptionElement).value));
+  const labels = await browser.evaluate(() => [...document.querySelectorAll('#cfg-schema-kind option')].map(o => (o.textContent || '').trim()));
+  expect(kinds.length).toBeGreaterThan(2);
+  const shownId = () => browser.evaluate(() => document.querySelector('#cfg-schema article.cfg-kind')?.id || '');
+  expect(await shownId()).toBe('cfg-kind-' + kinds[0]);
+  for (const kind of [kinds[1], kinds[kinds.length - 1], kinds[0]]) {
+    await pick.selectOption(labels[kinds.indexOf(kind)]);
+    await expect(cards).toHaveCount(1);
+    expect(await shownId()).toBe('cfg-kind-' + kind);
+    expect(await browser.evaluate(() => (document.querySelector('#cfg-schema-kind') as HTMLSelectElement).value)).toBe(kind);
+  }
 });
 
 test('a document opens rendered; Edit starts editing in the layout last used; Done editing returns to the rendered text', async ({ app, screen, browser }) => {
