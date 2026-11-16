@@ -202,6 +202,8 @@ Four things, read at the start of every chat.
 - **What a rule cannot do:** start work ("whenever X, do Y" is offered as a workflow), switch
   off APPROVE or the protected files, or move files that already exist.
 
+![The Rules part of the Configuration tab: each rule as a row to open, with a filter box and the two groups, where things go and where Codex looks first](diagrams/screenshots/dashboard-rules.png)
+
 #### Schema
 
 `configuration/schema.md`: what the brain keeps about each kind.
@@ -222,6 +224,8 @@ Four things, read at the start of every chat.
   "Anna joined Acme" also ends her job at Northwind. An unlisted type is saved as a plain note
   with an offer to add it.
 
+![The Schema part of the Configuration tab: one kind at a time, its fields with the required ones marked, and its relationships](diagrams/screenshots/dashboard-schema.png)
+
 #### Documents
 
 Base documents and your other documents. Detail: [DOCUMENTS.md](docs/DOCUMENTS.md).
@@ -239,6 +243,8 @@ Base documents and your other documents. Detail: [DOCUMENTS.md](docs/DOCUMENTS.m
   design system is also a page, `design-system.html`: one self-contained file shown on the
   dashboard's Visual tab and kept in step with `design-system.md`.
 
+![A document opened from the Configuration tab: the rendered text, its state, what work Codex reads it before, and the Edit button](diagrams/screenshots/dashboard-document.png)
+
 #### Settings
 
 `configuration/settings.yaml`. Beside company, team and tools it holds:
@@ -246,7 +252,7 @@ dashboard timing (`dashboard: always` or `on-demand`), the save reminder (`save_
 workflows on or off (`workflows: off`) and where big files go (`big_files: google-drive` or
 `local`). A change is shown first and applies only when you click APPROVE.
 
-![The Configuration tab: the company, the base documents with their state, and the rules and schema beside them](diagrams/screenshots/dashboard-configuration.png)
+![The Configuration tab: the company and the base documents with their state, with Rules and Schema as parts of the same tab](diagrams/screenshots/dashboard-configuration.png)
 
 ### Entities
 
@@ -309,7 +315,7 @@ Detail: [Contexts](plugins/gtm-brain/MANUAL.md#contexts) ·
 [Summaries](plugins/gtm-brain/MANUAL.md#summaries) ·
 [Chat capture](plugins/gtm-brain/MANUAL.md#chat-capture).
 
-![The Memories tab: notes on a timeline with their kind, topic and sources, filtered by type or searched](diagrams/screenshots/dashboard-memories.png)
+![The Memories tab: notes on a timeline with their topic and sources, a filter box with When and Show, and the other filters behind More filters](diagrams/screenshots/dashboard-memories.png)
 
 ### Workflows
 
