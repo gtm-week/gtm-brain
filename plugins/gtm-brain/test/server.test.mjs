@@ -678,6 +678,15 @@ test("remember echoes the note it wrote, in quotes, and its schema is small enou
   assert.deepEqual(Object.keys(batch).sort(), Object.keys(tool.inputSchema.properties).filter(k => !["brain", "by", "project", "memories"].includes(k)).sort(), "the batch item keeps every field");
   assert.ok(Object.entries(batch).every(([k, v]) => !v.description || ["content", "sources"].includes(k)), "batch fields carry no repeated paragraphs");
   assert.match(tool.inputSchema.properties.memories.description, /same fields/i);
+  // events ride on a save, single and batch (rule E1), within the same size
+  assert.ok(tool.inputSchema.properties.events && batch.events, "events is a field of a save");
+  const ev = await call("remember", { brain: root, by: "marta", context: "icp", content: "We ran Northfold Summit for 140 founders.", events: [{ name: "Northfold Summit", date: "2026-10-08" }] });
+  assert.ok(!ev.isError, ev.text);
+  assert.match(ev.text, /new event in entities\/: Northfold Summit \(2026-10-08/);
+  const ev2 = await call("remember", { brain: root, by: "marta", memories: [{ context: "icp", content: "Northfold Summit brought 12 qualified leads.", events: ["Northfold Summit"] }, { context: "icp", content: "Harbor Growth Meetup wants us on a panel.", events: ["Harbor Growth Meetup"] }] });
+  assert.ok(!ev2.isError, ev2.text);
+  assert.doesNotMatch(ev2.text, /new event/);
+  assert.match(ev2.text, /event "Harbor Growth Meetup" not registered: its date is missing/);
 });
 
 test("the skill tool creates, lists, and removes a person's own skill in the brain's .agents/skills", async () => {
