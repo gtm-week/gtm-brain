@@ -1183,6 +1183,8 @@ function cfgAddSync(id){const st=cfgAdd[id],go=document.getElementById("cfg-add-
  if(ready){go.setAttribute("href",askLink(`${prefix}: "${st.text.trim()}". Show me the exact wording first and add it once I confirm.`));go.removeAttribute("aria-disabled")}else{go.removeAttribute("href");go.setAttribute("aria-disabled","true")}go.classList.toggle("off",!ready)}
 document.addEventListener("input",e=>{const m=String(e.target?.id||"").match(/^cfg-add-(rule|schema)-text$/);if(m){cfgAdd[m[1]].text=e.target.value;cfgAdd[m[1]].open=true;cfgAddSync(m[1])}});
 document.addEventListener("change",e=>{const m=String(e.target?.id||"").match(/^cfg-add-(rule|schema)-kind$/);if(m){cfgAdd[m[1]].kind=e.target.value;cfgAdd[m[1]].open=true;cfgAddSync(m[1])}});
+/* The Schema tab's "Show" selector: one kind at a time. It had no listener, so picking a kind did nothing (0.35.0 to 0.36.5). */
+document.addEventListener("change",e=>{if(e.target?.id!=="cfg-schema-kind")return;cfgSchemaKind=e.target.value;renderSchemaBrowser();document.getElementById("cfg-schema-kind")?.focus()});
 function renderSchemaBrowser(){
  const S=PL.configuration.schema,q=cfgSchemaQ.trim(),has=text=>!q||!!fzMatch(q,[[text,1]]);
  const counts=Object.fromEntries((PL.entities?.kinds||[]).map(k=>[k.kind,k.count]));
