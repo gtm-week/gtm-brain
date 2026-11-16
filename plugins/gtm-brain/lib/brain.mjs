@@ -22,7 +22,7 @@ export { normalizeKind, normalizeSource, normalizeSources, pointerKey, parsePoin
 import { checkSchema } from "./ontology/validation.mjs";
 import { sharedEntityFiles, thaw, deepFreeze, writeEntityFiles, entityId, entityType, ENTITY_FORMAT, refreshEntityPages, staleEntities, withEntityLock } from "./entities.mjs";
 import { appendMemoryBytes } from './memory-journal.mjs';
-import { assertWritable, layoutBlock, LAYOUT_FILE } from "./layout-version.mjs";
+import { assertWritable, layoutBlock, LAYOUT_FILE, writesLayout } from "./layout-version.mjs";
 import { requestDashboardRefresh } from './dashboard-refresh.mjs';
 import { MEETING_FIELDS, validateMeetingEvidence, prepareMeetingMemory, duplicateMeetingMemory, meetingMetadata } from './meetings.mjs';
 export { meetingOverview, meetingCaptureStatus, meetingSourceSuggestions, validateMeetingEvidence, prepareMeetingMemory, meetingMetadata } from './meetings.mjs';
@@ -37,10 +37,13 @@ export { entityFacts, entityBrief, entityRecords, compileEntity, resolveEntity, 
 export { withEntityLock, startKindLayout, migrateToKindFolders } from './entities.mjs';
 export { ensureMeetingEntities, deriveMeetingEntities, meetingEntityId, meetingAttendees } from './meeting-entities.mjs';
 import { ensureMeetingEntities as meetingEntitiesFor, meetingAnchors, anchorOf } from './meeting-entities.mjs';
-export { layout as entityLayout, pagePaths as entityPagePaths, kindFolder, kindPagePath, assetFolder, findPage } from './layout.mjs';
+export { layout as entityLayout, pagePaths as entityPagePaths, kindFolder, kindPagePath, assetFolder, findPage, diskLayout } from './layout.mjs';
 import { ENTITIES_DIR, recordKindLayout } from './layout.mjs';
 import { isBrain, settingsFile, settingsPathOf, PROTECTED_FILES, SETTINGS_PROPOSAL, SETTINGS_FILE } from './brain-paths.mjs';
 import { divertCommit, proposalLine, guardOwnerEdits, ownerEditNotice, recordApproval } from './owner.mjs';
+import * as paths from './brain-paths.mjs';
+import { workDir, workPath, workName, coverFile, coversDir, noteFiles, notesFileFor, monthly, isNotesPath, notesGlob, coversGlob, entitiesDir, layoutFile, interactionsFile, protectedFiles, mergeAttributes, settingsProposal, inLayout4, CONTEXTS_DIR, NOTES_DIR, TOPICS_DIR } from './brain-paths.mjs';
+export * from './brain-paths.mjs';
 export { isBrain, settingsFile, rulesFile, schemaFile, baseDir, basePath, inConfigFolders, isOwnerPath, engineDirs } from './brain-paths.mjs';
 
 /* The machine-wide GTM Brain preferences file. */
@@ -75,7 +78,7 @@ export function registerBrain(root) {
 }
 export function currentPerson(root, who) {
   if (who) return teamHandle(root, who);
-  try { const handle = JSON.parse(readFileSync(join(root, "work", "person.json"), "utf8")).handle; if (handle) return teamHandle(root, handle); } catch {}
+  try { const handle = JSON.parse(readFileSync(join(workDir(root), "person.json"), "utf8")).handle; if (handle) return teamHandle(root, handle); } catch {}
   try {
     // the brain's own git identity (set by setup from what the person gave) may name them; a noreply or GitHub address never does
     const email = execFileSync("git", ["-C", root, "config", "user.email"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim().toLowerCase();
@@ -87,8 +90,8 @@ export function currentPerson(root, who) {
 export function selectPerson(root, who) {
   const handle = teamHandle(root, who);
   if (!handle) throw new Error("Identify the current person from admin.md team; never assume the brain owner");
-  mkdirSync(join(root, "work"), { recursive: true });
-  writeFileSync(join(root, "work", "person.json"), JSON.stringify({ handle }) + "\n");
+  mkdirSync(workDir(root), { recursive: true });
+  writeFileSync(join(workDir(root), "person.json"), JSON.stringify({ handle }) + "\n");
   return handle;
 }
 /* ---------- frontmatter: a small YAML subset ----------
@@ -181,9 +184,10 @@ export function renderSettings(fm, notes = "") {
 /* Setup: a new brain's config/settings.yaml (layout 3). Refuses to replace a brain's settings. */
 export function writeNewSettings(root, fm, notes = "") {
   if (isBrain(root)) throw new Error("this folder already has a brain");
-  mkdirSync(join(root, dirname(SETTINGS_FILE)), { recursive: true });
-  writeFileSync(join(root, SETTINGS_FILE), renderSettings(fm, notes));
-  return SETTINGS_FILE;
+  const file = writesLayout() >= 4 ? paths.SETTINGS_FILE4 : SETTINGS_FILE;   // layout 4: configuration/settings.yaml
+  mkdirSync(join(root, dirname(file)), { recursive: true });
+  writeFileSync(join(root, file), renderSettings(fm, notes));
+  return file;
 }
 /* One key: value line set in the settings text (either format), the rest kept as it is. */
 function setSettingLine(text, file, key, value) {
@@ -215,7 +219,7 @@ export function setAdminSetting(root, key, value) {
 }
 /* background: what the separate run is doing now (work/compile.json), for the dashboard and the chat */
 export function readCompileState(root) {
-  try { const s = JSON.parse(readFileSync(join(root, "work", "compile.json"), "utf8")); if (s.state === "queued" || s.state === "running") { if (Date.now() - Date.parse(s.at) > 20 * 60 * 1000) return { ...s, state: "failed" }; } return s; } catch { return null; }
+  try { const s = JSON.parse(readFileSync(join(workDir(root), "compile.json"), "utf8")); if (s.state === "queued" || s.state === "running") { if (Date.now() - Date.parse(s.at) > 20 * 60 * 1000) return { ...s, state: "failed" }; } return s; } catch { return null; }
 }
 /* How a context's summary stands, in the words the chat and the dashboard use. Since 0.35.0 a topic summary
    is written on demand (lib/summaries.mjs): when someone asks about the topic, in that chat, then cached until
@@ -238,7 +242,7 @@ export function compileGaveUp(root) { const s = readCompileState(root); return !
    upgraded brain whose last 0.34 run failed would show "Summary update failed" for good. Only a summary's own
    line counts (context set, recordSummaryRun), never the usage line a run writes about itself. */
 function writtenSince(root, at) {
-  try { return readFileSync(join(root, "work", "runs.jsonl"), "utf8").split("\n").some(l => { if (!l) return false; try { const r = JSON.parse(l); return !!r.context && r.turns > 0 && !r.error && Date.parse(r.at) > Date.parse(at); } catch { return false; } }); } catch { return false; }
+  try { return readFileSync(join(workDir(root), "runs.jsonl"), "utf8").split("\n").some(l => { if (!l) return false; try { const r = JSON.parse(l); return !!r.context && r.turns > 0 && !r.error && Date.parse(r.at) > Date.parse(at); } catch { return false; } }); } catch { return false; }
 }
 /* Every saved memory makes its context eligible immediately. Concurrent changes are
    drained by one worker; an empty plan starts no model run. */
@@ -263,7 +267,7 @@ export function compilePlan(root) {
    again. force (the advisor's explicit start) ignores it. */
 export const COMPILE_COOLDOWN_MS = 30 * 60 * 1000;
 export function compileBlocked(root, now = Date.now()) {
-  try { const s = JSON.parse(readFileSync(join(root, "work", "compile.json"), "utf8")); return s.state === "blocked" && now - Date.parse(s.at) < COMPILE_COOLDOWN_MS; } catch { return false; }
+  try { const s = JSON.parse(readFileSync(join(workDir(root), "compile.json"), "utf8")); return s.state === "blocked" && now - Date.parse(s.at) < COMPILE_COOLDOWN_MS; } catch { return false; }
 }
 /* Retired in 0.35.0: no background model run starts after a save or at chat start. Topic summaries are
    written on demand in the chat that asks (lib/summaries.mjs); entity pages refresh deterministically on
@@ -274,7 +278,7 @@ export function kickCompile(root, { force = false } = {}) { return false; }
 
 /* Baselines live in work/, never as additional brain objects. They record plugin writes
    or the first observed legacy cover, so upgrading alone does not imply a manual edit. */
-const coverStateFile = (root, slug) => join(root, "work", "cover-state", `${slug}.json`);
+const coverStateFile = (root, slug) => join(workDir(root), "cover-state", `${slug}.json`);
 const coverHash = text => createHash("sha256").update(text).digest("hex");
 function checkedCover(text) {
   if (!/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/.test(text)) throw new Error("Missing or incomplete frontmatter");
@@ -289,7 +293,7 @@ function generatedCover(text) {
   return JSON.stringify({ generated: Object.fromEntries(["summary", "names", "people", "tools", "related", "last_active", "confidence", "compiled_at", "compiled_by"].map(k => [k, fm[k] ?? null])), now: splitWhenLoaded(section(body, "When loaded"))[1], extraSections });
 }
 export function manualCoverState(root, slug) {
-  const path = join(root, "brain", "contexts", slug, "context.md");
+  const path = join(root, coverFile(root, slug));
   const stateFile = coverStateFile(root, slug);
   let baseline = null, baselineMissing = false, baselineError = null;
   try {
@@ -330,9 +334,9 @@ export function manualCoverState(root, slug) {
 }
 export function manualCoverChanges(root) {
   const slugs = new Set();
-  for (const dir of [join(root, "brain", "contexts"), join(root, "work", "cover-state")]) {
+  for (const dir of [join(root, coversDir(root)), join(workDir(root), "cover-state")]) {
     try { for (const f of readdirSync(dir, { withFileTypes: true })) {
-      const slug = f.isDirectory() ? f.name : f.name.endsWith(".json") ? f.name.slice(0, -5) : "";
+      const slug = f.isDirectory() ? f.name : f.name.endsWith(".json") ? f.name.slice(0, -5) : monthly(root) && f.name.endsWith(".md") ? f.name.slice(0, -3) : "";
       if (/^[a-z0-9-]+$/.test(slug)) slugs.add(slug);
     } } catch {}
   }
@@ -349,9 +353,9 @@ export function pausedCovers(root) {
 const pausedText = p => `${p.title} (last updated ${p.since ? String(p.since).slice(0, 10) : "never"}${p.waiting ? `, ${p.waiting} note${p.waiting === 1 ? "" : "s"} waiting` : ""})`;
 /* The chat start's line for them, once per set (work/paused-covers.json), so the person hears it where they work. */
 export function pausedCoversHint(root) {
-  const paused = pausedCovers(root), memo = join(root, "work", "paused-covers.json"), key = paused.map(p => p.slug).join(" ");
+  const paused = pausedCovers(root), memo = join(workDir(root), "paused-covers.json"), key = paused.map(p => p.slug).join(" ");
   let seen = ""; try { seen = JSON.parse(readFileSync(memo, "utf8")).slugs || ""; } catch {}
-  try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(memo, JSON.stringify({ slugs: key, at: new Date().toISOString() })); } catch {}
+  try { mkdirSync(workDir(root), { recursive: true }); writeFileSync(memo, JSON.stringify({ slugs: key, at: new Date().toISOString() })); } catch {}
   if (!paused.length || key === seen) return "";
   return `Summaries paused, not updating: ${paused.map(pausedText).join("; ")}. Each was edited by hand outside a summary run, so no run replaces it until the person reviews the edit. Say it in one line and offer the review: show the edit, keep what matters as sourced notes or the context rule, and only after an explicit yes release it (gtmb-use-brain compile.md, compile.mjs --release with --reviewed-cover).`;
 }
@@ -385,7 +389,7 @@ export function releaseManualCover(root, slug, reviewedHash) {
 }
 export function backupManualCover(root, slug) {
   const state = manualCoverState(root, slug);
-  const dir = join(root, "work", "manual-edits", slug); mkdirSync(dir, { recursive: true });
+  const dir = join(workDir(root), "manual-edits", slug); mkdirSync(dir, { recursive: true });
   const path = join(dir, `${state.hash}.md`);
   if (!existsSync(path)) writeFileSync(path, state.text, { flag: "wx" });
   return path;
@@ -393,7 +397,7 @@ export function backupManualCover(root, slug) {
 
 /* ---------- contexts ---------- */
 export function readContext(root, slug, { includeMemories = true } = {}) {
-  const dir = join(root, "brain", "contexts", slug); const f = join(dir, "context.md");
+  const f = join(root, coverFile(root, slug)), dir = dirname(f);   // dir: the context's own folder in layouts 1 to 3; in layout 4 the topics folder (nothing of one topic's own)
   if (!existsSync(f)) return null;
   const manualEdit = manualCoverState(root, slug);
   const text = manualEdit.status === "invalid" ? manualEdit.baseline?.text : manualEdit.text;
@@ -482,13 +486,25 @@ export function seedContexts(root, owner, rules = {}) {
    note from the other branch can be older than the kept summary, so its timestamp alone would never
    make the context stale; the list does, until the next compilation of that context. */
 // the entity log (lib/entity-events.mjs) is append-only lines too: two teammates' renames merge as lines
-export const MERGE_ATTRIBUTES = ["brain/contexts/*/memories.jsonl merge=union", "brain/contexts/*/context.md merge=gtm-brain-cover", "brain/entities/.history/events.jsonl merge=union"];
-const mergeStaleFile = root => join(root, "work", "merge-stale.json");
+export const MERGE_ATTRIBUTES = mergeAttributes(null);   // layouts 1 to 3; mergeAttributes(root) answers for a brain
+const mergeStaleFile = root => join(workDir(root), "merge-stale.json");
 export function mergeStale(root) { try { return JSON.parse(readFileSync(mergeStaleFile(root), "utf8")).contexts || []; } catch { return []; } }
 export function markMergeStale(root, slugs) {
   const contexts = [...new Set([...mergeStale(root), ...slugs.filter(s => /^[a-z0-9-]+$/.test(s))])];
-  mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(mergeStaleFile(root), JSON.stringify({ contexts }));
+  mkdirSync(workDir(root), { recursive: true }); writeFileSync(mergeStaleFile(root), JSON.stringify({ contexts }));
   return contexts;
+}
+/* Layout 4, after a merge with two parents: the topics that took notes from both sides in these month files.
+   A line the merge added against the first parent came from the second, and the other way round. */
+export function mergedTopics(root, files) {
+  const added = (parent, file) => {
+    const out = new Set();
+    try { for (const l of execFileSync("git", ["-C", root, "diff", "--unified=0", parent, "HEAD", "--", file], { encoding: "utf8", stdio: "pipe", maxBuffer: 256 << 20 }).split("\n")) { if (!l.startsWith("+{")) continue; try { out.add(JSON.parse(l.slice(1)).context); } catch {} } } catch {}
+    return out;
+  };
+  const both = new Set();
+  for (const f of files.filter(isNotesPath)) { const a = added("HEAD^1", f), b = added("HEAD^2", f); for (const c of a) if (b.has(c)) both.add(c); }
+  return [...both].filter(s => /^[a-z0-9-]+$/.test(String(s))).sort();
 }
 function clearMergeStale(root, slug) {
   const left = mergeStale(root); if (!left.includes(slug)) return;
@@ -507,7 +523,7 @@ export function ensureMergeSetup(root) {
   } catch {}
   try {
     const file = join(root, ".gitattributes"), text = existsSync(file) ? readFileSync(file, "utf8") : "";
-    const missing = MERGE_ATTRIBUTES.filter(l => !text.split("\n").includes(l));
+    const missing = mergeAttributes(root).filter(l => !text.split("\n").includes(l));
     if (missing.length) { writeFileSync(file, (text && !text.endsWith("\n") ? text + "\n" : text) + (text ? "" : "# gtm-brain: parallel branches merge notes as lines and keep the newer summary\n") + missing.join("\n") + "\n"); changed.push(".gitattributes"); }
     if (existsSync(join(root, ".githooks"))) {
       const hook = join(root, ".githooks", "post-merge"), want = readFileSync(join(plugin, "templates/githooks/post-merge"), "utf8");
@@ -525,12 +541,12 @@ export function writeContext(root, slug, { rule, now = "", ...fm }, { reviewedCo
   assertWritable(root);   // a brain on a newer file layout is read-only here (lib/layout-version.mjs)
   if (!/^[a-z0-9-]+$/.test(slug)) throw new Error(`bad slug: ${slug}`);
   if (Object.hasOwn(fm, "scope")) throw new Error("scope is no longer a context field; include boundaries in rule");
-  const dir = join(root, "brain", "contexts", slug); mkdirSync(dir, { recursive: true });
+  const path = join(root, coverFile(root, slug)), dir = dirname(path); mkdirSync(dir, { recursive: true });
   const full = { title: slug, slug, status: "active", created: new Date().toISOString().slice(0, 10), compiled_at: null, summary: "Nothing here yet.", people: [], tools: [], related: [], ...fm };
   const ordered = {}; for (const k of COVER_KEYS) if (full[k] !== undefined) ordered[k] = full[k]; for (const k of Object.keys(full)) if (!(k in ordered)) ordered[k] = full[k];
   const clean = t => String(t || "").trim();
   const body = `\n## When loaded\n\n${clean(rule) || `Work here is about ${full.title}.`}\n${clean(now) ? `\nWorking guidance: ${clean(now)}\n` : ""}`;
-  const path = join(dir, "context.md"), previous = existsSync(path) ? manualCoverState(root, slug) : null;
+  const previous = existsSync(path) ? manualCoverState(root, slug) : null;
   if (expectedCover && previous?.hash !== expectedCover) throw new Error("Context Markdown changed before writing; read compile_facts again");
   let text = renderFrontmatter(ordered) + body;
   const preservesManual = previous?.blocked && !["invalid", "missing"].includes(previous.status) && !checkedCover(previous.text).extraSections && generatedCover(text) === generatedCover(previous.text);
@@ -554,15 +570,24 @@ export function writeContext(root, slug, { rule, now = "", ...fm }, { reviewedCo
     writeFileSync(`${stateFile}.${process.pid}.tmp`, JSON.stringify({ hash: coverHash(text), text }));
     renameSync(`${stateFile}.${process.pid}.tmp`, stateFile);
   }
-  if (!existsSync(join(dir, "memories.jsonl"))) writeFileSync(join(dir, "memories.jsonl"), "");
-  return join(dir, "context.md");
+  // layouts 1 to 3: the context's own notes file from the start. Layout 4 has none: a note goes to its month's file.
+  if (!monthly(root) && !existsSync(join(root, notesFileFor(root, slug)))) writeFileSync(join(root, notesFileFor(root, slug)), "");
+  return path;
 }
 /* The contexts that are worked in: archived ones stay in listContexts (search, the dashboard) but
    are not offered, compiled or related. */
+/* Every context (topic) that has a cover: a folder of brain/contexts, or a file of memories/topics in layout 4. */
+export function contextSlugs(root) {
+  const d = join(root, coversDir(root));
+  try {
+    if (monthly(root)) return readdirSync(d, { withFileTypes: true }).filter(f => f.isFile() && /^[a-z0-9-]+\.md$/.test(f.name)).map(f => f.name.slice(0, -3)).sort();
+    return readdirSync(d).filter(n => statSync(join(d, n)).isDirectory());
+  } catch { return []; }
+}
+export const hasContext = (root, slug) => /^[a-z0-9-]+$/.test(String(slug || "")) && existsSync(join(root, coverFile(root, slug)));
 export const activeContexts = root => listContexts(root).filter(c => c.status === "active");
 export function listContexts(root, options) {
-  const d = join(root, "brain", "contexts"); if (!existsSync(d)) return [];
-  return readdirSync(d).filter(n => statSync(join(d, n)).isDirectory()).map(s => readContext(root, s, options)).filter(Boolean)
+  return contextSlugs(root).map(s => readContext(root, s, options)).filter(Boolean)
     .sort((a, b) => (a.status === b.status ? 0 : a.status === "active" ? -1 : 1) || a.slug.localeCompare(b.slug));
 }
 
@@ -570,8 +595,10 @@ export function listContexts(root, options) {
    Files live in brain/entities/. Identity is metadata; facts stay in context memories.
    Legacy registry files remain readable until a write or upgrade migrates them. */
 // the literal, not layout.ENTITIES_DIR: this constant is evaluated while layout.mjs may still be loading (import cycle)
-export const ENTITIES_PATHS = ["brain/entities", "brain/entities.md", "brain/names.md"];
-const entitiesFiles = root => [join(root, "brain", "entities.md"), join(root, "brain", "names.md")].filter(f => existsSync(f));
+export const ENTITIES_PATHS = [paths.ENTITIES_OLD, "brain/entities.md", "brain/names.md"];   // layouts 1 to 3
+/* What an entity write commits. Layout 4 has no legacy registry files: only the pages' folder. */
+export const entitiesPaths = root => (inLayout4(root) ? [paths.ENTITIES_DIR4] : ENTITIES_PATHS);
+const entitiesFiles = root => (inLayout4(root) ? [] : [join(root, "brain", "entities.md"), join(root, "brain", "names.md")].filter(f => existsSync(f)));
 const separateEntities = (a, b) => (a.not || []).some(n => exactName([b], n)) || (b.not || []).some(n => exactName([a], n));
 const sameEntity = (a, b) => !separateEntities(a, b) && (a.name.toLowerCase() === b.name.toLowerCase() || a.aliases.some(x => x.toLowerCase() === b.name.toLowerCase()) || b.aliases.some(x => x.toLowerCase() === a.name.toLowerCase()));
 function mergeEntity(into, e) {
@@ -627,7 +654,7 @@ export { ENTITY_KINDS as NAME_KINDS } from "./entities.mjs";
 const registries = new Map();
 const fileKey = path => { try { const s = statSync(path, { bigint: true }); return `${s.dev}:${s.ino}:${s.size}:${s.mtimeNs}:${s.ctimeNs}`; } catch (e) { if (e.code === "ENOENT") return "missing"; throw e; } };
 function sharedRegistry(root) {
-  const scan = sharedEntityFiles(root), key = [scan.key, ...[join(root, "brain", "entities.md"), join(root, "brain", "names.md"), settingsPathOf(root) || join(root, settingsFile(root))].map(fileKey)].join("|");
+  const scan = sharedEntityFiles(root), key = [scan.key, ...[...(inLayout4(root) ? [] : [join(root, "brain", "entities.md"), join(root, "brain", "names.md")]), settingsPathOf(root) || join(root, settingsFile(root))].map(fileKey)].join("|");
   const hit = registries.get(resolve(root));
   if (scan.key !== null && hit?.key === key) return hit.names;
   const names = deepFreeze(readRegistry(root, scan.entries.map(e => thaw(e))));
@@ -661,7 +688,7 @@ export function writeNames(root, names) {
 export function migrateEntities(root) {
   return withEntityLock(root, () => {
     const names = readNames(root);
-    if (!entitiesFiles(root).length && existsSync(join(root, ENTITIES_DIR)) && names.every(e => e._fm?.format === ENTITY_FORMAT)) return false;
+    if (!entitiesFiles(root).length && existsSync(join(root, entitiesDir(root))) && names.every(e => e._fm?.format === ENTITY_FORMAT)) return false;
     writeNames(root, names);
     return true;
   });
@@ -671,7 +698,7 @@ function writeRegistry(root, names) {
   // Preserve complete originals, including any unrecognized prose, before migration.
   for (const file of legacy) {
     const content = readFileSync(file, "utf8"), digest = createHash("sha256").update(content).digest("hex").slice(0, 16);
-    const dir = join(root, "work", "entity-migration", digest); mkdirSync(dir, { recursive: true });
+    const dir = join(workDir(root), "entity-migration", digest); mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, file.endsWith("/names.md") ? "names.md" : "entities.md"), content);
   }
   writeEntityFiles(root, names);
@@ -936,7 +963,7 @@ export function normalisePeople(root, mentions, { confirmedNew = [], companies =
    they were. work/projects.json indexes this machine's projects (git-ignored: paths are personal). */
 const projectDir = (root, project) => {
   if (project && !/^[a-z0-9][a-z0-9-]*$/.test(project)) throw new Error(`bad project slug: ${project}`);
-  return project ? join(root, "work", "projects", project) : join(root, "work");
+  return project ? join(workDir(root), "projects", project) : workDir(root);
 };
 export function readLoaded(root, project = null) {
   const dir = projectDir(root, project);
@@ -1021,8 +1048,8 @@ export function resolveBrain(cwd) {
     const up = dirname(dir); if (up === dir) return null; dir = up;
   }
 }
-export function readProjects(root) { try { return JSON.parse(readFileSync(join(root, "work", "projects.json"), "utf8")).projects || []; } catch { return []; } }
-export function writeProjects(root, projects) { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(join(root, "work", "projects.json"), JSON.stringify({ projects }, null, 1)); }
+export function readProjects(root) { try { return JSON.parse(readFileSync(join(workDir(root), "projects.json"), "utf8")).projects || []; } catch { return []; } }
+export function writeProjects(root, projects) { mkdirSync(workDir(root), { recursive: true }); writeFileSync(join(workDir(root), "projects.json"), JSON.stringify({ projects }, null, 1)); }
 
 /* ---------- the one commit path ----------
    Git is the store. Every writer calls commit() after writing and reports its note verbatim.
@@ -1046,7 +1073,7 @@ export function largeUnsaved(root, limit = LARGE_FILE_MB * 1024 * 1024) {
 }
 /* Every change in the brain folder: what .gitignore keeps out (work/, .env), a project's local pointer and a file
    too big for git stay out. */
-export function savePathsFor(root) { return [...[".", "brain"].filter(p => existsSync(join(root, p))), ...largeUnsaved(root).map(f => `:(exclude,literal)${f.path}`)]; }
+export function savePathsFor(root) { return [...[".", inLayout4(root) ? null : "brain"].filter(Boolean).filter(p => existsSync(join(root, p))), ...largeUnsaved(root).map(f => `:(exclude,literal)${f.path}`)]; }
 /* Every writer calls this once after writing: everything written is kept at once, one commit per
    change. The message is also the activity line the dashboard shows. GTM_BRAIN_NO_COMMIT (tests,
    dry runs) turns committing off, for save as well. */
@@ -1061,28 +1088,28 @@ export function commit(root, paths, message, options = {}) {
   // (lib/owner.mjs). options.system: the plugin's own housekeeping (setup, the layout move, shipped files).
   let proposal = null;
   try { const d = divertCommit(root, paths, message, options); paths = d.paths; proposal = d.proposal; } catch (e) { return { ok: false, note: `not kept: ${e.message}` }; }
-  const kept = keep(root, healed ? [...paths, LAYOUT_FILE] : paths, message, options);
-  const out = healed ? { ...kept, note: `${kept.note}; ${layoutHealed(healed)}` } : kept;
+  const kept = keep(root, healed ? [...paths, layoutFile(root)] : paths, message, options);
+  const out = healed ? { ...kept, note: `${kept.note}; ${layoutHealed(root, healed)}` } : kept;
   if (!proposal) return out;
   return { ...out, ok: true, proposal, note: `${proposalLine(root, proposal)}${out.note && out.note !== "nothing to commit" ? ` The rest: ${out.note}` : ""}` };
 }
 // Housekeeping, for the model only: said to the person it came out as "your plugin needs updating", which is false
 // (live benchmark, 2026-11-15, two answers). This plugin is current; the file only protects teammates on older ones.
-const layoutHealed = (n, kept = "") => `recorded file layout ${n} in ${LAYOUT_FILE}${kept && ` (${kept})`}: ${n >= 3 ? "the base files were already in about-us/ and config/" : "the entity pages were already in kind folders"}. Housekeeping only: this GTM Brain is up to date and nothing was moved`;
+const layoutHealed = (root, n, kept = "") => `recorded file layout ${n} in ${layoutFile(root)}${kept && ` (${kept})`}: ${n >= 4 ? "the files were already in configuration/, entities/ and memories/" : n >= 3 ? "the base files were already in about-us/ and config/" : "the entity pages were already in kind folders"}. Housekeeping only: this GTM Brain is up to date and nothing was moved`;
 /* The chat start's part of the same repair, for a chat that only reads: the file in a commit of its own, and
    the one line to say. "" when the file was right (every later call). */
 export function healLayout(root) {
   if (!readAdmin(root) || layoutBlock(root)) return "";
   let n = 0; try { n = recordKindLayout(root); } catch {}
   if (!n) return "";
-  const kept = keep(root, [LAYOUT_FILE], `layout: ${LAYOUT_FILE} says ${n}, the files were already in that layout`);
-  return `GTM Brain: ${layoutHealed(n, kept.note)}. Do not mention it to the person and do not say anything needs updating.`;
+  const kept = keep(root, [layoutFile(root)], `layout: ${layoutFile(root)} says ${n}, the files were already in that layout`);
+  return `GTM Brain: ${layoutHealed(root, n, kept.note)}. Do not mention it to the person and do not say anything needs updating.`;
 }
 function keep(root, paths, message, { always = false, push = true, allowEmpty = false } = {}) {
   // Keep identity files and derived evidence views with every brain write.
-  if (readAdmin(root) && paths.some(p => /brain(?:\/|$)|context\.md$|memories\.jsonl$/.test(p))) {
+  if (readAdmin(root) && paths.some(p => /brain(?:\/|$)|context\.md$|memories\.jsonl$|(?:^|\))(?:memories|entities|configuration)(?:\/|$)/.test(p))) {
     withEntityLock(root, () => { if (!migrateEntities(root)) refreshEntityPages(root); });
-    paths = [...new Set([...paths, ...ENTITIES_PATHS])];
+    paths = [...new Set([...paths, ...entitiesPaths(root)])];
   }
   logActivity(root, "change", message);
   if (process.env.GTM_BRAIN_NO_COMMIT && !always) return { ok: false, note: NOT_COMMITTED_YET };
@@ -1120,14 +1147,15 @@ function keep(root, paths, message, { always = false, push = true, allowEmpty = 
 /* ---------- activity log (work/hooks.log): what happened, for the dashboard ---------- */
 const localStamp = () => { const d = new Date(), p = n => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; };
 export function logActivity(root, kind, text) {
-  try { mkdirSync(join(root, "work"), { recursive: true }); appendFileSync(join(root, "work", "hooks.log"), `${localStamp()}  ${kind}  ${String(text).split("\n")[0].slice(0, 200)}\n`); } catch {}
+  try { mkdirSync(workDir(root), { recursive: true }); appendFileSync(join(workDir(root), "hooks.log"), `${localStamp()}  ${kind}  ${String(text).split("\n")[0].slice(0, 200)}\n`); } catch {}
 }
 export function readActivity(root, n = 12) {
-  let lines = []; try { lines = readFileSync(join(root, "work", "hooks.log"), "utf8").split("\n").filter(Boolean); } catch { return []; }
+  let lines = []; try { lines = readFileSync(join(workDir(root), "hooks.log"), "utf8").split("\n").filter(Boolean); } catch { return []; }
   return lines.slice(-n).reverse().map(l => { const m = l.match(/^(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d)\s{2,}(\S+)\s{2,}(.*)$/); return m ? { at: m[1], kind: m[2], text: m[3] } : { at: "", kind: "", text: l }; });
 }
 /* Only the context covers: what a scheduled run may commit. */
-export const COVER_PATHS = [":(glob)brain/contexts/*/context.md"];
+export const COVER_PATHS = [":(glob)brain/contexts/*/context.md"];   // layouts 1 to 3
+export const coverPaths = root => [coversGlob(root)];
 /* what git would commit on save */
 export function unsavedChanges(root, paths = savePathsFor(root)) {
   paths = paths.filter(p => p.startsWith(":(") || existsSync(join(root, p)));
@@ -1139,11 +1167,11 @@ export function unsavedChanges(root, paths = savePathsFor(root)) {
 export const PUSH = ["push", "-q", "-u"];
 export const NOT_SHARED_YET = "kept, not shared yet (sending to teammates in the background)";
 /* The outcome of the last push, written by the push itself: { ok, at, head, remote, error }. */
-const pushStatePath = root => join(root, "work", "push.json");
+const pushStatePath = root => join(workDir(root), "push.json");
 export function readPushState(root) { try { return JSON.parse(readFileSync(pushStatePath(root), "utf8")); } catch { return null; } }
 export function recordPush(root, { ok, remote = "", error = "" }) {
   let head = ""; try { head = execFileSync("git", ["-C", root, "rev-parse", "--short", "HEAD"], { encoding: "utf8", stdio: "pipe" }).trim(); } catch {}
-  try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(pushStatePath(root), JSON.stringify({ ok: !!ok, at: new Date().toISOString(), head, remote, error: String(error || "").trim().split("\n")[0].slice(0, 200) }) + "\n"); } catch {}
+  try { mkdirSync(workDir(root), { recursive: true }); writeFileSync(pushStatePath(root), JSON.stringify({ ok: !!ok, at: new Date().toISOString(), head, remote, error: String(error || "").trim().split("\n")[0].slice(0, 200) }) + "\n"); } catch {}
 }
 /* The last push when it failed and its commits are still not on the remote. Two background pushes can
    overlap, and the loser's failure may be written last although the other one sent everything: a
@@ -1160,7 +1188,7 @@ export function pushInBackground(root, remote) {
 }
 /* What pulling teammates left behind (session maintenance): { status: "ok" | "merged" | "conflict" | "failed", files, at }.
    Not work/sync.json: that file is the source sync's own (gtmb-sync), and its presence means a sync has finished. */
-export const syncStatePath = root => join(root, "work", "teammates.json");
+export const syncStatePath = root => join(workDir(root), "teammates.json");
 /* The chat-start lines for sharing: a failed last push, or a teammate merge that conflicted. Empty when all is well. */
 export function syncNotice(root) {
   const out = [], push = pushFailure(root);
@@ -1206,7 +1234,7 @@ export function largeNote(large, root) {
 /* The person's save: commit what unsavedChanges lists, push when there is a remote. */
 export function save(root, message, { covers = false, trailers = [] } = {}) {
   const blocked = layoutBlock(root); if (blocked) return { ok: false, note: blocked, files: [] };
-  if (!covers && existsSync(join(root, SETTINGS_PROPOSAL))) return { ok: false, note: `a change to ${settingsFile(root)} is waiting for APPROVE; ask for APPROVE or a drop, then save` };
+  if (!covers && existsSync(join(root, settingsProposal(root)))) return { ok: false, note: `a change to ${settingsFile(root)} is waiting for APPROVE; ask for APPROVE or a drop, then save` };
   // A direct edit of a protected file is never saved: it is put back first (guardProtected). Layout 3: a hand edit
   // under about-us/ or config/ by someone other than the owner becomes a proposal; the owner's own is kept and recorded.
   let own = { accepted: [], proposal: null, restored: [] };
@@ -1222,7 +1250,7 @@ export function save(root, message, { covers = false, trailers = [] } = {}) {
   return ownNote ? { ...r, note: `${r.note}\n${ownNote}`, proposal: own.proposal } : r;
 }
 function saveCommitted(root, message, { covers = false, trailers = [] } = {}) {
-  const paths = covers ? COVER_PATHS : savePathsFor(root);
+  const paths = covers ? coverPaths(root) : savePathsFor(root);
   const files = unsavedChanges(root, paths);
   if (!files.length && !trailers.length) { const large = covers ? [] : largeUnsaved(root); return { ok: true, note: covers ? "nothing to save: no cover changed" : large.length ? `nothing else to save\n${largeNote(large, root)}` : "nothing to save: everything is committed", files, large }; }
   // save pushes in the foreground below; a background push from commit would race it for the ref.
@@ -1266,26 +1294,28 @@ export function takeApproval(root, kind, secret) {
   let t; try { t = JSON.parse(readFileSync(file, "utf8")); unlinkSync(file); } catch { return false; }
   return t.brain === realRoot(root) && t.kind === kind && Date.now() - t.at < 120000;
 }
-export const PROTECTED_PATHS = [...PROTECTED_FILES, ":(glob)brain/contexts/*/memories.jsonl"];
+export const PROTECTED_PATHS = [...PROTECTED_FILES, ":(glob)brain/contexts/*/memories.jsonl"];   // layouts 1 to 3
+export const protectedPaths = root => [...protectedFiles(root), notesGlob(root)];
 export function guardProtected(root) {
   if (process.env.GTM_BRAIN_NO_COMMIT) return [];
   const git = (...a) => execFileSync("git", ["--no-optional-locks", "-C", root, ...a], { encoding: "utf8", stdio: "pipe" });
+  const SETTINGS = [SETTINGS_FILE, paths.SETTINGS_FILE4];
   let changed;
   // Layout 3: config/settings.yaml is the marker every reader asks for (lib/brain-paths.mjs). Deleted by hand, the
   // brain would read as an older layout, where nobody is the owner: it comes back like a protected file. An edit
   // of it is the owner rules' to judge (lib/owner.mjs guardOwnerEdits), not this guard's.
-  try { git("rev-parse", "--verify", "-q", "HEAD"); changed = git("diff", "--name-only", "HEAD", "--", ...PROTECTED_PATHS, SETTINGS_FILE).split("\n").filter(Boolean); }
+  try { git("rev-parse", "--verify", "-q", "HEAD"); changed = git("diff", "--name-only", "HEAD", "--", ...protectedPaths(root), ...SETTINGS).split("\n").filter(Boolean); }
   catch { return []; }
   const restored = [];
   for (const path of changed) {
     let committed; try { committed = git("show", `HEAD:${path}`); } catch { continue; }
     const file = join(root, path), now = existsSync(file) ? readFileSync(file, "utf8") : null;
-    if (path === SETTINGS_FILE && now !== null) continue;
-    if (/memories\.jsonl$/.test(path) && now !== null && now.startsWith(committed)) continue;
+    if (SETTINGS.includes(path) && now !== null) continue;
+    if (isNotesPath(path) && now !== null && now.startsWith(committed)) continue;
     let backup = null;
     if (now !== null) {
-      const dir = join(root, "work", "manual-edits", "protected"); mkdirSync(dir, { recursive: true });
-      backup = join("work", "manual-edits", "protected", `${path.replace(/\//g, "__")}.${Date.now()}`);
+      const dir = join(workDir(root), "manual-edits", "protected"); mkdirSync(dir, { recursive: true });
+      backup = join(workName(root), "manual-edits", "protected", `${path.replace(/\//g, "__")}.${Date.now()}`);
       writeFileSync(join(root, backup), now);
     }
     mkdirSync(dirname(file), { recursive: true }); writeFileSync(file, committed);
@@ -1364,8 +1394,8 @@ export function recordRunThread(root, kind, input) {
   if (!id || !RUN_KINDS.includes(kind)) return null;
   logActivity(root, "run", `${kind} ${THREAD_URL(id)}`);
   if (kind === "dashboard") return { kind, thread: id };
-  mkdirSync(join(root, "work"), { recursive: true });
-  const f = join(root, "work", "compile.json"); let s = {};
+  mkdirSync(workDir(root), { recursive: true });
+  const f = join(workDir(root), "compile.json"); let s = {};
   try { s = JSON.parse(readFileSync(f, "utf8")); } catch {}
   s = { ...s, thread: id }; writeFileSync(f, JSON.stringify(s) + "\n");
   return { kind, thread: id };
@@ -1461,7 +1491,7 @@ export function openExternal(url) {
 /* ---------- the chat and the dashboard server (both local, in work/) ---------- */
 export function readSession(root, project = null) { try { return JSON.parse(readFileSync(join(projectDir(root, project), "session.json"), "utf8")); } catch { return null; } }
 export function readDash(root) {
-  try { const s = JSON.parse(readFileSync(join(root, "work", "dash.json"), "utf8")); process.kill(s.pid, 0); return s; } catch { return null; }
+  try { const s = JSON.parse(readFileSync(join(workDir(root), "dash.json"), "utf8")); process.kill(s.pid, 0); return s; } catch { return null; }
 }
 /* line diff, plain: "- " removed, "+ " added, "  " context */
 export function lineDiff(a, b) {
@@ -1523,9 +1553,39 @@ export function validateMemory(r) {
   return errs;
 }
 export function readMemories(root, slug) {
-  const f = join(root, "brain", "contexts", slug, "memories.jsonl"); if (!existsSync(f)) return [];
+  if (monthly(root)) return (monthlyLines(root).get(slug) || []).map(l => JSON.parse(l));
+  const f = join(root, notesFileFor(root, slug)); if (!existsSync(f)) return [];
   return readFileSync(f, "utf8").split("\n").filter(l => l.trim()).map(l => JSON.parse(l));
 }
+/* Layout 4: every note is a line of memories/<YYYY-MM>.jsonl, and a topic's notes are the lines whose `context`
+   is that topic, months in order and lines in file order. The files are read once per change (size and mtime of
+   each) and kept as lines per topic; every read parses its own records, as a read of one file always did. */
+const monthCache = new Map();
+const LINE_CONTEXT = /^\{"id":"[^"]*","context":"([^"\\]*)"/;
+function monthlyLines(root) {
+  const files = noteFiles(root), stamps = files.map(f => { try { const st = statSync(join(root, f)); return `${f}:${st.size}:${st.mtimeMs}`; } catch { return `${f}:gone`; } }).join("|");
+  const hit = monthCache.get(root); if (hit && hit.key === stamps) return hit.by;
+  const by = new Map();
+  for (const f of files) {
+    let text = ""; try { text = readFileSync(join(root, f), "utf8"); } catch { continue; }
+    for (const line of text.split("\n")) {
+      if (!line.trim()) continue;
+      const context = LINE_CONTEXT.exec(line)?.[1] ?? JSON.parse(line).context;
+      if (!by.has(context)) by.set(context, []);
+      by.get(context).push(line);
+    }
+  }
+  monthCache.set(root, { key: stamps, by });
+  return by;
+}
+/* The files that hold notes, for whoever stamps or indexes them: {file, path}. file is the key the index and the
+   append receipts use: the context in layouts 1 to 3 (one file each, in listContexts order), the month in layout 4. */
+export function noteSources(root) {
+  if (monthly(root)) return noteFiles(root).map(f => ({ file: f.slice(NOTES_DIR.length + 1, -".jsonl".length), path: join(root, f) }));
+  return listContexts(root, { includeMemories: false }).map(c => ({ file: c.slug, path: join(root, notesFileFor(root, c.slug)) }));
+}
+/* The notes file a context's commit names (lib/brain-paths.mjs notesCommitPaths), for every writer. */
+export const notesPaths = (root, slug) => paths.notesCommitPaths(root, slug);
 /* what a reader should see: retracted records hidden, superseded ones replaced by their successor */
 /* What is in force: a superseded or retracted record is hidden; the record that supersedes or
    retracts it stays, because it carries the correction, the answer, or the reason. */
@@ -1579,8 +1639,7 @@ export function appendMemory(root, slug, options) {
   return withEntityLock(root, () => appendMemoryRecord(root, slug, prepareMeetingMemory(root, slug, options)));
 }
 function appendMemoryRecord(root, slug, { authors, via = "codex", kind = "note", tools = [], people = [], mentions = [], content, source = [], actions = [], supersedes = null, retracts = null, tags = [], at = null, asset, customer, customer_coverage, relation, ...meetingFields }) {
-  const dir = join(root, "brain", "contexts", slug);
-  if (!existsSync(join(dir, "context.md"))) throw new Error(`no such context: ${slug}`);
+  if (!hasContext(root, slug)) throw new Error(`no such context: ${slug}`);
   const when = at || new Date().toISOString();
   const id = "m_" + createHash("sha256").update(`${slug}|${when}|${(authors || []).join(",")}|${content}${asset ? JSON.stringify(asset) : ""}${Object.keys(meetingMetadata(meetingFields)).length ? JSON.stringify(meetingMetadata(meetingFields)) : ""}`).digest("hex").slice(0, 12);
   if (asset?.entity && Array.isArray(people)) people = [...new Set([...people, asset.entity])];
@@ -1615,7 +1674,9 @@ function appendMemoryRecord(root, slug, { authors, via = "codex", kind = "note",
   guardRelationCorrection(root, slug, rec);
   const duplicate = duplicateMeetingMemory(root, rec);
   if (duplicate) return { rec: duplicate, warnings: [], alreadyRecorded: true };
-  appendMemoryBytes(root, slug, join(dir, "memories.jsonl"), JSON.stringify(rec) + "\n");
+  const file = notesFileFor(root, slug, rec.at);
+  mkdirSync(dirname(join(root, file)), { recursive: true });
+  appendMemoryBytes(root, monthly(root) ? file.slice(NOTES_DIR.length + 1, -".jsonl".length) : slug, join(root, file), JSON.stringify(rec) + "\n");
   // a captured meeting is an entity of kind meeting from its first note on; later notes find it by meeting_id
   if (rec.meeting && rec.meeting_id === rec.id) meetingEntitiesFor(root, [rec]);
   return { rec, warnings: unknownTools(root, tools).map(t => `tool "${t}" is not listed in admin.md`) };
@@ -1645,7 +1706,7 @@ export function validateMemoriesFile(path, context = null) {
 // by the engine's loader, so names and schemas are validated the same way as the plugin's; the
 // keys GTM Brain adds (tool, operation, record, refuse_when) come from the loaded file's raw. Nothing
 // here writes a memory: interactionMemory builds what the remember script is then called with.
-export const INTERACTIONS_PATH = "brain/ontology.ossie.json";
+export const INTERACTIONS_PATH = paths.INTERACTIONS_OLD;   // layouts 1 to 3; interactionsFile(root) answers for a brain
 // every name the plugin serves; server.test.mjs holds this equal to the live catalog, so a company
 // interaction can never shadow a tool
 export const RESERVED_TOOLS = new Set(["memory_index", "capture_chats", "update_plugin", "where_we_are", "list_contexts", "load_context", "recall", "compile_facts", "compile_apply", "render_dashboard", "open_dashboard", "new_context", "fork_context", "edit_context", "archive_context", "advise", "who_is", "why_here", "check_rules", "add_name", "check_tools", "mark_tool", "propose_admin_change", "approve_change", "ask_person", "keep_approved_file", "save", "check_environment", "setup_brain", "upgrade_brain", "list_objects", "describe_object", "query", "remember", "interact", "propose_interaction", "link_project", "unlink_project", "list_projects", "list_brains", "customer_overview", "meeting_overview", "entity_facts", "compile_entity", "update_entity", "merge_entities", "archive_entity", "undo_entity_merge", "skill", "guideline", "document", "workflow", "share_brain", "answer_question"]);
@@ -1660,7 +1721,7 @@ const interactionOf = (raw, parsed) => ({
   external: raw.external !== false,
 });
 export function readInteractions(root) {
-  const path = join(root, INTERACTIONS_PATH);
+  const INTERACTIONS_PATH = interactionsFile(root), path = join(root, INTERACTIONS_PATH);
   if (!existsSync(path)) return { actions: [], error: null, exists: false };
   try {
     const raw = JSON.parse(readFileSync(path, "utf8"));
@@ -1686,7 +1747,7 @@ export function validateInteraction(root, a, { existing = [] } = {}) {
   const inputs = new Set(Object.keys(schema.properties || {}));
   const r = a.record || {};
   if (!r.context) say("record.context is needed: the context the memory goes to");
-  else if (!existsSync(join(root, "brain", "contexts", r.context, "context.md"))) say(`no context ${r.context}`);
+  else if (!hasContext(root, r.context)) say(`no context ${r.context}`);
   if (r.kind && !KINDS.includes(r.kind)) say(`record.kind must be one of ${KINDS.join(", ")}`);
   if (!String(r.content || "").trim()) say("record.content is needed: the sentence the memory keeps, with {inputs}");
   for (const field of ["people", "companies"]) for (const x of r[field] || []) if (!inputs.has(x)) say(`record.${field}: ${x} is not an input`);
@@ -1722,5 +1783,5 @@ export function interactionMemory(a, params = {}, { outcome = "done", error = ""
 export function writeInteractions(root, actions) {
   const admin = readAdmin(root) || {};
   const raw = { version: "1", name: String(admin.company || "company").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "company", description: "This company's own interactions: what it does on its tools, and what each records.", custom_extensions: [{ vendor_name: "ALLETHIC", data: { actions: actions.map(a => ({ name: a.name, title: a.title, tool: a.tool, operation: a.operation, description: a.description, input_schema: a.input_schema, record: a.record, ...(a.refuse_when ? { refuse_when: a.refuse_when } : {}), ...(a.external === false ? { external: false } : {}) })) } }] };
-  writeFileSync(join(root, INTERACTIONS_PATH), JSON.stringify(raw, null, 2) + "\n");
+  writeFileSync(join(root, interactionsFile(root)), JSON.stringify(raw, null, 2) + "\n");
 }

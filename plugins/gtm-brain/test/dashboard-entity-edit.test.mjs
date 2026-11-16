@@ -20,7 +20,7 @@ execFileSync("git", ["init", "-q", root]); execFileSync("git", ["-C", root, "con
 execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "Reflow", "--one-liner", "returns automation", "--owner", "Marta Nowak <marta@reflow.io>", "--team", "Tomek Zielinski <tomek@reflow.io>"], { cwd: root, env, stdio: "ignore" });
 const lib = await import(`${P}/lib/brain.mjs`);
 const { ENTITY_EDIT_OPS } = await import(`${P}/server/entity-edit.mjs`);
-writeFileSync(join(root, "work", "person.json"), JSON.stringify({ handle: "marta-nowak" }) + "\n");
+writeFileSync(join(lib.workDir(root), "person.json"), JSON.stringify({ handle: "marta-nowak" }) + "\n");
 const dash = (extra = {}, ...a) => execFileSync(process.execPath, [`${P}/server/dash.mjs`, root, ...a], { encoding: "utf8", env: { ...env, ...extra } }).trim();
 after(() => { try { dash({}, "--stop"); } catch {} for (const r of [root, env.CODEX_HOME, env.HOME]) { try { rmSync(r, { recursive: true, force: true }); } catch {} } });
 
@@ -123,7 +123,7 @@ test("add_relation writes a note with a relation block, and the link is in the r
   assert.equal(log.since, `${start}T00:00:00Z`); assert.equal(relation("Jan Zielinski", "works_at", "Acme Retail").status, "current");
   // the page's own data after the render the save asked for
   execFileSync(process.execPath, [`${P}/scripts/gtm-brain-render/render.mjs`, root], { env });
-  const D = JSON.parse(readFileSync(join(root, "work", "home", "data.json"), "utf8")), details = JSON.parse(readFileSync(join(root, "work", "home", D.pillars.entities.file), "utf8")).details;
+  const D = JSON.parse(readFileSync(join(lib.workDir(root), "home", "data.json"), "utf8")), details = JSON.parse(readFileSync(join(lib.workDir(root), "home", D.pillars.entities.file), "utf8")).details;
   const out = details[jan].links.find(l => l.type === "works_at");
   assert.deepEqual([out.out, out.other.id, out.status, out.since, out.events.map(e => e.event)], [true, acme, "current", `${start}T00:00:00Z`, ["started"]]);
   assert.equal(D.pillars.entities.rows.find(e => e.id === jan).company, "Acme Retail");
@@ -155,11 +155,11 @@ test("end_relation adds the ended event with its date; retract_relation withdraw
   const log = lib.buildRelationLog(notes().filter(x => x.relation && !x.retracts), {}).relations.find(x => x.from === jan && x.type === "works_at");
   assert.deepEqual(log.events.map(e => e.event), ["started", "ended"]); assert.equal(log.until, `${end}T00:00:00Z`);
   // "This was wrong": every note behind the link is withdrawn by a new record; nothing is edited or removed
-  const lines = readFileSync(join(root, "brain", "contexts", "company", "memories.jsonl"), "utf8").trim().split("\n");
+  const lines = lib.readMemories(root, "company").map(m => JSON.stringify(m));
   const w = await ok({ op: "retract_relation", from: jan, type: "works_at", to: acme });
   assert.equal(w.status, "withdrawn");
   assert.equal(relation("Jan Zielinski", "works_at", "Acme Retail"), undefined);
-  const after = readFileSync(join(root, "brain", "contexts", "company", "memories.jsonl"), "utf8").trim().split("\n");
+  const after = lib.readMemories(root, "company").map(m => JSON.stringify(m));
   assert.deepEqual(after.slice(0, lines.length), lines, "the log only grows"); assert.equal(after.length, lines.length + 2);
   assert.ok(after.slice(-2).map(l => JSON.parse(l)).every(m => m.retracts && m.authors[0] === "marta-nowak"));
   assert.equal((await edit({ op: "retract_relation", from: jan, type: "works_at", to: acme })).status, 404, "nothing left to withdraw");
@@ -194,9 +194,9 @@ test("merge shows what will happen first and merges only with that preview; arch
 
 test("nobody known at this computer, or a scheduled or background run: nothing is edited", async () => {
   const ola = names().find(e => e.name === "Aleksandra Kowalska").id;
-  rmSync(join(root, "work", "person.json")); execFileSync("git", ["-C", root, "config", "user.email", "nobody@users.noreply.github.com"]);
+  rmSync(join(lib.workDir(root), "person.json")); execFileSync("git", ["-C", root, "config", "user.email", "nobody@users.noreply.github.com"]);
   const anon = await edit({ op: "archive", entity: ola }); assert.equal(anon.status, 403); assert.match(anon.json.note, /does not know who is at this computer/);
-  writeFileSync(join(root, "work", "person.json"), JSON.stringify({ handle: "marta-nowak" }) + "\n");
+  writeFileSync(join(lib.workDir(root), "person.json"), JSON.stringify({ handle: "marta-nowak" }) + "\n");
   dash({}, "--stop");
   dash({ GTM_BRAIN_RUN: "1" }, "--start", `--port=${PORT}`);
   const fresh = (await (await fetch(url, { headers: { connection: "close" } })).text()).match(/gtm-brain-edit" content="([a-f0-9]{64})"/)[1];

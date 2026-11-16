@@ -5,9 +5,11 @@
 // (writeEntityFiles, applyEntityChange) and lib/entity-lifecycle.mjs, inside the entity lock.
 import { appendFileSync, mkdirSync, readFileSync, statSync, lstatSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { HISTORY_DIR } from "./layout.mjs";
+import { historyDir } from "./layout.mjs";
+import { ENTITIES_OLD } from "./brain-paths.mjs";
 
-export const EVENTS_FILE = `${HISTORY_DIR}/events.jsonl`;
+export const EVENTS_FILE = `${ENTITIES_OLD}/.history/events.jsonl`;   // layouts 1 to 3; the literal, since layout.mjs may still be loading (import cycle)
+export const eventsFile = root => `${historyDir(root)}/events.jsonl`;
 export const ENTITY_CHANGES = ["rename", "kind", "merge", "unmerge"];
 const ID = /^e_[0-9a-f]{16}$/;
 // company and team are the older spelling of an organization subtype: the same kind, never a change
@@ -38,17 +40,17 @@ export function validateEntityEvent(e) {
 export function appendEntityEvents(root, events, { by = null, at = new Date().toISOString() } = {}) {
   const rows = events.map(e => ({ at, by, ...e })).filter(e => !validateEntityEvent(e).length);
   if (!rows.length) return [];
-  const dir = join(root, HISTORY_DIR);
+  const dir = join(root, historyDir(root));
   if (existsSync(dir) && lstatSync(dir).isSymbolicLink()) throw new Error("Entity history cannot use symbolic links");
   mkdirSync(dir, { recursive: true });
-  appendFileSync(join(root, EVENTS_FILE), rows.map(r => JSON.stringify(r)).join("\n") + "\n");
+  appendFileSync(join(root, eventsFile(root)), rows.map(r => JSON.stringify(r)).join("\n") + "\n");
   return rows;
 }
 
 let cache = null;
 /* Every event, oldest first. A line that does not parse is skipped, never repaired here. */
 export function readEntityEvents(root) {
-  const path = join(root, EVENTS_FILE);
+  const path = join(root, eventsFile(root));
   let st; try { st = statSync(path); } catch { return []; }
   const key = `${path}|${st.size}|${st.mtimeMs}`;
   if (cache?.key === key) return cache.rows;
@@ -63,7 +65,7 @@ export function readEntityEvents(root) {
 }
 /* A stamp of the log, for caches that derive from it (the memory index). */
 export function entityEventsStamp(root) {
-  try { const st = statSync(join(root, EVENTS_FILE)); return `${st.size}|${st.mtimeMs}`; } catch { return "none"; }
+  try { const st = statSync(join(root, eventsFile(root))); return `${st.size}|${st.mtimeMs}`; } catch { return "none"; }
 }
 /* The events of one entity, its retired ids included (a merged entity's past stays with the survivor). */
 export const eventsOf = (rows, entity) => rows.filter(e => e.entity === entity.id || (entity.previous_ids || []).includes(e.entity) || e.merged_id === entity.id);

@@ -12,12 +12,16 @@ import { join, posix } from "node:path";
 import { DEFAULT_KINDS } from "./kinds.mjs";
 import { handleFor } from "./brain.mjs";
 import { readLayout, writeLayout, understandsLayout } from "./layout-version.mjs";
-import { inConfigFolders, schemaFile } from "./brain-paths.mjs";
+import { inConfigFolders, inLayout4, schemaFile, entitiesDir, ENTITIES_OLD, underEntities } from "./brain-paths.mjs";
 
-export const ENTITIES_DIR = "brain/entities";
+/* brain/entities in layouts 1 to 3, entities in layout 4: entitiesDir(root) answers for a brain (lib/brain-paths.mjs).
+   ENTITIES_DIR is the old name, for the records and pages that carry it. */
+export const ENTITIES_DIR = ENTITIES_OLD;
+export { entitiesDir };
 export const INDEX_FILE = "index.md";
 /* Entity history records (merges, renames, upgrades): an operation history that travels with git. */
 export const HISTORY_DIR = `${ENTITIES_DIR}/.history`;
+export const historyDir = root => `${entitiesDir(root)}/.history`;
 const FOLDERS = { person: "people", organization: "organizations", product: "products", event: "events", tool: "tools", meeting: "meetings", offering: "offerings" };
 /* The folder of a kind: its plural. A kind added in SCHEMA.md takes its lowercase plural (case_study -> case-studies). */
 export function kindFolder(kind) {
@@ -30,14 +34,18 @@ export const shortId = id => String(id || "").slice(2, 8);
 const readable = name => (handleFor(String(name || "")) || "entity").slice(0, 60).replace(/-+$/, "");
 /* "Max Jendral", e_3f9a2c... -> max-jendral-3f9a2c */
 export const pageName = (name, id) => `${readable(name)}-${shortId(id)}`;
-export const kindPagePath = (kind, name, id) => `${ENTITIES_DIR}/${kindFolder(kind)}/${pageName(name, id)}.md`;
-export const flatPagePath = slug => `${ENTITIES_DIR}/${slug}.md`;
-export const indexPath = kind => `${ENTITIES_DIR}/${kindFolder(kind)}/${INDEX_FILE}`;
+const dirOf = root => (root ? entitiesDir(root) : ENTITIES_DIR);
+export const kindPagePath = (kind, name, id, root) => `${dirOf(root)}/${kindFolder(kind)}/${pageName(name, id)}.md`;
+export const flatPagePath = slug => `${ENTITIES_DIR}/${slug}.md`;   // flat pages exist only in layout 1
+export const indexPath = (kind, root) => `${dirOf(root)}/${kindFolder(kind)}/${INDEX_FILE}`;
+/* Layout 4 keeps no generated index.md in a kind folder: the folder holds the pages and their file folders only. */
+export const keepsIndexes = root => !inLayout4(root);
 /* An entity's files sit in the folder named like its page, beside it. */
 export const assetFolder = pagePath => String(pagePath).replace(/\.md$/, "");
 /* A page path either layout writes: brain/entities/<slug>.md or brain/entities/<folder>/<slug>.md, never an index. */
-export const isPagePath = p => typeof p === "string" && /^brain\/entities\/(?:[a-z0-9-]+\/)?[a-z0-9-]+\.md$/.test(p) && !/^brain\/entities\/[a-z0-9-]+\/index\.md$/.test(p);
-export const isKindPagePath = p => isPagePath(p) && /^brain\/entities\/[a-z0-9-]+\/[a-z0-9-]+-[0-9a-f]{6}\.md$/.test(p);
+export const isPagePath = p => typeof p === "string" && /^(?:brain\/)?entities\/(?:[a-z0-9-]+\/)?[a-z0-9-]+\.md$/.test(p) && !/^(?:brain\/)?entities\/[a-z0-9-]+\/index\.md$/.test(p);
+export const isKindPagePath = p => isPagePath(p) && /^(?:brain\/)?entities\/[a-z0-9-]+\/[a-z0-9-]+-[0-9a-f]{6}\.md$/.test(p);
+export const isFlatPagePath = p => typeof p === "string" && /^brain\/entities\/[a-z0-9-]+\.md$/.test(p);
 /* The relative link from one page (or brain file) to another brain path, as Markdown writes it. */
 export const linkFrom = (fromPath, toPath) => posix.relative(posix.dirname(fromPath), toPath);
 
@@ -45,7 +53,7 @@ const dirOK = path => { try { return lstatSync(path).isDirectory(); } catch { re
 /* The kind folders present: a directory under brain/entities that is not a flat page's file folder
    (no <name>.md beside it), not hidden, and named for a kind or holding an index.md. */
 export function kindFolders(root) {
-  const dir = join(root, ENTITIES_DIR);
+  const dir = join(root, entitiesDir(root));
   if (!dirOK(dir)) return [];
   const entries = readdirSync(dir, { withFileTypes: true });
   const flat = new Set(entries.filter(d => d.isFile() && d.name.endsWith(".md")).map(d => d.name.slice(0, -3)));
@@ -53,10 +61,10 @@ export function kindFolders(root) {
   return entries.filter(d => d.isDirectory() && !d.name.startsWith(".") && !flat.has(d.name) && (KNOWN_FOLDERS.has(d.name) || existsSync(join(dir, d.name, INDEX_FILE)) || kindPages(d.name))).map(d => d.name).sort();
 }
 /* "kinds" when the brain has kind folders (setup and upgrade make them), else "flat". */
-export function layout(root) { return kindFolders(root).length ? "kinds" : "flat"; }
+export function layout(root) { return inLayout4(root) || kindFolders(root).length ? "kinds" : "flat"; }   // layout 4 is per kind even before its first page (no index.md marks an empty folder there)
 /* The same as the number brain/layout.json records (lib/layout-version.mjs): 3 with about-us/ and config/
    (config/settings.yaml, lib/brain-paths.mjs), 2 with kind folders, 1 flat. */
-export const diskLayout = root => (layout(root) !== "kinds" ? 1 : inConfigFolders(root) ? 3 : 2);   // flat pages are 1 whatever else moved
+export const diskLayout = root => (inLayout4(root) ? 4 : layout(root) !== "kinds" ? 1 : inConfigFolders(root) ? 3 : 2);   // flat pages are 1 whatever else moved
 /* brain/layout.json follows the files: a brain in kind folders is at least layout 2. Whatever makes kind
    folders calls this right after (setup's startKindLayout, the upgrade's migrateToKindFolders), and lib.commit
    and the chat start call it for a brain a 0.35 pre-release moved while the file still said 1 or was missing.
@@ -70,11 +78,11 @@ export function recordKindLayout(root) {
 
 /* Every entity page, both layouts, relative to the brain and sorted. Index files and asset folders are skipped. */
 export function pagePaths(root) {
-  const dir = join(root, ENTITIES_DIR);
+  const dir = join(root, entitiesDir(root));
   if (!dirOK(dir)) return [];
-  const out = readdirSync(dir, { withFileTypes: true }).filter(d => !d.isDirectory() && d.name.endsWith(".md")).map(d => `${ENTITIES_DIR}/${d.name}`);
+  const out = readdirSync(dir, { withFileTypes: true }).filter(d => !d.isDirectory() && d.name.endsWith(".md")).map(d => `${entitiesDir(root)}/${d.name}`);
   for (const folder of kindFolders(root)) {
-    for (const d of readdirSync(join(dir, folder), { withFileTypes: true })) if (!d.isDirectory() && d.name.endsWith(".md") && d.name !== INDEX_FILE) out.push(`${ENTITIES_DIR}/${folder}/${d.name}`);
+    for (const d of readdirSync(join(dir, folder), { withFileTypes: true })) if (!d.isDirectory() && d.name.endsWith(".md") && d.name !== INDEX_FILE) out.push(`${entitiesDir(root)}/${folder}/${d.name}`);
   }
   return out.sort();
 }
@@ -90,11 +98,11 @@ export function findPage(root, id) {
 /* An asset path recorded under brain/entities that no longer exists: the same file in the folder that holds
    that short id now (people/max-jendral-3f9a2c/ after a rename to people/max-j-3f9a2c/). Null when none. */
 export function movedAsset(root, path) {
-  const m = String(path).match(/^brain\/entities\/[a-z0-9-]+\/[a-z0-9-]+-([0-9a-f]{6})\/(.+)$/);
+  const m = String(path).match(/^(?:brain\/)?entities\/[a-z0-9-]+\/[a-z0-9-]+-([0-9a-f]{6})\/(.+)$/);
   if (!m) return null;
   for (const folder of kindFolders(root)) {
-    let dirs = []; try { dirs = readdirSync(join(root, ENTITIES_DIR, folder), { withFileTypes: true }).filter(d => d.isDirectory() && d.name.endsWith(`-${m[1]}`)); } catch {}
-    for (const d of dirs) { const p = `${ENTITIES_DIR}/${folder}/${d.name}/${m[2]}`; if (existsSync(join(root, p))) return p; }
+    let dirs = []; try { dirs = readdirSync(join(root, entitiesDir(root), folder), { withFileTypes: true }).filter(d => d.isDirectory() && d.name.endsWith(`-${m[1]}`)); } catch {}
+    for (const d of dirs) { const p = `${entitiesDir(root)}/${folder}/${d.name}/${m[2]}`; if (existsSync(join(root, p))) return p; }
   }
   return null;
 }

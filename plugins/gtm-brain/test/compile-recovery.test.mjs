@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,copyFileSync,existsSync,rmSync} from 'node:fs';
@@ -14,6 +17,7 @@ function fixture(t, data) {
  for(const file of ['background-compile.sh','compile-status.mjs','worker-lock.mjs','run-bounded.mjs','run-usage.mjs','run-args.mjs'])copyFileSync(join(plugin,'scripts/gtm-brain-compile',file),join(fake,'scripts/gtm-brain-compile',file));
  copyFileSync(join(plugin,'scripts/gtm-brain-schedule/scheduled-run.sh'),join(fake,'scripts/gtm-brain-schedule/scheduled-run.sh'));
  copyFileSync(join(plugin,'lib/process-lock.mjs'),join(fake,'lib/process-lock.mjs'));
+ copyFileSync(join(plugin,'lib/brain-paths.mjs'),join(fake,'lib/brain-paths.mjs'));   // run-usage.mjs asks it for this computer's folder; it imports nothing itself
  copyFileSync(join(plugin,'session/resolve.sh'),join(fake,'session/resolve.sh'));   // the shell scripts ask it whether this is a brain
  const dataPath=join(root,'work/test-data.json');writeFileSync(dataPath,JSON.stringify({contexts:['sales'],entities:[],calls:0,...data}));
  for(const [file,field,id] of [['gtm-brain-compile/compile.mjs','contexts','slug'],['gtm-brain-entities/compile-entity.mjs','entities','id']])writeFileSync(join(fake,'scripts',file),`import fs from 'node:fs'; const d=JSON.parse(fs.readFileSync('work/test-data.json','utf8')); if(d.bad==='${field}'){console.error('Cannot parse fixture ${field}');process.exit(7)} console.log(JSON.stringify(d.${field}.map(x=>({${id}:x})))); if(d.badExit==='${field}')process.exit(7);`);

@@ -28,6 +28,7 @@ import * as lib from "../../lib/brain.mjs";
 import * as docs from "../../lib/documents.mjs";
 import { resolveEntity } from "../../lib/entities.mjs";
 import { placeBigFile } from "../../lib/assets.mjs";
+import { workDir } from '../../lib/brain-paths.mjs';
 
 const MAX_BYTES = lib.LARGE_FILE_MB * 1024 * 1024;
 const KINDS = [[/^\.(png|jpe?g|gif|webp|svg|heic)$/i, "image"], [/^\.pdf$/i, "pdf"], [/^\.(txt|md|csv|rtf|html?|docx?|odt|pptx?|xlsx?|key|pages|numbers)$/i, "document"]];
@@ -109,7 +110,7 @@ if (wantEntity !== undefined) {
 let base = "brain", project, path, copied = false, note;
 const linked = lib.readProjects(root).find(p => { try { return lib.projectPointerStatus(root, p) === "ok" && within(realpathSync(p.path), real); } catch { return false; } });
 // work/ is this computer's scratch and is not shared: a file there is landed beside its owner like one from outside.
-if (within(root, real) && !within(join(root, "work"), real)) { path = relative(root, real); note = "already in the brain"; }
+if (within(root, real) && !within(workDir(root), real)) { path = relative(root, real); note = "already in the brain"; }
 else if (linked) { base = "project"; project = linked.slug; path = relative(realpathSync(linked.path), real); note = `already in project ${linked.slug}`; }
 else {
   // Nothing lands in the brain unasked: a file from outside needs the document or the entity it belongs to.
@@ -129,7 +130,7 @@ else {
 let text = null;
 const stored = base === "project" ? join(realpathSync(linked.path), path) : join(root, path);
 if (kind === "document" || kind === "pdf") {
-  const out = join(root, "work", "files", `${basename(path)}.txt`); mkdirSync(join(root, "work", "files"), { recursive: true });
+  const out = join(workDir(root), "files", `${basename(path)}.txt`); mkdirSync(join(workDir(root), "files"), { recursive: true });
   const has = cmd => { try { execFileSync("which", [cmd], { stdio: "ignore" }); return true; } catch { return false; } };
   const attempt = (cmd, cmdArgs) => { try { execFileSync(cmd, cmdArgs, { stdio: ["ignore", "ignore", "ignore"], timeout: 30000 }); return existsSync(out) && statSync(out).size > 0; } catch { return false; } };
   const plain = /^\.(txt|md|csv)$/i.test(extname(real));

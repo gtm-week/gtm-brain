@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawn, execFileSync } from "node:child_process";
 import { createInterface } from "node:readline";
+import * as lib from "../lib/brain.mjs";
 
 const P = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 const env = { ...process.env, PLUGIN_ROOT: P, CODEX_HOME: mkdtempSync(join(tmpdir(), "gtm-brain-owner-codex-")), HOME: mkdtempSync(join(tmpdir(), "gtm-brain-owner-home-")),
@@ -21,7 +22,7 @@ function brain() {
   execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "Reflow", "--one-liner", "returns automation", "--owner", "Marta Nowak <marta@reflow.io>", "--team", "Tomek Zielinski <tomek@reflow.io>"], { cwd: root, env, stdio: "ignore" });
   return root;
 }
-const as = (root, handle) => writeFileSync(join(root, "work", "person.json"), JSON.stringify({ handle }) + "\n");
+const as = (root, handle) => writeFileSync(join(lib.workDir(root), "person.json"), JSON.stringify({ handle }) + "\n");
 function client(answer) {
   const child = spawn(process.execPath, [`${P}/server/server.mjs`], { stdio: ["pipe", "pipe", "pipe"], env });
   const pending = new Map(); let seq = 0; const forms = [];
@@ -37,12 +38,12 @@ function client(answer) {
 }
 
 test("a teammate's settings change waits for the owner with no form; the owner's APPROVE applies it, Not now leaves it, and the approval is listed", async () => {
-  const root = brain(), settings = join(root, "config", "settings.yaml"), before = readFileSync(settings, "utf8");
+  const root = brain(), settings = join(root, lib.settingsFile(root)), before = readFileSync(settings, "utf8");
   as(root, "tomek-zielinski");
   const teammate = client(() => ({ action: "accept", content: { selection: "APPROVE" } })); await teammate.init();
   await teammate.call("propose_admin_change", { brain: root, content: before.replace("returns automation", "returns automation for retailers") });
   const kept = await teammate.call("approve_change", { brain: root, kind: "admin", by: "tomek-zielinski" });
-  assert.match(kept.text, /^NOT APPLIED: config\/settings\.yaml is the owner's to change \(Marta Nowak\)\. Kept as proposal (p_[0-9a-f]{10})/);
+  assert.match(kept.text, /^NOT APPLIED: configuration\/settings\.yaml is the owner's to change \(Marta Nowak\)\. Kept as proposal (p_[0-9a-f]{10})/);
   assert.equal(teammate.forms.length, 0, "no form for a teammate: nothing is applied");
   assert.equal(readFileSync(settings, "utf8"), before);
   const id = kept.text.match(/proposal (p_[0-9a-f]{10})/)[1];
@@ -61,10 +62,10 @@ test("a teammate's settings change waits for the owner with no form; the owner's
   const yes = client(() => ({ action: "accept", content: { selection: "APPROVE" } })); await yes.init();
   const applied = await yes.call("approve_change", { brain: root, kind: "proposal", id, by: "marta-nowak" });
   assert.ok(!applied.isError, applied.text);
-  assert.match(applied.text, new RegExp(`applied proposal ${id} \\(config/settings\\.yaml\\), asked by tomek-zielinski, approved by marta-nowak`));
+  assert.match(applied.text, new RegExp(`applied proposal ${id} \\(configuration/settings\\.yaml\\), asked by tomek-zielinski, approved by marta-nowak`));
   assert.match(readFileSync(settings, "utf8"), /for retailers/);
   assert.ok(!existsSync(join(root, "brain", "proposals", id)));
   const listed = await yes.call("query", { brain: root, object: "approvals" });
-  assert.match(listed.text, /approvals recorded: 1\n- [^\n]*Approved a change to config\/settings\.yaml[^\n]*Asked by Tomek Zielinski, approved by Marta Nowak, commit [0-9a-f]+\./);
+  assert.match(listed.text, /approvals recorded: 1\n- [^\n]*Approved a change to configuration\/settings\.yaml[^\n]*Asked by Tomek Zielinski, approved by Marta Nowak, commit [0-9a-f]+\./);
   assert.match(listed.text, /proposals waiting for the owner \(Marta Nowak\): 0/);
 });

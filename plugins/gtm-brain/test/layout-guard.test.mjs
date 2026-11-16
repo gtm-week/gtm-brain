@@ -67,7 +67,7 @@ function era032(root) {
 
 test("a brain made by setup is layout 2 (kind folders), with the five starters as given, all in the setup commit", t => {
   const { root, git } = brain(t);
-  assert.equal(LAYOUT, 3); assert.equal(process.env.GTM_BRAIN_TEST_LAYOUT, "2", "this file plays a plugin that writes layout 2");
+  assert.equal(LAYOUT, 4); assert.equal(process.env.GTM_BRAIN_TEST_LAYOUT, "2", "this file plays a plugin that writes layout 2");
   assert.equal(lib.entityLayout(root), "kinds");
   assert.equal(diskLayout(root), 2);
   assert.deepEqual(readLayout(root), { layout: 2, starters: [...GIVEN].sort() });   // the five documents and the design system page

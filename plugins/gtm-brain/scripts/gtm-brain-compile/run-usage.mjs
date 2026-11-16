@@ -6,6 +6,7 @@
 import { appendFileSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
+import { workDir } from '../../lib/brain-paths.mjs';
 
 const root = resolve(process.argv[2] || '.'), by = process.argv[3] || 'schedule';
 const usage = { input: 0, cached: 0, output: 0 }; let thread = null, last = '', turns = 0, failure = '', raw = [];
@@ -27,15 +28,15 @@ const at = new Date().toISOString();
 // A slim run loads no plugin hook, so the run's thread is recorded here for the page's link.
 if (thread) try {
   const lib = await import(new URL('../../lib/brain.mjs', import.meta.url));
-  let known = null; try { known = JSON.parse((await import('node:fs')).readFileSync(join(root, 'work', 'compile.json'), 'utf8')).thread; } catch {}
+  let known = null; try { known = JSON.parse((await import('node:fs')).readFileSync(join(workDir(root), 'compile.json'), 'utf8')).thread; } catch {}
   if (known !== thread && lib.RUN_KINDS.includes(by)) lib.recordRunThread(root, by, { session_id: thread });
 } catch {}
 try {
-  mkdirSync(join(root, 'work'), { recursive: true });
+  mkdirSync(workDir(root), { recursive: true });
   const why = (failure || (!turns ? raw.slice(-2).join(' / ') : '')).replace(/\s+/g, ' ').slice(0, 300);
   // the error rides on the run's own line too, for the chat start's health line (lib/health-line.mjs)
-  appendFileSync(join(root, 'work', 'runs.jsonl'), JSON.stringify({ at, by, thread, turns, ...usage, ...(why ? { error: why } : {}) }) + '\n');
+  appendFileSync(join(workDir(root), 'runs.jsonl'), JSON.stringify({ at, by, thread, turns, ...usage, ...(why ? { error: why } : {}) }) + '\n');
   const stamp = new Date().toLocaleString('sv-SE').slice(0, 19);
-  appendFileSync(join(root, 'work', 'hooks.log'), `${stamp}  scheduled-run  tokens in=${usage.input} cached=${usage.cached} out=${usage.output}${thread ? ` codex://threads/${thread}` : ''}\n`);
-  if (why) appendFileSync(join(root, 'work', 'hooks.log'), `${stamp}  scheduled-run  error: ${why}\n`);
+  appendFileSync(join(workDir(root), 'hooks.log'), `${stamp}  scheduled-run  tokens in=${usage.input} cached=${usage.cached} out=${usage.output}${thread ? ` codex://threads/${thread}` : ''}\n`);
+  if (why) appendFileSync(join(workDir(root), 'hooks.log'), `${stamp}  scheduled-run  error: ${why}\n`);
 } catch {}

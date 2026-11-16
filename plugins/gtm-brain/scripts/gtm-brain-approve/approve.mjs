@@ -16,13 +16,14 @@ import { readFileSync, writeFileSync, existsSync, unlinkSync, appendFileSync, mk
 import { createInterface } from "node:readline";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { workDir } from '../../lib/brain-paths.mjs';
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const owner = await import(new URL("../../lib/owner.mjs", import.meta.url));
 const paths = await import(new URL("../../lib/brain-paths.mjs", import.meta.url));
 const diff = lib.lineDiff;
 
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
-const SETTINGS = paths.settingsFile(root), ADMIN = join(root, SETTINGS), PROP = join(root, paths.SETTINGS_PROPOSAL);
+const SETTINGS = paths.settingsFile(root), ADMIN = join(root, SETTINGS), PROP = join(root, paths.settingsProposal(root));
 const opt = {}; for (let i = 0; i < args.length; i++) if (args[i].startsWith("--")) { opt[args[i].slice(2)] = args[i + 1] && !args[i + 1].startsWith("--") ? args[++i] : true; }
 const kind = opt.proposal ? "proposal" : opt.interaction ? "interaction" : "admin";
 
@@ -64,7 +65,7 @@ if (opt.proposal) {
 
 // --propose: a teammate's settings change in layout 3, kept for the owner. Applies nothing, so it needs no APPROVE.
 if (opt.propose) {
-  if (!existsSync(PROP)) { console.error(`no proposal at ${paths.SETTINGS_PROPOSAL}.`); process.exit(1); }
+  if (!existsSync(PROP)) { console.error(`no proposal at ${paths.settingsProposal(root)}.`); process.exit(1); }
   const by = approver();
   if (owner.isOwner(root, by)) { console.error("you own this brain: approve the change with approve_change (kind admin) instead."); process.exit(1); }
   const before = readFileSync(ADMIN, "utf8"), after = readFileSync(PROP, "utf8"), n = diff(before, after).filter(l => /^[-+] /.test(l)).length;
@@ -78,8 +79,8 @@ if (writes && !(await personApproved())) { console.error(NOT_APPROVED); process.
 
 if (opt.interaction) {
   // --interaction: the only way a company's interaction enters brain/ontology.ossie.json
-  const PROPI = join(root, "work", "interaction.proposed.json");
-  if (!existsSync(PROPI)) { console.error("no proposal at work/interaction.proposed.json. propose_interaction writes one."); process.exit(1); }
+  const PROPI = join(workDir(root), "interaction.proposed.json");
+  if (!existsSync(PROPI)) { console.error(`no proposal at ${lib.workName(root)}/interaction.proposed.json. propose_interaction writes one.`); process.exit(1); }
   const by = approver();
   let proposal; try { proposal = JSON.parse(readFileSync(PROPI, "utf8")); } catch (e) { console.error(`the proposal is not valid JSON: ${e.message}`); process.exit(1); }
   const { actions, error } = lib.readInteractions(root); if (error) { console.error(error); process.exit(1); }
@@ -89,14 +90,14 @@ if (opt.interaction) {
   const check = lib.readInteractions(root); if (check.error) { console.error(`written but does not load: ${check.error}`); process.exit(1); }
   unlinkSync(PROPI);
   const where = proposal.external === false ? "record only" : proposal.tool;
-  const r = lib.commit(root, [lib.INTERACTIONS_PATH], `interactions: ${proposal.name}\n\n${proposal.external === false ? "record only: no tool step" : `${proposal.tool}: ${proposal.operation}`}`, { system: true });
-  let record = null; try { if (r.ok) record = owner.recordApproval(root, { asked: by, approved: by, files: [lib.INTERACTIONS_PATH], summary: `interaction ${proposal.name} (${where})` }); } catch {}
+  const r = lib.commit(root, [lib.interactionsFile(root)], `interactions: ${proposal.name}\n\n${proposal.external === false ? "record only: no tool step" : `${proposal.tool}: ${proposal.operation}`}`, { system: true });
+  let record = null; try { if (r.ok) record = owner.recordApproval(root, { asked: by, approved: by, files: [lib.interactionsFile(root)], summary: `interaction ${proposal.name} (${where})` }); } catch {}
   lib.rerender(root);
   console.log(`added interaction ${proposal.name} (${where}) · ${r.note}${record ? ` · recorded as ${record}` : ""}\nlist_objects shows it from the next call; interact runs it.`);
   process.exit(0);
 }
 if (!existsSync(ADMIN)) { console.error(`no ${SETTINGS} here`); process.exit(1); }
-if (!existsSync(PROP)) { console.error(`no proposal at ${paths.SETTINGS_PROPOSAL}. Write the full proposed ${SETTINGS} there first.`); process.exit(1); }
+if (!existsSync(PROP)) { console.error(`no proposal at ${paths.settingsProposal(root)}. Write the full proposed ${SETTINGS} there first.`); process.exit(1); }
 const before = readFileSync(ADMIN, "utf8"), after = readFileSync(PROP, "utf8");
 if (before === after) { console.error(`proposal is identical to ${SETTINGS}; nothing to approve`); unlinkSync(PROP); process.exit(1); }
 if (/[\u2013\u2014\u2015\u2212]/.test(after)) { console.error("proposal contains a long dash; use a plain hyphen"); process.exit(1); }

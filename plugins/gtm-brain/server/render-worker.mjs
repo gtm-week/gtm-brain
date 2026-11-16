@@ -2,7 +2,7 @@
 // One short-lived dispatcher per OS user, one bounded renderer at a time.
 import { mkdirSync, readdirSync, rmSync, openSync, closeSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { isBrain as isBrainDir } from '../lib/brain-paths.mjs';
+import { isBrain as isBrainDir, workDir } from '../lib/brain-paths.mjs';
 import { spawn } from 'node:child_process';
 import { renderQueue, readJSON, writeJSON } from '../lib/dashboard-refresh.mjs';
 import { openDatabase } from '../lib/memory-index-store.mjs';
@@ -51,16 +51,16 @@ try {
       const path = join(queue, file), request = readJSON(path);
       if (!request?.root || !request.renderer || !request.id) { rmSync(path, { force: true }); continue; }
       if (!isBrainDir(request.root)) { rmSync(path, { force: true }); continue; }
-      const state = join(request.root, 'work', 'render-state.json');
+      const state = join(workDir(request.root), 'render-state.json');
       try {
       writeJSON(state, { request: request.id, status: 'running', requestedAt: request.at, startedAt: new Date().toISOString() });
-      const log = openSync(join(request.root, 'work', 'render.log'), 'a');
+      const log = openSync(join(workDir(request.root), 'render.log'), 'a');
       const result = await new Promise(done => {
         child = spawn(process.execPath, ['--max-old-space-size=160', '--max-semi-space-size=8', '--no-warnings', request.renderer, request.root], { stdio: ['ignore', log, log], env: { ...process.env, GTM_BRAIN_RENDER_REQUEST: request.id } });
         writeJSON(join(lock, 'owner.json'), { pid: process.pid, child: child.pid });
         const timer = setTimeout(() => child?.kill('SIGKILL'), 120000);
         child.once('error', error => { clearTimeout(timer); done({ error: error.message }); });
-        child.once('exit', (code, signal) => { clearTimeout(timer); done(code === 0 ? {} : { error: `Renderer exited ${signal || code}; see work/render.log. Retry render_dashboard.` }); });
+        child.once('exit', (code, signal) => { clearTimeout(timer); done(code === 0 ? {} : { error: `Renderer exited ${signal || code}; see the render.log in the brain's work folder. Retry render_dashboard.` }); });
       });
       closeSync(log); child = null;
       writeJSON(join(lock, 'owner.json'), { pid: process.pid });

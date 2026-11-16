@@ -9,6 +9,9 @@ import { ensureRules } from "./where.mjs";
 import { ensureSchema } from "./schema.mjs";
 import { basePath, rulesFile, schemaFile, inConfigFolders } from "./brain-paths.mjs";
 import { configMoveWhat, layoutReadme } from "./config-folders.mjs";
+import { tabsMoveWhat } from "./layout-four.mjs";
+import { inLayout4, layoutFile } from "./brain-paths.mjs";
+import { workDir } from './brain-paths.mjs';
 
 // Shared with the upgrade matrix tests. Aliases point to the same immutable snapshot.
 export const legacyTemplates = JSON.parse(readFileSync(new URL("../templates/legacy/manifest.json", import.meta.url), "utf8"));
@@ -118,7 +121,7 @@ export function prepareUpgrade(root, templates) {
       ? expected.trimEnd().split("\n").some(line => !existing.split("\n").includes(line))
       : existing !== expected;
   });
-  const folder = join(root, "work", "upgrades");
+  const folder = join(workDir(root), "upgrades");
   let backup;
   if (needsChange) {
     mkdirSync(folder, { recursive: true });
@@ -188,24 +191,27 @@ export function layoutStep(root, confirmed) {
   const on = diskLayout(root), flat = on < 2 ? pagePaths(root).filter(p => !isKindPagePath(p)).length : 0;
   const kinds = on < 2 ? `It moves ${flat} entity page${flat === 1 ? "" : "s"} into a folder per kind (brain/entities/people/, organizations/, ...). A teammate still on GTM Brain 0.34 gets no warning: their notes keep saving, but their GTM Brain no longer finds these pages (a known person or company looks unknown to it) and writes a flat page of its own for each name it saves, which the next save from an updated GTM Brain folds back in. No note is lost.` : "";
   const config = target >= 3 && !inConfigFolders(root) ? configMoveWhat(root) : "";
-  const plan = layoutPlan(root, { me, names, on, target, what: [kinds, config].filter(Boolean).join(" "), older: config ? "they will need to update GTM Brain: until then their GTM Brain does not find this brain." : kinds ? "they should update GTM Brain before you say yes: until they do, their GTM Brain keeps saving notes but does not find the entity pages." : "" });
-  if (!plan.changes) return target < writesLayout() && on < writesLayout() && on >= target ? `NOTE\tOne more move is waiting: the base documents into about-us/ and the rules, schema and settings into config/. It is the owner's (${names[owner] || owner}) to say yes to, in their own chat ("upgrade this brain"); nothing of it was asked or moved here.` : "";
+  // Layout 4, after 3 in the same run: the four folders (lib/layout-four.mjs). The owner's to say yes to, like 3.
+  const tabs = target >= 4 && !inLayout4(root) ? tabsMoveWhat(root) : "";
+  const plan = layoutPlan(root, { me, names, on, target, what: [kinds, config, tabs].filter(Boolean).join(" "), older: config || tabs ? "they will need to update GTM Brain: until then their GTM Brain does not find this brain." : kinds ? "they should update GTM Brain before you say yes: until they do, their GTM Brain keeps saving notes but does not find the entity pages." : "" });
+  if (!plan.changes) return target < writesLayout() && on < writesLayout() && on >= target ? `NOTE\tOne more move is waiting: ${writesLayout() < 4 ? "the base documents into about-us/ and the rules, schema and settings into config/" : inConfigFolders(root) ? "the brain into its four folders (configuration/, entities/, memories/, workflows/; layout 4)" : "the base documents, the rules, schema and settings, the entity pages and the notes into the four folders (configuration/, entities/, memories/, workflows/; layout 4)"}. It is the owner's (${names[owner] || owner}) to say yes to, in their own chat ("upgrade this brain"); nothing of it was asked or moved here.` : "";
   if (process.env.GTM_BRAIN_RUN) return `ASK\t${plan.summary} A scheduled or background run never changes the layout: the person says "upgrade the brain" in a chat.`;
   return confirmed ? `CHANGE\t${plan.from}\t${plan.to}` : `ASK\t${plan.line}`;
 }
 
 /* The chat start's line for a brain whose files are still arranged as an older GTM Brain kept them, when the
    person in this checkout is the one who can say yes to the move (anyone for the entity pages, only the owner for
-   about-us/ and config/): the brain needs an upgrade, Codex offers it and asks before anything moves, and
+   about-us/ and config/ and for the four folders of layout 4): the brain needs an upgrade, Codex offers it and asks before anything moves, and
    upgrade_brain does it. "" for a brain that is current, a brain this plugin must not write, a teammate whose
    only pending move is the owner's, and a scheduled or background run. Nothing is read beyond what layoutStep reads. */
 export function layoutOffer(root) {
   if (process.env.GTM_BRAIN_RUN) return "";
   let step; try { step = layoutStep(root, false); } catch { return ""; }
   if (!step.startsWith("ASK\t")) return "";
-  const pages = diskLayout(root) < 2, base = step.includes("about-us/");
-  const what = [pages && "the entity pages into a folder per kind", base && "the base documents into about-us/ and the rules, schema and settings into config/"].filter(Boolean).join(", and ");
-  return `GTM Brain: this brain needs an upgrade. Its files are still arranged as an older GTM Brain kept them, and this version can move ${what}. Nothing has moved, and reading and saving work as before. Offer the upgrade once, in one line at the end of your first reply ("This brain can be upgraded to the 0.35 file arrangement. Say: upgrade this brain."), and never start it unasked. On yes, call upgrade_brain: it changes nothing and returns what would move and which teammates must update GTM Brain first; put that to the person as one yes/no question, and only on their yes call upgrade_brain again with confirm: true.`;
+  const pages = diskLayout(root) < 2, base = /into (?:about-us|config)\//.test(step), tabs = step.includes("into four folders");
+  const what = [pages && "the entity pages into a folder per kind", base && "the base documents into about-us/ and the rules, schema and settings into config/", tabs && "the whole brain into four folders, the dashboard's tabs (configuration/, entities/, memories/ with one file of notes per month, workflows/)"].filter(Boolean).join(", and ");
+  const name = tabs ? "the four folders of 0.37" : "the 0.35 file arrangement";
+  return `GTM Brain: this brain needs an upgrade. Its files are still arranged as an older GTM Brain kept them, and this version can move ${what}. Nothing has moved, and reading and saving work as before. Offer the upgrade once, in one line at the end of your first reply ("This brain can be upgraded to ${name}. Say: upgrade this brain."), and never start it unasked. On yes, call upgrade_brain: it changes nothing and returns what would move and which teammates must update GTM Brain first; put that to the person as one yes/no question, and only on their yes call upgrade_brain again with confirm: true.`;
 }
 
 /* upgrade.sh: what a brain lacks, as three lines: the starters added, RULES.md and SCHEMA.md written, and
@@ -216,6 +222,6 @@ export function deliverMissing(root, templates, version, said = false) {
   const starters = addStarters(root, templates, { version });
   const files = [ensureRules(root, templates) && rulesFile(root), ensureSchema(root, templates) && schemaFile(root)].filter(Boolean);
   const before = readLayout(root), written = writeLayout(root, { starters: GIVEN, layout: diskLayout(root) >= 2 ? diskLayout(root) : undefined }), after = readLayout(root).layout;
-  const layout = !written ? "" : before.layout !== after ? `changed the brain's file layout to ${after}` : said ? "" : "recorded the brain's file layout (brain/layout.json)";
+  const layout = !written ? "" : before.layout !== after ? `changed the brain's file layout to ${after}` : said ? "" : `recorded the brain's file layout (${layoutFile(root)})`;
   return [starters.join(" "), files.join(" "), layout].join("\n");
 }

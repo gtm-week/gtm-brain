@@ -6,7 +6,7 @@
 // (scripts/gtm-brain-*), and a skill a team made itself keeps its name.
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { ABOUT_DIR, CONFIG_DIR, isOwnerPath } from "./brain-paths.mjs";
+import { aboutDir, configDir, isOwnerPath } from "./brain-paths.mjs";
 import { isOwner, personHere } from "./owner.mjs";
 
 export const RENAMED = ["add-section", "build-landing-page", "clay-setup", "configure", "deepdive", "define-icp", "design-system", "freckle-setup",
@@ -30,7 +30,7 @@ const md = (root, dir) => { try { return readdirSync(join(root, dir)).filter(f =
 const madeSkills = root => { try { return readdirSync(join(root, ".agents/skills")).map(d => `.agents/skills/${d}/SKILL.md`).filter(f => existsSync(join(root, f))); } catch { return []; } };
 /* The brain's own files that still name a shipped skill the old way, as paths from the brain's top. */
 export function filesWithOldSkillNames(root) {
-  const files = [...md(root, ""), ...md(root, ABOUT_DIR), ...md(root, CONFIG_DIR), ...md(root, "workflows"), ...madeSkills(root)];
+  const files = [...md(root, ""), ...[aboutDir(root), configDir(root)].filter(Boolean).flatMap(d => md(root, d)), ...md(root, "workflows"), ...madeSkills(root)];
   return files.filter(f => { try { return statSync(join(root, f)).size < 2_000_000 && hasOldSkillNames(readFileSync(join(root, f), "utf8")); } catch { return false; } });
 }
 /* The chat start's line: the short names, always for a person who may type an old one, and the files to offer. */

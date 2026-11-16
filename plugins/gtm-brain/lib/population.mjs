@@ -12,8 +12,10 @@ import { join } from "node:path";
 import * as lib from "./brain.mjs";
 import { readSchema, fieldsFor, brainKinds } from "./schema.mjs";
 import { normalizeSource } from "./pointers.mjs";
-import { ENTITIES_DIR } from "./layout.mjs";
+import { entitiesDir } from "./layout.mjs";
+import { coverFile, noteFiles } from "./brain-paths.mjs";
 import { TEMPLATES } from "./brain-paths.mjs";
+import { workDir } from './brain-paths.mjs';
 
 const DAY = 864e5;
 const nowMs = () => process.env.GTM_BRAIN_NOW ? Date.parse(process.env.GTM_BRAIN_NOW) : Date.now();
@@ -44,11 +46,10 @@ export const normalizedContent = s => String(s || "").normalize("NFKD").replace(
 const RECORD_KIND = k => k && !["codex", "claude", "memory", "user"].includes(k);
 
 function contextDirs(root) {
-  const d = join(root, "brain", "contexts"); if (!existsSync(d)) return [];
-  return readdirSync(d).filter(n => { try { return statSync(join(d, n)).isDirectory(); } catch { return false; } }).sort();
+  return [...lib.contextSlugs(root)].sort();
 }
 function entityFiles(root) {
-  const d = join(root, ENTITIES_DIR); if (!existsSync(d)) return [];
+  const d = join(root, entitiesDir(root)); if (!existsSync(d)) return [];
   const out = [], walk = dir => { for (const n of readdirSync(dir).sort()) { const p = join(dir, n); let s; try { s = statSync(p); } catch { continue; } if (s.isDirectory()) walk(p); else if (n.endsWith(".md")) out.push(`${p}:${s.size}:${s.mtimeMs}`); } };
   walk(d); return out;
 }
@@ -57,7 +58,8 @@ function entityFiles(root) {
 function stamp(root, now) {
   const st = p => { try { const s = statSync(p); return `${s.size}:${s.mtimeMs}`; } catch { return "-"; } };
   const parts = [CACHE_VERSION, String(Math.floor(now / 36e5))];
-  for (const c of contextDirs(root)) parts.push(c, st(join(root, "brain/contexts", c, "memories.jsonl")), st(join(root, "brain/contexts", c, "context.md")));
+  for (const c of contextDirs(root)) parts.push(c, st(join(root, coverFile(root, c))));
+  for (const f of noteFiles(root)) parts.push(f, st(join(root, f)));
   parts.push(...entityFiles(root), st(join(root, lib.schemaFile(root))), st(join(root, lib.settingsFile(root))));
   return lib.snapshotKey([{ id: parts.join("|") }]);
 }
@@ -153,11 +155,11 @@ export function computePopulation(root, { now = nowMs() } = {}) {
 
 /* The numbers, from the cache when nothing they rest on has changed this hour. */
 export function population(root, { now = nowMs(), cache = true } = {}) {
-  const key = stamp(root, now), file = join(root, "work", "population.json");
+  const key = stamp(root, now), file = join(workDir(root), "population.json");
   if (cache) { try { const c = JSON.parse(readFileSync(file, "utf8")); if (c.key === key && c.population?.saved && c.population.duplicates && c.population.entities && c.population.citations && c.population.sources) return c.population; } catch {} }
   const p = computePopulation(root, { now });
   if (cache && lib.isBrain(root)) {
-    try { mkdirSync(join(root, "work"), { recursive: true }); const tmp = `${file}.${process.pid}.tmp`; writeFileSync(tmp, JSON.stringify({ key, population: p }) + "\n"); renameSync(tmp, file); } catch {}
+    try { mkdirSync(workDir(root), { recursive: true }); const tmp = `${file}.${process.pid}.tmp`; writeFileSync(tmp, JSON.stringify({ key, population: p }) + "\n"); renameSync(tmp, file); } catch {}
   }
   return p;
 }

@@ -20,6 +20,7 @@ import { fileURLToPath } from "node:url";
 import { host } from "./host.mjs";
 import { readProjects, resolveBrain, listContexts, effectiveMemories, currentPerson, readAdmin, logActivity } from "./brain.mjs";
 import { acquireProcessLock, releaseProcessLock } from "./process-lock.mjs";
+import { workDir } from './brain-paths.mjs';
 
 export const CAP = 200000, CHAT_CAP = 50000, LATE_HOURS = 36;
 const FIRST_LOOKBACK_MS = 864e5;          // a first pass reads the last day
@@ -28,8 +29,8 @@ const TIMEOUT_MS = () => Number(process.env.GTM_BRAIN_CAPTURE_TIMEOUT_MS) || 10 
 const PERSON_MAX = 3000, ASSISTANT_MAX = 1500, EARLIER = 2, MIN_QUOTE = 12;
 const REMEMBER = fileURLToPath(new URL("../scripts/gtm-brain-remember/remember.mjs", import.meta.url));
 
-const file = root => join(root, "work", "capture.json");
-const runsFile = root => join(root, "work", "capture-runs.jsonl");
+const file = root => join(workDir(root), "capture.json");
+const runsFile = root => join(workDir(root), "capture-runs.jsonl");
 const nowMs = () => process.env.GTM_BRAIN_NOW ? Date.parse(process.env.GTM_BRAIN_NOW) : Date.now();
 const real = p => { try { return realpathSync(p); } catch { return p; } };
 const posInt = v => Number.isInteger(Number(v)) && Number(v) > 0 ? Number(v) : null;
@@ -41,7 +42,7 @@ const thousands = n => Number(n || 0).toLocaleString("en-US");
 
 export function readCapture(root) { try { return JSON.parse(readFileSync(file(root), "utf8")) || {}; } catch { return {}; } }
 function writeCapture(root, state) {
-  mkdirSync(join(root, "work"), { recursive: true });
+  mkdirSync(workDir(root), { recursive: true });
   const tmp = `${file(root)}.${process.pid}.tmp`; writeFileSync(tmp, JSON.stringify(state, null, 1) + "\n"); renameSync(tmp, file(root));
 }
 const update = (root, fn) => { const s = readCapture(root); const next = fn(s) || s; writeCapture(root, next); return next; };
@@ -274,8 +275,8 @@ const tagged = (root, tag) => listContexts(root).flatMap(c => effectiveMemories(
 export async function runPass(root, { now = nowMs(), by } = {}) {
   const settings = captureSettings(root);
   if (!settings.on) return { result: "off", text: "chat capture is off on this machine (capture_chats mode on turns it on)" };
-  mkdirSync(join(root, "work"), { recursive: true });
-  const lock = join(root, "work", "capture.lock"), token = acquireProcessLock(lock);
+  mkdirSync(workDir(root), { recursive: true });
+  const lock = join(workDir(root), "capture.lock"), token = acquireProcessLock(lock);
   if (!token) return { result: "busy", text: "a capture pass is already running" };
   const id = `c_${new Date(now).toISOString().replace(/[-:]/g, "").slice(0, 15)}`, at = new Date(now).toISOString(), name = host().capture.name;
   const record = { id, at, result: "failed", tokens: { estimated: 0, input: 0, cached: 0, output: 0 }, chats: 0, covered: 0, skipped: [], candidates: 0, saved: [], dropped: [], held: 0 };
@@ -399,7 +400,7 @@ export function captureNotice(root, { now = nowMs(), mark = true } = {}) {
 export function startPass(root) {
   if (!captureSettings(root).on) return "chat capture is off on this machine; capture_chats mode on turns it on";
   const script = fileURLToPath(new URL("../scripts/gtm-brain-schedule/capture.mjs", import.meta.url));
-  mkdirSync(join(root, "work"), { recursive: true });
+  mkdirSync(workDir(root), { recursive: true });
   const child = spawn(process.execPath, ["--disable-warning=ExperimentalWarning", script, root, "--run"], { cwd: root, detached: true, stdio: "ignore", env: process.env });
   child.unref();
   return "chat capture started in the background; what it saves is listed at the next chat start (capture_chats mode status shows the result)";

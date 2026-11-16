@@ -89,7 +89,7 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
   in the ontology. It refreshes the marked instruction blocks and batch schema; tests
   enforce `--check`. Historical templates are excluded. See [CONTRIBUTING.md](.github/CONTRIBUTING.md#maintaining-shared-text-and-schemas).
 - Three formal ontology objects: contexts, memories and entities. Entity kinds come from the
-  brain's SCHEMA.md: every `## <Kind>` section with a field table is a kind, and person,
+  brain's schema (`configuration/schema.md`): every `## <Kind>` section with a field table is a kind, and person,
   organization, product, offering, event, tool and meeting are the defaults that always exist (`lib/kinds.mjs`,
   `schema.brainKinds`). Company and team are organization subtypes. Roles and relationships
   are supported by context memories. A meeting is a default kind: a meeting entity is created
@@ -100,6 +100,12 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
   records. There is no language preference to read, save or ask about. Keep tool identifiers,
   CLI flags, and the APPROVE token stable.
 - `plugins/gtm-brain/lib/` is the file format; skills and the session scripts go through it.
+- Where a brain's files live is answered only by `lib/brain-paths.mjs`, by the brain's layout: 4 (what
+  setup makes: `configuration/`, `entities/`, `memories/`, `workflows/`, and `.gtm-brain/` for this
+  computer) and 1 to 3 (`brain/`, `work/`), all read and written. No other module names those paths
+  (tests grep for literals). The rulebook, the rule pages, the skills and the tool descriptions keep
+  the layout 1 names (`RULES.md`, `SCHEMA.md`, `brain/admin.md`, `brain/contexts/`, `work/`); the chat
+  start of a layout 3 or 4 brain says once where those are (`lib/config-folders.mjs` `layoutStartLine`).
 - GTM Brain declares no hooks. Since Codex 0.164 any change to a plugin, a version bump
   included, switches all its hooks off until the person approves a "Review hooks" dialog, and
   no other installed plugin has hooks. Everything runs through the MCP server instead. The chat
@@ -110,9 +116,10 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
   (`lib/host.mjs` `currentChat`). APPROVE: `approve_change` shows the person a native form and
   only their click applies the change; `approve.mjs --apply/--interaction` refuses otherwise,
   except in a terminal where the person types APPROVE. Protection: `lib.guardProtected` runs at
-  each chat start and before every save; a direct edit of `admin.md`, `ontology.ossie.json` or a
-  `memories.jsonl` not committed through GTM Brain is copied to `work/manual-edits/protected/` and
-  the committed version restored. The server logs its own calls to `work/tool-usage.jsonl`; it
+  each chat start and before every save; a direct edit of the interactions file or a notes file (and of
+  `brain/admin.md` in layouts 1 and 2) not committed through GTM Brain is copied to `manual-edits/protected/`
+  in this computer's folder (`.gtm-brain/`; `work/` before layout 4) and the committed version restored;
+  `lib/brain-paths.mjs` `protectedFiles` is the list. The server logs its own calls to `tool-usage.jsonl` there; it
   does not see other connectors' calls, so the model marks an untested tool with `mark_tool`.
   After any change to the plugin, re-run `./scripts/dev-install.sh` to install it.
 - A change under `plugins/gtm-brain/` that people should receive bumps the version in
@@ -128,21 +135,21 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
   shipped there sits in every user's skill list one prompt away from writing scratch files into
   their folder. `gtm-brain-review-tools` is the example.
 - Two kinds of interactions: the plugin's, described in `plugins/gtm-brain/ontology/gtm-brain.ossie.json`
-  and generated as first-class tools; a company's, described in its `brain/ontology.ossie.json`,
+  and generated as first-class tools; a company's, described in its `configuration/interactions.json` (`brain/ontology.ossie.json` before layout 4),
   listed per brain by the catalog tools and run through the one fixed tool `interact`. Codex lists a
   server's tools once, at startup, and the server does not know the brain then, so company
   interactions cannot be tools of their own. The company file is protected truth (`lib.guardProtected`,
   `approve_change` with kind interaction); `lib.RESERVED_TOOLS` is held equal to the live catalog by a test.
 - A project is a tag and a local pointer, never an object: `project:<slug>` on memories, a marked
   block in the folder's `AGENTS.md` (`lib.writePointer`; the format lives in `lib` and
-  `session/resolve.sh` mirrors it), and `work/projects.json` for this machine's paths. Nothing
-  under `brain/`. Codex reads `AGENTS.md` from the git root down to cwd and never below cwd
+  `session/resolve.sh` mirrors it), and `projects.json` in this computer's folder for this machine's paths. Nothing
+  in the brain's shared files. Codex reads `AGENTS.md` from the git root down to cwd and never below cwd
   (https://learn.chatgpt.com/docs/agent-configuration/agents-md), so an external folder needs the
   pointer with the rulebook line and a sub-folder of the brain needs only the two values.
   `lib.readLoaded/writeLoaded(root, ..., project)` are the only place that knows a loaded set's
   path; the session scripts resolve the brain through `session/resolve.sh` / `lib.resolveBrain`, never
-  `$cwd/brain/admin.md` directly.
-- Entity identity lives in `brain/entities/*.md`, with stable IDs and generated cited briefs.
+  a settings path under `$cwd` directly.
+- Entity identity lives in the entity pages (`entities/<kind folder>/`; `brain/entities/` before layout 4), with stable IDs and generated cited briefs.
   Facts stay in context memories. Migrations preserve old records, retired IDs and source files.
   Use `lib.readNames`, `lib.writeNames`, `lib.entityFacts`, `lib.compileEntity` and `lib.entityBrief`;
   do not introduce another identity store or hand-write entity files in skills.
@@ -179,9 +186,9 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
 - What is in `lib/brain.mjs` and why: the format (records, covers, names, the loaded set) and
   the things every writer needs right after writing (commit, activity line, re-render, session and
   dashboard state). `rerender` spawns the render script; that is the one place the lib reaches
-  into `skills/`. `setup` and `approve` write `admin.md` outside the lib, on purpose: one is the
+  into `skills/`. `setup` and `approve` write the settings file outside the lib, on purpose: one is the
   template, the other is the APPROVE step.
-- `lib.commit()` also writes the activity line the dashboard shows (`work/hooks.log`), so one
+- `lib.commit()` also writes the activity line the dashboard shows (`hooks.log` in this computer's folder), so one
   commit path is one activity path; `lib.save()` is the person's save (commit of `BRAIN_PATHS`,
   push when there is a remote). `readContext` exposes `rule` and `now` (learned working guidance, possibly empty); nobody splits
   "When loaded" by hand.
@@ -192,7 +199,7 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
   operations (`POST /entity-edit`, `server/entity-edit.mjs`), each of which runs the script
   Codex's tools run. A note can be corrected, withdrawn, moved to another topic, given another
   kind or, for an open question, answered through five operations (`POST /memory-edit`,
-  `server/memory-edit.mjs`), each one call of the remember script; no line of a `memories.jsonl`
+  `server/memory-edit.mjs`), each one call of the remember script; no line of a notes file
   is edited or removed. A prepared Codex message on the page is copied for the chat already
   open, since a new chat would replace the pane the dashboard is shown in. Everything else stays view-only: its server serves files, search reads and
   revision events, never other actions or background jobs. Chat about this uses a codex://threads/new link with the absolute

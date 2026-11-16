@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { randomUUID, createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { workDir } from './brain-paths.mjs';
 export const renderQueue = () => join(tmpdir(), 'gtm-brain-render-' + (process.getuid?.() ?? 'local'));
 export const readJSON = path => { try { return JSON.parse(readFileSync(path, 'utf8')); } catch { return null; } };
 export const writeJSON = (path, value) => {
@@ -12,14 +13,14 @@ export const writeJSON = (path, value) => {
   writeFileSync(temporary, JSON.stringify(value)); renameSync(temporary, path);
 };
 export function dashboardRefreshState(root) {
-  const request = readJSON(join(root, 'work', 'render-request.json'));
-  const state = readJSON(join(root, 'work', 'render-state.json'));
+  const request = readJSON(join(workDir(root), 'render-request.json'));
+  const state = readJSON(join(workDir(root), 'render-state.json'));
   if (!request) return state || { status: 'idle' };
   return state?.request === request.id ? state : { status: 'pending', requestedAt: request.at };
 }
 export function requestDashboardRefresh(root, renderer) {
   root = resolve(root);
-  const queue = renderQueue(), work = join(root, 'work');
+  const queue = renderQueue(), work = workDir(root);
   mkdirSync(queue, { recursive: true, mode: 0o700 }); mkdirSync(work, { recursive: true });
   const request = { id: randomUUID(), at: new Date().toISOString(), root, renderer };
   writeJSON(join(work, 'render-request.json'), request);

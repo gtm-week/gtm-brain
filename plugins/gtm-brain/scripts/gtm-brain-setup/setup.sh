@@ -52,9 +52,12 @@ tolist() { printf '%s' "$1" | tr ',' '\n' | sed 's/^ *//; s/ *$//' | grep -v '^$
 # 1. config/settings.yaml (layout 3, lib/brain-paths.mjs): the company, its one-liner, the owner (who runs setup is
 # the first owner), the team with handles and emails, the tools and the settings; the workplace prose as notes.
 # Written by the lib (renderSettings), so every value is quoted the way the reader parses it.
-mkdir -p brain
 . "$PLUGIN/session/resolve.sh"
-if [ "$(node -e 'const v=await import(process.argv[1]);console.log(v.writesLayout())' "$PLUGIN/lib/layout-version.mjs")" -lt 3 ]; then
+WRITES="$(node -e 'const v=await import(process.argv[1]);console.log(v.writesLayout())' "$PLUGIN/lib/layout-version.mjs")"
+# Layout 4 (lib/brain-paths.mjs): configuration/, entities/, memories/ and workflows/ at the top, no brain/ folder,
+# this computer's files in .gtm-brain/. A plugin that writes an older layout (the tests play one) keeps brain/.
+[ "$WRITES" -ge 4 ] || mkdir -p brain
+if [ "$WRITES" -lt 3 ]; then
 # A plugin that writes layout 2 at most (the tests play one with GTM_BRAIN_TEST_LAYOUT=2): brain/admin.md as before,
 # RULES.md, SCHEMA.md and the starters at the root (the steps below follow lib/brain-paths.mjs). TEAM_BLOCK is
 # multi-line, so it goes in through node, not sed.
@@ -118,8 +121,11 @@ fi
 if [ -f .gitignore ]; then # keep theirs, add ours
   while IFS= read -r line; do grep -qxF -- "$line" .gitignore || printf '%s\n' "$line" >> .gitignore; done < "$T/gitignore"
 else cp "$T/gitignore" .gitignore; fi
-mkdir -p .githooks work && cp "$T/githooks/pre-commit" .githooks/pre-commit && chmod +x .githooks/pre-commit
-printf '# work/\nDerived files (dashboard, logs, loaded contexts). Ignored by git.\n' > work/README.md
+W="$(gtm_brain_work .)"   # work, or .gtm-brain in layout 4
+# a chat opened here before setup left work/session.json: it goes with the rest of this computer's files
+if [ "$W" != work ] && [ -d work ]; then mkdir -p "$W"; cp -R work/. "$W"/ 2>/dev/null; rm -rf work; fi
+mkdir -p .githooks "$W" && cp "$T/githooks/pre-commit" .githooks/pre-commit && chmod +x .githooks/pre-commit
+printf '# %s/\nDerived files (dashboard, logs, loaded contexts). Ignored by git.\n' "$W" > "$W/README.md"
 
 # 4. git, with the owner as the commit identity for this repo
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || git init -q
@@ -130,16 +136,20 @@ OWNER_EMAIL="$(printf '%s' "$PEOPLE_JSON" | node -e 'const p=JSON.parse(require(
 [ -n "$OWNER_NAME" ] && git config user.name "$OWNER_NAME"; [ -n "$OWNER_EMAIL" ] && git config user.email "$OWNER_EMAIL"
 # Parallel branches (worktrees) merge notes as lines and keep the newer summary: .gitattributes, post-merge.
 node -e 'const l=await import(process.argv[1]);l.ensureMergeSetup(".")' "$PLUGIN/lib/brain.mjs" 2>/dev/null || true
-if git add -- brain AGENTS.md CLAUDE.md README.md $(for f in config about-us RULES.md SCHEMA.md strategy.md icp.md voice.md design-system.md design-system.html market.md; do [ -e "$f" ] && printf "%s " "$f"; done) workflows .gitignore .gitattributes .githooks && git -c commit.gpgsign=false commit -q -m "setup: $COMPANY brain (gtm-brain v0)"; then
+if git add -- AGENTS.md CLAUDE.md README.md $(for f in brain configuration entities memories layout.json config about-us RULES.md SCHEMA.md strategy.md icp.md voice.md design-system.md design-system.html market.md; do [ -e "$f" ] && printf "%s " "$f"; done) workflows .gitignore .gitattributes .githooks && git -c commit.gpgsign=false commit -q -m "setup: $COMPANY brain (gtm-brain v0)"; then
   echo "gtm-brain: brain created for $COMPANY  ·  committed"
 else
   echo "gtm-brain: brain created for $COMPANY  ·  written to disk, NOT committed (git is read-only here): say save"
 fi
 node -e 'const l=await import(process.argv[1]);l.registerBrain(".")' "$PLUGIN/lib/brain.mjs" 2>/dev/null || true
-if gtm_brain_layout3 .; then echo "  $(gtm_brain_settings .)      workplace info: team with handles, tools. Only the owner ($OWNER_HANDLE) approves a change."
+if gtm_brain_layout4 .; then echo "  configuration/            settings.yaml (team with handles, tools), rules.md, schema.md and the base documents in about-us/: the owner's ($OWNER_HANDLE) to change; a teammate's change waits as a proposal."
+echo "  entities/                 one page per person, company, product, in a folder per kind"
+echo "  memories/                 every note in the file of its month; topics/ holds a summary per topic: company, strategy, market, icp, offer, personal-$OWNER_HANDLE"
+echo "  workflows/                the team's workflows"
+elif gtm_brain_layout3 .; then echo "  $(gtm_brain_settings .)      workplace info: team with handles, tools. Only the owner ($OWNER_HANDLE) approves a change."
 echo "  config/, about-us/        rules, schema and the base documents: the owner's to change; a teammate's change waits as a proposal."
 else echo "  $(gtm_brain_settings .)            workplace info: team with handles, tools. Changes need APPROVE."; fi
-echo "  brain/contexts/           company, strategy, market, icp, offer, personal-$OWNER_HANDLE"
+gtm_brain_layout4 . || echo "  brain/contexts/           company, strategy, market, icp, offer, personal-$OWNER_HANDLE"
 echo "  git in this folder: commits as $OWNER_NAME <$OWNER_EMAIL>, git pre-commit check in .githooks (local config)"
 echo "  you are: $OWNER_HANDLE    next: onboarding is in progress; continue gtmb-start discovery in this chat using the answers already supplied"
 node -e 'const l=await import(process.argv[1]);console.log(l.onboardingInstruction("."))' "$PLUGIN/lib/brain.mjs"

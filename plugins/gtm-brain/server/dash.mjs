@@ -20,6 +20,7 @@ import { createMemoryReader } from './memory-reader.mjs';
 import { createEntityEdit } from './entity-edit.mjs';   // POST /entity-edit: the Entities tab's forms
 import { host as hostAdapter } from '../lib/host.mjs';   // GET /chat: which chat the page's prepared messages go to
 import { createMemoryEdit } from './memory-edit.mjs';   // POST /memory-edit: the Memories tab's menu on a note
+import { workDir } from '../lib/brain-paths.mjs';
 const lib = await import(new URL("../lib/brain.mjs", import.meta.url));
 
 const args = process.argv.slice(2);
@@ -46,7 +47,7 @@ const PROTOCOL = 7;
 // The plugin version that started this server: after an update an old server would go on serving the old
 // code from a cache folder Codex replaced, so --start retires a server from another version.
 const VERSION = (() => { try { return JSON.parse(readFileSync(new URL("../.codex-plugin/plugin.json", import.meta.url), "utf8")).version || null; } catch { return null; } })();
-const work = join(root, "work"), stateFile = join(work, "dash.json"), home = join(work, "home");
+const work = workDir(root), stateFile = join(work, "dash.json"), home = join(work, "home");
 if (!lib.isBrain(root)) { console.error(`not a brain: ${root}`); process.exit(1); }
 mkdirSync(work, { recursive: true });
 

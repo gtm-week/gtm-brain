@@ -19,7 +19,7 @@ let project = null; { const pi = args.indexOf("--project"); if (pi >= 0) { proje
 if (args[0] === "--new") {
   const slug = (args[1] || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); const title = args[2] || slug; const rule = args[3] || "";
   if (!slug) { console.error('usage: --new <slug> "<Title>" ["<rule>"]'); process.exit(1); }
-  const dir = join(root, "brain", "contexts", slug); if (existsSync(dir)) { console.error(`context exists: ${slug}`); process.exit(1); }
+  if (lib.hasContext(root, slug)) { console.error(`context exists: ${slug}`); process.exit(1); }
   // X1-X3 are judgment (saving-rules.md): the brain states what exists, Codex decides, and says why the new one is
   // distinct before it is created ("berlin-event" for the project berlin-event-2026 slipped past a name match, 2026-11-12)
   const di = args.indexOf("--distinct"), distinct = di > 0 ? (args[di + 1] || "").trim() : "";
@@ -36,7 +36,7 @@ if (args[0] === "--new") {
   lib.writeContext(root, slug, { title, rule });
   // A new context is loaded right away: you created it because you are about to work in it.
   const loaded = lib.readLoaded(root, project); if (!loaded.includes(slug)) loaded.push(slug); lib.writeLoaded(root, loaded, project);
-  console.log(`created context ${slug}  ·  brain/contexts/${slug}/context.md · ${lib.commit(root, [dir], `context: new ${slug}`).note}\nloaded now: admin + ${loaded.join(", ")}${project ? ` (project ${project})` : ""}`); lib.rerender(root); process.exit(0);
+  console.log(`created context ${slug}  ·  ${lib.coverFile(root, slug)} · ${lib.commit(root, lib.contextCommitPaths(root, slug), `context: new ${slug}`).note}\nloaded now: admin + ${loaded.join(", ")}${project ? ` (project ${project})` : ""}`); lib.rerender(root); process.exit(0);
 }
 
 if (args[0] === "--edit") {
@@ -49,7 +49,7 @@ if (args[0] === "--edit") {
   for (const k of changes) if (/[\u2013\u2014\u2015\u2212]/.test(opt[k])) { console.error(`${k} contains a long dash; use a plain hyphen`); process.exit(1); }
   const fm = { ...c.fm }; delete fm.title; delete fm.slug;
   lib.writeContext(root, slug, { ...fm, title: opt.title ? opt.title.trim() : c.title, rule: opt.rule ? opt.rule.trim() : c.rule, now: c.now });
-  console.log(`edited ${slug}: ${changes.join(", ")} · brain/contexts/${slug}/context.md · ${lib.commit(root, [c.path], `context: edit ${slug} (${changes.join(", ")})`).note}`);
+  console.log(`edited ${slug}: ${changes.join(", ")} · ${lib.coverFile(root, slug)} · ${lib.commit(root, [c.path], `context: edit ${slug} (${changes.join(", ")})`).note}`);
   lib.rerender(root); process.exit(0);
 }
 
@@ -71,13 +71,13 @@ if (args[0] === "--fork") {
   const fi = args.indexOf("--filter"); const filter = fi >= 0 ? (args[fi + 1] || "").toLowerCase() : "";
   const src = lib.readContext(root, from); if (!src) { console.error(`no context ${from}`); process.exit(1); }
   if (!slug) { console.error('usage: --fork <from> <new-slug> "<Title>" [--filter <keyword>]'); process.exit(1); }
-  const dir = join(root, "brain", "contexts", slug); if (existsSync(dir)) { console.error(`context exists: ${slug}`); process.exit(1); }
+  if (lib.hasContext(root, slug)) { console.error(`context exists: ${slug}`); process.exit(1); }
   const rule = src.rule + `\n\nThis context was forked from ${from}${filter ? ` for everything about "${filter}"` : ""}; it now has its own memories and summary.`;
   lib.writeContext(root, slug, { title, forked_from: from, summary: `Forked from ${from}${filter ? ` for "${filter}"` : ""}. Not compiled yet.`, tools: src.tools, related: [from], rule });
   const picked = lib.effectiveMemories(src.memories).filter(m => !filter || (m.content + " " + m.people.join(" ")).toLowerCase().includes(filter));
   for (const m of picked) lib.appendMemory(root, slug, { ...lib.meetingMetadata(m), authors: m.authors, via: m.via, kind: m.kind, tools: m.tools, people: m.people, content: m.content, asset: m.asset, source: [...m.source, { kind: "memory", ref: m.id }], actions: m.actions, tags: [...m.tags, `forked:${from}`], at: m.at, ...(m.customer ? { customer: m.customer } : {}), ...(m.customer_coverage ? { customer_coverage: m.customer_coverage } : {}) });
   const loaded = lib.readLoaded(root, project); if (!loaded.includes(slug)) loaded.push(slug); lib.writeLoaded(root, loaded, project);
-  console.log(`forked ${from} -> ${slug}: ${picked.length} of ${lib.effectiveMemories(src.memories).length} memories copied${filter ? ` (matching "${filter}")` : ""} · brain/contexts/${slug}/context.md · ${lib.commit(root, [dir], `context: fork ${from} -> ${slug}`).note}\nloaded now: admin + ${loaded.join(", ")}${project ? ` (project ${project})` : ""}`); lib.rerender(root); process.exit(0);
+  console.log(`forked ${from} -> ${slug}: ${picked.length} of ${lib.effectiveMemories(src.memories).length} memories copied${filter ? ` (matching "${filter}")` : ""} · ${lib.coverFile(root, slug)} · ${lib.commit(root, lib.contextCommitPaths(root, slug), `context: fork ${from} -> ${slug}`).note}\nloaded now: admin + ${loaded.join(", ")}${project ? ` (project ${project})` : ""}`); lib.rerender(root); process.exit(0);
 }
 
 const cs = lib.listContexts(root);

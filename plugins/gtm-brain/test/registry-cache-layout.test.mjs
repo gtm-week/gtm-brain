@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // The entity file cache (registry-cache.test.mjs) and the entity folders (entity-layout.test.mjs) together:
 // the cached registry lists pages through lib/layout.mjs, in kind folders and flat, and sees a page where a
 // rename or a move left it; the fast mention tables keep the rule that a note with a meeting id belongs to
