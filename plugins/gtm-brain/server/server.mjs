@@ -691,6 +691,8 @@ async function handle(req) {
     const tool = TOOLS.find(t => t.name === params.name);
     if (!tool) return fail(id, -32602, `unknown tool ${params.name}`);
     const args = params.arguments || {};
+    // An update replaces the cached plugin folder under a running chat: every script this server would run is gone.
+    if (!existsSync(join(P, "scripts"))) { const r = text(host().texts.pluginGone(VERSION), true); return reply(id, r); }
     if (!tool.noBrain && !isBrain(args.brain)) return reply(id, brainError(args.brain));
     // A brain on a newer file layout than this plugin understands (lib/layout-version.mjs): every write is
     // refused before it starts, reads go on with the line on top, and the chat start (which writes) is skipped.
