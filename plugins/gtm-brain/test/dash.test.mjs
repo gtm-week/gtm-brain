@@ -45,7 +45,7 @@ test("the session hook keeps edits made by hand outside Codex", () => {
     assert.ok(!out.includes(policy), `the brain hook does not print the ${name} policy: it is a rule page`);
   }
   assert.match(out, /questions rule page once \(query, object rules, search questions\)/);
-  assert.match(out, /maintenance requested in the background/);
+  assert.match(out, /its maintenance runs in the background, and open_dashboard is for when the person asks to see it/);
   execFileSync(process.execPath, [`${P}/session/session-maintenance.mjs`, root, '--run'], { env });
   assert.equal(execFileSync("git", ["-C", root, "status", "--short", "--", "brain"], { encoding: "utf8" }).trim(), "", "nothing left unkept");
   assert.match(execFileSync("git", ["-C", root, "log", "-1", "--format=%s"], { encoding: "utf8" }), /kept: edited by hand outside Codex/);

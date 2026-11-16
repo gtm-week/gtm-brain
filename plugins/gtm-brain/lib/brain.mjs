@@ -852,12 +852,20 @@ export function createMentionMatcher(names) {
    model may have left out ("Castorama should be an entity"). Capitalised runs of words, not at the
    start of a sentence unless two words or more, not days, months or everyday capitalised words. */
 const NOT_ENTITY = new Set(["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december", "next", "noted", "the", "this", "that", "our", "we", "they", "he", "she", "it", "i", "a", "an", "in", "on", "at", "to", "for", "of", "with", "from", "by", "and", "or", "no", "yes", "not", "open", "question", "decision", "note", "summary", "codex", "gtm", "os", "crm", "nda", "tco", "ceo", "cfo", "cto", "coo", "q1", "q2", "q3", "q4", "eur", "usd", "pln", "ok", "fde", "fdes", "pipeline", "marketing"]);
+// A pipeline stage, a plan, a tier or a status is written with a capital and names nobody ("moved to Paid", "Closed
+// Won", "the Growth plan"): a run made only of these is no candidate (the hint fired on "Paid", 2026-11-16). They do
+// not break a run the way NOT_ENTITY does, so "Scale Labs" and "Team Rocket" are still named whole.
+const LABEL_WORDS = new Set(["paid", "unpaid", "free", "trial", "pro", "premium", "basic", "starter", "standard", "plus", "enterprise", "business", "team", "growth", "scale",
+  "won", "lost", "closed", "qualified", "unqualified", "lead", "leads", "prospect", "customer", "churned", "active", "inactive", "demo", "discovery", "proposal", "negotiation",
+  "contract", "onboarding", "renewal", "pilot", "poc", "draft", "approved", "rejected", "pending", "done", "todo", "blocked", "live", "beta", "new", "hot", "warm", "cold",
+  "high", "medium", "low", "invoice", "invoiced", "signed", "sent", "booked", "cancelled", "canceled", "overdue", "monthly", "yearly", "annual", "mql", "sql", "arr", "mrr"]);
+const LABEL_AFTER = /^(tier|stage|status)\b/;
 export function candidateEntities(content, people, names) {
   const known = new Set(names.flatMap(n => [n.name, ...n.aliases]).concat(people || []).map(foldName));
   const out = []; const sentences = String(content || "").split(/(?<=[.!?])\s+|\n+/);
   for (const s of sentences) {
     const tokens = s.split(/\s+/); let run = [], startIdx = 0;
-    const flush = () => {
+    const flush = (next = "") => {
       if (run.length) {
         const cand = run.join(" ").replace(/[,;:.!?)("']+$/g, "").replace(/^[("']+/, "");
         const words = cand.split(" "); const first = startIdx === 0;
@@ -865,7 +873,10 @@ export function candidateEntities(content, people, names) {
         const isKnown = c => known.has(foldName(c)) || !!canonicalName(names, c) || c.split(" ").every(w => known.has(foldName(w)) || !!canonicalName(names, w));
         // "Met Pierre Dupont": the first word of a sentence is a plain word until the rest proves otherwise
         if (first && plain && words.length >= 2 && isKnown(words.slice(1).join(" "))) return (run = []);
-        const ok = cand.length >= 3 && !(first && words.length === 1 && plain) && !words.every(w => NOT_ENTITY.has(foldName(w))) && !isKnown(cand) && !/^\d/.test(cand);
+        // one capitalised word before "tier", "stage" or "status" is that stage's label ("the Evaluation stage"); not before
+        // "plan" or "licence", where it is as often a product ("the Zendesk plan")
+        const label = words.every(w => NOT_ENTITY.has(foldName(w)) || LABEL_WORDS.has(foldName(w))) || (words.length === 1 && LABEL_AFTER.test(next));
+        const ok = cand.length >= 3 && !(first && words.length === 1 && plain) && !label && !isKnown(cand) && !/^\d/.test(cand);
         if (ok && !out.some(x => foldName(x) === foldName(cand))) out.push(cand);
       }
       run = [];
@@ -873,7 +884,7 @@ export function candidateEntities(content, people, names) {
     tokens.forEach((t, i) => {
       const w = t.replace(/^[("']+|[,;:.!?)"']+$/g, "");
       const cap = /^[A-ZÀ-Ý][\p{L}\p{N}&.-]*$/u.test(w) && !NOT_ENTITY.has(foldName(w)) && !(i === 0 && /^[A-Z][a-z]+$/.test(w) && tokens.length > 1 && !/^[A-Z]/.test((tokens[1] || "").replace(/^[("']+/, "")));
-      if (cap) { if (!run.length) startIdx = i; run.push(w); if (/[.!?,;:]$/.test(t)) flush(); } else flush();
+      if (cap) { if (!run.length) startIdx = i; run.push(w); if (/[.!?,;:]$/.test(t)) flush(); } else flush(w);
     });
     flush();
   }

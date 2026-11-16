@@ -1,9 +1,8 @@
 # Saving rules
 
-The rules for every note and every new context. The brain hands you this page on the first save of
-a chat and quotes a rule by its number when it holds something back. The brain states facts (what the
-person typed, which names, projects and contexts exist); you decide with these rules. When a rule
-says ask, ask once, everything in one question.
+The rules for every note and every new context. The brain hands you this page at the start of a
+chat and quotes a rule by its number when it holds something back. The brain states facts (what the
+person typed, which names, projects and contexts exist); you decide with these rules.
 
 ## Questions
 

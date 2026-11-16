@@ -68,8 +68,9 @@ export function readForm(form, result) {
 const NOTE = 'This answers this question only: act on it through its owning workflow and do not ask it again. It approves nothing: a workplace or interaction change still goes only through approve_change, whose own form carries APPROVE.';
 export const answerText = a => `The person's answer (${a.typed ? 'typed' : 'picked'} in the form): ${JSON.stringify(a.answer)}\n${NOTE}`;
 export const noAnswerText = (reason, host = false) => `no answer (${reason}). This is neither an answer nor a refusal, and it authorizes nothing. `
-  + (host ? 'This host is not showing the form: do not call ask_person again in this chat. Ask with the host\'s own question box when this chat has one; otherwise ask once as plain chat text' : 'Ask the same question once as plain chat text')
-  + ' (the question, one line on why it matters, the numbered choices, recommended first) and end the turn.';
+  // how a plain text question is laid out is in the server's Questions instruction, in every chat: not repeated here
+  + (host ? 'Do not call ask_person again in this chat: ask with the host\'s own question box when this chat has one; otherwise ask once as plain chat text' : 'Ask the same question once as plain chat text')
+  + ' and end the turn.';
 
 /* questions is the server's one form transport (question-input.mjs): one form pending per session. */
 export async function askPerson(questions, args, requestId) {

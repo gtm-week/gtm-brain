@@ -20,8 +20,8 @@ in `people`, as written; use `add_name` with kind person, organization or produc
 optional organization subtype (company or team). A tool the team uses (Gmail, HubSpot, Granola)
 goes in `tools`; when `SCHEMA.md` defines the kind tool, it may also be an entity of kind tool,
 and never otherwise. Set the kind when clear, at once and without asking when the note makes it
-plain (a company in a sales note). When `remember` answers "possibly entities, not recorded as
-such", add the ones that are entities right away.
+plain (a company in a sales note). When `remember` answers "not linked to anything in the
+brain", add the ones that are entities right away.
 
 **A name that may already be known is never added on a guess (rule 2c).** When `remember`
 answers that a name may be someone in the registry ("Pierre Dupont" when Pierre Aubert is

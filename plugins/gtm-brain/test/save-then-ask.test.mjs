@@ -28,9 +28,10 @@ test("a bare first name nobody has: saved as written, no entity, the question ke
   const r = b.remember("--content", DECISION, "--people", "Anna", "--companies", "Castorama", "--kind", "decision");
   assert.equal(r.status, 0, r.stderr);
   const out = r.stdout.split("\n");
-  const saved = out.findIndex(l => l.startsWith("saved in "));
-  assert.ok(saved >= 0, r.stdout);
-  assert.equal(out[saved + 1], "Who is Anna? Full name or company.");
+  assert.ok(out.some(l => l.startsWith("remembered m_")), r.stdout);
+  // the question is said once, in the line that tells the model to ask it
+  assert.ok(out.includes("Ask the person one question, after quoting the note: 1) Who is Anna? Full name or company."), r.stdout);
+  assert.equal(r.stdout.split("Who is Anna?").length - 1, 1);
   assert.ok(!lib.readNames(b.root).some(e => e.name === "Anna"), "no entity for the one word");
   const note = b.live().find(m => m.kind === "decision" && /Castorama/.test(m.content));
   assert.ok(note, "the decision is saved");
@@ -70,7 +71,7 @@ test("a first name several known people have: saved, the candidates named, the p
   lib.addName(b.root, "Anna Kowalska"); lib.addName(b.root, "Anna Nowak");
   const r = b.remember("--content", "Anna approved the budget.", "--people", "Anna");
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /^Which Anna: Anna Kowalska or Anna Nowak\?$/m);
+  assert.match(r.stdout, / 1\) Which Anna: Anna Kowalska or Anna Nowak\?$/m);
   const note = b.live().find(m => /budget/.test(m.content) && m.kind === "note");
   assert.deepEqual(note.people, []);
   const [q] = b.pending();
@@ -161,7 +162,7 @@ test("two unclear names, one answered: that one is linked and the other is still
   const b = brain();
   const r = b.remember("--content", "Anna and Bo signed off.", "--people", "Anna,Bo");
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /^Who is Anna\? Who is Bo\? Full name or company\.$/m);
+  assert.match(r.stdout, / 1\) Who is Anna\? Who is Bo\? Full name or company\.$/m);
   const [q] = b.pending();
   const a = b.remember("--content", "Anna is Anna Kowalska.", "--kind", "decision", "--retracts", q.id, "--people", "Anna Kowalska");
   assert.equal(a.status, 0, a.stderr);
@@ -171,7 +172,7 @@ test("two unclear names, one answered: that one is linked and the other is still
   const open = b.pending();
   assert.equal(open.length, 1, "Bo is still asked");
   assert.deepEqual(open[0].tags.filter(t => /^(about|name):/.test(t)), [`about:${linked.id}`, "name:Bo"]);
-  assert.match(a.stdout, /^Who is Bo\? Full name or company\.$/m);
+  assert.match(a.stdout, / 1\) Who is Bo\? Full name or company\.$/m);
 });
 
 test("an answer that also names someone else attaches only the person asked about", () => {

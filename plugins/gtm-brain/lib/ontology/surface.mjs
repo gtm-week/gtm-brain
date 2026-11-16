@@ -69,7 +69,9 @@ export function formatRows(rows, { limit, truncated = false } = {}) {
 }
 
 export function formatOutcome(a, r) {
-  if (r.outcome === "ok") { const body = r.result === undefined ? "" : typeof r.result === "string" ? r.result : JSON.stringify(r.result); return `ok: ${a.name}${body ? `\n${body}` : ""}`; }
+  // What the operation said is the confirmation: "ok: <name>" above it said a second time that it worked. Only an
+  // operation that says nothing answers with that line. Refusals, denials and errors keep their word in front.
+  if (r.outcome === "ok") { const body = r.result === undefined ? "" : typeof r.result === "string" ? r.result : JSON.stringify(r.result); return body.trim() ? body : `ok: ${a.name}`; }
   if (r.outcome === "refused") return `refused: ${r.message || a.name}`;
   if (r.outcome === "denied") return `denied: ${r.message || `this role may not ${a.name}`}`;
   return `error: ${r.message || a.name}`;

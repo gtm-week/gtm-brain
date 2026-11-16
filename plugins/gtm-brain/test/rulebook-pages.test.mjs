@@ -127,21 +127,24 @@ test("a status call as the first call does not repeat the contexts the opening l
   assert.match(second.parts[0], /Strategy \(strategy\)/, "later in the chat, status is whole");
 });
 
-test("a tool attaches its own rule page to its first reply of a chat, once", async () => {
+test("a tool attaches its own rule page to the first reply of a chat that refuses or fails, once, and never to one that worked", async () => {
   const root = brain(); const s = client(); await s.init();
+  const pages = r => r.parts.filter(p => p.startsWith("--- Rule page:"));
   await s.call("query", { brain: root, object: "memories", search: "anything" });   // the chat start
-  const meetings = await s.call("query", { brain: root, object: "meetings" });
-  assert.ok(!meetings.isError, meetings.text);
-  assert.ok(meetings.parts.some(p => p.startsWith("--- Rule page: Meeting evidence")), "the meetings page rides along");
-  const again = await s.call("query", { brain: root, object: "meetings" });
-  assert.ok(!again.parts.some(p => p.startsWith("--- Rule page:")), "once per chat");
-  const customers = await s.call("query", { brain: root, object: "customers" });
-  assert.ok(customers.parts.some(p => p.startsWith("--- Rule page: Customer discovery")));
-  const load = await s.call("load_context", { brain: root, contexts: ["strategy"], last: 0 });
-  assert.ok(!load.isError, load.text);
-  assert.ok(load.parts.some(p => p.startsWith("--- Rule page: Contexts and summaries")));
-  const plain = await s.call("query", { brain: root, object: "contexts" });
-  assert.ok(!plain.parts.some(p => p.startsWith("--- Rule page:")), "a read with no page of its own carries none");
+  // a reply that worked carries no page: it was 900 to 4,000 characters on top of every first read, load and save
+  for (const [name, args] of [["query", { object: "meetings" }], ["query", { object: "customers" }], ["load_context", { contexts: ["strategy"], last: 0 }], ["query", { object: "contexts" }]]) {
+    const r = await s.call(name, { brain: root, ...args });
+    assert.ok(!r.isError, r.text); assert.deepEqual(pages(r), [], `${name} ${JSON.stringify(args)} worked: no page`);
+  }
+  // a refusal brings the page that helps put it right, once per chat
+  const refused = await s.call("archive_context", { brain: root, slug: "no-such-context" });
+  assert.match(refused.text, /^(refused|error): /);
+  assert.equal(pages(refused).length, 1); assert.match(pages(refused)[0], /^--- Rule page: Contexts and summaries/);
+  const again = await s.call("archive_context", { brain: root, slug: "no-such-context" });
+  assert.match(again.text, /^(refused|error): /); assert.deepEqual(pages(again), [], "once per chat");
+  // another tool's refusal brings its own page
+  const entity = await s.call("update_entity", { brain: root, by: "ann-lee", entity: "e_0000000000000000", set: { name: "Nobody" } });
+  assert.match(entity.text, /^(refused|error): /); assert.match(pages(entity)[0] || "", /^--- Rule page: People, companies and products/);
 });
 
 test("upgrade: a shipped rulebook becomes the slim one; a person's own lines stay under their own heading", t => {

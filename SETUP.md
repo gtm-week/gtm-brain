@@ -152,7 +152,7 @@ In Codex:
 2. *"load pipeline"*. Expected: the cover, the rule, and "Last 0 of 0 memories".
 3. *"Remember that Pierre Aubert asked for a three-year TCO before the 12.09 steering meeting;
    source is the email from today."*
-   Expected: *remembered m_xxxxxx in pipeline · note · <your handle> · people: Pierre Aubert*.
+   Expected: *remembered m_xxxxxx in pipeline (Pipeline) · note · <your handle> · people: Pierre Aubert · "the note"*.
    `cat brain/contexts/pipeline/memories.jsonl` shows one JSON line.
 4. *"Remember that we decided not to discount for Bergstrom."* Expected: kind `decision`.
 5. *"Forget memory m_xxxxxx, it was wrong."* Expected: a new record with `retracts`; `load

@@ -1,7 +1,7 @@
 /* The rule pages: the detail of each topic of a brain's rulebook, shipped with the plugin under policies/rules/
    (plus the shared question and Computer Use policies). The brain's AGENTS.md keeps the core and one line per
    rule; a page is fetched only when it matters: `query` with object rules and search = a topic returns just that
-   page, and a tool attaches its own page to its first reply of a chat (server.mjs). A brain's own rules stay in
+   page, and a tool attaches its own page to the first reply of a chat that refuses or holds something (server.mjs). A brain's own rules stay in
    its RULES.md. Node built-ins only. */
 import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -70,7 +70,7 @@ export function rulePageAnswer(search) {
   return `No rule page matches "${search}". Rule pages: ${rulePageIndex()}. Ask with one of them as search.`;
 }
 
-/* The page a tool's reply carries the first time it matters in a chat: by tool name, or by "query:<object>". */
+/* The page a tool's reply carries the first time it refuses, holds or fails in a chat: by tool name, or by "query:<object>". */
 export function pageForCall(name, args = {}) {
   const keys = [name, ...(name === "query" && typeof args.object === "string" ? [`query:${args.object}`] : [])];
   return rulePages().find(p => p.attach.some(a => keys.includes(a))) || null;

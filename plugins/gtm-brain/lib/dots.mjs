@@ -1,4 +1,3 @@
-import { host } from "./host.mjs";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ownRules } from "./where.mjs";
@@ -92,13 +91,15 @@ export function lastNotesAbout(memories, person, rec, limit = 2) {
 
 /* The chat's opening line about dates: "next Saturday" said on a Thursday is this Saturday or the one
    after, and a request (a calendar search, a draft) never passes remember's date check (scenario run,
-   2026-11-12: Codex took the calendar's free 14 Nov without asking). */
-export function datesLine(now = today(), box = host().nativeQuestions?.()) {
+   2026-11-12: Codex took the calendar's free 14 Nov without asking). The line gives the dates and the one thing
+   to do; rules D1 to D3, printed right after it, say the rest (a free slot is no answer, a plain weekday is the
+   coming one), and where a question is asked is the server's Questions instruction. */
+export function datesLine(now = today()) {
   const day = d => { const x = new Date(now); x.setDate(now.getDate() + d); return x; };
   const short = d => d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
   const left = []; for (let d = 1; now.getDay() + d <= 6 + 1 && (now.getDay() + d) % 7 !== 1; d++) left.push(d);
   const two = left.map(d => `"next ${DAYS[(now.getDay() + d) % 7][0].toUpperCase()}${DAYS[(now.getDay() + d) % 7].slice(1)}" (${short(day(d))} or ${short(day(d + 7))})`);
-  return `Today is ${now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}.${two.length ? ` ${two.join(", ")} ${two.length > 1 ? "each have" : "has"} two readings (D2): in any request, not only a note, ask which before acting on it, ${box ? "in Codex's question box (request_user_input) with the two dates as options" : "in Codex's question box (request_user_input) with the two dates as options when that tool is available in this chat, otherwise as plain chat text with the two dates numbered, then end the turn"}; a free calendar slot is no answer (D3). A plain weekday (\"Friday\") is the coming one, no question (D1).` : ""}`;
+  return `Today is ${now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}.${two.length ? ` ${two.join(", ")} ${two.length > 1 ? "each have" : "has"} two readings: in any request, not only a note, ask which before acting on it, with the two dates as options (D2, D3).` : ""}`;
 }
 
 /* A compiled summary: 2-4 sentences, each ending with the ids of the notes it rests on ("[m_1a2b3c, m_4d5e6f]"),
@@ -127,7 +128,7 @@ export function rulebookText(root) {
   let page = ""; try { page = readFileSync(new URL("../skills/gtmb-use-brain/references/saving-rules.md", import.meta.url), "utf8").trim(); } catch { return ""; }
   // once a rule is filed (a tag line under it), the chat start carries the general ones and a count; the rest come with the reply that needs them
   const own = startRules(root) ?? ownRules(root, new URL("../templates", import.meta.url).pathname);
-  return `--- The saving rules for this chat (a refusal quotes them by number) ---\n${page}${own ? `\n\n## This brain's own rules (Our rules in RULES.md, written by its people; they win over the rules above)\n\n${own}` : ""}\n---`;
+  return `--- The saving rules for this chat ---\n${page}${own ? `\n\n## This brain's own rules (Our rules in RULES.md, written by its people; they win over the rules above)\n\n${own}` : ""}\n---`;
 }
 const sentFile = root => join(root, "work", "rulebook-sent.json");
 const readSent = root => { try { return JSON.parse(readFileSync(sentFile(root), "utf8")); } catch { return {}; } };
@@ -135,7 +136,7 @@ export function markRulebookSent(root, chat) {
   if (!chat) return; const sent = readSent(root); sent[chat] = new Date().toISOString();
   try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(sentFile(root), JSON.stringify(sent, null, 2) + "\n"); } catch {}
 }
-/* the fallback: a chat whose start did not print it (no chat start ran) gets it with its first save */
+/* the fallback: a chat whose start did not print it (no chat start ran) gets it with the first save that is held or refused */
 export function rulebookOnce(root, chat) {
   if (!chat || readSent(root)[chat]) return "";
   const text = rulebookText(root); if (!text) return "";

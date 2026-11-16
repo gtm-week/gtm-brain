@@ -43,7 +43,7 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   const dinner = remember("--content", "The speaker dinner moved to Thursday.");
   assert.equal(dinner.status, 2);
   assert.match(dinner.stderr, /"Thursday" can be Thu 2026-11-12 or Thu 2026-11-19: ask which/);
-  assert.match(dinner.stderr, /Ask one question, in Codex's question box \(request_user_input\) when this chat has it, otherwise as numbered chat text, and wait for the reply\./);
+  assert.match(dinner.stderr, /Ask one question and wait for the reply\.$/m);
   assert.ok(dinner.stderr.split("\n")[0].length < 420, "a refusal is one or two short lines");
   // the person turned Codex's question box on: the question goes there (new-brain rerun: plain text although it was on)
   writeFileSync(join(process.env.CODEX_HOME, "config.toml"), "[features]\ndefault_mode_request_user_input = true\n");
@@ -95,7 +95,7 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   say("lorian called me about the venue.");
   const pick = remember("--content", "Florian Kim called about the venue.", "--people", "Florian Kim");
   assert.equal(pick.status, 2);
-  assert.match(pick.stderr, /the person did not write which Florian: Florian (Weber|Kim) or Florian (Weber|Kim)\. Ask which one\. Ask one question, /);
+  assert.match(pick.stderr, /the person did not write which Florian: Florian (Weber|Kim) or Florian (Weber|Kim)\. Ask which one\. Ask one question and wait for the reply\./);
   // Codex asked in its own question box before saving: the picked answer counts as the person's words, no second question
   writeFileSync(join(day, `rollout-2026-11-12T10-18-48-${id}.jsonl`), [{ type: "session_meta", payload: { cwd: root } },
     { type: "response_item", payload: { type: "message", role: "user", content: [{ type: "input_text", text: "lorian sent the agenda." }] } },
@@ -263,8 +263,8 @@ test("R2 in the tool: a note moved to another context in one call asks for the R
   const moved = rem("--batch", batch);
   assert.equal(moved.status, 0, moved.stderr);
   assert.match(moved.stdout, /moved from company to offer: .*RULES\.md under "## Our rules" \(R2\)/);
-  assert.doesNotMatch(moved.stdout, /or add offers/);
-  assert.match(rem("--context", "company", "--content", "Globex wants a booth.").stdout, /Do not repeat this output or add offers\./, "an ordinary save keeps the one-line reply");
+  assert.doesNotMatch(moved.stdout, /no offers/);
+  assert.match(rem("--context", "company", "--content", "Globex wants a booth.").stdout, /^Reply to the person in one line: what was saved, no offers\.$/m, "an ordinary save keeps the one-line reply");
 });
 
 test("P4: a surname more than two letters apart is another person, saved at once; a near one still asks", () => {

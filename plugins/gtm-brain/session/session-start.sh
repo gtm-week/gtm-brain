@@ -126,14 +126,15 @@ node "$H" text foreign
 # Claude Code reads CLAUDE.md: without its AGENTS.md import (a brain from before 0.30) the rulebook is named here.
 rules_dir="$root"; [ -n "$project" ] && rules_dir="$cwd"
 node "$H" rulebook "$rules_dir" 2>/dev/null || node "$H" text rulebook "$root"
-node -e 'const l=await import(process.argv[1]);const p=l.currentPerson(process.argv[2]);if(p)console.log("Current person: "+p+" (resolved from this checkout and validated against the team). Reuse this as by; do not ask who the user is again.");const w=l.layoutStartLine(process.argv[2]);if(w)console.log(w);const o=l.ownerStartLine(process.argv[2]);if(o)console.log(o)' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
+node -e 'const l=await import(process.argv[1]);const w=l.layoutStartLine(process.argv[2]);if(w)console.log(w);const o=l.ownerStartLine(process.argv[2]);if(o)console.log(o)' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
 brain_interaction_policy
 node -e 'const d=await import(process.argv[1]);console.log(d.datesLine())' "$P/lib/dots.mjs" 2>/dev/null || true
 node -e 'const s=await import(process.argv[1]);const t=s.scheduleNotice(process.argv[2]);if(t)console.log(t)' "$P/lib/schedule.mjs" "$root" 2>/dev/null || true
 # The nightly chat capture (lib/capture.mjs): the notes it saved, once, and the offer when a pass is late or failed, at most daily.
 node -e 'const c=await import(process.argv[1]);const t=c.captureNotice(process.argv[2]);if(t)console.log(t)' "$P/lib/capture.mjs" "$root" 2>/dev/null || true
 node -e 'const d=await import(process.argv[1]);const l=await import(process.argv[2]);const t=d.rulebookText(process.argv[3]);if(t){console.log(t);d.markRulebookSent(process.argv[3],l.readSession(process.argv[3],process.argv[4]||null)?.session_id)}' "$P/lib/dots.mjs" "$P/lib/brain.mjs" "$root" "$project" 2>/dev/null || true
-echo "Answer the person's request using relevant saved evidence. Never open, inspect or refresh the dashboard before an ordinary answer. Maintenance runs in the background; external source sync runs only when requested or by an approved schedule. An explicit dashboard or sync request follows its normal workflow."
+# The dashboard, said once: not before an answer, maintained in the background, opened by open_dashboard on request.
+echo "Answer the person's request using relevant saved evidence. Never open, inspect or refresh the dashboard before an ordinary answer: its maintenance runs in the background, and open_dashboard is for when the person asks to see it. External source sync runs only when requested or by an approved schedule."
 # A handoff another assistant wrote by following IMPORT.md waits under ~/.gtm-brain until it is imported
 # (the gtmb-start skill offers to delete it). Said once per chat; the model offers, never imports by itself.
 handoff_home="${GTM_BRAIN_HOME:-${GTM_OS_HOME:-$HOME}}"
@@ -156,7 +157,7 @@ if [ -n "$loaded" ] && [ -f "$P/scripts/gtm-brain-load/load.mjs" ]; then
   lo="$( cd "$root" && node "$P/scripts/gtm-brain-load/load.mjs" . $loaded --only --last 0 ${project:+--project "$project"} 2>/dev/null )"; printf '%s\n' "$lo"
   echo; echo "If the person starts on something else, switch: load the fitting context, or offer a new one (AGENTS.md rule 1)."
 else
-  echo "Nothing loaded yet. If a pending onboarding instruction above applies, follow its next step. A question needs no load: search with query and answer from the hits. For work that writes, infer a context from the request; ask what they are working on only when no task is known (AGENTS.md rule 1)."
+  echo "Nothing loaded yet, and a question needs no load. For work that writes, infer a context from the request; ask what they are working on only when no task is known (AGENTS.md rule 1)."
 fi
 # Cached connector status is sufficient for orientation. The worker refreshes it.
 if [ -f "$root/work/tools.json" ]; then
@@ -183,6 +184,5 @@ fi
 pv="$(node -e 'try{const s=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));if(s.status==="newer")console.log(`${s.latest} (installed ${s.installed})`)}catch{}' "$root/work/plugin-version.json" 2>/dev/null)"
 pv_latest="${pv%% *}"; pv_installed="${pv#*installed }"; pv_installed="${pv_installed%)}"
 [ -n "$pv" ] && node "$H" can update-check && node "$H" text updateOffer "$pv_installed" "$pv_latest"
-echo "Dashboard maintenance requested in the background. Use open_dashboard when the person asks to see it."
 printf '%s  SessionStart  loaded=%s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "${loaded:-none}" >> "$root/work/hooks.log"
 exit 0

@@ -26,8 +26,10 @@ test("a named context wins, and the person sees one short saved-in line", () => 
   const r = remember(root, "--context", "market", "--people", "Pierre Aubert", "--content", "Pierre Aubert runs returns at Bergstrom.");
   assert.equal(r.status, 0, r.stderr);
   const title = lib.readContext(root, "market").title;
-  assert.match(r.stdout, new RegExp(`^saved in ${title}: Pierre Aubert runs returns at Bergstrom\\.$`, "m"));
-  assert.match(r.stdout, /remembered m_[0-9a-f]{12} in market · note/, "the detail line is still there for the model and the tests");
+  // one line: the id and slug the dashboard reads, the title the person is told, the note once in quotes
+  assert.match(r.stdout, new RegExp(`^remembered m_[0-9a-f]{12} in market \\(${title}\\) · note · [a-z-]+ · people: Pierre Aubert · "Pierre Aubert runs returns at Bergstrom\\."$`, "m"));
+  assert.equal(r.stdout.split("Pierre Aubert runs returns at Bergstrom.").length - 1, 1, "the note is said once");
+  assert.doesNotMatch(r.stdout, /^saved in /m);
 });
 
 test("no context loaded or named: the one context where the people already have evidence", () => {
@@ -46,8 +48,8 @@ test("evidence in two contexts: saved where the people have most notes, and the 
   const before = lib.readMemories(root, "market").length + lib.readMemories(root, "icp").length;
   const r = remember(root, "--people", "Pierre Aubert", "--content", "Pierre Aubert called again.");
   assert.equal(r.status, 0, r.stderr + r.stdout);
-  assert.match(r.stdout, /saved in /);
-  assert.match(r.stdout, /filed under .* as the best guess \(its people have notes in .* and .*\)\. Do not ask about it/);
+  assert.match(r.stdout, /remembered m_[0-9a-f]{12} in (market|icp) \(/);
+  assert.match(r.stdout, /^its context is a best guess \(its people have notes in .* and .*\): do not ask;/m);
   assert.equal(lib.readMemories(root, "market").length + lib.readMemories(root, "icp").length, before + 1, "one note, in one of the two");
 });
 
@@ -56,7 +58,7 @@ test("no evidence and nothing loaded: saved in Our company as the best guess, ne
   const before = lib.readMemories(root, "company").length;
   const r = remember(root, "--content", "The returns market grows in Poland.");
   assert.equal(r.status, 0, r.stderr + r.stdout);
-  assert.match(r.stdout, /filed under .* as the best guess \(nothing in the note points at one context\)/);
+  assert.match(r.stdout, /its context is a best guess \(nothing in the note points at one context\)/);
   assert.equal(lib.readMemories(root, "company").length, before + 1);
   assert.doesNotMatch(r.stdout + r.stderr, /which context is this for/);
 });
@@ -67,14 +69,15 @@ test("a batch keeps every entry: the one with no home is filed under the best gu
   execFileSync(process.execPath, ["-e", `require("fs").writeFileSync(${JSON.stringify(file)}, JSON.stringify([{ content: "Offer note one.", context: "offer" }, { content: "Unplaced note." }]))`]);
   const r = remember(root, "--batch", file);
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /#1 saved in .*: Offer note one\./);
-  assert.match(r.stdout, /#2 saved in .*: Unplaced note\./);
-  assert.match(r.stdout, /#2 filed under .* as the best guess/);
+  assert.match(r.stdout, /^#1 remembered m_[0-9a-f]{12} in offer \(.*\) · .* · "Offer note one\."$/m);
+  assert.match(r.stdout, /^#2 remembered m_[0-9a-f]{12} in [a-z-]+ \(.*\) · .* · "Unplaced note\."$/m);
+  assert.match(r.stdout, /#2 its context is a best guess/);
+  assert.doesNotMatch(r.stdout, /#1 its context is a best guess/, "the hint only where the context was guessed");
 });
 
 test("several loaded contexts: saved in the first loaded one as the best guess", () => {
   run(root, "load", "load.mjs", "icp", "--only"); run(root, "load", "load.mjs", "market");
   const r = remember(root, "--content", "A loose note.");
   assert.equal(r.status, 0, r.stderr + r.stdout);
-  assert.match(r.stdout, /filed under .* as the best guess/);
+  assert.match(r.stdout, /its context is a best guess/);
 });

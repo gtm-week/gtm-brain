@@ -71,7 +71,7 @@ test("a batch is checked before the first write: one bad entry means nothing is 
   assert.throws(() => run(bt, "remember", "remember.mjs", "--by", "ann", "--batch", file), /nothing remembered: #2 no such context: no-such/);
   writeFileSync(file, JSON.stringify([{ content: "First, fine.", context: slug }, { content: "Third, fine.", context: slug, kind: "question" }]));
   const out = execFileSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann", "--batch", file], { cwd: bt, encoding: "utf8", env: { ...process.env, PLUGIN_ROOT: P, GTM_BRAIN_NO_COMPILE: "1" } });
-  assert.match(out, /^kept 2 of 2: m_[0-9a-f]+ in \S+, m_[0-9a-f]+ in \S+/); assert.equal(lib.readMemories(bt, slug).length, initial.length + 2);
+  assert.match(out, /^kept 2 of 2\n/); assert.equal([...out.matchAll(/^#\d remembered (m_[0-9a-f]+) in (\S+)/gm)].length, 2, "each note's id and context is in its own line"); assert.equal(lib.readMemories(bt, slug).length, initial.length + 2);
 });
 
 test("a background run that keeps failing tries three times and then says it gave up", async () => {
@@ -149,9 +149,9 @@ test("load adds to the set; --only replaces; --drop removes one; --clear empties
 test("remember infers the single loaded context, normalises people, commits, and refuses non-members", () => {
   run(root, "load", "load.mjs", "icp", "--only");
   const out = run(root, "remember", "remember.mjs", "--by", "marta", "--kind", "decision", "--people", "Pierre Aubert", "--tools", "attio", "--content", "No discount for Bergstrom.");
-  assert.match(out, /remembered m_[0-9a-f]{12} in icp · decision · marta-nowak · people: Pierre Aubert/);
+  assert.match(out, /remembered m_[0-9a-f]{12} in icp \([^)]+\) · decision · marta-nowak · people: Pierre Aubert/);
   assert.match(out, /new person in entities\/: Pierre Aubert/);
-  assert.match(out, /^kept$/m);
+  assert.doesNotMatch(out, /^kept$|not committed/m, "committed, and the remembered line is the whole confirmation");
   assert.throws(() => run(root, "remember", "remember.mjs", "--by", "stranger", "--content", "x"), /not in admin.md team/);
   const log = execFileSync("git", ["-C", root, "log", "--format=%s", "-1"], { encoding: "utf8" }).trim();
   assert.equal(log, "remember: icp decision by marta-nowak");
@@ -443,7 +443,7 @@ test("a brain with the old names.md keeps working; the first write and the upgra
   rmSync(join(ob, "brain", "entities"), { recursive: true }); writeFileSync(join(ob, "brain", "names.md"), "# Names\n\n- Ann Lee | aliases: ann | emails: ann@x.io\n"); execFileSync("git", ["-C", ob, "add", "brain"]); execFileSync("git", ["-C", ob, "commit", "-qm", "old layout"]);
   assert.equal(lib.canonicalName(lib.readNames(ob), "ann"), "Ann Lee", "read from names.md");
   run(ob, "load", "load.mjs", "icp", "--only");
-  assert.match(run(ob, "remember", "remember.mjs", "--by", "ann", "--people", "Bo Chan", "--content", "Met Bo."), /kept/);
+  assert.match(run(ob, "remember", "remember.mjs", "--by", "ann", "--people", "Bo Chan", "--content", "Met Bo."), /^remembered m_[0-9a-f]{12} in icp /m);
   assert.ok(existsSync(join(ob, "brain", "entities")) && !existsSync(join(ob, "brain", "names.md")), "renamed on the first write");
   assert.equal(execFileSync("git", ["-C", ob, "status", "--short"], { encoding: "utf8" }).trim(), "", "the rename and the note are committed together");
   assert.equal(lib.resolveEntity(lib.readNames(ob), "Bo Chan").name, "Bo Chan");
@@ -462,7 +462,7 @@ test("remember holds a note whose name looks like a known one until the person a
   const out = run(root, "remember", "remember.mjs", "--by", "marta", "--context", "icp", "--people", "Pierre Aubart", "--new", "Pierre Aubart", "--content", "Pierre Aubart joined the call.");
   assert.match(out, /people: Pierre Aubart/); assert.match(out, /new person in entities\/: Pierre Aubart/);
   const missed = run(root, "remember", "remember.mjs", "--by", "marta", "--context", "icp", "--people", "Pierre Aubart", "--content", "Pierre Aubart said Castorama will sign the NDA with ByteDance next Monday (2026-11-16).");
-  assert.match(missed, /words in this note not linked to anything in the brain: "Castorama", "ByteDance"\. Only one that is a person, company or product the note is about gets add_name/);
+  assert.match(missed, /^not linked to anything in the brain: "Castorama", "ByteDance"\. add_name only for a person, company or product the note is about/m);
   assert.match(run(root, "entities", "entities.mjs", "--add", "Pierre Aubirt"), /looks like Pierre Aub[ae]rt, Pierre Aub[ae]rt already in the registry/);
   run(root, "entities", "entities.mjs", "--add", "Nestle", "--kind", "company"); run(root, "entities", "entities.mjs", "--add", "Nestle Poland", "--kind", "company");
   assert.match(run(root, "entities", "entities.mjs"), /Might be the same: Nestle and Nestle Poland\. Ask the person; then "Nestle Poland is Nestle"/);

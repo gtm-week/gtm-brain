@@ -56,8 +56,8 @@ test('the second search of a draft turn, worded as a question, also ends with no
   // what Codex asked next in both runs: the event's details, with no word that says draft
   const a = answer(root, 'Lisbon workshop agenda');
   const end = last(a);
-  assert.match(end, /^Answer from these notes; a second search is needed only for a different question\./);
-  assert.match(end, /one to three sentences with the fact, its date and who or what it came from/);
+  assert.match(end, /^Answer from these notes in one to three sentences: the fact, its date and who or what it came from\./);
+  assert.match(end, /No list of everything found, no offers and no second search, unless the person asks for more\./);
   assert.match(end, /What these notes do not hold is not recorded: nothing is looked up on the web and no source link above is opened unless the person asks for exactly that\.$/);
 });
 

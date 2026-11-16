@@ -127,7 +127,7 @@ const TOOLS = [
       const url = started.out.trim().split("\n").pop() || "";
       const r = await run(brain, "gtm-brain-render/render.mjs");
       if (!/^http:/.test(url)) return text(`${r.out}${started.err}\nThe dashboard server did not start; the page is at work/home/index.html.`, true);
-      return text(`${r.out}\n${host().texts.dashboardOpened(url)}`);
+      return text(`${r.out.replace(/ · live at \S+/, "")}\n${host().texts.dashboardOpened(url)}`);   // the address once, in the line that says how to open it
     } },
   { name: "advise", title: "Checking how the brain is doing", readOnly: true,
     description: "A health check of the brain from its files: summaries behind or failing, questions nobody answered, tools listed but not connected, names that may be one entity, quiet or empty contexts, people known by a first name only, notes without sources, rules that grew, what every chat loads. Returns three things worth doing and one for this week. Reads only.",
@@ -591,7 +591,7 @@ const CALL_SHAPES = `Call shapes for the common jobs (each takes brain too). Use
 `;
 const INSTRUCTIONS = "GTM Brain: the company brain in this workspace. Pass the workspace folder as brain. In a folder with brain/admin.md, or one whose AGENTS.md names a GTM Brain project, the chat's first GTM Brain call, whatever it is, returns the chat's opening lines with its result; follow them. Make it the call the request needs (query answer with search for a question, remember for a save): no separate status call. Without a brain, setting up GTM Brain follows the gtmb-start skill (check_environment first).\n" + CORE + "Tools return plain text meant for you. Everything a tool writes is kept at once; never ask the person to save, never mention git. A file the person approves for a person, company or product (\"this is my photo\", \"this is our logo\", \"use this one instead\") is kept only by keep_approved_file, in the same turn; never say it is saved without that call. A note or a tag alone is never used again.\n" + CALL_SHAPES + "Files you create, edit, move or delete in the brain folder yourself (a graphic, a brief, RULES.md), not through a GTM Brain tool, are kept by save: call it once when that task is done, with a one-line message and, for each new file or folder, placed (path, RULES.md row, why). Why is this file here: query (object why, search: the path). Housekeeping, tidying or cleaning up the brain (duplicates included) starts with query (object housekeeping): its reply carries the items, their evidence and the one next step, so no skill file, rule page or per-person lookup comes first. Several people or companies are read in one query (object entities, filters.name or filters.id as a list), never one call each. A draft (a message, a post, an email) is written from the brain's notes and the document it follows: nothing is looked up on the web and no link in a note is opened for it unless the person asks for exactly that; a detail the brain does not hold is left out and named in one line.";
 
-const WORKFLOWS = `Ordinary questions and saving need no skill file and no rule page: the tool descriptions, the call shapes above and the opening lines carry what they need, and a tool attaches its rule page to its reply when one matters. Never read a skill file, a references file or a rule page in the middle of a save, a read or a confirmed action. Skills are for the workflows a person asks for by name. Asked how the brain works, what it can or cannot do, how to change it, or why something looks wrong: read ${join(P, "MANUAL.md")} and answer from it in a few lines. Read ${join(P, "skills/gtmb-configure/SKILL.md")} for workplace changes and APPROVE. Read ${join(P, "skills/gtmb-configure/references/update-plugin.md")} for plugin updates or brain refresh. Internal operations remain tools; the person does not need to invoke a separate skill for each one.`;
+const WORKFLOWS = `Ordinary questions and saving need no skill file and no rule page: the tool descriptions, the call shapes above and the opening lines carry what they need, and a tool attaches its rule page to a reply that refuses or holds something. Never read a skill file, a references file or a rule page in the middle of a save, a read or a confirmed action. Skills are for the workflows a person asks for by name. Asked how the brain works, what it can or cannot do, how to change it, or why something looks wrong: read ${join(P, "MANUAL.md")} and answer from it in a few lines. Read ${join(P, "skills/gtmb-configure/SKILL.md")} for workplace changes and APPROVE. Read ${join(P, "skills/gtmb-configure/references/update-plugin.md")} for plugin updates or brain refresh. Internal operations remain tools; the person does not need to invoke a separate skill for each one.`;
 
 /* ---------- The start of a chat ---------- */
 // What session/session-start.sh prints (the project line, loaded contexts, tools, documents, update offer)
@@ -625,12 +625,16 @@ async function opening(args) {
 }
 
 /* ---------- The rule pages that ride along ---------- */
-// A tool's own rule page (lib/rule-pages.mjs, the attach line of each page) goes with its first reply of a chat,
-// once per brain and project, the way the saving rules ride along with the chat start: the rulebook keeps one
-// line per rule, and the detail arrives at the moment it matters. Never in a separate run or the compile toolset.
+// A tool's own rule page (lib/rule-pages.mjs, the attach line of each page) goes with the first reply of a chat that
+// refuses, holds or fails, once per brain and project: the rulebook keeps one line per rule, and the detail arrives
+// when the model has something to put right. Never with a reply that worked (it was 1,200 to 4,000 characters on
+// top of every first save, load and search of a chat), never in a separate run or the compile toolset.
 const attached = new Map();
+// refused:, denied: and error: are the outcome words of the generated tools (lib/ontology/surface.mjs formatOutcome);
+// "not kept (1 of 3)" and "not remembered yet" are remember's hold, which a batch can carry beside notes it kept.
+const needsRulePage = res => !!res?.isError || /^(refused|denied|error): |^(#\d+ )?not (kept \(|remembered yet\b)/m.test(res?.content?.[0]?.text || "");
 function rulePageFor(args, name, res) {
-  if (res?.isError || process.env.GTM_BRAIN_RUN || process.env.GTM_BRAIN_TOOLSET === "compile" || process.env.GTM_BRAIN_NO_RULE_PAGES || process.env.GTM_BRAIN_NO_SESSION_START || !isBrain(args.brain)) return "";   // no chat start (tests that parse a reply as one text): no pages either
+  if (!needsRulePage(res) || process.env.GTM_BRAIN_RUN || process.env.GTM_BRAIN_TOOLSET === "compile" || process.env.GTM_BRAIN_NO_RULE_PAGES || process.env.GTM_BRAIN_NO_SESSION_START || !isBrain(args.brain)) return "";   // no chat start (tests that parse a reply as one text): no pages either
   const page = pageForCall(name, args); if (!page) return "";
   const key = `${resolve(args.brain)}\t${typeof args.project === "string" ? args.project : ""}`;
   const sent = attached.get(key) || new Set(); attached.set(key, sent);
