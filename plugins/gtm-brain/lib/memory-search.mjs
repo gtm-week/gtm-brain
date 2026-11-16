@@ -488,6 +488,17 @@ const describeNarrowing = q => [
   ...(q.period ? [`${q.period.label}${q.period.mention ? ' (recorded then or mentioning it)' : ''}`] : []),
 ].join(', ');
 
+/* The reply's last line keeps the model in the brain. Two runs in the Codex app on 2026-11-16: asked for a short
+   invitation to a workshop, Codex read the notes and the voice document, then searched the web three and six
+   times for the event's public page, whose address the notes carried as a source. Core rule 5 names a person
+   or a company only, and the old last line asked for one to three sentences with a fact, which a draft is not. */
+const NO_WEB = 'What these notes do not hold is not recorded: nothing is looked up on the web and no source link above is opened unless the person asks for exactly that.';
+const DRAFT_CLOSE = 'A draft is asked for: write it now from these notes and the document this kind of work follows, at the length asked; a second search is needed only for a different question. Nothing is looked up on the web and no source link above is opened for a draft unless the person asks for exactly that: a detail these notes do not hold (an agenda, a time, a link) is left out of the draft, and one line after the draft says what is missing.';
+const DRAFT_PIECE = /\b(?:messages?|dm|e-?mails?|mail|invitations?|invites?|inviting|posts?|repl(?:y|ies)|follow-?ups?|outreach|copy|announcements?|newsletters?|captions?|intros?|introductions?|pitch|text|letter|headline|tagline|bio|script)\b/i;
+const DRAFT_ASK = /^\W*(?:(?:please|can you|could you|would you|help me|i need you to|i want you to|let'?s)\W+)*(?:draft|write|compose|reword|rewrite)\b/i;
+/* A request to write a piece of text (a message, a post, an email), as opposed to a question about one. */
+export const asksForDraft = question => { const q = String(question || ''); return /\bdraft (?:me |us )?(?:an?|the|our|my|some|\d+|two|three)\b/i.test(q) || (DRAFT_ASK.test(q) && DRAFT_PIECE.test(q)); };
+
 /* query (object answer): the question as asked, one reply. */
 export function answerText(index, root, question, { filters = {}, limit, project = null, now = nowDate(), relationsFor = () => [] } = {}) {
   question = String(question || '').trim();
@@ -527,7 +538,7 @@ export function answerText(index, root, question, { filters = {}, limit, project
     const m = fetchRow(index, row.r);
     const line = `${shown + 1}. ${noteText(m, now, shown < 3 ? FULL_NOTE_CHARS : SHORT_NOTE_CHARS, row.later)}`;
     const size = Buffer.byteLength(line) + 1;
-    if (shown && bytes + size > maxBytes - 200) break;
+    if (shown && bytes + size > maxBytes - 360) break;
     if (!shown) out.push('');
     out.push(line); notes.push(m); bytes += size; shown++;
   }
@@ -539,7 +550,7 @@ export function answerText(index, root, question, { filters = {}, limit, project
     const ask = askSourceLines(root, notes, { day: at => lib.localDateTime(at).slice(0, 10) });
     if (ask.length) out.push('', ...ask);
     // the reply is as long as the question needs (ALL-716: answers were as long as before the round, 451 characters at the median)
-    out.push('', 'Answer from these notes; a second search is needed only for a different question. Keep the reply to what was asked: one to three sentences with the fact, its date and who or what it came from. No list of everything found and no offers, unless the person asks for more.');
+    out.push('', asksForDraft(question) ? DRAFT_CLOSE : `Answer from these notes; a second search is needed only for a different question. Keep the reply to what was asked: one to three sentences with the fact, its date and who or what it came from. No list of everything found and no offers, unless the person asks for more. ${NO_WEB}`);
   }
   return out.join('\n');
 }
