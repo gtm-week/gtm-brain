@@ -2,7 +2,7 @@
 
 # GTM Brain
 
-[Website](https://gtm-brain.ai/) · [Install](#install-in-codex) · [Configure](#configure-your-brain) · [Screenshots](#the-dashboard) · [Architecture](#how-it-fits-together) · [Workflows](#built-in-workflows)
+[Website](https://gtm-brain.ai/) · [Start here](#start-here) · [Install](#install-in-codex) · [Configure](#configure-your-brain) · [Screenshots](#the-dashboard) · [Architecture](#how-it-fits-together) · [Workflows](#built-in-workflows)
 
 **For GTM engineers building research, account and campaign workflows in Codex.**
 
@@ -35,6 +35,52 @@ of the shipped app, not mockups. No customer or private workspace data is shown.
 
 ![A context with its summary, evidence and related people and companies](diagrams/screenshots/context-evidence.png)
 
+## Start here
+
+**New to GTM Brain**
+
+1. Install it: [Install in Codex](#install-in-codex), one message to Codex.
+2. Open a new Codex chat in an empty folder and send `/gtmb-start`. It creates the brain, asks
+   about your business and connects your tools.
+3. Work as usual. Say what happened ("just got off a call with ..."), ask what you need
+   ("brief me on Acme", "what should I focus on this week?"), and say "open the dashboard" to
+   see what the brain holds.
+4. Shape it with the two commands that matter most: `/gtmb-rules` (what Codex saves and asks,
+   where files go) and `/gtmb-schema` (what is kept about each person and company).
+
+**Already using it (0.35 or earlier)**
+
+1. Everyone on the team says "update GTM Brain" in Codex, then quits and reopens Codex.
+2. Start a new chat in the brain folder and read the first reply: it says what was refreshed.
+3. The skills are now `/gtmb-<name>` (they were `/gtm-brain-<name>`). An old name still works:
+   Codex runs the new skill and tells you its name. If your brain's own files still use old
+   names, Codex offers once to update them.
+4. If the reply says the brain can be upgraded, the owner says "upgrade the brain". Only after
+   everyone has updated: a teammate on an older version cannot use an upgraded brain.
+
+Details: [Updating to 0.36](plugins/gtm-brain/MANUAL.md#updating-to-036-short-skill-names) ·
+[Updating to 0.35](plugins/gtm-brain/MANUAL.md#updating-to-035).
+
+**How the brain works**
+
+![A GTM Brain in one picture: you in a Codex chat on top; below it the brain, a folder of plain files, with memories, configuration and entities side by side; workflows under them; connected tools, the dashboard and your team at the bottom](diagrams/brain-in-one-picture.svg)
+
+- **It is a folder of plain files in git on your computer.** Nothing is stored anywhere else.
+- **You talk, Codex saves.** What happened, was decided or is open becomes a dated note with
+  its source. Notes are never edited; a correction replaces the old note and keeps it.
+- **People, companies and products are linked across notes,** with their relationships and
+  history (who worked where, who is a customer).
+- **Your base documents steer the work:** strategy, ideal customer profile, tone of voice,
+  design system. Codex reads them before the work they apply to.
+- **Your rules and schema decide** what Codex saves and asks, where files go, and what is kept
+  about each person and company.
+- **The dashboard shows the same files:** what needs you, housekeeping, entities, notes,
+  workflows and configuration. Documents, entities and notes can be edited there.
+
+More: [How GTM Brain works](#how-gtm-brain-works) · [How a brain works](plugins/gtm-brain/MANUAL.md).
+
+**Configure it:** one table of commands in [Configure your brain](#configure-your-brain).
+
 ## Install in Codex
 
 Already using the previous plugin? Follow the [rename migration](MIGRATING.md) to keep your existing brain and switch installations safely.
@@ -60,6 +106,15 @@ sign-in is required to download the plugin.
 Type a command in a Codex chat opened in the brain's folder, or say the sentence beside it.
 Every skill is `/gtmb-<name>`.
 
+**First: rules and schema.** These two decide how the brain behaves for everyone on the team.
+
+| To change | Command | Or say |
+| --- | --- | --- |
+| Rules: what Codex saves, what it asks, where files go | `/gtmb-rules` | "add a rule: ...", "from now on ...", "always ask before ..." |
+| Schema: what is kept about people, companies and products, and how they relate | `/gtmb-schema` | "every company must have a budget owner" |
+
+**Then: setup and the base documents.**
+
 | To set up or change | Command | Or say |
 | --- | --- | --- |
 | Create the brain in a folder | `/gtmb-start` | |
@@ -68,8 +123,11 @@ Every skill is `/gtmb-<name>`.
 | Ideal customer profile | `/gtmb-define-icp` | "define our ICP" |
 | Tone of voice | `/gtmb-voice` | "draft our voice" |
 | Design system | `/gtmb-design-system` | "build our design system" |
-| Rules: what Codex saves, asks and where files go | `/gtmb-rules` | "add a rule: ...", "from now on ..." |
-| Schema: what is kept about people, companies and products | `/gtmb-schema` | "every company must have a budget owner" |
+
+**As you need them.**
+
+| To do | Command | Or say |
+| --- | --- | --- |
 | A process with steps | `/gtmb-workflow` | "start the outbound workflow" |
 | Your own skill | `/gtmb-skill` | "make this a skill" |
 | A working folder linked to the brain | `/gtmb-project` | "link this folder" |
@@ -78,38 +136,7 @@ Every skill is `/gtmb-<name>`.
 | The latest from connected tools | `/gtmb-sync` | "catch up" |
 | Update the plugin, upgrade the brain | | "update GTM Brain", "upgrade the brain" |
 
-What each command changes, and what Codex reads from it:
-
-```mermaid
-flowchart LR
-  you["You, in a Codex chat"]
-
-  subgraph commands["Commands"]
-    c1["/gtmb-start<br/>/gtmb-configure"]
-    c2["/gtmb-strategy · /gtmb-define-icp<br/>/gtmb-voice · /gtmb-design-system"]
-    c3["/gtmb-rules<br/>/gtmb-schema"]
-    c4["/gtmb-workflow<br/>/gtmb-skill"]
-  end
-
-  subgraph brain["Your brain's files"]
-    f1["config/settings.yaml<br/>Company, team, tools"]
-    f2["about-us/<br/>Strategy, ICP, voice, design system"]
-    f3["config/rules.md · config/schema.md<br/>What is saved, asked and kept"]
-    f4["workflows/ · .agents/skills/<br/>Processes and your own skills"]
-  end
-
-  you --> c1 --> f1
-  you --> c2 --> f2
-  you --> c3 --> f3
-  you --> c4 --> f4
-
-  f1 --> start["Read at every chat start"]
-  f3 --> start
-  f2 --> work["Read before the work they apply to<br/>Copy, research, outreach"]
-  f4 --> run["Run when you ask, or on their trigger"]
-```
-
-Who can change what:
+Where each part lives is in the picture under [Start here](#start-here). Who can change what:
 
 ```mermaid
 flowchart LR
