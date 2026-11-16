@@ -5,8 +5,9 @@ P="${PLUGIN_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 BRAIN="${1:-.}"; cd "$BRAIN" || exit 1
 . "$P/session/resolve.sh"
 [ -f AGENTS.md ] && gtm_brain_is . || exit 1
-mkdir -p work
-STATE=work/compile.json; LOCK=work/compile.lock
+W="$(gtm_brain_work .)"   # work, or .gtm-brain in layout 4 (session/resolve.sh)
+mkdir -p "$W"
+STATE="$W/compile.json"; LOCK="$W/compile.lock"
 now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 ATTEMPT=1; TRIES=3; HANDLED=""; BLOCKED=""
 write() {
@@ -16,7 +17,7 @@ write() {
 }
 pending() { node "$P/scripts/gtm-brain-compile/compile-status.mjs" .; }
 # Publish before claiming the lock, so a busy worker sees that another change arrived.
-printf '%s\n' "$$" > work/compile.kick
+printf '%s\n' "$$" > "$W/compile.kick"
 if TOKEN="$(node "$P/scripts/gtm-brain-compile/worker-lock.mjs" acquire "$LOCK" "$$")"; then :
 else
   code=$?; [ "$code" -eq 75 ] && exit 0
@@ -26,7 +27,7 @@ cleanup() {
   node "$P/scripts/gtm-brain-compile/worker-lock.mjs" release "$LOCK" "$TOKEN" || return
   # Close the completion race: a kick that saw our lock must not be lost as we exit.
   # A blocked worker is the exception: another run would compile nothing again.
-  if [ -z "$BLOCKED" ] && [ "$(cat work/compile.kick 2>/dev/null)" != "$HANDLED" ]; then
+  if [ -z "$BLOCKED" ] && [ "$(cat "$W/compile.kick" 2>/dev/null)" != "$HANDLED" ]; then
     bash "$P/scripts/gtm-brain-compile/background-compile.sh" "$PWD" >/dev/null 2>&1 &
   fi
 }
@@ -35,11 +36,12 @@ trap cleanup EXIT
 # worker waits until no note has been saved for GTM_BRAIN_COMPILE_DELAY seconds (default 120) and then
 # compiles everything waiting in one run. Notes saved while it waits extend the wait.
 DELAY="${GTM_BRAIN_COMPILE_DELAY:-120}"
-last_note() { node -e 'const fs=require("fs"),p=require("path");let t=0;const d="brain/contexts";try{for(const c of fs.readdirSync(d)){try{t=Math.max(t,fs.statSync(p.join(d,c,"memories.jsonl")).mtimeMs)}catch{}}}catch{}console.log(Math.floor(t/1000))'; }
+# Both places a brain keeps notes (lib/brain-paths.mjs noteFiles), spelled here: this worker runs with node built-ins only.
+last_note() { node -e 'const fs=require("fs"),p=require("path");let t=0;const s=f=>{try{t=Math.max(t,fs.statSync(f).mtimeMs)}catch{}};try{for(const c of fs.readdirSync("brain/contexts"))s(p.join("brain/contexts",c,"memories.jsonl"))}catch{}try{for(const f of fs.readdirSync("memories"))if(f.endsWith(".jsonl"))s(p.join("memories",f))}catch{}console.log(Math.floor(t/1000))'; }
 # Nothing behind: stop before any wait, with no state written, so the page is never told a summary is coming.
 # HANDLED first: the exit cleanup restarts the worker for any kick it did not see, and an early exit
 # that had not read the kick would restart itself forever.
-HANDLED="$(cat work/compile.kick 2>/dev/null)"
+HANDLED="$(cat "$W/compile.kick" 2>/dev/null)"
 [ "$(pending 2>/dev/null)" = '|' ] && exit 0
 if [ "$DELAY" -gt 0 ] 2>/dev/null; then
   while :; do
@@ -50,7 +52,7 @@ if [ "$DELAY" -gt 0 ] 2>/dev/null; then
   done
 fi
 while :; do
-  HANDLED="$(cat work/compile.kick 2>/dev/null)"
+  HANDLED="$(cat "$W/compile.kick" 2>/dev/null)"
   STALE=""
   if PENDING="$(pending)"; then
     STALE="${PENDING%%|*}"; [ "$PENDING" = '|' ] && exit 0
@@ -68,7 +70,7 @@ while :; do
           exit 0
         fi
         # Productive passes do not spend the failure budget. Include entity briefs too.
-        if [ "$(cat work/compile.kick 2>/dev/null)" != "$HANDLED" ] || node "$P/scripts/gtm-brain-compile/compile-status.mjs" --progress "$PENDING" "$remaining"; then ATTEMPT=1; continue; fi
+        if [ "$(cat "$W/compile.kick" 2>/dev/null)" != "$HANDLED" ] || node "$P/scripts/gtm-brain-compile/compile-status.mjs" --progress "$PENDING" "$remaining"; then ATTEMPT=1; continue; fi
       fi
     fi
   fi

@@ -1,7 +1,14 @@
 # Internal working context: meeting notes, source material, screenshots, design docs,
 # and the reference workshop kit. Not tracked.
 gtm-week-context/
-docs/
+# docs/ at the top holds the tracked documentation: its Markdown files, releases/ (the notes and
+# the release graphic template), images/ (the README pictures) and skill-template/;
+# anything else in a docs/ folder is internal working material.
+**/docs/*
+!/docs/*.md
+!/docs/releases/
+!/docs/images/
+!/docs/skill-template/
 !plugins/gtm-brain/starters/web-design-system/source/docs/
 !plugins/gtm-brain/starters/web-design-system/source/docs/**
 
@@ -12,7 +19,7 @@ reference/gtm-week-workshop/work/*
 # Scratch test brains never live inside this repo, but just in case
 /brain/
 /work/
-# Test-brain paths dev-reset.sh created and may wipe (machine-specific)
+# Test-brain paths scripts/dev-reset.sh created and may wipe (machine-specific)
 .dev-brains
 
 # macOS

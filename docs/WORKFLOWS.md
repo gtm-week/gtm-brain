@@ -3,7 +3,7 @@
 GTM Brain 0.35.0. A skill is one sitting of work; a workflow is skills in sequence, with a gate
 between steps, started by a person, a schedule or something saved in the brain. One skill with a
 trigger is the shortest workflow. Each step ends on a milestone the brain can see; reaching it is
-saved as a note, and that note starts the next step. The rules in RULES.md bind every step.
+saved as a note, and that note starts the next step. The rules (`configuration/rules.md`) bind every step.
 
 ## The idea in one paragraph
 
@@ -33,7 +33,7 @@ context: company         # optional; required for a schedule: where its runs liv
   `every weekday 08:30`; or a brain event: `note about <kind>`, `link <type> created`,
   `link <type> ended`, `field <kind>.<field> changed`, `field <kind>.<field> missing for 30 days`.
 - `reads`, `writes`: what the workflow touches: `kind:<kind>`, `link:<type>`,
-  `field:<kind>.<field>` (from SCHEMA.md) and `tool:<category>` (crm, email, calendar,
+  `field:<kind>.<field>` (from the schema, `configuration/schema.md`) and `tool:<category>` (crm, email, calendar,
   sequencer, ads, analytics, meetings, enrichment, slack, docs, web, events).
 
 There is no owner field: a run says who started it.
@@ -46,7 +46,7 @@ There is no owner field: a run says who started it.
 1. **Title** (tool: crm) (skill: gtmb-deepdive). What to do. Milestone: a note tagged brief-done. Gate: after 3 days.
 ```
 
-- `(tool: <category>)`, optional: mapped to whatever admin.md lists for that category.
+- `(tool: <category>)`, optional: mapped to whatever the settings list for that category.
 - `(skill: <name>)`, optional: a shipped skill or one in the brain's `.agents/skills`. Without it
   the step text is the instruction.
 - `Milestone:`, what the brain can see when the step is done: `a note tagged <tag>`,
@@ -68,7 +68,7 @@ metadata:
   needs: "kind:organization, field:organization.industry, tool:crm"
 ```
 
-`workflow needs <skill or workflow>` compares that with SCHEMA.md and admin.md and returns one
+`workflow needs <skill or workflow>` compares that with the schema and the settings and returns one
 proposal listing what is missing. It changes nothing: a schema change goes through
 `/gtmb-schema` with your yes, a tool through `connect my tools`. Shipped skills that declare
 needs: define-icp, deepdive, market-desk-research, publish-website.
@@ -76,14 +76,14 @@ needs: define-icp, deepdive, market-desk-research, publish-website.
 ## Switching one on
 
 `check the account-follow-up workflow` runs the check and writes nothing: the header is valid;
-every kind, link and field it names is in SCHEMA.md; every named skill exists and has what it
+every kind, link and field it names is in the schema; every named skill exists and has what it
 needs; every step has a milestone; no other active workflow has exactly the same trigger; and a
 dry run on one real example from the brain lists what a run would read and write.
 `switch on the account-follow-up workflow` runs the check and, when it passes, sets
 `status: active` and `active_since` in the header. `pause the workflow` and `resume it` change
 only that line.
 
-When SCHEMA.md loses a kind, link or field an active workflow names (removed or renamed), the
+When the schema loses a kind, link or field an active workflow names (removed or renamed), the
 workflow is held: it reads as paused, its runs wait, and the chat start says what changed. The
 file is not rewritten; fixing the header or the schema brings it back.
 
@@ -133,7 +133,7 @@ neither does what was saved about an entity while a run of the workflow about it
 note saved with `remember` about a run's subject while that run is going counts as the run's work:
 it carries the run's depth, so two workflows offering each other the same account's notes stop at
 depth 3 like any other chain.
-`workflows: off` in `brain/admin.md` (a workplace change, through APPROVE) turns them all off:
+`workflows: off` in `configuration/settings.yaml` (a workplace change, through APPROVE) turns them all off:
 nothing is offered, started or moved.
 
 ## Teammates on older versions

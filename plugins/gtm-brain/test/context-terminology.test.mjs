@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -21,7 +24,7 @@ test('shipped instructions, tool metadata and interface text use context consist
     ['legacy', 'vendor', 'test'].includes(e.name) ? [] : e.isDirectory() ? walk(join(dir, e.name)) : [join(dir, e.name)]);
   const files = walk(root).filter(p => ['.md', '.mjs', '.json', '.html', '.sh', '.yaml'].includes(extname(p)));
   // The guides people learn the words from use the same word (ALL-212)
-  files.push(...['README.md', 'COMMANDS.md', 'SETUP.md', 'GUIDE.md', 'ONBOARDING.md', 'INSTALL.md'].map(p => join(root, '../..', p)));
+  files.push(...['README.md', 'docs/COMMANDS.md', 'docs/SETUP.md', 'docs/GUIDE.md', 'docs/ONBOARDING.md', 'INSTALL.md'].map(p => join(root, '../..', p)));
   for (const path of files) assert.doesNotMatch(exceptions.reduce((text, allowed) => text.replaceAll(allowed, ''), readFileSync(path, 'utf8')), retired, path);
 });
 

@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // A refused tool call names the whole small object it expected, so the model fixes it in one more call, not one
 // field per call. Demo loops 2026-11-15 (o6-status): remember.meeting.participants took five refusals, one field each
 // ("must be object", "needs role", "entity is not allowed", "role must be one of ...").

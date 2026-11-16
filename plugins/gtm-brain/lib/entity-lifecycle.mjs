@@ -45,7 +45,7 @@ function finish(root, record, result) {
   const change_id = applyEntityChange(root, record);
   if (!change_id) return { ...result, changed: false };
   let commit;
-  try { commit = lib.commit(root, lib.ENTITIES_PATHS, `entity ${record.operation}: ${record.entity || record.target} by ${record.by}`); }
+  try { commit = lib.commit(root, lib.entitiesPaths(root), `entity ${record.operation}: ${record.entity || record.target} by ${record.by}`); }
   catch (error) {
     return { ...result, changed: true, change_id, note: "Identity saved to disk; not committed. Review the repair proposal, then save.", warning: error.message, ...(error.repair ? { repair: error.repair } : {}) };
   }

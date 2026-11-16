@@ -69,7 +69,7 @@ test("the shipped version is the one the docs tell people to expect", () => {
   const version = JSON.parse(readFileSync(`${P}/.codex-plugin/plugin.json`, "utf8")).version;
   assert.match(version, /^\d+\.\d+\.\d+$/);
   const repo = new URL("../../../", import.meta.url).pathname;
-  for (const doc of ["SETUP.md", "COMMANDS.md"]) {
+  for (const doc of ["docs/SETUP.md", "docs/COMMANDS.md"]) {
     const text = readFileSync(join(repo, doc), "utf8");
     for (const [, said] of text.matchAll(/gtm-brain\/gtm-brain\/(\d+\.\d+\.\d+)/g)) assert.equal(said, version, `${doc} names a cache path for ${said}, the plugin ships ${version}`);
     // A version bump should guarantee no stale number is left behind anywhere in these docs.

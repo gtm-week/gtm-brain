@@ -9,10 +9,11 @@ import { writeJSON } from '../lib/dashboard-refresh.mjs';
 import * as lib from '../lib/brain.mjs';
 
 import { pullTeammates } from './sync.mjs';
+import { workDir } from '../lib/brain-paths.mjs';
 
 const root = resolve(process.argv[2] || '.');
 const plugin = fileURLToPath(new URL('..', import.meta.url));
-const work = join(root, 'work');
+const work = workDir(root);
 if (!lib.readAdmin(root) || process.env.GTM_BRAIN_RUN) process.exit(0);
 mkdirSync(work, { recursive: true });
 if (process.argv[3] === '--start') {

@@ -1,4 +1,4 @@
-// The close of onboarding in a brain with an owner (layout 3, lib/owner.mjs): the owner is asked the schema, rules
+// The close of onboarding in a brain with an owner (lib/owner.mjs): the owner is asked the schema, rules
 // and documents questions; a teammate is told in one line that those changes go to the owner as proposals, and is
 // asked none. The notes are per person. Order, wording and resuming are in onboarding-flow.test.mjs.
 import { test, after } from "node:test";
@@ -21,12 +21,12 @@ function brain() {
   execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "Acme", "--one-liner", "returns automation", "--owner", "Anna Lind <anna@acme.example>", "--team", "Tom Berg <tom@acme.example>"], { cwd: root, env, stdio: "ignore" });
   return root;
 }
-const as = (root, handle) => writeFileSync(join(root, "work", "person.json"), JSON.stringify({ handle }) + "\n");
+const as = (root, handle) => writeFileSync(join(root, ".gtm-brain", "person.json"), JSON.stringify({ handle }) + "\n");
 const tour = readFileSync(join(P, "skills/gtmb-start/references/skills-tour.md"), "utf8");
 
 test("the owner is asked the schema and the rules; a teammate is told and not asked", () => {
   const root = brain();
-  assert.ok(existsSync(join(root, "config/schema.md")) && existsSync(join(root, "config/rules.md")), "setup writes layout 3");
+  assert.ok(existsSync(join(root, "configuration/schema.md")) && existsSync(join(root, "configuration/rules.md")), "setup writes the four folders");
   as(root, "anna-lind");
   const owner = lib.closingSteps(root);
   assert.equal(owner.owner, true);
@@ -97,12 +97,12 @@ test("closing notes are per person: a teammate's close settles nothing for the o
 test("the skill says the same: one line for someone who is not the owner, no question", () => {
   const close = tour.slice(tour.indexOf("\n## The close, in order\n"), tour.indexOf("\n## Schema\n"));
   assert.match(close, /\*\*Not the owner\.\*\*/);
-  assert.match(close, /Their changes\s+to the schema, the rules and the base documents in `about-us\/` become proposals for the owner,\s+as always\. Ask none of the three questions\./);
+  assert.match(close, /Their changes\s+to the schema, the rules and the base documents in `configuration\/about-us\/` become proposals for the owner,\s+as always\. Ask none of the three questions\./);
   assert.match(close, /Say one line instead: "The schema, the rules and the base documents are <owner>'s to change;\s+say a change any time and it goes to them as a proposal\."/);
   assert.match(close, /Save all three notes with the answer\s+`told, not the owner`, then give the first task\./);
   assert.match(close, /The notes are per person: only the notes of the person who is\s+onboarding settle their steps/);
   assert.match(tour.slice(tour.indexOf("\n## The documents question\n")), /Someone who is not the brain's owner is\s+not asked/);
   assert.match(readFileSync(join(P, "skills/gtmb-start/SKILL.md"), "utf8"), /is told in one line that schema, rules and base document changes go to the\s+owner as proposals, and is not asked/);
   assert.match(readFileSync(join(P, "skills/gtmb-start/references/questions.md"), "utf8"), /\| Documents, at the close \|[^\n]*Not asked of someone who is not the owner\. \|/);
-  assert.match(readFileSync(join(P, "../../ONBOARDING.md"), "utf8"), /If you are not the brain's owner, Codex does not ask these three/);
+  assert.match(readFileSync(join(P, "../../docs/ONBOARDING.md"), "utf8"), /If you are not the brain's owner, Codex does not ask these three/);
 });

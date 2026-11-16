@@ -59,10 +59,17 @@ if [ -z "$where" ] || ! gtm_brain_is "$root"; then
   [ -n "$known" ] && echo "GTM Brain: this folder is not linked to a brain (known: $known). If the person does company work here, offer /gtmb-project once, in half a sentence; never link without a yes."
   exit 0
 fi
-mkdir -p "$root/work"
+# A layout 4 brain whose own files on this computer are still in work/ (the owner moved the brain and this
+# computer pulled it): they go to .gtm-brain/ once, so the person, the loaded set and the linked projects are kept.
+if gtm_brain_old_work "$root"; then
+  node --disable-warning=ExperimentalWarning -e 'const f=await import(process.argv[1]);f.adoptWork(process.argv[2])' "$P/lib/layout-four.mjs" "$root" >/dev/null 2>&1 || true
+fi
+W="$root/$(gtm_brain_work "$root")"   # work, or .gtm-brain in layout 4
+LF="$root/$(gtm_brain_layout_file "$root")"
+mkdir -p "$W"
 # A brain on a newer file layout than this plugin understands (brain/layout.json, lib/layout-version.mjs) is
 # read-only here: one line and nothing else, since every step below may write into it.
-if [ -f "$root/brain/layout.json" ]; then
+if [ -f "$LF" ]; then
   blocked="$(node -e 'const v=await import(process.argv[1]);process.stdout.write(v.layoutBlock(process.argv[2]))' "$(dirname "${BASH_SOURCE[0]}")/../lib/layout-version.mjs" "$root" 2>/dev/null || true)"
   [ -n "$blocked" ] && { echo "$blocked"; exit 0; }
 fi
@@ -70,7 +77,7 @@ fi
 # did not record it): the file is set to 2 in a commit of its own and said in one line, once (lib.healLayout).
 # lib.commit does the same with the first write; here a chat that only reads repairs it too. Node starts only
 # for a brain that looks like that, so a healthy chat start pays nothing.
-if { ! grep -qs '"layout": *[2-9]' "$root/brain/layout.json" && ls "$root"/brain/entities/*/index.md >/dev/null 2>&1; } || { gtm_brain_layout3 "$root" && ! grep -qs '"layout": *[3-9]' "$root/brain/layout.json"; }; then
+if { ! grep -qs '"layout": *[2-9]' "$LF" && ls "$root"/brain/entities/*/index.md >/dev/null 2>&1; } || { gtm_brain_layout3 "$root" && ! grep -qs '"layout": *[3-9]' "$LF"; } || { gtm_brain_layout4 "$root" && ! grep -qs '"layout": *[4-9]' "$LF"; }; then
   node -e 'const l=await import(process.argv[1]);const t=l.healLayout(process.argv[2]);if(t)console.log(t)' "$(dirname "${BASH_SOURCE[0]}")/../lib/brain.mjs" "$root" 2>/dev/null || true
 fi
 # Remember which Codex chat this is (work/session.json): the dashboard shows which chat is linked.
@@ -97,7 +104,7 @@ command -v node >/dev/null 2>&1 || { echo "brain: $(basename "$root") (node not 
 # Maintenance owns network checks and rendering outside the foreground hook.
 P="${PLUGIN_ROOT:-}"
 node "$P/session/session-maintenance.mjs" "$root" --start "$project" >/dev/null 2>&1 || true
-url="$(node -e 'try{const s=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));process.kill(s.pid,0);console.log(s.url+(process.argv[2]?"#view=home&project="+encodeURIComponent(process.argv[2]):""))}catch{}' "$root/work/dash.json" "$project" 2>/dev/null)"
+url="$(node -e 'try{const s=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));process.kill(s.pid,0);console.log(s.url+(process.argv[2]?"#view=home&project="+encodeURIComponent(process.argv[2]):""))}catch{}' "$W/dash.json" "$project" 2>/dev/null)"
 # The legacy dashboard_browser value is ignored; the dashboard belongs in the Codex pane.
 mode="$(node -e 'const l=await import(process.argv[1]);const a=l.readAdmin(process.argv[2])||{};console.log(a.dashboard==="on-demand"?"on-demand":"always")' "$P/lib/brain.mjs" "$root" 2>/dev/null || echo 'always')"
 # The PROJECT line above already named this project; here only the dashboard link, never its order.
@@ -116,7 +123,7 @@ company="${company:-$(node -e 'const l=await import(process.argv[1]);console.log
 echo "brain: $(basename "$root")${company:+ ($company)} at $root  ·  admin: $(gtm_brain_settings "$root") (always loaded)"
 # Sharing, said honestly: a failed last push, or a teammate merge that conflicted (lib.syncNotice).
 # Node starts only when one of the two state files records a problem, so a healthy chat start pays nothing.
-if grep -qs '"ok": *false' "$root/work/push.json" || grep -qs '"status": *"conflict"' "$root/work/teammates.json"; then
+if grep -qs '"ok": *false' "$W/push.json" || grep -qs '"status": *"conflict"' "$W/teammates.json"; then
   node --input-type=module -e 'const l=await import(process.argv[1]);const n=l.syncNotice(process.argv[2]);if(n)console.log(n)' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
 fi
 # Other chats are linked, never entered: the person opens them, or not.
@@ -148,7 +155,7 @@ done
 # One persisted workflow flag drives both hook and MCP continuation, including fresh chats.
 ob="$(node -e 'const l=await import(process.argv[1]);console.log(l.onboardingInstruction(process.argv[2],{project:process.argv[3]}))' "$P/lib/brain.mjs" "$root" "$project" 2>/dev/null)"
 [ -n "$ob" ] && printf '%s\n' "$ob"
-loaded="$(node -e 'try{console.log((JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).loaded||[]).join(" "))}catch{console.log("")}' "$root/work${project:+/projects/$project}/loaded-contexts.json" 2>/dev/null)"
+loaded="$(node -e 'try{console.log((JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).loaded||[]).join(" "))}catch{console.log("")}' "$W${project:+/projects/$project}/loaded-contexts.json" 2>/dev/null)"
 # Contexts about to be re-loaded in full below are listed on one line each.
 brief=""; [ -n "$loaded" ] && [ -f "$P/scripts/gtm-brain-load/load.mjs" ] && brief="--brief-loaded"
 [ -f "$P/scripts/gtm-brain-contexts/contexts.mjs" ] && ( cd "$root" && node "$P/scripts/gtm-brain-contexts/contexts.mjs" . ${project:+--project "$project"} $brief 2>/dev/null | tail -n +2 | sed 's/^/  /' )
@@ -160,8 +167,8 @@ else
   echo "Nothing loaded yet, and a question needs no load. For work that writes, infer a context from the request; ask what they are working on only when no task is known (AGENTS.md rule 1)."
 fi
 # Cached connector status is sufficient for orientation. The worker refreshes it.
-if [ -f "$root/work/tools.json" ]; then
-  tools="$(node -e 'try{const t=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));console.log(Object.values(t).map(x=>`${(x.tool||"").toLowerCase().replace(/\s*\(.*\)$/,"")} ${x.status==="installed"?(x.test==="ok"?"●":"○"):x.declined?"skipped":"✕"}`).join("  "))}catch{console.log("")}' "$root/work/tools.json")"
+if [ -f "$W/tools.json" ]; then
+  tools="$(node -e 'try{const t=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));console.log(Object.values(t).map(x=>`${(x.tool||"").toLowerCase().replace(/\s*\(.*\)$/,"")} ${x.status==="installed"?(x.test==="ok"?"●":"○"):x.declined?"skipped":"✕"}`).join("  "))}catch{console.log("")}' "$W/tools.json")"
   [ -n "$tools" ] && echo "tools: $tools   (● read test ok, ○ installed not tested, ✕ not connected, skipped = declined, never offered again; say: connect my tools. The first time a ○ tool returns data in this chat, call mark_tool with status ok once)"
 else
   node "$H" text toolsUnchecked
@@ -178,11 +185,11 @@ node "$P/session/start-lines.mjs" "$root" "$project" "$P/templates" 2>/dev/null 
 # fetch of one ref, never in the hook's own time); the last result is said here and shown on the page.
 if [ -z "${GTM_BRAIN_NO_VERSION_CHECK:-}" ] && [ -f "$P/scripts/gtm-brain-update-plugin/check-version.mjs" ] && node "$H" can update-check; then
   # due: no check yet, a check older than a day, or a check made by another version of the plugin (ALL-211)
-  due="$(node -e 'try{const s=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")),v=JSON.parse(require("fs").readFileSync(process.argv[2],"utf8")).version;console.log(Date.now()-Date.parse(s.checkedAt||0)>86400000||s.installed!==v?"yes":"")}catch{console.log("yes")}' "$root/work/plugin-version.json" "$P/.codex-plugin/plugin.json")"
+  due="$(node -e 'try{const s=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")),v=JSON.parse(require("fs").readFileSync(process.argv[2],"utf8")).version;console.log(Date.now()-Date.parse(s.checkedAt||0)>86400000||s.installed!==v?"yes":"")}catch{console.log("yes")}' "$W/plugin-version.json" "$P/.codex-plugin/plugin.json")"
   [ -n "$due" ] && ( cd "$root" && nohup node "$P/scripts/gtm-brain-update-plugin/check-version.mjs" . >/dev/null 2>&1 & )
 fi
-pv="$(node -e 'try{const s=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));if(s.status==="newer")console.log(`${s.latest} (installed ${s.installed})`)}catch{}' "$root/work/plugin-version.json" 2>/dev/null)"
+pv="$(node -e 'try{const s=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));if(s.status==="newer")console.log(`${s.latest} (installed ${s.installed})`)}catch{}' "$W/plugin-version.json" 2>/dev/null)"
 pv_latest="${pv%% *}"; pv_installed="${pv#*installed }"; pv_installed="${pv_installed%)}"
 [ -n "$pv" ] && node "$H" can update-check && node "$H" text updateOffer "$pv_installed" "$pv_latest"
-printf '%s  SessionStart  loaded=%s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "${loaded:-none}" >> "$root/work/hooks.log"
+printf '%s  SessionStart  loaded=%s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "${loaded:-none}" >> "$W/hooks.log"
 exit 0

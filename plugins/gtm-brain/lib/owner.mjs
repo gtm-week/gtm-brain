@@ -16,8 +16,9 @@ import { join, dirname, posix } from "node:path";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readAdmin, currentPerson, appendMemory, commit, listContexts, logActivity, lineDiff, teamHandle, parseSettings } from "./brain.mjs";
-import { inConfigFolders, isOwnerPath, OWNER_DIRS, PROPOSALS_DIR, SETTINGS_FILE } from "./brain-paths.mjs";
+import { inConfigFolders, isOwnerPath, workName, ownerDirs, proposalsDir, settingsFile, notesCommitPaths, SETTINGS_FILE, SETTINGS_FILE4 } from "./brain-paths.mjs";
 import { readLayout } from "./layout-version.mjs";
+import { workDir } from './brain-paths.mjs';
 
 export const PROPOSAL_TAG = "owner-proposal", APPROVAL_TAG = "approval";
 const git = (root, ...a) => execFileSync("git", ["--no-optional-locks", "-C", root, ...a], { encoding: "utf8", stdio: "pipe" });
@@ -31,7 +32,7 @@ export function ownerOf(root) {
   // The committed owner decides. The file on disk may be a hand edit nobody approved yet: a teammate who writes
   // their own handle there is not the owner until the owner's save or approval commits it. The file on disk
   // answers only where nothing is committed (setup before its first commit, a brain outside git).
-  if (inConfigFolders(root)) { try { o = parseSettings(git(root, "show", `HEAD:${SETTINGS_FILE}`)).fm.owner; } catch {} }
+  if (inConfigFolders(root)) { try { o = parseSettings(git(root, "show", `HEAD:${settingsFile(root)}`)).fm.owner; } catch {} }
   if (!o) { try { o = readAdmin(root)?.owner; } catch {} }
   return o ? String(o) : null;
 }
@@ -49,7 +50,7 @@ export const isOwner = (root, who) => !ownerRules(root) || (!!who && who === own
 export function ownerChanges(root, within = null) {
   if (!inConfigFolders(root) || gitOK(root, "rev-parse", "--verify", "-q", "HEAD") === null) return [];
   // -z: paths as they are (a space, a non-ASCII letter), never quoted or escaped
-  const out = gitOK(root, "status", "--porcelain", "-z", "--untracked-files=all", "--no-renames", "--", ...OWNER_DIRS) || "";
+  const out = gitOK(root, "status", "--porcelain", "-z", "--untracked-files=all", "--no-renames", "--", ...ownerDirs(root)) || "";
   const covers = p => !within || within.some(w => { const x = String(w).replace(/^\.\//, "").replace(/\/+$/, ""); return x === "." || x === "" || p === x || p.startsWith(`${x}/`); });
   return out.split("\0").filter(Boolean).map(l => {
     const code = l.slice(0, 2), path = l.slice(3);
@@ -69,7 +70,7 @@ function restore(root, changes) {
   }
   // a folder a new file brought along, left empty now
   for (const c of changes.filter(c => c.state === "add")) {
-    for (let d = dirname(c.path); d && d !== "." && !OWNER_DIRS.includes(d); d = dirname(d)) { try { if (readdirSync(join(root, d)).length) break; rmSync(join(root, d), { recursive: true }); } catch { break; } }
+    for (let d = dirname(c.path); d && d !== "." && !ownerDirs(root).includes(d); d = dirname(d)) { try { if (readdirSync(join(root, d)).length) break; rmSync(join(root, d), { recursive: true }); } catch { break; } }
   }
 }
 
@@ -82,7 +83,7 @@ const commitHash = root => (gitOK(root, "rev-parse", "--short", "HEAD") || "").t
 export function proposeChange(root, { by, changes, summary = "" }) {
   const owner = ownerOf(root), at = new Date().toISOString();
   const id = "p_" + createHash("sha256").update(`${at}|${by}|${changes.map(c => c.path).join(",")}`).digest("hex").slice(0, 10);
-  const dir = `${PROPOSALS_DIR}/${id}`;
+  const dir = `${proposalsDir(root)}/${id}`;
   mkdirSync(join(root, dir, "files"), { recursive: true });
   const files = changes.map(c => {
     if (c.state !== "delete") { const to = join(root, dir, "files", c.path); mkdirSync(dirname(to), { recursive: true }); if (c.content !== undefined) writeFileSync(to, c.content); else copyFileSync(join(root, c.path), to); }
@@ -96,7 +97,7 @@ export function proposeChange(root, { by, changes, summary = "" }) {
     try {
       appendMemory(root, slug, { authors: [by], kind: "note", tags: [PROPOSAL_TAG, `for:${owner}`, `proposal:${id}`],
         content: `${nameOf(root, by)} proposes ${files.map(f => `${f.change === "delete" ? "removing" : f.change === "add" ? "adding" : "a change to"} ${f.path}`).join(", ")} for the owner, ${nameOf(root, owner)}, to approve: ${what}. Proposal ${id}; nothing changes until the owner approves it.` });
-      paths.push(`brain/contexts/${slug}/memories.jsonl`);
+      paths.push(...notesCommitPaths(root, slug));
     } catch {}
   }
   const r = commit(root, paths, `proposal ${id} for ${owner}: ${what}`.slice(0, 200), { system: true });
@@ -116,7 +117,8 @@ export function divertCommit(root, paths, message, { system = false } = {}) {
   // every rule here would be off and the commit would carry the removal to the team: the committed file comes
   // back first. brain/layout.json is read before git is asked, so a layout 1 or 2 brain pays nothing.
   if (!inConfigFolders(root) && readLayout(root).layout >= 3) {
-    try { const committed = execFileSync("git", ["-C", root, "show", `HEAD:${SETTINGS_FILE}`], { stdio: "pipe" }); mkdirSync(dirname(join(root, SETTINGS_FILE)), { recursive: true }); writeFileSync(join(root, SETTINGS_FILE), committed); logActivity(root, "restored", `${SETTINGS_FILE}: it had been deleted; the committed version is back`); } catch {}
+    const lost = readLayout(root).layout >= 4 ? SETTINGS_FILE4 : SETTINGS_FILE;
+    try { const committed = execFileSync("git", ["-C", root, "show", `HEAD:${lost}`], { stdio: "pipe" }); mkdirSync(dirname(join(root, lost)), { recursive: true }); writeFileSync(join(root, lost), committed); logActivity(root, "restored", `${lost}: it had been deleted; the committed version is back`); } catch {}
   }
   if (system || !inConfigFolders(root)) return { paths, proposal: null };
   const owner = ownerOf(root); if (!owner) return { paths, proposal: null };
@@ -137,7 +139,7 @@ export function guardOwnerEdits(root, { by = null } = {}) {
   const changes = ownerChanges(root);
   if (!changes.length) return { accepted: [], proposal: null, restored: [] };
   // settings nobody can read any more go back first, whoever edited them: kept aside, never proposed
-  const bad = changes.filter(c => c.path === SETTINGS_FILE && !settingsReadable(root));
+  const bad = changes.filter(c => c.path === settingsFile(root) && !settingsReadable(root));
   if (bad.length) { keepAside(root, bad); restore(root, bad); }
   const rest = changes.filter(c => !bad.includes(c));
   const who = personHere(root, by), owner = ownerOf(root);
@@ -150,14 +152,14 @@ function settingsReadable(root) { const a = readAdmin(root); return !!(a && a.co
 function keepAside(root, changes) {
   for (const c of changes) {
     if (c.state === "delete") continue;
-    const dir = join(root, "work", "manual-edits", "protected"); mkdirSync(dir, { recursive: true });
+    const dir = join(workDir(root), "manual-edits", "protected"); mkdirSync(dir, { recursive: true });
     copyFileSync(join(root, c.path), join(dir, `${c.path.replace(/\//g, "__")}.${Date.now()}`));
   }
 }
 /* The line for a chat start or a save: what happened to the hand edits. */
 export function ownerEditNotice(root, g) {
   if (g.proposal) return `${proposalLine(root, g.proposal)}`;
-  if (g.restored.length) return `${g.restored.join(", ")}: this edit leaves the settings unreadable (company, owner and team are needed), so the committed version is back and the edit is kept in work/manual-edits/protected/. Tell the person in one line.`;
+  if (g.restored.length) return `${g.restored.join(", ")}: this edit leaves the settings unreadable (company, owner and team are needed), so the committed version is back and the edit is kept in ${workName(root)}/manual-edits/protected/. Tell the person in one line.`;
   return "";
 }
 
@@ -169,7 +171,7 @@ export function recordApproval(root, { asked, approved, files, summary, hash = c
   const verb = outcome === "declined" ? "Declined" : outcome === "own edit" ? "Accepted the owner's own edit of" : "Approved a change to";
   const content = `${verb} ${list}: ${what}. Asked by ${nameOf(root, asked)}, ${outcome === "declined" ? "declined" : "approved"} by ${nameOf(root, approved)}${hash ? `, commit ${hash}` : ""}.`;
   const { rec } = appendMemory(root, slug, { authors: [approved], kind: "decision", content, tags: [APPROVAL_TAG, ...(proposal ? [`proposal:${proposal}`] : []), ...(files || []).slice(0, 5).map(f => `file:${f}`)], source: hash ? [{ kind: "git", ref: hash }] : [] });
-  commit(root, [`brain/contexts/${slug}/memories.jsonl`], `approval recorded: ${list}`.slice(0, 200), { system: true });
+  commit(root, notesCommitPaths(root, slug), `approval recorded: ${list}`.slice(0, 200), { system: true });
   return rec.id;
 }
 
@@ -182,14 +184,14 @@ function validProposal(root, id, p) {
   if (!p || typeof p !== "object" || !Array.isArray(p.files) || !p.files.length) return null;
   for (const f of p.files) {
     if (!f || typeof f.path !== "string" || !CHANGES.includes(f.change)) return null;
-    if (f.path.startsWith("/") || f.path.includes("\\") || posix.normalize(f.path) !== f.path || f.path.split("/").includes("..") || !isOwnerPath(root, f.path) || OWNER_DIRS.includes(f.path)) return null;
-    if (f.change !== "delete") { try { if (!lstatSync(join(root, PROPOSALS_DIR, id, "files", f.path)).isFile()) return null; } catch { return null; } }
+    if (f.path.startsWith("/") || f.path.includes("\\") || posix.normalize(f.path) !== f.path || f.path.split("/").includes("..") || !isOwnerPath(root, f.path) || ownerDirs(root).includes(f.path)) return null;
+    if (f.change !== "delete") { try { if (!lstatSync(join(root, proposalsDir(root), id, "files", f.path)).isFile()) return null; } catch { return null; } }
   }
   return { id, by: typeof p.by === "string" && /^[a-z0-9][a-z0-9-]*$/.test(p.by) ? p.by : null, at: String(p.at || ""), owner: p.owner ? String(p.owner) : null,
     summary: plain(p.summary).slice(0, 200) || "a change", files: p.files.map(f => ({ path: f.path, change: f.change, base: typeof f.base === "string" ? f.base : null })) };
 }
 export function listProposals(root) {
-  const dir = join(root, PROPOSALS_DIR); let ids = [];
+  const dir = join(root, proposalsDir(root)); let ids = [];
   try { ids = readdirSync(dir).filter(n => /^p_[0-9a-f]{10}$/.test(n)).sort(); } catch { return []; }
   return ids.map(id => { try { return validProposal(root, id, JSON.parse(readFileSync(join(dir, id, "proposal.json"), "utf8"))); } catch { return null; } }).filter(Boolean).sort((a, b) => String(a.at).localeCompare(String(b.at)));
 }
@@ -200,7 +202,7 @@ export function proposalDiff(root, p) {
   return p.files.map(f => {
     const now = existsSync(join(root, f.path)) ? readFileSync(join(root, f.path), "utf8") : "";
     if (f.change === "delete") return `${f.path}: removed`;
-    const raw = readFileSync(join(root, PROPOSALS_DIR, p.id, "files", f.path));
+    const raw = readFileSync(join(root, proposalsDir(root), p.id, "files", f.path));
     if (raw.includes(0)) return `${f.path}${f.change === "add" ? " (new)" : ""}: a file that is not text, ${raw.length} bytes`;
     const next = raw.toString("utf8");
     const d = lineDiff(now, next), changed = d.filter(l => /^[-+] /.test(l));
@@ -215,17 +217,17 @@ export function applyProposal(root, id, approver) {
   if (!isOwner(root, approver)) throw new Error(`only the owner, ${nameOf(root, ownerOf(root))}, approves a change to ${p.files.map(f => f.path).join(", ")}`);
   // The settings name the owner and are the marker of this layout: a yes never removes them or leaves them
   // without a company, an owner or a team (the form shows 500 characters; this does not rest on them being read).
-  for (const f of p.files.filter(f => f.path === SETTINGS_FILE)) {
-    let fm = null; if (f.change !== "delete") { try { fm = parseSettings(readFileSync(join(root, PROPOSALS_DIR, id, "files", f.path), "utf8")).fm; } catch {} }
-    if (!fm || !fm.company || !fm.owner || !Array.isArray(fm.team) || !fm.team.length) throw new Error(`proposal ${id} would leave ${SETTINGS_FILE} without a company, an owner or a team. Decline it; the change can be proposed again with those kept`);
+  for (const f of p.files.filter(f => f.path === settingsFile(root))) {
+    let fm = null; if (f.change !== "delete") { try { fm = parseSettings(readFileSync(join(root, proposalsDir(root), id, "files", f.path), "utf8")).fm; } catch {} }
+    if (!fm || !fm.company || !fm.owner || !Array.isArray(fm.team) || !fm.team.length) throw new Error(`proposal ${id} would leave ${settingsFile(root)} without a company, an owner or a team. Decline it; the change can be proposed again with those kept`);
   }
   for (const f of p.files) {
     const to = join(root, f.path);
     if (f.change === "delete") { rmSync(to, { force: true }); continue; }
-    mkdirSync(dirname(to), { recursive: true }); copyFileSync(join(root, PROPOSALS_DIR, id, "files", f.path), to);
+    mkdirSync(dirname(to), { recursive: true }); copyFileSync(join(root, proposalsDir(root), id, "files", f.path), to);
   }
-  rmSync(join(root, PROPOSALS_DIR, id), { recursive: true, force: true });
-  const r = commit(root, [...p.files.map(f => f.path), `${PROPOSALS_DIR}/${id}`], `approved ${id}: ${p.summary}\n\nAsked by ${p.by || "someone"}, approved by ${approver}.`.slice(0, 400), { system: true });
+  rmSync(join(root, proposalsDir(root), id), { recursive: true, force: true });
+  const r = commit(root, [...p.files.map(f => f.path), `${proposalsDir(root)}/${id}`], `approved ${id}: ${p.summary}\n\nAsked by ${p.by || "someone"}, approved by ${approver}.`.slice(0, 400), { system: true });
   const hash = r.ok ? commitHash(root) : "";
   const record = recordApproval(root, { asked: p.by, approved: approver, files: p.files.map(f => f.path), summary: p.summary, hash, proposal: id });
   return { proposal: p, note: r.note, hash, record };
@@ -234,8 +236,8 @@ export function applyProposal(root, id, approver) {
 export function dropProposal(root, id, approver) {
   const p = readProposal(root, id); if (!p) throw new Error(`no proposal ${id} waiting`);
   if (!isOwner(root, approver)) throw new Error(`only the owner, ${nameOf(root, ownerOf(root))}, decides on proposal ${id}`);
-  rmSync(join(root, PROPOSALS_DIR, id), { recursive: true, force: true });
-  const r = commit(root, [`${PROPOSALS_DIR}/${id}`], `declined ${id}: ${p.summary}`.slice(0, 200), { system: true });
+  rmSync(join(root, proposalsDir(root), id), { recursive: true, force: true });
+  const r = commit(root, [`${proposalsDir(root)}/${id}`], `declined ${id}: ${p.summary}`.slice(0, 200), { system: true });
   const record = recordApproval(root, { asked: p.by, approved: approver, files: p.files.map(f => f.path), summary: p.summary, hash: r.ok ? commitHash(root) : "", outcome: "declined", proposal: id });
   return { proposal: p, note: r.note, record };
 }
@@ -246,7 +248,7 @@ export function ownerLine(root) {
   const who = personHere(root); if (!who || who !== ownerOf(root)) return "";
   const waiting = listProposals(root); if (!waiting.length) return "";
   const first = waiting[0];
-  return `Waiting for your approval (you own about-us/ and config/): ${waiting.length === 1 ? "" : `${waiting.length} proposals, the oldest: `}${nameOf(root, first.by)} proposes ${first.summary} (${first.files.map(f => f.path).join(", ")}, ${first.id}). Say it to the person in one line; approve_change with kind proposal and id ${first.id} shows them the change with an APPROVE choice${waiting.length > 1 ? "; query object approvals lists every one" : ""}.`;
+  return `Waiting for your approval (you own ${ownerDirs(root).map(d => `${d}/`).join(" and ")}): ${waiting.length === 1 ? "" : `${waiting.length} proposals, the oldest: `}${nameOf(root, first.by)} proposes ${first.summary} (${first.files.map(f => f.path).join(", ")}, ${first.id}). Say it to the person in one line; approve_change with kind proposal and id ${first.id} shows them the change with an APPROVE choice${waiting.length > 1 ? "; query object approvals lists every one" : ""}.`;
 }
 
 /* query (object approvals): the recorded approvals, newest first, then the proposals waiting. */

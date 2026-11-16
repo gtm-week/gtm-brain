@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // Review of the slim rulebook (0.35.0), second pass: no shipped skill still demands a status call first, and every
 // topic page rides along with a tool, so its detail reaches a plain turn without the model having to ask for it.
 // Run: node --test plugins/gtm-brain/test/rulebook-attach.test.mjs
@@ -42,12 +45,14 @@ test("no shipped skill sends the model to a status call first", () => {
   }
 });
 
-test("every topic page has a tool it rides along with, and comes when that tool refuses or holds something: never with a search or a save that worked", async () => {
+test("every topic page has a tool it rides along with, and comes when that tool refuses or holds something; only the answers page still comes with a search that worked", async () => {
   // a page no tool attaches is read only when the model thinks to ask, which a plain turn never does
   for (const p of rulePages().filter(p => !["questions", "computer-use"].includes(p.slug))) assert.ok(p.attach.length, `${p.slug} rides along with no tool`);
   const root = brain(); const s = client(); await s.init();
   const search = await s.call("query", { brain: root, object: "memories", search: "pricing" });
-  assert.ok(!search.parts.some(t => t.startsWith("--- Rule page:")), "a search that worked carries no page");
+  // the one page that still comes with a call that worked: how a reply ends has not been benchmarked without it
+  assert.ok(search.parts.some(t => t.startsWith("--- Rule page: Answering and the next step")), "the answers page comes with the first memories search");
+  assert.ok(!(await s.call("query", { brain: root, object: "memories", search: "pricing" })).parts.some(t => t.startsWith("--- Rule page:")), "once per chat");
   const saved = await s.call("remember", { brain: root, context: "company", by: "ann-lee", kind: "decision", content: "Pricing is per seat, EUR 40 a month, from 2 November 2026." });
   assert.ok(!saved.isError, saved.text);
   assert.ok(!saved.parts.some(t => t.startsWith("--- Rule page:")), "a save that worked carries no page");

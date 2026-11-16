@@ -12,6 +12,7 @@ import { appendFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import * as lib from "./brain.mjs";
 import { assetSummary } from "./assets.mjs";
+import { workDir } from './brain-paths.mjs';
 
 const count = arrs => { const m = new Map(); for (const a of arrs) for (const x of a) m.set(x, (m.get(x) || 0) + 1); return [...m.entries()].sort((a, b) => b[1] - a[1]); };
 
@@ -108,10 +109,10 @@ export function explainFailure(raw, title = "the") {
 /* one line per summary written or failed in a chat; the health line (lib/health-line.mjs) reads it with the background runs' lines */
 export function recordSummaryRun(root, { context, by = "chat", ok, error = "", foreground = true, why = null }) {
   try {
-    mkdirSync(join(root, "work"), { recursive: true });
+    mkdirSync(workDir(root), { recursive: true });
     // what and todo: the words the person was given, kept so the health line repeats them and never explains an explanation
     const said = ok ? {} : { error: String(error).replace(/\s+/g, " ").slice(0, 300), ...(why || explainFailure(error)) };
-    appendFileSync(join(root, "work", "runs.jsonl"), JSON.stringify({ at: new Date().toISOString(), by: foreground ? "chat" : "compile", handle: by, context, foreground, turns: ok ? 1 : 0, ...said }) + "\n");
+    appendFileSync(join(workDir(root), "runs.jsonl"), JSON.stringify({ at: new Date().toISOString(), by: foreground ? "chat" : "compile", handle: by, context, foreground, turns: ok ? 1 : 0, ...said }) + "\n");
   } catch {}
 }
 

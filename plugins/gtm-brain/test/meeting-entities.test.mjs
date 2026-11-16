@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // A meeting is an entity of kind meeting (lib/meeting-entities.mjs): made when it is captured, its page
 // collects the notes with its meeting id, attendees link to it with attended, old notes are never rewritten.
 import { test } from "node:test";

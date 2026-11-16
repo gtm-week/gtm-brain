@@ -653,8 +653,8 @@ test("the dashboard procedure is a reference of use-brain, and says what the pag
   assert.match(skill, /citation\s+pill/, "the pills are how a person gets from a wrong sentence to its note");
   assert.match(skill, /forget memory m_/, "and the correction that follows, which is a note withdrawn, never a summary rewritten");
 
-  const commands = readFileSync(join(P, "..", "..", "COMMANDS.md"), "utf8");
-  assert.match(commands, /^\| `gtmb-use-brain` \| GTM Brain: Use the company brain \|/m, "the skill that owns the dashboard procedure is listed in COMMANDS.md (ALL-204 step 4)");
+  const commands = readFileSync(join(P, "..", "..", "docs/COMMANDS.md"), "utf8");
+  assert.match(commands, /^\| `gtmb-use-brain` \| GTM Brain: Use the company brain \|/m, "the skill that owns the dashboard procedure is listed in docs/COMMANDS.md (ALL-204 step 4)");
   const section = commands.slice(commands.indexOf("\n### render\n") + 1).split(/\n### /)[0];
   assert.match(section, /\bRead-only\b/i); assert.match(section, /All changes happen in Codex/);
   assert.match(section, /citation\s+pill/, "and never said how to trace a wrong sentence back to its note");
@@ -777,7 +777,7 @@ test("adding a file is one obvious pathway: everyday work through use-brain's fi
   assert.match(readFileSync(`${P}/skills/gtmb-use-brain/SKILL.md`, "utf8"), /\[files\]\(references\/files\.md\)/);
   assert.ok(!existsSync(`${P}/skills/gtm-brain-document`), "documents are part of everyday work, not a skill of their own (2026-11-13)");
   assert.match(readFileSync(`${P}/skills/gtmb-use-brain/SKILL.md`, "utf8"), /\[documents\]\(references\/documents\.md\)/);
-  assert.doesNotMatch(readFileSync(join(P, "..", "..", "COMMANDS.md"), "utf8"), /`gtm-brain-document`/);
+  assert.doesNotMatch(readFileSync(join(P, "..", "..", "docs/COMMANDS.md"), "utf8"), /`gtm-brain-document`/);
   const template = wholeRulebook(readFileSync(`${P}/templates/AGENTS.md`, "utf8"));
   assert.match(template, /goes through gtmb-use-brain's\s+references\/files\.md/); assert.doesNotMatch(template, /gtm-brain-add-file/);
 });
@@ -820,7 +820,7 @@ test("retired skills live on as references of the eight, and nothing names them 
   for (const gone of ["import", "whats-next", "advisor", "schedule", "new-project", "link-project", "connect-tools", "update-plugin", "load-context", "create-context", "edit-context", "render"]) assert.ok(!existsSync(`${P}/skills/gtm-brain-${gone}/SKILL.md`), `gtm-brain-${gone} is no longer a skill`);
   // a retired name may still appear as a script path (scripts/gtm-brain-render/render.mjs), never as a skill or a slash command
   const retired = /gtm-brain-(import|whats-next|advisor|schedule|new-project|link-project|connect-tools|update-plugin|load-context|create-context|edit-context|render)(?![-\w]*\/)/;
-  const files = execFileSync("grep", ["-rlE", "gtm-brain-(import|whats-next|advisor|schedule|new-project|link-project|connect-tools|update-plugin|load-context|create-context|edit-context|render)", `${P}/skills`, `${P}/policies`, `${P}/session`, `${P}/templates/AGENTS.md`, `${P}/server/server.mjs`, `${P}/scripts/gtm-brain-render/skill-catalog.json`, join(P, "..", "..", "COMMANDS.md"), join(P, "..", "..", "ONBOARDING.md"), join(P, "..", "..", "GUIDE.md")], { encoding: "utf8" }).trim().split("\n").filter(Boolean);
+  const files = execFileSync("grep", ["-rlE", "gtm-brain-(import|whats-next|advisor|schedule|new-project|link-project|connect-tools|update-plugin|load-context|create-context|edit-context|render)", `${P}/skills`, `${P}/policies`, `${P}/session`, `${P}/templates/AGENTS.md`, `${P}/server/server.mjs`, `${P}/scripts/gtm-brain-render/skill-catalog.json`, join(P, "..", "..", "docs/COMMANDS.md"), join(P, "..", "..", "docs/ONBOARDING.md"), join(P, "..", "..", "docs/GUIDE.md")], { encoding: "utf8" }).trim().split("\n").filter(Boolean);
   const offenders = files.filter(f => !f.includes("/legacy/")).filter(f => readFileSync(f, "utf8").split("\n").some(line => retired.test(line)));
   assert.deepEqual(offenders, [], "these still name a retired skill");
 });

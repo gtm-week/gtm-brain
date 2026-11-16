@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // Search that answers in one call (0.35.0, lane R1): stemmed words, one typo, names and periods
 // narrowing first, ranking, the byte cap, and query object answer through the MCP server.
 // Each test fails on 0.34.5, where search matched the whole text literally and newest first.
@@ -163,10 +166,10 @@ test('a negative answer is cheap and plain', () => {
 test('the index is version 6 with a stemming tokenizer; a version 5 cache is rebuilt from the source files', () => {
   const root = fixture();
   const n = note(root, 'Invoicing moved.');
-  assert.equal(MEMORY_INDEX_VERSION, 10);
+  assert.equal(MEMORY_INDEX_VERSION, 11);
   const i = new MemoryIndex(root); i.db.exec('PRAGMA user_version=5'); i.close();
   withMemoryIndex(root, index => {
-    assert.equal(index.db.prepare('PRAGMA user_version').get().user_version, 10);
+    assert.equal(index.db.prepare('PRAGMA user_version').get().user_version, 11);
     assert.match(index.db.prepare("SELECT sql FROM sqlite_master WHERE name='keywords'").get().sql, /porter/);
   });
   assert.deepEqual(ids(search(root, 'invoice')), [n.id]);

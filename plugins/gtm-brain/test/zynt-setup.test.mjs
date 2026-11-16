@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // gtmb-zynt-setup (0.35.0): ZYNT set up from the brain when the person pastes ZYNT's prompt;
 // the key stays in the chat and ZYNT ends up in the brain's tools.
 import { test } from 'node:test';
@@ -18,7 +21,7 @@ test('the ZYNT setup skill follows the shipped-skill template: name, links, open
   const i = catalog.findIndex(s => s.id === 'gtmb-zynt-setup');
   assert.ok(i > 0 && catalog[i].group === 'setup' && catalog[i].featured === false);
   assert.ok(catalog.slice(i + 1).every(s => s.group === 'setup'), 'after the last one of its group');
-  for (const doc of ['README.md', 'COMMANDS.md', 'ONBOARDING.md']) assert.match(readFileSync(join(R, doc), 'utf8'), /gtmb-zynt-setup/, doc);
+  for (const doc of ['README.md', 'docs/COMMANDS.md', 'docs/ONBOARDING.md']) assert.match(readFileSync(join(R, doc), 'utf8'), /gtmb-zynt-setup/, doc);
 });
 
 test('a pasted ZYNT prompt reaches the skill: its first line is a trigger', () => {

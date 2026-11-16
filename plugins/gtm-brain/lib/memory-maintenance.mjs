@@ -6,16 +6,17 @@ import { MemoryIndex, MEMORY_INDEX_VERSION } from './memory-index.mjs';
 import { cacheLock, indexPath, openDatabase, cacheResetPending } from './memory-index-store.mjs';
 import { memoryStamp } from './memory-journal.mjs';
 import { meetingAnchors } from './meeting-entities.mjs';
+import { workDir } from './brain-paths.mjs';
 const bytes = path => { try { return statSync(path).size; } catch (e) { if (e.code === 'ENOENT') return 0; throw e; } };
 function describe(root, db, registry) {
-  const sources = lib.listContexts(root, { includeMemories: false }).map(c => ({ file: c.slug, state: memoryStamp(join(c.dir, 'memories.jsonl')) }));
+  const sources = lib.noteSources(root).map(f => ({ file: f.file, state: memoryStamp(f.path) }));
   const meta = key => db?.prepare('SELECT value FROM meta WHERE key=?').get(key)?.value;
   const files = db ? db.prepare('SELECT file,stamp,bytes,complete FROM files').all() : [];
   const pending = sources.filter(s => !files.some(f => f.file === s.file && f.complete && f.stamp === (s.state?.key || 'missing')));
   const removed = files.filter(f => !sources.some(s => s.file === f.file));
   const identitiesChanged = !!db && meta('registry') !== registry;
   const ready = !!db && meta('ready') === '1' && !pending.length && !removed.length && !identitiesChanged;
-  const path = indexPath(root), disk = { database: bytes(path), wal: bytes(path + '-wal'), previous: bytes(join(root, 'work/memory-index.previous.sqlite')) + bytes(join(root, 'work/memory-index.previous.sqlite-wal')) };
+  const path = indexPath(root), disk = { database: bytes(path), wal: bytes(path + '-wal'), previous: bytes(join(workDir(root), 'memory-index.previous.sqlite')) + bytes(join(workDir(root), 'memory-index.previous.sqlite-wal')) };
   const sourceBytes = sources.reduce((n, s) => n + (s.state?.size || 0), 0);
   return {
     status: !db ? 'missing' : ready ? 'ready' : meta('rebuilding') === '1' ? 'rebuilding' : 'stale',

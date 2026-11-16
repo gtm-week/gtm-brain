@@ -10,10 +10,11 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { sourceVersion, retiredSource, SHIPPING_SOURCE } from "../../lib/plugin-source.mjs";
 import { host } from "../../lib/host.mjs";
+import { workDir } from '../../lib/brain-paths.mjs';
 const root = process.argv[2] && !process.argv[2].startsWith("--") ? process.argv[2] : ".";
 const P = fileURLToPath(new URL("../..", import.meta.url)).replace(/[\\/]$/, "");
 const { plugin } = host(), codexHome = plugin.home();
-const out = join(root, "work", "plugin-version.json");
+const out = join(workDir(root), "plugin-version.json");
 const version = json => { try { return JSON.parse(json).version || null; } catch { return null; } };
 export const newer = (a, b) => { // is a newer than b? numeric per part, missing parts are 0
   if (!a || !b) return false; const pa = String(a).split(/[.-]/).map(Number), pb = String(b).split(/[.-]/).map(Number);
@@ -45,7 +46,7 @@ try {
   state.status = "unknown"; state.note = String(e && e.message || e).split("\n")[0].slice(0, 160);
   if (previous.latest && previous.installed === state.installed) { state.latest = previous.latest; state.status = newer(previous.latest, state.installed) ? "newer" : "current"; state.note = `last check kept (${state.note})`; state.checkedAt = previous.checkedAt || state.checkedAt; }
 }
-mkdirSync(join(root, "work"), { recursive: true });
+mkdirSync(workDir(root), { recursive: true });
 try { writeFileSync(out, JSON.stringify(state, null, 1)); } catch {}
 console.log(state.status === "newer" ? `GTM Brain ${state.latest} is available (installed ${state.installed}); say: update GTM Brain`
   : state.status === "current" ? `GTM Brain ${state.installed} is the latest` : `GTM Brain ${state.installed || "?"}: latest not known (${state.note})`);

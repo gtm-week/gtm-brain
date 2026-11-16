@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // gtmb-voice (0.35.0): the shipped skill that settles whose voice it is, drafts it from fitting evidence,
 // tests it on fresh work and checks that a new chat uses it.
 import { test } from 'node:test';
@@ -24,9 +27,9 @@ test('the voice skill follows the shipped-skill template: name, links, openai.ya
   const i = catalog.findIndex(s => s.id === 'gtmb-voice');
   assert.ok(i > 0 && catalog[i].group === 'setup' && catalog[i].featured === false);
   assert.ok(catalog.slice(i + 1).every(s => s.group === 'setup'), 'after the last one of its group');
-  for (const doc of ['README.md', 'COMMANDS.md', 'ONBOARDING.md']) assert.match(readFileSync(join(R, doc), 'utf8'), /gtmb-voice/, doc);
-  for (const doc of ['README.md', 'CLAUDE.md', 'CONTRIBUTING.md', 'USER-SKILLS.md']) assert.match(readFileSync(join(R, doc), 'utf8'), /twenty/, doc);
-  assert.match(readFileSync(join(R, 'GUIDE.md'), 'utf8'), /\/gtmb-voice/);
+  for (const doc of ['README.md', 'docs/COMMANDS.md', 'docs/ONBOARDING.md']) assert.match(readFileSync(join(R, doc), 'utf8'), /gtmb-voice/, doc);
+  for (const doc of ['README.md', '.claude/CLAUDE.md', '.github/CONTRIBUTING.md', 'docs/USER-SKILLS.md']) assert.match(readFileSync(join(R, doc), 'utf8'), /twenty/, doc);
+  assert.match(readFileSync(join(R, 'docs/GUIDE.md'), 'utf8'), /\/gtmb-voice/);
 });
 
 test('the skill reads connectors first, the public web only, and saves through the document path on a yes', () => {
@@ -97,7 +100,7 @@ test('reuse is verified: the kinds of work from applies_to, one sentence for a n
   assert.match(six, /The message after each save gives: the path; exactly which kinds of work it governs, from the\s+document's `applies_to`/);
   assert.match(six, /the one sentence to type in a new chat/);
   assert.match(six, /Do not say it is in use until the person has seen that/);
-  assert.match(readFileSync(join(R, 'DOCUMENTS.md'), 'utf8'), /say which one you followed/, 'the document mechanism names the followed document');
+  assert.match(readFileSync(join(R, 'docs/DOCUMENTS.md'), 'utf8'), /say which one you followed/, 'the document mechanism names the followed document');
 });
 
 test('an update run reuses the guide, keeps approved rules and shows the proposed changes', () => {

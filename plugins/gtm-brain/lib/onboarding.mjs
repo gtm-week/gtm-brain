@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { readMemories, effectiveMemories, readContext, appendMemory, currentPerson, teamHandle, bigFiles } from './brain.mjs';
 import { host } from './host.mjs';
 import { isOwner, ownerOf } from './owner.mjs';
+import { settingsFile } from './brain-paths.mjs';
 
 export const ONBOARDING_VERSION = 2;
 const STEPS = [
@@ -136,7 +137,7 @@ export const bigFilesAnswer = choice => `Big files: ${choice}.`;
 function bigFilesLine(root) {
   const c = bigFilesChoice(root);
   if (!c.asked) return `Big files: not asked yet. Ask once, in discovery Step 1 before the workplace draft, where recordings and files over 25 MB go (gtmb-start/references/discovery.md), and save the answer as the note "${bigFilesAnswer('google-drive')}" or "${bigFilesAnswer('local')}" in ${readContext(root, 'company') ? 'company' : 'gtm'}.\n`;
-  return `Big files: answered (${c.choice})${c.approval ? '; brain/admin.md still says big_files: ' + c.setting + ', so the workplace draft for APPROVE carries big_files: local' : ''}. Do not ask again.\n`;
+  return `Big files: answered (${c.choice})${c.approval ? `; ${settingsFile(root)} still says big_files: ` + c.setting + ', so the workplace draft for APPROVE carries big_files: local' : ''}. Do not ask again.\n`;
 }
 
 /* The close of onboarding (gtmb-start/references/skills-tour.md): after the last step outcome the person is
@@ -145,8 +146,8 @@ function bigFilesLine(root) {
    `Onboarding closing: schema looks right.` A step with a note is settled and is never asked again, in this
    chat or a resumed one. The notes are per person: the close belongs to whoever onboarded, so only that
    person's notes settle their steps, and a teammate's "told, not the owner" settles nothing for the owner.
-   Someone who is not the brain's owner (layout 3, lib/owner.mjs) is asked none of the three: the schema and the
-   rules (config/) and the base documents (about-us/) are the owner's, a change of theirs there becomes a
+   Someone who is not the brain's owner (layouts 3 and 4, lib/owner.mjs) is asked none of the three: the schema, the
+   rules and the base documents (configuration/; config/ and about-us/ in layout 3) are the owner's, a change of theirs there becomes a
    proposal for the owner, so they are told that in one line. A brain without owner rules has no such person.
    `Onboarding closing: started.` is written with the completion marker (closeOnboardingFromOutcomes): it is
    what tells a close that was interrupted, even before its first answer, from a brain completed before the

@@ -8,8 +8,8 @@ made. Before 0.27.0 these were "guidelines" in `brain/guidelines/`; the upgrade 
 
 A document is one Markdown file you wrote and the work must follow. It is not a note (a
 memory) and not a context summary: nothing compiles it, nothing rewrites it, it says what it
-says until a person changes it. It lives where you would put it yourself: `strategy.md` at the
-top of the brain folder, or `brand/voice.md` in a folder you named. Its files, if any, live in
+says until a person changes it. A base document lives in `configuration/about-us/` (`strategy.md`); any other
+lives where you would put it yourself, such as `brand/voice.md` in a folder you named. Its files, if any, live in
 a folder of the same name beside it: `strategy/deck.pdf`, `brand/design-system/tokens.json`.
 A `kind: document` line in its frontmatter is what tells Codex it is one. Every chat opens with
 one line naming the documents, what each applies to and how many files it owns; rule 11 of the
@@ -48,7 +48,7 @@ Read it, then `approve the strategy`.
 
 ## Out of the box
 
-Setup writes five starters at the top of the brain: `strategy.md`, `icp.md`, `voice.md`,
+Setup writes five starters in `configuration/about-us/`: `strategy.md`, `icp.md`, `voice.md`,
 `design-system.md` and `market.md`. Each holds headings and no guidance yet, and the chat line shows it as
 `[not filled]` until someone fills it (a hand edit counts). The end of onboarding asks once which
 to fill now; "Later" is a fine answer. Say `fill in our tone of voice` (or the ICP, the strategy,
@@ -66,7 +66,7 @@ writes both from the website and your brand files, shows you the page and saves 
 
 ## Making one
 
-Say `add our tone of voice`, `save the pricing`, or `add pricing.md as a document`. A file you already wrote goes in as it is; one already at the top of the
+Say `add our tone of voice`, `save the pricing`, or `add pricing.md as a document`. A file you already wrote goes in as it is; one already in the
 brain folder is adopted where it lies. Otherwise Codex writes the document from what the
 company already says (the website, the last deck, existing posts, what is already in Our offer
 and Target customers). It shows the title, the place and the first rules, and asks: "Add it as
@@ -84,13 +84,13 @@ for pricing, positioning, competitors and objections, and lists the notes it dre
 brain knows nothing about it, it says so and asks for the two or three facts it needs. It shows
 the draft in full and asks one thing: what work should follow it. Picking one saves it as a draft.
 
-A Markdown you drop at the top of the folder by hand shows in `list the documents` and once in
+A Markdown you drop into `configuration/about-us/` (or at the top of the folder) by hand shows in `list the documents` and once in
 the health line as "pricing.md is here but the brain does not use it yet". Adopting it asks what
 work it governs and adds only the frontmatter, shown to you first; your text stays as it is.
 
 Files: `add this to the design system` with a path or a dropped file lands it in
 `brand/design-system/`. A logo or a deck about one company goes with that company:
-`brain/entities/<company>/`, linked from its brief. Nothing to invoke; dropping the file is
+the folder beside that company's page under `entities/organizations/`, linked from its brief. Nothing to invoke; dropping the file is
 enough.
 
 ## What a good one contains
@@ -147,8 +147,8 @@ to companies before stay in `files/` and their links keep working.
 - Documents are the standing statements; contexts hold the evidence and the running summary.
   Codex never records a document's content as notes, and never rewrites one because a draft did
   not fit it.
-- The `README.md` at the top of the brain folder says what goes where: documents and their
-  files, project folders, `brain/`. Nothing else belongs at that level.
+- The `README.md` at the top of the brain folder says what goes where: the four
+  folders, documents and their files, project folders. Nothing else belongs at that level.
 - A document can also be read and edited in the dashboard: click it under Configuration (base
   documents) or at the end of Memories (other documents). Save there writes the file the way
   `document.mjs --update` does, with the same checks and commit; if the file changed since you

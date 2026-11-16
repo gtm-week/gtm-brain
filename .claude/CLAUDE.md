@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-The contributor invariants live in AGENTS.md and apply here in full: @AGENTS.md
+The contributor invariants live in AGENTS.md and apply here in full: @../AGENTS.md
 
 AGENTS.md is written for Codex, the host GTM Brain runs in. Its "Default onboarding interaction" and
 "Computer Use" sections are generated blocks describing how the plugin behaves inside a company
@@ -27,7 +27,7 @@ node --test --test-name-pattern='<regex>' plugins/gtm-brain/test/brain.test.mjs 
 
 node plugins/gtm-brain/test/live/harness-bench.mjs         # live Codex A/B: bare / plugin / brain on 3 tasks (~4 min)
 node plugins/gtm-brain/test/live/tool-routing.mjs skills   # live Codex through the skill cases on a seeded brain; one case: skill-todo
-node plugins/gtm-brain/test/live/claude-smoke.mjs          # live Claude Code: setup, the admin.md guard, go ahead vs APPROVE (~2 min)
+node plugins/gtm-brain/test/live/claude-smoke.mjs          # live Claude Code: setup, the protected-file guard, go ahead vs APPROVE (~2 min)
 node plugins/gtm-brain/test/live/scenarios.mjs             # live Codex: ten saving sentences on a clean brain, pass or fail each (~5 min)
 
 node scripts/sync-derived.mjs                           # regenerate derived blocks and schema
@@ -36,8 +36,8 @@ node scripts/sync-derived.mjs --check                   # report drift only (the
 npm ci --prefix frontend/dashboard                      # dashboard frontend, only when touching it
 npm run build --prefix frontend/dashboard               # writes plugins/gtm-brain/scripts/gtm-brain-render/ui/
 
-./dev-install.sh                                        # install this checkout into Codex, then start a new chat
-./dev-reset.sh [brain-folder]                           # wipe the test brain (default ~/Desktop/test-brain) and reinstall
+./scripts/dev-install.sh                                # install this checkout into Codex, then start a new chat
+./scripts/dev-reset.sh [brain-folder]                   # wipe the test brain (default ~/Desktop/test-brain) and reinstall
 ```
 
 Run the suite before every commit that touches `lib/`, a skill script, a server or a session script. Tests
@@ -45,14 +45,14 @@ build throwaway brains with `setup` and set `GTM_BRAIN_NO_COMMIT` where committi
 `plugins/gtm-brain/test/live/` holds benchmarks and fixtures that talk to real connectors; they are
 not `*.test.mjs` files and are not part of the suite.
 
-`.githooks/pre-push` (enabled by `./dev-install.sh`) runs the suite before a push to `main`, then
+`.githooks/pre-push` (enabled by `./scripts/dev-install.sh`) runs the suite before a push to `main`, then
 the harness bench when the push changes anything under `plugins/gtm-brain/` but `test/`. The bench
 fails when the plugin makes Codex solve fewer tasks than without it, adds more prompt tokens than
 `GTM_BRAIN_BENCH_MAX_OVERHEAD`, or calls GTM Brain tools for a self-contained puzzle.
 `GTM_BRAIN_SKIP_BENCH=1 git push` skips it. Then, when `claude` is on PATH, the Claude Code smoke runs the
 same checkout through four `claude -p` turns; `GTM_BRAIN_SKIP_CLAUDE=1` skips it.
 
-`dev-reset.sh` only wipes a folder that is empty or that it created itself (tracked in the
+`scripts/dev-reset.sh` only wipes a folder that is empty or that it created itself (tracked in the
 gitignored `.dev-brains`); it never deletes a real brain.
 
 ## Architecture
@@ -74,14 +74,14 @@ Everything that ships is under `plugins/gtm-brain/`. The layers, from the outsid
   the skills.
 - **lib** (`lib/brain.mjs` plus focused modules): the file format and the only write path. Records,
   context covers, entity names, the loaded set, `commit`, `save`, `rerender`. The two deliberate
-  exceptions that write `admin.md` outside the lib are `setup` and `approve`.
+  exceptions that write the settings file outside the lib are `setup` and `approve`.
 - **Chat start** (`session/`): the plugin declares no hooks (since Codex 0.164 any plugin change
   switches hooks off until the person reviews them). On a chat's first GTM Brain call the server
   runs `session/session-start.sh`, which refreshes the brain, and returns the opening lines before
   that call's result. `lib.guardProtected` (at each chat start and before every save) puts back a
-  direct edit of a protected file (`admin.md`, `memories.jsonl`, the company ontology) and keeps
-  the edit in `work/manual-edits/protected/`.
-- **Dashboard**: `scripts/gtm-brain-render/render.mjs` builds `work/home/index.html` from the brain
+  direct edit of a protected file (a notes file, the company's interactions file, and `brain/admin.md` in
+  a brain of layout 1 or 2) and keeps the edit in `.gtm-brain/manual-edits/protected/` (`work/` before layout 4).
+- **Dashboard**: `scripts/gtm-brain-render/render.mjs` builds `.gtm-brain/home/index.html` (`work/home/` before layout 4) from the brain
   files; `server/dash.mjs` serves it on 127.0.0.1 with revision events; it is read-only except for the three guarded
   writes named in AGENTS.md (a document save, the entity operations and the note operations). The React
   Overview is built from `frontend/dashboard/` into `scripts/gtm-brain-render/ui/` and committed, so
@@ -95,22 +95,40 @@ layer (`lib/ontology/`, ported from Allethic) turns it into first-class MCP tool
 extends the generated `query` with derived views (status, brief, customers, meetings, health, ...)
 and a read-only SQL mode over the memory index.
 
-A company's own interactions live in its `brain/ontology.ossie.json`. The server does not know the
+A company's own interactions live in its `configuration/interactions.json` (`brain/ontology.ossie.json`
+before layout 4, the same Ossie file). The server does not know the
 brain at startup, so these can never be registered as tools: they are listed per call and run
 through the single fixed tool `interact`. New ones go through `propose_interaction` and the APPROVE
 form of `approve_change`.
 
 `lib/ontology/` is GTM Brain code: it loads Ossie files with the `ALLETHIC` extension block and
-generates the tools. Keep the `ALLETHIC` block name; every company's `brain/ontology.ossie.json`
+generates the tools. Keep the `ALLETHIC` block name; every company's interactions file
 carries it.
 
 ### The memory index
 
 `lib/memory-index*.mjs` and `server/memory-reader.mjs` / `memory-worker.mjs` maintain a disposable
-SQLite search cache in the brain's `work/`. The JSONL files and entity Markdown are the truth; the
+SQLite search cache in the brain's `.gtm-brain/` (`work/` before layout 4). The JSONL files and entity Markdown are the truth; the
 index can always be rebuilt from them and is never a second store.
 
 ### A brain on disk
+
+Layout 4, what setup makes (`lib/brain-paths.mjs` answers every path by the brain's layout; the move is
+`lib/layout-four.mjs`):
+
+```
+configuration/about-us/                the base documents and their files
+configuration/rules.md, schema.md      the rules and the schema
+configuration/settings.yaml            workplace info, the owner's to change
+configuration/interactions.json        the company's own interactions, protected
+entities/<kind folder>/<name>-<id>.md  identity, aliases, cited brief; hand-editable
+memories/<YYYY-MM>.jsonl               append-only records, one file per month of `at`
+memories/topics/<slug>.md              the compiled cover of a context (a topic)
+workflows/, layout.json, README.md, AGENTS.md, CLAUDE.md
+.gtm-brain/                            gitignored: dashboard, loaded set, tools.json, hooks.log, index
+```
+
+Layouts 1 to 3, still read and written for a brain that has not moved:
 
 ```
 brain/admin.md                         workplace info, protected, changed only via APPROVE
@@ -139,17 +157,19 @@ Edit the source, run `node scripts/sync-derived.mjs`, commit source and output t
 ## Shipping a change
 
 Anything under `plugins/gtm-brain/` that users should receive needs a version bump in
-`.codex-plugin/plugin.json`, and the same number in the cache paths in `SETUP.md` and
-`COMMANDS.md` (a test holds them together), then `node scripts/sync-derived.mjs`: the Claude Code
+`.codex-plugin/plugin.json`, and the same number in the cache paths in `docs/SETUP.md` and
+`docs/COMMANDS.md` (a test holds them together), then `node scripts/sync-derived.mjs`: the Claude Code
 manifest and marketplace are generated from the Codex one and carry the version. Changing `templates/AGENTS.md` first requires a
 snapshot of the outgoing file in `templates/legacy/AGENTS-<old version>.md` plus a
-`templates/legacy/manifest.json` entry. Re-run `./dev-install.sh` to try the change in Codex.
+`templates/legacy/manifest.json` entry. Re-run `./scripts/dev-install.sh` to try the change in Codex.
 
 ## Docs map
 
 Describe a feature once, in its owning document, and link from the others: `INSTALL.md`
-(standalone instructions for the installing agent), `ONBOARDING.md` (first-use walkthrough),
-`GUIDE.md` (everyday use), `plugins/gtm-brain/MANUAL.md` (how a brain works and how to change it; ships with the plugin, Codex answers "how does the brain work?" from it), `COMMANDS.md` (every tool and command and the files it writes),
-`SETUP.md` (manual install and contributor verification), `RELEASE-0.35.md` (what 0.35 changes and its known limits; the update steps live in MANUAL.md), `DOCUMENTS.md` (documents
-feature), `USER-SKILLS.md`, `skill-template/README.md` (contributing a shipped skill), `IMPORT.md` (its text is duplicated word for word as the body of
-`plugins/gtm-brain/claude/gtm-brain-export/SKILL.md`; keep the two in step).
+(standalone instructions for the installing agent), `docs/ONBOARDING.md` (first-use walkthrough),
+`docs/GUIDE.md` (everyday use), `plugins/gtm-brain/MANUAL.md` (how a brain works and how to change it; ships with the plugin, Codex answers "how does the brain work?" from it), `docs/COMMANDS.md` (every tool and command and the files it writes),
+`docs/SETUP.md` (manual install and contributor verification), `docs/releases/RELEASE-0.35.md` (what 0.35 changes and its known limits; the update steps live in MANUAL.md), `docs/DOCUMENTS.md` (documents
+feature), `docs/USER-SKILLS.md`, `docs/skill-template/README.md` (contributing a shipped skill), `IMPORT.md` (its text is duplicated word for word as the body of
+`plugins/gtm-brain/claude/gtm-brain-export/SKILL.md`; keep the two in step). Only `README.md`, `INSTALL.md`,
+`IMPORT.md` and `AGENTS.md` stay in the top folder (this file lives in `.claude/`, where Claude Code also reads it, and `CONTRIBUTING.md` in `.github/`, where GitHub links it); every other document goes in
+`docs/`, with a line in the index `docs/README.md`.

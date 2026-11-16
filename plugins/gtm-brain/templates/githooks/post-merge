@@ -4,14 +4,21 @@
 # so its summary is compiled again. Notes merge as lines (.gitattributes, merge=union) and the
 # summary kept is one side's; see lib.ensureMergeSetup. A fast-forward pull has one parent: nothing to do.
 git rev-parse -q --verify HEAD^2 >/dev/null 2>&1 || exit 0
-slugs=""
+slugs=""; months=""
 for f in $(git diff --name-only HEAD^1 HEAD -- 'brain/contexts/*/memories.jsonl'); do
   git diff --quiet HEAD^2 HEAD -- "$f" && continue
   slugs="$slugs $(basename "$(dirname "$f")")"
 done
-[ -n "$slugs" ] || exit 0
+# layout 4: a month's file holds every topic's notes, so the lib reads which topics each side added to
+for f in $(git diff --name-only HEAD^1 HEAD -- 'memories/*.jsonl'); do
+  git diff --quiet HEAD^2 HEAD -- "$f" && continue
+  months="$months $f"
+done
+[ -n "$slugs$months" ] || exit 0
 lib="${GTM_BRAIN_LIB:-$(git config --get gtm-brain.lib 2>/dev/null)}"
 if [ -z "$lib" ] || [ ! -f "$lib" ]; then lib="$(ls -d "$HOME"/.codex/plugins/cache/gtm-brain/gtm-brain/*/lib/brain.mjs 2>/dev/null | sort -V | tail -1)"; fi
 [ -n "$lib" ] && [ -f "$lib" ] || exit 0
+if [ -n "$months" ]; then slugs="$slugs $(node -e 'import(process.argv[1]).then(l => console.log(l.mergedTopics(process.argv[2], process.argv.slice(3)).join(" "))).catch(() => {})' "$lib" "$(pwd)" $months)"; fi
+[ -n "$(printf '%s' "$slugs" | tr -d ' ')" ] || exit 0
 node -e 'import(process.argv[1]).then(l => { const c = l.markMergeStale(process.argv[2], process.argv.slice(3)); console.log(`gtm-brain: notes merged from both sides in ${c.join(", ")}; the summary will be compiled again`); l.kickCompile(process.argv[2]); }).catch(() => {})' "$lib" "$(pwd)" $slugs
 exit 0

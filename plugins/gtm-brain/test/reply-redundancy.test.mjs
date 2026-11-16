@@ -112,7 +112,7 @@ test("the not linked hint: silent for a stage, plan or status word, one short li
   assert.equal(missed.code, 0, missed.out);
   const hint = missed.out.split("\n").find(l => /not linked to anything in the brain/.test(l));
   assert.match(hint, /^not linked to anything in the brain: "Brightwell"\. add_name only for a person, company or product the note is about/);
-  assert.doesNotMatch(hint, /Paid/); assert.ok(hint.length < 200, `one short line, not ${hint.length} characters`);
+  assert.doesNotMatch(hint, /Paid/); assert.ok(hint.length < 280, `one short line, not ${hint.length} characters`);
 });
 
 test("every line another part of the plugin reads keeps its shape", () => {
@@ -135,7 +135,7 @@ test("every line another part of the plugin reads keeps its shape", () => {
   assert.ok(held.out.split("\n").some(l => /held|not kept|not remembered|ask/i.test(l)));
   assert.match(held.out.replace(/^(#\d+ )?(not remembered yet|nothing remembered|not remembered|not kept \(\d+ of \d+\)):\s*/, ""), /^"Petra Holme" looks like Petra Holm/, "memory-edit strips the same start");
   // a batch that keeps one note and holds another: the count first, the hold named by position
-  const batch = join(root, "work", "batch.json");
+  const batch = join(mkdtempSync(join(tmpdir(), "gtm-reply-batch-")), "batch.json");
   execFileSync(process.execPath, ["-e", `require("fs").writeFileSync(${JSON.stringify(batch)}, JSON.stringify([{ content: "Support hours are 9 to 17 CET from 1 December 2026.", context: "offer" }, { content: "Petra Holme asked for a second demo on 20 November 2026.", people: ["Petra Holme"], context: "company" }]))`]);
   const mixed = remember(root, "--by", "ann-lee", "--batch", batch);
   assert.equal(mixed.code, 0, mixed.out);

@@ -19,7 +19,7 @@ agents/openai.yaml    the name, one line and the default prompt Codex shows
 The skill never touches brain files directly. It reads with `query`, `load_context` and
 `document`, asks in Codex's question box or plain chat text, and writes with `remember` or
 `document`. Those tools keep the brain valid and commit every write; a direct edit of
-`brain/admin.md` or a `memories.jsonl` is put back at the next chat start or save.
+a notes file or the interactions file is put back at the next chat start or save.
 
 ## Steps
 
@@ -37,9 +37,9 @@ The skill never touches brain files directly. It reads with `query`, `load_conte
    - `plugins/gtm-brain/test/skill-catalog.test.mjs`: add the id to the list of shipped skills
      in "the person can ask for ... shipped workflows". The test compares a sorted list, so put the id in
      alphabetical order.
-   - The skill tables in `README.md`, `COMMANDS.md` and `ONBOARDING.md`: one row each.
-   - The skill count ("twenty") in `README.md`, `CLAUDE.md`, `CONTRIBUTING.md` and
-     `USER-SKILLS.md`, plus the skill list in the layout blocks of `README.md` and `CONTRIBUTING.md`.
+   - The skill tables in `README.md`, `docs/COMMANDS.md` and `docs/ONBOARDING.md`: one row each.
+   - The skill count ("twenty") in `README.md`, `.claude/CLAUDE.md`, `.github/CONTRIBUTING.md` and
+     `docs/USER-SKILLS.md`, plus the skill list in the layout blocks of `README.md` and `.github/CONTRIBUTING.md`.
    - A skill whose work overlaps another: say "Not ..." in both descriptions, as define-icp
      does about market desk research and campaign execution.
 4. **Routing, only if needed.** A slash command (`/gtm-brain-<slug>`) always works. For plain
@@ -53,7 +53,7 @@ The skill never touches brain files directly. It reads with `query`, `load_conte
    plain hyphens, a catalog entry. A live case (`test/live/<slug>-cases.mjs`, listed in
    `test/live/skill-cases.mjs`) runs the skill through real Codex; it is optional and run by hand.
 6. **Bump the version.** Raise `plugins/gtm-brain/.codex-plugin/plugin.json`, the same number in the
-   cache paths in `SETUP.md` and `COMMANDS.md`, then run `node scripts/sync-derived.mjs`.
+   cache paths in `docs/SETUP.md` and `docs/COMMANDS.md`, then run `node scripts/sync-derived.mjs`.
    Without a bump nobody is offered the skill.
 7. **Open a pull request** to `main`. Run `node --test 'plugins/gtm-brain/test/*.test.mjs'`
    first. Without write access to the repository, open it from a fork; `main` needs one approval.

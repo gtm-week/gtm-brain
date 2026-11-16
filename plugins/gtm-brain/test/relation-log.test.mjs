@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // Relationship history from the log (ALL-711): a relation saved with three fields, a stable relation id whose
 // notes are its events (started, changed, ended), one current link at a time where SCHEMA.md says so, entity
 // renames, merges and kind changes in the same log, and query relations / the entity page read from the index.

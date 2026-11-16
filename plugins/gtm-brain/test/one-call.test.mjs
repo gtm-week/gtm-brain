@@ -29,7 +29,7 @@ after(() => server.kill());
 const brain = () => {
   const root = mkdtempSync(join(tmpdir(), "gtm-brain-one-call-")); execFileSync("git", ["init", "-q", root]);
   execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "X", "--one-liner", "y", "--owner", "Ann Lee <ann@b.c>"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P } });
-  const log = () => readFileSync(join(root, "brain/contexts/company/memories.jsonl"), "utf8");
+  const log = () => lib.noteFiles(root).map(f => readFileSync(join(root, f), "utf8")).join("");   // every note, wherever this layout keeps them
   const note = fields => lib.appendMemory(root, "company", { authors: ["ann-lee"], via: "codex", kind: "note", tools: [], people: [], source: [{ kind: "user", ref: "ann-lee" }], actions: [], supersedes: null, retracts: null, tags: [], ...fields }).rec;
   const ask = (content, more = {}) => note({ kind: "question", content, tags: ["brain-question"], ...more });
   const names = () => lib.readNames(root);
@@ -351,5 +351,5 @@ test("no reply of the two tools sends the model to a skill or rule file", async 
   const replies = [await b.tool("answer_question"), await b.tool("answer_question", { question: q.id, answer: "yes", by: "ann-lee" }), await b.tool("answer_question"),
     await b.tool("merge_entities", { source: a.id, target: c.id, confirmed: true, by: "ann-lee" })];
   for (const r of replies) { assert.ok(!r.isError, r.text); assert.doesNotMatch(r.text, /SKILL\.md|references\/[a-z-]+\.md|rule page|query \(object rules|[–—]/); }
-  assert.ok(!existsSync(join(b.root, "work")) || !readdirSync(join(b.root, "work")).some(f => /^remember-.*\.json$/.test(f)), "no batch file left behind");
+  assert.ok(!existsSync(lib.workDir(b.root)) || !readdirSync(lib.workDir(b.root)).some(f => /^remember-.*\.json$/.test(f)), "no batch file left behind");
 });
