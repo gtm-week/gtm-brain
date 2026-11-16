@@ -279,6 +279,7 @@ h1,h2,h3{font-family:var(--display);margin:0;letter-spacing:-.01em}
 .doc-save{margin:0;padding:9px 20px;font-size:13px;font-weight:650}.doc-save:disabled{background:transparent;border-color:var(--rule);color:var(--muted);cursor:default;filter:none}
 .doc-notice{display:none;margin:0 0 14px;padding:12px 16px;border:1px solid var(--rule);border-left:3px solid var(--accent);border-radius:3px;background:var(--surface);font-size:13px}.doc-notice.on{display:block}.doc-notice.ok{border-left-color:var(--green)}.doc-notice.warn{border-left-color:var(--amber)}.doc-notice p{margin:0 0 6px}.doc-notice p:last-child{margin-bottom:0}
 .doc-theirs{max-height:240px;overflow:auto;margin:10px 0;padding:12px;background:var(--code);border-radius:3px;font-family:var(--mono);font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}.doc-choices{display:flex;gap:10px;flex-wrap:wrap}.doc-choices .btn{margin:0;padding:6px 12px}
+#doc-view[data-doc-mode="preview"] .doc-toolbar,#doc-view[data-doc-mode="preview"] .doc-done-btn,#doc-view:not([data-doc-mode="preview"]) .doc-edit-btn,#doc-view[data-doc-mode="preview"] .doc-save:disabled{display:none}
 .doc-toolbar{display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--rule);border-bottom:0;border-radius:4px 4px 0 0;background:var(--surface)}
 .doc-tool{min-width:34px;height:32px;padding:0 9px;border:1px solid transparent;border-radius:3px;background:none;color:var(--ink);font:500 12.5px var(--body);cursor:pointer}.doc-tool:hover{background:var(--soft);border-color:var(--rule)}.doc-tool:focus-visible,.doc-modes button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}.doc-tool b{font-weight:800}.doc-tool i{font-family:Georgia,serif;font-size:14px}.doc-sep{width:1px;height:18px;background:var(--rule);margin:0 6px}
 .doc-modes{margin-left:auto;display:inline-flex;border:1px solid var(--rule);border-radius:3px;overflow:hidden}.doc-modes button{border:0;background:none;color:var(--muted);font:500 12px var(--body);padding:6px 12px;cursor:pointer}.doc-modes button+button{border-left:1px solid var(--rule)}.doc-modes button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
@@ -2020,14 +2021,15 @@ function docShell(){
  const mod=typeof navigator!=="undefined"&&/Mac|iPhone|iPad/.test(navigator.platform||"")?"Cmd":"Ctrl";
  const meta=[i.state?stateBadge(i.state):"",i.changed?`<span>${esc("Last changed")} ${whenText(i.changed)}${i.by?" "+esc("by")+" "+esc(authorName(i.by)):""}</span>`:i.kind==="document"?`<span class="pl-age">${esc("not saved yet")}</span>`:"",`<code>${esc(s.path)}</code>`].filter(Boolean).join("");
  $("#doc-view").innerHTML=`<div class="doc-top"><div class="doc-heading"><button class="linkbtn doc-back" data-v="${backView}"><span aria-hidden="true">←</span> ${esc(backLabel)}</button><h1 id="doc-title" tabindex="-1">${esc(i.title)}</h1><div class="doc-meta">${meta}</div>${i.applies?.length?`<p class="doc-applies">${esc("Codex reads this before:")} ${esc(i.applies.join(", "))}</p>`:""}</div>`+
-  `<div class="doc-actions"><a class="doc-chat" href="${esc(askLink(i.chat))}">${esc("Chat about this")} <span aria-hidden="true">↗</span></a>${s.editable?`<button type="button" class="btn doc-save" id="doc-save" data-doc-save disabled title="${esc("Save ("+mod+"-S)")}">${esc("Save")}</button>`:""}</div></div>`+
+  `<div class="doc-actions"><a class="doc-chat" href="${esc(askLink(i.chat))}">${esc("Chat about this")} <span aria-hidden="true">↗</span></a>${s.editable?`<button type="button" class="btn doc-edit-btn" id="doc-edit-btn" data-doc-edit>${esc("Edit")}</button><button type="button" class="btn doc-done-btn" data-doc-mode="preview">${esc("Done editing")}</button><button type="button" class="btn doc-save" id="doc-save" data-doc-save disabled title="${esc("Save ("+mod+"-S)")}">${esc("Save")}</button>`:""}</div></div>`+
   `<div id="doc-notice" class="doc-notice" role="status" aria-live="polite"></div><div id="ds-tabs" class="ds-tabs" role="tablist" aria-label="${esc("How to show the design system")}"></div><div id="ds-visual" class="ds-visual" role="tabpanel" aria-labelledby="ds-tab-visual" hidden></div>`+
   (s.editable?`<div class="doc-toolbar" role="toolbar" aria-label="${esc("Formatting")}">${tool("h2","Heading","H2")}${tool("h3","Smaller heading","H3")}<span class="doc-sep" aria-hidden="true"></span>${tool("bold","Bold","<b>B</b>",mod+"-B")}${tool("italic","Italic","<i>I</i>",mod+"-I")}${tool("code","Code","&lt;/&gt;")}<span class="doc-sep" aria-hidden="true"></span>${tool("ul","Bulleted list","&bull; List")}${tool("ol","Numbered list","1.")}${tool("quote","Quote","&ldquo;")}<span class="doc-sep" aria-hidden="true"></span>${tool("link","Link","Link")}${tool("table","Table","Table")}`+
-   `<span class="doc-modes" role="group" aria-label="${esc("Layout")}">${[["write","Write"],["split","Split"],["preview","Preview"]].map(([k,l])=>`<button type="button" data-doc-mode="${k}" aria-pressed="${s.mode===k}">${esc(l)}</button>`).join("")}</span></div>`:"")+
+   `<span class="doc-modes" role="group" aria-label="${esc("Layout")}">${[["write","Write"],["split","Split"]].map(([k,l])=>`<button type="button" data-doc-mode="${k}" aria-pressed="${s.mode===k}">${esc(l)}</button>`).join("")}</span></div>`:"")+
   `<div class="doc-body ${s.editable?"mode-"+s.mode:"mode-read"}" id="doc-body"><aside class="doc-outline" aria-label="${esc("Outline")}"><h2>${esc("Outline")}</h2><nav id="doc-outline"></nav></aside>`+
   (s.editable?`<div class="doc-edit"><label class="sr-only" for="doc-text">${esc("Document text, in Markdown")}</label><textarea id="doc-text" spellcheck="true" autocapitalize="sentences"></textarea></div>`:"")+
   `<article class="doc-preview md-doc" id="doc-preview" tabindex="0" aria-label="${esc(s.editable?"Preview":i.title)}"></article></div>`+
   `<div class="doc-foot"><span id="doc-count"></span><span id="doc-dirty" role="status"></span><a class="pl-open" href="${esc(fileHref(s.path))}" target="_blank" rel="noopener" aria-label="${esc("Open "+s.path)}">${esc("Open file")}</a></div>`;
+ $("#doc-view").dataset.docMode=s.editable?s.mode:"read";
  dsShell();
 }
 function docPaint(){
@@ -2048,7 +2050,8 @@ function docNotice(html=docNoticeHtml,tone=docNoticeTone){docNoticeHtml=html;doc
 async function openDoc(path,restoring=false){
  const info=docInfo(path);if(!info){if(!restoring)return;docState=null;return}
  if(docState&&docState.path!==path&&docDirty()&&typeof confirm==="function"&&!confirm("Leave this document? Your unsaved changes will be lost."))return;
- let mode="split";try{mode=sessionStorage.getItem("gtm-doc-mode")||"split"}catch{}if(!["write","split","preview"].includes(mode))mode="split";
+ /* A document opens to be read. Editing starts from the Edit button, in the layout last used for editing. */
+ const mode="preview";
  docNoticeHtml=docNoticeTone="";const s=docState={path,info,raw:"",body:"",text:"",sent:null,hash:"",editable:false,loading:LIVE,error:LIVE?"":"A saved copy of the dashboard cannot open files. Open the live dashboard to read this here, or open the file itself.",mode,saving:false,savedAt:null};
  docShell();docPaint();
  if(!restoring||view!=="doc")show("doc");
@@ -2119,6 +2122,7 @@ document.addEventListener("click",e=>{
  const t=e.target;if(!t?.closest)return;
  if(t.closest("[data-doc-save]")){docSave();return}
  const tool=t.closest("[data-md]");if(tool&&docState?.editable){if(docState.mode==="preview"){docState.mode="split";docMode()}docFormat(tool.dataset.md);return}
+ if(t.closest("[data-doc-edit]")&&docState?.editable){let m="split";try{m=sessionStorage.getItem("gtm-doc-mode")||"split"}catch{}docState.mode=m==="write"?"write":"split";docMode();$("#doc-text")?.focus();return}
  const mode=t.closest("[data-doc-mode]");if(mode&&docState){docState.mode=mode.dataset.docMode;docMode();return}
  const stale=t.closest("[data-doc-stale]");if(stale&&docState?.stale){const s=docState;if(stale.dataset.docStale==="theirs"){s.body=s.text=s.stale.body;s.hash=s.stale.hash;s.stale=null;$("#doc-text").value=s.text;docPaint();docNotice("","")}else{s.hash=s.stale.hash;s.body=s.stale.body;s.stale=null;docSave(true)}return}
  const head=t.closest("[data-doc-head]");if(head&&docState){const ta=docState.editable&&docState.mode!=="preview"?$("#doc-text"):null;
@@ -2126,7 +2130,7 @@ document.addEventListener("click",e=>{
   document.getElementById(head.dataset.docHead)?.scrollIntoView?.({block:"start",behavior:"smooth"});return}
  const open=t.closest("[data-doc]");if(open&&!t.closest("a")){openDoc(open.dataset.doc);return}
 });
-function docMode(){const s=docState;try{sessionStorage.setItem("gtm-doc-mode",s.mode)}catch{}const body=$("#doc-body");body.className="doc-body mode-"+s.mode;for(const b of document.querySelectorAll("[data-doc-mode]"))b.setAttribute("aria-pressed",String(b.dataset.docMode===s.mode))}
+function docMode(){const s=docState;if(s.mode!=="preview")try{sessionStorage.setItem("gtm-doc-mode",s.mode)}catch{}const body=$("#doc-body");body.className="doc-body mode-"+s.mode;$("#doc-view").dataset.docMode=s.mode;for(const b of document.querySelectorAll("[data-doc-mode]"))b.setAttribute("aria-pressed",String(b.dataset.docMode===s.mode))}
 document.addEventListener("input",e=>{if(e.target?.id==="doc-text")docChanged()});
 document.addEventListener("keydown",e=>{
  if(view!=="doc"||!docState?.editable)return;

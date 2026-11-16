@@ -85,7 +85,7 @@ for (const e of entries || []) if (e && e.sources !== undefined && e.sources !==
 // is already a source, so the sentence is left out, not refused. And a call the person tells about arrives with its
 // meeting block half in the format: names for participants, a date for observed_at. Both are read, not sent back
 // (app run, 2026-11-16: one spoken note took four saves, three of them refused on these).
-const sentence = v => typeof v === "string" && !/^https?:\/\//i.test(v.trim()) && !/^[A-Za-z][\w.-]*:\S/.test(v.trim());
+const sentence = v => typeof v === "string" && !/^https?:\/\//i.test(v.trim()) && !/^[{\[]/.test(v.trim()) && !/^[A-Za-z][\w.-]*:\S/.test(v.trim());
 const nowUtc = new Date().toISOString().replace(/\.\d+Z$/, "Z");
 for (const e of entries || []) {
   if (!e || typeof e !== "object") continue;
