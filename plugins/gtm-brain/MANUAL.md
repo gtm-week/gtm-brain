@@ -338,6 +338,122 @@ plan for a private repository. The paths to protect: `about-us/**`, `config/**`,
 `brain/ontology.ossie.json`, and, for brains not yet upgraded, `brain/admin.md`, `RULES.md` and
 `SCHEMA.md`.
 
+## Updating to 0.37: the four folders
+
+0.37 can keep a brain in four folders, the tabs of the dashboard: `configuration/`, `entities/`,
+`memories/` and `workflows/` ("The four folders (file layout 4)" above). Updating the plugin moves
+nothing: a brain keeps working as it is until its owner says yes to the move. No note is
+rewritten: every line goes into the file of its month as it was, and every person, company and
+note keeps its id. A brain set up with 0.37 starts in the four folders.
+
+### What to do, in order
+
+1. **Everyone on the team updates the plugin first.** In Codex, say "update GTM Brain". Without
+   Codex: `codex plugin marketplace upgrade gtm-brain`, then `codex plugin add gtm-brain@gtm-brain`.
+   This matters more than in 0.35: after the move an older GTM Brain finds no brain in the folder.
+2. **Quit and reopen Codex, then start a new chat in the brain folder.** The first reply refreshes
+   the rules as after every update. For the owner it ends with one line: "This brain can be
+   upgraded to the four folders of 0.37. Say: upgrade this brain." Nothing has moved, and nothing
+   moves until the owner asks.
+3. **The owner says "save", then "upgrade this brain".** Codex answers with what would move (how
+   many notes of how many topics into how many month files), which teammates saved here in the
+   last 14 days, and one question: "Yes, upgrade the layout / No, not now". Nothing has changed at
+   this point (the tool says "Nothing was changed."). No is safe: the brain keeps working and the
+   offer comes back in the next chat.
+4. **On yes, the files move** and the reply lists them: "moved config -> configuration", "moved
+   brain/entities -> entities", "moved 1134 notes of 6 topics into 2 month files in memories/,
+   every line unchanged", "changed the brain's file layout to 4 (layout.json)". Before anything is
+   kept, every note line is read back from the new files and compared, and the entity ids are
+   counted again; if anything differs the move is undone and says so. It is pushed like any save.
+5. **Teammates pull as usual** (their next chat start does). On their computer the first chat
+   moves their own `work/` into `.gtm-brain/`, so who they are there, the loaded topics and the
+   linked projects are kept.
+
+A brain still in the layout of 0.34 or of an early 0.35 is asked once, for all moves together, and
+goes through them in the same run.
+
+Measured on a copy of a real brain (1,134 notes in 6 topics and 2 months, 381 entity pages): the
+question took under a second, the move 7 seconds, the first dashboard afterwards 5 seconds. On a
+brain with 92 notes the move took 2 seconds. Before and after, the notes (all and in force), the
+entity ids, the aliases, the relationships, the customers, the documents and the answers to five
+searches were the same.
+
+### Who can say yes
+
+Only the owner (`owner` in the settings). A teammate gets no offer at the chat start. A teammate
+who says "upgrade this brain" gets the usual refresh of rules and hook and then: "One more move is
+waiting: the brain into its four folders (configuration/, entities/, memories/, workflows/;
+layout 4). It is the owner's (name) to say yes to, in their own chat". Nothing of the move is
+asked or done there. A scheduled or background run never moves anything.
+
+Who is the owner on a computer is who GTM Brain takes the person there to be: the name given in
+that chat, or the folder's git email when it is the email of exactly one person in the team.
+
+### What someone on an older GTM Brain sees after the move
+
+Measured with 0.36.1 on a brain moved by 0.37:
+
+- A question: "no brain here". Nothing is read.
+- A save: `"<their handle>" is not in admin.md team`. Nothing is written.
+
+No note is lost, because nothing is written. The fix is to update GTM Brain and restart Codex,
+never to run setup in that folder. `layout.json` at the top says so in words, for a person or a
+tool that looks.
+
+### What is different afterwards
+
+- **Where files are.** `configuration/` holds `about-us/`, `rules.md`, `schema.md`,
+  `settings.yaml`, `interactions.json` (it was `brain/ontology.ossie.json`) and `proposals/`.
+  `entities/` holds the kind folders. `memories/` holds one file of notes per month
+  (`2026-11.jsonl`) and `topics/<topic>.md`, what a context's `context.md` was. `workflows/`,
+  `projects/` and your own documents stay where they were. There is no `brain/` folder.
+- **This computer's files** are in the hidden `.gtm-brain/` (it was `work/`): the search index,
+  the dashboard, the logs, kept manual edits, upgrade backups. A task's throwaway files go in
+  `.gtm-brain/scratch/`.
+- **A note names its topic.** The tools still say context, and their parameter is still
+  `context`. Reading one topic is a filter over the month files.
+- **No generated `index.md`** in the entity folders: "list the people" answers from the pages.
+- **The README and the rules**, when nobody edited them, are rewritten to name the new places.
+  Edited ones are yours and keep their text.
+- **The same protections.** A hand edit of a month's notes is put back; only the owner changes
+  `configuration/`, and a teammate's change waits in `configuration/proposals/`.
+
+### Going back
+
+The move is two commits. `git log --oneline` shows them:
+
+- `layout 4: entity pages link to memories/`
+- `layout 4: configuration/, entities/, memories/ and workflows/`
+
+`git revert` both, the newest first, to put every file back where it was. This is clean only
+before the next note is saved: a later note is in a month's file the revert wants to delete, and
+git reports a conflict on that file. Decide on the day of the move. Rehearsed on both brains
+above: after the two reverts every count and every search was the starting one, read by 0.37 and
+by 0.36.1.
+
+After going back:
+
+- This computer's files are still in `.gtm-brain/`. In a brain folder with no `work/`, rename it
+  back (`mv .gtm-brain work`) to keep who you are there and the loaded topics; otherwise leave it.
+- `entities/` stays behind as empty folders; delete it or leave it.
+- "upgrade this brain" moves the brain again whenever the owner wants; neither leftover stops it.
+
+A full copy of everything as it was before the move is in
+`.gtm-brain/upgrades/layout-4-<time>/` on the computer that moved it, whatever happens to git.
+
+Going back does not downgrade the plugin: 0.37 reads and writes all four arrangements.
+
+### If something looks wrong
+
+| You see | What it means, and what to do |
+|---|---|
+| "not moved to layout 4: N unsaved changes under brain/, about-us/ or config/ (...); save first, then upgrade again" | a file that would move has an edit git does not hold yet; say "save", then "upgrade this brain" again. Nothing was moved |
+| "... already exists at the top of the brain; rename it first" | a folder of your own is called `configuration`, `entities` or `memories`, or a file is called `layout.json`; rename it, then upgrade again |
+| "the move was stopped and everything put back: ..." | the notes did not read back the same, so nothing was kept; the line says which topic. Report it; the brain works as before |
+| "One more move is waiting ... It is the owner's (name) to say yes to" | not an error: you are not the owner here |
+| "no brain here", or a save refused, on a teammate's computer after the move | that computer is on an older GTM Brain; "update GTM Brain", quit and reopen Codex. Do not run setup |
+| "left in brain/: N files GTM Brain does not know" | files of your own under `brain/` were left where they are; move them where you want them |
+
 ## Updating to 0.36: short skill names
 
 Since 0.36 every skill is `/gtmb-<name>`. Until 0.35 it was `/gtm-brain-<name>`. Nothing else is

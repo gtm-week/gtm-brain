@@ -340,27 +340,27 @@ automatic replacement until reviewed. Refreshing a summary is not a live check o
 
 ```text
 your-brain/
-  AGENTS.md                         Workspace instructions for the agent
-  CLAUDE.md                         Claude Code entry point
-  brain/
-    admin.md                        Company, team, tools and settings
-    contexts/
-      icp/
-        context.md                  Summary, standing rules, working guidance
-        memories.jsonl              Append-only evidence, decisions and questions
-      offer/ ...                    Other shared contexts
-    entities/
-      <entity>.md                   Stable identity and cited cross-context brief
-      .history/                     Identity merge and recovery records
-  strategy.md                       A standing document (kind: document)
-  strategy/                         Files belonging to that document
-  workflows/
-    outbound.md                     Playbook definition; run state lives in memories
-  .agents/skills/                    Your own reusable skills
-  work/                             Local state and caches, ignored by version control
-    memory-index.sqlite             Rebuildable SQLite search index
-    loaded-contexts.json             Working context selection
-    home/                           Rendered dashboard and data
+  configuration/                    What is allowed and what the work must follow
+    about-us/                       Base documents
+      strategy.md  icp.md  voice.md  market.md
+      design-system.md  design-system.html
+    rules.md                        Where things go, Ask the source, Our rules
+    schema.md                       Fields per kind, organization subtypes, relationship types
+    settings.yaml                   Company, team, tools and settings
+    interactions.json               Your company's own interactions, once one is approved
+    proposals/                      A teammate's change, waiting for the owner
+  entities/                         One page per person, company, product, event, tool, meeting
+    people/  organizations/  products/  events/  tools/  meetings/  offerings/
+  memories/                         The notes: one per line, never edited
+    2026-11.jsonl                   One file per month; each note names its topic
+    topics/                         Per topic: the standing rule, summary and working guidance
+      company.md  icp.md  market.md  offer.md  strategy.md  personal-<handle>.md
+  workflows/                        Processes with steps; a run's state is kept as notes
+  projects/                         Working folders for an event, a campaign, a client
+  .agents/skills/                   Skills you made
+  layout.json                       The file layout of this brain (4)
+  AGENTS.md  CLAUDE.md  README.md   Written by GTM Brain and refreshed on update
+  .gtm-brain/                       This computer only, not in git: search index, dashboard, caches
 ```
 
 The plugin's source and your brain are separate folders. Updating the plugin does not replace

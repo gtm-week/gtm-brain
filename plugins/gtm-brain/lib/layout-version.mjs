@@ -73,7 +73,7 @@ export function writeLayout(root, { layout, starters } = {}) {
   if (current.error) throw new LayoutError(layoutBlock(root));
   layout = Math.max(current.layout, Number.isInteger(layout) ? layout : 0);
   const given = [...new Set([...(current.starters || []), ...(starters || [])])].sort();
-  const next = JSON.stringify({ layout, starters: given, about: "The file layout of this brain. A GTM Brain older than this layout reads but writes nothing until it is updated." }, null, 2) + "\n";
+  const next = JSON.stringify({ layout, starters: given, about: layout >= 4 ? "The file layout of this brain: configuration/, entities/, memories/ and workflows/ (file layout 4). A GTM Brain older than 0.37 finds no brain here and neither reads nor writes until it is updated." : "The file layout of this brain. A GTM Brain older than this layout reads but writes nothing until it is updated." }, null, 2) + "\n";
   let before = null; try { before = readFileSync(path, "utf8"); } catch {}
   if (before === next) return false;
   mkdirSync(dirname(path), { recursive: true });
