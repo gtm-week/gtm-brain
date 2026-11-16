@@ -2,7 +2,7 @@
 
 For experts and tool vendors (Zynt, Surfer, a course lecturer) adding a skill that ships with
 the plugin to every brain. A skill one company keeps for itself is not this: see
-[USER-SKILLS.md](../docs/USER-SKILLS.md), no pull request needed.
+[USER-SKILLS.md](../USER-SKILLS.md), no pull request needed.
 
 `gtmb-icp` (Chris Pawlak, PR #5) is the worked example. Read it next to this page.
 
@@ -38,8 +38,8 @@ The skill never touches brain files directly. It reads with `query`, `load_conte
      in "the person can ask for ... shipped workflows". The test compares a sorted list, so put the id in
      alphabetical order.
    - The skill tables in `README.md`, `docs/COMMANDS.md` and `docs/ONBOARDING.md`: one row each.
-   - The skill count ("twenty") in `README.md`, `.claude/CLAUDE.md`, `CONTRIBUTING.md` and
-     `docs/USER-SKILLS.md`, plus the skill list in the layout blocks of `README.md` and `CONTRIBUTING.md`.
+   - The skill count ("twenty") in `README.md`, `.claude/CLAUDE.md`, `.github/CONTRIBUTING.md` and
+     `docs/USER-SKILLS.md`, plus the skill list in the layout blocks of `README.md` and `.github/CONTRIBUTING.md`.
    - A skill whose work overlaps another: say "Not ..." in both descriptions, as define-icp
      does about market desk research and campaign execution.
 4. **Routing, only if needed.** A slash command (`/gtm-brain-<slug>`) always works. For plain

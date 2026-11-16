@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Total reset for onboarding testing: wipe the test brain, refresh the gtm-brain plugin from
-# this checkout (dev-install.sh), and leave a fresh empty folder for the next run.
-#   ./dev-reset.sh [brain-folder]     default: ~/Desktop/test-brain
+# this checkout (scripts/dev-install.sh), and leave a fresh empty folder for the next run.
+#   ./scripts/dev-reset.sh [brain-folder]     default: ~/Desktop/test-brain
 # Then start a new chat in Codex on the brain folder (restart the app only if old skills linger).
 #
 # Safety: only wipes a folder that is empty or that this script created earlier (paths are
 # recorded in .dev-brains, gitignored). A real brain is never deleted here; do that by hand.
 set -eu
-R="$(cd "$(dirname "$0")" && pwd)"
+R="$(cd "$(dirname "$0")/.." && pwd)"
 BRAIN="${1:-$HOME/Desktop/test-brain}"
 case "$BRAIN" in /*) ;; *) BRAIN="$PWD/$BRAIN" ;; esac
 REG="$R/.dev-brains"
@@ -29,4 +29,4 @@ fi
 mkdir -p "$BRAIN"
 grep -qxF "$BRAIN" "$REG" 2>/dev/null || echo "$BRAIN" >> "$REG"
 echo "fresh test brain: $BRAIN (empty, ready for onboarding)"
-"$R/dev-install.sh"
+"$R/scripts/dev-install.sh"

@@ -103,7 +103,7 @@ test("the live skill cases name a shipped skill, open with its slash command and
 });
 
 test("the contributor template passes the same rules once copied into skills/, and its README names real files", () => {
-  const T = join(P, "../../skill-template"), id = "gtm-brain-example", home = join(P, "skills", id);
+  const T = join(P, "../../docs/skill-template"), id = "gtm-brain-example", home = join(P, "skills", id);
   const skill = readFileSync(join(T, id, "SKILL.md"), "utf8"), method = readFileSync(join(T, id, "references/method.md"), "utf8");
   assert.match(frontmatter(skill), new RegExp(`^name: ${id}$`, "m"));
   assert.match(readFileSync(join(T, id, "agents/openai.yaml"), "utf8"), new RegExp(`\\$${id}\\b`));
