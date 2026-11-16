@@ -7,7 +7,7 @@ description: |
   brain's tools. Triggers: "Set up Freckle for me", "connect Freckle", "/gtmb-freckle-setup",
   "enrich my target companies with Freckle". Not the time tracker at letsfreckle.com. Not later
   Freckle work after setup (Freckle's own skills or gtmb-use-brain), and not defining the
-  ICP (gtmb-define-icp).
+  ICP (gtmb-icp).
 metadata:
   author: GTM Brain
 allowed-tools: [Bash, Read]

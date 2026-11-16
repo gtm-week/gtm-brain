@@ -31,8 +31,8 @@ do not establish business status.
   procedure's own next step: nothing in progress or "what should I do": `gtmb-todo`; a call
   or meeting with a company or person: `gtmb-deepdive`; CAC, LTV, churn or growth-spend
   numbers: `gtmb-unit-economics`; a market, segment or competitors to assess:
-  `gtmb-market-desk-research`; the person wants to define or rework who to target, with no
-  ICP written to save ("define our ICP", "who is our ideal customer"): `gtmb-define-icp`;
+  `gtmb-market-research`; the person wants to define or rework who to target, with no
+  ICP written to save ("define our ICP", "who is our ideal customer"): `gtmb-icp`;
   the first chat of the day, or "what came in": `gtmb-sync`; the same multi-step work done
   twice: `gtmb-skill`; copy, a design or outreach with no document covering it, or only a
   `[not filled]` starter: filling that starter (`voice.md`, `design-system.md`, `strategy.md`,
