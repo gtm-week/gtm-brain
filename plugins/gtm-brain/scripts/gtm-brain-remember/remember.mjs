@@ -573,7 +573,7 @@ for (let i = 0; i < entries.length; i++) {
     ev.note = d.id; } catch (err) { lines.push(`${at(n)}the date of "${ev.name}" was not kept (${err.message}): say it in a note.`); } }
   if (alreadyRecorded) {
     // an event this call registered is kept even when the note itself was already there
-    if (eventDates.length || events.some(ev => added.includes(ev.name))) { try { lib.commit(root, [`brain/contexts/${ctx}/memories.jsonl`, ...lib.ENTITIES_PATHS], `remember: ${ctx} event by ${authors.join(",")}`); } catch {} }
+    if (eventDates.length || events.some(ev => added.includes(ev.name))) { try { lib.commit(root, [...lib.notesPaths(root, ctx), ...lib.entitiesPaths(root)], `remember: ${ctx} event by ${authors.join(",")}`); } catch {} }
     kept.push({ n, id: rec.id, ctx }); lines.push(`${at(n)}already recorded ${rec.id} in ${ctx}`); continue; }
   // one current link at a time where SCHEMA.md says so: the previous one gets an ended note dated to this one
   let endedBefore = [];
