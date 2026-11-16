@@ -2,9 +2,9 @@
 
 For experts and tool vendors (Zynt, Surfer, a course lecturer) adding a skill that ships with
 the plugin to every brain. A skill one company keeps for itself is not this: see
-[USER-SKILLS.md](../USER-SKILLS.md), no pull request needed.
+[USER-SKILLS.md](../docs/USER-SKILLS.md), no pull request needed.
 
-`gtmb-define-icp` (Chris Pawlak, PR #5) is the worked example. Read it next to this page.
+`gtmb-icp` (Chris Pawlak, PR #5) is the worked example. Read it next to this page.
 
 ## What a skill is
 
@@ -37,9 +37,9 @@ The skill never touches brain files directly. It reads with `query`, `load_conte
    - `plugins/gtm-brain/test/skill-catalog.test.mjs`: add the id to the list of shipped skills
      in "the person can ask for ... shipped workflows". The test compares a sorted list, so put the id in
      alphabetical order.
-   - The skill tables in `README.md`, `COMMANDS.md` and `ONBOARDING.md`: one row each.
+   - The skill tables in `README.md`, `docs/COMMANDS.md` and `docs/ONBOARDING.md`: one row each.
    - The skill count ("twenty") in `README.md`, `CLAUDE.md`, `CONTRIBUTING.md` and
-     `USER-SKILLS.md`, plus the skill list in the layout blocks of `README.md` and `CONTRIBUTING.md`.
+     `docs/USER-SKILLS.md`, plus the skill list in the layout blocks of `README.md` and `CONTRIBUTING.md`.
    - A skill whose work overlaps another: say "Not ..." in both descriptions, as define-icp
      does about market desk research and campaign execution.
 4. **Routing, only if needed.** A slash command (`/gtm-brain-<slug>`) always works. For plain
@@ -53,7 +53,7 @@ The skill never touches brain files directly. It reads with `query`, `load_conte
    plain hyphens, a catalog entry. A live case (`test/live/<slug>-cases.mjs`, listed in
    `test/live/skill-cases.mjs`) runs the skill through real Codex; it is optional and run by hand.
 6. **Bump the version.** Raise `plugins/gtm-brain/.codex-plugin/plugin.json`, the same number in the
-   cache paths in `SETUP.md` and `COMMANDS.md`, then run `node scripts/sync-derived.mjs`.
+   cache paths in `docs/SETUP.md` and `docs/COMMANDS.md`, then run `node scripts/sync-derived.mjs`.
    Without a bump nobody is offered the skill.
 7. **Open a pull request** to `main`. Run `node --test 'plugins/gtm-brain/test/*.test.mjs'`
    first. Without write access to the repository, open it from a fork; `main` needs one approval.

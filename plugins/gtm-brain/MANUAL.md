@@ -48,9 +48,16 @@ cannot settle (an unclear name is asked right after the note is saved). It asks 
   a note, is asked when it has two readings. Every chat starts with today's date.
 - **Companies.** A new company is saved as a company. Its website is not asked on a save; give it
   any time ("Northwind is northwind.com") and it is kept on the company's page.
+- **Events.** An event you run, sponsor, speak at or attend is registered once, with its date
+  ("we ran Northfold Summit on 8 October"), and later notes link to it. Named without a date, the
+  note is saved and the event waits for one; Codex does not ask for it.
 - **Projects.** A note about someone whose notes all sit in one project is tagged with it; when
   they are in several, Codex asks which.
 - **Your reply first.** A held question waits for your answer; Codex never picks it for you.
+
+"What events did we run?" lists the events from their pages, each with its newest notes. When
+notes name events and the brain has none, housekeeping says so and gives the sentence that
+registers them.
 
 Entity pages live in a folder per kind: `brain/entities/people/`, `organizations/`, `products/`,
 `offerings/` (what we sell: what it is, its price, who it is for), `events/`, `tools/`,
@@ -465,10 +472,13 @@ calls keep their names, and notes, people and companies are untouched.
 | `/gtm-brain-start` | `/gtmb-start` |
 | `/gtm-brain-configure` | `/gtmb-configure` |
 | `/gtm-brain-rules`, `/gtm-brain-schema` | `/gtmb-rules`, `/gtmb-schema` |
-| `/gtm-brain-strategy`, `/gtm-brain-define-icp`, `/gtm-brain-voice`, `/gtm-brain-design-system` | `/gtmb-strategy`, `/gtmb-define-icp`, `/gtmb-voice`, `/gtmb-design-system` |
+| `/gtm-brain-strategy`, `/gtm-brain-define-icp`, `/gtm-brain-voice`, `/gtm-brain-design-system` | `/gtmb-strategy`, `/gtmb-icp`, `/gtmb-voice`, `/gtmb-design-system` |
 | `/gtm-brain-workflow`, `/gtm-brain-skill`, `/gtm-brain-project` | `/gtmb-workflow`, `/gtmb-skill`, `/gtmb-project` |
 | `/gtm-brain-todo`, `/gtm-brain-sync`, `/gtm-brain-deepdive` | `/gtmb-todo`, `/gtmb-sync`, `/gtmb-deepdive` |
 | `/gtm-brain-<tool>-setup` | `/gtmb-<tool>-setup` |
+| `/gtm-brain-define-icp` (and `/gtmb-define-icp` of 0.36.0) | `/gtmb-icp` |
+| `/gtm-brain-market-desk-research` (and `/gtmb-market-desk-research` of 0.36.0) | `/gtmb-market-research` |
+| new in 0.36.1 | `/gtmb-market`, which fills the market document |
 | any other `/gtm-brain-<name>` | `/gtmb-<name>` |
 
 ### What to do, in order

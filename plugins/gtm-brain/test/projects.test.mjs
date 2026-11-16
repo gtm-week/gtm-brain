@@ -484,7 +484,7 @@ test("the skill exists, is listed, and asks before it writes", () => {
   assert.match(create, /^name: gtmb-project$/m);
   assert.ok(existsSync(`${P}/skills/gtmb-project/references/link.md`));
   assert.match(readFileSync(`${P}/skills/gtmb-project/agents/openai.yaml`, "utf8"), /display_name: "GTM Brain: Projects"/);
-  const commands = readFileSync(join(P, "..", "..", "COMMANDS.md"), "utf8");
+  const commands = readFileSync(join(P, "..", "..", "docs/COMMANDS.md"), "utf8");
   assert.match(commands, /^\| `gtmb-project` \| GTM Brain: Projects \|/m);
   assert.match(commands, /^\| `gtmb-project` \| GTM Brain: Projects \|/m);
 });
@@ -496,7 +496,7 @@ test("the model, the contributors and the participants are told", () => {
   assert.match(book, /`link_project`, `unlink_project`\)/); assert.match(book, /`gtmb-project`/);
   const contrib = readFileSync(join(P, "..", "..", "AGENTS.md"), "utf8");
   assert.match(contrib, /A project is a tag and a local pointer, never an object/); assert.match(contrib, /never below cwd/);
-  for (const doc of ["ONBOARDING.md", "GUIDE.md"]) assert.match(readFileSync(join(P, "..", "..", doc), "utf8"), /## Work in your own folders/, doc);
+  for (const doc of ["docs/ONBOARDING.md", "docs/GUIDE.md"]) assert.match(readFileSync(join(P, "..", "..", doc), "utf8"), /## Work in your own folders/, doc);
 
 });
 

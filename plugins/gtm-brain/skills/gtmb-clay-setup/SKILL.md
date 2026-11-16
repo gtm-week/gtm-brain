@@ -6,7 +6,7 @@ description: |
   only after a second yes, and keep one note so Clay shows in the brain's tools. Triggers: "Set up
   Clay for me", "connect Clay", "/gtmb-clay-setup", "find my target companies in Clay". Not
   later Clay work after setup (Clay's own skills or gtmb-use-brain), and not defining the
-  ICP (gtmb-define-icp).
+  ICP (gtmb-icp).
 metadata:
   author: GTM Brain
 allowed-tools: [Bash, Read]

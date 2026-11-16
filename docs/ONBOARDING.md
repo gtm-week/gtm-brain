@@ -32,6 +32,7 @@ Three things only you can do:
 | 1. Install | Paste one prompt in any Codex chat | Checks the computer, installs GTM Brain |
 | 2. Project | Create an empty folder called GTM Brain, open a new chat in it | Nothing yet |
 | 3. Set up | Send "Set up GTM Brain here" | Creates the brain, learns your business, connects your tools, opens the dashboard |
+| 4. Make it yours | Answer three short questions, or click Later | Shows what the brain keeps (the schema) and its rules, then offers to fill the base documents |
 | After | Work in plain language | Remembers, recalls, keeps summaries up to date |
 
 ## Step 1: install GTM Brain
@@ -86,8 +87,35 @@ The dashboard opens next to the chat, with a card showing these six steps and wh
    Choose the ones whose future work should feed the brain, or skip. Your existing files
    and conversations stay where they are.
 
-It closes with a short summary: what connected, what it learned, what is now running, and
-where to find the ready-made workflows in the dashboard.
+It closes with a short summary: what connected, what it learned and what is now running.
+
+### Then: schema, rules, documents
+
+Before you start working, Codex takes you through the three things that shape everything it
+saves later. Each is one form with the recommended choice first, and **Later** is always a
+choice, so you can pass each in one click. An answer is remembered: if you leave and come back,
+Codex does not ask it again. If you left before answering, it offers the open ones once more
+on your next hello, and not after that.
+
+1. **Schema: what the brain keeps.** Codex shows, in a few lines, what it keeps about each
+   person, company and product, and proposes up to three additions, only ones backed by what
+   it saw during setup (a renewal date, if your site says annual plans); with nothing to go
+   on it proposes none. A proposed field is optional unless you say it must be there. Choose
+   **Looks right**, pick an addition, or type your own. `/gtmb-schema` changes it any time.
+2. **Rules: how Codex saves.** Codex shows the brain's rules in a few lines (where files go,
+   which tool it asks, your own rules) and asks one thing: is there something it should always
+   ask before saving, or never save? Choose **The defaults are fine** or type the rule.
+   `/gtmb-rules` changes them any time.
+3. **Base documents.** Rules and schema come first; these are next. Codex asks which of the
+   five starters to fill now: tone of voice, ICP, strategy, design system, market. Choose some,
+   all, or Later.
+
+If you are not the brain's owner, Codex does not ask these three: it tells you in one line
+that the schema, the rules and the base documents are the owner's to change, and that a change
+you ask for goes to them as a proposal. Your answers are your own: the owner is still asked.
+
+Then it gives you one first thing to do, as a sentence you can send, and says where to find
+the ready-made workflows in the dashboard.
 
 ### Good to know during setup
 
@@ -126,8 +154,8 @@ summary is written when you ask about it. When you want a specific workflow:
 | Pull in what arrived through your tools | `/gtmb-sync` |
 | Get a one-page brief before a call | `/gtmb-deepdive` |
 | Decide whether to push, fix, stop or measure growth spend | `/gtmb-unit-economics` |
-| Assess a market, its segments and competitors against what you can prove today | `/gtmb-market-desk-research` |
-| Define who to target: company fit, buying roles and readiness, kept as one draft | `/gtmb-define-icp` |
+| Assess a market, its segments and competitors against what you can prove today | `/gtmb-market-research` |
+| Define who to target: company fit, buying roles and readiness, kept as one draft | `/gtmb-icp` |
 | Fill in the strategy the brain starts with (`strategy.md`), in a 10-15 minute conversation | `/gtmb-strategy` |
 | Draft a tone of voice: first whose it is (the company's, yours or a team's), then from writing that fits, tested on one fresh email or post; `voice.md` for the company; offered at the end of setup, skippable, run again any time | `/gtmb-voice` |
 | Set up ZYNT from what the brain knows: paste the prompt ZYNT gives you after "Set up with my AI agent" | `/gtmb-zynt-setup` |

@@ -1,8 +1,8 @@
 # gtm-brain: contributor notes
 
 This repo is the plugin, not a brain. Test brains live in a scratch folder (`setup` creates one).
-If someone opens this repo in Codex to try GTM Brain: do not improvise an installation from SETUP.md
-or run checks in the shell; send them to SETUP.md's install command and an empty folder, where
+If someone opens this repo in Codex to try GTM Brain: do not improvise an installation from docs/SETUP.md
+or run checks in the shell; send them to docs/SETUP.md's install command and an empty folder, where
 the plugin's `check_environment` and `setup_brain` tools do the work.
 
 ## Default onboarding interaction
@@ -87,7 +87,7 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
 - Shared question and Computer Use policies are authored in `plugins/gtm-brain/policies/`.
   Run `node scripts/sync-derived.mjs` after editing them or the single-memory input fields
   in the ontology. It refreshes the marked instruction blocks and batch schema; tests
-  enforce `--check`. Historical templates are excluded. See [README.md](README.md#maintaining-shared-text-and-schemas).
+  enforce `--check`. Historical templates are excluded. See [CONTRIBUTING.md](CONTRIBUTING.md#maintaining-shared-text-and-schemas).
 - Three formal ontology objects: contexts, memories and entities. Entity kinds come from the
   brain's SCHEMA.md: every `## <Kind>` section with a field table is a kind, and person,
   organization, product, offering, event, tool and meeting are the defaults that always exist (`lib/kinds.mjs`,
@@ -118,7 +118,7 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
 - A change under `plugins/gtm-brain/` that people should receive bumps the version in
   `.codex-plugin/plugin.json`. `check-version.mjs` compares that number with the installed one,
   and the dashboard, the chat start and the advisor all read its answer: everything shipped without a
-  bump is invisible, so nobody is ever offered it. The cache path in SETUP.md and COMMANDS.md
+  bump is invisible, so nobody is ever offered it. The cache path in docs/SETUP.md and docs/COMMANDS.md
   carries the same number, and a test holds them together. A change to `templates/AGENTS.md`
   snapshots the outgoing template into `templates/legacy/AGENTS-<old version>.md` and lists that
   version in `templates/legacy/manifest.json`, shared by the upgrader and its test matrix.
@@ -167,7 +167,7 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
   start. Run them before every commit that touches `lib/`, a skill script, a server or the session scripts.
   Before a push to `main`, `.githooks/pre-push` runs them and, when what ships changed,
   `test/live/harness-bench.mjs`: the plugin must not cost Codex solved tasks on work that is not
-  GTM (see README.md, Before pushing to main).
+  GTM (see CONTRIBUTING.md, Before pushing to main).
 - The model reaches the skills through the MCP server (`server/server.mjs`, one tool per
   operation, each runs the skill's script in the brain). The server runs outside the sandbox, so
   every writer commits what it wrote at once (`lib.commit`, pushed in the background when there

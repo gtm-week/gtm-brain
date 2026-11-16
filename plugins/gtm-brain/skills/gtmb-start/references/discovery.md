@@ -449,9 +449,15 @@ verified results. When the one-time summary refresh was declined, say "The initi
 refresh is deferred, as requested." Do not replace that outcome with a promise that the summaries
 update later by themselves. Tell the user they can change any of
 it later and where the ten-minute guide is.
-End this closing reply with [the documents question](skills-tour.md#the-documents-question):
-which of the five starters (strategy, ICP, voice, design system, market) to fill now, or later. After
-that answer is handled, give [the first task](skills-tour.md): one concrete sentence to send,
+End this closing reply with [the close](skills-tour.md#the-close-in-order), one question at a
+time: the [schema](skills-tour.md#schema) (what the brain keeps, with up to three additions,
+only those this discovery supports), then the [rules](skills-tour.md#rules) (anything
+Codex should always ask before saving, or never save), then
+[the documents question](skills-tour.md#the-documents-question):
+which of the five starters (strategy, ICP, voice, design system, market) to fill now, or later.
+Each is one form with "Later" as a choice; save each answer as its `Onboarding closing:` note,
+and skip a step the opening lines list as settled. After
+the documents answer is handled, give [the first task](skills-tour.md#the-first-task): one concrete sentence to send,
 built from what onboarding verified, and one line on where every workflow is listed. The first
 task is guidance, not another onboarding question or an action to run for the person.
 

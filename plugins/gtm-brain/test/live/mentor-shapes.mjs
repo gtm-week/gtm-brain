@@ -89,8 +89,8 @@ export function mentorCases({ gold } = {}) {
       responseCheck: text => !open.length || mentions(text, open.map(salient)) >= Math.ceil(open.length / 2),
       expect: `A list of what is waiting, each item traced to a note${open.length ? `; the brain's open questions include: ${open.join(" | ")}` : ""}. The person answers later, so nothing is written.`,
     },
-    interview("gtmb-define-icp", "Help define our ICP."),
-    interview("gtmb-market-desk-research", "Assess our main market."),
+    interview("gtmb-icp", "Help define our ICP."),
+    interview("gtmb-market-research", "Assess our main market."),
     interview("gtmb-unit-economics", "Is our growth economically healthy?"),
     interview("gtmb-strategy", "Run the strategic intake."),
   ];

@@ -10,7 +10,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync, renameSync } from "node:fs";
 import { join } from "node:path";
 import * as lib from "./brain.mjs";
-import { readSchema, fieldsFor } from "./schema.mjs";
+import { readSchema, fieldsFor, brainKinds } from "./schema.mjs";
 import { normalizeSource } from "./pointers.mjs";
 import { entitiesDir } from "./layout.mjs";
 import { coverFile, noteFiles } from "./brain-paths.mjs";
@@ -232,4 +232,36 @@ export function populationText(p, r = POPULATION_RANGES) {
     `Shares are judged from ${r.min_notes} notes and ${r.min_entities} entities. ${out.length ? `Out of range: ${out.join("; ")}.` : "Every measured number is in range."} Reads only.`,
   ];
   return lines.join("\n");
+}
+
+/* A kind SCHEMA.md defines, of which the brain has no entity while its notes name some: "what events did we run?"
+   is then pieced together from notes on every ask (a real brain, 2026-11-16: 23 notes naming events, no event
+   entity, 54 seconds for the answer). One pass over the notes in force, no model. Only events for now: an event
+   is read from its own name, capitalised words ending in an event word (Northfold Summit, Acme Founders Dinner).
+   Nothing below MIN_NOTES notes, so a new or small brain is never told; a name the brain already knows as a
+   person, a company or anything else, and the company's own name, are never listed. */
+const LEAD_WORDS = new Set("the a an our this that next last at in on for after before from during to and of with we every each first second third annual weekly monthly great".split(" "));
+const KIND_SIGNS = {
+  event: { plural: "events", say: "Register the events our notes name, each with its date.",
+    names: content => [...String(content || "").matchAll(/((?:[A-Z][\p{L}\p{N}&'.-]*\s+){1,4})(Meetup|Summit|Conference|Workshop|Week|Dinner|Webinar)\b/gu)].map(m => {
+      const words = m[1].trim().split(/\s+/); while (words.length && LEAD_WORDS.has(words[0].toLowerCase())) words.shift();
+      return words.length ? `${words.join(" ")} ${m[2]}` : null; }).filter(Boolean) },
+};
+export const UNREGISTERED_MIN_NOTES = 3;
+export function unregisteredKinds(root, { names = lib.readNames(root), memories = null } = {}) {
+  const live = names.filter(e => e.status !== "archived"), kinds = new Set(brainKinds(root)), out = [];
+  const ours = String(lib.readAdmin(root)?.company || "").trim().toLowerCase();
+  let notes = null;
+  for (const [kind, sign] of Object.entries(KIND_SIGNS)) {
+    if (!kinds.has(kind) || live.some(e => e.kind === kind)) continue;
+    notes ||= (memories || lib.listContexts(root).flatMap(c => lib.effectiveMemories(c.memories))).filter(m => !m.retracts);
+    const seen = new Map(); let count = 0;
+    for (const m of notes) {
+      const found = [...new Set(sign.names(m.content))].filter(x => x.toLowerCase() !== ours && !lib.exactName(names, x));
+      if (!found.length) continue;
+      count++; for (const x of found) seen.set(x, (seen.get(x) || 0) + 1);
+    }
+    if (count >= UNREGISTERED_MIN_NOTES) out.push({ kind, plural: sign.plural, notes: count, examples: [...seen].sort((a, b) => b[1] - a[1]).slice(0, 3).map(x => x[0]), say: sign.say });
+  }
+  return out;
 }

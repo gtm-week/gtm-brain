@@ -17,7 +17,7 @@ test('the Woodpecker setup skill follows the shipped-skill template: name, links
   const catalog = JSON.parse(readFileSync(join(P, 'scripts/gtm-brain-render/skill-catalog.json'), 'utf8'));
   const i = catalog.findIndex(s => s.id === 'gtmb-woodpecker-setup');
   assert.ok(i > 0 && catalog[i].group === 'setup' && catalog[i].featured === false);
-  for (const doc of ['README.md', 'COMMANDS.md', 'ONBOARDING.md']) assert.match(readFileSync(join(R, doc), 'utf8'), /gtmb-woodpecker-setup/, doc);
+  for (const doc of ['README.md', 'docs/COMMANDS.md', 'docs/ONBOARDING.md']) assert.match(readFileSync(join(R, doc), 'utf8'), /gtmb-woodpecker-setup/, doc);
 });
 
 test('the hosted MCP is added on the person\'s yes and the sign-in stays theirs, no key or Docker', () => {

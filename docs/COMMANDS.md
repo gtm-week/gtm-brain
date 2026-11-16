@@ -17,9 +17,9 @@ to distinguish these workflows from other installed skills.
 | `gtmb-todo` | GTM Brain: Todo | What should I do now: everything waiting on you, ordered, walked through one by one |
 | `gtmb-workflow` | GTM Brain: Workflows | Start a run of a workflow document (an outbound campaign, ads then outbound), see where it stands, do the next step, skip or abandon; switch one on so a schedule or a save offers it; the brain keeps the steps, dates and milestones |
 | `gtmb-deepdive` | GTM Brain: Deep dive | A one-page brief on an entity or a context, from the notes and the tools read live |
-| `gtmb-define-icp` | GTM Brain: Define ICP | Chris Pawlak's exploratory interview: company examples, fit and exclusions, buying committee, awareness and readiness; reuses brain evidence and keeps one formal draft ICP document |
+| `gtmb-icp` | GTM Brain: Define ICP | Chris Pawlak's exploratory interview: company examples, fit and exclusions, buying committee, awareness and readiness; reuses brain evidence and keeps one formal draft ICP document |
 | `gtmb-unit-economics` | GTM Brain: Unit economics | Lech Kaniuk's unit economics review: CAC, LTV12 and LTV24, LTV:CAC, both paybacks and retention from the chat and the brain, then PUSH, FIX, STOP or MEASURE overall and per acquisition source or segment; offers to keep the decision as a note and the missing inputs as questions |
-| `gtmb-market-desk-research` | GTM Brain: Market desk research | Chris Pawlak's market desk research: a 5-8 minute intake, a confirmed research frame, 15-30 sourced web and community reads, an interim checkpoint, then `market-desk-research-<slug>.md` with a positioning map and, when the numbers allow, a growth chart; market attractiveness and right to win judged separately, no offering design; accepted conclusions become notes |
+| `gtmb-market-research` | GTM Brain: Market desk research | Chris Pawlak's market desk research: a 5-8 minute intake, a confirmed research frame, 15-30 sourced web and community reads, an interim checkpoint, then `market-desk-research-<slug>.md` with a positioning map and, when the numbers allow, a growth chart; market attractiveness and right to win judged separately, no offering design; accepted conclusions become notes |
 | `gtmb-use-brain` | GTM Brain: Use the company brain | Everyday work: remember, recall, where we are |
 | `gtmb-configure` | GTM Brain: Configure GTM Brain | Workplace info, team, tools and settings through APPROVE |
 | `gtmb-skill` | GTM Brain: Your skills | Turn a repeated workflow into a Codex skill kept in the brain's `.agents/skills`; install from GitHub, list, remove, share |
@@ -89,6 +89,11 @@ with no unique answer it is saved under the best guess (where its people have mo
 Our company) and the reply says so, so the person can move it in one sentence. Each kept note
 starts with `saved in <Context title>: ...`. `by` is optional too: it defaults to the person
 selected in this brain (`work/person.json`, else the brain's git identity in the team).
+
+`events` (flag `--events "Northfold Summit | 2026-10-08"`) names the events the note is about: a
+known event links by name or alias; `{name, date}` registers a new one once (`brain/entities/events/`),
+and the date is kept as a note of its own when the note's text does not say it. A new event without
+a date is not registered: the note is saved and one reply line says what is missing.
 
 Before writing, the note is compared with the notes in force across the whole brain (same project
 only). The same fact again, with no value and no source the kept note lacks, writes nothing and
@@ -339,6 +344,8 @@ them; for a pair both cards side by side, what a merge would keep and the two to
 `filters.offset` returns the next items, `search` (first names, same names, other) one group. The
 reply stays under 12 KB and ends with the instruction the rules check also ends with
 (`ONE_AT_A_TIME` in `lib/rules-check.mjs`): one item at a time, ask the person, never the web.
+Among the other findings: three or more notes name events and the brain has no event entity
+(`unregisteredKinds` in `lib/population.mjs`), with up to three names and the sentence to send.
 Reads only. Writes: nothing.
 
 Several people or companies in one read: `query` with object `entities` and `filters.name` and/or
@@ -616,7 +623,7 @@ to the same component library, and plugin updates never rewrite a company's proj
 sections. `/gtmb-build-landing-page` uses the strategy, ICP, voice and offer, then
 composes registered sections. Both end at a local preview. `/gtmb-publish-website` runs
 only on its own request: a Vercel preview first, production on a separate decision. See the
-[preservation and packaging contract](plugins/gtm-brain/starters/web-design-system/README.md).
+[preservation and packaging contract](../plugins/gtm-brain/starters/web-design-system/README.md).
 
 ### connect
 *"connect my tools"*, *"is HubSpot connected?"*
@@ -673,7 +680,7 @@ left uncommitted and listed), `work/hooks.log`.
 
 Before it compiles, the scheduled run reads this brain's chats (brain folder and linked project folders
 only) changed since the last pass and saves, through `remember`, the outcomes nobody saved, each resting on
-an exact sentence of its chat (see [MANUAL.md](plugins/gtm-brain/MANUAL.md#chat-capture)). Capped at
+an exact sentence of its chat (see [MANUAL.md](../plugins/gtm-brain/MANUAL.md#chat-capture)). Capped at
 200,000 input tokens per pass and 50,000 per chat; what a cap leaves is read next time.
 
 Tool: `capture_chats` (`mode` run | undo | status | off | on, optional `cap`, `chat_cap`). Writes: notes
@@ -732,13 +739,13 @@ the yes says how many pages would move and names the teammates who saved notes i
 commit. `update_plugin` runs the upgrade without the yes, and a scheduled or background run never
 moves pages. A brain already in kind folders whose file says 1 or is missing is set to 2 by the
 upgrade, the next chat start or the next save, with nothing moved. What a teammate on an older
-version sees is in [MANUAL.md](plugins/gtm-brain/MANUAL.md#saving-what-you-say-what-it-keeps).
+version sees is in [MANUAL.md](../plugins/gtm-brain/MANUAL.md#saving-what-you-say-what-it-keeps).
 
 For the owner the same question also covers layout 3: the base files into `about-us/`, `RULES.md`,
 `SCHEMA.md` and `brain/admin.md` into `config/`, in a commit of its own. A teammate's yes moves the
 entity pages only. The chat start offers the upgrade in one line to whoever can say yes to a move
 still waiting. The order for a team, what a 0.34 teammate sees and how to go back are in
-[MANUAL.md, Updating to 0.35](plugins/gtm-brain/MANUAL.md#updating-to-035).
+[MANUAL.md, Updating to 0.35](../plugins/gtm-brain/MANUAL.md#updating-to-035).
 
 Tool: `upgrade_brain` (`confirm`, `skill_names`). Writes: `AGENTS.md`, `.githooks/pre-commit`, `.gitignore`,
 `RULES.md`, `SCHEMA.md`, missing starter documents, `brain/layout.json`, upgrade backups, and
@@ -750,7 +757,7 @@ workflow documents, base documents and the skills made in the brain) it rewrites
 of 0.35 and earlier, `gtm-brain-<name>`, to `gtmb-<name>`, and commits. Without it, the chat start
 names those files and Codex asks first. A teammate's run leaves `about-us/` and `config/` to the
 owner. Notes are never rewritten. See
-[MANUAL.md, Updating to 0.36](plugins/gtm-brain/MANUAL.md#updating-to-036-short-skill-names).
+[MANUAL.md, Updating to 0.36](../plugins/gtm-brain/MANUAL.md#updating-to-036-short-skill-names).
 `node $PLUGIN_ROOT/scripts/gtm-brain-upgrade/skill-names.mjs . [--apply] [--by <handle>]`
 
 ## What runs by itself

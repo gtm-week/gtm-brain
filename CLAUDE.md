@@ -59,7 +59,7 @@ gitignored `.dev-brains`); it never deletes a real brain.
 
 Everything that ships is under `plugins/gtm-brain/`. The layers, from the outside in:
 
-- **Skills** (`skills/gtm-brain-*/SKILL.md`): the twenty-six user-facing workflows. Detailed procedures
+- **Skills** (`skills/gtmb-*/SKILL.md`): the twenty-seven user-facing workflows. Detailed procedures
   live in each skill's `references/`. These are what people install, so developer workflows never
   go here.
 - **MCP server** (`server/server.mjs`): hand-rolled stdio JSON-RPC, Node built-ins only. Each tool
@@ -156,8 +156,8 @@ Edit the source, run `node scripts/sync-derived.mjs`, commit source and output t
 ## Shipping a change
 
 Anything under `plugins/gtm-brain/` that users should receive needs a version bump in
-`.codex-plugin/plugin.json`, and the same number in the cache paths in `SETUP.md` and
-`COMMANDS.md` (a test holds them together), then `node scripts/sync-derived.mjs`: the Claude Code
+`.codex-plugin/plugin.json`, and the same number in the cache paths in `docs/SETUP.md` and
+`docs/COMMANDS.md` (a test holds them together), then `node scripts/sync-derived.mjs`: the Claude Code
 manifest and marketplace are generated from the Codex one and carry the version. Changing `templates/AGENTS.md` first requires a
 snapshot of the outgoing file in `templates/legacy/AGENTS-<old version>.md` plus a
 `templates/legacy/manifest.json` entry. Re-run `./dev-install.sh` to try the change in Codex.
@@ -165,8 +165,10 @@ snapshot of the outgoing file in `templates/legacy/AGENTS-<old version>.md` plus
 ## Docs map
 
 Describe a feature once, in its owning document, and link from the others: `INSTALL.md`
-(standalone instructions for the installing agent), `ONBOARDING.md` (first-use walkthrough),
-`GUIDE.md` (everyday use), `plugins/gtm-brain/MANUAL.md` (how a brain works and how to change it; ships with the plugin, Codex answers "how does the brain work?" from it), `COMMANDS.md` (every tool and command and the files it writes),
-`SETUP.md` (manual install and contributor verification), `RELEASE-0.35.md` (what 0.35 changes and its known limits; the update steps live in MANUAL.md), `DOCUMENTS.md` (documents
-feature), `USER-SKILLS.md`, `skill-template/README.md` (contributing a shipped skill), `IMPORT.md` (its text is duplicated word for word as the body of
-`plugins/gtm-brain/claude/gtm-brain-export/SKILL.md`; keep the two in step).
+(standalone instructions for the installing agent), `docs/ONBOARDING.md` (first-use walkthrough),
+`docs/GUIDE.md` (everyday use), `plugins/gtm-brain/MANUAL.md` (how a brain works and how to change it; ships with the plugin, Codex answers "how does the brain work?" from it), `docs/COMMANDS.md` (every tool and command and the files it writes),
+`docs/SETUP.md` (manual install and contributor verification), `docs/releases/RELEASE-0.35.md` (what 0.35 changes and its known limits; the update steps live in MANUAL.md), `docs/DOCUMENTS.md` (documents
+feature), `docs/USER-SKILLS.md`, `skill-template/README.md` (contributing a shipped skill), `IMPORT.md` (its text is duplicated word for word as the body of
+`plugins/gtm-brain/claude/gtm-brain-export/SKILL.md`; keep the two in step). Only `README.md`, `INSTALL.md`,
+`IMPORT.md`, `AGENTS.md`, `CLAUDE.md` and `CONTRIBUTING.md` stay in the top folder; every other document goes in
+`docs/`, with a line in the index `docs/README.md`.

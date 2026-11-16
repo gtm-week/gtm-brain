@@ -1,167 +1,128 @@
 # Contributing to GTM Brain
 
-GTM Brain installs as the `gtm-brain` plugin. This guide covers the plugin's architecture,
-source layout and release checks. Start with [AGENTS.md](AGENTS.md) for contributor invariants
-and [SETUP.md](SETUP.md) for local installation and verification.
+This repository is the source of the `gtm-brain` plugin. It is never a brain: test brains live in
+a scratch folder outside the checkout.
 
-## How it fits together
+| Read | For |
+| --- | --- |
+| [AGENTS.md](AGENTS.md), "Contributor invariants" | The rules every change keeps |
+| [CLAUDE.md](CLAUDE.md) | The architecture, layer by layer, and every command |
+| [README.md](README.md#how-it-fits-together) | The architecture as a picture |
+| [SETUP.md](docs/SETUP.md) | Installing from a checkout and verifying by hand |
+| [skill-template/](skill-template/README.md) | Adding a shipped skill |
 
-```mermaid
-flowchart LR
-  subgraph person["Person"]
-    chat["Codex chat<br/>load · remember · recall · compile · save"]
-    browser["Browser<br/>the dashboard"]
-  end
+## Source layout
 
-  subgraph plugin["gtm-brain plugin (~/.codex/plugins)"]
-    skills["skills/*<br/>workflow skills + internal procedures"]
-    session["session/<br/>chat start · protected-file guard"]
-    lib["lib/brain.mjs<br/>the file format: read, validate, append"]
-    skills --> lib
-    session --> lib
-  end
-
-  subgraph brain["The brain (their private git repo)"]
-    admin["brain/admin.md<br/>workplace info · APPROVE to change"]
-    names["brain/entities/*.md<br/>identity and cited briefs"]
-    ctx["brain/contexts/&lt;slug&gt;/context.md<br/>summary · rules · people · tools"]
-    mem["brain/contexts/&lt;slug&gt;/memories.jsonl<br/>append-only notes"]
-    work["work/ (ignored)<br/>dashboard · loaded set · tools · logs"]
-  end
-
-  subgraph tools["Tools, source evidence and live checks"]
-    crm["HubSpot / Attio"]
-    mail["Gmail · Calendar"]
-    notes["Granola"]
-  end
-
-  chat -->|"skills"| skills
-  lib -->|"writes"| mem
-  lib -->|"compile writes"| ctx
-  lib -->|"approve writes"| admin
-  lib -->|"names, remember write"| names
-  lib -->|"render writes"| work
-  work --> browser
-  chat -->|"official Codex plugins"| crm
-  chat --> mail
-  chat --> notes
-  schedule["Scheduled run<br/>app task or launchd"] -->|"refresh summaries · render · save covers"| skills
-  session -.->|"puts back direct edits"| admin
-  session -.->|"puts back direct edits"| mem
+```text
+plugins/gtm-brain/              everything that ships
+  .codex-plugin/plugin.json     the manifest and the version; the Claude Code files are generated from it
+  .mcp.json                     how the host starts the MCP server
+  skills/gtmb-*/                the twenty-seven shipped skills, one folder each: SKILL.md and its references/
+  server/                       the MCP server (server.mjs) and the dashboard server (dash.mjs, with its
+                                three write routes: entity-edit.mjs, memory-edit.mjs and the document save)
+  scripts/gtm-brain-*/          one folder per operation the server runs: remember, load, compile,
+                                render, setup, approve, upgrade, ...; no SKILL.md
+  lib/                          the file format and the only write path: notes, entities, documents,
+                                search, owner rules, paths; Node built-ins only
+  session/                      what the server runs on a chat's first call: the opening lines, the refresh,
+                                putting back direct edits of protected files; the plugin declares no hooks
+  ontology/                     the plugin's own tools, described once and generated as MCP tools
+  policies/                     shared instruction text, copied into the marked blocks by sync-derived
+  templates/                    what setup writes into a new brain; legacy/ holds every shipped rulebook
+  starters/web-design-system/   the website design system starter, unchanged, with its preservation manifest
+  claude/gtm-brain-export/      the hand-over skill another assistant runs; its body is IMPORT.md
+  test/                         *.test.mjs is the suite; live/ and e2e/ are benchmarks, not part of it
+.agents/plugins/marketplace.json   the Codex marketplace entry
+.claude-plugin/marketplace.json    the Claude Code one, generated
+frontend/dashboard/             dashboard frontend source and browser tests; built assets ship with the plugin
+scripts/sync-derived.mjs        regenerates derived text, schemas and the Claude Code declarations
+scripts/check-version-bump.mjs  CI: a pull request that changes what ships bumps the version
+scripts/migrate-install.mjs     moves an installation from the old gtm-os name (docs/MIGRATING.md)
+skill-template/                 the folder to copy for a new shipped skill
+docs/                           the guides and references (docs/README.md is the index); releases/ holds release notes
+diagrams/                       the pictures and screenshots in the README
+dev-install.sh  dev-reset.sh    install this checkout into Codex (--claude for Claude Code); wipe and
+                                reinstall a test brain
 ```
 
-Three objects, shared library writers. Workflow skills coordinate small MCP operations, with detailed internal procedures loaded as needed; every write goes
-through `lib/brain.mjs`, with two named exceptions (`setup` composes the first `admin.md` from
-its template, `approve` replaces it after APPROVE); a direct edit of a protected file is put back
-at the next chat start or save, and kept in `work/manual-edits/protected/`. Memories retain append-only evidence; entity files maintain identities and
-cited briefs; context covers are compiled from memories. The dashboard reads all three objects.
+The plugin ships from `gtm-week/gtm-brain`, branch `main`. Scripts that used to live under
+`skills/gtm-brain-*/` keep those paths (`skills/gtm-brain-add-file/add-file.mjs`).
 
-```mermaid
-sequenceDiagram
-  participant P as Person
-  participant C as Codex
-  participant B as Brain files
-  participant T as Tools (live)
+Describe a feature once, in its owning document, and link to it from the others; the list of
+owners is the "Docs map" in [CLAUDE.md](CLAUDE.md). Shared agent policies are the exception:
+they are embedded where an agent needs a self-contained document
+([below](#maintaining-shared-text-and-schemas)).
 
-  Note over C: chat start: the first GTM Brain call re-loads last contexts and requests background maintenance
-  P->>C: "show the dashboard"
-  C-->>P: open the read-only dashboard on request
-  P->>C: "load pipeline"
-  C->>B: read context.md + last memories
-  P->>C: "The buyer asked for a total-cost breakdown"
-  C->>B: remember → memories.jsonl (append)
-  P->>C: "what do we know about the CFO?"
-  C->>B: recall across all contexts
-  C-->>P: hits, grouped by context
-  P->>C: "yes, compile"
-  C->>B: read all memories of pipeline
-  C->>B: write summary + Now paragraph into context.md
-  P->>C: "is Attio connected?"
-  C->>T: read one deal
-  C-->>P: "connection confirmed by a successful deal read"
-  Note over C,B: every write is kept at once (one commit per change)
+## Commands
+
+Node 22.16+ or 24+ and git. Runtime code has no npm dependencies, so there is no install step.
+
+```bash
+node --test 'plugins/gtm-brain/test/*.test.mjs'              # the suite (quote the glob in zsh)
+node --test plugins/gtm-brain/test/brain.test.mjs            # one file
+node scripts/sync-derived.mjs --check                        # derived text and schema in sync
+npm ci --prefix frontend/dashboard                           # only when touching the dashboard frontend
+npm run build --prefix frontend/dashboard                    # writes plugins/gtm-brain/scripts/gtm-brain-render/ui/
+./dev-install.sh                                             # install this checkout, then start a new chat
 ```
 
-Notes are saved immediately. The background worker batches summary updates after ten minutes
-without a new note by default (`GTM_BRAIN_COMPILE_DELAY=600`); another note extends the wait.
-An explicit refresh can run sooner. Opening a chat does not automatically open the dashboard.
-
-## Layout
-
-```
-.agents/plugins/marketplace.json
-plugins/gtm-brain/
-  .codex-plugin/plugin.json
-  session/                    the chat start the MCP server runs on a chat's first call (list
-                              contexts, put back direct edits of protected files); no hooks
-  .mcp.json  server/          the operations as MCP tools (Remembering, Searching the brain, ...);
-                              dash.mjs serves the read-only dashboard and revision events
-  lib/                        the file format: read, append, write covers, commit; no dependencies
-  skills/                     the twenty-six workflows a person can ask for (all prefixed gtm-brain-): start,
-                              todo, sync, workflow, deepdive, strategy, unit-economics, define-icp,
-                              market-desk-research, voice, zynt-setup, freckle-setup, clay-setup,
-                              woodpecker-setup, surfer-setup, heyreach-setup,
-                              project, design-system, add-section,
-                              build-landing-page, publish-website, configure, skill, rules, schema,
-                              use-brain; what
-                              they used to be as separate skills lives on as their references
-    gtmb-use-brain/references/    load, create and edit contexts, remember, recall, names, compile,
-                              dashboard, manual save
-    gtmb-configure/references/ workplace approval, connect tools, update plugin
-    gtmb-start/references/  onboarding, the handoff import
-  scripts/gtm-brain-*/           the operation scripts the MCP server, session scripts and skills run (no SKILL.md)
-  starters/web-design-system/ Brian and Peakout's unchanged starter source and its preservation manifest
-  templates/                  AGENTS.md, brain/admin.md, .gitignore, the pre-commit hook
-  test/                       node --test 'plugins/gtm-brain/test/*.test.mjs'
-dev-install.sh                install this checkout into Codex, no GitHub round trip
-```
-
-The plugin ships from `gtm-week/gtm-brain`, branch `main`.
-
-Describe a feature in its owning reference and link to it from the other guides. Shared
-agent policies are embedded automatically where an agent needs a self-contained document.
+Run the suite before every commit that touches `lib/`, a skill script, a server or a session
+script. CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs the suite and the
+derived-text check on Linux and macOS with Node 22.16 and 24, checks the version bump on a pull
+request into `main`, and rebuilds the dashboard to confirm the committed assets match the source.
 
 ## Adding a skill
 
 A skill that ships to every brain starts from [skill-template/](skill-template/README.md): a folder
-to copy, the rules it must follow, and every file to register it in. `gtmb-define-icp` is the
-worked example.
+to copy, the rules it must follow, and every file to register it in. `gtmb-icp` is the worked
+example. Developer workflows never go under `plugins/gtm-brain/skills/`: that folder is what
+people install.
 
 ## Before pushing to main
 
-`./dev-install.sh` points git at [.githooks/](.githooks/). Before a push to `main`, the pre-push
-hook runs the test suite, then [the harness bench](plugins/gtm-brain/test/live/harness-bench.mjs)
-when the push changes what ships. The bench runs three tasks (a coding fix, a logic puzzle, a
-connector question) through `codex exec` without the plugin, with it in an ordinary folder and
-in a brain, in throwaway Codex profiles with this checkout installed. It fails when the plugin
-costs solved tasks, adds more prompt tokens than `GTM_BRAIN_BENCH_MAX_OVERHEAD` (default 14000) or
-calls GTM Brain tools for the puzzle. Traces of every run stay in its artifacts folder.
-`GTM_BRAIN_SKIP_BENCH=1 git push` skips it.
-Then [the Claude Code smoke](plugins/gtm-brain/test/live/claude-smoke.mjs) runs this checkout in `claude -p`
-(setup, the guard on `admin.md`, "go ahead" refused, APPROVE applied), so a fix for one host
-cannot quietly break the other. `GTM_BRAIN_SKIP_CLAUDE=1 git push` skips it.
+`./dev-install.sh` points git at [.githooks/](.githooks/). Before a push to `main` the pre-push
+hook runs, in order:
+
+| Step | When | Skip with |
+| --- | --- | --- |
+| The test suite | every push to `main` | `GTM_BRAIN_SKIP_TESTS=1` (skips the two below as well) |
+| [The harness bench](plugins/gtm-brain/test/live/harness-bench.mjs), about 4 minutes | the push changes anything under `plugins/gtm-brain/` but `test/` | `GTM_BRAIN_SKIP_BENCH=1` (skips the smoke as well) |
+| [The Claude Code smoke](plugins/gtm-brain/test/live/claude-smoke.mjs), about 2 minutes | after the bench, when `claude` is on PATH | `GTM_BRAIN_SKIP_CLAUDE=1` |
+
+The bench runs three tasks (a coding fix, a logic puzzle, a connector question) through
+`codex exec` without the plugin, with it in an ordinary folder and in a brain, in throwaway
+Codex profiles with this checkout installed. It fails when the plugin costs solved tasks, adds
+more prompt tokens than `GTM_BRAIN_BENCH_MAX_OVERHEAD` (default 14000) or calls GTM Brain tools
+for the puzzle. Traces of every run stay in its artifacts folder.
+
+The smoke runs this checkout through four `claude -p` turns (setup, a direct edit of the
+workplace settings refused, "go ahead" applying nothing, APPROVE applied), so a fix for one host
+cannot quietly break the other.
 
 ## Maintaining shared text and schemas
 
-Run `node scripts/sync-derived.mjs` after changing either source below. Commit the source
-and its generated changes together. `node scripts/sync-derived.mjs --check` reports drift
-without writing; the normal test suite runs that check too.
+Run `node scripts/sync-derived.mjs` after changing any source below. Commit the source and its
+generated changes together. `node scripts/sync-derived.mjs --check` reports drift without
+writing; the suite and CI run that check too.
 
-- Question and Computer Use policy sources live in [plugins/gtm-brain/policies/](plugins/gtm-brain/policies/).
-  The script fills marked blocks in contributor instructions, installation instructions,
-  the brain template and the question reference. The chat start reads these sources
-  directly for both empty folders and existing brains.
-- In [the ontology](plugins/gtm-brain/ontology/gtm-brain.ossie.json), edit the single-memory fields
-  under `remember.input_schema.properties`. The script derives `memories.items.properties`
-  from them, excluding the call-level `by`, `project` and batch envelope. The static JSON
-  remains ready for the tool generator; edit only the single-memory field definitions.
+| Source | What is generated from it |
+| --- | --- |
+| [plugins/gtm-brain/policies/](plugins/gtm-brain/policies/) `questions.md`, `computer-use.md` | The marked blocks in `AGENTS.md`, `INSTALL.md`, the brain template and the question reference. The chat start reads the sources directly |
+| [plugins/gtm-brain/policies/core.md](plugins/gtm-brain/policies/core.md) | The first section of the brain template. The MCP server reads the same file into its instructions, so a chat that never reads `AGENTS.md` still gets the core |
+| [The ontology](plugins/gtm-brain/ontology/gtm-brain.ossie.json), `remember.input_schema.properties` | The batch schema `memories.items.properties`, without the call-level `by`, `project` and batch envelope. Edit only the single-memory fields |
+| `plugins/gtm-brain/.codex-plugin/plugin.json` | The Claude Code declarations: `plugins/gtm-brain/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`. Never edit those by hand |
 
-[The compatibility manifest](plugins/gtm-brain/templates/legacy/manifest.json) is the upgrade
-matrix for both runtime and tests. Before editing the brain template, snapshot its outgoing
-contents as `templates/legacy/AGENTS-<old version>.md` and add the manifest entry. Identical
-releases may share one file (0.8.1 and 0.8.2 do). These are immutable fixtures, excluded from
-policy generation: exact comparison lets upgrades preserve personal instruction edits.
-Bump the plugin version and the paths in SETUP.md and COMMANDS.md when shipping changes.
-For each module release, follow the update invariants and release checks:
-users start fresh on the first participant release; preserve their data and entry points through
-subsequent releases, validate before installation, and keep brain refresh repeatable.
+## Shipping a change
+
+- **Version.** A change under `plugins/gtm-brain/` that people should receive bumps the version
+  in `.codex-plugin/plugin.json` and the same number in the cache paths in docs/SETUP.md and
+  docs/COMMANDS.md (a test holds them together), then `node scripts/sync-derived.mjs`. Anything
+  shipped without a bump is never offered to anyone.
+- **The brain template.** Before editing `templates/AGENTS.md`, snapshot the outgoing file as
+  `templates/legacy/AGENTS-<old version>.md` and add it to
+  [the compatibility manifest](plugins/gtm-brain/templates/legacy/manifest.json), the upgrade
+  matrix for both runtime and tests. Identical releases may share one file (0.8.1 and 0.8.2 do).
+  The snapshots are immutable and excluded from generation: exact comparison is how an upgrade
+  tells shipped instructions from a person's own edits.
+- **Updates must be safe.** Preserve people's data and entry points from one release to the
+  next, validate before installing, and keep the brain refresh repeatable.

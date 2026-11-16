@@ -75,8 +75,8 @@ test('copy prompt copies the exact command and example without navigating',async
  assert.match(p.node('#copy-status-'+s.id).textContent,/Copied/);assert.equal(p.run('view'),'home','copying does not navigate away from the front page');
 });
 
-test('the person can ask for twenty-six shipped workflows; internal procedures remain references',()=>{
- assert.deepEqual(skillCatalog().map(s=>s.id).sort(),['gtmb-add-section','gtmb-build-landing-page','gtmb-clay-setup','gtmb-configure','gtmb-deepdive','gtmb-define-icp','gtmb-design-system','gtmb-freckle-setup','gtmb-heyreach-setup','gtmb-market-desk-research','gtmb-project','gtmb-publish-website','gtmb-rules','gtmb-schema','gtmb-skill','gtmb-start','gtmb-strategy','gtmb-surfer-setup','gtmb-sync','gtmb-todo','gtmb-unit-economics','gtmb-use-brain','gtmb-voice','gtmb-woodpecker-setup','gtmb-workflow','gtmb-zynt-setup']);
+test('the person can ask for twenty-seven shipped workflows; internal procedures remain references',()=>{
+ assert.deepEqual(skillCatalog().map(s=>s.id).sort(),['gtmb-add-section','gtmb-build-landing-page','gtmb-clay-setup','gtmb-configure','gtmb-deepdive','gtmb-design-system','gtmb-freckle-setup','gtmb-heyreach-setup','gtmb-icp','gtmb-market','gtmb-market-research','gtmb-project','gtmb-publish-website','gtmb-rules','gtmb-schema','gtmb-skill','gtmb-start','gtmb-strategy','gtmb-surfer-setup','gtmb-sync','gtmb-todo','gtmb-unit-economics','gtmb-use-brain','gtmb-voice','gtmb-woodpecker-setup','gtmb-workflow','gtmb-zynt-setup']);
 });
 
 test('a brain with a skill of its own gets a "yours" group after the shipped ones; the shipped set is unchanged',()=>{

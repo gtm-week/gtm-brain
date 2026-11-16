@@ -1,4 +1,5 @@
-// Since 0.36 the shipped skills are named gtmb-<name>; until 0.35 they were gtm-brain-<name>. The plugin's own
+// Since 0.36 the shipped skills are named gtmb-<name>; until 0.35 they were gtm-brain-<name>. RENAMED lists them
+// by the names they had then. The plugin's own
 // files follow with the update. A brain's own files (its README, rules, workflow documents, base documents and
 // the skills made in it) may still tell people to type the old names: this module finds those files, says so
 // once at a chat start, and rewrites them on the person's yes. Operation scripts keep their folders
@@ -11,9 +12,15 @@ import { isOwner, personHere } from "./owner.mjs";
 export const RENAMED = ["add-section", "build-landing-page", "clay-setup", "configure", "deepdive", "define-icp", "design-system", "freckle-setup",
   "heyreach-setup", "market-desk-research", "project", "publish-website", "rules", "schema", "skill", "start", "strategy", "surfer-setup", "sync",
   "todo", "unit-economics", "use-brain", "voice", "woodpecker-setup", "workflow", "zynt-setup"];
-const old = () => new RegExp(`(?<!scripts/)gtm-brain-(${[...RENAMED].sort((a, b) => b.length - a.length).join("|")})(?![a-z0-9-])`, "g");
+// Two skills were renamed again in 0.36.1 so that each base document's command is named after it:
+// define-icp is icp, market-desk-research is market-research (gtmb-market is the new one that fills the document).
+export const RENAMED_AGAIN = { "define-icp": "icp", "market-desk-research": "market-research" };
+const now = name => RENAMED_AGAIN[name] || name;
+/* The skills that ship today. */
+export const SHIPPED = [...new Set([...RENAMED.map(now), "market"])].sort();
+const old = () => new RegExp(`(?<!scripts/)(?:gtm-brain-(${[...RENAMED].sort((a, b) => b.length - a.length).join("|")})|gtmb-(${Object.keys(RENAMED_AGAIN).sort((a, b) => b.length - a.length).join("|")}))(?![a-z0-9-])`, "g");
 export const hasOldSkillNames = text => old().test(String(text || ""));
-export const renameSkillNames = text => String(text || "").replace(old(), "gtmb-$1");
+export const renameSkillNames = text => String(text || "").replace(old(), (_, first, second) => `gtmb-${now(first || second)}`);
 /* What the person typed, as the skill it is now: "/gtm-brain-rules" is "/gtmb-rules". */
 export const currentSkillName = name => renameSkillNames(String(name || "").trim());
 
@@ -31,7 +38,7 @@ export function skillNamesLine(root) {
   if (process.env.GTM_BRAIN_RUN) return "";
   let files = []; try { files = filesWithOldSkillNames(root); } catch {}
   if (!files.length) return "";
-  return `GTM Brain: the skills have short names since 0.36: /gtm-brain-<name> is now /gtmb-<name> (/gtmb-rules, /gtmb-schema, /gtmb-todo). When the person types an old name, run the skill under its new name and say the new name once. ${files.length} of this brain's own files still use the old names (${files.slice(0, 6).join(", ")}${files.length > 6 ? ", ..." : ""}). Offer once, in one line at the end of your first reply, to update them; ask yes or no, and only on yes call upgrade_brain with skill_names: true. Notes are never rewritten.`;
+  return `GTM Brain: the skills have short names since 0.36: /gtm-brain-<name> is now /gtmb-<name> (/gtmb-rules, /gtmb-schema, /gtmb-todo), and /gtmb-define-icp is /gtmb-icp, /gtmb-market-desk-research is /gtmb-market-research. When the person types an old name, run the skill under its new name and say the new name once. ${files.length} of this brain's own files still use the old names (${files.slice(0, 6).join(", ")}${files.length > 6 ? ", ..." : ""}). Offer once, in one line at the end of your first reply, to update them; ask yes or no, and only on yes call upgrade_brain with skill_names: true. Notes are never rewritten.`;
 }
 /* Rewrite the old names in the brain's own files. A teammate's run leaves the owner's folders alone and says so. */
 export function rewriteSkillNames(root, { by = null } = {}) {

@@ -8,7 +8,7 @@ artwork and the [GTM Week design contract](https://www.gtm-week.com/DESIGN.md).
 - Product: **GTM Brain**.
 - Website: https://gtm-brain.ai/.
 - Source and installation: https://github.com/gtm-week/gtm-brain.
-- Logo: [approved GTM Brain holographic square](plugins/gtm-brain/assets/logo.png), reused unchanged from the website.
+- Logo: [approved GTM Brain holographic square](../plugins/gtm-brain/assets/logo.png), reused unchanged from the website.
 - Audience: GTM engineers. Lead with the work, the problem it solves and the evidence behind the result.
 
 ## Visual direction
