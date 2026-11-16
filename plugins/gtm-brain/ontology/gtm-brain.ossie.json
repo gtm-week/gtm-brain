@@ -485,7 +485,7 @@
                 "by": {
                   "type": "string",
                   "minLength": 1,
-                  "description": "Omit for the person in this chat; else a team handle, name or email. Several: comma separated."
+                  "description": "Omit for the person in this chat; else team handles, names or emails, comma separated."
                 },
                 "project": {
                   "type": "string",
@@ -494,13 +494,13 @@
                 "memories": {
                   "type": "array",
                   "minItems": 1,
-                  "description": "One entry per finding, the same fields as the single-note form; each entry may name its own context. Prefer one call per turn.",
+                  "description": "One entry per finding, the same fields as one note; each may name its own context. Prefer one call per turn.",
                   "items": {
                     "type": "object",
                     "properties": {
                       "content": {
                         "type": "string",
-                        "description": "A brief, what changed, or one sentence identifying an artifact. Include names and subject. Keep relevant dates in the text with source precision and uncertainty; do not invent dates or add them to timeless facts. Plain hyphens.",
+                        "description": "A brief, what changed, or one sentence identifying an artifact, with names and subject. Keep relevant dates in the text with source precision and uncertainty; do not invent dates or add them to timeless facts. Plain hyphens.",
                         "minLength": 1
                       },
                       "kind": {
@@ -532,6 +532,19 @@
                           "type": "string"
                         }
                       },
+                      "events": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object"
+                            }
+                          ]
+                        }
+                      },
                       "sources": {
                         "type": "array",
                         "items": {
@@ -544,7 +557,7 @@
                             }
                           ]
                         },
-                        "description": "Where it comes from, provider:reference. When a connector returns a direct URL (url, web_url, webUrl, permalink), save that exact URL with its provider. If no direct URL is returned, keep provider:ID. Never invent a link. Or an object {kind, account, ref} for a named mailbox or workspace. This chat is added automatically."
+                        "description": "Source as provider:reference. A direct URL a connector returns (url, web_url, webUrl, permalink): save that exact URL with its provider. If no direct URL is returned, keep provider:ID. Never invent a link. Or {kind, account, ref} for a named mailbox or workspace. This chat is added automatically."
                       },
                       "actions": {
                         "type": "array",
@@ -1079,12 +1092,12 @@
                 },
                 "content": {
                   "type": "string",
-                  "description": "A brief, what changed, or one sentence identifying an artifact. Include names and subject. Keep relevant dates in the text with source precision and uncertainty; do not invent dates or add them to timeless facts. Plain hyphens.",
+                  "description": "A brief, what changed, or one sentence identifying an artifact, with names and subject. Keep relevant dates in the text with source precision and uncertainty; do not invent dates or add them to timeless facts. Plain hyphens.",
                   "minLength": 1
                 },
                 "kind": {
                   "type": "string",
-                  "description": "note (default) | decision | question",
+                  "description": "Default note",
                   "enum": [
                     "note",
                     "decision",
@@ -1093,28 +1106,42 @@
                 },
                 "context": {
                   "type": "string",
-                  "description": "Context slug; omit when one is loaded or the people in the note have most of their notes in one context (the reply says where it went)"
+                  "description": "Context slug; omit when one is loaded or the note's people have most of their notes in one (the reply says where it went)"
                 },
                 "tools": {
                   "type": "array",
                   "items": {
                     "type": "string"
                   },
-                  "description": "Tools actually used, e.g. [\"attio\", \"gmail\"]"
+                  "description": "Tools actually used, e.g. attio, gmail"
                 },
                 "people": {
                   "type": "array",
                   "items": {
                     "type": "string"
                   },
-                  "description": "Names mentioned, including people, products and teams, spelled as the person wrote them (Florian, not your guess Florian Weber): the brain matches each and keeps how. Text in content alone does not link names."
+                  "description": "Names mentioned (people, products, teams), spelled as the person wrote them (Florian, not your guess Florian Weber): the brain matches each and keeps how. Content text alone links no names."
                 },
                 "companies": {
                   "type": "array",
                   "items": {
                     "type": "string"
                   },
-                  "description": "Company names the source identifies (e.g. client Castorama); registered and linked in this call."
+                  "description": "Companies the source identifies (e.g. client Castorama); registered and linked in this call."
+                },
+                "events": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "object"
+                      }
+                    ]
+                  },
+                  "description": "Events we run, sponsor, speak at or attend: names; {name, date: YYYY-MM-DD} registers a new one."
                 },
                 "sources": {
                   "type": "array",
@@ -1128,7 +1155,7 @@
                       }
                     ]
                   },
-                  "description": "Where it comes from, provider:reference. When a connector returns a direct URL (url, web_url, webUrl, permalink), save that exact URL with its provider. If no direct URL is returned, keep provider:ID. Never invent a link. Or an object {kind, account, ref} for a named mailbox or workspace. This chat is added automatically."
+                  "description": "Source as provider:reference. A direct URL a connector returns (url, web_url, webUrl, permalink): save that exact URL with its provider. If no direct URL is returned, keep provider:ID. Never invent a link. Or {kind, account, ref} for a named mailbox or workspace. This chat is added automatically."
                 },
                 "actions": {
                   "type": "array",
@@ -1157,7 +1184,7 @@
                   "items": {
                     "type": "string"
                   },
-                  "description": "Names the person confirmed as new after the tool held an entry back; never filled on a guess."
+                  "description": "Names the person confirmed as new after an entry was held; never filled on a guess."
                 },
                 "asset": {
                   "type": "object",
@@ -1166,17 +1193,17 @@
                     "entity": {
                       "type": "string",
                       "minLength": 1,
-                      "description": "Existing canonical entity or exact alias. Register a new entity with add_name first."
+                      "description": "Existing entity name or exact alias; register a new one with add_name first."
                     },
                     "label": {
                       "type": "string",
                       "minLength": 1,
-                      "description": "Human readable name, e.g. Reflow primary logo"
+                      "description": "Readable name, e.g. Reflow primary logo"
                     },
                     "role": {
                       "type": "string",
                       "minLength": 1,
-                      "description": "Relationship role, e.g. primary-logo, portrait, product-photo, screenshot or document"
+                      "description": "Role, e.g. primary-logo, portrait, product-photo, screenshot or document"
                     },
                     "status": {
                       "type": "string",
@@ -1190,7 +1217,7 @@
                     "path": {
                       "type": "string",
                       "minLength": 1,
-                      "description": "Local file path; relative to the selected project or the brain. Omit with supersedes to keep the prior file."
+                      "description": "Local path, relative to the selected project or the brain. Omit with supersedes to keep the prior file."
                     }
                   },
                   "required": [
@@ -1233,7 +1260,7 @@
                     },
                     "reference": {
                       "type": "object",
-                      "description": "Optional stable per-entity source record, e.g. the CRM record URL; never a whole list or thread.",
+                      "description": "Stable per-entity source record, e.g. the CRM record URL; never a whole list or thread.",
                       "properties": {
                         "kind": {
                           "type": "string",
@@ -1424,7 +1451,7 @@
                     "observed_at": {
                       "type": "string",
                       "minLength": 1,
-                      "description": "Source observation/update time, ISO UTC including seconds; preserve on retries."
+                      "description": "Source observation/update time, ISO UTC with seconds; preserve on retries."
                     },
                     "occurred_at": {
                       "anyOf": [
@@ -1441,7 +1468,7 @@
                     "scheduled_at": {
                       "type": "string",
                       "minLength": 1,
-                      "description": "Optional calendar planned time, UTC timestamp or date only."
+                      "description": "Planned calendar time, UTC timestamp or date only."
                     },
                     "participants": {
                       "type": "array",
@@ -1479,12 +1506,12 @@
                     "series": {
                       "type": "string",
                       "minLength": 1,
-                      "description": "Optional provider/account/calendar/recurring-series scoped reference, for explicit series rules."
+                      "description": "Provider/account/calendar/recurring-series scoped reference, for explicit series rules."
                     },
                     "revision": {
                       "type": "string",
                       "minLength": 1,
-                      "description": "Optional provider revision or content fingerprint, stable on retry."
+                      "description": "Provider revision or content fingerprint, stable on retry."
                     },
                     "capture": {
                       "type": "string",
@@ -1494,7 +1521,7 @@
                         "pending",
                         "unavailable"
                       ],
-                      "description": "Content availability of this artifact: complete, partial, pending (a source still processing) or unavailable."
+                      "description": "Content availability; pending: still processing."
                     }
                   },
                   "required": [
@@ -1513,7 +1540,7 @@
                 "meeting_id": {
                   "type": "string",
                   "minLength": 1,
-                  "description": "The anchor memory id remember returned, for linked outcomes and additional matched sources; never invented."
+                  "description": "The anchor id remember returned, for linked outcomes and further matched sources; never invented."
                 },
                 "meeting_capture": {
                   "type": "object",
@@ -1645,7 +1672,7 @@
                     "checked_at": {
                       "type": "string",
                       "minLength": 1,
-                      "description": "ISO UTC including seconds"
+                      "description": "ISO UTC with seconds"
                     },
                     "status": {
                       "type": "string",
@@ -1677,7 +1704,7 @@
                     "cursor": {
                       "type": "string",
                       "minLength": 1,
-                      "description": "Optional retry/page cursor; never a credential."
+                      "description": "Retry/page cursor; never a credential."
                     }
                   },
                   "required": [

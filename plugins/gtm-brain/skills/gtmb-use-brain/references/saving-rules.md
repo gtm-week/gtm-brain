@@ -37,6 +37,10 @@ says ask, ask once, everything in one question.
 - **C1** A company the note plainly names is saved as a company (`companies`). Do not ask for its
   website on a save. When the person gives it ("Northwind (northwind.com)"), that is its website:
   keep it with add_name and references.
+- **E1** An event the team runs, sponsors, speaks at or attends is registered once, as an event with
+  its date: name it in `events` as `{name, date}`. Later notes name it in `events` and link to it.
+  Without a date the note is still saved and the event waits for one; never ask only for it (S3).
+  People in the same note are not its speakers or attendees unless a `relation` says so.
 
 ## Dates
 

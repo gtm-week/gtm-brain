@@ -45,6 +45,10 @@ Each entry takes:
 - `companies`: company names explicitly identified by the source (for example, "client is
   Castorama"). They are registered as companies and linked to the memory in the same call.
   Include them even when they already appear in `content`; text alone does not link a name.
+- `events`: the events the note is about, ones the team runs, sponsors, speaks at or attends. A
+  name links a known event (name or alias); `{name, date}` (YYYY-MM-DD or YYYY-MM) registers a
+  new one once. A new event without a date is not registered: the note is saved and one reply
+  line says so; do not save again or ask only for the date (rule E1).
 - `people`: every entity the text names, as written in the source: people, and just as much
   companies, products and teams (Castorama, ByteDance, Wispr Flow). A name left out here is not
   an entity anywhere. A new name lands in the registry as a person; if it is not one, follow
