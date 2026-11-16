@@ -48,7 +48,7 @@ test('the answer to a draft request ends with: write it from these notes, nothin
   assert.match(end, /a detail these notes do not hold \(an agenda, a time, a link\) is left out of the draft, and one line after the draft says what is missing\.$/);
   // a draft is not a fact in one to three sentences: the question's closing line would cut it short
   assert.doesNotMatch(a, /one to three sentences/);
-  assert.doesNotMatch(a, /[–—]/);
+  assert.doesNotMatch(a, /[\u2013\u2014]/);
 });
 
 test('the second search of a draft turn, worded as a question, also ends with nothing from the web', () => {
