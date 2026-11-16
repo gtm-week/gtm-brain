@@ -41,7 +41,8 @@ const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
 const outBase = resolve(opt("--out", process.env.GTM_BRAIN_MENTOR_BENCH_DIR || join(homedir(), "gtm-brain-bench", "mentor")));
 const out = join(outBase, stamp + (dryRun ? "-dry" : ""));
 if (!opt("--report")) mkdirSync(out, { recursive: true });
-const scratch = mkdtempSync(join(resolve(process.env.GTM_BRAIN_EVAL_DIR || tmpdir()), "gtm-mentor-bench-"));
+// --report only reads a results file: it gets no scratch folder
+const scratch = opt("--report") ? "" : mkdtempSync(join(resolve(process.env.GTM_BRAIN_EVAL_DIR || tmpdir()), "gtm-mentor-bench-"));
 const SETUP_TIMEOUT = Number(process.env.GTM_BRAIN_EVAL_SETUP_TIMEOUT_MS || 180000);
 const base = { ...process.env, NODE_NO_WARNINGS: "1", PLUGIN_ROOT: plugin, GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_NO_WATCH: "1" };
 const script = (root, operation, list) => execFileSync(process.execPath, [join(plugin, "scripts", operation), ".", ...list], { cwd: root, env: base, encoding: "utf8", timeout: SETUP_TIMEOUT });
@@ -375,10 +376,10 @@ const written = r => Object.keys(r.files_changed).filter(p => !/^entities\//.tes
 // away, so neither may outlive its case (nine dashboard servers were left behind by the first full run).
 const release = root => { lib.stopBrainWatcher?.(root); spawnSync("pkill", ["-f", `${basename(scratch)}/${basename(root)}`]); };
 const mean = xs => xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
-function report(rows) {
+function report(rows, run = { stamp, model, judge_model: judgeModel, persona_model: personaModel }) {
   const ids = CRITERIA.map(([id]) => id), cell = v => v === null || v === undefined ? "-" : String(v);
   const scoreOf = (r, id) => r.judge?.scores?.[id]?.score ?? null;
-  const lines = [`# Mentor skill benchmark, ${stamp.slice(0, 10)}`, "", `Codex model ${model}; judge ${judgeModel}; persona ${personaModel}. Plugin ${JSON.parse(readFileSync(join(plugin, ".codex-plugin/plugin.json"), "utf8")).version} from ${repo}. Scores are 1 to 5.`, "",
+  const lines = [`# Mentor skill benchmark, ${String(run.stamp).slice(0, 10)}`, "", `Codex model ${run.model}; judge ${run.judge_model}; persona ${run.persona_model}. Plugin ${JSON.parse(readFileSync(join(plugin, ".codex-plugin/plugin.json"), "utf8")).version} from ${repo}. Scores are 1 to 5.`, "",
     `| case | skill | ${ids.join(" | ")} | mean | wall s | turns | tool calls | gtm_brain calls | skill read | files | notes |`, `|---|---|${ids.map(() => "---").join("|")}|---|---|---|---|---|---|---|---|`];
   for (const r of rows) { const s = ids.map(id => scoreOf(r, id)); const m = s.every(x => x !== null) ? mean(s).toFixed(1) : "-";
     lines.push(`| ${r.id} | ${r.skill} | ${s.map(cell).join(" | ")} | ${m} | ${Math.round(r.wall_ms / 1000)} | ${r.turns.length} | ${r.tool_calls} | ${r.gtm_calls} | ${r.skill_read ? "yes" : "no"} | ${written(r).length} | ${r.notes_added.length} |`); }
@@ -395,8 +396,9 @@ function report(rows) {
   return lines.join("\n").replace(new RegExp(`[${String.fromCharCode(0x2013, 0x2014)}]`, "g"), "-") + "\n";
 }
 
+// a past run's report again: only the Markdown goes to stdout, so it can be redirected into a file
+if (opt("--report")) { const past = JSON.parse(readFileSync(resolve(opt("--report")), "utf8")); process.stdout.write(report(past.cases, past)); process.exit(0); }
 console.log(`mentor bench: ${selected.length} case${selected.length === 1 ? "" : "s"}${dryRun ? " (dry run)" : `, Codex ${model}, judge ${judgeModel}`}\nresults ${out}\nscratch ${scratch}\n`);
-if (opt("--report")) { process.stdout.write(report(JSON.parse(readFileSync(resolve(opt("--report")), "utf8")).cases)); process.exit(0); }
 if (dryRun) {
   const rows = selected.map(c => { const root = seedBrain(c), files = snapshot(root); release(root); const row = { id: c.id, skill: c.skill, prompt: c.prompt, brain: root, notes: noteRows(files).length, documents: Object.keys(files).filter(p => /^configuration\/about-us\/[^/]+\.md$/.test(p)), skill_text: existsSync(join(plugin, "skills", c.skill, "SKILL.md")) && (c.refs || []).every(r => existsSync(join(plugin, "skills", c.skill, r))) }; console.log(`seeded ${c.id.padEnd(16)} ${row.notes} notes, ${row.documents.length} base documents, skill text ${row.skill_text ? "found" : "MISSING"}  | ${c.prompt}`); return row; });
   writeFileSync(join(out, "dry-run.json"), JSON.stringify({ stamp, plugin, cases: rows, criteria: CRITERIA }, null, 2) + "\n");
