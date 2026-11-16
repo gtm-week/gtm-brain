@@ -3,7 +3,7 @@
 What this brain keeps about each person, organization, product, offering, event, tool and meeting,
 and how they relate. Codex fills these fields from your notes, each value citing the notes it rests on, and
 lists a required field nobody has said yet as a gap to ask about. Edit freely, or say
-`/gtm-brain-schema` and Codex changes it for you. GTM Brain never overwrites your edits.
+`/gtmb-schema` and Codex changes it for you. GTM Brain never overwrites your edits.
 
 Every `## <Kind>` section with a field table is a kind. Person, organization, product, offering,
 event, tool and meeting always exist; add a section to add a kind. Add fields, organization subtypes and

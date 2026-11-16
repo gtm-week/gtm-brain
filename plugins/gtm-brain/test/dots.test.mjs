@@ -35,8 +35,8 @@ test("remember: a bare date is held with what it means; a known speaker's note l
   const env = { ...process.env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_NOW: "2026-11-12T09:00:00" };
   const remember = (...a) => spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann-lee", "--context", "company", ...a], { cwd: root, env, encoding: "utf8" });
   const event = mkdtempSync(join(tmpdir(), "gtm-brain-dots-event-"));
-  execFileSync(process.execPath, [`${P}/skills/gtm-brain-project/project.mjs`, ".", "--link", event, "--slug", "berlin-event-2026", "--title", "Berlin event"], { cwd: root, env });
-  execFileSync(process.execPath, [`${P}/skills/gtm-brain-project/project.mjs`, ".", "--link", mkdtempSync(join(tmpdir(), "gtm-brain-dots-web-")), "--slug", "website", "--title", "Website"], { cwd: root, env });
+  execFileSync(process.execPath, [`${P}/skills/gtmb-project/project.mjs`, ".", "--link", event, "--slug", "berlin-event-2026", "--title", "Berlin event"], { cwd: root, env });
+  execFileSync(process.execPath, [`${P}/skills/gtmb-project/project.mjs`, ".", "--link", mkdtempSync(join(tmpdir(), "gtm-brain-dots-web-")), "--slug", "website", "--title", "Website"], { cwd: root, env });
   assert.equal(remember("--content", "Florian Weber is our keynote speaker.", "--people", "Florian Weber", "--project", "berlin-event-2026").status, 0);
 
   // "Thursday" said on a Thursday: two readings, so held and asked; nothing written

@@ -81,7 +81,7 @@ document is a document (rule 11); a person, organization or product is an entity
 lands beside its owner, as `RULES.md` says (the files page); everything that happened, was
 decided, found or asked is a memory in the context whose purpose fits (rules 1 and 2). Work built
 for a goal goes inside its project, `projects/<project>/<deliverable>/`, never in `work/` or a new
-folder at the brain root. A playbook is a workflow (gtm-brain-workflow).
+folder at the brain root. A playbook is a workflow (gtmb-workflow).
 
 ## Rules
 
@@ -135,5 +135,5 @@ folder at the brain root. A playbook is a workflow (gtm-brain-workflow).
 Call GTM Brain tools directly; never through shell commands; pass this folder as `brain`. The
 compile tools are offered only to the scheduled and background runs. This company's own
 interactions run through `interact` (interactions page). A person's own skills live in
-`.agents/skills/`, made through `gtm-brain-skill`. The skills the person sees and when to offer
+`.agents/skills/`, made through `gtmb-skill`. The skills the person sees and when to offer
 them are on the skills page.

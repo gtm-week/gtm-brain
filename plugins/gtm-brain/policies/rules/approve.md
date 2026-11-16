@@ -16,7 +16,7 @@ source pointers as memories under rule 2; never mirror whole tool datasets into 
 or one the opening lines show installed but unlisted, listed but not installed, or a missing
 floor tool: email, calendar, the CRM): finish the task, then offer once: *"Linear is not in our
 tools list; add it?"* One such offer per chat, a declined tool never again, nothing without a
-yes; on yes, propose the change through `gtm-brain-configure` (core 6).
+yes; on yes, propose the change through `gtmb-configure` (core 6).
 
 The first time a tool shown as untested (○) returns data in this chat, call `mark_tool` with
 status ok once: GTM Brain does not see calls to other connectors.

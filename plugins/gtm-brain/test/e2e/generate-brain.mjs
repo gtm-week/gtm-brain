@@ -133,7 +133,7 @@ export async function generate({ shape = "small", out, seed = 1, gold: goldPath 
 
   /* ---------- projects ---------- */
   const projects = PROJECTS.slice(0, cfg.projects);
-  for (const [slug, title] of projects) mkdirSync(join(root, "projects"), { recursive: true }), execFileSync(process.execPath, [join(P, "skills/gtm-brain-project/project.mjs"), ".", "--link", join(root, "projects", slug), "--create", "--slug", slug, "--title", title, "--contexts", "icp,offer", "--by", by], { cwd: root, env, stdio: ["ignore", "ignore", "pipe"], timeout: 60000 });
+  for (const [slug, title] of projects) mkdirSync(join(root, "projects"), { recursive: true }), execFileSync(process.execPath, [join(P, "skills/gtmb-project/project.mjs"), ".", "--link", join(root, "projects", slug), "--create", "--slug", slug, "--title", title, "--contexts", "icp,offer", "--by", by], { cwd: root, env, stdio: ["ignore", "ignore", "pipe"], timeout: 60000 });
 
   // an established brain: onboarding finished on the first day (the six outcomes, then the marker setup left is closed)
   const T0 = Date.parse("2026-01-05T08:00:00Z"), SPAN = 300 * 86400000;   // Jan 5 to Nov 1, 2026

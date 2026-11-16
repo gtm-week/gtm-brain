@@ -16,21 +16,21 @@ const sourcedNote = (root, before, re) => added(root, before).some(m => re.test(
 
 export const captureCases = [
   {
-    name: "capture-call", judge: "advisory", workflow: "gtm-brain-use-brain",
+    name: "capture-call", judge: "advisory", workflow: "gtmb-use-brain",
     prompt: "Just got off a call with Chris at Bergstrom Home. Their security review passed, and they want the pilot to start on October 5 with three stores.",
     calls: calls => calls.some(c => c.tool === "remember"),
     verify: (root, { before }) => sourcedNote(root, before, /security review|pilot/i),
     expect: "A new memory about Bergstrom Home (security review passed, pilot from October 5 with three stores) attributed to the person's account of the call, with a source, linked to Krzysztof Pawlak and Bergstrom Home. The answer confirms briefly where it went.",
   },
   {
-    name: "capture-decision", judge: "advisory", workflow: "gtm-brain-use-brain",
+    name: "capture-decision", judge: "advisory", workflow: "gtmb-use-brain",
     prompt: "We agreed this morning: Castorama gets a 10 percent volume discount if they sign before December 1. Anna from finance signed off on it.",
     calls: calls => calls.some(c => c.tool === "remember"),
     verify: (root, { before }) => sourcedNote(root, before, /Castorama|discount/i),
     expect: "A new memory about the Castorama discount (10 percent, sign before December 1, finance approval by Anna) with a source naming the person as the one who reported it. No CRM or external change.",
   },
   {
-    name: "capture-draft-unsent", judge: "advisory", workflow: "gtm-brain-use-brain",
+    name: "capture-draft-unsent", judge: "advisory", workflow: "gtmb-use-brain",
     prompt: "Here is a draft I have not sent yet, and may never send:\n\n\"Hi Chris, following up on the pilot. Could we move the start to next week?\"\n\nIs the tone right? Just tell me, nothing else.",
     calls: calls => !calls.some(c => WRITES.includes(c.tool) && !(c.tool === "document" && ["list", "show", "files"].includes(c.arguments?.action)) && !(c.tool === "skill" && c.arguments?.action === "list")),
     verify: (root, { before, after }) => JSON.stringify(before) === JSON.stringify(after),

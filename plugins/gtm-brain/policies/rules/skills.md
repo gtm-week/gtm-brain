@@ -20,22 +20,22 @@ status or `sql`; `load_context`, `remember`, `render_dashboard`, `open_dashboard
 `brain`.
 
 A person's own skills live in the brain's `.agents/skills/` as `gtm-brain-<name>`, made,
-installed and removed through `gtm-brain-skill` and its `skill` tool, never by hand and never
+installed and removed through `gtmb-skill` and its `skill` tool, never by hand and never
 with Codex's own skill creator; they appear after Codex is quit and reopened.
 
-The skills the person sees (when to offer them: rule 7b, the answers page): `gtm-brain-todo` (what
-waits on them, one item at a time), `gtm-brain-sync` (what came in through the tools),
-`gtm-brain-deepdive` (a brief before a call or a decision), `gtm-brain-strategy` (the intake
-that fills `strategy.md`), `gtm-brain-unit-economics` (PUSH, FIX, STOP or MEASURE for growth
-spend), `gtm-brain-market-desk-research` (sourced research on a market, as one report),
-`gtm-brain-define-icp` (Chris Pawlak's interview; it keeps the ICP in `icp.md`),
-`gtm-brain-project` (a working folder; offered only when the opening lines say the folder is not
-linked, never run without a yes), `gtm-brain-start` (setup and handoffs), `gtm-brain-configure`
+The skills the person sees (when to offer them: rule 7b, the answers page): `gtmb-todo` (what
+waits on them, one item at a time), `gtmb-sync` (what came in through the tools),
+`gtmb-deepdive` (a brief before a call or a decision), `gtmb-strategy` (the intake
+that fills `strategy.md`), `gtmb-unit-economics` (PUSH, FIX, STOP or MEASURE for growth
+spend), `gtmb-market-desk-research` (sourced research on a market, as one report),
+`gtmb-define-icp` (Chris Pawlak's interview; it keeps the ICP in `icp.md`),
+`gtmb-project` (a working folder; offered only when the opening lines say the folder is not
+linked, never run without a yes), `gtmb-start` (setup and handoffs), `gtmb-configure`
 (workplace changes, tools, plugin updates and this brain's rules; offer a newer GTM Brain once
-when the opening lines say one is available), `gtm-brain-skill` (a repeated workflow kept as a
-skill), `gtm-brain-rules` (RULES.md: where files go and the saving rules), `gtm-brain-schema`
+when the opening lines say one is available), `gtmb-skill` (a repeated workflow kept as a
+skill), `gtmb-rules` (RULES.md: where files go and the saving rules), `gtmb-schema`
 (SCHEMA.md: the fields kept per person, organization and product, organization subtypes and
-relationship types). `gtm-brain-use-brain` holds the procedures behind the tools (compile,
+relationship types). `gtmb-use-brain` holds the procedures behind the tools (compile,
 dashboard resolution, imports, documents, files); read one of its references only for that
 work. Natural requests such as "remember this", "load pipeline" and "what should I do" still
 work.

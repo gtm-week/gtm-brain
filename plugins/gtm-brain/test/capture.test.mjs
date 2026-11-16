@@ -428,5 +428,5 @@ test("a key pasted into a chat is removed before the pass counts, sends or quote
     assert.doesNotMatch(out, /A1b2C3d4E5f6|9f8e7d6c5b4a|JhbGci|p_0123|xb-1234/, c);
   }
   // ordinary text, ids the brain uses and file paths are left alone
-  for (const plain of ["Max will send the token gesture budget by Tuesday.", "see m_6cc01aba36bf and e_0123456789abcdef", "open plugins/gtm-brain/skills/gtm-brain-use-brain/references/documents.md", "the password policy is reviewed in March"]) assert.equal(redactSecrets(plain), plain);
+  for (const plain of ["Max will send the token gesture budget by Tuesday.", "see m_6cc01aba36bf and e_0123456789abcdef", "open plugins/gtm-brain/skills/gtmb-use-brain/references/documents.md", "the password policy is reviewed in March"]) assert.equal(redactSecrets(plain), plain);
 });

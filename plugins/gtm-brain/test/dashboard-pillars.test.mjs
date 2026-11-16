@@ -378,7 +378,7 @@ test("page: Workflows shows each file's status, trigger and runs, and the skills
   assert.match(w, /Outbound.*You start it by asking Codex/s); assert.match(w, /Weekly review.*Starts every Monday at 09:00/s); assert.match(w, /never run/);
   p.run('pwOpen="outbound";renderWorkflowsTab()');
   assert.match(p.node("#pw-files").innerHTML, /<ol class="wf-steps"><li class=""><span>[^<]+<\/span>/, "a click shows the steps as a numbered path"); assert.match(p.node("#pw-files").innerHTML, /<summary>Details<\/summary>.*Trigger: manual/s, "the file's own words stay in Details");
-  assert.match(p.node("#pw-skills").innerHTML, /gtm-brain-workflow/);
+  assert.match(p.node("#pw-skills").innerHTML, /gtmb-workflow/);
   p.run('show("contexts")'); assert.match(p.node("#nav").innerHTML, /data-v="notes" class="on"/, "an earlier view lights the place it belongs to; there is no More menu");
   const older = structuredClone(D); delete older.pillars; const o = page(older);
   assert.match(o.node("#cfg-docs").innerHTML, /made by an older version/, "a page rendered by an older plugin still loads");

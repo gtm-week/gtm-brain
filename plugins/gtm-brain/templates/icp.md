@@ -12,7 +12,7 @@ gtm-brain: {{VERSION}}
 Made with GTM Brain. This document lives in the brain folder and travels with it.
 
 Not written yet. This is who {{COMPANY}} sells to and who it does not. Say **define our ICP**
-(`/gtm-brain-define-icp`): a short interview fills it in from your best customers. Lists,
+(`/gtmb-define-icp`): a short interview fills it in from your best customers. Lists,
 exports and research about the ICP go in the `icp/` folder beside this file.
 
 ## Best customers today

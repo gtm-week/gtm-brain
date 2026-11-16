@@ -1,6 +1,6 @@
 [
   {
-    "id": "gtm-brain-todo",
+    "id": "gtmb-todo",
     "group": "daily",
     "featured": true,
     "title": "Choose my next task",
@@ -8,7 +8,7 @@
     "example": "What should I focus on today?"
   },
   {
-    "id": "gtm-brain-workflow",
+    "id": "gtmb-workflow",
     "group": "daily",
     "featured": false,
     "title": "Run a workflow",
@@ -16,7 +16,7 @@
     "example": "Start the outbound workflow for the Q4 accounts."
   },
   {
-    "id": "gtm-brain-sync",
+    "id": "gtmb-sync",
     "group": "daily",
     "featured": true,
     "title": "Sync the latest updates",
@@ -24,7 +24,7 @@
     "example": "Sync recent updates from my connected tools."
   },
   {
-    "id": "gtm-brain-deepdive",
+    "id": "gtmb-deepdive",
     "group": "daily",
     "featured": true,
     "title": "Prepare for a meeting",
@@ -32,7 +32,7 @@
     "example": "Help me prepare for my next customer meeting."
   },
   {
-    "id": "gtm-brain-unit-economics",
+    "id": "gtmb-unit-economics",
     "group": "daily",
     "featured": false,
     "title": "Review unit economics",
@@ -40,7 +40,7 @@
     "example": "Can we spend more on growth? Here are our CAC, ARPU and churn."
   },
   {
-    "id": "gtm-brain-market-desk-research",
+    "id": "gtmb-market-desk-research",
     "group": "daily",
     "featured": false,
     "title": "Research a market",
@@ -48,7 +48,7 @@
     "example": "Assess the market for our offering in the DACH mid-market."
   },
   {
-    "id": "gtm-brain-define-icp",
+    "id": "gtmb-define-icp",
     "group": "daily",
     "featured": false,
     "title": "Define our ICP",
@@ -56,7 +56,7 @@
     "example": "Define our ideal customer profile using what we already know."
   },
   {
-    "id": "gtm-brain-use-brain",
+    "id": "gtmb-use-brain",
     "group": "knowledge",
     "featured": false,
     "title": "Ask or remember something",
@@ -64,7 +64,7 @@
     "example": "What do we know about our target customers?"
   },
   {
-    "id": "gtm-brain-rules",
+    "id": "gtmb-rules",
     "group": "knowledge",
     "featured": false,
     "title": "Change our rules",
@@ -72,7 +72,7 @@
     "example": "From now on, always ask before tagging a client."
   },
   {
-    "id": "gtm-brain-schema",
+    "id": "gtmb-schema",
     "group": "knowledge",
     "featured": false,
     "title": "Change what we keep",
@@ -80,7 +80,7 @@
     "example": "Every company must have a budget owner."
   },
   {
-    "id": "gtm-brain-project",
+    "id": "gtmb-project",
     "group": "projects",
     "featured": true,
     "title": "Work in a project",
@@ -88,7 +88,7 @@
     "example": "Create a new project for our website."
   },
   {
-    "id": "gtm-brain-design-system",
+    "id": "gtmb-design-system",
     "group": "projects",
     "featured": false,
     "title": "Build our design system",
@@ -96,7 +96,7 @@
     "example": "Build our design system from our company website."
   },
   {
-    "id": "gtm-brain-add-section",
+    "id": "gtmb-add-section",
     "group": "projects",
     "featured": false,
     "title": "Add a reusable section",
@@ -104,7 +104,7 @@
     "example": "Add a comparison table to our website's reusable sections."
   },
   {
-    "id": "gtm-brain-build-landing-page",
+    "id": "gtmb-build-landing-page",
     "group": "projects",
     "featured": false,
     "title": "Build a landing page",
@@ -112,7 +112,7 @@
     "example": "Build a follow-up page for our event leads and show me the local preview."
   },
   {
-    "id": "gtm-brain-publish-website",
+    "id": "gtmb-publish-website",
     "group": "projects",
     "featured": false,
     "title": "Publish the website",
@@ -120,7 +120,7 @@
     "example": "Prepare a hosted preview of our website and keep its access private."
   },
   {
-    "id": "gtm-brain-start",
+    "id": "gtmb-start",
     "group": "setup",
     "featured": false,
     "title": "Set up or resume GTM Brain",
@@ -128,7 +128,7 @@
     "example": "Resume my GTM Brain setup."
   },
   {
-    "id": "gtm-brain-configure",
+    "id": "gtmb-configure",
     "group": "setup",
     "featured": false,
     "title": "Change my preferences",
@@ -136,7 +136,7 @@
     "example": "Help me change my GTM Brain preferences."
   },
   {
-    "id": "gtm-brain-skill",
+    "id": "gtmb-skill",
     "group": "setup",
     "featured": false,
     "title": "Make a skill of your own",
@@ -144,7 +144,7 @@
     "example": "Turn what we just did into a skill."
   },
   {
-    "id": "gtm-brain-strategy",
+    "id": "gtmb-strategy",
     "group": "setup",
     "featured": false,
     "title": "Run the strategic intake",
@@ -152,7 +152,7 @@
     "example": "Run the strategic intake."
   },
   {
-    "id": "gtm-brain-voice",
+    "id": "gtmb-voice",
     "group": "setup",
     "featured": false,
     "title": "Draft our tone of voice",
@@ -160,7 +160,7 @@
     "example": "Draft our tone of voice from our website and posts."
   },
   {
-    "id": "gtm-brain-zynt-setup",
+    "id": "gtmb-zynt-setup",
     "group": "setup",
     "featured": false,
     "title": "Set up ZYNT",
@@ -168,7 +168,7 @@
     "example": "Set up ZYNT for me."
   },
   {
-    "id": "gtm-brain-freckle-setup",
+    "id": "gtmb-freckle-setup",
     "group": "setup",
     "featured": false,
     "title": "Set up Freckle",
@@ -176,7 +176,7 @@
     "example": "Set up Freckle for me."
   },
   {
-    "id": "gtm-brain-clay-setup",
+    "id": "gtmb-clay-setup",
     "group": "setup",
     "featured": false,
     "title": "Set up Clay",
@@ -184,7 +184,7 @@
     "example": "Set up Clay for me."
   },
   {
-    "id": "gtm-brain-woodpecker-setup",
+    "id": "gtmb-woodpecker-setup",
     "group": "setup",
     "featured": false,
     "title": "Set up Woodpecker",
@@ -192,7 +192,7 @@
     "example": "Set up Woodpecker for me."
   },
   {
-    "id": "gtm-brain-surfer-setup",
+    "id": "gtmb-surfer-setup",
     "group": "setup",
     "featured": false,
     "title": "Set up Surfer",
@@ -200,7 +200,7 @@
     "example": "Set up Surfer for me."
   },
   {
-    "id": "gtm-brain-heyreach-setup",
+    "id": "gtmb-heyreach-setup",
     "group": "setup",
     "featured": false,
     "title": "Set up HeyReach",

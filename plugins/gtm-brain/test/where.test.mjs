@@ -65,7 +65,7 @@ test("a brain from before RULES.md gets it at its next chat start, committed", (
 
 test("a new project goes to projects/<slug>/ by default, creating projects/ the first time", () => {
   const root = brain();
-  const out = execFileSync(process.execPath, [`${P}/skills/gtm-brain-project/project.mjs`, root, "--link", join(root, "projects", "berlin-event-2026"), "--create", "--slug", "berlin-event-2026", "--title", "Berlin event", "--by", "artur-wala"], { cwd: root, env, encoding: "utf8" });
+  const out = execFileSync(process.execPath, [`${P}/skills/gtmb-project/project.mjs`, root, "--link", join(root, "projects", "berlin-event-2026"), "--create", "--slug", "berlin-event-2026", "--title", "Berlin event", "--by", "artur-wala"], { cwd: root, env, encoding: "utf8" });
   assert.match(out, /Created Berlin event at .*projects\/berlin-event-2026/);
   assert.ok(existsSync(join(root, "projects", "berlin-event-2026", "AGENTS.md")));
   // its README.md first line is what every chat start lists for it
@@ -121,7 +121,7 @@ test("a video over 25 MB is never committed: save keeps the rest and names it, t
   assert.match(r.note, /Too big for git, not kept \(over 25 MB\): projects\/berlin-event-2026\/sources\/Keynote Recording\.mov \(30 MB\)/);
   assert.match(lib.save(root, "again").note, /^nothing else to save\nToo big for git/);
   const out = start(root);
-  assert.match(out, /Follow the big-files walk-through \(gtm-brain-use-brain\/references\/big-files\.md\): offer to move each to the shared drive \(Google Drive\), in the folder "[^"]+ GTM Brain files"/);
+  assert.match(out, /Follow the big-files walk-through \(gtmb-use-brain\/references\/big-files\.md\): offer to move each to the shared drive \(Google Drive\), in the folder "[^"]+ GTM Brain files"/);
   assert.match(out, /save its pointer \{kind: google-drive, account, ref, url\} on the note/);
   assert.match(out, /If Google Drive is not connected in this Codex, say so and ask for the file's Drive link instead \(connect my tools connects it\); without a link the file stays on this computer only/);
   assert.match(out, /Name folders and files in lowercase words joined by hyphens/);

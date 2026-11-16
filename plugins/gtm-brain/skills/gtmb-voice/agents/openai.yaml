@@ -1,0 +1,4 @@
+interface:
+  display_name: "GTM Brain: Voice"
+  short_description: "Draft our tone of voice from our own writing"
+  default_prompt: "Use $gtmb-voice to draft a tone of voice: settle whose voice it is, then draft it from writing that fits."

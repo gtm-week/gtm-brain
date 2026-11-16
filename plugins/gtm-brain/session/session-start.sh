@@ -12,7 +12,7 @@ H="$(dirname "${BASH_SOURCE[0]}")/../lib/host.mjs"
 cwd="$(pwd)"; project=""; root="$cwd"
 where="$(gtm_brain_resolve "$cwd")" || where=""
 case "$where" in
-  MISSING*) rest="${where#MISSING$'\t'}"; echo "GTM Brain: this folder points at a brain that is not there: ${rest%%$'\t'*}; run /gtm-brain-project here to link it to the brain that exists now (the old pointer is replaced). Nothing else runs here."; exit 0;;
+  MISSING*) rest="${where#MISSING$'\t'}"; echo "GTM Brain: this folder points at a brain that is not there: ${rest%%$'\t'*}; run /gtmb-project here to link it to the brain that exists now (the old pointer is replaced). Nothing else runs here."; exit 0;;
   "") ;;
   *) root="${where%%$'\t'*}"; project="${where#*$'\t'}";;
 esac
@@ -21,13 +21,13 @@ esac
 if [ -n "$project" ]; then
   company="$(node -e 'const l=await import(process.argv[1]);console.log((l.readAdmin(process.argv[2])||{}).company||"")' "$P/lib/brain.mjs" "$root" 2>/dev/null)"
   echo "PROJECT $project of the $company brain at $root. Pass brain: $root and project: $project in every GTM Brain tool call. Say \"$project\" to the person, never the path."
-  echo "This linked folder is one working project. For new subprojects or a workspace hierarchy, propose separate folders in $root/projects/ through /gtm-brain-project. Do not scaffold a brain or nested GTM Brain projects here; preserve ordinary application directories and existing files."
+  echo "This linked folder is one working project. For new subprojects or a workspace hierarchy, propose separate folders in $root/projects/ through /gtmb-project. Do not scaffold a brain or nested GTM Brain projects here; preserve ordinary application directories and existing files."
   # A teammate's skill arrives through git; the link into this project is made here, once per session start.
   node -e 'const u=await import(process.argv[1]);u.reconcileProjectSkills(process.argv[2],process.argv[3])' "$P/lib/user-skills.mjs" "$root" "$project" 2>/dev/null || true
 fi
 # Both the empty-folder and brain branches emit the same authored policy.
 interaction_policy() {
-  echo "Before the first question you ask the person, read $P/skills/gtm-brain-start/references/questions.md once; not before a plain answer, and not again later."
+  echo "Before the first question you ask the person, read $P/skills/gtmb-start/references/questions.md once; not before a plain answer, and not again later."
   echo "Call GTM Brain tools directly when the host lists them as tools. When the host exposes them only inside a code or script cell, call them there: that is the host's tool path, not a workaround. Either way a result is content parts (never stringify it)."
   cat "$P/policies/questions.md" "$P/policies/computer-use.md"
 }
@@ -41,7 +41,7 @@ brain_interaction_policy() {
   if [ -z "$project" ] && node "$H" rulebook "$root" 2>/dev/null && grep -q '^## Rule pages' "$root/AGENTS.md" 2>/dev/null && ! grep -q '<!-- generated: questions' "$root/AGENTS.md" 2>/dev/null; then
     echo "Before the first question you ask the person, read the questions rule page once (query, object rules, search questions); not before a plain answer, and not again later."
   elif [ -z "$project" ] && node "$H" rulebook "$root" 2>/dev/null && grep -q '<!-- generated: questions' "$root/AGENTS.md" 2>/dev/null && grep -q '<!-- generated: computer-use' "$root/AGENTS.md" 2>/dev/null; then
-    echo "Before the first question you ask the person, read $P/skills/gtm-brain-start/references/questions.md once; not before a plain answer, and not again later."
+    echo "Before the first question you ask the person, read $P/skills/gtmb-start/references/questions.md once; not before a plain answer, and not again later."
   else
     interaction_policy
   fi
@@ -52,11 +52,11 @@ if [ -z "$where" ] || ! gtm_brain_is "$root"; then
   # Preserve this real hook session before setup; never infer it from an inherited env.
   if [ -f "$P/lib/brain.mjs" ] && command -v node >/dev/null 2>&1 && printf '%s' "$input" | node -e 'const l=await import(process.argv[1]);const fs=await import("node:fs");const input=fs.readFileSync(0,"utf8");process.exit(l.prepareLandingSession(process.argv[2],input)?0:1)' "$P/lib/brain.mjs" "$root" 2>/dev/null; then
     interaction_policy
-    echo "GTM Brain: this folder has no company brain yet. If setup was requested, including in a prepared new-chat prompt, follow the gtm-brain-start skill immediately. On a greeting, proactively offer to set up this folder with one native choice; do not require a slash command. A concrete unrelated task comes first. Do not create a brain without a setup request or submitted choice."
+    echo "GTM Brain: this folder has no company brain yet. If setup was requested, including in a prepared new-chat prompt, follow the gtmb-start skill immediately. On a greeting, proactively offer to set up this folder with one native choice; do not require a slash command. A concrete unrelated task comes first. Do not create a brain without a setup request or submitted choice."
   fi
   # a folder that is not a brain and not linked: when this machine knows a brain, the skill is offered once
   known="$(node -e 'const l=await import(process.argv[1]);console.log(l.knownBrains().map(b=>b.company).join(", "))' "$P/lib/brain.mjs" 2>/dev/null)"
-  [ -n "$known" ] && echo "GTM Brain: this folder is not linked to a brain (known: $known). If the person does company work here, offer /gtm-brain-project once, in half a sentence; never link without a yes."
+  [ -n "$known" ] && echo "GTM Brain: this folder is not linked to a brain (known: $known). If the person does company work here, offer /gtmb-project once, in half a sentence; never link without a yes."
   exit 0
 fi
 mkdir -p "$root/work"
@@ -75,14 +75,14 @@ if { ! grep -qs '"layout": *[2-9]' "$root/brain/layout.json" && ls "$root"/brain
 fi
 # Remember which Codex chat this is (work/session.json): the dashboard shows which chat is linked.
 [ -n "${PLUGIN_ROOT:-}" ] && printf '%s' "$input" | node "$PLUGIN_ROOT/session/session.mjs" "$root" "$project" 2>/dev/null || true
-# This machine has opened this brain: known to /gtm-brain-project when it offers the skill elsewhere.
+# This machine has opened this brain: known to /gtmb-project when it offers the skill elsewhere.
 node -e 'const l=await import(process.argv[1]);l.registerBrain(process.argv[2])' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
 # A direct edit of a protected file is put back before anything reads or commits it (lib.guardProtected); in layout 3
 # a hand edit under about-us/ or config/ by someone other than the owner becomes a proposal for the owner (lib/owner.mjs).
 node -e 'const l=await import(process.argv[1]);const t=l.guardAtStart(process.argv[2]);if(t)console.log(t)' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
 # Every change in the brain is kept: a project folder an older version kept out of git is shared now; the
 # background maintenance then keeps what changed since the last save (lib.save covers the whole brain).
-node "$P/skills/gtm-brain-project/project.mjs" "$root" --share >/dev/null 2>&1 || true
+node "$P/skills/gtmb-project/project.mjs" "$root" --share >/dev/null 2>&1 || true
 # A file too big for git (a video, a recording) is never committed: Codex is told, to offer the shared drive.
 node -e 'const l=await import(process.argv[1]);const g=l.largeUnsaved(process.argv[2]);if(g.length)console.log(l.largeNote(g,process.argv[2]))' "$P/lib/brain.mjs" "$root" 2>/dev/null || true
 P="${PLUGIN_ROOT:-}"
@@ -135,12 +135,12 @@ node -e 'const c=await import(process.argv[1]);const t=c.captureNotice(process.a
 node -e 'const d=await import(process.argv[1]);const l=await import(process.argv[2]);const t=d.rulebookText(process.argv[3]);if(t){console.log(t);d.markRulebookSent(process.argv[3],l.readSession(process.argv[3],process.argv[4]||null)?.session_id)}' "$P/lib/dots.mjs" "$P/lib/brain.mjs" "$root" "$project" 2>/dev/null || true
 echo "Answer the person's request using relevant saved evidence. Never open, inspect or refresh the dashboard before an ordinary answer. Maintenance runs in the background; external source sync runs only when requested or by an approved schedule. An explicit dashboard or sync request follows its normal workflow."
 # A handoff another assistant wrote by following IMPORT.md waits under ~/.gtm-brain until it is imported
-# (the gtm-brain-start skill offers to delete it). Said once per chat; the model offers, never imports by itself.
+# (the gtmb-start skill offers to delete it). Said once per chat; the model offers, never imports by itself.
 handoff_home="${GTM_BRAIN_HOME:-${GTM_OS_HOME:-$HOME}}"
 for hf in "$handoff_home/.gtm-brain/handoff.md" "$handoff_home/.gtm-brain/claude-export.md" "$handoff_home/.gtm-os/handoff.md" "$handoff_home/.gtm-os/claude-export.md"; do
   if [ -f "$hf" ]; then
     hby="$(sed -n 's/^by: *//p' "$hf" | head -1)"; hc="$(sed -n 's/^confirmed: *//p' "$hf" | head -1)"
-    echo "HANDOFF waiting: $hf (by ${hby:-another assistant}, confirmed: ${hc:-unknown}; skill gtm-brain-start). Offer once, in one line, to bring it in; every line is played back before it enters the brain."
+    echo "HANDOFF waiting: $hf (by ${hby:-another assistant}, confirmed: ${hc:-unknown}; skill gtmb-start). Offer once, in one line, to bring it in; every line is played back before it enters the brain."
     break
   fi
 done

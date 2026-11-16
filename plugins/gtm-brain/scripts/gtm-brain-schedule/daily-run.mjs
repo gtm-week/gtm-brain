@@ -7,9 +7,9 @@ import * as lib from '../../lib/brain.mjs';
 
 export function dailyRefreshPrompt(root, by) {
   const policy = lib.meetingOverview(root, { by }).policies[0];
-  const procedure = fileURLToPath(new URL('../../skills/gtm-brain-use-brain/references/meetings.md', import.meta.url));
-  const compile = fileURLToPath(new URL('../../skills/gtm-brain-use-brain/references/compile.md', import.meta.url));
-  const entities = fileURLToPath(new URL('../../skills/gtm-brain-use-brain/references/entity-compile.md', import.meta.url));
+  const procedure = fileURLToPath(new URL('../../skills/gtmb-use-brain/references/meetings.md', import.meta.url));
+  const compile = fileURLToPath(new URL('../../skills/gtmb-use-brain/references/compile.md', import.meta.url));
+  const entities = fileURLToPath(new URL('../../skills/gtmb-use-brain/references/entity-compile.md', import.meta.url));
   return `Run GTM Brain daily maintenance in ${root} for confirmed person ${by}. No interactive questions, external writes, identity edits or new contexts.
 ${policy ? `Read meeting_overview with by=${by} and follow the submitted policy in memory ${policy.id}. Follow ${procedure}. Fetch new/updated meeting evidence from the selected connected sources, resume partial scopes and processing records, capture through remember with by=${by}, and record per-source coverage separately after checking results. Refresh selected calendar references when calendar_refresh is daily. A failed or unavailable source leaves its coverage incomplete and must not stop other sources or compilation. Do not invent source hooks, use computer controls, infer attendance from calendar, or create missing-transcript tasks from past invitations.` : 'No submitted meeting policy exists. Do not refresh external sources; report that source refresh was skipped and continue compiling saved evidence.'}
 Then call compile_facts, compile every stale context following ${compile}, and compile stale entity briefs using entity_facts and compile_entity following ${entities}, with by=schedule. Each writer commits its work. Render the dashboard. Report captured conversations, each source failure or unresolved scope, and summaries updated. Never claim a failed refresh succeeded.`;

@@ -141,5 +141,5 @@ echo "  config/, about-us/        rules, schema and the base documents: the owne
 else echo "  $(gtm_brain_settings .)            workplace info: team with handles, tools. Changes need APPROVE."; fi
 echo "  brain/contexts/           company, strategy, market, icp, offer, personal-$OWNER_HANDLE"
 echo "  git in this folder: commits as $OWNER_NAME <$OWNER_EMAIL>, git pre-commit check in .githooks (local config)"
-echo "  you are: $OWNER_HANDLE    next: onboarding is in progress; continue gtm-brain-start discovery in this chat using the answers already supplied"
+echo "  you are: $OWNER_HANDLE    next: onboarding is in progress; continue gtmb-start discovery in this chat using the answers already supplied"
 node -e 'const l=await import(process.argv[1]);console.log(l.onboardingInstruction("."))' "$PLUGIN/lib/brain.mjs"

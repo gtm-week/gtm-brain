@@ -1,4 +1,4 @@
-// The live cases for gtm-brain-voice, run through tool-routing.mjs (skill-cases.mjs lists them):
+// The live cases for gtmb-voice, run through tool-routing.mjs (skill-cases.mjs lists them):
 //   node plugins/gtm-brain/test/live/tool-routing.mjs skill-voice          two turns: asks whose voice, then drafts and asks
 //   node plugins/gtm-brain/test/live/tool-routing.mjs skill-voice-save     the request settles whose voice and says save: it saves
 // The fixture brain has no website and no tool connected. codex exec has no question box, so a question is plain
@@ -48,8 +48,8 @@ const COMPANY = "The company's voice: one standard for everything we publish and
 
 export const voiceCases = [
   {
-    judge: "advisory", name: "skill-voice", workflow: "gtm-brain-voice",
-    prompt: "/gtm-brain-voice Draft our tone of voice.",
+    judge: "advisory", name: "skill-voice", workflow: "gtmb-voice",
+    prompt: "/gtmb-voice Draft our tone of voice.",
     followUps: [`${COMPANY} Our website is offline today and no mail or Slack is connected; use these three public posts of ours, each with its link:\n${posts}`],
     calls: (calls, { turns = [] } = {}) => voiceRoute(calls) && (turns.length < 2 || !turns[0].calls.some(voiceWrite)),
     verify: root => { const d = voiceDoc(root); return !!d && !d.filled; },
@@ -59,12 +59,12 @@ export const voiceCases = [
     expect: "Turn one: before reading anything into a draft, one question whose voice this is, the company's (recommended, one standard for what it publishes and sends) against a person's or a team's, with one line on why, then the turn ends. Turn two, after the answer and three pasted posts: what was reviewed (three public posts) and what is missing (website, sent mail; internal chat is not evidence of a company voice), a small-corpus warning, then the whole draft in the structure the posts support, observed rules apart from any suggestion, quoted lines copied word for word with their links. It ends with one question offering Save it as a draft (recommended) and Change something. Nothing is written: voice.md is still the starter.",
   },
   {
-    judge: "advisory", name: "skill-voice-save", workflow: "gtm-brain-voice",
-    prompt: `/gtm-brain-voice Draft our tone of voice and save it as a draft when it is ready; I accept it without another question. ${COMPANY} Our website is offline today and no mail or Slack is connected; use these three public posts of ours instead, each with its link:\n${posts}`,
+    judge: "advisory", name: "skill-voice-save", workflow: "gtmb-voice",
+    prompt: `/gtmb-voice Draft our tone of voice and save it as a draft when it is ready; I accept it without another question. ${COMPANY} Our website is offline today and no mail or Slack is connected; use these three public posts of ours instead, each with its link:\n${posts}`,
     calls: calls => voiceRoute(calls, { save: true }),
     verify: root => { const d = voiceDoc(root); return !!d && d.filled && d.status === "draft" && voiceDocChecks(d.body) && d.applies_to.includes("posts"); },
-    responseCheck: text => /voice\.md/i.test(text) && /gtm-brain-voice/.test(text) && /new chat/i.test(text) && /\bposts\b/i.test(text) && /\b(email|post)\b[^?]*\?/i.test(text) && !/\bis (now )?in use\b/i.test(text),
+    responseCheck: text => /voice\.md/i.test(text) && /gtmb-voice/.test(text) && /new chat/i.test(text) && /\bposts\b/i.test(text) && /\b(email|post)\b[^?]*\?/i.test(text) && !/\bis (now )?in use\b/i.test(text),
     evidence,
-    expect: "Whose voice is settled by the request (the company's), so no question asks it. voice.md, the starter setup wrote, is filled in place as a draft (no second voice document), using the yes given in the request without asking again: concise, first line saying it is the company's voice and what it governs, rules from the posts with quoted lines copied word for word and their links. The final message names voice.md and the kinds of work it applies to, gives one sentence to type in a new chat to see it followed without claiming it is already in use, offers to test the guide on one short real email or post, and says /gtm-brain-voice revises it. Nothing is saved as a note.",
+    expect: "Whose voice is settled by the request (the company's), so no question asks it. voice.md, the starter setup wrote, is filled in place as a draft (no second voice document), using the yes given in the request without asking again: concise, first line saying it is the company's voice and what it governs, rules from the posts with quoted lines copied word for word and their links. The final message names voice.md and the kinds of work it applies to, gives one sentence to type in a new chat to see it followed without claiming it is already in use, offers to test the guide on one short real email or post, and says /gtmb-voice revises it. Nothing is saved as a note.",
   },
 ];

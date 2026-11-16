@@ -1,4 +1,4 @@
-// gtm-brain-freckle-setup (0.35.0): Freckle connected over its MCP on the person's yes, its first plan
+// gtmb-freckle-setup (0.35.0): Freckle connected over its MCP on the person's yes, its first plan
 // drafted from the brain, credits spent only on a yes, and Freckle ends up in the brain's tools.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -7,17 +7,17 @@ import { fileURLToPath } from 'node:url';
 import { resolve, dirname, join } from 'node:path';
 const P = fileURLToPath(new URL('..', import.meta.url)).replace(/\/$/, '');
 const R = resolve(P, '../..');
-const file = join(P, 'skills/gtm-brain-freckle-setup/SKILL.md');
+const file = join(P, 'skills/gtmb-freckle-setup/SKILL.md');
 const skill = readFileSync(file, 'utf8');
 
 test('the Freckle setup skill follows the shipped-skill template: name, links, openai.yaml, catalog and docs', () => {
-  assert.match(skill, /^---\nname: gtm-brain-freckle-setup\n/);
+  assert.match(skill, /^---\nname: gtmb-freckle-setup\n/);
   for (const [, ref] of skill.matchAll(/\]\(([^)]+\.md)\)/g)) assert.ok(existsSync(resolve(dirname(file), ref)), ref);
-  assert.match(readFileSync(join(P, 'skills/gtm-brain-freckle-setup/agents/openai.yaml'), 'utf8'), /display_name: "GTM Brain: Set up Freckle"/);
+  assert.match(readFileSync(join(P, 'skills/gtmb-freckle-setup/agents/openai.yaml'), 'utf8'), /display_name: "GTM Brain: Set up Freckle"/);
   const catalog = JSON.parse(readFileSync(join(P, 'scripts/gtm-brain-render/skill-catalog.json'), 'utf8'));
-  const i = catalog.findIndex(s => s.id === 'gtm-brain-freckle-setup');
+  const i = catalog.findIndex(s => s.id === 'gtmb-freckle-setup');
   assert.ok(i > 0 && catalog[i].group === 'setup' && catalog[i].featured === false);
-  for (const doc of ['README.md', 'COMMANDS.md', 'ONBOARDING.md']) assert.match(readFileSync(join(R, doc), 'utf8'), /gtm-brain-freckle-setup/, doc);
+  for (const doc of ['README.md', 'COMMANDS.md', 'ONBOARDING.md']) assert.match(readFileSync(join(R, doc), 'utf8'), /gtmb-freckle-setup/, doc);
 });
 
 test('the MCP is added on the person\'s yes and the sign-in stays theirs', () => {

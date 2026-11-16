@@ -60,7 +60,7 @@ The folder must be empty. GTM Brain never takes over a folder that already has f
 
 ## Step 3: send "Set up GTM Brain here"
 
-In that new chat, send **Set up GTM Brain here**. Typing `/gtm-brain-start` does the same. From
+In that new chat, send **Set up GTM Brain here**. Typing `/gtmb-start` does the same. From
 here Codex drives and you correct. It asks one question at a time, usually as choices you
 click, with room to type a correction.
 
@@ -122,29 +122,29 @@ summary is written when you ask about it. When you want a specific workflow:
 
 | You want to | Type |
 |---|---|
-| Know what to do next | `/gtm-brain-todo` |
-| Pull in what arrived through your tools | `/gtm-brain-sync` |
-| Get a one-page brief before a call | `/gtm-brain-deepdive` |
-| Decide whether to push, fix, stop or measure growth spend | `/gtm-brain-unit-economics` |
-| Assess a market, its segments and competitors against what you can prove today | `/gtm-brain-market-desk-research` |
-| Define who to target: company fit, buying roles and readiness, kept as one draft | `/gtm-brain-define-icp` |
-| Fill in the strategy the brain starts with (`strategy.md`), in a 10-15 minute conversation | `/gtm-brain-strategy` |
-| Draft a tone of voice: first whose it is (the company's, yours or a team's), then from writing that fits, tested on one fresh email or post; `voice.md` for the company; offered at the end of setup, skippable, run again any time | `/gtm-brain-voice` |
-| Set up ZYNT from what the brain knows: paste the prompt ZYNT gives you after "Set up with my AI agent" | `/gtm-brain-zynt-setup` |
-| Connect Freckle and build its first list of target companies and people from the brain | `/gtm-brain-freckle-setup` |
-| Connect Clay and find the target companies and people the brain names | `/gtm-brain-clay-setup` |
-| Connect Woodpecker and save one email sequence written from the brain as a draft | `/gtm-brain-woodpecker-setup` |
-| Connect Surfer and brief the first article from what the brain knows | `/gtm-brain-surfer-setup` |
-| Connect HeyReach and get LinkedIn messages written from the brain | `/gtm-brain-heyreach-setup` |
+| Know what to do next | `/gtmb-todo` |
+| Pull in what arrived through your tools | `/gtmb-sync` |
+| Get a one-page brief before a call | `/gtmb-deepdive` |
+| Decide whether to push, fix, stop or measure growth spend | `/gtmb-unit-economics` |
+| Assess a market, its segments and competitors against what you can prove today | `/gtmb-market-desk-research` |
+| Define who to target: company fit, buying roles and readiness, kept as one draft | `/gtmb-define-icp` |
+| Fill in the strategy the brain starts with (`strategy.md`), in a 10-15 minute conversation | `/gtmb-strategy` |
+| Draft a tone of voice: first whose it is (the company's, yours or a team's), then from writing that fits, tested on one fresh email or post; `voice.md` for the company; offered at the end of setup, skippable, run again any time | `/gtmb-voice` |
+| Set up ZYNT from what the brain knows: paste the prompt ZYNT gives you after "Set up with my AI agent" | `/gtmb-zynt-setup` |
+| Connect Freckle and build its first list of target companies and people from the brain | `/gtmb-freckle-setup` |
+| Connect Clay and find the target companies and people the brain names | `/gtmb-clay-setup` |
+| Connect Woodpecker and save one email sequence written from the brain as a draft | `/gtmb-woodpecker-setup` |
+| Connect Surfer and brief the first article from what the brain knows | `/gtmb-surfer-setup` |
+| Connect HeyReach and get LinkedIn messages written from the brain | `/gtmb-heyreach-setup` |
 | Add a PDF, image or deck to the brain | drop it in the chat and say what it belongs to; no command |
 | Keep a recording or a file over 25 MB | drop it in the chat; it goes to Google Drive or a folder outside git, and the note keeps the link |
-| Change company info, team or tools | `/gtm-brain-configure` |
+| Change company info, team or tools | `/gtmb-configure` |
 | Fill in the voice, ICP, design system or market the brain starts with (`voice.md`, `icp.md`, `design-system.md`, `market.md`) | "fill in our tone of voice" |
-| Turn something you do repeatedly into a reusable skill | `/gtm-brain-skill` |
-| Build a website design system from your existing brand (Brian Woloszczak and Peakout's starter) | `/gtm-brain-design-system` |
-| Add a reusable section to that website | `/gtm-brain-add-section` |
-| Build a campaign or event page on it | `/gtm-brain-build-landing-page` |
-| Publish it on Vercel, preview first | `/gtm-brain-publish-website` |
+| Turn something you do repeatedly into a reusable skill | `/gtmb-skill` |
+| Build a website design system from your existing brand (Brian Woloszczak and Peakout's starter) | `/gtmb-design-system` |
+| Add a reusable section to that website | `/gtmb-add-section` |
+| Build a campaign or event page on it | `/gtmb-build-landing-page` |
+| Publish it on Vercel, preview first | `/gtmb-publish-website` |
 
 The **dashboard** is view-only: what needs you, open questions, contexts, notes, sources,
 customers and companies. "Chat about this" opens a prepared Codex conversation; press Send
@@ -156,8 +156,8 @@ once. Say **"update GTM Brain"**, then start a new chat.
 ## Three kinds of skills
 
 Type `/` in Codex and every skill looks the same. They are three kinds. **Shipped with GTM Brain**
-(`/gtm-brain-todo`, `/gtm-brain-strategy`, ...): they come with the plugin, update with it, and are
-not yours to edit. **Yours, in this brain**: made with `/gtm-brain-skill` or installed from
+(`/gtmb-todo`, `/gtmb-strategy`, ...): they come with the plugin, update with it, and are
+not yours to edit. **Yours, in this brain**: made with `/gtmb-skill` or installed from
 GitHub; they live in the brain's `.agents/skills`, travel with the brain, and teammates get
 them. **Codex's own, on this machine**: made with Codex's `$skill-creator`; they live in
 `~/.agents/skills`, are yours alone, and GTM Brain never sees or updates them. Say `list my
@@ -175,7 +175,7 @@ if it is not, Codex tells you exactly that and stops.
 ## Work in your own folders
 
 The brain is one folder; your work does not have to move into it. To connect another folder
-(your website, your curriculum), type `/gtm-brain-project` in Codex. It creates a new project
+(your website, your curriculum), type `/gtmb-project` in Codex. It creates a new project
 folder or links one you already have, and asks before capturing any work done there. From
 the next chat in that folder, what you do lands in the brain tagged with that project, and
 each project keeps its own open contexts, so two projects never mix. The dashboard lists

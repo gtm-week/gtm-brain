@@ -1,0 +1,4 @@
+interface:
+  display_name: "GTM Brain: Set up Surfer"
+  short_description: "Connect Surfer and brief the first article from the brain"
+  default_prompt: "Use $gtmb-surfer-setup to set up Surfer from what the brain already knows."

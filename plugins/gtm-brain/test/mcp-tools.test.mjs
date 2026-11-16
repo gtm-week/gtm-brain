@@ -53,7 +53,7 @@ test("an installed plugin the catalog misses takes its name from its own manifes
   assert.match(f.check(), /installed in Codex but not in admin\.md tools: Pocket AI/);
 });
 
-// ZYNT's setup runs on its HTTP API with a key pasted in the chat: no plugin, no MCP server (gtm-brain-zynt-setup).
+// ZYNT's setup runs on its HTTP API with a key pasted in the chat: no plugin, no MCP server (gtmb-zynt-setup).
 test("a tool read through its API is on the page once a read test and a note back it; a failed read shows as failed", t => {
   const f = brain(t, ["HubSpot"]);
   const mark = (status, note) => spawnSync(process.execPath, [connect, f.root, "--mark", "zynt", status, note], { cwd: f.root, env: f.env, encoding: "utf8" });
@@ -68,7 +68,7 @@ test("a tool read through its API is on the page once a read test and a note bac
   assert.equal(f.state().zynt.test, "fail", "an expired key stays visible as failed, never connected");
 });
 
-// HeyReach's key is part of its MCP Connection URL, and a transport error quotes the URL (gtm-brain-heyreach-setup).
+// HeyReach's key is part of its MCP Connection URL, and a transport error quotes the URL (gtmb-heyreach-setup).
 test("a read test note never carries a connector's URL path, query or key into tools.json or the chat", t => {
   const f = brain(t, ["HubSpot"]);
   const out = spawnSync(process.execPath, [connect, f.root, "--mark", "heyreach", "fail", "error sending request for url (https://mcp.fixture.test/mcp/k9Zs3cret?key=abc123): 401, api key: Qw3rtyUiop12345"], { cwd: f.root, env: f.env, encoding: "utf8" }).stdout;

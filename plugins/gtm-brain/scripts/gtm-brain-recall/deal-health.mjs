@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // deal-health: one deal's MEDDPICC rubric and the memories to score it from. Reads only.
 //   node deal-health.mjs <root> --entity "<company>"
-// The model scores; this read gives it the rubric (skills/gtm-brain-use-brain/references/deal-health.md)
+// The model scores; this read gives it the rubric (skills/gtmb-use-brain/references/deal-health.md)
 // and the newest memories about the company (200, then a count of the rest), each with its ID. admin.md deal_scoring: off turns it off.
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -14,7 +14,7 @@ if (String(lib.readAdmin(root)?.deal_scoring ?? "on").toLowerCase() === "off") {
 }
 const who = args[args.indexOf("--entity") + 1];
 if (args.indexOf("--entity") < 0 || !who) { console.error("deal needs search: the company name, alias or id"); process.exit(2); }
-const rubric = readFileSync(new URL("../../skills/gtm-brain-use-brain/references/deal-health.md", import.meta.url), "utf8")
+const rubric = readFileSync(new URL("../../skills/gtmb-use-brain/references/deal-health.md", import.meta.url), "utf8")
   .split(/^## Turning it off/m)[0].replace(/^# .*\n+/, "").trim();
 let view;
 try { view = lib.entityBrief(root, who, {}); } catch (e) { console.error(e.message); process.exit(1); }

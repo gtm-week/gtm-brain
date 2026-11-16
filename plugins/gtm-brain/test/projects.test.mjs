@@ -41,14 +41,14 @@ function withOwnCodexHome(fn) {
   try { return fn(); } finally { process.env.CODEX_HOME = saved; env.CODEX_HOME = saved; }
 }
 const folder = () => mkdtempSync(join(tmpdir(), "gtm-brain-proj-folder-"));
-const project = (root, ...args) => execFileSync(process.execPath, [`${P}/skills/gtm-brain-project/project.mjs`, ".", ...args], { cwd: root, encoding: "utf8", env });
+const project = (root, ...args) => execFileSync(process.execPath, [`${P}/skills/gtmb-project/project.mjs`, ".", ...args], { cwd: root, encoding: "utf8", env });
 const refused = (root, ...args) => { try { project(root, ...args); return null; } catch (e) { return { code: e.status, text: String(e.stderr || e.stdout) }; } };
 
 test("a folder that holds documents is not linked as a project: open it in Codex instead; a plain folder still links", () => {
   const root = realpathSync(brain());
   mkdirSync(join(root, "brand")); writeFileSync(join(root, "brand", "voice.md"), "---\nkind: document\ntitle: Voice\napplies_to: [copy]\nstatus: draft\n---\n# Voice\n\nShort sentences.\n");
   mkdirSync(join(root, "brand", "design-system")); writeFileSync(join(root, "brand", "design-system", "logo.svg"), "<svg/>");
-  const link = (folder, slug) => { try { return { out: execFileSync(process.execPath, [`${P}/skills/gtm-brain-project/project.mjs`, ".", "--link", folder, "--slug", slug, "--contexts", "offer"], { cwd: root, encoding: "utf8", env }), code: 0 }; } catch (e) { return { out: String(e.stderr), code: e.status }; } };
+  const link = (folder, slug) => { try { return { out: execFileSync(process.execPath, [`${P}/skills/gtmb-project/project.mjs`, ".", "--link", folder, "--slug", slug, "--contexts", "offer"], { cwd: root, encoding: "utf8", env }), code: 0 }; } catch (e) { return { out: String(e.stderr), code: e.status }; } };
   const refused = link(join(root, "brand"), "brand");
   assert.equal(refused.code, 2, refused.out);
   assert.match(refused.out, /holds documents \(brand\/voice\.md\)/);
@@ -432,9 +432,9 @@ test("the session hook elsewhere: a pointer to a gone brain says so and stops; a
   const root = brain(); hook(root, "session-start.sh", {});
   const gone = folder(); lib.writePointer(gone, { brain: "/no/such/brain", slug: "old", title: "Old", company: "X" });
   const g = hook(gone, "session-start.sh", {});
-  assert.match(g, /points at a brain that is not there: \/no\/such\/brain; run \/gtm-brain-project here to link it to the brain that exists now/); assert.doesNotMatch(g, /PROJECT old/);
+  assert.match(g, /points at a brain that is not there: \/no\/such\/brain; run \/gtmb-project here to link it to the brain that exists now/); assert.doesNotMatch(g, /PROJECT old/);
   const plain = folder(); writeFileSync(join(plain, "notes.txt"), "x");
-  assert.match(hook(plain, "session-start.sh", {}), /GTM Brain: this folder is not linked to a brain \(known: Reflow\)\. If the person does company work here, offer \/gtm-brain-project once/);
+  assert.match(hook(plain, "session-start.sh", {}), /GTM Brain: this folder is not linked to a brain \(known: Reflow\)\. If the person does company work here, offer \/gtmb-project once/);
   const empty = folder();
   const e = hook(empty, "session-start.sh", {}); assert.match(e, /this folder has no company brain yet/); assert.match(e, /not linked to a brain/, "both offers, the start one first");
   assert.ok(e.indexOf("no company brain yet") < e.indexOf("not linked to a brain"));
@@ -472,28 +472,28 @@ test("the dashboard lists the projects and chips a note with its project; the ad
 });
 
 test("the skill exists, is listed, and asks before it writes", () => {
-  const skill = readFileSync(`${P}/skills/gtm-brain-project/SKILL.md`, "utf8") + readFileSync(`${P}/skills/gtm-brain-project/references/link.md`, "utf8");
-  assert.match(skill, /^name: gtm-brain-project$/m);
+  const skill = readFileSync(`${P}/skills/gtmb-project/SKILL.md`, "utf8") + readFileSync(`${P}/skills/gtmb-project/references/link.md`, "utf8");
+  assert.match(skill, /^name: gtmb-project$/m);
   assert.match(skill, /capture work done\s+in this folder/i, "the opt-in question is in the skill");
   assert.match(skill, /`query` \(brains\)/); assert.match(skill, /link_project/); assert.match(skill, /unlink_project/);
   assert.match(skill, /never link without a yes/i);
-  assert.match(readFileSync(`${P}/skills/gtm-brain-project/agents/openai.yaml`, "utf8"), /display_name: "GTM Brain: Projects"/);
+  assert.match(readFileSync(`${P}/skills/gtmb-project/agents/openai.yaml`, "utf8"), /display_name: "GTM Brain: Projects"/);
   assert.ok(!existsSync(`${P}/skills/gtm-brain-link-project/SKILL.md`) && !existsSync(`${P}/skills/gtm-brain-new-project/SKILL.md`), "the two old workflows are one skill now (ALL-204 step 4)");
-  assert.ok(existsSync(`${P}/skills/gtm-brain-project/project.mjs`), "the tool script stays at its stable path");
-  const create = readFileSync(`${P}/skills/gtm-brain-project/SKILL.md`, "utf8");
-  assert.match(create, /^name: gtm-brain-project$/m);
-  assert.ok(existsSync(`${P}/skills/gtm-brain-project/references/link.md`));
-  assert.match(readFileSync(`${P}/skills/gtm-brain-project/agents/openai.yaml`, "utf8"), /display_name: "GTM Brain: Projects"/);
+  assert.ok(existsSync(`${P}/skills/gtmb-project/project.mjs`), "the tool script stays at its stable path");
+  const create = readFileSync(`${P}/skills/gtmb-project/SKILL.md`, "utf8");
+  assert.match(create, /^name: gtmb-project$/m);
+  assert.ok(existsSync(`${P}/skills/gtmb-project/references/link.md`));
+  assert.match(readFileSync(`${P}/skills/gtmb-project/agents/openai.yaml`, "utf8"), /display_name: "GTM Brain: Projects"/);
   const commands = readFileSync(join(P, "..", "..", "COMMANDS.md"), "utf8");
-  assert.match(commands, /^\| `gtm-brain-project` \| GTM Brain: Projects \|/m);
-  assert.match(commands, /^\| `gtm-brain-project` \| GTM Brain: Projects \|/m);
+  assert.match(commands, /^\| `gtmb-project` \| GTM Brain: Projects \|/m);
+  assert.match(commands, /^\| `gtmb-project` \| GTM Brain: Projects \|/m);
 });
 
 test("the model, the contributors and the participants are told", () => {
   const tpl = readFileSync(`${P}/templates/AGENTS.md`, "utf8"), book = wholeRulebook(tpl);
   assert.match(tpl, /^1c\. \*\*A chat in a project works in that project\.\*\*/m);
   assert.match(tpl, /pass it as `project` in every GTM Brain call/); assert.match(book, /never its\s+folder path/);
-  assert.match(book, /`link_project`, `unlink_project`\)/); assert.match(book, /`gtm-brain-project`/);
+  assert.match(book, /`link_project`, `unlink_project`\)/); assert.match(book, /`gtmb-project`/);
   const contrib = readFileSync(join(P, "..", "..", "AGENTS.md"), "utf8");
   assert.match(contrib, /A project is a tag and a local pointer, never an object/); assert.match(contrib, /never below cwd/);
   for (const doc of ["ONBOARDING.md", "GUIDE.md"]) assert.match(readFileSync(join(P, "..", "..", doc), "utf8"), /## Work in your own folders/, doc);

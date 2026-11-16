@@ -107,7 +107,7 @@ const bullets = text => text.split("\n").filter(l => /^\s*[-*]\s+/.test(l)).map(
 // numbered items; an indented continuation line belongs to the item above it
 const items = text => { const out = []; for (const line of text.split("\n")) { const m = line.match(/^\s*(\d+)\.\s+(.*)$/); if (m) out.push(m[2].trim()); else if (out.length && line.trim()) out[out.length - 1] += " " + line.trim(); } return out; };
 
-/* One step: **Title** (tool: crm) (skill: gtm-brain-define-icp). What to do. Milestone: a note tagged x. Gate: after 3 days.
+/* One step: **Title** (tool: crm) (skill: gtmb-define-icp). What to do. Milestone: a note tagged x. Gate: after 3 days.
    The milestone comes before the gate, so a teammate on 0.34 still reads the gate (it takes the last "Gate:"). */
 function parseStep(text, n, problems) {
   const m = text.match(/^\*\*(.+?)\*\*([\s\S]*)$/);
@@ -217,7 +217,7 @@ export function runsLine(root, today = localDate()) {
       return `${r.id} in ${r.contextTitle}${r.paused ? ", paused" : r.duplicateOf ? `, a second run of the event ${r.duplicateOf} took: cancel it` : s ? `, step ${s.n} of ${total}${title ? ` (${title})` : ""}${s.status === "due" ? ", due now" : s.due ? `, due ${s.due}` : ", waiting for its milestone"}` : ", no step pending"}`;
     };
     const due = live.filter(r => !r.paused && r.current && (r.current.status === "due" || (r.current.due && r.current.due <= today))).length;
-    const tail = due ? `${due} step${due === 1 ? "" : "s"} due: mention it once; on "next step" or "where is the campaign" follow the gtm-brain-workflow skill (workflow status, then the step).` : `Say nothing about them unless asked; "where is the campaign" or "next step" follows the gtm-brain-workflow skill.`;
+    const tail = due ? `${due} step${due === 1 ? "" : "s"} due: mention it once; on "next step" or "where is the campaign" follow the gtmb-workflow skill (workflow status, then the step).` : `Say nothing about them unless asked; "where is the campaign" or "next step" follows the gtmb-workflow skill.`;
     lines.push(`workflows: ${live.length} run${live.length === 1 ? "" : "s"} in progress: ${live.map(show).join("; ")}. ${tail}`);
   }
   try { lines.push(...triggers.offerLines(root, { contexts, runs, today })); } catch {}

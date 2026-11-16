@@ -14,7 +14,7 @@
 //                                                       beside the Markdown), replacing the one there
 // The attachment itself is a remember call with asset; this script only lands the file.
 // Big files (a recording, or over 25 MB) never land in the brain: without a flag they are refused with the
-// big-files advice. The walk-through (skills/gtm-brain-use-brain/references/big-files.md) then runs:
+// big-files advice. The walk-through (skills/gtmb-use-brain/references/big-files.md) then runs:
 //   node add-file.mjs <root> --file <path> --big       big_files: local copies it to the big-files folder outside
 //                                                       git, checks the copy and prints its pointer; google-drive
 //                                                       prints the Drive folder to place it in

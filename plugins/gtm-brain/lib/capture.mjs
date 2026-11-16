@@ -75,7 +75,7 @@ export function chatHome(root, cwd, folders = captureFolders(root)) {
 }
 
 /* ---------- secrets: a key pasted into a chat never reaches the model run or a note ---------- */
-// A person pastes a key to set a tool up (gtm-brain-zynt-setup reads one from the chat). The chat file keeps it,
+// A person pastes a key to set a tool up (gtmb-zynt-setup reads one from the chat). The chat file keeps it,
 // and this pass rereads chats, so every turn is cleaned before it is counted, sent or quoted.
 const SECRET_SHAPES = [
   /\b(?:sk|pk|rk)-[A-Za-z0-9_-]{16,}\b/g,                                   // sk-..., pk-..., rk-...

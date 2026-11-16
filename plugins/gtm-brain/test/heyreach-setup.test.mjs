@@ -1,4 +1,4 @@
-// gtm-brain-heyreach-setup (0.35.0): the person adds HeyReach's Connection URL (a secret) themselves; reads and drafts only, never acts in HeyReach
+// gtmb-heyreach-setup (0.35.0): the person adds HeyReach's Connection URL (a secret) themselves; reads and drafts only, never acts in HeyReach
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
@@ -6,17 +6,17 @@ import { fileURLToPath } from "node:url";
 import { resolve, dirname, join } from "node:path";
 const P = fileURLToPath(new URL("..", import.meta.url)).replace(/\/$/, "");
 const R = resolve(P, "../..");
-const file = join(P, "skills/gtm-brain-heyreach-setup/SKILL.md");
+const file = join(P, "skills/gtmb-heyreach-setup/SKILL.md");
 const skill = readFileSync(file, "utf8");
 
 test("the skill follows the shipped-skill template: name, links, openai.yaml, catalog and docs", () => {
-  assert.match(skill, /^---\nname: gtm-brain-heyreach-setup\n/);
+  assert.match(skill, /^---\nname: gtmb-heyreach-setup\n/);
   for (const [, ref] of skill.matchAll(/\]\(([^)]+\.md)\)/g)) assert.ok(existsSync(resolve(dirname(file), ref)), ref);
-  assert.ok(existsSync(join(P, "skills/gtm-brain-heyreach-setup/agents/openai.yaml")));
+  assert.ok(existsSync(join(P, "skills/gtmb-heyreach-setup/agents/openai.yaml")));
   const catalog = JSON.parse(readFileSync(join(P, "scripts/gtm-brain-render/skill-catalog.json"), "utf8"));
-  const i = catalog.findIndex(s => s.id === "gtm-brain-heyreach-setup");
+  const i = catalog.findIndex(s => s.id === "gtmb-heyreach-setup");
   assert.ok(i > 0 && catalog[i].group === "setup" && catalog[i].featured === false);
-  for (const doc of ["README.md", "COMMANDS.md", "ONBOARDING.md"]) assert.match(readFileSync(join(R, doc), "utf8"), /gtm-brain-heyreach-setup/, doc);
+  for (const doc of ["README.md", "COMMANDS.md", "ONBOARDING.md"]) assert.match(readFileSync(join(R, doc), "utf8"), /gtmb-heyreach-setup/, doc);
 });
 
 test("the Connection URL is a secret the person adds in a terminal, never through the chat", () => {

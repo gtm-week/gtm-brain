@@ -248,9 +248,9 @@ for (const r of rows) {
 // (installed by default) and developer plugins are left out; they are not a GTM person's tools.
 const known = new Set(rows.map(r => r.p && r.p.id).filter(Boolean));
 const extra = candidates().filter(p => p.state === "enabled" && !known.has(p.id) && !used.some(u => norm(u.tool) === norm(p.display || p.id)) && !DEV.has(p.id) && p.policy !== "INSTALLED_BY_DEFAULT" && !mcpServers.some(m => norm(p.display).startsWith(norm(m)))).map(p => p.display || p.id);
-if (used.length) console.log(`\nused in this brain, on the dashboard, not in admin.md tools: ${used.map(u => `${u.tool} (${u.why})`).join(", ")}. Offer once to add them to the company profile (gtm-brain-configure workplace-change procedure).`);
-if (extra.length) console.log(`\ninstalled in Codex but not in admin.md tools: ${extra.join(", ")}. Offer to add them (gtm-brain-configure workplace-change procedure).`);
-if (manual.length) console.log(`\nconnected as MCP servers, not in admin.md tools: ${manual.map(s => state[key(s)].tool).join(", ")}. They are on the dashboard already; offer once to add them to the company profile (gtm-brain-configure workplace-change procedure).`);
+if (used.length) console.log(`\nused in this brain, on the dashboard, not in admin.md tools: ${used.map(u => `${u.tool} (${u.why})`).join(", ")}. Offer once to add them to the company profile (gtmb-configure workplace-change procedure).`);
+if (extra.length) console.log(`\ninstalled in Codex but not in admin.md tools: ${extra.join(", ")}. Offer to add them (gtmb-configure workplace-change procedure).`);
+if (manual.length) console.log(`\nconnected as MCP servers, not in admin.md tools: ${manual.map(s => state[key(s)].tool).join(", ")}. They are on the dashboard already; offer once to add them to the company profile (gtmb-configure workplace-change procedure).`);
 for (const s of suggested) {
   if (s.declined) { console.log(`\ndeclined earlier: ${s.tool} (not offered again unless they ask)`); continue; }
   console.log(`\nsuggested (${s.why || "the pulse of the company"}, not yet in admin.md): ${s.tool}  ${s.status}`);
