@@ -1669,12 +1669,12 @@ function plObserve(){
    fills its box and they press Send. A new chat would replace the pane this dashboard is shown in. Without a known
    chat (a first visit, a saved copy) the link opens a new chat as before. Alt-click always opens a new chat. */
 function codexToast(html){let t=$("#ov-toast");if(!t){t=document.createElement("div");t.id="ov-toast";t.className="ov-toast";t.setAttribute("role","status");document.body.appendChild(t)}t.innerHTML=html;t.hidden=false;clearTimeout(codexToast.t);codexToast.t=setTimeout(()=>{t.hidden=true},9000)}
-/* Which chat is open is asked ahead of the click (on load, on every refresh, every 20 seconds), so the click itself
+/* Which chat is open is asked as the pointer or the focus reaches a Codex link, ahead of the click, so the click itself
    stays the person's own click on a link: its address is pointed at that chat as they click. The page never
    navigates by itself. */
 let chatNow=/^[0-9a-f-]{36}$/.test(D.chat?.id||"")?D.chat.id:null;
 async function refreshChat(){if(location.protocol==="file:")return;try{const r=await fetch("/chat",{cache:"no-store"});if(r.ok){const j=await r.json();chatNow=/^[0-9a-f-]{36}$/.test(j.thread||"")?j.thread:chatNow}}catch{}}
-refreshChat();setInterval(refreshChat,20000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshChat()});
+let chatAsked=0;const chatSoon=e=>{if(e.target?.closest?.('a[href^="codex://threads/"]')&&Date.now()-chatAsked>5000){chatAsked=Date.now();refreshChat()}};for(const ev of ["pointerover","focusin","pointerdown"])document.addEventListener(ev,chatSoon,true);
 document.addEventListener("click",e=>{const a=e.target.closest?.('a[href^="codex://threads/"]');if(!a)return;const fresh=a.dataset.newHref||a.getAttribute("href");if(!/^codex:\/\/threads\/new\?/.test(fresh))return;a.dataset.newHref=fresh;let prompt="";try{prompt=new URL(fresh).searchParams.get("prompt")||""}catch{}if(e.altKey||e.metaKey||e.ctrlKey||a.dataset.newChat!==undefined||!chatNow||!prompt){a.setAttribute("href",fresh);return}a.setAttribute("href","codex://threads/"+chatNow+"?prompt="+encodeURIComponent(prompt));codexToast(`${esc("It is in your Codex chat. Press Send there.")}<a href="${esc(fresh)}" data-new-chat>${esc("Open a new chat instead")}</a>`)},true);
 document.addEventListener("click",e=>{const h=e.target.closest?.("[data-ov-open]");if(h)h.closest(".ov-item")?.classList.toggle("open")});document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.matches?.("[data-ov-open]"))e.target.closest(".ov-item")?.classList.toggle("open")});
 document.addEventListener("click",e=>{const r=e.target.closest?.("tr[data-open]");if(r&&!e.target.closest("a,button"))window.open(r.dataset.open,"_blank","noopener")});document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.matches?.("tr[data-open]"))window.open(e.target.dataset.open,"_blank","noopener")});

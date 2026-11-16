@@ -202,9 +202,17 @@ test("contexts: a project or a look-alike is never a new context (X1, X3); a sum
   const ctx = (...a) => spawnSync(process.execPath, [`${P}/scripts/gtm-brain-contexts/contexts.mjs`, ".", ...a], { cwd: root, env, encoding: "utf8" });
   mkdirSync(join(root, "projects", "website"), { recursive: true });
   // X1-X3 are Codex's judgment (saving-rules.md): the first call creates nothing and lists what exists to check against
-  const first = ctx("--new", "website", "Website", "rule");
-  assert.equal(first.status, 2); assert.match(first.stderr, /^not created yet: check "Website" against what exists\. Contexts: .*Market \(market\).*\. Projects: website\. X1: .* X3: /);
-  assert.ok(!existsSync(join(root, "brain", "contexts", "website")));
+  const first = ctx("--new", "launch-plan", "Launch plan", "rule");
+  assert.equal(first.status, 2); assert.match(first.stderr, /^not created yet: check "Launch plan" against what exists\. Contexts: .*Market \(market\).*\. Projects: website\. X1: .* X3: /);
+  assert.ok(!existsSync(join(root, "brain", "contexts", "launch-plan")));
+  // X1 by name, even with a reason: the project's own slug, or a shorter or longer form of it, is never a context
+  mkdirSync(join(root, "projects", "berlin-event-2026"), { recursive: true });
+  for (const [slug, title] of [["website", "Website"], ["berlin-event", "Berlin event"], ["website-launch-2026", "Website launch"]]) {
+    const r = ctx("--new", slug, title, "rule", "--distinct", "event planning and logistics");
+    assert.equal(r.status, 2, slug); assert.match(r.stderr, /^not created: ".+" is the project (website|berlin-event-2026) \(X1: a project is not a context\)/, slug);
+    assert.ok(!existsSync(join(root, "brain", "contexts", slug)), slug);
+  }
+  assert.equal(ctx("--new", "events", "Events", "rule", "--distinct", "every event we run, not one project").status, 0, "a word in a project name alone is not a match");
   assert.equal(ctx("--new", "market-research", "Market research", "rule", "--distinct", "research projects, not the market overview").status, 0);
   assert.ok(existsSync(join(root, "brain", "contexts", "market-research", "context.md")));
 
@@ -241,4 +249,37 @@ test("the rulebook: another company's brand rule goes to partner-brands.md, not 
   assert.match(text, /goes to `partner-brands\.md`, one heading\s+per company: "Add to partner-brands\.md under OpenAI: <the line>\?"/);
   assert.match(text, /keeps `# Partner brands` as the only top heading;\s+each company is a `## <Company>` heading under it/);
   assert.match(text, /A file whose top heading is a company \(an older layout\) is\s+put right in the same update/);
+});
+
+test("R2 in the tool: a note moved to another context in one call asks for the RULES.md offer instead of no offers", () => {
+  const root = mkdtempSync(join(tmpdir(), "gtm-brain-r2-")); execFileSync("git", ["init", "-q", root]);
+  execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "X", "--one-liner", "y", "--owner", "Ann Lee <ann@b.c>"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P } });
+  const env = { ...process.env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_NO_WATCH: "1" };
+  const rem = (...a) => spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann-lee", ...a], { cwd: root, env, encoding: "utf8" });
+  assert.equal(rem("--context", "company", "--content", "The sponsor deck is due in December.").status, 0);
+  const old = lib.readMemories(root, "company").find(m => m.content === "The sponsor deck is due in December.");
+  const batch = join(root, "work", "move.json");
+  writeFileSync(batch, JSON.stringify([{ context: "company", content: "Moved to Our offer: the sponsor deck is due in December.", retracts: old.id }, { context: "offer", content: "The sponsor deck is due in December." }]));
+  const moved = rem("--batch", batch);
+  assert.equal(moved.status, 0, moved.stderr);
+  assert.match(moved.stdout, /moved from company to offer: .*RULES\.md under "## Our rules" \(R2\)/);
+  assert.doesNotMatch(moved.stdout, /or add offers/);
+  assert.match(rem("--context", "company", "--content", "Globex wants a booth.").stdout, /Do not repeat this output or add offers\./, "an ordinary save keeps the one-line reply");
+});
+
+test("P4: a surname more than two letters apart is another person, saved at once; a near one still asks", () => {
+  const root = mkdtempSync(join(tmpdir(), "gtm-brain-p4-")); execFileSync("git", ["init", "-q", root]);
+  execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "X", "--one-liner", "y", "--owner", "Ann Lee <ann@b.c>"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P } });
+  const env = { ...process.env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_NO_WATCH: "1" };
+  const rem = (...a) => spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "ann-lee", "--context", "company", ...a], { cwd: root, env, encoding: "utf8" });
+  rem("--content", "Florian Weber is our keynote speaker.", "--people", "Florian Weber", "--new", "Florian Weber");
+  rem("--content", "Lena Dumos joined the events team.", "--people", "Lena Dumos", "--new", "Lena Dumos");
+  // Since the save-flow lane (16 Nov) a shared first name with a clearly different surname is another person and is
+  // saved at once: the earlier version refused it with "no question needed" and cost one more call for the same result.
+  const kim = rem("--content", "Florian Kim joined Globex as head of sales.", "--people", "Florian Kim");
+  assert.equal(kim.status, 0, kim.stderr + kim.stdout);
+  assert.doesNotMatch(kim.stdout + kim.stderr, /looks like Florian Weber/);
+  const dumas = rem("--content", "Lena Dumas will host the panel.", "--people", "Lena Dumas");
+  assert.equal(dumas.status, 2, "one letter off a known name is still asked");
+  assert.match(dumas.stderr, /"Lena Dumas" looks like Lena Dumos \(P4\)/); assert.match(dumas.stderr, /"Lena Dumas": ask "same as X\?"/); assert.match(dumas.stderr, /Ask one question/);
 });

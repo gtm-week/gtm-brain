@@ -23,9 +23,13 @@ if (args[0] === "--new") {
   // X1-X3 are judgment (saving-rules.md): the brain states what exists, Codex decides, and says why the new one is
   // distinct before it is created ("berlin-event" for the project berlin-event-2026 slipped past a name match, 2026-11-12)
   const di = args.indexOf("--distinct"), distinct = di > 0 ? (args[di + 1] || "").trim() : "";
+  const projects = [...new Set([...lib.readProjects(root).map(p => p.slug), ...(existsSync(join(root, "projects")) ? readdirSync(join(root, "projects"), { withFileTypes: true }).filter(d => d.isDirectory()).map(d => d.name) : [])])];
+  // X1 by name, with or without a reason: the same slug, or one that is the other's start at a word
+  // ("berlin-event" and berlin-event-2026), is that project (the live scenario run of 2026-11-15 gave a reason and created it).
+  const sameProject = projects.find(p => p === slug || p.startsWith(slug + "-") || slug.startsWith(p + "-"));
+  if (sameProject) { console.error(`not created: "${title}" is the project ${sameProject} (X1: a project is not a context). Save its notes in the context their meaning fits, with the project tag (project: ${sameProject}); say so in one line.`); process.exit(2); }
   if (!distinct) {
     const ctxs = lib.listContexts(root).map(c => `${c.title} (${c.slug}${c.status === "archived" ? ", archived" : ""})`);
-    const projects = [...new Set([...lib.readProjects(root).map(p => p.slug), ...(existsSync(join(root, "projects")) ? readdirSync(join(root, "projects"), { withFileTypes: true }).filter(d => d.isDirectory()).map(d => d.name) : [])])];
     console.error(`not created yet: check "${title}" against what exists. Contexts: ${ctxs.join(", ") || "none"}. Projects: ${projects.join(", ") || "none"}. X1: a project (by any shorter or longer name) is not a context. X3: a topic an existing or archived context covers is that context. If it is one of these, do not create it: say which, and ask the person only when it is unclear (Q1). If it is a new lasting topic (X2) and the person agreed, call new_context again with distinct set to one line on why no context or project above covers it.${dots.rulebookOnce(root, lib.readSession(root, project)?.session_id)}`);
     process.exit(2);
   }
