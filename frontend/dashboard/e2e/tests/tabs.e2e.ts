@@ -60,6 +60,77 @@ test('Configuration: base documents open in the page; rules and schema are brows
   await expect(browser.locator('#cfg-schema article.cfg-kind').first()).toBeVisible();
 });
 
+test('a document opens rendered; Edit starts editing in the layout last used; Done editing returns to the rendered text', async ({ app, screen, browser }) => {
+  const f = fixture(app.baseUrl);
+  const written = f.documents.find(d => d.state !== 'not written');
+  expect(written).toBeTruthy();
+  await app.open('/');
+  await screen.getByRole('navigation', 'Main navigation').getByRole('button', 'Configuration').tap();
+  await screen.getByRole('table').filter({ has: screen.getByRole('columnheader', 'Document') }).getByRole('button', written!.title).tap();
+  const view = browser.locator('#doc-view'), text = browser.locator('#doc-text'), preview = browser.locator('#doc-preview');
+  const toolbar = view.getByRole('toolbar', 'Formatting'), edit = view.getByRole('button', 'Edit', { exact: true });
+  const done = view.getByRole('button', 'Done editing'), save = view.getByRole('button', 'Save', { exact: true });
+  // it opens to be read: the rendered text beside its outline, one Edit button, no editor, no toolbar, no Save
+  await expect(view).toHaveAttribute('data-doc-mode', 'preview');
+  await expect(edit).toBeVisible();
+  await expect(preview).toContainText('Three plans, billed yearly.');
+  await expect(preview.getByRole('heading', written!.title, { level: 1 })).toBeVisible();
+  for (const hidden of [toolbar, text, done, save]) await expect(hidden).toBeHidden();
+  const box = (sel: string) => browser.evaluate((q: string) => { const r = document.querySelector(q)!.getBoundingClientRect(); return { left: r.left, right: r.right, width: r.width }; }, sel);
+  const outline = await box('#doc-view .doc-outline'), read = await box('#doc-preview');
+  expect(outline.width).toBeGreaterThan(0);
+  expect(outline.right).toBeLessThanOrEqual(read.left + 1);   // the outline stays in its own column, left of the text
+  // Edit: the text area beside the preview, focused, with the formatting toolbar; nothing to save yet
+  await edit.tap();
+  await expect(view).toHaveAttribute('data-doc-mode', 'split');
+  for (const shown of [text, toolbar, preview, done]) await expect(shown).toBeVisible();
+  await expect(edit).toBeHidden();
+  expect(await browser.evaluate(() => document.activeElement?.id)).toBe('doc-text');
+  await expect(save).toBeVisible();
+  await expect(save).toBeDisabled();
+  // typing enables Save and shows in the preview
+  const original: string = await browser.evaluate(() => (document.querySelector('#doc-text') as HTMLTextAreaElement).value);
+  expect(original).toContain('Three plans, billed yearly.');
+  const typed = 'The yearly discount is two months free.';
+  await text.fill(`${original}\n${typed}\n`);
+  await expect(save).toBeEnabled();
+  await expect(view).toContainText('Unsaved changes');
+  await expect(preview).toContainText(typed);
+  // Done editing: back to the rendered view with the typed text, Save still offered because it is unsaved
+  await done.tap();
+  await expect(view).toHaveAttribute('data-doc-mode', 'preview');
+  await expect(preview).toContainText(typed);
+  for (const hidden of [toolbar, text, done]) await expect(hidden).toBeHidden();
+  await expect(edit).toBeVisible();
+  await expect(save).toBeVisible();
+  await expect(save).toBeEnabled();
+  // Edit again keeps what was typed; the Write layout is remembered for the next Edit
+  await edit.tap();
+  await expect(text).toHaveValue(`${original}\n${typed}\n`);
+  await toolbar.getByRole('button', 'Write', { exact: true }).tap();
+  await expect(view).toHaveAttribute('data-doc-mode', 'write');
+  await expect(preview).toBeHidden();
+  await text.fill(original);   // nothing is saved by this test: the text goes back to what the file holds
+  await expect(save).toBeDisabled();
+  await done.tap();
+  await expect(save).toBeHidden();
+  await expect(preview).not.toContainText(typed);
+  await edit.tap();
+  await expect(view).toHaveAttribute('data-doc-mode', 'write');
+  await expect(text).toBeVisible();
+  expect(await browser.evaluate(() => document.activeElement?.id)).toBe('doc-text');
+  await toolbar.getByRole('button', 'Split', { exact: true }).tap();   // leave the default layout for the next test
+  await done.tap();
+  // a file that is changed only in Codex is read here: no Edit, no editor, no toolbar, no Save
+  await screen.getByRole('button', /Configuration$/).first().tap();
+  await screen.getByRole('tablist', 'Parts of the configuration').getByRole('tab', /^Rules/).tap();
+  await browser.locator('#cfg-rules').getByRole('button', 'Read the whole file').tap();
+  await expect(view).toHaveAttribute('data-doc-mode', 'read');
+  await expect(preview).toContainText(/\S/);
+  await expect(browser.locator('#doc-notice')).toContainText('The rules are changed in Codex');
+  for (const absent of [edit, done, save, toolbar, text]) await expect(absent).toHaveCount(0);
+});
+
 test('Entities: a list to pick from with a count per kind, and the picked entity with its notes beside it', async ({ app, screen, browser }) => {
   const f = fixture(app.baseUrl);
   await app.open('/');
