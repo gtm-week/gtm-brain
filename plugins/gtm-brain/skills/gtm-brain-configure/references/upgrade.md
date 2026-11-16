@@ -20,6 +20,19 @@ tool reports it, and ask one question: Yes, upgrade the layout / No, not now. On
 `upgrade_brain` again with `confirm: true`. On no, leave it: the flat brain keeps working. Never
 pass `confirm` without that yes, after a plugin update on its own, or in a scheduled run.
 
+For the owner the change can also be layout 3: the base files move into `about-us/` and `RULES.md`,
+`SCHEMA.md` and `brain/admin.md` into `config/` (`rules.md`, `schema.md`, `settings.yaml`), word for
+word, in one commit. Say what the tool lists as moving and that teammates on an older GTM Brain
+will not find the brain until they update, then ask the same one question. A teammate who is not
+the owner is never asked about it.
+
+Order matters: everyone on the team updates GTM Brain before the owner's yes. A teammate still on
+0.34 is not warned by their plugin: after the first move it no longer finds the entity pages, and
+after the second it no longer finds the brain. When the tool names teammates, say that they update
+first and offer to wait. The plugin's MANUAL.md, "Updating to 0.35", has the order, what each
+person sees, how to go back (`git revert` of the move's commit) and what to do when something
+looks wrong; answer "how do I update?" from it.
+
 The refresh recognizes current rules and every shipped template in
 `templates/legacy/manifest.json`, including skipped releases. Before replacing files it
 validates editable entity files and saves previous instructions under `work/upgrades/before-*`. Company data and

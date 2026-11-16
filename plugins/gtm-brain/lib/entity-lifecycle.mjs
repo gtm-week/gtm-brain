@@ -144,7 +144,7 @@ export function mergeEntities(root, { source, target, by, as_of, resolution = {}
     merged.merge_ids.push(id);
     const fm = updated(into, identity(merged));
     const redirect = `\n# Merged identity\n\nMerged into [${into.id}](${linkFrom(from._path, into._path)}). Recovery record: ${id}.\n` + (editedBody(from) ? from._body : "");
-    return finish(root, { id, operation: "merge", source, target, by: who, resolution, impact: preview.impact,
+    return finish(root, { id, operation: "merge", source, target, by: who, resolution, impact: preview.impact, event: { entity: target, change: "merge", from: from.name, to: into.name, merged_id: source },
       changes: [change(root, into, fm), change(root, from, updated(from, { redirect: target, merged_by: id }), redirect)] },
     { status: "merged", source, target, merge_id: id, entity: identity(merged) });
   });
@@ -188,6 +188,7 @@ export function undoEntityMerge(root, { merge_id, by, as_of }) {
       const fm = { ...before.fm, updated_at: new Date().toISOString(), ...(c.keptBefore ? {} : { rendered_body_hash: bodyHash(body) }) };
       return { path, ...(path !== c.at ? { from: c.at } : {}), before: c.current, after: entityText({ _fm: before.fm, _header: before.header }, fm, body) };
     });
-    return finish(root, { operation: "undo_merge", merge_id, source: rec.source, target: rec.target, by: who, changes }, { status: "unmerged", source: rec.source, target: rec.target, memories_kept_with_survivor: later });
+    const names = changes.map(c => parseEntityText(c.after, c.path).fm), was = id => names.find(fm => fm.id === id)?.name || id;
+    return finish(root, { operation: "undo_merge", merge_id, source: rec.source, target: rec.target, by: who, changes, event: { entity: rec.target, change: "unmerge", from: was(rec.source), to: was(rec.target), merged_id: rec.source } }, { status: "unmerged", source: rec.source, target: rec.target, memories_kept_with_survivor: later });
   });
 }

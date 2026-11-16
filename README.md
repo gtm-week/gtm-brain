@@ -39,6 +39,8 @@ of the shipped app, not mockups. No customer or private workspace data is shown.
 
 Already using the previous plugin? Follow the [rename migration](MIGRATING.md) to keep your existing brain and switch installations safely.
 
+Coming from 0.34? [What is new in 0.35 and how to update](RELEASE-0.35.md).
+
 Requires the **Codex desktop app** and **Node 22.16+ (22.x) or Node 24+**. The guided installer checks your environment.
 
 Open a new Codex chat and send:

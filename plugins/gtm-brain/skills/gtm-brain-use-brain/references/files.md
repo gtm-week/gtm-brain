@@ -29,6 +29,10 @@ or three most likely documents or entities, then run, through the shell:
 node "$PLUGIN_ROOT/skills/gtm-brain-add-file/add-file.mjs" <brain> --file "<path>" [--document <ref> | --entity "<name>"]
 ```
 
+With `--document design-system --page` the file is not put in the files folder: it becomes the
+design system's page, `design-system.html` beside the Markdown, replacing the one there
+([the design system page](documents.md#the-design-system-page)).
+
 It prints one JSON object. `path` is where the file now lives, relative to `base` (`brain`, or
 `project` with the project slug); `copied` says whether it was copied or referenced where it
 already was; `owner` names the document or entity it landed beside; `kind` is image, pdf,

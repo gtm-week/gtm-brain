@@ -16,7 +16,7 @@ import { WEB_STARTER, preparedStarter, createStarterProject, finishStarterProjec
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const us = await import(new URL("../../lib/user-skills.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = resolve(args[0] && !args[0].startsWith("--") ? args.shift() : ".");
-if (!existsSync(join(root, "brain", "admin.md"))) { console.error("no brain here (brain/admin.md missing)."); process.exit(1); }
+if (!lib.isBrain(root)) { console.error("no brain here (brain/admin.md missing)."); process.exit(1); }
 const opt = {}; for (let i = 0; i < args.length; i++) if (args[i].startsWith("--")) { const k = args[i].slice(2), v = args[i + 1]; if (v === undefined || v.startsWith("--")) opt[k] = true; else { opt[k] = v; i++; } }
 const refuse = why => { console.error(why); process.exit(2); };
 for (const flag of ["link", "slug", "title", "contexts", "by", "unlink", "starter"]) if (opt[flag] === true) refuse(`--${flag} needs a value`);
@@ -100,10 +100,10 @@ if (opt.link) {
     try { resume = preparedStarter(path, root); } catch (e) { refuse(e.message); }
   }
   if (opt.create && existsSync(path) && !resume) refuse(`${path} already exists; choose another name or use Link Project to connect the existing folder.`);
-  if (existsSync(join(path, "brain", "admin.md"))) refuse(`${path} is another brain; a brain is never a project.`);
+  if (lib.isBrain(path)) refuse(`${path} is another brain; a brain is never a project.`);
   // A folder nested inside someone else's brain (not this one) is that brain's business, never this one's.
   for (const candidate of [path, effectivePath]) for (let d = dirname(candidate); ; d = dirname(d)) {
-    if (existsSync(join(d, "brain", "admin.md")) && !same(d, root)) refuse(`${path} is inside another brain (${d})`);
+    if (lib.isBrain(d) && !same(d, root)) refuse(`${path} is inside another brain (${d})`);
     if (dirname(d) === d) break;
   }
   // A folder that holds documents is a document home, not a project: linking it would take its documents out of

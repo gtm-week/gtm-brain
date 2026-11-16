@@ -9,6 +9,9 @@
 // is referenced where it is: nothing is moved, nothing is overwritten. For a PDF or a document
 // the text is extracted into work/files/ (derived, outside git) so the notes can be written from
 // it. Prints one JSON object: { base, path, project?, copied, kind, bytes, text, note? }.
+//   node add-file.mjs <root> --file <path> --document design-system --page
+//                                                       the file becomes the document's page (design-system.html
+//                                                       beside the Markdown), replacing the one there
 // The attachment itself is a remember call with asset; this script only lands the file.
 // Big files (a recording, or over 25 MB) never land in the brain: without a flag they are refused with the
 // big-files advice. The walk-through (skills/gtm-brain-use-brain/references/big-files.md) then runs:
@@ -66,6 +69,28 @@ const flag = name => { const i = args.indexOf(name); return i >= 0 ? args[i + 1]
 const wantDoc = flag("--document"), wantEntity = flag("--entity");
 if (wantDoc !== undefined && wantEntity !== undefined) fail("pass --document or --entity, not both");
 let owner = null;
+// --page: the file becomes the document's own page, <slug>.html beside the Markdown (the design system's is what the
+// dashboard shows on its Visual tab). The one writer of that page: it replaces the page that is there, refuses one
+// that would need the network or a script (lib/documents.mjs pageProblems), and commits like any other write, so
+// on layout 3 someone other than the owner gets a proposal.
+if (args.includes("--page")) {
+  if (wantDoc === undefined) fail("--page needs --document <ref>: the document whose page this is");
+  let doc; try { doc = docs.readDocument(root, wantDoc); } catch (e) { fail(e.message); }
+  if (!doc) fail(`no such document ${wantDoc}; yours: ${docs.listDocuments(root).map(d => d.path).join(", ") || "none"}`);
+  if (!docs.PAGE_DOCS.includes(doc.slug)) fail(`${doc.path} has no page: only ${docs.PAGE_DOCS.join(", ")} does`);
+  if (!/^\.html?$/i.test(extname(real))) fail(`${basename(given)} is not an HTML file`);
+  const html = readFileSync(real, "utf8"), problems = docs.pageProblems(html);
+  if (docs.isStarterPage(html)) problems.push("it still carries the starter's meta tag (gtm-brain-starter): remove it from a page written for the company");
+  if (problems.length) fail(`${basename(given)} cannot be the page: ${problems.join("; ")}. The page is one self-contained file: inline CSS, inline SVG or data: images, fonts by name.`);
+  const page = docs.documentPage(root, doc), target = join(root, page.path);
+  if (page.exists && readFileSync(target, "utf8") === html) { console.log(JSON.stringify({ base: "brain", path: page.path, page: true, copied: false, kind: "document", bytes, owner: { kind: "document", ref: doc.path }, note: "already the page" })); process.exit(0); }
+  const before = page.exists ? readFileSync(target) : null;
+  writeFileSync(target, html);
+  const kept = lib.commit(root, [page.path], `page: ${page.path}`);
+  if (kept.proposal) { console.log(JSON.stringify({ base: "brain", path: page.path, page: true, copied: false, proposal: kept.proposal.id, note: kept.note })); process.exit(0); }
+  console.log(JSON.stringify({ base: "brain", path: page.path, page: true, copied: true, replaced: !!before, kind: "document", bytes, owner: { kind: "document", ref: doc.path } }));
+  process.exit(0);
+}
 if (wantDoc !== undefined) {
   let doc; try { doc = docs.readDocument(root, wantDoc); } catch (e) { fail(e.message); }
   if (!doc) fail(`no such document ${wantDoc}; yours: ${docs.listDocuments(root).map(d => d.path).join(", ") || "none"}`);
@@ -95,7 +120,9 @@ else {
   while (existsSync(join(root, folder, name)) && !same(join(root, folder, name))) name = `${stem}-${++n}${ext}`;
   path = join(folder, name);
   if (same(join(root, path))) note = "already in the brain";
-  else { copyFileSync(real, join(root, path)); copied = true; const mv = owner?.moved; lib.commit(root, mv ? [path, mv.from, mv.to] : [path], mv ? `file: ${name}; ${mv.from} -> ${mv.to}` : `file: ${name}`); }
+  else { copyFileSync(real, join(root, path)); copied = true; const mv = owner?.moved; const kept = lib.commit(root, mv ? [path, mv.from, mv.to] : [path], mv ? `file: ${name}; ${mv.from} -> ${mv.to}` : `file: ${name}`);
+    // layout 3, someone other than the owner: the file waits in a proposal and nothing is under about-us/; say only that
+    if (kept.proposal) { console.log(JSON.stringify({ base, path, copied: false, proposal: kept.proposal.id, note: kept.note })); process.exit(0); } }
 }
 
 // what it says, for the notes: derived text under work/, never in git

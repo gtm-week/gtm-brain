@@ -12,7 +12,7 @@ import * as lib from "../../lib/brain.mjs";
 
 const args = process.argv.slice(2); const root = realpathSync(resolve(args[0] && !args[0].startsWith("--") ? args.shift() : "."));
 const refuse = (why, code = 2) => { console.error(why); process.exit(code); };
-if (!existsSync(join(root, "brain", "admin.md"))) refuse("no brain here (brain/admin.md missing).", 1);
+if (!lib.isBrain(root)) refuse("no brain here (brain/admin.md missing).", 1);
 const opt = {}; for (let i = 0; i < args.length; i++) if (args[i].startsWith("--")) { const k = args[i].slice(2), v = args[i + 1]; if (v === undefined || v.startsWith("--")) opt[k] = true; else { opt[k] = v; i++; } }
 if (opt.name === true) refuse("--name needs a value");
 const git = (...a) => execFileSync("git", ["-C", root, ...a], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();

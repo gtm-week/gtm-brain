@@ -8,4 +8,4 @@ This company's own interactions (move a deal in Attio, send a proposal by mail) 
 first checks and says what to do in the connector, with that connector's own tools, never with
 Computer Use; the second, with the outcome and the connector's refs, records it. When the person
 keeps doing the same thing by hand, call `propose_interaction`, then `approve_change` with kind
-interaction (core 4).
+interaction (core 6).

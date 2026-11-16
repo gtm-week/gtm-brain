@@ -1,3 +1,6 @@
+// These tests read and write the root files of a layout 2 brain: setup and the lib play a plugin that writes layout 2 at most
+// (lib/layout-version.mjs GTM_BRAIN_TEST_LAYOUT). Layout 3 (about-us/, config/) is covered by config-folders.test.mjs.
+process.env.GTM_BRAIN_TEST_LAYOUT = "2";
 // SCHEMA.md: what a brain keeps about each person, organization and product, and how they relate (GTM week
 // sync, 2026-11-13). The person edits it; a broken one is reported with a fix per line and left as it is.
 // Run: node --test plugins/gtm-brain/test/schema.test.mjs
@@ -32,7 +35,14 @@ test("the shipped template parses: five kinds with fields, organization subtypes
   assert.deepEqual(Object.keys(s.kinds.organization.subtypes), ["company", "team", "investor", "partner", "community"]);
   assert.deepEqual(schema.fieldsFor(s, "organization", "investor").map(f => f.name), ["website", "industry", "size", "hq", "stage"]);
   assert.deepEqual(schema.fieldsFor(s, "organization", "company").map(f => f.name), ["website", "industry", "size", "hq"]);
-  assert.deepEqual(Object.keys(s.relations), ["works_at", "reports_to", "partner_of", "investor_in", "uses", "speaker_at", "attended", "integrates_with", "customer_of"]);
+  assert.deepEqual(Object.keys(s.relations), ["works_at", "reports_to", "partner_of", "investor_in", "uses", "speaker_at", "attended", "integrates_with", "customer_of", "sponsor_of"]);
+  // sponsor_of is known without a row in the file, as an ordinary relation (organization to us), never the customer block
+  assert.deepEqual([s.relations.sponsor_of.from, s.relations.sponsor_of.to, s.relations.sponsor_of.built_in, s.relations.sponsor_of.one], [["organization"], ["us"], undefined, false]);
+  assert.equal(schema.checkRelation(s, { type: "sponsor_of", fromKind: "organization", toKind: "us" }).type, "sponsor_of");
+  assert.throws(() => schema.checkRelation(s, { type: "sponsor_of", fromKind: "person", toKind: "us" }), /sponsor_of goes from organization, not person/);
+  // the brain's own row of that name wins, and so does a type renamed from it
+  const own = schema.parseSchema(readFileSync(join(T, "SCHEMA.md"), "utf8").replace("| partner_of | organization | us |", "| sponsor_of | person, organization | us | Our sponsors | no | no |\n| partner_of | organization | us |"));
+  assert.deepEqual([own.relations.sponsor_of.from, own.relations.sponsor_of.about], [["person", "organization"], "Our sponsors"]);
   assert.deepEqual(Object.keys(s.kinds), ["person", "organization", "product", "event", "tool", "meeting", "offering"]);
   assert.deepEqual(s.relations.investor_in.to, ["organization", "us"]);
   assert.equal(s.relations.customer_of.built_in, true);
@@ -57,7 +67,7 @@ test("each problem has its line and a fix; a removed customer_of row still exist
 test("a subtype under person is refused (it would break every entity read), and a renamed type keeps its old name", () => {
   const text = readFileSync(join(T, "SCHEMA.md"), "utf8");
   assert.throws(() => schema.parseSchema(text.replace("## Organization", "### intern\n\n| Field | What it means | Required |\n| --- | --- | --- |\n| school | x | no |\n\n## Organization")), /a subtype under person is not possible/);
-  const renamed = schema.parseSchema(text.replace("| Type | From | To | What it means | Required |\n| --- | --- | --- | --- | --- |", "| Type | From | To | What it means | Required | Was called |\n| --- | --- | --- | --- | --- | --- |").replace("| partner_of | organization | us | A partner of ours: referrals, integrations, co-selling | no |", "| partnered_with | organization | us | A partner | no | partner_of |"));
+  const renamed = schema.parseSchema(text.replace("| Type | From | To | What it means | Required | One at a time |\n| --- | --- | --- | --- | --- | --- |", "| Type | From | To | What it means | Required | One at a time | Was called |\n| --- | --- | --- | --- | --- | --- | --- |").replace("| partner_of | organization | us | A partner of ours: referrals, integrations, co-selling | no | no |", "| partnered_with | organization | us | A partner | no | no | partner_of |"));
   assert.equal(schema.relationType(renamed, "partner_of").type, "partnered_with");
   assert.throws(() => schema.checkRelation(renamed, { type: "owns", fromKind: "person", toKind: "organization" }), /not in SCHEMA.md/);
   assert.throws(() => schema.checkRelation(renamed, { type: "works_at", fromKind: "organization", toKind: "organization" }), /goes from person/);

@@ -55,7 +55,9 @@ After these manual commands, run the installed `update.mjs --check` from the ver
 by `codex plugin list`, then quit and reopen Codex. The in-app update performs this check for you.
 
 Brains you already have keep working; open one in Codex and the chat start refreshes its
-git config, or say "upgrade the brain" to refresh its AGENTS.md and pre-commit hook too. A brain set up
+git config, or say "upgrade the brain" to refresh its AGENTS.md and pre-commit hook too. Coming from 0.34, the
+upgrade also offers to move files and asks first: see
+[Updating to 0.35](plugins/gtm-brain/MANUAL.md#updating-to-035). A brain set up
 before the full-name handles (`maciej` instead of `maciej-konczal`) gets a note from upgrade:
 say "change the team handles to full names" and choose APPROVE; old memories keep the old
 handle, and both resolve to the same person.
@@ -255,6 +257,33 @@ work that needs existing logins; MCP connectors remain the first choice.
 
 Onboarding choices use native Codex forms. If multi-select is unavailable, offer concrete
 combinations in a single-select question. The progress card is view-only.
+
+### Checking the dashboard in a browser (contributors)
+
+The browser tests open the live dashboard of a generated brain in headless Chromium and check
+what a person sees: the four tabs and the health line, the base files with their state, entity
+counts per kind, an entity page with its notes, notes newest first with a replaced note, the
+workflows with their triggers and a run in progress, no edit or action anywhere, a saved note
+reaching the open page, and no console errors. They use the e2e framework
+(https://github.com/e2e-inc/e2e) with plain assertions only: no model, no API key. Node 22.22.3+
+or 24.8+.
+
+```bash
+npm ci --prefix frontend/dashboard
+npm run test:e2e:install --prefix frontend/dashboard   # once: the Chromium build the engine pins
+npm run test:e2e --prefix frontend/dashboard           # about 15 seconds
+```
+
+`frontend/dashboard/e2e/serve.mjs` makes the brain (`test/e2e/generate-brain.mjs`, small shape,
+plus an adopted document, a scheduled workflow and a run in progress) in a scratch folder under
+the system temp directory with its own `CODEX_HOME`, renders it and runs `server/dash.mjs` on a
+free port. The runner starts it and stops it when the run ends, passed or failed, and the scratch
+folder goes with it; no server or browser is left running. A run that was killed outright cannot
+clean up: the next run stops the server it left and removes its folder. A failed test leaves its trace,
+screen and screenshot in `frontend/dashboard/.e2e/results/` (gitignored). Rebuild the dashboard
+(`npm run build --prefix frontend/dashboard`) before running them after a change under
+`frontend/dashboard/src`. They are not part of `node --test`; CI runs them in their own job,
+which does not block a merge.
 
 ## 8. Recall (step 5)
 

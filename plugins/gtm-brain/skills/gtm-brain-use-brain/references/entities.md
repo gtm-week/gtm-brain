@@ -88,7 +88,13 @@ restoring them. An alias collision refuses the whole update and points to merge 
 
 ## Merge and reverse a merge
 
-When the person confirms two identities are one, resolve both current IDs and choose the
+When the person has already said two identities are one, call `merge_entities` with `source`,
+`target` (the surviving ID and name) and `confirmed: true`: that one call merges and returns
+the line to relay, or the one question to ask when a choice is theirs. The merge record
+carries who confirmed it; save no note about it. The steps below are the two-call form, for a
+merge you want to show before it happens.
+
+Resolve both current IDs and choose the
 surviving ID and name as `target`. Call `merge_entities` with `source` and `target`, omitting
 `as_of`. Show the affected identities, contexts and conflicts. The preview is read-only.
 Resolve differences in `resolution`: `kind`, `subtype`, `allow_distinct: true` for an earlier

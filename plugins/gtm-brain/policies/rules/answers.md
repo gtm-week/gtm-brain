@@ -13,7 +13,7 @@ nothing was ever recorded; do not fill it from general knowledge.
 
 **Operational answers name the work and its evidence (rule 5a).** Name the account or item, the
 action, the source and why it matters now, and cite each material claim beside its sentence
-with the returned source link; never invent links; the live check is core 3. For "where are we"
+with the returned source link; never invent links; the live check is core 2. For "where are we"
 or a company overview, read the relevant memories across contexts (gtm-brain-use-brain's
 references/operational-evidence.md has the full procedure); counts and summary freshness alone
 do not establish business status.

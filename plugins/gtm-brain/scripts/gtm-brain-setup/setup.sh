@@ -49,14 +49,35 @@ TEAM_BLOCK="$(printf '%s' "$PEOPLE_JSON" | node -e 'for (const p of JSON.parse(r
 TEAM_LINE="$(printf '%s' "$PEOPLE_JSON" | node -e 'const p=JSON.parse(require("fs").readFileSync(0,"utf8"));console.log(p.map((x,i)=>`${x.name} (${x.handle}${i===0?", owner":""}${x.email?", "+x.email:""})`).join("; "))')"
 tolist() { printf '%s' "$1" | tr ',' '\n' | sed 's/^ *//; s/ *$//' | grep -v '^$' | sed 's/.*/"&"/' | paste -sd, - | sed 's/,/, /g'; }
 
-# 1. admin.md (TEAM_BLOCK is multi-line, so it goes in through node, not sed)
+# 1. config/settings.yaml (layout 3, lib/brain-paths.mjs): the company, its one-liner, the owner (who runs setup is
+# the first owner), the team with handles and emails, the tools and the settings; the workplace prose as notes.
+# Written by the lib (renderSettings), so every value is quoted the way the reader parses it.
 mkdir -p brain
+. "$PLUGIN/session/resolve.sh"
+if [ "$(node -e 'const v=await import(process.argv[1]);console.log(v.writesLayout())' "$PLUGIN/lib/layout-version.mjs")" -lt 3 ]; then
+# A plugin that writes layout 2 at most (the tests play one with GTM_BRAIN_TEST_LAYOUT=2): brain/admin.md as before,
+# RULES.md, SCHEMA.md and the starters at the root (the steps below follow lib/brain-paths.mjs). TEAM_BLOCK is
+# multi-line, so it goes in through node, not sed.
+ADMIN_OUT="$(gtm_brain_settings .)"
 sed -e "s|{{COMPANY}}|$(esc "$COMPANY")|g" -e "s|{{TODAY}}|$TODAY|g" -e "s|{{OWNER_HANDLE}}|$OWNER_HANDLE|g" \
     -e "s|{{ONE_LINER}}|$(esc "$ONE_LINER")|g" -e "s|{{TEAM_LINE}}|$(esc "$TEAM_LINE")|g" \
     -e "s|{{TOOLS_LINE}}|$(esc "${TOOLS:-none yet}")|g" -e "s|{{TOOLS}}|$(esc "$(tolist "$TOOLS")")|g" \
     -e "s|{{DASHBOARD}}|$([ "${DASHBOARD:-always}" = "on-demand" ] && echo on-demand || echo always)|g" \
-    "$T/brain/admin.md" > brain/admin.md
-TEAM_BLOCK="$TEAM_BLOCK" node -e 'const fs=require("fs");fs.writeFileSync("brain/admin.md",fs.readFileSync("brain/admin.md","utf8").replace("{{TEAM_BLOCK}}",process.env.TEAM_BLOCK))'
+    "$T/brain/admin.md" > "$ADMIN_OUT"
+TEAM_BLOCK="$TEAM_BLOCK" node -e 'const fs=require("fs"),f=process.argv[1];fs.writeFileSync(f,fs.readFileSync(f,"utf8").replace("{{TEAM_BLOCK}}",process.env.TEAM_BLOCK))' "$ADMIN_OUT"
+else
+COMPANY="$COMPANY" ONE_LINER="$ONE_LINER" OWNER_HANDLE="$OWNER_HANDLE" TEAM_LINE="$TEAM_LINE" TOOLS="$TOOLS" TODAY="$TODAY" \
+DASHBOARD="$([ "${DASHBOARD:-always}" = "on-demand" ] && echo on-demand || echo always)" PEOPLE_JSON="$PEOPLE_JSON" \
+node --input-type=module -e '
+  const lib = await import(process.argv[1]), fs = await import("node:fs"), e = process.env;
+  const tools = (e.TOOLS || "").split(",").map(s => s.trim()).filter(Boolean);
+  const notes = fs.readFileSync(process.argv[2], "utf8").replaceAll("{{COMPANY}}", e.COMPANY).replaceAll("{{ONE_LINER}}", e.ONE_LINER)
+    .replaceAll("{{TEAM_LINE}}", e.TEAM_LINE).replaceAll("{{TOOLS_LINE}}", e.TOOLS || "none yet");
+  const team = JSON.parse(e.PEOPLE_JSON).map(p => ({ name: p.name, email: p.email, handle: p.handle }));
+  const fm = { company: e.COMPANY, one_liner: e.ONE_LINER, created: e.TODAY, owner: e.OWNER_HANDLE, team, tools, dashboard: e.DASHBOARD, deal_scoring: "on", big_files: "google-drive", protected: true };
+  lib.writeNewSettings(".", fm, notes);
+' "$PLUGIN/lib/brain.mjs" "$T/config/settings-notes.md"
+fi
 
 # 2. the agreed shared seed plus the identified creator's personal context.
 node -e 'const l=await import(process.argv[1]); const [owner,company,strategy,market,icp,offer]=process.argv.slice(2); l.seedContexts(".",owner,{company,strategy,market,icp,offer})' "$PLUGIN/lib/brain.mjs" "$OWNER_HANDLE" "$COMPANY_RULE" "$STRATEGY" "$MARKET" "$ICP" "$OFFER"
@@ -66,30 +87,29 @@ node -e 'const l=await import(process.argv[1]);l.seedOnboarding(".",process.argv
 
 # 2b. names registry, seeded with the team
 # Entity pages go in a folder per kind (people/, organizations/, ...), each with its generated index.md.
-# startKindLayout records that as layout 2 in brain/layout.json, kept in the setup commit with the folders.
+# startKindLayout records the layout in brain/layout.json (3: config/settings.yaml is there already), kept in the setup commit.
 node -e 'const l=await import(process.argv[1]); l.startKindLayout("."); l.writeNames(".", l.readNames("."))' "$PLUGIN/lib/brain.mjs"
 
 # 3. AGENTS.md, gitignore, hooks
 sed -e "s|{{COMPANY}}|$(esc "$COMPANY")|g" "$T/AGENTS.md" > AGENTS.md
 # Claude Code reads CLAUDE.md: it imports the same rulebook.
 node -e 'const l=await import(process.argv[1]);l.ensureRulebookShim(".")' "$PLUGIN/lib/brain.mjs"
-# The root README says what goes where (documents, projects, brain/); a README the person wrote stays.
-[ -f README.md ] || sed -e "s|{{COMPANY}}|$(esc "$COMPANY")|g" "$T/README.md" > README.md
-# Where things go: the table Codex follows and the person edits (lib/where.mjs).
-[ -f RULES.md ] || cp "$T/RULES.md" RULES.md
-# What the brain keeps about people, organizations and products, and how they relate (lib/schema.mjs).
-[ -f SCHEMA.md ] || cp "$T/SCHEMA.md" SCHEMA.md
-# strategy.md from day one: a draft document waiting for the strategic intake (gtm-brain-strategy); a file already there is the person's.
 PLUGIN_VERSION="$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$T/../.codex-plugin/plugin.json" | head -1)"
-# The other starters the same way (GTM week sync, 2026-11-13: voice and design system out of the box, filling them is offered at the
-# end of onboarding and can wait). A file already there, at the root or in its own folder, is the person's.
-for doc in strategy icp voice design-system market; do
-  [ -f "$doc.md" ] || [ -f "$doc/$doc.md" ] || sed -e "s|{{COMPANY}}|$(esc "$COMPANY")|g" -e "s|{{DATE}}|$(date +%F)|g" -e "s|{{VERSION}}|$PLUGIN_VERSION|g" "$T/$doc.md" > "$doc.md"
-done
+# Layout 3 (lib/brain-paths.mjs): the root README says what goes where (lib/config-folders.mjs layoutReadme); the
+# rules (where things go, the person's own rules) and the schema (what the brain keeps) in config/, as rules.md and
+# schema.md; the five starter documents in about-us/, the design system with its page design-system.html (strategy waits for the strategic intake; voice, design system,
+# ICP and market are offered at the end of onboarding and can wait; GTM week sync, 2026-11-13).
+node --input-type=module -e '
+  const fs = await import("node:fs"), l = await import(process.argv[1]), c = await import(process.argv[2]), u = await import(process.argv[3]), w = await import(process.argv[4]);
+  const [t, company, version] = process.argv.slice(5);
+  if (!fs.existsSync("README.md")) fs.writeFileSync("README.md", c.layoutReadme(fs.readFileSync(`${t}/README.md`, "utf8").replaceAll("{{COMPANY}}", company), "."));
+  for (const [file, template] of [[l.rulesFile("."), "RULES.md"], [l.schemaFile("."), "SCHEMA.md"]]) if (!fs.existsSync(file)) { fs.mkdirSync(file.split("/").slice(0, -1).join("/") || ".", { recursive: true }); fs.writeFileSync(file, template === "RULES.md" ? w.layoutRules(fs.readFileSync(`${t}/${template}`, "utf8"), ".") : fs.readFileSync(`${t}/${template}`, "utf8")); }
+  u.addStarters(".", t, { version });
+' "$PLUGIN/lib/brain.mjs" "$PLUGIN/lib/config-folders.mjs" "$PLUGIN/lib/upgrade-files.mjs" "$PLUGIN/lib/where.mjs" "$T" "$COMPANY" "$PLUGIN_VERSION"
 # brain/layout.json: the file layout this brain uses, read by every GTM Brain before it writes; the starters
 # are recorded as given, so an upgrade never brings back one the person deleted (lib/layout-version.mjs). The
-# layout number is the 2 startKindLayout recorded above; this adds the starters and never lowers it.
-node -e 'const v=await import(process.argv[1]),u=await import(process.argv[2]);v.writeLayout(".",{starters:u.STARTERS})' "$PLUGIN/lib/layout-version.mjs" "$PLUGIN/lib/upgrade-files.mjs"
+# layout number is the 3 startKindLayout recorded above; this adds the starters and never lowers it.
+node -e 'const v=await import(process.argv[1]),u=await import(process.argv[2]);v.writeLayout(".",{starters:u.GIVEN})' "$PLUGIN/lib/layout-version.mjs" "$PLUGIN/lib/upgrade-files.mjs"
 # workflows/ from day one (0.28.0): the two shipped workflow documents as drafts; a folder already there is the person's.
 if [ ! -d workflows ]; then
   mkdir -p workflows
@@ -110,13 +130,15 @@ OWNER_EMAIL="$(printf '%s' "$PEOPLE_JSON" | node -e 'const p=JSON.parse(require(
 [ -n "$OWNER_NAME" ] && git config user.name "$OWNER_NAME"; [ -n "$OWNER_EMAIL" ] && git config user.email "$OWNER_EMAIL"
 # Parallel branches (worktrees) merge notes as lines and keep the newer summary: .gitattributes, post-merge.
 node -e 'const l=await import(process.argv[1]);l.ensureMergeSetup(".")' "$PLUGIN/lib/brain.mjs" 2>/dev/null || true
-if git add -- brain AGENTS.md CLAUDE.md README.md RULES.md SCHEMA.md $(for doc in strategy icp voice design-system market; do [ -f "$doc.md" ] && printf "%s.md " "$doc"; done) workflows .gitignore .gitattributes .githooks && git -c commit.gpgsign=false commit -q -m "setup: $COMPANY brain (gtm-brain v0)"; then
+if git add -- brain AGENTS.md CLAUDE.md README.md $(for f in config about-us RULES.md SCHEMA.md strategy.md icp.md voice.md design-system.md design-system.html market.md; do [ -e "$f" ] && printf "%s " "$f"; done) workflows .gitignore .gitattributes .githooks && git -c commit.gpgsign=false commit -q -m "setup: $COMPANY brain (gtm-brain v0)"; then
   echo "gtm-brain: brain created for $COMPANY  ·  committed"
 else
   echo "gtm-brain: brain created for $COMPANY  ·  written to disk, NOT committed (git is read-only here): say save"
 fi
 node -e 'const l=await import(process.argv[1]);l.registerBrain(".")' "$PLUGIN/lib/brain.mjs" 2>/dev/null || true
-echo "  brain/admin.md            workplace info: team with handles, tools. Changes need APPROVE."
+if gtm_brain_layout3 .; then echo "  $(gtm_brain_settings .)      workplace info: team with handles, tools. Only the owner ($OWNER_HANDLE) approves a change."
+echo "  config/, about-us/        rules, schema and the base documents: the owner's to change; a teammate's change waits as a proposal."
+else echo "  $(gtm_brain_settings .)            workplace info: team with handles, tools. Changes need APPROVE."; fi
 echo "  brain/contexts/           company, strategy, market, icp, offer, personal-$OWNER_HANDLE"
 echo "  git in this folder: commits as $OWNER_NAME <$OWNER_EMAIL>, git pre-commit check in .githooks (local config)"
 echo "  you are: $OWNER_HANDLE    next: onboarding is in progress; continue gtm-brain-start discovery in this chat using the answers already supplied"

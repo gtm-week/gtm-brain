@@ -5,11 +5,12 @@
 // scan never writes. The rulebook's rule 11 makes Codex read the matching one before that kind of work; the
 // session hook and the status read list them every chat (documentsLine). This file is the format; the script,
 // the server, the hook, add-file and save go through it.
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync, rmdirSync, renameSync, statSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync, rmdirSync, renameSync, statSync } from "node:fs";
 import { join, dirname, basename, relative, sep } from "node:path";
 import { execFileSync } from "node:child_process";
 import { handleFor, parseFrontmatter, renderFrontmatter, readProjects } from "./brain.mjs";
 import { HOST_DIRS } from "./host.mjs";
+import { ROOT_KEEP as KEEP_AT_TOP, ENGINE_DIRS, ABOUT_DIR, baseDir, engineDirs } from "./brain-paths.mjs";
 
 export const KIND = "document";
 export const STATUSES = ["draft", "approved"];
@@ -20,8 +21,8 @@ export const HEADER_LINE = "Made with GTM Brain. This document lives in the brai
 // What the course expects first; said by the hook while there are none.
 export const SUGGESTED = ["strategy", "tone of voice", "design system", "target customer definition", "pricing"];
 // The engine and the machine's own folders: never a document's home.
-export const SKIP_DIRS = new Set(["brain", "work", "files", ".agents", ".githooks", ".git", ".obsidian", ...HOST_DIRS, "node_modules"]);
-const ROOT_KEEP = new Set(["AGENTS.md", "CLAUDE.md", "README.md", "WHERE.md", "RULES.md", "SCHEMA.md"]);
+export const SKIP_DIRS = new Set([...ENGINE_DIRS, "files", ".agents", ".githooks", ".git", ".obsidian", ...HOST_DIRS, "node_modules"]);
+const ROOT_KEEP = new Set(KEEP_AT_TOP);
 const posix = p => p.split(sep).join("/");
 const FOLDER = /^[a-z0-9][a-z0-9-]*(\/[a-z0-9][a-z0-9-]*)?$/;
 
@@ -42,7 +43,7 @@ export function validateDocument({ slug, title, applies_to, body, status, folder
     if (!/^[a-z0-9][a-z0-9-]*$/.test(slug || "")) return `the title must give a slug of lowercase letters, digits and hyphens; got ${slug || "(nothing)"}`;
     if (slug.length > 64) return `${slug} is longer than 64 characters`;
     const f = String(folder || "").replace(/^\/+|\/+$/g, "");
-    if (f && (!FOLDER.test(f) || SKIP_DIRS.has(f.split("/")[0]))) return `folder must be one or two lowercase names outside the brain's own folders (brand, market/battle-cards); got ${f}`;
+    if (f && (!FOLDER.test(f) || (SKIP_DIRS.has(f.split("/")[0]) || (root && engineDirs(root).includes(f.split("/")[0]))))) return `folder must be one or two lowercase names outside the brain's own folders (brand, market/battle-cards); got ${f}`;
     if (f && root && projectDirs(root).has(f.split("/")[0])) return `${f.split("/")[0]} is a linked project folder; a document lives at the brain root or in a folder of its own`;
   }
   const applies = normalizeAppliesTo(applies_to);
@@ -76,7 +77,7 @@ export function projectDirs(root) {
 
 /* Every Markdown file at the root and up to MAX_DEPTH folders down, outside the engine, the projects and dotfolders. */
 export function markdownFiles(root) {
-  const skip = new Set([...SKIP_DIRS, ...projectDirs(root)]); const out = [];
+  const skip = new Set([...SKIP_DIRS, ...engineDirs(root), ...projectDirs(root)]); const out = [];
   const walk = (dir, depth) => {
     let entries; try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return; }
     for (const e of entries.sort((a, b) => a.name.localeCompare(b.name))) {
@@ -97,18 +98,63 @@ export const STARTERS = ["strategy", "icp", "voice", "design-system", "market"];
    for when the brain holds nothing. A document whose body is still one of them is not filled either. */
 export const BASE_STARTERS = ["pricing", "positioning", "competitors", "objections"];
 const templateUrl = slug => new URL(BASE_STARTERS.includes(slug) ? `../templates/base-files/${slug}.md` : `../templates/${slug}.md`, import.meta.url);
+/* A starter's text changes between releases, and a brain keeps the one its setup wrote: the earlier shipped texts
+   are kept whole in templates/legacy/starters/<slug>-<version>.md and count as not filled too. Never edit or
+   remove one; add the outgoing file there before changing a starter under templates/. */
+const LEGACY_STARTERS = new URL("../templates/legacy/starters/", import.meta.url);
 const starterBody = new Map();
+const starterPattern = text => new RegExp(`^${parseFrontmatter(text).body.trim().split("{{COMPANY}}").map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".+?")}$`, "s");
 function isStarterBody(slug, body) {
   if (!STARTERS.includes(slug) && !BASE_STARTERS.includes(slug)) return false;
   if (!starterBody.has(slug)) {
-    let re = null;
-    try {
-      const shipped = parseFrontmatter(readFileSync(templateUrl(slug), "utf8")).body.trim();
-      re = new RegExp(`^${shipped.split("{{COMPANY}}").map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".+?")}$`, "s");
-    } catch {}
-    starterBody.set(slug, re);
+    const res = [];
+    try { res.push(starterPattern(readFileSync(templateUrl(slug), "utf8"))); } catch {}
+    try { for (const f of readdirSync(LEGACY_STARTERS).sort()) if (f.startsWith(`${slug}-`) && f.endsWith(".md")) res.push(starterPattern(readFileSync(new URL(f, LEGACY_STARTERS), "utf8"))); } catch {}
+    starterBody.set(slug, res);
   }
-  const re = starterBody.get(slug); return !!re && re.test(String(body || "").trim());
+  const text = String(body || "").trim(); return starterBody.get(slug).some(re => re.test(text));
+}
+
+/* A document's page: <slug>.html beside the Markdown, the version people look at (the design system's is shown on
+   the dashboard's Visual tab). A document that moved into a folder of its own name may have left the page beside
+   that folder: it is found there too. A new page goes beside the Markdown. Returns { path, exists }. */
+export const PAGE_DOCS = ["design-system"];
+export function documentPage(root, doc) {
+  const name = `${doc.slug}.html`, beside = doc.folder ? `${doc.folder}/${name}` : name;
+  const up = inOwnFolder(doc) ? (dirname(doc.folder) === "." ? name : `${posix(dirname(doc.folder))}/${name}`) : null;
+  const found = [beside, up].find(p => { try { return !!p && lstatSync(join(root, p)).isFile(); } catch { return false; } });
+  return { path: found || beside, exists: !!found };
+}
+/* The shipped starter page says so itself in a meta tag; a page written for the company does not carry it. */
+export const STARTER_PAGE_MARK = '<meta name="gtm-brain-starter"';
+export const isStarterPage = html => String(html || "").includes(STARTER_PAGE_MARK);
+/* What a page must not hold. The dashboard shows it in a sandboxed frame with no network and no scripts, and it
+   travels with the brain, so everything it needs is inside it: inline CSS, inline SVG, data: images, fonts by
+   name. Returns the problems in words, [] for a page that can be saved. */
+export function pageProblems(html) {
+  const text = String(html || ""), out = [];
+  if (!/^\s*<!doctype html/i.test(text)) out.push("it does not start with <!DOCTYPE html>");
+  if (/<script\b/i.test(text)) out.push("it has a <script> (a page runs no scripts)");
+  if (/<(iframe|object|embed|frame|base)\b/i.test(text)) out.push("it embeds another page or sets a base address (iframe, object, embed, base)");
+  if (/<link\b/i.test(text)) out.push("it has a <link> (styles are inline, in one <style> block)");
+  if (/@import\b/i.test(text)) out.push("it has an @import (no stylesheet or font is loaded from elsewhere)");
+  if (/url\(\s*(?!["']?(?:data:|#))/i.test(text)) out.push("it has a url() that is not a data: address");
+  if (/\b(?:src|srcset|poster|background|action|formaction)\s*=\s*["']?(?!data:|["']?\s*>)[^\s"'>]/i.test(text)) out.push("it loads a file by address (src, srcset, poster): images are inline SVG or data: addresses");
+  if (/<meta[^>]+http-equiv\s*=\s*["']?refresh/i.test(text)) out.push("it redirects (meta refresh)");
+  if (/[\u2013\u2014]/.test(text)) out.push("it has an en or em dash (plain hyphens only)");
+  return out;
+}
+
+/* A base file is what the company's work must follow, not every document a team keeps: one of the shipped
+   starters or ready base files at the top of the brain, anything in about-us/ (layout 3, the owner's folder), or a
+   document that says so itself with `base: true` in its header. A talk draft or a brief at the top is a document,
+   not a base file: the dashboard lists it apart and the move to about-us/ leaves it where it is. */
+export function isBase(slug, folder, fm = {}) {
+  if (fm.type === "workflow") return false;
+  if (folder === ABOUT_DIR || folder.startsWith(`${ABOUT_DIR}/`)) return true;
+  if (/^(true|yes)$/i.test(String(fm.base ?? "").trim())) return true;
+  if (/^(false|no)$/i.test(String(fm.base ?? "").trim())) return false;
+  return (folder === "" || folder === slug) && (STARTERS.includes(slug) || BASE_STARTERS.includes(slug));
 }
 
 // A workflow's status is draft, active or paused (lib/workflows.mjs); any other document's is draft or approved.
@@ -119,7 +165,8 @@ export function parseDocument(root, path) {
   const slug = basename(path, ".md"), dir = posix(dirname(path));
   const extra = Object.fromEntries(Object.entries(fm).filter(([k]) => !DOCUMENT_KEYS.has(k)));
   const status = STATUSES.includes(fm.status) || (fm.type === "workflow" && ["active", "paused"].includes(fm.status)) ? fm.status : "draft", filled = !isStarterBody(slug, body);
-  return { slug, path: posix(path), folder: dir === "." ? "" : dir, title: String(fm.title || slug), applies_to: normalizeAppliesTo(fm.applies_to), status, filled, state: filled ? status : "not filled", by: fm.by ? String(fm.by) : null, updated: fm.updated ? String(fm.updated) : null, version: fm["gtm-brain"] ? String(fm["gtm-brain"]) : null, body: body.trim(), bytes: Buffer.byteLength(body, "utf8"), extra };
+  const folder = dir === "." ? "" : dir;
+  return { slug, path: posix(path), folder, base: isBase(slug, folder, fm), title: String(fm.title || slug), applies_to: normalizeAppliesTo(fm.applies_to), status, filled, state: filled ? status : "not filled", by: fm.by ? String(fm.by) : null, updated: fm.updated ? String(fm.updated) : null, version: fm["gtm-brain"] ? String(fm["gtm-brain"]) : null, body: body.trim(), bytes: Buffer.byteLength(body, "utf8"), extra };
 }
 
 export function listDocuments(root) { return markdownFiles(root).map(p => parseDocument(root, p)).filter(Boolean); }
@@ -191,7 +238,7 @@ export function writeFields(root, path, fields, { preview = false } = {}) {
   const abs = join(root, path), raw = readFileSync(abs, "utf8").replace(/^﻿/, "");
   const { fm, body } = parseFrontmatter(raw.replace(/\r\n/g, "\n"));
   const text = /\r\n/.test(raw) ? raw.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "") : body;   // a CRLF file keeps its own line ends below
-  const head = renderFrontmatter(documentFields(fields, fm));
+  const head = renderFrontmatter(documentFields(fields, { ...fm, ...(fields.extra || {}) }));   // extra: header keys of the caller's (base: true)
   if (!preview) writeFileSync(abs, head + text);
   return { frontmatter: head, text };
 }
@@ -205,7 +252,8 @@ export function appendSection(root, doc, section, fields) {
 
 /* Markdown dropped at the brain root by hand that is not a document yet: the brain does not read it before work. */
 export function unadoptedFiles(root) {
-  return markdownFiles(root).filter(p => !p.includes("/") && !parseDocument(root, p));
+  const base = baseDir(root);   // layout 3: the base files' folder counts as the top
+  return markdownFiles(root).filter(p => (!p.includes("/") || (base && p.startsWith(`${base}/`) && p.split("/").length === 2)) && !parseDocument(root, p));
 }
 export const unadoptedText = files => files.map(f => `${f} is here but the brain does not use it yet`).join("; ");
 
@@ -287,7 +335,7 @@ export function savePaths(root) {
 /* Folders at the top GTM Brain does not use: not the engine's, not a project's, not a document's home. A brain
    migrated from an older layout brings company/, assets/, output/; nothing here touches them, the hint names them. */
 export function strayFolders(root) {
-  const skip = new Set([...SKIP_DIRS, ...projectDirs(root)]), homes = new Set(listDocuments(root).map(d => d.folder.split("/")[0]).filter(Boolean));
+  const skip = new Set([...SKIP_DIRS, ...engineDirs(root), ...projectDirs(root), ...(baseDir(root) ? [ABOUT_DIR] : [])]), homes = new Set(listDocuments(root).map(d => d.folder.split("/")[0]).filter(Boolean));
   let entries; try { entries = readdirSync(root, { withFileTypes: true }); } catch { return []; }
   return entries.filter(e => e.isDirectory() && !e.name.startsWith(".") && !skip.has(e.name) && !homes.has(e.name)).map(e => e.name).sort();
 }

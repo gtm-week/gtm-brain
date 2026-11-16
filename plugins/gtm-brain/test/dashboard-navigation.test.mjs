@@ -6,18 +6,17 @@ const memory=(id,content,context='market')=>({id,content,context,at:'2026-09-14T
 const context=(slug,memories=[])=>({slug,title:slug,label:slug,status:'active',summary:'Evidence about '+slug+'.',rule:'Knowledge about '+slug,now:'',whenLoaded:'',people:[],tools:[],related:[],names:[],memories,stored:memories.length,totalMemories:memories.length,loaded:true});
 const fixture=()=>({brain:'/tmp/Company & Team',generatedAt:'2026-09-14T10:00:00Z',contexts:[context('market',[memory('m_aaaaaa','Recent research')])],names:[],recent:[],loaded:['market'],questions:[],decisions:[],tools:[],activity:[],projects:[],admin:{company:'Test Co',owner:'alex',team:[{handle:'alex',name:'Alex Example'}],tools:[],body:'Company profile',dashboard:'on-demand'}});
 const click=(p,selector,button)=>Promise.all(p.listeners.click.map(fn=>fn({target:{closest:sel=>sel===selector?button:null}})));
-test(`navigation has four pillar tabs and More, and classifies details consistently`,()=>{
+test(`navigation is one flat row with Overview first, and an earlier view lights the place it belongs to`,()=>{
  const D=fixture();const p=page(D);
- assert.equal(p.run('view'),'config','the front page opens on the first pillar tab');
+ assert.equal(p.run('view'),'home','the front page opens on Overview');
  assert.equal((p.node('#nav').innerHTML.match(/<button /g)||[]).length,5);
- assert.match(p.node('#nav').innerHTML,/data-v="config"[^>]*aria-current="page"[^>]*><span>Configuration<\/span>.*data-v="entities".*data-v="notes".*data-v="workflows".*data-v="home"[^>]*><span>More<\/span>/);
+ assert.match(p.node('#nav').innerHTML,/data-v="home"[^>]*aria-current="page"[^>]*><span>Overview<\/span>.*data-v="config"[^>]*><span>Configuration<\/span>.*data-v="entities".*data-v="notes".*data-v="workflows"/);assert.doesNotMatch(p.node('#nav').innerHTML,/More/);
  assert.doesNotMatch(p.node('#nav').innerHTML,/data-v="(?:contexts|projects|people|customers|meetings|questions|admin|explore|skills)"/);
- assert.equal(p.node('#subnav').hidden,true,'More has no second row while a pillar tab is open');
- p.run('show("customers")');assert.match(p.node('#nav').innerHTML,/data-v="home"[^>]*aria-current="page"/);assert.match(p.node('#subnav').innerHTML,/data-v="explore"[^>]*aria-current="page"/);assert.equal(p.node('#subnav').hidden,false);
- p.run('show("contexts")');assert.match(p.node('#subnav').innerHTML,/data-v="explore"[^>]*aria-current="page"/);
- assert.match(p.node('#location').innerHTML,/data-v="explore"/);
- assert.match(p.node('#location').innerHTML,/data-v="explore"/);
- p.run('show("projects")');assert.equal(p.node('#workspace-link').getAttribute('aria-current'),'false');assert.match(p.node('#nav').innerHTML,/data-v="home"[^>]*aria-current="page"/);assert.match(p.node('#subnav').innerHTML,/data-v="home"[^>]*aria-current="page"/);
+ assert.equal(p.node('#subnav').hidden,true,'there is no second row');
+ p.run('show("customers")');assert.match(p.node('#nav').innerHTML,/data-v="entities"[^>]*aria-current="page"/);assert.equal(p.node('#subnav').hidden,true);
+ p.run('show("contexts")');assert.match(p.node('#nav').innerHTML,/data-v="notes"[^>]*aria-current="page"/);
+ assert.match(p.node('#location').innerHTML,/data-v="home"/);
+ p.run('show("projects")');assert.equal(p.node('#workspace-link').getAttribute('aria-current'),'false');assert.match(p.node('#nav').innerHTML,/data-v="home"[^>]*aria-current="page"/);
  assert.match(p.node('#explore-grid').innerHTML,/data-v="contexts"/);assert.match(p.node('#explore-grid').innerHTML,/data-v="people"/);assert.match(p.node('#explore-grid').innerHTML,/data-v="meetings"/);
  assert.equal((p.node('#explore-grid').innerHTML.match(/class="explore-count"/g)||[]).length,4);
  assert.match(p.node('#explore-grid').innerHTML,/data-v="contexts"[^>]*>[^<]*<strong>[^<]*<span class="explore-count">1<\/span>/);
@@ -120,7 +119,7 @@ test('browser history and copied links preserve the context, folder and search s
  const q=page(D,{route:'#view=search&search=research&type=notes'});
  assert.equal(q.run('view'),'search');assert.equal(q.node('#gq').value,'research');assert.equal(q.run('searchFilter'),'notes');
  assert.match(q.node('#s-grid').innerHTML,/Recent <mark>research/);
- assert.equal(page(D,{route:'#view=nonexistent'}).run('view'),'config');
+ assert.equal(page(D,{route:'#view=nonexistent'}).run('view'),'home');
 });
 
 test('a revision restores detailed browsing state instead of replacing it with the shorter URL',()=>{
@@ -165,10 +164,11 @@ test('Contexts opens a searchable directory with more rows, archived filtering a
 test('recent references use recorded entity evidence and tools, with working exploration links',async()=>{
  const D=fixture(),m={...memory('m_aaaaaa','Customer research'),tools:['CRM'],source:[{kind:'url',ref:'https://example.com/record'}]};D.recent=[m];
  D.entityGraph={nodes:[{name:'Acme',contexts:[{context:'market',evidence:[{id:m.id}]}]},{name:'Unrelated',contexts:[]}],links:[]};
- const p=page(D),html=p.node('#h-recent').innerHTML;
+ const p=page(D),html=p.run('recentReferences(D.recent[0])')+p.run('sourcesHtml(D.recent[0].source)');
  assert.match(html,/data-entity="Acme" data-entity-context="market"/);assert.doesNotMatch(html,/Unrelated/);
  assert.match(html,/data-recent-tool="CRM"/);assert.match(html,/https:\/\/example.com\/record/);
- assert.match(html,/<article class="recent-item"/);
+ // Overview carries no list of recent notes: one quiet sentence, and Memories is where notes are read
+ const recent=p.node('#h-recent').innerHTML;assert.doesNotMatch(recent,/<article|Customer research/);assert.match(recent,/^<p class="ov-activity">The last note was saved <time[^>]*>[^<]+<\/time>\. <button class="linkbtn" data-v="notes">Read them in Memories/);
  await click(p,'[data-recent-tool]',{dataset:{recentTool:'CRM'}});
  assert.equal(p.run('view'),'search');assert.equal(p.node('#gq').value,'CRM');
 });
@@ -211,7 +211,7 @@ test('Explore groups questions and decisions under the Memories type filter',()=
  p.run('show("questions")');assert.equal(p.run('view'),'memories');assert.equal(p.run('memoryKinds.join(",")'),'question');
  p.run('show("decisions")');assert.equal(p.run('view'),'memories');assert.equal(p.run('memoryKinds.join(",")'),'decision');
  assert.match(p.node('#mem-list').innerHTML,/A decision/);assert.doesNotMatch(p.node('#mem-list').innerHTML,/A question|A note/);
- assert.match(p.node('#subnav').innerHTML,/data-v="explore"[^>]*aria-current="page"/);
+ assert.match(p.node('#nav').innerHTML,/data-v="notes"[^>]*aria-current="page"/);
 });
 
 test('memory pills combine multiple types and contexts and toggle independently',async()=>{
@@ -315,7 +315,7 @@ test('feed search includes older records and respects its project filter',async(
  const result=await p.run('loadOverviewFeed("recent",6,"research","cobalt")');
  assert.equal(result.records.length,1);assert.equal(result.records[0].id,older.id);assert.equal(result.hasMore,false);
  assert.equal((await p.run('loadOverviewFeed("recent",6,"other","cobalt")')).records.length,0);
- assert.match(p.node('#h-recent').innerHTML,/data-v="memories"/);
+ assert.match(p.node('#h-recent').innerHTML,/data-v="notes"/);
 });
 
 test(`resolution draft contains only displayed questions, without record IDs or a sync request`,async()=>{

@@ -7,6 +7,8 @@ import { readLayout, layoutBlock, layoutPlan, writeLayout, writesLayout } from "
 import { diskLayout, pagePaths, isKindPagePath } from "./layout.mjs";
 import { ensureRules } from "./where.mjs";
 import { ensureSchema } from "./schema.mjs";
+import { basePath, rulesFile, schemaFile, inConfigFolders } from "./brain-paths.mjs";
+import { configMoveWhat, layoutReadme } from "./config-folders.mjs";
 
 // Shared with the upgrade matrix tests. Aliases point to the same immutable snapshot.
 export const legacyTemplates = JSON.parse(readFileSync(new URL("../templates/legacy/manifest.json", import.meta.url), "utf8"));
@@ -69,7 +71,7 @@ export function autoRefresh(root, templates) {
 export function refreshReadme(root, templates) {
   const company = readAdmin(root)?.company, path = join(root, "README.md");
   if (process.env.GTM_BRAIN_RUN || !company || !existsSync(path)) return false;
-  const render = file => readFileSync(file, "utf8").replaceAll("{{COMPANY}}", company);
+  const render = file => layoutReadme(readFileSync(file, "utf8").replaceAll("{{COMPANY}}", company), root);
   const current = readFileSync(path, "utf8"), next = render(join(templates, "README.md")), shipped = join(templates, "legacy", "readme");
   if (current === next || !readdirSync(shipped).some(f => f.endsWith(".md") && render(join(shipped, f)) === current)) return false;
   writeFileSync(path, next);
@@ -139,13 +141,32 @@ export function prepareUpgrade(root, templates) {
    the root or in a folder of their own name, and brain/layout.json records every starter as given, so one
    the person deleted afterwards is never brought back. A file already there is the person's. */
 export const STARTERS = ["strategy", "icp", "voice", "design-system", "market"];
+/* The design system is a page too (0.35): design-system.html beside design-system.md, the version people look at.
+   A new brain gets the starter page with the Markdown; an older one gets it once, beside its Markdown wherever that
+   lies, and only when no page is there: a page the team made is never touched. It is recorded as given under its
+   own name, so one the person deleted is not brought back. */
+export const STARTER_PAGES = [{ doc: "design-system", file: "design-system.html" }];
+export const GIVEN = [...STARTERS, ...STARTER_PAGES.map(p => p.file)];
+const escapeHtml = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 export function addStarters(root, templates, { version = "", date = new Date().toISOString().slice(0, 10) } = {}) {
   const company = readAdmin(root)?.company || "", given = new Set(readLayout(root).starters || []), added = [];
   for (const doc of STARTERS) {
-    const template = join(templates, `${doc}.md`);
-    if (given.has(doc) || !existsSync(template) || existsSync(join(root, `${doc}.md`)) || existsSync(join(root, doc, `${doc}.md`))) continue;
-    writeFileSync(join(root, `${doc}.md`), readFileSync(template, "utf8").replaceAll("{{COMPANY}}", company).replaceAll("{{DATE}}", date).replaceAll("{{VERSION}}", version));
-    added.push(`${doc}.md`);
+    const template = join(templates, `${doc}.md`), at = basePath(root, `${doc}.md`);
+    if (given.has(doc) || !existsSync(template) || existsSync(join(root, at)) || existsSync(join(root, basePath(root, `${doc}/${doc}.md`)))) continue;
+    mkdirSync(dirname(join(root, at)), { recursive: true });
+    writeFileSync(join(root, at), readFileSync(template, "utf8").replaceAll("{{COMPANY}}", company).replaceAll("{{DATE}}", date).replaceAll("{{VERSION}}", version));
+    added.push(at);
+  }
+  for (const { doc, file } of STARTER_PAGES) {
+    const template = join(templates, file);
+    if (given.has(file) || !existsSync(template)) continue;
+    // beside the Markdown: at the base folder, or inside the document's own folder when it moved there
+    const md = [basePath(root, `${doc}.md`), basePath(root, `${doc}/${doc}.md`)].find(p => existsSync(join(root, p)));
+    if (!md) continue;
+    const at = `${dirname(md) === "." ? "" : `${dirname(md)}/`}${file}`;
+    if ([at, basePath(root, file), file].some(p => existsSync(join(root, p)))) continue;
+    writeFileSync(join(root, at), readFileSync(template, "utf8").replaceAll("{{COMPANY}}", escapeHtml(company)));
+    added.push(at);
   }
   return added;
 }
@@ -159,13 +180,32 @@ export function addStarters(root, templates, { version = "", date = new Date().t
 export function layoutStep(root, confirmed) {
   const blocked = layoutBlock(root);
   if (blocked) return `BLOCKED\t${blocked}`;
-  const names = Object.fromEntries((readAdmin(root)?.team || []).map(p => [p.handle, p.name]));
+  const admin = readAdmin(root) || {}, names = Object.fromEntries((admin.team || []).map(p => [p.handle, p.name]));
+  const me = currentPerson(root), owner = admin.owner ? String(admin.owner) : null;
+  // Layout 3 moves the base files and the settings into the owner's folders: only the owner says yes to it.
+  // Anyone else upgrades to layout 2 at most, and the rest of the upgrade goes on.
+  const target = !owner || me === owner ? writesLayout() : Math.min(writesLayout(), 2);
   const on = diskLayout(root), flat = on < 2 ? pagePaths(root).filter(p => !isKindPagePath(p)).length : 0;
-  const what = on < 2 ? `It moves ${flat} entity page${flat === 1 ? "" : "s"} into a folder per kind (brain/entities/people/, organizations/, ...), where a GTM Brain from before 0.35 does not find them; 0.34 does not check the layout yet, so it keeps saving and writes flat pages of its own, which the next write here folds in.` : "";
-  const plan = layoutPlan(root, { me: currentPerson(root), names, on, what });
-  if (!plan.changes) return "";
+  const kinds = on < 2 ? `It moves ${flat} entity page${flat === 1 ? "" : "s"} into a folder per kind (brain/entities/people/, organizations/, ...). A teammate still on GTM Brain 0.34 gets no warning: their notes keep saving, but their GTM Brain no longer finds these pages (a known person or company looks unknown to it) and writes a flat page of its own for each name it saves, which the next save from an updated GTM Brain folds back in. No note is lost.` : "";
+  const config = target >= 3 && !inConfigFolders(root) ? configMoveWhat(root) : "";
+  const plan = layoutPlan(root, { me, names, on, target, what: [kinds, config].filter(Boolean).join(" "), older: config ? "they will need to update GTM Brain: until then their GTM Brain does not find this brain." : kinds ? "they should update GTM Brain before you say yes: until they do, their GTM Brain keeps saving notes but does not find the entity pages." : "" });
+  if (!plan.changes) return target < writesLayout() && on < writesLayout() && on >= target ? `NOTE\tOne more move is waiting: the base documents into about-us/ and the rules, schema and settings into config/. It is the owner's (${names[owner] || owner}) to say yes to, in their own chat ("upgrade this brain"); nothing of it was asked or moved here.` : "";
   if (process.env.GTM_BRAIN_RUN) return `ASK\t${plan.summary} A scheduled or background run never changes the layout: the person says "upgrade the brain" in a chat.`;
   return confirmed ? `CHANGE\t${plan.from}\t${plan.to}` : `ASK\t${plan.line}`;
+}
+
+/* The chat start's line for a brain whose files are still arranged as an older GTM Brain kept them, when the
+   person in this checkout is the one who can say yes to the move (anyone for the entity pages, only the owner for
+   about-us/ and config/): the brain needs an upgrade, Codex offers it and asks before anything moves, and
+   upgrade_brain does it. "" for a brain that is current, a brain this plugin must not write, a teammate whose
+   only pending move is the owner's, and a scheduled or background run. Nothing is read beyond what layoutStep reads. */
+export function layoutOffer(root) {
+  if (process.env.GTM_BRAIN_RUN) return "";
+  let step; try { step = layoutStep(root, false); } catch { return ""; }
+  if (!step.startsWith("ASK\t")) return "";
+  const pages = diskLayout(root) < 2, base = step.includes("about-us/");
+  const what = [pages && "the entity pages into a folder per kind", base && "the base documents into about-us/ and the rules, schema and settings into config/"].filter(Boolean).join(", and ");
+  return `GTM Brain: this brain needs an upgrade. Its files are still arranged as an older GTM Brain kept them, and this version can move ${what}. Nothing has moved, and reading and saving work as before. Offer the upgrade once, in one line at the end of your first reply ("This brain can be upgraded to the 0.35 file arrangement. Say: upgrade this brain."), and never start it unasked. On yes, call upgrade_brain: it changes nothing and returns what would move and which teammates must update GTM Brain first; put that to the person as one yes/no question, and only on their yes call upgrade_brain again with confirm: true.`;
 }
 
 /* upgrade.sh: what a brain lacks, as three lines: the starters added, RULES.md and SCHEMA.md written, and
@@ -174,8 +214,8 @@ export function layoutStep(root, confirmed) {
    here the number only rises to what this plugin writes for a brain in kind folders, and a flat brain keeps 1. */
 export function deliverMissing(root, templates, version, said = false) {
   const starters = addStarters(root, templates, { version });
-  const files = [ensureRules(root, templates) && "RULES.md", ensureSchema(root, templates) && "SCHEMA.md"].filter(Boolean);
-  const before = readLayout(root), written = writeLayout(root, { starters: STARTERS, layout: diskLayout(root) === 2 ? writesLayout() : undefined }), after = readLayout(root).layout;
+  const files = [ensureRules(root, templates) && rulesFile(root), ensureSchema(root, templates) && schemaFile(root)].filter(Boolean);
+  const before = readLayout(root), written = writeLayout(root, { starters: GIVEN, layout: diskLayout(root) >= 2 ? diskLayout(root) : undefined }), after = readLayout(root).layout;
   const layout = !written ? "" : before.layout !== after ? `changed the brain's file layout to ${after}` : said ? "" : "recorded the brain's file layout (brain/layout.json)";
   return [starters.join(" "), files.join(" "), layout].join("\n");
 }

@@ -15,7 +15,7 @@ const alive=pid=>{try{process.kill(pid,0);return true}catch{return false}};
 if(mode==='--stop'){
  const old=state();if(old?.pid&&alive(old.pid))process.kill(old.pid);process.exit(0);
 }
-if(!existsSync(join(root,'brain','admin.md')))process.exit(1);
+if(!lib.isBrain(root))process.exit(1);
 mkdirSync(work,{recursive:true});
 if(mode==='--start'){
  const old=state();if(old?.pid&&alive(old.pid)&&old.script===fileURLToPath(import.meta.url))process.exit(0);
@@ -33,7 +33,7 @@ const finish=()=>{if(state()?.pid===process.pid){rmSync(stateFile,{force:true});
 process.on('SIGTERM',finish);process.on('SIGINT',finish);
 let attachmentKey = '', attachments = [];
 function fingerprint(){
- const files=['brain/admin.md','brain/entities.md','AGENTS.md','work/projects.json','work/asset-machine.json'];
+ const files=[lib.settingsFile(root),'brain/entities.md','AGENTS.md','work/projects.json','work/asset-machine.json'];
  try{for(const d of readdirSync(join(root,'brain','contexts'),{withFileTypes:true}))if(d.isDirectory()&&!d.isSymbolicLink()){
   files.push(`brain/contexts/${d.name}/context.md`,`brain/contexts/${d.name}/memories.jsonl`);
  }}catch{}
@@ -45,7 +45,7 @@ function fingerprint(){
 }
 let observed=fingerprint(),rendered='',stableAt=Date.now();
 function tick(){
- if(!existsSync(join(root,'brain','admin.md')))return; // An editor can temporarily rename this file.
+ if(!lib.isBrain(root))return; // An editor can temporarily rename this file.
  const current=fingerprint();
  if(current!==observed){observed=current;stableAt=Date.now();return}
  if(current===rendered||Date.now()-stableAt<500)return;

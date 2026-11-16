@@ -13,6 +13,7 @@ import * as lib from "./brain.mjs";
 import { readSchema, fieldsFor } from "./schema.mjs";
 import { normalizeSource } from "./pointers.mjs";
 import { ENTITIES_DIR } from "./layout.mjs";
+import { TEMPLATES } from "./brain-paths.mjs";
 
 const DAY = 864e5;
 const nowMs = () => process.env.GTM_BRAIN_NOW ? Date.parse(process.env.GTM_BRAIN_NOW) : Date.now();
@@ -57,7 +58,7 @@ function stamp(root, now) {
   const st = p => { try { const s = statSync(p); return `${s.size}:${s.mtimeMs}`; } catch { return "-"; } };
   const parts = [CACHE_VERSION, String(Math.floor(now / 36e5))];
   for (const c of contextDirs(root)) parts.push(c, st(join(root, "brain/contexts", c, "memories.jsonl")), st(join(root, "brain/contexts", c, "context.md")));
-  parts.push(...entityFiles(root), st(join(root, "SCHEMA.md")), st(join(root, "brain/admin.md")));
+  parts.push(...entityFiles(root), st(join(root, lib.schemaFile(root))), st(join(root, lib.settingsFile(root))));
   return lib.snapshotKey([{ id: parts.join("|") }]);
 }
 
@@ -140,9 +141,9 @@ export function computePopulation(root, { now = nowMs() } = {}) {
     at: new Date(now).toISOString(),
     notes: notes.length,
     saved: { last_7_days: week, average_4_weeks_before: Math.round((before / 4) * 10) / 10, history_days: Math.floor((now - oldest) / DAY) },
-    duplicates: { exact, near, share: share(exact + near, notes.length), examples },
+    duplicates: { exact, near, share: share(exact + near, notes.length), exact_share: share(exact, notes.length), examples },
     entities: { total: tracked.length, without_notes: without.length, without_notes_share: share(without.length, tracked.length), without_notes_examples: without.slice(0, 5).map(e => e.name),
-      missing_required: missing.length, missing_required_share: share(missing.length, tracked.length), missing_required_fields: byField, missing_required_examples: missing.slice(0, 5) },
+      missing_required: missing.length, missing_required_share: share(missing.length, tracked.length), missing_required_fields: byField, missing_required_examples: missing.slice(0, 5), schema_untouched: schemaUntouched(root) },
     citations: { uncited, waiting_for_summary: waiting, judged, uncited_share: share(uncited, judged) },
     sources: { without: noSource, without_share: share(noSource, notes.length) },
     capture_rate: "not measured",
@@ -155,10 +156,21 @@ export function population(root, { now = nowMs(), cache = true } = {}) {
   const key = stamp(root, now), file = join(root, "work", "population.json");
   if (cache) { try { const c = JSON.parse(readFileSync(file, "utf8")); if (c.key === key && c.population?.saved && c.population.duplicates && c.population.entities && c.population.citations && c.population.sources) return c.population; } catch {} }
   const p = computePopulation(root, { now });
-  if (cache && existsSync(join(root, "brain", "admin.md"))) {
+  if (cache && lib.isBrain(root)) {
     try { mkdirSync(join(root, "work"), { recursive: true }); const tmp = `${file}.${process.pid}.tmp`; writeFileSync(tmp, JSON.stringify({ key, population: p }) + "\n"); renameSync(tmp, file); } catch {}
   }
   return p;
+}
+
+/* True while the brain's SCHEMA.md is still one GTM Brain shipped (this version's or an earlier one's): the team
+   has not said what it wants to keep, so what the file marks required is our default, not their rule. */
+export function schemaUntouched(root) {
+  try {
+    const current = readFileSync(join(root, lib.schemaFile(root)), "utf8"), dir = new URL("../templates/", import.meta.url);
+    const shipped = [readFileSync(new URL(TEMPLATES.schema, dir), "utf8")];
+    try { for (const f of readdirSync(new URL("legacy/schema/", dir))) if (f.endsWith(".md")) shipped.push(readFileSync(new URL(`legacy/schema/${f}`, dir), "utf8")); } catch {}
+    return shipped.includes(current);
+  } catch { return false; }
 }
 
 const pct = x => `${Math.round(x * 100)}%`;
@@ -170,22 +182,35 @@ export function outOfRange(p, r = POPULATION_RANGES) {
   if (compared && week < avg * r.week_low) out.push(`too empty: ${week} note${week === 1 ? "" : "s"} saved in the last 7 days against ${avg} a week before`);
   if (compared && week > avg * r.week_high) out.push(`too full: ${week} notes saved in the last 7 days against ${avg} a week before`);
   if (p.notes >= r.min_notes) {
-    if (p.duplicates.share > r.duplicates_max) out.push(`${pct(p.duplicates.share)} duplicates (${p.duplicates.exact} exact, ${p.duplicates.near} near)`);
+    // exact copies only: "near" (the same source record on the same day) is what one chat or one meeting that
+    // yields several notes looks like, and flagged a real brain at 15% with no copy in it (2026-11-15)
+    if ((p.duplicates.exact_share ?? 0) > r.duplicates_max) out.push(`${pct(p.duplicates.exact_share)} duplicates (${p.duplicates.exact} notes with the same content as another)`);
     if (p.sources.without_share > r.no_source_max) out.push(`${pct(p.sources.without_share)} of notes without a source`);
-    if (p.citations.judged >= r.min_notes && p.citations.uncited_share > r.uncited_max) out.push(`${pct(p.citations.uncited_share)} of summarised notes cited nowhere`);
+    // notes no summary cites are not reported: summaries are written on demand since 0.35.0 (the background run is
+    // retired), so nobody is behind on them; the number stays in the population report
   }
   if (p.entities.total >= r.min_entities) {
     if (p.entities.without_notes_share > r.entities_without_notes_max) out.push(`${p.entities.without_notes} of ${p.entities.total} entities without notes`);
-    if (p.entities.missing_required_share > r.entities_missing_required_max) out.push(`${p.entities.missing_required} of ${p.entities.total} entities missing a required field`);
+    // not against a schema nobody chose: the shipped SCHEMA.md marks fields required, and a brain that got it on
+    // upgrade fails on every entity before anyone has decided what to keep
+    if (!p.entities.schema_untouched && p.entities.missing_required_share > r.entities_missing_required_max) out.push(`${p.entities.missing_required} of ${p.entities.total} entities missing a required field`);
   }
   return out;
 }
 
 /* The compact health-line part, or null when every number is in range. */
+/* The chat start's part of the health line. Only what a person would act on is spelled out: a week far emptier
+   or fuller than usual (capture or sync is probably broken). Things to tidy (copies, notes without a source,
+   entities without notes or a required field) are never counted here: a count read at every chat start was taken
+   as a job ("41 items") and worked through unasked, 84 calls in a manual run on 2026-11-15. It says only that
+   housekeeping exists; lib/health-line.mjs adds how it starts. The numbers stay in query population and the
+   housekeeping view. The dashboard shows this part too, so it reads as words for a person. */
+export const HOUSEKEEPING_HINT = "housekeeping: there are things to tidy, when asked for";
 export function populationPart(root, options) {
   let p; try { p = population(root, options); } catch { return null; }
-  const out = outOfRange(p);
-  return out.length ? `population: ${out.join(", ")} (query population)` : null;
+  const out = outOfRange(p), week = out.filter(o => /^too (empty|full)/.test(o));
+  const parts = [week.length ? `population: ${week.join(", ")} (query population)` : "", out.length > week.length ? HOUSEKEEPING_HINT : ""].filter(Boolean);
+  return parts.length ? parts.join(" | ") : null;
 }
 
 /* The view's text: every number, the range it is judged by, and what is not measured. */

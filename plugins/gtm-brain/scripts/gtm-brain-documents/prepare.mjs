@@ -35,7 +35,7 @@ export function prepare(root, { title, file, version = "", by = null }) {
     subject = title || (heading ? heading[1].trim() : basename(file, ".md").replace(/[-_]+/g, " "));
   }
   const starter = docs.matchStarter(`${subject} ${file ? basename(file, ".md") : ""}`);
-  const slug = docs.documentSlug(subject), path = file || docs.documentPathFor(slug);
+  const slug = docs.documentSlug(subject), path = file || docs.documentPathFor(slug, lib.baseDir(root));
   const choices = (starter ? starter.choices : GENERIC).slice(0, 3);
   const over = docs.overlaps(root, subject, starter, all).filter(o => o.doc.path !== path);
 

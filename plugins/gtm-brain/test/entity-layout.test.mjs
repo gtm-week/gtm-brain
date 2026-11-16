@@ -210,7 +210,9 @@ test("an older record holding whole files stays readable and undoes", () => {
   assert.equal(readEntityChange(root, merged.merge_id).changes[0].before, whole.changes[0].before);
   const undo = lib.undoEntityMerge(root, { merge_id: merged.merge_id });
   assert.equal(lib.undoEntityMerge(root, { merge_id: merged.merge_id, by: "ann", as_of: undo.as_of }).status, "unmerged");
-  assert.equal(readFileSync(join(root, paths[0]), "utf8").split("\n---\n")[1], before[0].split("\n---\n")[1], "the whole-file body is restored");
+  // the page now also lists the merge and its undo under ## History (lib/entity-events.mjs); the rest is the body it had
+  const body = t => t.split("\n---\n")[1].replace(/\n## History\n[\s\S]*?(?=\n## )/, "");
+  assert.equal(body(readFileSync(join(root, paths[0]), "utf8")), body(before[0]), "the whole-file body is restored");
 });
 
 /* ---------- part 4: a generated index per kind ---------- */
