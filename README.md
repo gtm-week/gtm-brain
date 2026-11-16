@@ -78,6 +78,50 @@ Every skill is `/gtmb-<name>`.
 | The latest from connected tools | `/gtmb-sync` | "catch up" |
 | Update the plugin, upgrade the brain | | "update GTM Brain", "upgrade the brain" |
 
+What each command changes, and what Codex reads from it:
+
+```mermaid
+flowchart LR
+  you["You, in a Codex chat"]
+
+  subgraph commands["Commands"]
+    c1["/gtmb-start<br/>/gtmb-configure"]
+    c2["/gtmb-strategy · /gtmb-define-icp<br/>/gtmb-voice · /gtmb-design-system"]
+    c3["/gtmb-rules<br/>/gtmb-schema"]
+    c4["/gtmb-workflow<br/>/gtmb-skill"]
+  end
+
+  subgraph brain["Your brain's files"]
+    f1["config/settings.yaml<br/>Company, team, tools"]
+    f2["about-us/<br/>Strategy, ICP, voice, design system"]
+    f3["config/rules.md · config/schema.md<br/>What is saved, asked and kept"]
+    f4["workflows/ · .agents/skills/<br/>Processes and your own skills"]
+  end
+
+  you --> c1 --> f1
+  you --> c2 --> f2
+  you --> c3 --> f3
+  you --> c4 --> f4
+
+  f1 --> start["Read at every chat start"]
+  f3 --> start
+  f2 --> work["Read before the work they apply to<br/>Copy, research, outreach"]
+  f4 --> run["Run when you ask, or on their trigger"]
+```
+
+Who can change what:
+
+```mermaid
+flowchart LR
+  owner["Owner"] -->|"asks for a change"| show["Codex shows the change"]
+  mate["Teammate"] -->|"asks for a change"| where{"Which file?"}
+  where -->|"about-us/ or config/"| proposal["Kept as a proposal<br/>brain/proposals/"]
+  where -->|"notes, people, companies,<br/>workflows, documents"| saved["Saved at once"]
+  proposal -->|"shown at the owner's<br/>next chat start"| show
+  show -->|"APPROVE"| applied["Applied and committed<br/>Recorded: who asked, who approved"]
+  show -->|"No"| unchanged["Nothing changes"]
+```
+
 Three things to know:
 
 - A change to company, team or tools is shown first and applies only when you choose APPROVE.
