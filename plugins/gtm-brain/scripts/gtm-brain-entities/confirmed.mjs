@@ -34,8 +34,12 @@ function entityOf(registry, ref) {
   return hits[0] || null;
 }
 function person(root, by) {
-  const who = lib.currentPerson(root, by);
-  if (!who) throw new Error(by ? "by must identify a team member" : "by is missing and the brain does not know who is in this chat: pass by, the person's team handle");
+  let who = lib.currentPerson(root, by);
+  // as a save does: a team of one needs no by (a merge and an answer were refused for it, and Codex asked the person
+  // who they are; conversation benchmark, 2026-11-16). A larger team is told the handles to choose from.
+  const team = (lib.readAdmin(root)?.team || []).map(p => p.handle).filter(Boolean);
+  if (!who && !by && team.length === 1) who = team[0];
+  if (!who) throw new Error(by ? `by must identify a team member (${team.join(", ")})` : `by is missing: pass by, the handle of the person speaking (${team.join(", ")}); ask who it is only when the chat does not say`);
   return who;
 }
 
