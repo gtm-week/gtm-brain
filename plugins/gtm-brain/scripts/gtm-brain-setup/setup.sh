@@ -136,11 +136,7 @@ OWNER_EMAIL="$(printf '%s' "$PEOPLE_JSON" | node -e 'const p=JSON.parse(require(
 [ -n "$OWNER_NAME" ] && git config user.name "$OWNER_NAME"; [ -n "$OWNER_EMAIL" ] && git config user.email "$OWNER_EMAIL"
 # Parallel branches (worktrees) merge notes as lines and keep the newer summary: .gitattributes, post-merge.
 node -e 'const l=await import(process.argv[1]);l.ensureMergeSetup(".")' "$PLUGIN/lib/brain.mjs" 2>/dev/null || true
-<<<<<<< HEAD
-if git add -- AGENTS.md CLAUDE.md README.md $(for f in brain configuration entities memories layout.json config about-us RULES.md SCHEMA.md strategy.md icp.md voice.md design-system.md market.md; do [ -e "$f" ] && printf "%s " "$f"; done) workflows .gitignore .gitattributes .githooks && git -c commit.gpgsign=false commit -q -m "setup: $COMPANY brain (gtm-brain v0)"; then
-=======
-if git add -- brain AGENTS.md CLAUDE.md README.md $(for f in config about-us RULES.md SCHEMA.md strategy.md icp.md voice.md design-system.md design-system.html market.md; do [ -e "$f" ] && printf "%s " "$f"; done) workflows .gitignore .gitattributes .githooks && git -c commit.gpgsign=false commit -q -m "setup: $COMPANY brain (gtm-brain v0)"; then
->>>>>>> origin/integration/pass-four
+if git add -- AGENTS.md CLAUDE.md README.md $(for f in brain configuration entities memories layout.json config about-us RULES.md SCHEMA.md strategy.md icp.md voice.md design-system.md design-system.html market.md; do [ -e "$f" ] && printf "%s " "$f"; done) workflows .gitignore .gitattributes .githooks && git -c commit.gpgsign=false commit -q -m "setup: $COMPANY brain (gtm-brain v0)"; then
   echo "gtm-brain: brain created for $COMPANY  ·  committed"
 else
   echo "gtm-brain: brain created for $COMPANY  ·  written to disk, NOT committed (git is read-only here): say save"
