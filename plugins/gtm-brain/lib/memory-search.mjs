@@ -172,7 +172,7 @@ export function parseQuestion(question, names, { now = nowDate() } = {}) {
     terms.push(w);
   });
   for (const q of quoted) terms.push(fold(q));
-  // Getting ready for a call with someone known ("I have a call with Surfer tomorrow, brief me"): the day of the
+  // Getting ready for a call with someone known ("I have a call with Acme tomorrow, brief me"): the day of the
   // call is when the answer is needed, not which notes to read. Their newest notes are the brief, so neither the
   // day nor the words "call" and "meeting" narrow them (app run, 2026-11-16: one note came back out of twelve).
   // The asking itself is no search word either: "get ready", "help me prepare", "I need a briefing".

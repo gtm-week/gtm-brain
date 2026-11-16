@@ -551,10 +551,10 @@ test("a cited note is evidence only for a relationship it names; customer status
 test("a call the person tells about is saved in one call: names as participants, a date as observed_at, a sentence as source", () => {
   const b = brain();
   // the shape Codex sent in the app (16 Nov): three refusals before, one save now
-  const entry = { context: "company", content: "Kasia Nowak, Tidio's new Head of Partnerships, said she wants Tidio to sponsor the Berlin workshop. The budget is around EUR 5,000, and Tidio expects to decide by the end of November 2026.",
-    people: ["Kasia Nowak"], companies: ["Tidio"], new_names: ["Kasia Nowak", "Tidio"], sources: ["User's firsthand account of the call with Kasia Nowak on 2026-11-16"],
-    meeting: { basis: "user", capture: "partial", evidence: "recollection", observed_at: "2026-11-16", occurred_at: "2026-11-16", occurrence: "happened", participants: ["Kasia Nowak"], reference: { account: "user", kind: "user", ref: "2026-11-16 call with Kasia Nowak from Tidio" }, title: "Call with Kasia Nowak from Tidio" } };
-  b.say("Just had a call with Kasia Nowak from Tidio, save what came of it.");
+  const entry = { context: "company", content: "Kasia Nowak, Northfold's new Head of Partnerships, said she wants Northfold to sponsor the Berlin workshop. The budget is around EUR 5,000, and Northfold expects to decide by the end of November 2026.",
+    people: ["Kasia Nowak"], companies: ["Northfold"], new_names: ["Kasia Nowak", "Northfold"], sources: ["User's firsthand account of the call with Kasia Nowak on 2026-11-16"],
+    meeting: { basis: "user", capture: "partial", evidence: "recollection", observed_at: "2026-11-16", occurred_at: "2026-11-16", occurrence: "happened", participants: ["Kasia Nowak"], reference: { account: "user", kind: "user", ref: "2026-11-16 call with Kasia Nowak from Northfold" }, title: "Call with Kasia Nowak from Northfold" } };
+  b.say("Just had a call with Kasia Nowak from Northfold, save what came of it.");
   const r = b.batch([entry]);
   assert.equal(r.status, 0, r.stderr + r.stdout);
   assert.match(r.stdout, /left out of sources: "User's firsthand account[^\n]*This chat is the note's source/, "the reply says which source was left out");
@@ -565,11 +565,11 @@ test("a call the person tells about is saved in one call: names as participants,
   assert.ok(!rec.source.some(s => /firsthand/.test(s.ref || "")), "a sentence is not kept as a source");
   assert.ok(rec.source.some(s => s.kind === "user"), "the person's word is the source");
   // a planned call from a calendar keeps its names as invited, never attended
-  const planned = b.batch([{ context: "company", content: "Planning call with Tidio on 20 November 2026 about the booth.", sources: ["google-calendar:evt-9"], meeting: { basis: "source", capture: "complete", evidence: "calendar", observed_at: "2026-11-16T09:00:00Z", occurred_at: null, scheduled_at: "2026-11-20", occurrence: "planned", participants: ["Kasia Nowak"], reference: { account: "artur@week.test", kind: "google-calendar", ref: "evt-9" }, title: "Tidio booth planning" } }]);
+  const planned = b.batch([{ context: "company", content: "Planning call with Northfold on 20 November 2026 about the booth.", sources: ["google-calendar:evt-9"], meeting: { basis: "source", capture: "complete", evidence: "calendar", observed_at: "2026-11-16T09:00:00Z", occurred_at: null, scheduled_at: "2026-11-20", occurrence: "planned", participants: ["Kasia Nowak"], reference: { account: "artur@week.test", kind: "google-calendar", ref: "evt-9" }, title: "Northfold booth planning" } }]);
   assert.equal(planned.status, 0, planned.stderr + planned.stdout);
-  assert.deepEqual(b.live().find(m => /Planning call with Tidio/.test(m.content)).meeting.participants, [{ name: "Kasia Nowak", role: "invited" }]);
+  assert.deepEqual(b.live().find(m => /Planning call with Northfold/.test(m.content)).meeting.participants, [{ name: "Kasia Nowak", role: "invited" }]);
   // a recorder's list of names is not attendance evidence: a bare name from a source is mentioned, in a chat and in a run
-  const recorded = { context: "company", content: "Tidio asked for a second booth at the Berlin workshop.", sources: ["granola:note-7"], meeting: { basis: "source", capture: "complete", evidence: "summary", observed_at: "2026-11-16T09:00:00Z", occurred_at: "2026-11-15", occurrence: "happened", participants: ["Kasia Nowak", { name: "Ola Testowa", role: "attended" }], reference: { account: "artur@week.test", kind: "granola", ref: "note-7" }, title: "Tidio booth call" } };
+  const recorded = { context: "company", content: "Northfold asked for a second booth at the Berlin workshop.", sources: ["granola:note-7"], meeting: { basis: "source", capture: "complete", evidence: "summary", observed_at: "2026-11-16T09:00:00Z", occurred_at: "2026-11-15", occurrence: "happened", participants: ["Kasia Nowak", { name: "Ola Testowa", role: "attended" }], reference: { account: "artur@week.test", kind: "granola", ref: "note-7" }, title: "Northfold booth call" } };
   const rs = b.batch([recorded]);
   assert.equal(rs.status, 0, rs.stderr + rs.stdout);
   assert.deepEqual(b.live().find(m => /second booth/.test(m.content)).meeting.participants, [{ name: "Kasia Nowak", role: "mentioned" }, { name: "Ola Testowa", role: "attended" }]);
@@ -607,18 +607,18 @@ test("only a plain sentence is left out of sources, only in a chat, and the repl
 test("the person corrects a call they told about: one call, the conversation's record kept", () => {
   const b = brain();
   const meeting = { basis: "user", capture: "partial", evidence: "recollection", observed_at: "2026-11-16", occurred_at: "2026-11-16", occurrence: "happened", participants: ["Kasia Nowak"], reference: { account: "user", kind: "user", ref: "2026-11-16 call with Kasia Nowak" }, title: "Call with Kasia Nowak" };
-  b.say("Actually the Tidio budget Kasia Nowak mentioned is around EUR 8,000.");
-  assert.equal(b.batch([{ context: "company", content: "Kasia Nowak of Tidio said the sponsorship budget is around EUR 5,000.", people: ["Kasia Nowak"], companies: ["Tidio"], new_names: ["Kasia Nowak", "Tidio"], meeting }]).status, 0);
+  b.say("Actually the Northfold budget Kasia Nowak mentioned is around EUR 8,000.");
+  assert.equal(b.batch([{ context: "company", content: "Kasia Nowak of Northfold said the sponsorship budget is around EUR 5,000.", people: ["Kasia Nowak"], companies: ["Northfold"], new_names: ["Kasia Nowak", "Northfold"], meeting }]).status, 0);
   const old = b.live().find(m => /5,000/.test(m.content));
-  const fix = b.batch([{ context: "company", content: "Kasia Nowak of Tidio said the sponsorship budget is around EUR 8,000.", people: ["Kasia Nowak"], companies: ["Tidio"], sources: ["User's correction of the budget in this chat"], supersedes: old.id }]);
+  const fix = b.batch([{ context: "company", content: "Kasia Nowak of Northfold said the sponsorship budget is around EUR 8,000.", people: ["Kasia Nowak"], companies: ["Northfold"], sources: ["User's correction of the budget in this chat"], supersedes: old.id }]);
   assert.equal(fix.status, 0, fix.stderr + fix.stdout);
-  const now = b.live().filter(m => /Kasia Nowak of Tidio/.test(m.content));
+  const now = b.live().filter(m => /Kasia Nowak of Northfold/.test(m.content));
   assert.equal(now.length, 1); assert.match(now[0].content, /8,000/); assert.equal(now[0].meeting.title, "Call with Kasia Nowak");
   // a correction that cites an outside record is a source refresh: refused, and what the person said stays live
-  const mail = b.batch([{ context: "company", content: "Kasia Nowak of Tidio said the sponsorship budget is around EUR 3,000.", people: ["Kasia Nowak"], companies: ["Tidio"], sources: ["gmail:msg-55"], supersedes: now[0].id }]);
+  const mail = b.batch([{ context: "company", content: "Kasia Nowak of Northfold said the sponsorship budget is around EUR 3,000.", people: ["Kasia Nowak"], companies: ["Northfold"], sources: ["gmail:msg-55"], supersedes: now[0].id }]);
   assert.notEqual(mail.status, 0, mail.stdout);
   assert.match(mail.stdout + mail.stderr, /Source refresh cannot replace user meeting evidence/);
-  const after = b.live().filter(m => /Kasia Nowak of Tidio/.test(m.content));
+  const after = b.live().filter(m => /Kasia Nowak of Northfold/.test(m.content));
   assert.equal(after.length, 1); assert.equal(after[0].id, now[0].id);
 });
 
