@@ -598,7 +598,12 @@ export function suggestMerges(names) {
     if ((a.not || []).some(x => exactName([b], x)) || (b.not || []).some(x => exactName([a], x))) continue;
     const A = [a.name, ...a.aliases], B = [b.name, ...b.aliases];
     const letters = A.some(x => B.some(y => nameLetters(x) === nameLetters(y)));
-    const shared = a.kind === "person" ? A.some(x => { const l = last(x); return l && B.some(y => last(y) === l); }) : A.some(x => words(x).some(w => B.some(y => words(y).includes(w))));
+    // A shared word suggests one company under two names (Acme, Acme Ltd). It says nothing for the kinds whose
+    // names are built from common words and a date or a number: two meetings, two events, two tools or two
+    // offerings are the same only when their names are (the Overview listed 43 such pairs on a demo brain,
+    // every one of them two different meetings or events; 2026-11-16).
+    const shared = a.kind === "person" ? A.some(x => { const l = last(x); return l && B.some(y => last(y) === l); })
+      : a.kind === "organization" ? A.some(x => words(x).some(w => B.some(y => words(y).includes(w)))) : false;
     if (letters || shared) { seen.add(k); out.push({ a: a.name, b: b.name, kind: a.kind }); }
   }
   return out;

@@ -12,12 +12,13 @@
 //          named mailbox, workspace or portal; in a batch file the object is given as it is
 //        [--supersedes m_xxxxxx] [--retracts m_xxxxxx] [--tags "synthetic"]
 //        [--new "Pierre Dupont"]  names the person confirmed as new, when one looked like a known name
+//        [--events "Northfold Summit | 2026-11-20, Acme Meetup"]  events the note names; a date registers a new one
 //
 // A whole turn's notes, from a file:
 //   node remember.mjs <root> --by <handle> --batch <path to json>
 //        The json is a list of entries (or {"memories": [...]}), each with the same fields as the
 //        flags above: content, kind, context, people, companies, tools, sources, actions,
-//        supersedes, retracts, tags, new_names.
+//        supersedes, retracts, tags, new_names, events (a name, or {name, date}).
 //
 // Every memory written gets its own commit, so git history stays one commit per memory. What is
 // batched is the work around them: one pass over the names, one dashboard render, one kick of the
@@ -33,6 +34,22 @@ const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const dots = await import(new URL("../../lib/dots.mjs", import.meta.url));
 const checks = await import(new URL("../../lib/note-checks.mjs", import.meta.url));
 const ourRules = await import(new URL("../../lib/our-rules.mjs", import.meta.url));   // RULES.md Our rules tagged check (S4)
+const { readSchema, fieldsFor } = await import(new URL("../../lib/schema.mjs", import.meta.url));
+// Events (rule E1): a note names the events it is about in `events`, each a name or {name, date}. A known event
+// (name or alias) is linked; one not known yet is registered as an event entity only when the save gives the
+// date SCHEMA.md requires, and otherwise the note is saved all the same and one line says what is missing. A real
+// brain had 23 notes naming events and no event entity (2026-11-16): a save had no way to carry one.
+const EVENT_DATE = /^\d{4}-\d{2}(-\d{2})?$/;
+const realDate = d => EVENT_DATE.test(d) && !Number.isNaN(Date.parse(d.length === 7 ? `${d}-01` : d)) && (d.length === 7 || new Date(d).toISOString().slice(0, 10) === d);
+const eventItems = v => (Array.isArray(v) ? v : typeof v === "string" ? v.split(",") : []).map(x => {
+  if (x && typeof x === "object" && !Array.isArray(x)) return { name: String(x.name ?? x.title ?? "").trim(), date: String(x.date ?? "").trim() };
+  const t = String(x ?? "").trim(), m = t.match(/^(.+?)[\s|;:@(\[]+(\d{4}-\d{2}(?:-\d{2})?)[)\]]?$/);   // "Northfold Summit | 2026-11-20"
+  return m ? { name: m[1].trim(), date: m[2] } : { name: t, date: "" };
+}).filter((x, i, all) => x.name && !/[\r\n]/.test(x.name) && all.findIndex(y => fold(y.name) === fold(x.name)) === i);
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+// does the note's own text already say this date ("2026-11-20", "20 November", "Nov 20th")? Then it is the evidence.
+const saysDate = (content, date) => { const text = String(content).toLowerCase(), [, mo, day] = date.split("-");
+  return text.includes(date) || (!!day && new RegExp(`\\b${MONTHS[+mo - 1]}`).test(text) && new RegExp(`\\b0?${+day}(st|nd|rd|th)?\\b`).test(text)); };
 // One-word names held under P3, so a later new_names for the same word is the person's answer, not a guess.
 const ASKED_DAYS = 7, askedFile = () => join(root, "work", "asked-names.json"), fold = n => String(n).trim().toLowerCase();
 const readAsked = () => { try { return JSON.parse(readFileSync(askedFile(), "utf8")); } catch { return {}; } };
@@ -61,7 +78,7 @@ if (opt.batch) {
   if (!entries) die("--batch json must be a list of memories, or {\"memories\": [...]}");
   if (!entries.length) die("--batch json has no memories");
 } else {
-  entries = [{ content: opt.content, kind: opt.kind, context: opt.context, people: opt.people, companies: opt.companies, tools: opt.tools, sources: opt.source, actions: opt.action, supersedes: opt.supersedes, retracts: opt.retracts, tags: opt.tags, new_names: opt.new, via: opt.via }];
+  entries = [{ content: opt.content, kind: opt.kind, context: opt.context, people: opt.people, companies: opt.companies, events: opt.events, tools: opt.tools, sources: opt.source, actions: opt.action, supersedes: opt.supersedes, retracts: opt.retracts, tags: opt.tags, new_names: opt.new, via: opt.via }];
 }
 
 if (args.includes("--project") && (opt.project === undefined || opt.project === "")) die("--project needs a value", 2);
@@ -383,6 +400,9 @@ for (let i = 0; i < entries.length; i++) {
   }
 
   const companies = list(e.companies);
+  // an event also sent under people is the event, never a new person
+  const events = eventItems(e.events);
+  if (events.length && e.people) e.people = list(e.people).filter(p => !events.some(ev => fold(ev.name) === fold(p)));
   let customerName;
   if (e.customer) {
     try { customerName = lib.customerIdentity(root, e.customer); }
@@ -513,6 +533,23 @@ for (let i = 0; i < entries.length; i++) {
   // outcomes of one conversation in one call: the first one written is the meeting, the others link to it
   // (an outcome carries meeting_id and no meeting block of its own: with the block it would read as a revision of the meeting, not an outcome of it)
   if (e.meeting && !e.meeting_id && anchors.has(meetingSourceKey(e.meeting.reference))) { e.meeting_id = anchors.get(meetingSourceKey(e.meeting.reference)); delete e.meeting; }
+  // Events are settled last, when nothing can hold the note any more: link the known ones, register a new one that
+  // comes with its date, and say in one line what a new one without a date still needs. Never a hold.
+  const eventLines = [], eventDates = [];
+  if (events.length) {
+    const reg = lib.readNames(root), sch = readSchema(root).schema;
+    const needsDate = !sch || fieldsFor(sch, "event").some(f => f.name === "date" && f.required);
+    for (const ev of events) {
+      const known = lib.exactName(reg, ev.name), entry = known && reg.find(x => x.name === known);
+      if (entry) { if (!people.includes(known)) people.push(known);
+        if (entry.kind !== "event") eventLines.push(`"${ev.name}" is a known ${entry.kind}: linked as that, not registered as an event.`);
+        continue; }
+      const date = realDate(ev.date) ? ev.date : "";
+      if (needsDate && !date) { eventLines.push(`event "${ev.name}" not registered: ${ev.date ? `"${ev.date}" is not a date (YYYY-MM-DD)` : "its date is missing"}. The note is saved; do not save it again or ask now. When the date is said, send events [{name: "${ev.name}", date}] with that note.`); continue; }
+      try { lib.addName(root, ev.name, { kind: "event" }); people.push(ev.name); added.push(ev.name); if (date) eventDates.push({ name: ev.name, date }); }
+      catch (err) { eventLines.push(`event "${ev.name}" not registered: ${err.message}. The note is saved.`); }
+    }
+  }
   let rec, warnings, alreadyRecorded;
   try {
     ({ rec, warnings, alreadyRecorded } = lib.appendMemory(root, ctx, {
@@ -527,7 +564,16 @@ for (let i = 0; i < entries.length; i++) {
       ...(relation ? { relation } : {}),
     }));
   } catch (err) { failed.push({ n, why: err.message }); lines.push(`${at(n)}not remembered: ${err.message}`); continue; }
-  if (alreadyRecorded) { kept.push({ n, id: rec.id, ctx }); lines.push(`${at(n)}already recorded ${rec.id} in ${ctx}`); continue; }
+  for (const l of eventLines) lines.push(`${at(n)}${l}`);
+  // the date a new event was registered with is kept as a note of its own when the note's text does not say it:
+  // an entity's fields are cited from notes (SCHEMA.md), so a date held only in the call would be lost
+  for (const ev of eventDates) if (!saysDate(rec.content, ev.date)) { try {
+    const { rec: d } = lib.appendMemory(root, ctx, { authors, via: e.via || opt.via || "codex", kind: "note", tools: [], people: [ev.name], content: `${ev.name}: date ${ev.date}.`, source: rec.source, actions: [], supersedes: null, retracts: null, tags: ["event-date", ...rec.tags.filter(t => t.startsWith("project:"))] });
+    ev.note = d.id; } catch (err) { lines.push(`${at(n)}the date of "${ev.name}" was not kept (${err.message}): say it in a note.`); } }
+  if (alreadyRecorded) {
+    // an event this call registered is kept even when the note itself was already there
+    if (eventDates.length || events.some(ev => added.includes(ev.name))) { try { lib.commit(root, [`brain/contexts/${ctx}/memories.jsonl`, ...lib.ENTITIES_PATHS], `remember: ${ctx} event by ${authors.join(",")}`); } catch {} }
+    kept.push({ n, id: rec.id, ctx }); lines.push(`${at(n)}already recorded ${rec.id} in ${ctx}`); continue; }
   // one current link at a time where SCHEMA.md says so: the previous one gets an ended note dated to this one
   let endedBefore = [];
   if (rec.relation) { try { endedBefore = lib.endPreviousRelations(root, ctx, rec); } catch (err) { endedBefore = []; lines.push(`${at(n)}warning: the earlier ${rec.relation.type} was not ended (${err.message})`); } }
@@ -561,7 +607,8 @@ for (let i = 0; i < entries.length; i++) {
   const names = lib.readNames(root);
   for (const a of added) {
     const kind = names.find(x => x.name === a)?.kind || "person";
-    lines.push(`${at(n)}new ${kind} in entities/: ${a}.${kind === "person" ? " If it is not a person, set its kind with add_name (organization, product; company/team are organization subtypes)." : ""}`);
+    const ev = kind === "event" && eventDates.find(x => x.name === a);
+    lines.push(`${at(n)}new ${kind} in entities/: ${a}${ev ? ` (${ev.date}${ev.note ? `, kept as ${ev.note}` : ""})` : ""}.${kind === "person" ? " If it is not a person, set its kind with add_name (organization, product; company/team are organization subtypes)." : kind === "event" ? " Registered once: later notes name it in events and link to it." : ""}`);
   }
   if (where.one) lines.push(`${at(n)}tagged project:${where.one}: ${known.join(", ")}'s notes are all in that project. Say so in your reply; if this note is not about it, remember a correction.`);
   if (where.several.length) asks.push(`which project is "${shown.slice(0, 60)}" about: ${where.several.join(" or ")}, or none? (then remember a correction with the project tag)`);
@@ -582,8 +629,8 @@ for (let i = 0; i < entries.length; i++) {
     if (before.length) lines.push(`${at(n)}the brain last said about ${p}: ${before.map(m => `"${m.content.replace(/\s+/g, " ").slice(0, 100)}" (${m.at.slice(0, 10)})`).join("; ")}. If this note changes one of these, say what changed in one line.`);
   }
   for (const inf of inferred) lines.push(`${at(n)}took "${inf.mention}" as ${inf.name} (rule P2: the one known person with that first name). If it is someone else, say so: remember again with new_names ["${inf.mention}"].`);
-  const missed = answering ? [] : lib.candidateEntities(e.content, people, names).filter(x => !notPeople.some(c => fold(c) === fold(x)));   // an answer's words are the question's, already settled
-  if (missed.length) lines.push(`${at(n)}words in this note not linked to anything in the brain: ${missed.map(x => `"${x}"`).join(", ")}. Only one that is a person, company or product the note is about gets add_name with its kind (company and team are organization subtypes; ask only when it is not plain); a place, event, project, code or plain word needs nothing, and no read is needed to decide.`);
+  const missed = answering ? [] : lib.candidateEntities(e.content, people, names).filter(x => !notPeople.some(c => fold(c) === fold(x)) && !events.some(ev => fold(ev.name) === fold(x)));   // an answer's words are the question's, already settled
+  if (missed.length) lines.push(`${at(n)}words in this note not linked to anything in the brain: ${missed.map(x => `"${x}"`).join(", ")}. Only one that is a person, company or product the note is about gets add_name with its kind (company and team are organization subtypes; ask only when it is not plain); an event we run, sponsor, speak at or attend goes in events with its date (E1); a place, project, code or plain word needs nothing, and no read is needed to decide.`);
   // The last step outcome closes onboarding in the same commit: no separate marker to forget.
   const closed = /^Onboarding step [1-6][ :]/.test(rec.content) ? lib.closeOnboardingFromOutcomes(root, rec.authors) : null;
   const closedIn = closed && lib.readOnboarding(root).context;
