@@ -235,7 +235,10 @@ export async function generate({ shape = "small", out, seed = 1, gold: goldPath 
   // meetings
   const meetingEvents = [];
   for (let i = 0; i < cfg.meetings; i++) {
-    const c = i === 0 && hub ? hub : pick(customerSet), staff = [...jobs].filter(([, j]) => j.org === c).map(([p]) => p).slice(0, int(1, 3));
+    // the first meeting always has someone from the customer in it: the page and the checks open that meeting's
+    // attendee, and a shifted random sequence (a relation type added to the schema) once left every meeting without one
+    const manned = x => [...jobs].some(([, j]) => j.org === x);
+    const c = i === 0 ? (hub && manned(hub) ? hub : customerSet.find(manned) || hub || pick(customerSet)) : pick(customerSet), staff = [...jobs].filter(([, j]) => j.org === c).map(([p]) => p).slice(0, int(1, 3));
     const f = 0.1 + rnd() * 0.88, occurred = timeAt(f), title = `${pick(["Discovery call", "QBR", "Pilot review", "Pricing walkthrough", "Security review"])} with ${c.name}`;
     const ref = `https://meetings.fixture.test/recordings/${i + 1}?account=work`;
     const participants = [{ name: "Marta Nowak", role: "attended" }, ...staff.map(p => ({ name: p.name, role: "attended" }))];
