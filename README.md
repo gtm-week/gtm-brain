@@ -243,6 +243,8 @@ dashboard timing (`dashboard: always` or `on-demand`), the save reminder (`save_
 workflows on or off (`workflows: off`) and where big files go (`big_files: google-drive` or
 `local`). A change is shown first and applies only when you click APPROVE.
 
+![The Configuration tab: the company, the base documents with their state, and the rules and schema beside them](diagrams/screenshots/dashboard-configuration.png)
+
 ### Entities
 
 One page per person, organization, product, offering, event, tool or meeting, at
@@ -262,6 +264,8 @@ and a cited brief built from them.
 Each kind's folder has a generated `index.md`: never edit it. A page's own Markdown may be
 edited by hand; say "save" afterwards. Renames, merges and kind changes are shown under History
 on the page. Detail: [How a brain works: Saving](plugins/gtm-brain/MANUAL.md#saving-what-you-say-what-it-keeps).
+
+![The Entities tab with a company opened: its relation to us, its details, the people who work there, what it uses and its history](diagrams/screenshots/dashboard-entity.png)
 
 ### Memories
 
@@ -300,6 +304,8 @@ A memory is a note: one dated line in a topic's `memories.jsonl`, never edited a
 Detail: [Contexts](plugins/gtm-brain/MANUAL.md#contexts) ·
 [Summaries](plugins/gtm-brain/MANUAL.md#summaries) ·
 [Chat capture](plugins/gtm-brain/MANUAL.md#chat-capture).
+
+![The Memories tab: notes on a timeline with their kind, topic and sources, filtered by type or searched](diagrams/screenshots/dashboard-memories.png)
 
 ### Workflows
 
@@ -340,6 +346,8 @@ writes: ["tool:email"]
   `workflows: off` in the settings stops them all.
 
 Detail: [WORKFLOWS.md](WORKFLOWS.md).
+
+![The Workflows tab: each workflow with whether it is on, how it starts and where its runs stand](diagrams/screenshots/dashboard-workflows.png)
 
 ### Skills, projects and interactions
 
@@ -487,7 +495,7 @@ of the shipped app, not mockups. No customer or private workspace data is shown.
 
 ![The Overview tab: what is coming up and what to tidy, each with a link that prepares the work in Codex](diagrams/screenshots/dashboard-overview.png)
 
-![The Entities tab with a company opened: its relation to us, its details, the people who work there, what it uses and its history](diagrams/screenshots/dashboard-entity.png)
+The other four tabs are shown with the part of the brain they belong to: [Configuration](#configuration), [Entities](#entities), [Memories](#memories) and [Workflows](#workflows).
 
 ## How GTM Brain works
 
