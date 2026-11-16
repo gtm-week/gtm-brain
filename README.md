@@ -24,16 +24,17 @@ It installs as the **`gtm-brain` plugin**. Open source under [MIT](LICENSE).
 
 ## The dashboard
 
-The dashboard makes the agent's working knowledge inspectable: contexts, source-backed memories,
-people and companies, decisions, open questions and workflow progress. Work happens in chat;
-the dashboard is a read-only view of the same files.
+The dashboard shows what the brain holds, from the same files Codex reads: what needs you and
+what to tidy, the people and companies with their relationships and history, the notes with
+their sources, the workflows, and the configuration. Most work happens in chat; documents,
+entities and notes can also be edited here.
 
 **Actual GTM Brain dashboard, populated with fictional demo data.** These are captures
 of the shipped app, not mockups. No customer or private workspace data is shown.
 
-![GTM Brain dashboard showing the shared contexts and their summaries](diagrams/screenshots/dashboard-contexts.png)
+![The Overview tab: what is coming up and what to tidy, each with a link that prepares the work in Codex](diagrams/screenshots/dashboard-overview.png)
 
-![A context with its summary, evidence and related people and companies](diagrams/screenshots/context-evidence.png)
+![The Entities tab with a company opened: its relation to us, its details, the people who work there, what it uses and its history](diagrams/screenshots/dashboard-entity.png)
 
 ## Start here
 
