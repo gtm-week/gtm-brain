@@ -352,3 +352,34 @@ test("a teammate's computer after the owner's move: its work/ goes into .gtm-bra
   mkdirSync(join(root, "work")); writeFileSync(join(root, "work", "plan.md"), "ours\n");
   assert.equal(adoptWork(root), 0); assert.ok(existsSync(join(root, "work", "plan.md")));
 });
+
+test("going back is a revert of the move's two commits; every count is the starting one, and the move runs again afterwards", { skip }, t => {
+  const { root, git, upgrade } = makeBrain(t, { layout: 3 });
+  fill(root, git);
+  const before = snapshot(root);
+  assert.match(upgrade("--confirm").stdout, /changed the brain's file layout to 4/);
+  const log = git("log", "--format=%H %s").split("\n");
+  assert.match(log[0], / layout 4: entity pages link to memories\/$/);
+  assert.match(log[1], / layout 4: configuration\/, entities\/, memories\/ and workflows\/$/);
+  // the way back the manual gives: both commits reverted, newest first
+  git("-c", "commit.gpgsign=false", "revert", "--no-edit", log[0].split(" ")[0]);
+  git("-c", "commit.gpgsign=false", "revert", "--no-edit", log[1].split(" ")[0]);
+  assert.equal(lib.diskLayout(root), 3);
+  const back = snapshot(root);
+  assert.deepEqual(back.ids, before.ids); assert.deepEqual(back.records, before.records); assert.deepEqual(back.effective, before.effective);
+  assert.deepEqual(back.entities, before.entities); assert.deepEqual(back.contexts, before.contexts); assert.deepEqual(back.search, before.search);
+  // every file git holds is as it was in the commit before the move (the upgrade's own refresh of rules and hook stays)
+  assert.equal(git("diff", "--name-only", log[2].split(" ")[0], "HEAD").trim(), "");
+  // what the revert leaves: this computer's .gtm-brain/ and the empty kind folders of entities/. Neither stops the next move.
+  assert.ok(existsSync(join(root, ".gtm-brain", "upgrades")));
+  assert.equal(tabsMovePlan(root).blocked, "");
+  const extra = lib.appendMemory(root, "company", { authors: by, people: [], content: "A note saved after going back." }).rec;
+  assert.equal(lib.save(root, "a note at layout 3").ok, true);
+  assert.match(upgrade("--confirm").stdout, /changed the brain's file layout to 4/);
+  assert.equal(lib.diskLayout(root), 4);
+  const again = snapshot(root);
+  assert.deepEqual(again.ids, [...before.ids, extra.id].sort());
+  assert.deepEqual(again.entities, before.entities);
+  assert.ok(!existsSync(join(root, "entities", "entities")), "the pages are in entities/, not a folder deeper");
+  assert.equal(readdirSync(join(root, ".gtm-brain/upgrades")).filter(n => n.startsWith("layout-4-")).length, 2, "the first move's copy is kept beside the second's");
+});

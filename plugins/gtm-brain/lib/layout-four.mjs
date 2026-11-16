@@ -28,6 +28,9 @@ import { rulesInFolders, rulesInTabs } from "./where.mjs";
 import * as P from "./brain-paths.mjs";
 
 const isDir = p => { try { return statSync(p).isDirectory(); } catch { return false; } };
+/* A folder that holds no file at any depth (only empty folders, or nothing). */
+const noFiles = p => isDir(p) && readdirSync(p, { withFileTypes: true }).every(e => e.isDirectory() && noFiles(join(p, e.name)));
+const EMPTY_OK = [P.CONFIGURATION_DIR, P.ENTITIES_DIR4, P.NOTES_DIR];
 const TEMPLATES = fileURLToPath(new URL("../templates/", import.meta.url));
 /* Rebuilt from the files after the move, never carried over: the search index (its version changed), the rendered
    dashboard, the page cache, the append receipts (keyed by context before, by month now) and what a running
@@ -117,7 +120,9 @@ export function tabsMovePlan(root) {
   const none = { moves: [], notes: 0, months: [], topics: 0, indexes: [], extra: [], blocked: "" };
   if (P.inLayout4(root)) return none;
   // a folder of the team's own already under one of the names: nothing moves until it is renamed
-  const taken = [P.CONFIGURATION_DIR, P.ENTITIES_DIR4, P.NOTES_DIR, P.LAYOUT_FILE4, P.WORK_DIR4].filter(p => existsSync(join(root, p)));
+  // (a folder with no file in it is nobody's: the empty kind folders git leaves behind when the move is reverted;
+  // .gtm-brain/ as a folder is this computer's own from an earlier move, and moveWork joins work/ into it)
+  const taken = [P.CONFIGURATION_DIR, P.ENTITIES_DIR4, P.NOTES_DIR, P.LAYOUT_FILE4, P.WORK_DIR4].filter(p => existsSync(join(root, p)) && !(p === P.WORK_DIR4 ? isDir(join(root, p)) : noFiles(join(root, p))));
   if (taken.length) return { ...none, blocked: `${taken.join(", ")} already ${taken.length === 1 ? "exists" : "exist"} at the top of the brain; rename ${taken.length === 1 ? "it" : "them"} first` };
   const moves = [], add = (from, to) => { if (existsSync(join(root, from))) moves.push([from, to]); };
   add(P.CONFIG_DIR, P.CONFIGURATION_DIR);
@@ -168,6 +173,8 @@ export function migrateToTabs(root, { commit = !process.env.GTM_BRAIN_NO_COMMIT 
   const old = readOldNotes(root), months = monthBuckets(old);
   const idsBefore = new Set(readNames(root).map(e => e.id));
   stopServers(root);
+  const hadWork4 = existsSync(join(root, P.WORK_DIR4));   // kept from an earlier move that was reverted: never removed by the way back
+  for (const p of EMPTY_OK) if (noFiles(join(root, p))) rmSync(join(root, p), { recursive: true, force: true });   // git mv would move into it
 
   // 1. the copy: everything that moves, as it was
   const stamp = new Date().toISOString().replace(/[:.]/g, "-"), backupRel = `upgrades/layout-4-${stamp}`, backup = join(root, "work", backupRel);
@@ -177,7 +184,7 @@ export function migrateToTabs(root, { commit = !process.env.GTM_BRAIN_NO_COMMIT 
   const undo = () => {
     // this computer's folder first: the copy of the old files is inside it
     if (!existsSync(join(root, "work")) && existsSync(join(root, P.WORK_DIR4))) renameSync(join(root, P.WORK_DIR4), join(root, "work"));
-    else if (existsSync(join(root, "work")) && existsSync(join(root, P.WORK_DIR4))) rmSync(join(root, P.WORK_DIR4), { recursive: true, force: true });   // only what a background run wrote there since the move began
+    else if (!hadWork4 && existsSync(join(root, "work")) && existsSync(join(root, P.WORK_DIR4))) rmSync(join(root, P.WORK_DIR4), { recursive: true, force: true });   // only what a background run wrote there since the move began
     if (inGit) { try { git("reset", "-q", "HEAD", "--", ...TOUCHED); } catch {} }
     for (const p of [P.CONFIGURATION_DIR, P.ENTITIES_DIR4, P.NOTES_DIR, P.LAYOUT_FILE4]) rmSync(join(root, p), { recursive: true, force: true });
     for (const p of [...MOVED, ".gitattributes", ".gitignore", ".githooks", "README.md"]) if (existsSync(join(backup, p))) { rmSync(join(root, p), { recursive: true, force: true }); cpSync(join(backup, p), join(root, p), { recursive: true }); }
