@@ -10,7 +10,7 @@ a proposal, a design, a plan), read the matching document in full and follow it,
 folder as much as in the brain's own chat; say in one line which document you followed
 ("Following Tone of voice."). An approved document is a rule; a draft is the best available
 guidance, say so. When two conflict, show the two lines and ask. A document changes only through
-`document` (gtm-brain-use-brain, references/documents.md) after the person confirmed the draft,
+`document` (gtmb-use-brain, references/documents.md) after the person confirmed the draft,
 or by the person's own hand; never record a document's content as memories. A file for a
 document lands beside it (`add-file.mjs --document`), never in `files/`. Without any document,
 offer once to add one (rule 7b).

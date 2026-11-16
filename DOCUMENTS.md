@@ -40,7 +40,7 @@ rules, plus three headings the brain reads and a run state it keeps. See
 ## The one you start with
 
 Every brain has `strategy.md` from setup: a draft document that says it is waiting for the
-strategic intake. Say `run the strategic intake` (`/gtm-brain-strategy`): a 10-15 minute
+strategic intake. Say `run the strategic intake` (`/gtmb-strategy`): a 10-15 minute
 conversation with the founder or the head of sales, growth or GTM fills it in, mapped to
 Playing to Win without ever naming the framework. Decks and notes shared along the way land in
 `strategy/` beside it, and the decisions it surfaces are also notes in the Strategy context.
@@ -55,7 +55,7 @@ to fill now; "Later" is a fine answer. Say `fill in our tone of voice` (or the I
 the design system) at any time: the strategy runs the strategic intake, the ICP the Define ICP
 interview, and voice and design system are drafted from the website and what you drop in the
 chat. Each is filled where it lies, never as a second document. There is no separate documents
-skill since 0.33.10: these requests are part of everyday work (gtm-brain-use-brain).
+skill since 0.33.10: these requests are part of everyday work (gtmb-use-brain).
 
 The design system is a page as well: setup writes `design-system.html` beside
 `design-system.md`, and an upgrade adds it once to a brain that has none (a page already there is

@@ -389,6 +389,6 @@ test("a playbook is a workflow: create writes a new draft that parses, refuses a
   assert.match(refusedBy(root, "--create", "Broken one", "--body", "## Steps\n\n1. no title here", "--by", "marta-nowak").text, /would not parse: missing heading "## Before starting"/);
   assert.ok(!existsSync(join(root, "workflows", "broken-one.md")));
   // the words people use route here, and the rulebook no longer files a playbook as a document
-  assert.match(readFileSync(`${P}/skills/gtm-brain-workflow/SKILL.md`, "utf8"), /"I need a playbook"/);
-  assert.match(wholeRulebook(readFileSync(`${P}/templates/AGENTS.md`, "utf8")), /A playbook\s+is a workflow \(gtm-brain-workflow\)/);
+  assert.match(readFileSync(`${P}/skills/gtmb-workflow/SKILL.md`, "utf8"), /"I need a playbook"/);
+  assert.match(wholeRulebook(readFileSync(`${P}/templates/AGENTS.md`, "utf8")), /A playbook\s+is a workflow \(gtmb-workflow\)/);
 });

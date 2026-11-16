@@ -20,6 +20,8 @@ const parts = [
   // a brain still in an older file layout, for the person who can say yes to the move: offered, never started (lib/upgrade-files.mjs layoutOffer)
   async () => { if (!project) say((await lib("upgrade-files.mjs")).layoutOffer(root)); },
   async () => (await lib("upgrade-files.mjs")).refreshReadme(root, templates),
+  // 0.36: the skills are gtmb-<name>; the brain's own files that still say gtm-brain-<name> are offered for an update (lib/skill-names.mjs)
+  async () => { if (!project) say((await lib("skill-names.mjs")).skillNamesLine(root)); },
   async () => { const w = await lib("where.mjs"); w.ensureRules(root, templates); say(w.whereLine(root)); },
   async () => say((await lib("ask-source.mjs")).askSourceLine(root)),
   async () => { const s = await lib("schema.mjs"); s.ensureSchema(root, templates); say(s.schemaLine(root)); },

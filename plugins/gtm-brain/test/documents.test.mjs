@@ -178,7 +178,7 @@ test("the session hook names the documents every chat, in the brain and in a lin
   document(root, "--create", "--title", "Tone of voice", "--applies-to", "copy, posts", "--body", VOICE, "--folder", "brand");
   assert.match(hook(root), /documents: Tone of voice \[draft\] \(copy, posts\) -> brand\/tone-of-voice\.md  ·  Strategy \[not filled\]/);
   const folder = realpathSync(mkdtempSync(join(tmpdir(), "gtm-brain-doc-folder-")));
-  execFileSync(process.execPath, [`${P}/skills/gtm-brain-project/project.mjs`, ".", "--link", folder, "--slug", "landing", "--contexts", "offer"], { cwd: root, encoding: "utf8", env });
+  execFileSync(process.execPath, [`${P}/skills/gtmb-project/project.mjs`, ".", "--link", folder, "--slug", "landing", "--contexts", "offer"], { cwd: root, encoding: "utf8", env });
   const inProject = hook(root, folder);
   assert.match(inProject, /^PROJECT landing/m);
   assert.ok(inProject.includes(`Tone of voice [draft] (copy, posts) -> ${join(root, "brand", "tone-of-voice.md")}`), inProject);
@@ -217,7 +217,7 @@ test("review: old guidelines are named until the upgrade moves them; a document 
   const line = docs.documentsLine(root);
   assert.match(line, /brain\/guidelines\/tone-of-voice\.md/); assert.match(line, /upgrade/);
   const folder = join(root, "website"); mkdirSync(folder); writeFileSync(join(folder, "brief.md"), "# Brief\n\nx\n");
-  execFileSync(process.execPath, [`${P}/skills/gtm-brain-project/project.mjs`, ".", "--link", folder, "--slug", "website", "--contexts", "offer"], { cwd: root, encoding: "utf8", env });
+  execFileSync(process.execPath, [`${P}/skills/gtmb-project/project.mjs`, ".", "--link", folder, "--slug", "website", "--contexts", "offer"], { cwd: root, encoding: "utf8", env });
   assert.match(refused(root, "--create", "--title", "Brief", "--applies-to", "planning", "--file", "website/brief.md").text, /project/);
   assert.match(refused(root, "--create", "--title", "Brief", "--applies-to", "planning", "--body", "x", "--folder", "website").text, /project/);
   assert.match(refused(root, "--create", "--title", "Admin copy", "--applies-to", "planning", "--file", "brain/admin.md").text, /brain/);

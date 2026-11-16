@@ -76,13 +76,13 @@ test("no instruction demands a status call first or a skill file read to answer 
     assert.doesNotMatch(text, /references\/(context-routing|recall|remember|saving-rules|connect-dots)\.md/, `${name}: a skill read for recall or saving`);
   }
   const s = client(); const { result } = await s.init();
-  assert.doesNotMatch(result.instructions, /start every chat with query \(object status\)|gtm-brain-use-brain\/SKILL\.md/);
+  assert.doesNotMatch(result.instructions, /start every chat with query \(object status\)|gtmb-use-brain\/SKILL\.md/);
   assert.match(result.instructions, /no separate status call/);
   const { result: listed } = await s.rpc("tools/list");
   const query = listed.tools.find(t => t.name === "query");
   assert.doesNotMatch(query.description, /call it first/);
   assert.match(query.description, /no context load, topic load or skill file first/);
-  const useBrain = readFileSync(join(P, "skills/gtm-brain-use-brain/SKILL.md"), "utf8").split("\n---")[0];
+  const useBrain = readFileSync(join(P, "skills/gtmb-use-brain/SKILL.md"), "utf8").split("\n---")[0];
   assert.match(useBrain, /needs no skill file/);
   assert.doesNotMatch(useBrain, /Use during company work/);
 });

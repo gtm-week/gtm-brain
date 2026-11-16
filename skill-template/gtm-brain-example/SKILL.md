@@ -19,7 +19,7 @@ token `APPROVE`.
 ## 1. Reuse what the brain knows
 
 Reuse the session's resolved person, company and offering. Use `query` (status) only if this
-state is missing. Follow [context routing](../gtm-brain-use-brain/references/context-routing.md):
+state is missing. Follow [context routing](../gtmb-use-brain/references/context-routing.md):
 load the context this work belongs to (`load_context`, `mode: add`). Do not create a new context
 for one account or one run. Pass the resolved `brain` and, when the session names one, `project`
 on tools that support it.
@@ -60,7 +60,7 @@ moving a record).
 
 ## 3. Ask, one question at a time
 
-Follow [question handling](../gtm-brain-start/references/questions.md): Codex's question box
+Follow [question handling](../gtmb-start/references/questions.md): Codex's question box
 when the chat has it, otherwise plain chat text with numbered options, and end the turn. Ask
 one focused question at a time and reuse answers already given. No default, timeout or empty
 result is an answer.
@@ -69,9 +69,9 @@ result is an answer.
 
 Pick one home for the output and say it here:
 
-- A document the work must follow: [documents](../gtm-brain-use-brain/references/documents.md), `document`
+- A document the work must follow: [documents](../gtmb-use-brain/references/documents.md), `document`
   with `action: create` or `update`, `status: draft`. Confirm once with the person first.
-- Findings and decisions: the [remember procedure](../gtm-brain-use-brain/references/remember.md),
+- Findings and decisions: the [remember procedure](../gtmb-use-brain/references/remember.md),
   in the loaded context, with sources and the person's exact words.
 - A draft for one piece of work: the project folder, never the brain root.
 

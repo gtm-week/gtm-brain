@@ -10,7 +10,7 @@ if (process.argv.slice(2).some(arg => arg !== "--check")) throw new Error("Usage
 const read = path => readFileSync(new URL(path, root), "utf8");
 const outputs = new Map();
 
-// The question reference (gtm-brain-start/references/questions.md) no longer carries the blocks: every chat already
+// The question reference (gtmb-start/references/questions.md) no longer carries the blocks: every chat already
 // holds them through the brain's AGENTS.md and the session line, so the reference keeps only the tool details.
 for (const path of ["AGENTS.md", "INSTALL.md", "plugins/gtm-brain/templates/AGENTS.md"]) {
   let text = read(path);

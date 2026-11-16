@@ -141,7 +141,7 @@ Each context's summary is rewritten from its notes (the compile):
    chat: Codex writes the summary there, once, from the notes since the last one, and it is kept
    until new notes arrive. Nothing runs after a save (since 0.35.0).
 2. **On a schedule, if you set one up.** A Codex Scheduled task (Codex app, the brain's project,
-   Scheduled tasks, run in the local project, weekly) with the prompt: "Run the gtm-brain-sync
+   Scheduled tasks, run in the local project, weekly) with the prompt: "Run the gtmb-sync
    skill as the scheduled run: compile every context whose summary is behind with by: schedule,
    render the dashboard. Do nothing else."
 
@@ -188,7 +188,7 @@ and offers a new row. Edit the rows to change where things land; GTM Brain never
 Ask "why is this here?" about any file: the answer names the row, the reason, who put it there and
 when. A file that appears without one is named at the next chat start.
 
-Work in your own folders: `/gtm-brain-project` in any Codex project links it to the brain. Notes
+Work in your own folders: `/gtmb-project` in any Codex project links it to the brain. Notes
 made there carry the project's tag, and everything stays searchable from the brain.
 
 ### One brain, many projects
@@ -259,14 +259,14 @@ the header or the schema is fixed. `query workflows` shows each one, its runs an
 |---|---|
 | Company profile, team, tools, settings | say it in chat; Codex shows the change and applies it only when you choose APPROVE |
 | What Codex saves and asks | your own rules under "Our rules" in `RULES.md`, one line each; Codex offers to add one when you correct a save, and yours win over the defaults. Under a rule, Codex proposes a tag line (`> applies to: organization · when: saving customer status · check`) and writes it on your yes: then the rule is shown only for that kind, and a `check` rule refuses a save that breaks it |
-| Where files go | `/gtm-brain-rules`, or edit the rows under "Where things go" in `RULES.md` |
+| Where files go | `/gtmb-rules`, or edit the rows under "Where things go" in `RULES.md` |
 | Which questions go to a live tool, and how old a note may be | edit the rows under "Ask the source" in `RULES.md` (deal stage: CRM, 1 day; meeting times: calendar, always ask) |
-| What the brain keeps (fields, subtypes, relationship types) | `/gtm-brain-schema`, or edit `SCHEMA.md`; a brief's fields are rewritten with its overview, when someone asks about it |
+| What the brain keeps (fields, subtypes, relationship types) | `/gtmb-schema`, or edit `SCHEMA.md`; a brief's fields are rewritten with its overview, when someone asks about it |
 | How Codex works in a context | "change the rule of <context> to ..." |
 | A rule the work must follow (tone of voice, pricing, ICP) | write it as a document: `<name>.md` at the top, then "add <name>.md as a document" |
 | A recurring process with steps | "start the outbound workflow", or describe a new one; see `workflows/` and "Workflows" above |
 | When a workflow starts by itself | its header in `workflows/<name>.md` (trigger: a schedule or a save); "check the workflow", then "switch it on" |
-| A new skill for your team | "make a skill that ..." (gtm-brain-skill) |
+| A new skill for your team | "make a skill that ..." (gtmb-skill) |
 | An action your own tools run (a CRM write) | "propose an interaction for ..."; applied only after APPROVE. When it runs, Codex does it in the tool first and the note is written only after the tool confirms, with the record's link or id; a failed write is noted as a failure |
 | Which tools are connected | "connect my tools" |
 | A person's or company's name, alias, kind | "Chris is Krzysztof Pawlak", "Telli is a company" |
@@ -310,6 +310,52 @@ block such a push only with a push rule (a ruleset that restricts file paths), w
 plan for a private repository. The paths to protect: `about-us/**`, `config/**`,
 `brain/ontology.ossie.json`, and, for brains not yet upgraded, `brain/admin.md`, `RULES.md` and
 `SCHEMA.md`.
+
+## Updating to 0.36: short skill names
+
+Since 0.36 every skill is `/gtmb-<name>`. Until 0.35 it was `/gtm-brain-<name>`. Nothing else is
+renamed: the plugin is still `gtm-brain`, the install commands are the same, the tools Codex
+calls keep their names, and notes, people and companies are untouched.
+
+| Until 0.35 | Since 0.36 |
+|---|---|
+| `/gtm-brain-start` | `/gtmb-start` |
+| `/gtm-brain-configure` | `/gtmb-configure` |
+| `/gtm-brain-rules`, `/gtm-brain-schema` | `/gtmb-rules`, `/gtmb-schema` |
+| `/gtm-brain-strategy`, `/gtm-brain-define-icp`, `/gtm-brain-voice`, `/gtm-brain-design-system` | `/gtmb-strategy`, `/gtmb-define-icp`, `/gtmb-voice`, `/gtmb-design-system` |
+| `/gtm-brain-workflow`, `/gtm-brain-skill`, `/gtm-brain-project` | `/gtmb-workflow`, `/gtmb-skill`, `/gtmb-project` |
+| `/gtm-brain-todo`, `/gtm-brain-sync`, `/gtm-brain-deepdive` | `/gtmb-todo`, `/gtmb-sync`, `/gtmb-deepdive` |
+| `/gtm-brain-<tool>-setup` | `/gtmb-<tool>-setup` |
+| any other `/gtm-brain-<name>` | `/gtmb-<name>` |
+
+### What to do, in order
+
+1. **Update the plugin.** In Codex, say "update GTM Brain". Without Codex:
+   `codex plugin marketplace upgrade gtm-brain`, then `codex plugin add gtm-brain@gtm-brain`.
+2. **Quit and reopen Codex, then start a new chat in the brain folder.** The old skill names are
+   gone from the list; the new ones are there.
+3. **The first reply refreshes the brain's rules by itself** (`AGENTS.md`, and `README.md`,
+   the rules and the schema when nobody edited them), as after every update.
+4. **If the brain's own files still tell people to type the old names**, the first reply ends with
+   one line offering to update them, and names the files: the README, the rules, workflow
+   documents, base documents and the skills made in this brain. On yes, Codex calls
+   `upgrade_brain` with `skill_names: true`, which rewrites `gtm-brain-<name>` to `gtmb-<name>`
+   in those files and commits. On no, nothing changes and the offer returns in the next chat.
+
+### For Codex: what to do when you meet an old name
+
+- The person types `/gtm-brain-<name>` or says "run gtm-brain-<name>": run the `gtmb-<name>` skill
+  and say the new name once. Do not ask which they meant.
+- A document, a rule, a workflow or a note says `gtm-brain-<name>`: read it as `gtmb-<name>`.
+  Notes are never rewritten.
+- A skill the team made itself (`.agents/skills/gtm-brain-<their name>`) keeps its name and keeps
+  working. New ones are named `gtmb-<their name>`.
+- A file under `about-us/` or `config/` is the owner's: for a teammate, `upgrade_brain` leaves
+  those files as they are and says so; the owner's next chat offers the same update.
+- Scripts and folders named `scripts/gtm-brain-*` are the plugin's own and are not renamed.
+- Everyone on a team should update the plugin before the README and rules are rewritten, so
+  nobody is told to type a name their version does not have. A plain sentence ("show my rules",
+  "add a rule") works on every version.
 
 ## Updating to 0.35
 

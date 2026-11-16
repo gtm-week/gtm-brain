@@ -13,7 +13,7 @@ and `search` = the name for its brief. Similarity is never identity confirmation
 results never authorize merging. Facts stay in context memories; never erase identities or
 history. Entity files are editable: preserve handwritten Markdown and propose a minimal repair
 when parsing fails. A confirmed merge needs no procedure. A split or a CRM lookup has one in
-gtm-brain-use-brain's references/entities.md and entity-search.md, read only for that work.
+gtmb-use-brain's references/entities.md and entity-search.md, read only for that work.
 
 **Every company, product, team and person a note names is an entity (rule 2a).** Pass them all
 in `people`, as written; use `add_name` with kind person, organization or product and an

@@ -1,4 +1,0 @@
-interface:
-  display_name: "GTM Brain: Set up Woodpecker"
-  short_description: "Connect Woodpecker and draft a campaign from the brain"
-  default_prompt: "Use $gtm-brain-woodpecker-setup to set up Woodpecker from what the brain already knows."

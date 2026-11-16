@@ -70,12 +70,12 @@ export function ruleFindings(root, shared = {}) {
   // RULES.md Ask the source: a row that cannot be read is left out (the defaults apply when none can), named with its line and fix
   const ask = readAskSource(root);
   for (const p of ask.problems) add("RULES.md Ask the source", "ask", `RULES.md line ${p.line}`, `RULES.md line ${p.line}, Ask the source: ${p.problem}${ask.defaults ? "; until it is fixed, the built-in rows apply" : "; the other rows still apply"}.`, [
-    `Fix it: ${p.proposal} (say /gtm-brain-rules, or edit RULES.md and save)`, `Remove the row (or the whole section, to use the built-in rows)`]);
+    `Fix it: ${p.proposal} (say /gtmb-rules, or edit RULES.md and save)`, `Remove the row (or the whole section, to use the built-in rows)`]);
 
   // SCHEMA.md: a file that cannot be read, then required fields and relationships nobody has said yet. Only briefs
   // compiled under the current schema count: an uncompiled one has not been read for its fields yet.
   const schema = readSchema(root);
-  if (schema.error) add(lib.schemaFile(root), "schema", lib.schemaFile(root), `${lib.schemaFile(root)} cannot be read: ${schema.error.message}`, [`Apply the proposed fix with /gtm-brain-schema`, `Fix it by hand, then save`]);
+  if (schema.error) add(lib.schemaFile(root), "schema", lib.schemaFile(root), `${lib.schemaFile(root)} cannot be read: ${schema.error.message}`, [`Apply the proposed fix with /gtmb-schema`, `Fix it by hand, then save`]);
   if (schema.schema) {
     const contexts = lib.listContexts(root), index = lib.entityEvidenceIndex(names, contexts), gaps = [], words = x => x.replace(/_/g, " ");
     for (const e of names.filter(n => n.status !== "archived" && n._path)) {
@@ -94,7 +94,7 @@ export function ruleFindings(root, shared = {}) {
       add(lib.schemaFile(root), "gap", g.e.name, `${g.e.name} (${g.e.kind}${g.e.subtype ? `, ${g.e.subtype}` : ""}) has no ${[...g.fields.map(words), ...g.rels.map(r => `current ${words(r)}`)].join(", ")}, which SCHEMA.md marks required.`, [
         `Ask "${asks.join(" ")}" and remember the answer${g.rels.length ? " (a relationship with remember's relation block)" : ""}; the brief fills at the next compile`,
         `Does not apply: remember a note saying so, in the person's words`,
-        `Not needed for everyone: make it optional with /gtm-brain-schema`]);
+        `Not needed for everyone: make it optional with /gtmb-schema`]);
     }
     if (gaps.length > 10) add(lib.schemaFile(root), "gap", "more", `${gaps.length - 10} more with required fields missing.`, [`Run the check again after the first ones are answered`]);
   }

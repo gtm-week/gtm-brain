@@ -634,9 +634,9 @@ test("nothing on the dashboard asks a person to update a summary", () => {
 // went on claiming the page never writes, long after every button on it started acting. This holds the
 // restored skill to the three things it exists to promise.
 test("the dashboard procedure is a reference of use-brain, and says what the page actually does", () => {
-  const skill = readFileSync(`${P}/skills/gtm-brain-use-brain/references/dashboard.md`, "utf8");
+  const skill = readFileSync(`${P}/skills/gtmb-use-brain/references/dashboard.md`, "utf8");
   assert.doesNotMatch(skill, /^name: /m, "a reference, not a skill of its own (ALL-204 step 4)");
-  assert.equal(existsSync(`${P}/skills/gtm-brain-use-brain/references/render.md`), false, "one source for the procedure: the old reference is gone, not left to drift");
+  assert.equal(existsSync(`${P}/skills/gtmb-use-brain/references/render.md`), false, "one source for the procedure: the old reference is gone, not left to drift");
 
   // kept between chats: the tab lives in the Codex pane and outlives the turn (ALL-207)
   assert.match(skill, /open_in_codex/, "the dashboard opens in the Codex pane, never Chrome");
@@ -654,14 +654,14 @@ test("the dashboard procedure is a reference of use-brain, and says what the pag
   assert.match(skill, /forget memory m_/, "and the correction that follows, which is a note withdrawn, never a summary rewritten");
 
   const commands = readFileSync(join(P, "..", "..", "COMMANDS.md"), "utf8");
-  assert.match(commands, /^\| `gtm-brain-use-brain` \| GTM Brain: Use the company brain \|/m, "the skill that owns the dashboard procedure is listed in COMMANDS.md (ALL-204 step 4)");
+  assert.match(commands, /^\| `gtmb-use-brain` \| GTM Brain: Use the company brain \|/m, "the skill that owns the dashboard procedure is listed in COMMANDS.md (ALL-204 step 4)");
   const section = commands.slice(commands.indexOf("\n### render\n") + 1).split(/\n### /)[0];
   assert.match(section, /\bRead-only\b/i); assert.match(section, /All changes happen in Codex/);
   assert.match(section, /citation\s+pill/, "and never said how to trace a wrong sentence back to its note");
 });
 
 test("onboarding offers personal Chrome setup for websites, never a dashboard browser choice", () => {
-  const create = readFileSync(`${P}/skills/gtm-brain-start/references/create-brain.md`, "utf8");
+  const create = readFileSync(`${P}/skills/gtmb-start/references/create-brain.md`, "utf8");
   const policy = readFileSync(`${P}/policies/computer-use.md`, "utf8");
   assert.doesNotMatch(create, /Where should the dashboard open|Separate Chrome window/);
   assert.match(create, /Set up your logged-in Chrome for website work/);
@@ -748,7 +748,7 @@ test("questions go to ask_person's form first, then Codex's own box, then plain 
   assert.match(policy, /plain chat text that ends\s+the turn/);
   assert.ok(policy.indexOf("`ask_person`") < policy.indexOf("`request_user_input`") && policy.indexOf("`request_user_input`") < policy.indexOf("plain chat text"), "the form, the host's box, chat text");
   assert.match(policy, /never stands in for APPROVE, an `ask_person` answer\s+included/);
-  for (const file of ["templates/AGENTS.md", "skills/gtm-brain-start/references/questions.md"]) { const t = readFileSync(`${P}/${file}`, "utf8"); assert.ok(t.includes("`ask_person`") && t.indexOf("`ask_person`") < t.indexOf("question box"), `${file}: ask_person first`); }
+  for (const file of ["templates/AGENTS.md", "skills/gtmb-start/references/questions.md"]) { const t = readFileSync(`${P}/${file}`, "utf8"); assert.ok(t.includes("`ask_person`") && t.indexOf("`ask_person`") < t.indexOf("question box"), `${file}: ask_person first`); }
   assert.ok(Buffer.byteLength(readFileSync(`${P}/templates/AGENTS.md`)) < 32768, "the rulebook fits what Codex reads of AGENTS.md");
   assert.match(policy, /`approve_change`/, "APPROVE keeps its own form");
   let found = ""; try { found = execFileSync("grep", ["-rlE", "onboarding_question|configuration_question", `${P}/skills`, `${P}/policies`, `${P}/templates/AGENTS.md`, "--include=*.md"], { encoding: "utf8" }); } catch {}
@@ -759,34 +759,34 @@ test("questions go to ask_person's form first, then Codex's own box, then plain 
 test("sync and resolution end without a next step, a reminder or a to-do; the brain is not the person's to-do system (ALL-208)", () => {
   const template = wholeRulebook(readFileSync(`${P}/templates/AGENTS.md`, "utf8"));
   assert.match(template, /not the person's to-do system/);
-  assert.match(template, /Not after `gtm-brain-sync` or a dashboard resolution/);
-  const sync = readFileSync(`${P}/skills/gtm-brain-sync/SKILL.md`, "utf8");
+  assert.match(template, /Not after `gtmb-sync` or a dashboard resolution/);
+  const sync = readFileSync(`${P}/skills/gtmb-sync/SKILL.md`, "utf8");
   assert.match(sync, /Record what happened, never what should happen next/);
   assert.match(sync, /no next step, no reminder, no to-do/i);
-  const resolution = readFileSync(`${P}/skills/gtm-brain-use-brain/references/dashboard-resolution.md`, "utf8");
+  const resolution = readFileSync(`${P}/skills/gtmb-use-brain/references/dashboard-resolution.md`, "utf8");
   assert.match(resolution, /no reminder \("noted for tomorrow"\), no to-do/i);
-  assert.ok(existsSync(`${P}/skills/gtm-brain-todo/SKILL.md`), "the to-do skill stays, on request");
+  assert.ok(existsSync(`${P}/skills/gtmb-todo/SKILL.md`), "the to-do skill stays, on request");
 });
 
 test("adding a file is one obvious pathway: everyday work through use-brain's files reference, which lands beside the owner, attaches and notes (ALL-205)", () => {
   assert.ok(!existsSync(`${P}/skills/gtm-brain-add-file/SKILL.md`), "add-file is no longer a listed skill; its script path stays");
   assert.ok(existsSync(`${P}/skills/gtm-brain-add-file/add-file.mjs`));
-  const files = readFileSync(`${P}/skills/gtm-brain-use-brain/references/files.md`, "utf8");
+  const files = readFileSync(`${P}/skills/gtmb-use-brain/references/files.md`, "utf8");
   assert.match(files, /add-file\.mjs/); assert.match(files, /--document <ref> \| --entity/); assert.match(files, /remember` with `asset`/); assert.match(files, /kind: "file"/);
   assert.match(files, /never what should happen next/, "learning from a file follows the no to-do rule");
-  assert.match(readFileSync(`${P}/skills/gtm-brain-use-brain/SKILL.md`, "utf8"), /\[files\]\(references\/files\.md\)/);
+  assert.match(readFileSync(`${P}/skills/gtmb-use-brain/SKILL.md`, "utf8"), /\[files\]\(references\/files\.md\)/);
   assert.ok(!existsSync(`${P}/skills/gtm-brain-document`), "documents are part of everyday work, not a skill of their own (2026-11-13)");
-  assert.match(readFileSync(`${P}/skills/gtm-brain-use-brain/SKILL.md`, "utf8"), /\[documents\]\(references\/documents\.md\)/);
+  assert.match(readFileSync(`${P}/skills/gtmb-use-brain/SKILL.md`, "utf8"), /\[documents\]\(references\/documents\.md\)/);
   assert.doesNotMatch(readFileSync(join(P, "..", "..", "COMMANDS.md"), "utf8"), /`gtm-brain-document`/);
   const template = wholeRulebook(readFileSync(`${P}/templates/AGENTS.md`, "utf8"));
-  assert.match(template, /goes through gtm-brain-use-brain's\s+references\/files\.md/); assert.doesNotMatch(template, /gtm-brain-add-file/);
+  assert.match(template, /goes through gtmb-use-brain's\s+references\/files\.md/); assert.doesNotMatch(template, /gtm-brain-add-file/);
 });
 
 test("a summary is written on demand in the chat that asks: the procedure says so and no longer queues the worker (0.35.0, lane S1)", () => {
-  const compile = readFileSync(`${P}/skills/gtm-brain-use-brain/references/compile.md`, "utf8");
+  const compile = readFileSync(`${P}/skills/gtmb-use-brain/references/compile.md`, "utf8");
   assert.match(compile, /^## On demand, in the chat that asks/m); assert.match(compile, /Summary behind: write it now, in this chat/); assert.match(compile, /--release/);
   assert.doesNotMatch(compile, /queue the worker through the shell|A chat never compiles/);
-  const useBrain = readFileSync(`${P}/skills/gtm-brain-use-brain/SKILL.md`, "utf8");
+  const useBrain = readFileSync(`${P}/skills/gtmb-use-brain/SKILL.md`, "utf8");
   assert.doesNotMatch(useBrain, /\| `compile_facts`, `compile_apply` \|/);
   assert.doesNotMatch(useBrain, /\| `entity_facts`, `compile_entity` \|/);
   const template = wholeRulebook(readFileSync(`${P}/templates/AGENTS.md`, "utf8"));
@@ -805,17 +805,17 @@ test("a chat is told one read tool: no skill, policy or template names a retired
 });
 
 test("remember confirms with the note itself, and the schema guidance lives in the references (ALL-209, ALL-204 step 3)", () => {
-  const remember = readFileSync(`${P}/skills/gtm-brain-use-brain/references/remember.md`, "utf8");
+  const remember = readFileSync(`${P}/skills/gtmb-use-brain/references/remember.md`, "utf8");
   assert.match(remember, /quote the note as written/i, "the confirmation is the note, not a list of names");
   assert.match(remember, /do not invent dates/i, "guidance that lived only in the schema moved here");
-  assert.match(readFileSync(`${P}/skills/gtm-brain-use-brain/references/customers.md`, "utf8"), /separate call/);
+  assert.match(readFileSync(`${P}/skills/gtmb-use-brain/references/customers.md`, "utf8"), /separate call/);
   assert.match(readFileSync(`${P}/templates/AGENTS.md`, "utf8"), /note text in\s+quotes with its context/);
 });
 
 test("retired skills live on as references of the eight, and nothing names them as skills any more (ALL-204 step 4)", () => {
-  const refs = { "gtm-brain-project/SKILL.md": /name: gtm-brain-project/, "gtm-brain-project/references/link.md": /./, "gtm-brain-configure/references/connect-tools.md": /read test/i, "gtm-brain-configure/references/update-plugin.md": /update/i,
-    "gtm-brain-todo/references/whats-next.md": /next steps/i, "gtm-brain-todo/references/advisor.md": /health/i, "gtm-brain-sync/references/schedule.md": /daily/i, "gtm-brain-start/references/import.md": /handoff/i,
-    "gtm-brain-use-brain/references/load-context.md": /load/i, "gtm-brain-use-brain/references/create-context.md": /context/i, "gtm-brain-use-brain/references/edit-context.md": /rule|title/i, "gtm-brain-use-brain/references/dashboard.md": /dashboard/i };
+  const refs = { "gtmb-project/SKILL.md": /name: gtmb-project/, "gtmb-project/references/link.md": /./, "gtmb-configure/references/connect-tools.md": /read test/i, "gtmb-configure/references/update-plugin.md": /update/i,
+    "gtmb-todo/references/whats-next.md": /next steps/i, "gtmb-todo/references/advisor.md": /health/i, "gtmb-sync/references/schedule.md": /daily/i, "gtmb-start/references/import.md": /handoff/i,
+    "gtmb-use-brain/references/load-context.md": /load/i, "gtmb-use-brain/references/create-context.md": /context/i, "gtmb-use-brain/references/edit-context.md": /rule|title/i, "gtmb-use-brain/references/dashboard.md": /dashboard/i };
   for (const [file, re] of Object.entries(refs)) assert.match(readFileSync(`${P}/skills/${file}`, "utf8"), re, file);
   for (const gone of ["import", "whats-next", "advisor", "schedule", "new-project", "link-project", "connect-tools", "update-plugin", "load-context", "create-context", "edit-context", "render"]) assert.ok(!existsSync(`${P}/skills/gtm-brain-${gone}/SKILL.md`), `gtm-brain-${gone} is no longer a skill`);
   // a retired name may still appear as a script path (scripts/gtm-brain-render/render.mjs), never as a skill or a slash command
@@ -826,10 +826,10 @@ test("retired skills live on as references of the eight, and nothing names them 
 });
 
 test("Slack replies: optional in onboarding, read live, scope asked once, style learned as a description, nothing stored (2026-10-01)", () => {
-  const ref = readFileSync(`${P}/skills/gtm-brain-todo/references/slack-replies.md`, "utf8");
-  const todo = readFileSync(`${P}/skills/gtm-brain-todo/SKILL.md`, "utf8");
-  const discovery = readFileSync(`${P}/skills/gtm-brain-start/references/discovery.md`, "utf8");
-  const sync = readFileSync(`${P}/skills/gtm-brain-sync/references/source-sync.md`, "utf8");
+  const ref = readFileSync(`${P}/skills/gtmb-todo/references/slack-replies.md`, "utf8");
+  const todo = readFileSync(`${P}/skills/gtmb-todo/SKILL.md`, "utf8");
+  const discovery = readFileSync(`${P}/skills/gtmb-start/references/discovery.md`, "utf8");
+  const sync = readFileSync(`${P}/skills/gtmb-sync/references/source-sync.md`, "utf8");
   assert.match(todo, /\(references\/slack-replies\.md\)/, "todo reaches the procedure");
   assert.match(todo, /what's waiting on me in Slack/);
   // onboarding offers it only when Slack is in sight, never as part of the floor, and a skip sticks

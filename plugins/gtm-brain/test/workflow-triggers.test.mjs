@@ -34,7 +34,7 @@ const run = (root, ...a) => execFileSync(process.execPath, [script, ".", ...a], 
 const refused = (root, ...a) => { try { run(root, ...a); return null; } catch (e) { return String(e.stderr); } };
 const note = (root, content, extra = {}) => lib.appendMemory(root, "company", { authors: ["marta-nowak"], via: "codex", kind: "note", content, source: [{ kind: "user", ref: "marta" }], ...extra }).rec;
 const FOLLOW = (header, steps) => `---\nkind: document\ntype: workflow\ntitle: Account follow-up\napplies_to: [follow-up]\nstatus: draft\n${header}\nby: ""\nupdated: 2026-11-01\ngtm-brain: 0.35.0\n---\n# Account follow-up\n\n## Before starting\n\n## Steps\n\n${steps}\n\n## Learn\n\n- Did the account reply.\n`;
-const GOOD_STEPS = "1. **Draft the follow-up** (tool: email) (skill: gtm-brain-deepdive). Read the account, then write it. Milestone: a note tagged follow-up-drafted.\n2. **Read the reply** (tool: email). Milestone: a note tagged reply-read. Gate: after 3 days.";
+const GOOD_STEPS = "1. **Draft the follow-up** (tool: email) (skill: gtmb-deepdive). Read the account, then write it. Milestone: a note tagged follow-up-drafted.\n2. **Read the reply** (tool: email). Milestone: a note tagged reply-read. Gate: after 3 days.";
 const GOOD_HEADER = 'trigger: note about organization\nreads: ["kind:organization", "tool:email"]\nwrites: ["tool:email"]';
 const put = (root, slug, text) => { mkdirSync(join(root, "workflows"), { recursive: true }); writeFileSync(join(root, "workflows", `${slug}.md`), text); };
 
@@ -59,7 +59,7 @@ test("parsers: triggers, milestones, header items and steps with a skill and a m
   const root = brain(); put(root, "account-follow-up", FOLLOW(GOOD_HEADER, GOOD_STEPS));
   const w = wf.readWorkflow(root, "account-follow-up");
   assert.equal(w.ok, true, JSON.stringify(w.problems)); assert.equal(w.header.declared, true); assert.deepEqual(w.settle, [], "a header lets Before starting be empty");
-  assert.deepEqual([w.steps[0].tool, w.steps[0].skill, w.steps[0].text, w.steps[0].milestone], ["email", "gtm-brain-deepdive", "Read the account, then write it.", { kind: "tag", tag: "follow-up-drafted" }]);
+  assert.deepEqual([w.steps[0].tool, w.steps[0].skill, w.steps[0].text, w.steps[0].milestone], ["email", "gtmb-deepdive", "Read the account, then write it.", { kind: "tag", tag: "follow-up-drafted" }]);
   assert.deepEqual(w.steps[1].gate, { kind: "after", days: 3 }, "the gate after the milestone still parses, and a 0.34 reader takes the last Gate: too");
 });
 
@@ -87,9 +87,9 @@ test("skills declare their needs in metadata; needs compares them with SCHEMA.md
   assert.match(proposal, /link:sponsors: SCHEMA\.md has no relationship sponsors/);
   assert.match(proposal, /kind:deal: SCHEMA\.md has no kind deal/);
   assert.match(proposal, /tool:crm: no crm tool in admin\.md/);
-  assert.match(proposal, /only through \/gtm-brain-schema with the person's yes; nothing was changed/);
+  assert.match(proposal, /only through \/gtmb-schema with the person's yes; nothing was changed/);
   assert.equal(readFileSync(join(root, "SCHEMA.md"), "utf8"), schema, "the schema is never changed by a needs check");
-  assert.match(run(root, "--needs", "gtm-brain-define-icp"), /skill gtm-brain-define-icp/);
+  assert.match(run(root, "--needs", "gtmb-define-icp"), /skill gtmb-define-icp/);
 });
 
 test("the check: header, schema items, named skills, milestones, the same trigger twice, and a dry run that writes nothing", () => {
@@ -111,7 +111,7 @@ test("the check: header, schema items, named skills, milestones, the same trigge
   const good = run(root, "--check", "account-follow-up");
   assert.match(good, /^check account-follow-up: passes/);
   assert.match(good, /dry run \(nothing written\), example: a note about Northwind \(organization\)/);
-  assert.match(good, /would read: kind:organization; tool:email; .*skill gtm-brain-deepdive/);
+  assert.match(good, /would read: kind:organization; tool:email; .*skill gtmb-deepdive/);
   assert.match(good, /would write: a run-start note in company/);
   assert.equal(lib.readMemories(root, "company").length, before, "the dry run wrote nothing");
   run(root, "--activate", "account-follow-up", "--by", "marta");
@@ -138,7 +138,7 @@ test("an event is offered at the chat start in one line, started once on a yes, 
   run(root, "--due", "--by", "session");
   assert.equal(lib.readMemories(root, "company").length, before, "the automatic check offers, it never starts a run");
   const started = run(root, "--start", "account-follow-up", "--event", ev, "--settled", "{}", "--by", "marta");
-  assert.match(started, /^started account-follow-up-\d{4}-\d\d-\d\d-northwind in Our company: step 1 of 2, Draft the follow-up \(skill gtm-brain-deepdive\), due now; done when a note tagged follow-up-drafted\. RULES\.md binds every step/);
+  assert.match(started, /^started account-follow-up-\d{4}-\d\d-\d\d-northwind in Our company: step 1 of 2, Draft the follow-up \(skill gtmb-deepdive\), due now; done when a note tagged follow-up-drafted\. RULES\.md binds every step/);
   const first = lib.readMemories(root, "company").find(x => x.tags.includes("run-start"));
   assert.ok(first.tags.includes(`event:${ev}`) && first.tags.includes(`subject:${id}`)); assert.deepEqual(first.source, [{ kind: "memory", ref: m.id }]);
   assert.doesNotMatch(wf.runsLine(root), /workflow account-follow-up \(/, "taken: no longer offered, on this machine or a teammate's");

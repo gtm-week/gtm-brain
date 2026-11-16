@@ -42,8 +42,8 @@ const evidence = root => {
 };
 export const icpCases = [
   {
-    name: 'skill-define-icp-interview', workflow: 'gtm-brain-define-icp', judge: 'advisory',
-    prompt: '/gtm-brain-define-icp Help define our ICP. We sell returns automation. Cedar Demo is our only customer example; Birch Demo is a desired account, not a customer. I cannot provide a third, even anonymously. Use those two and move beyond examples to the broader company pattern. Ask only the next focused question, then stop this turn. Do not save anything yet.',
+    name: 'skill-define-icp-interview', workflow: 'gtmb-define-icp', judge: 'advisory',
+    prompt: '/gtmb-define-icp Help define our ICP. We sell returns automation. Cedar Demo is our only customer example; Birch Demo is a desired account, not a customer. I cannot provide a third, even anonymously. Use those two and move beyond examples to the broader company pattern. Ask only the next focused question, then stop this turn. Do not save anything yet.',
     calls: interviewRoute,
     responseCheck: text => !/market.validated|validated ICP/i.test(text)
       && !/(?<!not |n't |never )\b(?:saved|created|wrote|updated)\b[^.\n]*\b(?:draft|document|ICP|profile)\b/i.test(text),
@@ -57,8 +57,8 @@ export const icpCases = [
     expect: 'One focused question through the everyday question form about the broader company pattern, not a third example. Reuse offering and identity. No document or memory write, research, CRM change or new context. The two examples retain customer versus desired status. No fabricated third account.',
   },
   {
-    name: 'skill-define-icp-update', workflow: 'gtm-brain-define-icp', judge: 'advisory', answer: 'draft|yes|update', prepare: seedICP,
-    prompt: `/gtm-brain-define-icp Synthesize a revised working ICP from this completed fictional interview. Stop interviewing; all unspecified details remain unknown. Only two examples are available: Cedar Demo is a current customer; Birch Demo is a desired account with no purchase history. No third example is available. Near-term focus is retailers with manual returns reconciliation, 20-200 stores as a hypothesis, and an operations team struggling with refund delays. Company gain: lower reconciliation cost. Operations lead: reduce daily exception backlog, champion observed at Cedar only; CFO: cash predictability KPI, final approval unknown. Do not infer either role universally from the title. No evidence of blockers. Exclude companies without returns; unknown budgets need verification, not exclusion. Large enterprise is future-fit only: missing access, proof and delivery capacity. Awareness differs by persona; we have no stage-conversion evidence and cannot choose a minimum stage yet. Previous vendor use is only a clue. Need now: a refund backlog deadline, to confirm in discovery. Budget: funding and store count are clues, no allocated amount known. Trust: referrals may help; content engagement does not prove trust. Reach: industry operations events are a hypothesis. Use the existing Customer fit document and preserve its prior evidence. Confirm once before replacing its approved version with a draft. Do not record notes or change any external system.`,
+    name: 'skill-define-icp-update', workflow: 'gtmb-define-icp', judge: 'advisory', answer: 'draft|yes|update', prepare: seedICP,
+    prompt: `/gtmb-define-icp Synthesize a revised working ICP from this completed fictional interview. Stop interviewing; all unspecified details remain unknown. Only two examples are available: Cedar Demo is a current customer; Birch Demo is a desired account with no purchase history. No third example is available. Near-term focus is retailers with manual returns reconciliation, 20-200 stores as a hypothesis, and an operations team struggling with refund delays. Company gain: lower reconciliation cost. Operations lead: reduce daily exception backlog, champion observed at Cedar only; CFO: cash predictability KPI, final approval unknown. Do not infer either role universally from the title. No evidence of blockers. Exclude companies without returns; unknown budgets need verification, not exclusion. Large enterprise is future-fit only: missing access, proof and delivery capacity. Awareness differs by persona; we have no stage-conversion evidence and cannot choose a minimum stage yet. Previous vendor use is only a clue. Need now: a refund backlog deadline, to confirm in discovery. Budget: funding and store count are clues, no allocated amount known. Trust: referrals may help; content engagement does not prove trust. Reach: industry operations events are a hypothesis. Use the existing Customer fit document and preserve its prior evidence. Confirm once before replacing its approved version with a draft. Do not record notes or change any external system.`,
     calls: updateRoute,
     responseCheck: text => /customer-fit\.md/.test(text) && /draft/i.test(text) && !/market.validated|validated ICP/i.test(text),
     verify: (root, { before, after }) => {
@@ -89,7 +89,7 @@ const savedAfterConsent = calls => {
     && calls.slice(0, at).some(c => c.tool === 'question' && /Keep as a draft/.test(JSON.stringify(c.arguments || {})));
 };
 export const plainRequestRouted = (calls, text) => savedAfterConsent(calls) && noForms(calls)
-  && (/gtm-brain-define-icp|Define ICP/i.test(text) || interviewAsk(calls.find(c => c.tool === 'question') || {}));
+  && (/gtmb-define-icp|Define ICP/i.test(text) || interviewAsk(calls.find(c => c.tool === 'question') || {}));
 export const writtenICPRoute = calls => calls.filter(isWrite).length === 1
   && calls.some(c => c.tool === 'document' && c.arguments?.action === 'create')
   && !calls.some(interviewAsk) && noForms(calls);
@@ -97,16 +97,16 @@ export function icpRoutingCases() {
   let seen = [];   // the harness evaluates calls before responseCheck in the same case
   return [
     {
-      name: 'icp-plain', workflow: 'gtm-brain-use-brain', judge: 'advisory',
+      name: 'icp-plain', workflow: 'gtmb-use-brain', judge: 'advisory',
       prompt: 'We need to define our ICP. Who should we be targeting?',
       calls: calls => { seen = calls; return savedAfterConsent(calls) && noForms(calls); },
       responseCheck: text => plainRequestRouted(seen, text),
       verify: (root, { before, after }) => JSON.stringify(before) === JSON.stringify(after)
         && listDocuments(root).filter(d => /customer.fit|ideal.customer|icp/i.test(d.title)).length <= 1,
-      expect: 'Offer gtm-brain-define-icp by name once, or start its interview with a question about target companies. No memories; at most one ICP draft, saved only after the Keep as a draft confirmation.',
+      expect: 'Offer gtmb-define-icp by name once, or start its interview with a question about target companies. No memories; at most one ICP draft, saved only after the Keep as a draft confirmation.',
     },
     {
-      name: 'icp-written', workflow: 'gtm-brain-use-brain', judge: 'advisory', answer: 'draft|yes|add',
+      name: 'icp-written', workflow: 'gtmb-use-brain', judge: 'advisory', answer: 'draft|yes|add',
       prompt: 'Add this as our ICP document, as a draft:\n\n# Ideal customer profile\n\nRetailers with 20-200 stores and manual returns reconciliation. Exclude companies without returns.',
       calls: calls => writtenICPRoute(calls),
       verify: (root, { before, after }) => JSON.stringify(before) === JSON.stringify(after)

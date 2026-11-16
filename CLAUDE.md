@@ -127,7 +127,7 @@ work/                                  gitignored: dashboard, loaded set, tools.
 
 `plugins/gtm-brain/policies/questions.md` and `computer-use.md` are the sources for the marked blocks
 (`<!-- generated: <name>; edit plugins/gtm-brain/policies/<name>.md -->`) in `AGENTS.md`, `INSTALL.md`,
-`plugins/gtm-brain/templates/AGENTS.md` and `skills/gtm-brain-start/references/questions.md`. The batch
+`plugins/gtm-brain/templates/AGENTS.md` and `skills/gtmb-start/references/questions.md`. The batch
 memory schema in the ontology is derived from `remember.input_schema.properties` the same way.
 `policies/core.md` (the core rules) fills only the template's first section, and `server/server.mjs`
 reads it into the MCP instructions.

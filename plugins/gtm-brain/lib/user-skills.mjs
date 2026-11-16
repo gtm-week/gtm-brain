@@ -11,7 +11,9 @@ import { gitExcludePath, handleFor, readProjects } from "./brain.mjs";
 import { host, PROJECT_SKILL_DIRS } from "./host.mjs";
 
 export const SKILLS_DIR = ".agents/skills";
-export const PREFIX = "gtm-brain-";
+// Since 0.36 a skill made in a brain is named gtmb-<name>, like the shipped ones; skills made before keep their names.
+export const PREFIX = "gtmb-";
+const ours = id => id.startsWith(PREFIX) || id.startsWith("gtm-brain-") || id.startsWith("gtm-os-");
 export const DESCRIPTION_MAX = 200;
 // The keys Codex's own validator accepts (skill-creator/scripts/quick_validate.py, Codex 0.153).
 export const ALLOWED_FRONTMATTER = ["name", "description", "license", "allowed-tools", "metadata"];
@@ -22,7 +24,7 @@ export const skillsDir = root => join(root, ".agents", "skills");
 export function shippedSkillIds(pluginRoot = PLUGIN) {
   return readdirSync(join(pluginRoot, "skills")).filter(id => existsSync(join(pluginRoot, "skills", id, "SKILL.md"))).sort();
 }
-export function skillId(title) { const s = handleFor(String(title || "")); return s.startsWith(PREFIX) || s.startsWith("gtm-os-") ? s : PREFIX + s; }
+export function skillId(title) { const s = handleFor(String(title || "")); return ours(s) ? s : PREFIX + s; }
 
 /* A skill file's frontmatter: key: value, key: | blocks, and one level of nested map (metadata). */
 export function readSkillFrontmatter(text) {
@@ -41,8 +43,8 @@ const unquote = v => (/^".*"$/.test(v) || /^'.*'$/.test(v)) ? v.slice(1, -1) : v
 const quote = v => JSON.stringify(String(v));
 
 export function validateSkill(root, { id, description, keys = [] }, { pluginRoot = PLUGIN } = {}) {
-  if (!/^gtm-(?:brain|os)-[a-z0-9][a-z0-9-]*$/.test(id || "")) return `the name must be gtm-brain- followed by lowercase letters, digits and hyphens; got ${id || "(nothing)"}`;
-  const shipped = shippedSkillIds(pluginRoot); if (shipped.includes(id.replace(/^gtm-os-/, PREFIX))) return `${id} is a shipped GTM Brain skill; pick another name (taken: ${shipped.join(", ")})`;
+  if (!/^(?:gtmb|gtm-(?:brain|os))-[a-z0-9][a-z0-9-]*$/.test(id || "")) return `the name must be gtmb- followed by lowercase letters, digits and hyphens; got ${id || "(nothing)"}`;
+  const shipped = shippedSkillIds(pluginRoot); if (shipped.includes(id.replace(/^gtm-(?:os|brain)-/, PREFIX))) return `${id} is a shipped GTM Brain skill; pick another name (taken: ${shipped.join(", ")})`;
   if (id.length > 64) return `${id} is longer than 64 characters`;
   const d = String(description || "").trim(); if (!d) return "a description is needed: one English sentence saying what the skill does and when it applies";
   if (d.length > DESCRIPTION_MAX) return `the description is ${d.length} characters; at most ${DESCRIPTION_MAX} (it is what Codex lists in every chat)`;
@@ -67,7 +69,7 @@ export function personalSkillIds(home = process.env.HOME || homedir()) {
 
 export function listUserSkills(root) {
   const dir = skillsDir(root); if (!existsSync(dir)) return [];
-  return readdirSync(dir).filter(id => (id.startsWith(PREFIX) || id.startsWith("gtm-os-")) && existsSync(join(dir, id, "SKILL.md"))).sort().map(id => {
+  return readdirSync(dir).filter(id => ours(id) && existsSync(join(dir, id, "SKILL.md"))).sort().map(id => {
     const { fm, body } = readSkillFrontmatter(readFileSync(join(dir, id, "SKILL.md"), "utf8"));
     const meta = fm.metadata || {};
     const title = meta["short-description"] || (body.match(/^# (?:GTM (?:Brain|OS) skill: )?(.+)$/m) || [])[1] || id.replace(/^gtm-(?:brain|os)-/, "");

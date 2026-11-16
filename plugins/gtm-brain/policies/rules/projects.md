@@ -3,7 +3,7 @@ title: Projects
 words: project projects folder linked link unlink pointer working tag
 attach: link_project unlink_project
 ---
-Work happens in the person's own folders. A folder linked to this brain (`/gtm-brain-project`) is
+Work happens in the person's own folders. A folder linked to this brain (`/gtmb-project`) is
 a **project**: a tag `project:<slug>` on the notes written from there and its own set of open
 contexts, never its own memories or covers. Everything still lands here, in the one brain.
 

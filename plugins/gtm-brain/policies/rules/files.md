@@ -25,10 +25,10 @@ project or row, ask before creating a folder, and offer a new row. After creatin
 moving or deleting files in the brain yourself (a graphic, a brief, `RULES.md`), call `save` once
 when the task is done, so the team gets them. Never put a deliverable in `work/` or a new folder
 at the brain root. Only what is worth keeping from a raw source becomes a document or notes. A
-playbook is a workflow (gtm-brain-workflow): steps that play out over time, started and tracked
+playbook is a workflow (gtmb-workflow): steps that play out over time, started and tracked
 as a run. Why a file is where it is: `query` with object why and `search` = the path.
 
-**Entity attachments.** A file the person hands over goes through gtm-brain-use-brain's
+**Entity attachments.** A file the person hands over goes through gtmb-use-brain's
 references/files.md: it lands beside its owner (a document's files folder, or the entity's own
 folder for a person, company or product; a file with no owner is refused, so ask what it belongs
 to; a project file stays in its project folder), an entity file is attached through `remember`

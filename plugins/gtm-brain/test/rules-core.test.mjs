@@ -95,7 +95,7 @@ test("the server's instructions carry the core once, on either host", async () =
     const text = reply.result.instructions;
     assert.equal(count(text, core), 1, `${host || "codex"}: the core, whole and once`);
     assert.ok(text.indexOf(core) < text.indexOf("Ordinary questions and saving need no skill file"), "before the workflow pointers");
-    assert.doesNotMatch(text, /start every chat with query \(object status\)|gtm-brain-use-brain\/SKILL\.md/, "no status call first, no skill read for recall");
+    assert.doesNotMatch(text, /start every chat with query \(object status\)|gtmb-use-brain\/SKILL\.md/, "no status call first, no skill read for recall");
     assert.match(text, /kept at once/);
     // Claude Code cuts a server's instructions at 2048 characters (MAX_MCP_DESCRIPTION_LENGTH): what must
     // arrive on either host sits before that, the core whole.
@@ -129,7 +129,7 @@ test("the server's instructions carry the core once, on either host", async () =
 
 test("the skills do not send the model to a file before a save, a read or a question", () => {
   const skill = name => readFileSync(join(plugin, "skills", name, "SKILL.md"), "utf8");
-  const use = skill("gtm-brain-use-brain"), todo = skill("gtm-brain-todo");
+  const use = skill("gtmb-use-brain"), todo = skill("gtmb-todo");
   assert.doesNotMatch(use, /Read \[memory recording\]\(references\/remember\.md\) before/);
   assert.doesNotMatch(use, /Before the first question, read/);
   assert.doesNotMatch(use, /recommendations, read\s+\[operational evidence\]/);

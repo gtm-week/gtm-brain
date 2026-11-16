@@ -1,7 +1,7 @@
 # Rules
 
 This brain's own rules. Codex reads them at the start of every chat and follows them over GTM
-Brain's defaults. Edit freely, or say `/gtm-brain-rules` and Codex shows and changes them for
+Brain's defaults. Edit freely, or say `/gtmb-rules` and Codex shows and changes them for
 you: a change applies from the next chat, and GTM Brain never overwrites your edits.
 
 ## Where things go

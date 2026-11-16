@@ -1991,7 +1991,7 @@
             "tool_name": "compile_entity",
             "title": "Compiling an entity brief",
             "returns": "Opaque",
-            "description": "Write an entity brief's overview, once, when a brief read says it is behind and gives as_of (or from entity_facts in a run); cached until new notes arrive. Every claim cites current relevant memory IDs; context perspectives cite only that context. Keep dates, scope, interpretations and disagreements explicit. Does not create facts or rewrite memories. Refuses outdated as_of. Follow the entity compilation procedure in gtm-brain-use-brain.",
+            "description": "Write an entity brief's overview, once, when a brief read says it is behind and gives as_of (or from entity_facts in a run); cached until new notes arrive. Every claim cites current relevant memory IDs; context perspectives cite only that context. Keep dates, scope, interpretations and disagreements explicit. Does not create facts or rewrite memories. Refuses outdated as_of. Follow the entity compilation procedure in gtmb-use-brain.",
             "input_schema": {
               "type": "object",
               "properties": {

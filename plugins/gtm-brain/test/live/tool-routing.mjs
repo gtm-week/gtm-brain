@@ -75,14 +75,14 @@ const cases = [
   ...baseFileCases,
   // mentor-shapes.mjs adds its own cases (a module exporting `cases`) and may hand in a brain to copy
   ...(process.env.GTM_BRAIN_EVAL_CASES ? (await import(resolve(process.env.GTM_BRAIN_EVAL_CASES))).cases : []),
-  { name: 'dashboard-chrome', workflow: 'gtm-brain-use-brain',
+  { name: 'dashboard-chrome', workflow: 'gtmb-use-brain',
     prompt: 'Open the brain dashboard. It is configured to use a separate Chrome window.',
     prepare: root => { const path = join(root, 'brain', 'admin.md'); writeFileSync(path, readFileSync(path, 'utf8').replace('dashboard: always', 'dashboard: always\ndashboard_browser: chrome')); },
     verify: root => existsSync(join(root, 'work', 'home', 'index.html')),
     calls: calls => calls.some(c => c.tool === 'open_dashboard') && !calls.some(c => c.tool === 'computer_use'),
     responseCheck: text => /Codex|127\.0\.0\.1/i.test(text),
     expect: 'The dashboard tool returns a local URL for the Codex pane. The legacy Chrome setting is ignored, with no Computer Use, external browser launch or login.' },
-  { name: 'context-switch', workflow: 'gtm-brain-use-brain',
+  { name: 'context-switch', workflow: 'gtmb-use-brain',
     prompt: 'Switch to Strategy so we can work on our expansion plan.',
     verify: root => JSON.stringify(lib.readLoaded(root)) === JSON.stringify(['strategy']),
     calls: calls => calls.some(c => c.tool === 'load_context' && c.arguments.mode === 'only' && c.arguments.contexts.includes('strategy'))
@@ -97,9 +97,9 @@ const cases = [
     expect: 'Infer Strategy despite Our offer being loaded, record the decision there, and confirm briefly using the displayed name. No classification question, duplicated context or channel terminology.' },
   ...[false, true].map(declined => ({
     name: declined ? "project-create-declined" : "project-create", creation: true,
-    workflow: "gtm-brain-project", answer: declined ? "^Cancel$" : "^Create project$",
+    workflow: "gtmb-project", answer: declined ? "^Cancel$" : "^Create project$",
     responseCheck: text => !/\bchannels?\b/i.test(text),
-    prompt: "Create a new project called Website in this GTM Brain workspace using /gtm-brain-project. Keep it as an empty working folder for now. Do not open an application in this synthetic test.",
+    prompt: "Create a new project called Website in this GTM Brain workspace using /gtmb-project. Keep it as an empty working folder for now. Do not open an application in this synthetic test.",
     verify: root => declined
       ? !existsSync(join(root, "website")) && lib.readProjects(root).length === 0
       : lib.readProjects(root).some(p => p.slug === "website" && p.path === join(root, "website"))
@@ -139,7 +139,7 @@ const cases = [
     calls: calls => calls.some(c => c.tool === 'memory_index' && c.arguments.mode === 'rebuild'),
     expect: 'The local search cache is rebuilt through the maintenance tool, completion is verified, and the saved source memories remain unchanged. No summary compilation, installation or business questions are needed.' },
   { name: "onboarding-return", onboarding: true, answer: "Skip for now|^Skip$", prompt: "I'm back.",
-    responseCheck: text => !/\bchannels?\b/i.test(text) && /skills/i.test(text) && /Admin/i.test(text) && /\/gtm-brain-sync/.test(text),
+    responseCheck: text => !/\bchannels?\b/i.test(text) && /skills/i.test(text) && /Admin/i.test(text) && /\/gtmb-sync/.test(text),
     prepare: (root, by) => {
       const titles = ["Who you are", "Company profile", "Your tools", "What is going on", "Running for you"];
       const outcomes = ["Marta Nowak and Routing Fixture confirmed.", "Company profile approved and applied.", "Marta explicitly skipped all connections for now.", "Snapshot confirmed from supplied notes; one-time summary refresh explicitly declined.", "Marta explicitly skipped automations for now."];
@@ -324,12 +324,12 @@ for (const scenario of selected) {
     const offerLoaded = !!cover(root, "offer");   // a given brain may have no offer context
     if (offerLoaded) run(root, "gtm-brain-load/load.mjs", ["offer", "--only"]);
     let cwd = root;
-    if (scenario.project) { cwd = mkdtempSync(join(tmpdir(), "gtm-routing-folder-")); run(root, "gtm-brain-project/project.mjs", ["--link", cwd, "--slug", "curriculum", "--title", "Curriculum", "--contexts", "icp"]); }
+    if (scenario.project) { cwd = mkdtempSync(join(tmpdir(), "gtm-routing-folder-")); run(root, "gtmb-project/project.mjs", ["--link", cwd, "--slug", "curriculum", "--title", "Curriculum", "--contexts", "icp"]); }
     const allRows = r => lib.listContexts(r).flatMap(c => c.memories);
     const before = allRows(root); const channelsBefore = channels(root);
     writeFileSync(join(artifacts, `${scenario.name}-before.json`), JSON.stringify(before, null, 2));
-    const onboardingContext = scenario.onboarding ? `\n\nSession context from GTM Brain:\n${lib.onboardingInstruction(root)}\nOwning workflow: ${join(plugin, "skills/gtm-brain-start/SKILL.md")}` : "";
-    const header = `This is a synthetic GTM Brain company brain at ${root}. You work for ${lib.readAdmin(root).team[0].name || "Marta Nowak"}, confirmed handle ${by}${scenario.project ? "; this chat is in a linked project folder" : offerLoaded ? "; offer is loaded" : ""}. Use only this synthetic brain and plugin workflow instructions. Do not read real account data, assistant archives or other company files; report out-of-scope steps instead. Use the available application capabilities to complete the request. The plugin build under test is ${plugin}; use its skills/${scenario.workflow || "gtm-brain-use-brain"}/SKILL.md and its referenced procedures for this evaluation.${onboardingContext}`;
+    const onboardingContext = scenario.onboarding ? `\n\nSession context from GTM Brain:\n${lib.onboardingInstruction(root)}\nOwning workflow: ${join(plugin, "skills/gtmb-start/SKILL.md")}` : "";
+    const header = `This is a synthetic GTM Brain company brain at ${root}. You work for ${lib.readAdmin(root).team[0].name || "Marta Nowak"}, confirmed handle ${by}${scenario.project ? "; this chat is in a linked project folder" : offerLoaded ? "; offer is loaded" : ""}. Use only this synthetic brain and plugin workflow instructions. Do not read real account data, assistant archives or other company files; report out-of-scope steps instead. Use the available application capabilities to complete the request. The plugin build under test is ${plugin}; use its skills/${scenario.workflow || "gtmb-use-brain"}/SKILL.md and its referenced procedures for this evaluation.${onboardingContext}`;
     const prompt = `${header}\n\n${scenario.daily ? dailyRefreshPrompt(root, by) : scenario.prompt}`;
     console.log(`Running ${scenario.name} in ${root}`);
     // one codex exec per turn; turn n > 0 writes its prompt, final, events and stderr with a -turn<n+1> suffix

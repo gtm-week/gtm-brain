@@ -36,7 +36,7 @@ try {
  const t=await call('thread/start',{cwd:dir,ephemeral:true,sandbox:'read-only',approvalPolicy:'never',developerInstructions:'Read-only question lifecycle test. Do not use shell, web, files, connectors or other external actions. No real installation or permissions are requested. Treat submitted tool answers as synthetic test data.'});
  const threadId=t.thread.id;
  const settings={model:t.model,developer_instructions:null};
- const instructions=readFileSync(new URL('../../skills/gtm-brain-start/references/questions.md',import.meta.url),'utf8');
+ const instructions=readFileSync(new URL('../../skills/gtmb-start/references/questions.md',import.meta.url),'utf8');
  record('test_mode',{mode});
  await call('turn/start',{threadId,collaborationMode:{mode,settings},input:[{type:'text',text:'Exercise only the language question using this onboarding guidance:\n'+instructions+'\nAsk for language using request_user_input: English (Recommended) first, Polski second. Wait for the answer. After receiving it, report LANGUAGE_SAVED: English and stop. Do not write any files.'}]});
  await until(()=>requests.length||completions.length);

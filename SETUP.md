@@ -28,11 +28,11 @@ needed only if you later choose to share your own private company brain through 
 codex plugin marketplace add gtm-week/gtm-brain   # straight from GitHub (verified)
 codex plugin marketplace upgrade gtm-brain        # refresh an existing marketplace snapshot
 codex plugin add gtm-brain@gtm-brain
-codex plugin list | grep gtm-brain                                      # installed, enabled, 0.35.2
+codex plugin list | grep gtm-brain                                      # installed, enabled, 0.36.0
 ```
 
 The install is a snapshot of the configured branch. In the Codex app, say **"update GTM Brain"**
-to use `gtm-brain-configure`: Codex checks the candidate connector, refreshes the plugin and
+to use `gtmb-configure`: Codex checks the candidate connector, refreshes the plugin and
 verifies the installed connector. Follow the two actions it gives you: quit and reopen Codex,
 then open its prepared chat in the same folder and press Send. If onboarding is unfinished,
 your saved progress and next step carry over; you do not need to type a continuation command. It keeps the
@@ -81,7 +81,7 @@ new chat in Codex on the test folder (restart the app only if old skills linger)
 Set this once in your shell; the scripts below use it:
 
 ```bash
-export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.35.2
+export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.36.0
 ```
 
 In a chat the skills run as GTM Brain tools: you see "Remembering", "Searching the brain",
@@ -95,7 +95,7 @@ mkdir ~/brain-try && cd ~/brain-try
 codex
 ```
 
-In a new Codex chat in the empty project, send `/gtm-brain-start`.
+In a new Codex chat in the empty project, send `/gtmb-start`.
 Setup reuses known answers and asks only for missing information. It creates Our company
 (`company`), Strategy (`strategy`), Market (`market`), Target customers (`icp`), Our offer
 (`offer`) and the creator's personal context. The dashboard and background summaries use
@@ -349,7 +349,7 @@ Compile every context whose summary is behind, render, save the covers, on a sch
 
 **A. Codex app, Scheduled tasks.** In the project, create a scheduled task with this text:
 
-> Run the gtm-brain-sync skill as the scheduled run: compile every context whose summary is behind with by: schedule, render the
+> Run the gtmb-sync skill as the scheduled run: compile every context whose summary is behind with by: schedule, render the
 > dashboard.
 > Do nothing else.
 

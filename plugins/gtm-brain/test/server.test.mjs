@@ -577,7 +577,7 @@ test("propose_interaction writes the proposal after validating it, and refuses a
 });
 
 test("project reaches the five tools that take it, is validated, and remember tags through the server", async () => {
-  execFileSync(process.execPath, [`${P}/skills/gtm-brain-project/project.mjs`, ".", "--link", mkdtempSync(join(tmpdir(), "gtm-brain-srv-proj-")), "--slug", "seo", "--contexts", "icp"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P, GTM_BRAIN_NO_OPEN: "1" } });
+  execFileSync(process.execPath, [`${P}/skills/gtmb-project/project.mjs`, ".", "--link", mkdtempSync(join(tmpdir(), "gtm-brain-srv-proj-")), "--slug", "seo", "--contexts", "icp"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P, GTM_BRAIN_NO_OPEN: "1" } });
   const bad = await rpc("tools/call", { name: "load_context", arguments: { brain: root, contexts: ["icp"], project: "nope" } });
   assert.match(bad.result.content[0].text, /no project nope; projects: seo/); assert.equal(bad.result.isError, true);
   const w = await rpc("tools/call", { name: "where_we_are", arguments: { brain: root, project: "seo" } });

@@ -4,7 +4,7 @@ For experts and tool vendors (Zynt, Surfer, a course lecturer) adding a skill th
 the plugin to every brain. A skill one company keeps for itself is not this: see
 [USER-SKILLS.md](../USER-SKILLS.md), no pull request needed.
 
-`gtm-brain-define-icp` (Chris Pawlak, PR #5) is the worked example. Read it next to this page.
+`gtmb-define-icp` (Chris Pawlak, PR #5) is the worked example. Read it next to this page.
 
 ## What a skill is
 
@@ -73,7 +73,7 @@ For a vendor such as Zynt, the contract between your tool and the brain:
   successful call. A tool used only through its HTTP API is listed once the skill records a read
   test (`mark_tool`) and a note names it in `tools`: connected through its API, or read failed
   when the key expired. Use MCP when your tools are already there; never make the person add MCP
-  only to be listed. `gtm-brain-configure` cannot add your server for them, so put your own connect
+  only to be listed. `gtmb-configure` cannot add your server for them, so put your own connect
   steps in the skill, check your tools are callable first, and when they are not, say so and
   show those steps. After connecting, the person opens a new chat: Codex lists tools at chat start.
 - **The brain keeps pointers, not your data.** A signal or a news item becomes one short note in

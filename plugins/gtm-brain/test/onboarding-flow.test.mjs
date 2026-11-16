@@ -99,7 +99,7 @@ createInterface({ input: process.stdin }).on('line', line => {
 test("onboarding crosses fresh MCP contexts from setup to approved profile, explicit tool skips, snapshot and completion", t => {
   const f = fixture(t);
   const emptyOpening = f.hook();
-  assert.match(emptyOpening, /no company brain yet.*gtm-brain-start/);
+  assert.match(emptyOpening, /no company brain yet.*gtmb-start/);
   assert.match(emptyOpening, /references\/questions\.md/,
     "the empty-folder branch supplies the question policy before its early return");
   for (const name of ["questions", "computer-use"]) {
@@ -236,7 +236,7 @@ test("an older completion stays closed across fresh hooks, MCP readers and the d
   assert.deepEqual(readOnboarding(f.root).steps.map(s => s.n), [1], "an upgrade does not erase already known facts");
   for (const text of [f.call('where_we_are'), f.call('check_environment', { folder: f.root })]) {
     assert.match(text, /Onboarding is completed/);
-    assert.doesNotMatch(text, /ONBOARDING |Resume link:|follow gtm-brain-start now/);
+    assert.doesNotMatch(text, /ONBOARDING |Resume link:|follow gtmb-start now/);
     assert.match(text, /takes precedence over stale onboarding reminders/);
   }
   const data = f.render();
@@ -257,7 +257,7 @@ test('missing active markers keep an established brain out of onboarding in ever
   f.remember('We already use this brain for our customer work.');
   for (const text of [f.hook(), f.call('where_we_are'), f.call('check_environment', { folder: f.root })]) {
     assert.match(text, /No active onboarding request is recorded/);
-    assert.doesNotMatch(text, /ONBOARDING |Resume link:|follow gtm-brain-start now/);
+    assert.doesNotMatch(text, /ONBOARDING |Resume link:|follow gtmb-start now/);
   }
   const data = f.render();
   assert.equal(data.onboarding.status, null, 'do not invent a completion record');
@@ -296,16 +296,16 @@ test("a handoff written by IMPORT.md is announced by the hook until it is gone; 
   const hook = () => f.run("bash", [join(P, "session/session-start.sh")], { input: JSON.stringify({ session_id: "synthetic-handoff", cwd: f.root }), env: { ...f.env, GTM_BRAIN_HOME: home } });
   assert.doesNotMatch(hook(), /HANDOFF/, "nothing to import, nothing said");
   writeFileSync(join(home, ".gtm-brain", "handoff.md"), "---\nexported: 2026-09-07T10:00:00Z\nby: claude-code\nconfirmed: false\n---\n# Company context handoff for GTM Brain\n## Tools observed\n- HubSpot is the CRM (memory)\n");
-  assert.match(hook(), /HANDOFF waiting: .*handoff\.md \(by claude-code, confirmed: false; skill gtm-brain-start\)/);
+  assert.match(hook(), /HANDOFF waiting: .*handoff\.md \(by claude-code, confirmed: false; skill gtmb-start\)/);
   rmSync(join(home, ".gtm-brain", "handoff.md"));
   writeFileSync(join(home, ".gtm-brain", "claude-export.md"), "---\nby: claude\nconfirmed: true\n---\n");
   assert.match(hook(), /HANDOFF waiting: .*claude-export\.md \(by claude, confirmed: true/, "the older file name still counts");
   rmSync(join(home, ".gtm-brain", "claude-export.md")); assert.doesNotMatch(hook(), /HANDOFF/);
   const body = s => s.slice(s.indexOf("> For humans:"));
   assert.equal(body(readFileSync(join(P, "..", "..", "IMPORT.md"), "utf8")), body(readFileSync(join(P, "claude", "gtm-brain-export", "SKILL.md"), "utf8")), "the plugin's export skill is IMPORT.md, so the headless run and the paste sentence do the same");
-  assert.match(readFileSync(join(P, "skills", "gtm-brain-start", "SKILL.md"), "utf8"), /^name: gtm-brain-start$/m);
-  assert.match(readFileSync(join(P, "skills", "gtm-brain-start", "agents", "openai.yaml"), "utf8"), /display_name: "GTM Brain: Start"/);   // the import flow is a reference of start (ALL-204 step 4)
-  assert.match(readFileSync(join(P, "skills", "gtm-brain-start", "references", "import.md"), "utf8"), /Read https:\/\/github\.com\/gtm-week\/gtm-brain\/blob\/main\/IMPORT\.md and follow it/, "onboarding closes with the paste sentence");
+  assert.match(readFileSync(join(P, "skills", "gtmb-start", "SKILL.md"), "utf8"), /^name: gtmb-start$/m);
+  assert.match(readFileSync(join(P, "skills", "gtmb-start", "agents", "openai.yaml"), "utf8"), /display_name: "GTM Brain: Start"/);   // the import flow is a reference of start (ALL-204 step 4)
+  assert.match(readFileSync(join(P, "skills", "gtmb-start", "references", "import.md"), "utf8"), /Read https:\/\/github\.com\/gtm-week\/gtm-brain\/blob\/main\/IMPORT\.md and follow it/, "onboarding closes with the paste sentence");
 });
 
 test("successful empty plugin listing still offers cached email, calendar and CRM candidates", t => {
@@ -387,8 +387,8 @@ test("an empty-folder hook preserves its actual session through same-chat setup 
     env: { ...f.env, CODEX_THREAD_ID: "wrong-inherited-parent" },
     input: JSON.stringify({ session_id: id, cwd: f.root }),
   });
-  assert.match(hook("actual-hook-session-1"), /follow the gtm-brain-start skill/);
-  assert.match(hook("actual-hook-session-2"), /follow the gtm-brain-start skill/, "valid bootstrap metadata keeps the landing folder eligible");
+  assert.match(hook("actual-hook-session-1"), /follow the gtmb-start skill/);
+  assert.match(hook("actual-hook-session-2"), /follow the gtmb-start skill/, "valid bootstrap metadata keeps the landing folder eligible");
   const sessionPath = join(f.root, "work/session.json");
   const captured = readFileSync(sessionPath, "utf8");
   assert.equal(JSON.parse(captured).session_id, "actual-hook-session-2");
@@ -423,7 +423,7 @@ for (const invalid of ["extra-file", "invalid-json", "wrong-cwd", "invalid-id", 
       symlinkSync(join(external, "session.json"), join(work, "session.json"));
     } else writeFileSync(join(work, "session.json"), content);
     if (invalid === "extra-file") writeFileSync(join(work, "notes.txt"), "Personal notes, never adopt.");
-    assert.doesNotMatch(f.hook(), /follow the gtm-brain-start skill/,
+    assert.doesNotMatch(f.hook(), /follow the gtmb-start skill/,
       "unsafe folders receive no setup invitation; the shared question reference may still be supplied");
     assert.equal(readFileSync(join(work, "session.json"), "utf8"), content, "hook leaves rejected metadata untouched");
     const result = f.rpc("tools/call", { name: "setup_brain", arguments: { folder: f.root, company: "Synthetic Example",
@@ -441,7 +441,7 @@ test('setup persists the start flag in git and fresh MCP readers recover the nex
   const initial = readOnboarding(f.root);
   assert.equal(initial.status, 'pending');
   assert.equal(initial.required, true);
-  assert.match(output, /continue gtm-brain-start discovery in this chat/);
+  assert.match(output, /continue gtmb-start discovery in this chat/);
   assert.match(f.run('git', ['show', 'HEAD:brain/contexts/company/memories.jsonl']), /Onboarding: pending v2/);
   seedOnboarding(f.root, 'alex-example');
   assert.equal(readOnboarding(f.root).marker_id, initial.marker_id, 'initialization does not duplicate the marker');
@@ -512,11 +512,11 @@ test('a teammate, linked project or unattended job does not automatically inheri
   const f = fixture(t);
   f.call('setup_brain', { folder: f.root, company: 'Synthetic Example', one_liner: 'Synthetic testing',
     owner: 'Alex Example <alex@example.invalid>', team: 'Robin Example <robin@example.invalid>', dashboard: 'on-demand' });
-  assert.match(onboardingInstruction(f.root), /follow gtm-brain-start now/);
+  assert.match(onboardingInstruction(f.root), /follow gtmb-start now/);
   assert.equal(onboardingInstruction(f.root, { project: 'website' }), '');
   assert.equal(onboardingInstruction(f.root, { unattended: true }), '');
   selectPerson(f.root, 'robin-example');
-  assert.doesNotMatch(onboardingInstruction(f.root), /follow gtm-brain-start now/);
+  assert.doesNotMatch(onboardingInstruction(f.root), /follow gtmb-start now/);
   assert.match(onboardingInstruction(f.root), /do not offer or resume another teammate/);
   assert.equal(readOnboarding(f.root).status, 'pending');
 });

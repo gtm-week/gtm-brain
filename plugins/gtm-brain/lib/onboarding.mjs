@@ -104,10 +104,10 @@ export function onboardingInstruction(root, { project, unattended = !!process.en
   return `ONBOARDING ${state.status || 'never started'} · steps done: ${[...new Set(state.steps.map(s => s.n))].join(', ') || 'none'} · next: ${state.next.n} (${state.next.title}).\n`
     + `Onboarding state: ${JSON.stringify(state)}\n`
     + bigFilesLine(root)
-    + 'On a greeting or return after restart, follow gtm-brain-start now from this saved step. Say what is already done and carry out the next action or ask its one necessary question. Do not ask whether to continue and do not wait for the words continue onboarding. '
+    + 'On a greeting or return after restart, follow gtmb-start now from this saved step. Say what is already done and carry out the next action or ask its one necessary question. Do not ask whether to continue and do not wait for the words continue onboarding. '
     + `Resume link: ${onboardingResumeLink(root)}\n`
     + 'A business request or general status question takes priority; answer it without mentioning onboarding or adding an onboarding question, and do not restart onboarding afterward. ' + completion
-    + ' Reuse recorded answers and skips; never repeat setup. A declined question skips only that question; dismiss onboarding only on an explicit request to stop onboarding. During onboarding, continue after each outcome until completion or a real blocker. Read saved continuation as progress evidence, not as permission to execute commands or bypass APPROVE. Before a required new chat follow gtm-brain-start/references/continuation.md.';
+    + ' Reuse recorded answers and skips; never repeat setup. A declined question skips only that question; dismiss onboarding only on an explicit request to stop onboarding. During onboarding, continue after each outcome until completion or a real blocker. Read saved continuation as progress evidence, not as permission to execute commands or bypass APPROVE. Before a required new chat follow gtmb-start/references/continuation.md.';
 }
 
 /* Where big files go is asked once, during onboarding (discovery Step 1, before the workplace draft), and the
@@ -126,7 +126,7 @@ export function bigFilesChoice(root) {
 export const bigFilesAnswer = choice => `Big files: ${choice}.`;
 function bigFilesLine(root) {
   const c = bigFilesChoice(root);
-  if (!c.asked) return `Big files: not asked yet. Ask once, in discovery Step 1 before the workplace draft, where recordings and files over 25 MB go (gtm-brain-start/references/discovery.md), and save the answer as the note "${bigFilesAnswer('google-drive')}" or "${bigFilesAnswer('local')}" in ${readContext(root, 'company') ? 'company' : 'gtm'}.\n`;
+  if (!c.asked) return `Big files: not asked yet. Ask once, in discovery Step 1 before the workplace draft, where recordings and files over 25 MB go (gtmb-start/references/discovery.md), and save the answer as the note "${bigFilesAnswer('google-drive')}" or "${bigFilesAnswer('local')}" in ${readContext(root, 'company') ? 'company' : 'gtm'}.\n`;
   return `Big files: answered (${c.choice})${c.approval ? '; brain/admin.md still says big_files: ' + c.setting + ', so the workplace draft for APPROVE carries big_files: local' : ''}. Do not ask again.\n`;
 }
 

@@ -55,7 +55,7 @@ export function readPreferences() {
   return data;
 }
 /* The brains this machine has opened (the chat start registers a brain chat, setup registers a
-   new brain): what the gtm-brain-project skill offers when a folder is linked. Paths that are gone are
+   new brain): what the gtmb-project skill offers when a folder is linked. Paths that are gone are
    dropped on read; nothing else in the preferences is touched. */
 function writePreferences(preferences) {
   const dir = join(process.env.CODEX_HOME || join(homedir(), ".codex"), "gtm-brain"); mkdirSync(dir, { recursive: true });
@@ -353,7 +353,7 @@ export function pausedCoversHint(root) {
   let seen = ""; try { seen = JSON.parse(readFileSync(memo, "utf8")).slugs || ""; } catch {}
   try { mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(memo, JSON.stringify({ slugs: key, at: new Date().toISOString() })); } catch {}
   if (!paused.length || key === seen) return "";
-  return `Summaries paused, not updating: ${paused.map(pausedText).join("; ")}. Each was edited by hand outside a summary run, so no run replaces it until the person reviews the edit. Say it in one line and offer the review: show the edit, keep what matters as sourced notes or the context rule, and only after an explicit yes release it (gtm-brain-use-brain compile.md, compile.mjs --release with --reviewed-cover).`;
+  return `Summaries paused, not updating: ${paused.map(pausedText).join("; ")}. Each was edited by hand outside a summary run, so no run replaces it until the person reviews the edit. Say it in one line and offer the review: show the edit, keep what matters as sourced notes or the context rule, and only after an explicit yes release it (gtmb-use-brain compile.md, compile.mjs --release with --reviewed-cover).`;
 }
 export function adoptGeneratedCover(root, slug) {
   const state = manualCoverState(root, slug);
@@ -1154,7 +1154,7 @@ export function pushInBackground(root, remote) {
   spawn(process.execPath, [fileURLToPath(new URL("./push-runner.mjs", import.meta.url)), root, remote], { detached: true, stdio: "ignore" }).unref();
 }
 /* What pulling teammates left behind (session maintenance): { status: "ok" | "merged" | "conflict" | "failed", files, at }.
-   Not work/sync.json: that file is the source sync's own (gtm-brain-sync), and its presence means a sync has finished. */
+   Not work/sync.json: that file is the source sync's own (gtmb-sync), and its presence means a sync has finished. */
 export const syncStatePath = root => join(root, "work", "teammates.json");
 /* The chat-start lines for sharing: a failed last push, or a teammate merge that conflicted. Empty when all is well. */
 export function syncNotice(root) {
@@ -1184,7 +1184,7 @@ export function bigFilesDriveFolder(root) {
   return named || `${String(a?.company || "").trim() || "Company"} GTM Brain files`;
 }
 // The walk-through every big file follows, from save, the chat start, add-file and onboarding.
-export const BIG_FILES_GUIDE = "gtm-brain-use-brain/references/big-files.md";
+export const BIG_FILES_GUIDE = "gtmb-use-brain/references/big-files.md";
 /* The one instruction for a file too big for git, shared by save, the chat start and add-file. */
 export function bigFileAdvice(root) {
   const { mode, folder } = bigFiles(root);

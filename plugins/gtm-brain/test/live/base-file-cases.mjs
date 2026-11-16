@@ -13,7 +13,7 @@ const pricing = root => { try { return readDocument(root, "pricing"); } catch { 
 
 export const baseFileCases = [
   {
-    judge: "advisory", name: "base-file", workflow: "gtm-brain-use-brain",
+    judge: "advisory", name: "base-file", workflow: "gtmb-use-brain",
     prompt: "add pricing as a base file",
     followUps: ["1. Yes, save it."],
     calls: (calls, { turns = [] } = {}) => turns.length === 2 && prepared(turns[0].calls) && !writes(turns[0].calls).length

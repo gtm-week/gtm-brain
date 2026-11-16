@@ -76,7 +76,7 @@ not establish MCP health: keep browser verification separate from connector read
 For an approved website step requiring an existing login, use the person's connected Chrome
 session in the intended profile. The embedded browser has a separate profile and does not
 reuse that login. If Chrome is unavailable, explain the missing connection and follow
-gtm-brain-configure/references/chrome-session.md; never silently switch to the embedded browser
+gtmb-configure/references/chrome-session.md; never silently switch to the embedded browser
 or ask for another login there. If the intended Chrome session itself needs sign-in, let the
 person handle its native prompt. A prior setup choice is not authorization for future website
 reads. The local dashboard needs no login and always belongs in the Codex pane.

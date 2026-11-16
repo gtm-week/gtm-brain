@@ -11,7 +11,7 @@ import { host } from "./host.mjs";
 
 const git = (root, ...a) => { try { return execFileSync("git", ["--no-optional-locks", "-C", root, ...a], { encoding: "utf8", stdio: "pipe" }).trim(); } catch { return ""; } };
 const DAY = 864e5;
-export const SCHEDULE_PROMPT = "Run the gtm-brain-sync skill as the scheduled run: compile every context whose summary is behind with by: schedule, render the dashboard. Do nothing else.";
+export const SCHEDULE_PROMPT = "Run the gtmb-sync skill as the scheduled run: compile every context whose summary is behind with by: schedule, render the dashboard. Do nothing else.";
 
 /* The chat-start line, or "": only when a summary has been behind for more than 2 days (each save starts
    a background compile, so a working brain is never behind that long) and no scheduled run saved anything

@@ -22,7 +22,7 @@ function brain() {
   return root;
 }
 const folder = () => realpathSync(mkdtempSync(join(tmpdir(), "gtm-brain-uskill-folder-")));
-const project = (root, ...args) => execFileSync(process.execPath, [`${P}/skills/gtm-brain-project/project.mjs`, ".", ...args], { cwd: root, encoding: "utf8", env });
+const project = (root, ...args) => execFileSync(process.execPath, [`${P}/skills/gtmb-project/project.mjs`, ".", ...args], { cwd: root, encoding: "utf8", env });
 const skill = (root, ...args) => execFileSync(process.execPath, [`${P}/scripts/gtm-brain-skills/skill.mjs`, ".", ...args], { cwd: root, encoding: "utf8", env });
 const refused = (root, ...args) => { try { skill(root, ...args); return null; } catch (e) { return { code: e.status, text: String(e.stderr || e.stdout) }; } };
 const lastCommit = root => execFileSync("git", ["-C", root, "log", "-1", "--format=%s"], { encoding: "utf8" }).trim();
@@ -38,7 +38,7 @@ test("ids carry the prefix and frontmatter reads blocks and nested maps", () => 
 
 test("validation refuses shipped names, bad ids, long descriptions and unknown keys", () => {
   const root = brain();
-  assert.match(us.validateSkill(root, { id: "gtm-brain-todo", description: "x", keys: ["name", "description"] }), /shipped/);
+  assert.match(us.validateSkill(root, { id: "gtmb-todo", description: "x", keys: ["name", "description"] }), /shipped/);
   assert.match(us.validateSkill(root, { id: "sales", description: "x", keys: ["name", "description"] }), /gtm-brain-/);
   assert.match(us.validateSkill(root, { id: "gtm-brain-a", description: "x".repeat(201), keys: ["name", "description"] }), /201/);
   assert.match(us.validateSkill(root, { id: "gtm-brain-a", description: "x", keys: ["name", "description", "tools"] }), /tools/);
@@ -110,7 +110,7 @@ test("list shows the brain's skills and the shipped ones; remove deletes the fol
   project(root, "--link", external, "--slug", "website");
   skill(root, "--create", "--title", "Weekly update", "--description", "Draft the weekly account update.", "--body", "Draft it.");
   const rows = JSON.parse(skill(root, "--list", "--json"));
-  assert.deepEqual(rows.yours.map(s => s.id), ["gtm-brain-weekly-update"]); assert.ok(rows.plugin.includes("gtm-brain-todo"));
+  assert.deepEqual(rows.yours.map(s => s.id), ["gtm-brain-weekly-update"]); assert.ok(rows.plugin.includes("gtmb-todo"));
   assert.deepEqual(rows.yours[0].projects, ["website"]);
   // three kinds, said as three groups: shipped with the plugin, yours in this brain, Codex's own on this machine
   const home = mkdtempSync(join(tmpdir(), "gtm-brain-skills-home-")); mkdirSync(join(home, ".agents", "skills", "analyze-account-signals"), { recursive: true });
@@ -118,7 +118,7 @@ test("list shows the brain's skills and the shipped ones; remove deletes the fol
   const listed = execFileSync(process.execPath, [`${P}/scripts/gtm-brain-skills/skill.mjs`, ".", "--list"], { cwd: root, encoding: "utf8", env: { ...env, HOME: home } });
   const [shipped, yours, personal] = ["Shipped with GTM Brain", "Yours, in this brain", "Codex's own, on this machine"].map(h => listed.indexOf(h));
   assert.ok(shipped >= 0 && yours > shipped && personal > yours, `three groups in order:\n${listed}`);
-  assert.match(listed.slice(shipped, yours), /updated with the plugin/); assert.match(listed.slice(shipped, yours), /\/gtm-brain-todo/);
+  assert.match(listed.slice(shipped, yours), /updated with the plugin/); assert.match(listed.slice(shipped, yours), /\/gtmb-todo/);
   assert.match(listed.slice(yours, personal), /travel with the brain/); assert.match(listed.slice(yours, personal), /gtm-brain-weekly-update/);
   assert.match(listed.slice(personal), /GTM Brain never sees or updates them/); assert.match(listed.slice(personal), /analyze-account-signals/);
   const withPersonal = JSON.parse(execFileSync(process.execPath, [`${P}/scripts/gtm-brain-skills/skill.mjs`, ".", "--list", "--json"], { cwd: root, encoding: "utf8", env: { ...env, HOME: home } }));

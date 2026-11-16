@@ -43,7 +43,7 @@ export function rulesOffer(root, templates) {
   if (rulesState(root, templates) !== "legacy") return "";
   const { from, reasons } = rulesReasons(root, templates);
   const why = reasons.length ? reasons.join("; ") : "they name tools and habits the plugin has moved on from";
-  return `GTM Brain: this brain's rules (AGENTS.md) are from GTM Brain ${from}. What the newer rules change: ${why}. Offer once, in one line, to refresh the rules (upgrade_brain, gtm-brain-configure), and say why in plain words from that list, the reason that matters most for this person first; it backs the old file up and keeps local edits.`;
+  return `GTM Brain: this brain's rules (AGENTS.md) are from GTM Brain ${from}. What the newer rules change: ${why}. Offer once, in one line, to refresh the rules (upgrade_brain, gtmb-configure), and say why in plain words from that list, the reason that matters most for this person first; it backs the old file up and keeps local edits.`;
 }
 
 /* Session start: rules that are exactly an older shipped version are refreshed here ("why i have to

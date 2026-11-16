@@ -74,7 +74,7 @@ test("remember resolves the ends by the name rules, refuses an unknown type with
   assert.match(remember(root, [entry]), /remembered m_/);
   assert.match(remember(root, [entry]), /already recorded m_/);
   const out = (() => { try { return remember(root, [{ ...entry, content: "Anna owns the deal.", relation: rel("Anna Lee", "owns_deal", "Northwind") }]); } catch (e) { return String(e.stdout) + String(e.stderr); } })();
-  assert.match(out, /owns_deal is not in SCHEMA\.md .*save it as a plain note and offer to add the type with \/gtm-brain-schema/);
+  assert.match(out, /owns_deal is not in SCHEMA\.md .*save it as a plain note and offer to add the type with \/gtmb-schema/);
   assert.equal(lib.relationOverview(root).relations.filter(r => r.type === "reports_to").length, 1);
 });
 

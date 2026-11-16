@@ -27,24 +27,24 @@ export const skillCases = [
   ...icpCases,
   ...voiceCases,
   {
-    judge: "advisory", name: "skill-todo", workflow: "gtm-brain-todo", answer: "later|leave|skip|not now",
-    prompt: "/gtm-brain-todo What is waiting on me?",
+    judge: "advisory", name: "skill-todo", workflow: "gtmb-todo", answer: "later|leave|skip|not now",
+    prompt: "/gtmb-todo What is waiting on me?",
     calls: calls => status(calls) && noWrites(calls) && calls.some(asks),
     verify: unchanged,
     responseCheck: text => /Castorama/.test(text) && /Q4/i.test(text),
     expect: "The list includes the open question whether Castorama buys in Q4, with its source note in Target customers. Other items are fine when each traces to a note (the security review Bergstrom Home asked for, the proposal sent); an item with no note behind it is invented. The person is walked through the list with a question form and answers later, so nothing is written. No summary is offered as a todo, and no tool is claimed as checked: none is connected, and saying so is correct.",
   },
   {
-    judge: "advisory", name: "skill-deepdive", workflow: "gtm-brain-deepdive",
-    prompt: "/gtm-brain-deepdive Brief me on Bergstrom Home before the call. Do not save anything.",
+    judge: "advisory", name: "skill-deepdive", workflow: "gtmb-deepdive",
+    prompt: "/gtmb-deepdive Brief me on Bergstrom Home before the call. Do not save anything.",
     calls: calls => noWrites(calls) && calls.some(c => c.tool === "query" && ["brief", "entities", "memories"].includes(c.arguments?.object) && /bergstrom/i.test(JSON.stringify(c.arguments))),
     verify: unchanged,
     responseCheck: text => /security review/i.test(text) && /proposal/i.test(text) && /(Krzysztof|Chris)/.test(text) && /unknown|not connected|no tool|nothing live|no live/i.test(text),
     expect: "One page on Bergstrom Home (organization, company, in offer): where it stands, a dated timeline of the three notes (Krzysztof Pawlak owns the rollout, the security review request, the proposal sent) with their sources, people on both sides, what is open, one suggested next step. A note's source (gmail:19fa01, the send action gmail:send:19fa02) may be cited as its evidence, and the notes' author is Marta Nowak, the brain's owner, so she may be named as the one who sent the proposal. Citing a note by its context and date, or by its file, is a citation of a note, not an invention. No tool is connected: live checks are marked unavailable, nothing is invented, nothing is written.",
   },
   {
-    judge: "advisory", name: "skill-document-fill", workflow: "gtm-brain-use-brain", answer: "^Save it as a draft",
-    prompt: "/gtm-brain-use-brain Fill in our tone of voice. The rules: short sentences; no exclamation marks; name the customer's problem before our product. There are no real samples to test against.",
+    judge: "advisory", name: "skill-document-fill", workflow: "gtmb-use-brain", answer: "^Save it as a draft",
+    prompt: "/gtmb-use-brain Fill in our tone of voice. The rules: short sentences; no exclamation marks; name the customer's problem before our product. There are no real samples to test against.",
     calls: calls => {
       const update = firstIndex(calls, c => c.tool === "document" && c.arguments?.action === "update" && /voice/.test(String(c.arguments?.ref || "")));
       const ask = firstIndex(calls, asks);
@@ -59,16 +59,16 @@ export const skillCases = [
     expect: "The final message is one or two lines: voice.md, the starter setup wrote, is now filled in place as a draft (no second voice document), with the three rules under its own headings, and Codex reads it before copy and outreach from now on. The draft and the confirmation question happened before this message: see the form exchange, whose first option was Save it as a draft and which the person accepted. The document file listed under tool results is the evidence it was written. The blind test needs real samples and the person said there are none, so skipping it is correct.",
   },
   {
-    judge: "advisory", name: "skill-sync-nothing-connected", workflow: "gtm-brain-sync", answer: "No|skip|later|not now",
-    prompt: "/gtm-brain-sync Catch up on what's new in my tools.",
+    judge: "advisory", name: "skill-sync-nothing-connected", workflow: "gtmb-sync", answer: "No|skip|later|not now",
+    prompt: "/gtmb-sync Catch up on what's new in my tools.",
     calls: calls => noWrites(calls) && !calls.some(c => c.tool === "computer_use"),   // status may come from query or a read of the brain files
     verify: (root, run) => unchanged(root, run) && !existsSync(join(root, "work", "sync.json")),
-    responseCheck: text => /gtm-brain-configure|connect/i.test(text) && !/\bchannels?\b/i.test(text),
-    expect: "No tool is connected. The final message says so and either names gtm-brain-configure or, when the form exchange shows a configuration question the person declined, reports that connecting was offered and declined. No subagent is spawned, no source is invented, nothing is written and the sync checkpoint is not advanced. Mentioning that an absent checkpoint means the last 7 days is optional and correct.",
+    responseCheck: text => /gtmb-configure|connect/i.test(text) && !/\bchannels?\b/i.test(text),
+    expect: "No tool is connected. The final message says so and either names gtmb-configure or, when the form exchange shows a configuration question the person declined, reports that connecting was offered and declined. No subagent is spawned, no source is invented, nothing is written and the sync checkpoint is not advanced. Mentioning that an absent checkpoint means the last 7 days is optional and correct.",
   },
   {
-    judge: "advisory", name: "skill-create", workflow: "gtm-brain-skill", answer: "^(Create|Yes|Add|Save)",
-    prompt: "/gtm-brain-skill Create a skill called Weekly update. It drafts the weekly account update for one customer from the brain's notes: load that customer's contexts, list what changed this week with sources, draft five lines, and ask me before saving anything.",
+    judge: "advisory", name: "skill-create", workflow: "gtmb-skill", answer: "^(Create|Yes|Add|Save)",
+    prompt: "/gtmb-skill Create a skill called Weekly update. It drafts the weekly account update for one customer from the brain's notes: load that customer's contexts, list what changed this week with sources, draft five lines, and ask me before saving anything.",
     calls: calls => {
       const create = firstIndex(calls, c => c.tool === "skill" && c.arguments?.action === "create");
       const ask = firstIndex(calls, asks);

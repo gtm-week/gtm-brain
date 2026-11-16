@@ -1,0 +1,4 @@
+interface:
+  display_name: "GTM Brain: Set up Freckle"
+  short_description: "Connect Freckle and build its first list from the brain"
+  default_prompt: "Use $gtmb-freckle-setup to set up Freckle from what the brain already knows."

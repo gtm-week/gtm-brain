@@ -115,7 +115,7 @@ export async function buildBrain(out, { zyntSignal = true } = {}) {
   const env = { ...process.env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_RUN: "demo" };
   for (const [slug, title] of [["outbound", "Outbound"], ["website", "Website"]]) {
     mkdirSync(join(root, "projects", slug), { recursive: true });
-    execFileSync(process.execPath, [`${P}/skills/gtm-brain-project/project.mjs`, root, "--link", join(root, "projects", slug), "--slug", slug, "--title", title, "--by", by], { cwd: root, env, stdio: "ignore" });
+    execFileSync(process.execPath, [`${P}/skills/gtmb-project/project.mjs`, root, "--link", join(root, "projects", slug), "--slug", slug, "--title", title, "--by", by], { cwd: root, env, stdio: "ignore" });
   }
   lib.save(root, "demo: the workshop story");
   return { root, by };
@@ -359,7 +359,7 @@ async function main() {
     const connected = o.stub ? `Nothing is ever sent or published from this chat: Gmail and Vercel are not connected, and what they returned is told to you. The company data, buying signals and SEO tools are the ${STUB_SERVER} tools in this chat.`
       : o.connectors ? "Nothing is ever sent or published from this chat. Clay, Zynt and Surfer are connected as test fixtures through their MCP tools; Gmail and Vercel are not connected, and what they returned is told to you."
       : "Nothing is ever sent or published from this chat: Clay, Surfer, Gmail and Vercel are not connected, and what they returned is told to you.";
-    const preamble = `This is a synthetic GTM Brain company brain at ${root}, used for a workshop demo. You work for Marta Nowak, confirmed handle ${by}. Use only this synthetic brain and the plugin's workflow instructions; do not read real account data or other company files. ${connected} The plugin build under test is ${pluginPath}; use its skills/gtm-brain-use-brain/SKILL.md and the procedures it references.\n\n`;
+    const preamble = `This is a synthetic GTM Brain company brain at ${root}, used for a workshop demo. You work for Marta Nowak, confirmed handle ${by}. Use only this synthetic brain and the plugin's workflow instructions; do not read real account data or other company files. ${connected} The plugin build under test is ${pluginPath}; use its skills/gtmb-use-brain/SKILL.md and the procedures it references.\n\n`;
     for (const step of steps.filter(s => s.loop === loop)) {
       const fresh = !session || step.fresh, before = { trace: readJSONL(trace).length, ctrace: readJSONL(ctrace).length, stub: readJSONL(stubLog).length, notes: new Set(lib.listContexts(root).flatMap(c => c.memories.map(m => m.id))), files: snapshot(root) };
       const events = join(artifacts, `${step.id}-agent.jsonl`), final = join(artifacts, `${step.id}-final.txt`);
@@ -398,7 +398,7 @@ async function main() {
       const fromBrain = records.filter(r => r.kind === "result" && !r.result?.isError).map(text), fromShell = done.map(e => String(e.item.aggregated_output || ""));
       const context = step.fresh ? [...fromBrain, ...fromShell, ...fromConnectors] : [...seen, ...fromBrain, ...fromShell, ...fromConnectors];
       if (!step.fresh) seen = context;
-      const skill = context.some(t => /^name: gtm-brain-use-brain/m.test(t));   // without it the turn ran on the tool descriptions alone
+      const skill = context.some(t => /^name: gtmb-use-brain/m.test(t));   // without it the turn ran on the tool descriptions alone
       const x = { reply, calls, stub, connector, toolsList, commands, added, files, names, idOf, customers: customerOverview(root).customers, saw: re => context.some(t => re.test(t)), sawBrain: re => fromBrain.some(t => re.test(t)) };
       // a played failure is judged by what Codex told the person and saved, on the steps that call a stub tool
       const check = o.fail ? step.fail && step.fail(o.fail) : step.check;

@@ -1,4 +1,4 @@
-// gtm-brain-surfer-setup (0.35.0): Surfer hosted MCP added on a yes, one brief from the brain on a yes, articles on a second yes, never published
+// gtmb-surfer-setup (0.35.0): Surfer hosted MCP added on a yes, one brief from the brain on a yes, articles on a second yes, never published
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
@@ -6,17 +6,17 @@ import { fileURLToPath } from "node:url";
 import { resolve, dirname, join } from "node:path";
 const P = fileURLToPath(new URL("..", import.meta.url)).replace(/\/$/, "");
 const R = resolve(P, "../..");
-const file = join(P, "skills/gtm-brain-surfer-setup/SKILL.md");
+const file = join(P, "skills/gtmb-surfer-setup/SKILL.md");
 const skill = readFileSync(file, "utf8");
 
 test("the skill follows the shipped-skill template: name, links, openai.yaml, catalog and docs", () => {
-  assert.match(skill, /^---\nname: gtm-brain-surfer-setup\n/);
+  assert.match(skill, /^---\nname: gtmb-surfer-setup\n/);
   for (const [, ref] of skill.matchAll(/\]\(([^)]+\.md)\)/g)) assert.ok(existsSync(resolve(dirname(file), ref)), ref);
-  assert.ok(existsSync(join(P, "skills/gtm-brain-surfer-setup/agents/openai.yaml")));
+  assert.ok(existsSync(join(P, "skills/gtmb-surfer-setup/agents/openai.yaml")));
   const catalog = JSON.parse(readFileSync(join(P, "scripts/gtm-brain-render/skill-catalog.json"), "utf8"));
-  const i = catalog.findIndex(s => s.id === "gtm-brain-surfer-setup");
+  const i = catalog.findIndex(s => s.id === "gtmb-surfer-setup");
   assert.ok(i > 0 && catalog[i].group === "setup" && catalog[i].featured === false);
-  for (const doc of ["README.md", "COMMANDS.md", "ONBOARDING.md"]) assert.match(readFileSync(join(R, doc), "utf8"), /gtm-brain-surfer-setup/, doc);
+  for (const doc of ["README.md", "COMMANDS.md", "ONBOARDING.md"]) assert.match(readFileSync(join(R, doc), "utf8"), /gtmb-surfer-setup/, doc);
 });
 
 test("the hosted MCP is added on a yes and the sign-in stays the person's", () => {

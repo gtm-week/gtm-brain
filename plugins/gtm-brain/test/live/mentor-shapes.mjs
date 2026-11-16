@@ -74,25 +74,25 @@ export function mentorCases({ gold } = {}) {
   const open = g?.questions.slice(0, 8) || [];
   return [
     {
-      name: "mentor-deepdive", workflow: "gtm-brain-deepdive", judge: "advisory",
-      prompt: `/gtm-brain-deepdive Brief me on ${hub?.name || "our most important customer"} before the call. Do not save anything.`,
+      name: "mentor-deepdive", workflow: "gtmb-deepdive", judge: "advisory",
+      prompt: `/gtmb-deepdive Brief me on ${hub?.name || "our most important customer"} before the call. Do not save anything.`,
       calls: calls => noWrites(calls) && reads(calls),
       verify: unchanged,
       responseCheck: text => !hub || (new RegExp(escape(hub.name), "i").test(text) && mentions(text, hub.related.slice(0, 6)) >= Math.ceil(Math.min(6, hub.related.length) / 2)),
       expect: `One page on ${hub?.name || "the company the person means, or one question asking which"}: where it stands, a dated timeline with sources, the people and companies around it${hub ? ` (the brain links it to ${hub.related.slice(0, 6).join(", ")})` : ""}, what is open, one next step. No tool is connected; nothing is invented, nothing is written.`,
     },
     {
-      name: "mentor-todo", workflow: "gtm-brain-todo", judge: "advisory", answer: "later|leave|skip|not now",
-      prompt: "/gtm-brain-todo What is waiting on me?",
+      name: "mentor-todo", workflow: "gtmb-todo", judge: "advisory", answer: "later|leave|skip|not now",
+      prompt: "/gtmb-todo What is waiting on me?",
       calls: calls => noWrites(calls) && reads(calls),
       verify: unchanged,
       responseCheck: text => !open.length || mentions(text, open.map(salient)) >= Math.ceil(open.length / 2),
       expect: `A list of what is waiting, each item traced to a note${open.length ? `; the brain's open questions include: ${open.join(" | ")}` : ""}. The person answers later, so nothing is written.`,
     },
-    interview("gtm-brain-define-icp", "Help define our ICP."),
-    interview("gtm-brain-market-desk-research", "Assess our main market."),
-    interview("gtm-brain-unit-economics", "Is our growth economically healthy?"),
-    interview("gtm-brain-strategy", "Run the strategic intake."),
+    interview("gtmb-define-icp", "Help define our ICP."),
+    interview("gtmb-market-desk-research", "Assess our main market."),
+    interview("gtmb-unit-economics", "Is our growth economically healthy?"),
+    interview("gtmb-strategy", "Run the strategic intake."),
   ];
 }
 

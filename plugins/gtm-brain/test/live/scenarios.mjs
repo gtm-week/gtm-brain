@@ -23,7 +23,7 @@ function fixture() {
   execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "newcto", "--one-liner", "events for revenue teams", "--owner", "Maciej Konczal <maciej@example.com>"], { cwd: root, env: { ...process.env, PLUGIN_ROOT: P }, stdio: "ignore" });
   mkdirSync(join(root, "work"), { recursive: true }); writeFileSync(join(root, "work", "person.json"), JSON.stringify({ handle: by }) + "\n");
   mkdirSync(join(root, "projects", "berlin-event-2026"), { recursive: true }); writeFileSync(join(root, "projects", "berlin-event-2026", "README.md"), "Berlin Event 2026\n");
-  execFileSync(process.execPath, [`${P}/skills/gtm-brain-project/project.mjs`, ".", "--link", join(root, "projects", "berlin-event-2026"), "--slug", "berlin-event-2026", "--title", "Berlin Event 2026"], { cwd: root, env: { ...process.env, GTM_BRAIN_RUN: "scenario" }, stdio: "ignore" });
+  execFileSync(process.execPath, [`${P}/skills/gtmb-project/project.mjs`, ".", "--link", join(root, "projects", "berlin-event-2026"), "--slug", "berlin-event-2026", "--title", "Berlin Event 2026"], { cwd: root, env: { ...process.env, GTM_BRAIN_RUN: "scenario" }, stdio: "ignore" });
   seed(root, "Florian Weber is our keynote speaker at the Berlin event.", "Florian Weber", ["--project", "berlin-event-2026"]);
   seed(root, "Ola Nowak prepares the sponsor deck.", "Ola Nowak");
   seed(root, "Lena Dumos joined the events team.", "Lena Dumos");

@@ -36,7 +36,7 @@ export const toolsFor = (root, category) => CATEGORIES[category] ? declaredTools
 /* ---------- skills and their needs ---------- */
 const PLUGIN_SKILLS = new URL("../skills/", import.meta.url).pathname;
 const skillDirs = root => [join(root, ".agents", "skills"), PLUGIN_SKILLS];
-/* A skill by its name (gtm-brain-define-icp, or define-icp): the brain's own first, then the shipped ones. */
+/* A skill by its name (gtmb-define-icp, or define-icp): the brain's own first, then the shipped ones. */
 export function findSkill(root, name) {
   const n = String(name || "").trim().toLowerCase(); if (!n) return null;
   for (const dir of skillDirs(root)) for (const id of [n, `gtm-brain-${n}`]) {
@@ -88,7 +88,7 @@ export function needsProposal(name, { missing }) {
   if (!missing.length) return `${name}: everything it needs is in SCHEMA.md and admin.md.`;
   const schema = missing.filter(m => !m.tool), tools = missing.filter(m => m.tool);
   return [`${name} needs ${plural(missing.length, "thing")} this brain does not have yet:`, ...missing.map(m => `- ${m.item}: ${m.why}; ${m.fix}`),
-    ...(schema.length ? ["Schema items change only through /gtm-brain-schema with the person's yes; nothing was changed."] : []),
+    ...(schema.length ? ["Schema items change only through /gtmb-schema with the person's yes; nothing was changed."] : []),
     ...(tools.length ? ["A missing tool does not block a step: the person can do it in the tool and report it."] : [])].join("\n");
 }
 
@@ -252,8 +252,8 @@ export function offerLines(root, { contexts = lib.listContexts(root), runs = lis
   if (workflowsOff(root)) return workflows.some(w => w.ok && w.header.status === "active") ? ["workflows are off in this brain (workflows: off in brain/admin.md): nothing is offered or moved; say so only if asked."] : [];
   const lines = [], flagged = workflows.filter(w => effectiveStatus(root, w).flag);
   // one line however many are held: the chat start is read every chat until the header or the schema is fixed
-  if (flagged.length === 1) lines.push(`workflow ${flagged[0].slug} is held: ${effectiveStatus(root, flagged[0]).flag}. Say it once; the fix is the header (or the schema through /gtm-brain-schema), then workflow check.`);
-  else if (flagged.length) lines.push(`${flagged.length} workflows are held because SCHEMA.md changed: ${flagged.slice(0, 10).map(w => w.slug).join(", ")}${flagged.length > 10 ? ` and ${flagged.length - 10} more` : ""}. Say it once; query workflows says what each one lost; the fix is the header (or the schema through /gtm-brain-schema), then workflow check.`);
+  if (flagged.length === 1) lines.push(`workflow ${flagged[0].slug} is held: ${effectiveStatus(root, flagged[0]).flag}. Say it once; the fix is the header (or the schema through /gtmb-schema), then workflow check.`);
+  else if (flagged.length) lines.push(`${flagged.length} workflows are held because SCHEMA.md changed: ${flagged.slice(0, 10).map(w => w.slug).join(", ")}${flagged.length > 10 ? ` and ${flagged.length - 10} more` : ""}. Say it once; query workflows says what each one lost; the fix is the header (or the schema through /gtmb-schema), then workflow check.`);
   const offers = pendingOffers(root, { contexts, runs, now, workflows });
   for (const o of offers.slice(0, LIMITS.offersPerChat)) {
     const ev = o.events[0], more = o.events.length - 1;

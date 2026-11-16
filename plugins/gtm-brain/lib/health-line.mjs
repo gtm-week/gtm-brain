@@ -29,7 +29,7 @@ export function summaryRuns(root) {
   return { good: good?.at || null, error };
 }
 
-/* The source sync's checkpoints (work/sync.json, written by gtm-brain-sync). Since 0.35.0 one per source kind
+/* The source sync's checkpoints (work/sync.json, written by gtmb-sync). Since 0.35.0 one per source kind
    and account, the same {kind, account} as a note's source pointer:
      {"at": "<last run that read every source>", "tools": [...], "sources": {"gmail": {"at": "..."}, "hubspot:12345": {"at": "...", "window_days": 2}}}
    A brain from before has only the global at and tools: each listed tool reads as synced at that time. */
