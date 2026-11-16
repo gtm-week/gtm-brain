@@ -518,7 +518,9 @@ work happens in chat; the page is for reading, plus three kinds of edit.
 **Actual GTM Brain dashboard, populated with fictional demo data.** These are captures
 of the shipped app, not mockups. No customer or private workspace data is shown.
 
-![The Overview tab: what is coming up and what to tidy, each with a link that prepares the work in Codex](docs/images/screenshots/dashboard-overview.png)
+![The Overview tab: what is coming up, then the mentors, each with the document it fills and a link that prepares the work in Codex](docs/images/screenshots/dashboard-overview.png)
+
+![The Help view: every task Codex can take on, mentors first, each with a prepared message and its command](docs/images/screenshots/dashboard-mentors.png)
 
 The other four tabs are shown with the part of the brain they belong to: [Configuration](#configuration), [Entities](#entities), [Memories](#memories) and [Workflows](#workflows).
 
