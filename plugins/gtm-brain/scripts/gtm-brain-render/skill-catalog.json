@@ -166,5 +166,45 @@
     "title": "Set up ZYNT",
     "description": "Paste the prompt ZYNT gives you, and the brain fills ZYNT in from what it already knows.",
     "example": "Set up ZYNT for me."
+  },
+  {
+    "id": "gtm-brain-freckle-setup",
+    "group": "setup",
+    "featured": false,
+    "title": "Set up Freckle",
+    "description": "Connect Freckle and build its first list of target companies and people from what the brain already knows.",
+    "example": "Set up Freckle for me."
+  },
+  {
+    "id": "gtm-brain-clay-setup",
+    "group": "setup",
+    "featured": false,
+    "title": "Set up Clay",
+    "description": "Connect Clay and find the target companies and people the brain already names; enrichment asks first.",
+    "example": "Set up Clay for me."
+  },
+  {
+    "id": "gtm-brain-woodpecker-setup",
+    "group": "setup",
+    "featured": false,
+    "title": "Set up Woodpecker",
+    "description": "Connect Woodpecker, see how your campaigns perform, and save one email sequence written from the brain as a draft.",
+    "example": "Set up Woodpecker for me."
+  },
+  {
+    "id": "gtm-brain-surfer-setup",
+    "group": "setup",
+    "featured": false,
+    "title": "Set up Surfer",
+    "description": "Connect Surfer, get topics from what the brain knows about the market and customers, and brief the first article.",
+    "example": "Set up Surfer for me."
+  },
+  {
+    "id": "gtm-brain-heyreach-setup",
+    "group": "setup",
+    "featured": false,
+    "title": "Set up HeyReach",
+    "description": "Connect HeyReach, see how your LinkedIn campaigns do, and get a connection note and follow-ups written from the brain.",
+    "example": "Set up HeyReach for me."
   }
 ]
