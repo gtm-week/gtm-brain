@@ -121,6 +121,15 @@ if (!authors.length) {
 // the speaker is known from the session: their own name is never an unclear name (s07: "which Artur?" asked of Artur himself)
 const speakers = (lib.readAdmin(root)?.team || []).filter(p => p && authors.includes(p.handle) && p.name).map(p => p.name);
 
+// The person corrects a call they told about ("actually the budget is 8k"): the correction is of that same
+// conversation, so it keeps the conversation's record. Sent without it, the save was refused as a "source refresh"
+// and cost a second call (app run, 2026-11-16).
+if (!process.env.GTM_BRAIN_RUN) { let all = null;
+  for (const e of entries) if (e && e.supersedes && !e.meeting && !e.meeting_id && !e.meeting_capture && !e.meeting_policy && !e.meeting_coverage) {
+    all ||= lib.listContexts(root).flatMap(c => c.memories);
+    const old = all.find(m => m.id === e.supersedes);
+    if (old?.meeting?.basis === "user") e.meeting = { ...old.meeting, observed_at: nowUtc };
+  } }
 // a conversation the person told (meeting basis user) rests on their word: the user source is the author, added
 // when it is missing, so the outcome is not refused for a field the brain already knows
 if (!process.env.GTM_BRAIN_RUN) for (const e of entries) if (e && e.meeting?.basis === "user") {

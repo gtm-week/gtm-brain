@@ -567,3 +567,14 @@ test("a call the person tells about is saved in one call: names as participants,
   assert.equal(planned.status, 0, planned.stderr + planned.stdout);
   assert.deepEqual(b.live().find(m => /Planning call with Tidio/.test(m.content)).meeting.participants, [{ name: "Kasia Nowak", role: "invited" }]);
 });
+
+test("the person corrects a call they told about: one call, the conversation's record kept", () => {
+  const b = brain();
+  const meeting = { basis: "user", capture: "partial", evidence: "recollection", observed_at: "2026-11-16", occurred_at: "2026-11-16", occurrence: "happened", participants: ["Kasia Nowak"], reference: { account: "user", kind: "user", ref: "2026-11-16 call with Kasia Nowak" }, title: "Call with Kasia Nowak" };
+  assert.equal(b.batch([{ context: "company", content: "Kasia Nowak of Tidio said the sponsorship budget is around EUR 5,000.", people: ["Kasia Nowak"], companies: ["Tidio"], new_names: ["Kasia Nowak", "Tidio"], meeting }]).status, 0);
+  const old = b.live().find(m => /5,000/.test(m.content));
+  const fix = b.batch([{ context: "company", content: "Kasia Nowak of Tidio said the sponsorship budget is around EUR 8,000.", people: ["Kasia Nowak"], companies: ["Tidio"], sources: ["User's correction of the budget in this chat"], supersedes: old.id }]);
+  assert.equal(fix.status, 0, fix.stderr + fix.stdout);
+  const now = b.live().filter(m => /Kasia Nowak of Tidio/.test(m.content));
+  assert.equal(now.length, 1); assert.match(now[0].content, /8,000/); assert.equal(now[0].meeting.title, "Call with Kasia Nowak");
+});
