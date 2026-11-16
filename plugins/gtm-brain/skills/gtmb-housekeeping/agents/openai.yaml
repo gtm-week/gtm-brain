@@ -1,0 +1,4 @@
+interface:
+  display_name: "GTM Brain: Housekeeping"
+  short_description: "Tidy names and gaps, one question at a time"
+  default_prompt: "Use $gtmb-housekeeping to go through what the brain could not settle, one item at a time."

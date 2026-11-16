@@ -348,5 +348,9 @@ the report in the chat.
 After the participant accepts the final report, `remember` in the fitting context (Strategy
 when none is named) the confirmed market definition, the final verdict and the assessed segment
 fit, each with the report's path as its source. The open validation questions from section 11
-the participant wants to pursue become open questions (`remember`, kind `question`). Do not record provisional hypotheses or
+the participant wants to pursue become open questions (`remember`, kind `question`). A
+competitor the accepted report names and the participant confirms as one they meet is kept as an
+organization with the `competes_with` relationship to `us`, one note each in the Market context
+([relationships](../gtmb-use-brain/references/relations.md)); the report itself is a document,
+beside `market.md` when the brain has a `market/` folder. Do not record provisional hypotheses or
 unconfirmed interim findings as facts, and write nothing before the report is accepted.

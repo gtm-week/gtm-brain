@@ -17,7 +17,7 @@ a scratch folder outside the checkout.
 plugins/gtm-brain/              everything that ships
   .codex-plugin/plugin.json     the manifest and the version; the Claude Code files are generated from it
   .mcp.json                     how the host starts the MCP server
-  skills/gtmb-*/                the twenty-seven shipped skills, one folder each: SKILL.md and its references/
+  skills/gtmb-*/                the twenty-nine shipped skills, one folder each: SKILL.md and its references/
   server/                       the MCP server (server.mjs) and the dashboard server (dash.mjs, with its
                                 three write routes: entity-edit.mjs, memory-edit.mjs and the document save)
   scripts/gtm-brain-*/          one folder per operation the server runs: remember, load, compile,

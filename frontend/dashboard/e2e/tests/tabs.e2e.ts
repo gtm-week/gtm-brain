@@ -236,14 +236,58 @@ test('Memories is one timeline, newest first; a replaced note shows as replaced;
   await expect(old).toContainText('replaced');
   await expect(old).toContainText(f.correction.new);
   await screen.getByLabel('Show').selectOption('Current notes');
-  // the person filter keeps only the notes about that person
+  // the person filter sits behind More filters and keeps only the notes about that person
   const status = browser.locator('#pm-status');
   const before = await status.textContent();
+  await screen.getByRole('button', 'More filters').tap();
   await screen.getByLabel('Person or company').fill(f.person.name);
   await expect(status).toContainText(`Showing ${f.person.notes.length} of ${f.person.notes.length} notes`);
   await expect(browser.locator('#pm-list article.pl-note .pl-text')).toHaveText(f.person.notes);
   await screen.getByLabel('Person or company').fill('');
   await expect(status).toHaveText(before ?? '');
+});
+
+test('Memories keeps the extra filters behind More filters: closed at first, a count when one is in use, one Clear', async ({ app, screen, browser }) => {
+  const f = fixture(app.baseUrl);
+  await app.open('/');
+  await screen.getByRole('navigation', 'Main navigation').getByRole('button', 'Memories').tap();
+  await expect(browser.locator('#pm-list article.pl-note').first()).toBeVisible();
+  // what is always there: the filter box, When and Show
+  await expect(screen.getByLabel('Filter notes')).toBeVisible();
+  await expect(screen.getByLabel('When')).toBeVisible();
+  await expect(screen.getByLabel('Show')).toBeVisible();
+  const more = browser.locator('#pm-more-btn');
+  const clear = screen.getByRole('button', 'Clear all filters');
+  await expect(more).toHaveText('More filters');
+  await expect(more).toHaveAttribute('aria-expanded', 'false');
+  await expect(screen.getByLabel('Person or company')).toBeHidden();
+  await expect(screen.getByRole('button', 'Decisions')).toBeHidden();
+  await expect(clear).toBeHidden();
+  const status = browser.locator('#pm-status');
+  const rows = browser.locator('#pm-list article.pl-note');
+  const before = await rows.count();
+  // open it, pick a person: the count says one filter is in use
+  await more.tap();
+  await expect(more).toHaveAttribute('aria-expanded', 'true');
+  await screen.getByLabel('Person or company').fill(f.person.name);
+  await expect(more).toHaveText('More filters (1)');
+  await expect(status).toContainText(`Showing ${f.person.notes.length} of ${f.person.notes.length} notes`);
+  await screen.getByRole('button', 'Decisions').tap();
+  await expect(more).toHaveText('More filters (2)');
+  await expect(screen.getByRole('button', 'Decisions')).toHaveAttribute('aria-pressed', 'true');
+  // closed again, the count still tells that filters are in use
+  await more.tap();
+  await expect(screen.getByLabel('Person or company')).toBeHidden();
+  await expect(more).toHaveText('More filters (2)');
+  // one click puts the whole list back
+  await clear.tap();
+  await expect(more).toHaveText('More filters');
+  await expect(clear).toBeHidden();
+  await expect(rows).toHaveCount(before);
+  await expect(status).not.toContainText(`Showing ${f.person.notes.length} of`);
+  await more.tap();
+  await expect(screen.getByLabel('Person or company')).toHaveValue('');
+  await expect(screen.getByRole('button', 'Everything')).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('Workflows shows each one as a card in plain words; a click shows its steps and its runs', async ({ app, screen, browser }) => {

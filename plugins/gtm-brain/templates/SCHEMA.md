@@ -22,6 +22,7 @@ is still on GTM Brain 0.34: that version cannot read a file with one.
 | location | City and country they work from | no |
 | linkedin | Their LinkedIn profile link | no |
 | how_we_met | Who introduced them, or where we first met | no |
+| buying_role | Their part in a buying decision, in the ICP's words: decision maker, champion, user, blocker | no |
 
 ## Organization
 
@@ -31,6 +32,7 @@ is still on GTM Brain 0.34: that version cannot read a file with one.
 | industry | Their market, in a few words | yes |
 | size | Number of employees, roughly | no |
 | hq | City and country of the head office | no |
+| segment | Which segment of our ICP it belongs to, in the ICP's words | no |
 
 ### Subtypes
 
@@ -99,5 +101,6 @@ to the new note (a person has one employer); no means several at once.
 | uses | person, organization | product | Uses this product, ours or another | no | no |
 | speaker_at | person | event | Speaks or spoke at this event | no | no |
 | attended | person | event | Attends or attended this event (a meeting too, always) | no | no |
+| competes_with | organization | us | A competitor of ours: buyers choose between them and us | no | no |
 | integrates_with | tool | tool | Connected to this other tool | no | no |
 | customer_of | person, organization | us | Customer status (customer, prospect, former customer), kept by the customer notes | no | yes |

@@ -21,7 +21,8 @@ Keep authored brain content in English. Preserve names, source quotes and the ex
 
 Not for housekeeping ("let's do housekeeping", "tidy the brain": names, files and gaps to settle):
 that is `query` with object `housekeeping`, then its first item only, one at a time with the
-person, with no skill file read and nothing looked up on the web.
+person, with no skill file read and nothing looked up on the web (`/gtmb-housekeeping` is the
+same thing by command).
 
 ## Step 1: gather
 

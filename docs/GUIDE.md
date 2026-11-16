@@ -141,7 +141,7 @@ before it is saved, and kept as a short description, never as your messages. The
 
 Two stories show the brain end to end: an outreach lifecycle and a content loop. Build the demo
 brain with `node plugins/gtm-brain/test/live/demo-loops.mjs --brain-only` (a contributor
-checkout). It holds Reflow Fixture: a filled ICP, strategy and tone of voice, Zynt signals, customer
+checkout). It holds Northfold: a filled ICP, strategy and tone of voice, Zynt signals, customer
 words from two calls, and the project folders Outbound and Website. Open it as a Codex project.
 Nothing is sent or published. You tell Codex what Clay, Surfer, Gmail and Vercel returned. The same
 script without `--brain-only` types these sentences into Codex and checks every step. The summaries
