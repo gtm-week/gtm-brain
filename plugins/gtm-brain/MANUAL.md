@@ -48,9 +48,16 @@ cannot settle (an unclear name is asked right after the note is saved). It asks 
   a note, is asked when it has two readings. Every chat starts with today's date.
 - **Companies.** A new company is saved as a company. Its website is not asked on a save; give it
   any time ("Northwind is northwind.com") and it is kept on the company's page.
+- **Events.** An event you run, sponsor, speak at or attend is registered once, with its date
+  ("we ran Northfold Summit on 8 October"), and later notes link to it. Named without a date, the
+  note is saved and the event waits for one; Codex does not ask for it.
 - **Projects.** A note about someone whose notes all sit in one project is tagged with it; when
   they are in several, Codex asks which.
 - **Your reply first.** A held question waits for your answer; Codex never picks it for you.
+
+"What events did we run?" lists the events from their pages, each with its newest notes. When
+notes name events and the brain has none, housekeeping says so and gives the sentence that
+registers them.
 
 Entity pages live in a folder per kind: `brain/entities/people/`, `organizations/`, `products/`,
 `offerings/` (what we sell: what it is, its price, who it is for), `events/`, `tools/`,

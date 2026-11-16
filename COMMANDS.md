@@ -90,6 +90,11 @@ Our company) and the reply says so, so the person can move it in one sentence. E
 starts with `saved in <Context title>: ...`. `by` is optional too: it defaults to the person
 selected in this brain (`work/person.json`, else the brain's git identity in the team).
 
+`events` (flag `--events "Northfold Summit | 2026-10-08"`) names the events the note is about: a
+known event links by name or alias; `{name, date}` registers a new one once (`brain/entities/events/`),
+and the date is kept as a note of its own when the note's text does not say it. A new event without
+a date is not registered: the note is saved and one reply line says what is missing.
+
 Before writing, the note is compared with the notes in force across the whole brain (same project
 only). The same fact again, with no value and no source the kept note lacks, writes nothing and
 replies `already kept in <Context title>, <id>`. The same fact with another date, amount, code or
@@ -339,6 +344,8 @@ them; for a pair both cards side by side, what a merge would keep and the two to
 `filters.offset` returns the next items, `search` (first names, same names, other) one group. The
 reply stays under 12 KB and ends with the instruction the rules check also ends with
 (`ONE_AT_A_TIME` in `lib/rules-check.mjs`): one item at a time, ask the person, never the web.
+Among the other findings: three or more notes name events and the brain has no event entity
+(`unregisteredKinds` in `lib/population.mjs`), with up to three names and the sentence to send.
 Reads only. Writes: nothing.
 
 Several people or companies in one read: `query` with object `entities` and `filters.name` and/or
