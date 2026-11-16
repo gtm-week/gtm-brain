@@ -55,9 +55,119 @@ test('Configuration: base documents open in the page; rules and schema are brows
   await expect(screen.getByRole('heading', 'Rules', { level: 2 })).toBeVisible();
   await expect(browser.locator('#cfg-rules details.cfg-rule').first()).toBeVisible();
   await expect(browser.locator('#cfg-rules')).not.toContainText(/\bP[1-4]\b/);
-  await parts.getByRole('tab', /^What the brain records/).tap();
-  await expect(screen.getByRole('heading', 'What the brain records', { level: 2 })).toBeVisible();
+  await parts.getByRole('tab', /^Schema/).tap();
+  await expect(screen.getByRole('heading', 'Schema', { level: 2 })).toBeVisible();
   await expect(browser.locator('#cfg-schema article.cfg-kind').first()).toBeVisible();
+});
+
+test('a document opens rendered; Edit starts editing in the layout last used; Done editing returns to the rendered text', async ({ app, screen, browser }) => {
+  const f = fixture(app.baseUrl);
+  const written = f.documents.find(d => d.state !== 'not written');
+  expect(written).toBeTruthy();
+  await app.open('/');
+  await screen.getByRole('navigation', 'Main navigation').getByRole('button', 'Configuration').tap();
+  await screen.getByRole('table').filter({ has: screen.getByRole('columnheader', 'Document') }).getByRole('button', written!.title).tap();
+  const view = browser.locator('#doc-view'), text = browser.locator('#doc-text'), preview = browser.locator('#doc-preview');
+  const toolbar = view.getByRole('toolbar', 'Formatting'), edit = view.getByRole('button', 'Edit', { exact: true });
+  const done = view.getByRole('button', 'Done editing'), save = view.getByRole('button', 'Save', { exact: true });
+  // it opens to be read: the rendered text beside its outline, one Edit button, no editor, no toolbar, no Save
+  await expect(view).toHaveAttribute('data-doc-mode', 'preview');
+  await expect(edit).toBeVisible();
+  await expect(preview).toContainText('Three plans, billed yearly.');
+  await expect(preview.getByRole('heading', written!.title, { level: 1 })).toBeVisible();
+  for (const hidden of [toolbar, text, done, save]) await expect(hidden).toBeHidden();
+  const box = (sel: string) => browser.evaluate((q: string) => { const r = document.querySelector(q)!.getBoundingClientRect(); return { left: r.left, right: r.right, width: r.width }; }, sel);
+  const outline = await box('#doc-view .doc-outline'), read = await box('#doc-preview');
+  expect(outline.width).toBeGreaterThan(0);
+  expect(outline.right).toBeLessThanOrEqual(read.left + 1);   // the outline stays in its own column, left of the text
+  // Edit: the text area beside the preview, focused, with the formatting toolbar; nothing to save yet
+  await edit.tap();
+  await expect(view).toHaveAttribute('data-doc-mode', 'split');
+  for (const shown of [text, toolbar, preview, done]) await expect(shown).toBeVisible();
+  await expect(edit).toBeHidden();
+  expect(await browser.evaluate(() => document.activeElement?.id)).toBe('doc-text');
+  await expect(save).toBeVisible();
+  await expect(save).toBeDisabled();
+  // typing enables Save and shows in the preview
+  const original: string = await browser.evaluate(() => (document.querySelector('#doc-text') as HTMLTextAreaElement).value);
+  expect(original).toContain('Three plans, billed yearly.');
+  const typed = 'The yearly discount is two months free.';
+  await text.fill(`${original}\n${typed}\n`);
+  await expect(save).toBeEnabled();
+  await expect(view).toContainText('Unsaved changes');
+  await expect(preview).toContainText(typed);
+  // Done editing: back to the rendered view with the typed text, Save still offered because it is unsaved
+  await done.tap();
+  await expect(view).toHaveAttribute('data-doc-mode', 'preview');
+  await expect(preview).toContainText(typed);
+  for (const hidden of [toolbar, text, done]) await expect(hidden).toBeHidden();
+  await expect(edit).toBeVisible();
+  await expect(save).toBeVisible();
+  await expect(save).toBeEnabled();
+  // Edit again keeps what was typed; the Write layout is remembered for the next Edit
+  await edit.tap();
+  await expect(text).toHaveValue(`${original}\n${typed}\n`);
+  await toolbar.getByRole('button', 'Write', { exact: true }).tap();
+  await expect(view).toHaveAttribute('data-doc-mode', 'write');
+  await expect(preview).toBeHidden();
+  await text.fill(original);   // nothing is saved by this test: the text goes back to what the file holds
+  await expect(save).toBeDisabled();
+  await done.tap();
+  await expect(save).toBeHidden();
+  await expect(preview).not.toContainText(typed);
+  await edit.tap();
+  await expect(view).toHaveAttribute('data-doc-mode', 'write');
+  await expect(text).toBeVisible();
+  expect(await browser.evaluate(() => document.activeElement?.id)).toBe('doc-text');
+  await toolbar.getByRole('button', 'Split', { exact: true }).tap();   // leave the default layout for the next test
+  await done.tap();
+  // a file that is changed only in Codex is read here: no Edit, no editor, no toolbar, no Save
+  await screen.getByRole('button', /Configuration$/).first().tap();
+  await screen.getByRole('tablist', 'Parts of the configuration').getByRole('tab', /^Rules/).tap();
+  await browser.locator('#cfg-rules').getByRole('button', 'Read the whole file').tap();
+  await expect(view).toHaveAttribute('data-doc-mode', 'read');
+  await expect(preview).toContainText(/\S/);
+  await expect(browser.locator('#doc-notice')).toContainText('The rules are changed in Codex');
+  for (const absent of [edit, done, save, toolbar, text]) await expect(absent).toHaveCount(0);
+});
+
+test('inside an open document the outline scrolls to its heading and a save conflict can be resolved', async ({ app, screen, browser }) => {
+  const f = fixture(app.baseUrl);
+  const written = f.documents.find(d => d.state !== 'not written');
+  await app.open('/');
+  await screen.getByRole('navigation', 'Main navigation').getByRole('button', 'Configuration').tap();
+  await screen.getByRole('table').filter({ has: screen.getByRole('columnheader', 'Document') }).getByRole('button', written!.title).tap();
+  const view = browser.locator('#doc-view'), text = browser.locator('#doc-text'), notice = browser.locator('#doc-notice');
+  const item = browser.locator('#doc-outline [data-doc-head]').first();
+  await expect(item).toBeVisible();
+  // an outline item reaches its heading, reading and editing, and never changes the layout
+  const scrolled = () => browser.evaluate(() => (window as any).__scrolled as string[]);
+  await browser.evaluate(() => { (window as any).__scrolled = []; const was = Element.prototype.scrollIntoView; Element.prototype.scrollIntoView = function (...a: any[]) { (window as any).__scrolled.push(this.id); return was.apply(this, a as any); }; });
+  const head = await item.getAttribute('data-doc-head');
+  await item.tap();
+  expect(await scrolled()).toEqual([head]);
+  await expect(view).toHaveAttribute('data-doc-mode', 'preview');
+  await view.getByRole('button', 'Edit', { exact: true }).tap();
+  const layout = await view.getAttribute('data-doc-mode');
+  await browser.locator('#doc-outline [data-doc-head]').first().tap();
+  expect(await scrolled()).toEqual([head, head]);
+  await expect(view).toHaveAttribute('data-doc-mode', layout!);
+  expect(await browser.evaluate(() => document.activeElement?.id)).toBe('doc-text');
+  // the file changed since it was opened (here: the page holds an outdated hash): the save is refused with both ways out
+  const original: string = await browser.evaluate(() => (document.querySelector('#doc-text') as HTMLTextAreaElement).value);
+  await text.fill(`${original}\nA line that is never saved.\n`);
+  await browser.evaluate(() => { const s = (0, eval)('docState'); s.hash = String(s.hash).replace(/[0-9a-f]/g, '0'); });
+  await view.getByRole('button', 'Save', { exact: true }).tap();
+  await expect(notice).toContainText('This document changed since you opened it. Nothing was saved.');
+  const theirs = notice.getByRole('button', "Load the file's version");
+  await expect(notice.getByRole('button', 'Save mine over it')).toBeVisible();
+  // Load the file's version: the editor holds the file again, the notice goes, nothing is left to save
+  await theirs.tap();
+  await expect(text).toHaveValue(original);
+  await expect(notice).not.toContainText('This document changed');
+  await expect(view.getByRole('button', 'Save', { exact: true })).toBeDisabled();
+  await expect(view).toHaveAttribute('data-doc-mode', layout!);
+  await view.getByRole('button', 'Done editing').tap();
 });
 
 test('Entities: a list to pick from with a count per kind, and the picked entity with its notes beside it', async ({ app, screen, browser }) => {

@@ -8,7 +8,7 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync, statSync, mkdirSync, rmSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join, dirname } from "node:path";
-import { rulesFile, OLD_WHERE, TEMPLATES, ROOT_KEEP, ABOUT_DIR, ABOUT_DIR4, inConfigFolders, inLayout4 } from "./brain-paths.mjs";
+import { rulesFile, OLD_WHERE, TEMPLATES, ROOT_KEEP, ABOUT_DIR, ABOUT_DIR4, PAGE_FILES, inConfigFolders, inLayout4 } from "./brain-paths.mjs";
 import { readAdmin, commit } from "./brain.mjs";
 import { layoutBlock } from "./layout-version.mjs";
 import { workDir } from './brain-paths.mjs';
@@ -120,7 +120,7 @@ export function whereLine(root) {
    the brain, no second store). whyHere reads those lines back; unplacedHint names new files that
    arrived without one. Rows are cited by number and their What text, so a reordered table still reads right. */
 export const WHY_TRAILER = "gtm-brain-why";
-export const MANAGED = p => /^(?:(?:brain|work|config|entities|memories|\.gtm-brain|\.githooks|\.agents)\/|configuration\/(?!about-us\/))/.test(p) || [...ROOT_KEEP, ".gitignore", ".gitattributes"].includes(p);
+export const MANAGED = p => /^(?:(?:brain|work|config|entities|memories|\.gtm-brain|\.githooks|\.agents)\/|configuration\/(?!about-us\/))/.test(p) || [...ROOT_KEEP, ".gitignore", ".gitattributes"].includes(p) || PAGE_FILES.some(f => p === f || p === `${ABOUT_DIR}/${f}` || p === `${ABOUT_DIR4}/${f}` || p.endsWith(`/${f}`));
 const clean = p => String(p || "").trim().replace(/^\.\//, "").replace(/\/+$/, "");
 const oneLine = s => String(s || "").replace(/\s+/g, " ").trim();
 

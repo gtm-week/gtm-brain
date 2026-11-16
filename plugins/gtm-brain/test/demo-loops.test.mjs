@@ -13,7 +13,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-const { buildBrain, STEPS, STUB_STEPS, STUB_SERVER, parseArgs, stepsFor } = await import("./live/demo-loops.mjs");
+const { buildBrain, STEPS, STUB_STEPS, STUB_SERVER, CONNECTOR_STEPS, CONNECTOR_SERVERS, parseArgs, stepsFor } = await import("./live/demo-loops.mjs");
 const lib = await import("../lib/brain.mjs");
 const { readDocument } = await import("../lib/documents.mjs");
 const { customerOverview } = await import("../lib/customers.mjs");
@@ -175,8 +175,73 @@ test("demo stub checks: a played failure is told to the person and nothing inven
   assert.deepEqual(stepsFor(true).map(s => s.id), STUB_STEPS.map(s => s.id));
 });
 
+const connectorStep = id => CONNECTOR_STEPS.find(s => s.id === id);
+const via = (...tools) => tools.map(tool => ({ kind: "call", server: tool.split("_")[0], tool, args: {} }));
+
+test("demo connectors mode: the brain has no Fernbrook signal, the steps name the connector, a credit nobody asked for fails", { timeout: 120000 }, async () => {
+  const { root } = await buildBrain(join(mkdtempSync(join(tmpdir(), "gtm-demo-test-")), "brain"), { zyntSignal: false });
+  const market = lib.effectiveMemories(lib.readMemories(root, "market"));
+  assert.ok(!market.some(m => /Fernbrook Outdoor/.test(m.content)), "the Fernbrook signal comes from Zynt, not from the brain");
+  assert.ok(market.some(m => /Heron Home/.test(m.content)), "the older signals stay seeded");
+  assert.equal(new Set(CONNECTOR_STEPS.map(s => s.id)).size, CONNECTOR_STEPS.length);
+  assert.deepEqual(CONNECTOR_STEPS.map(s => s.id), STEPS.flatMap(s => s.id === "o2-enrich" ? ["o2-find", s.id] : [s.id]), "the told steps, with the free lookup before the paid enrichment");
+  assert.deepEqual(CONNECTOR_STEPS.filter(s => s.connector).map(s => s.id), ["o1-pick", "o2-find", "o2-enrich", "c1-topics", "c2-draft"]);
+  for (const s of CONNECTOR_STEPS.filter(s => s.connector)) {
+    assert.match(s.say, /Clay|Zynt|Surfer/, `${s.id}: names the connector to use`);
+    assert.doesNotMatch(s.say, /85 stores|1,400|lea\.hoffmann@|1,900|880|320/, `${s.id}: nothing the connector returns is told`);
+    assert.doesNotMatch(s.say + s.shows, /[\u2013\u2014]/);
+  }
+  for (const loop of ["outreach", "content"]) assert.ok(CONNECTOR_STEPS.filter(s => s.loop === loop).at(-1).fresh);
+  assert.deepEqual(stepsFor(false, "", "", true).map(s => s.id), CONNECTOR_STEPS.map(s => s.id));
+  assert.match(parseArgs(["--stub", "--connectors"]).error, /pick one/);
+  assert.equal(parseArgs(["--connectors", "--step", "o2-find"]).error, "");
+  // o1: the signals are read in Zynt; the same text from anywhere else is not that call
+  const picked = "1. Fernbrook Outdoor: ICP fit with a Head of Returns post. 2. Heron Home. Umber Pharma is out.";
+  const read = re => re.test("Fernbrook Outdoor posted a Head of Returns job\n## Not a fit\n\nPharmacy chains (regulated returns)");
+  assert.equal(connectorStep("o1-pick").check(evidence({ reply: picked, saw: read, connector: via("zynt_list_signals") })), true);
+  assert.match(connectorStep("o1-pick").check(evidence({ reply: picked, saw: read })), /did not read the signals in Zynt/);
+  // o2: finding is free, enriching spends a credit and happens once, on the person's yes
+  assert.equal(connectorStep("o2-find").check(evidence({ reply: "Lea Hoffmann, Head of Operations.", connector: via("clay_find_companies", "clay_find_people") })), true);
+  assert.match(connectorStep("o2-find").check(evidence({ reply: "Lea Hoffmann.", connector: via("clay_find_people", "clay_enrich_person") })), /credit nobody asked for/);
+  const lea = [{ name: "Lea Hoffmann", kind: "person", emails: ["lea.hoffmann@fernbrook-outdoor.example"] }];
+  const enriched = evidence({ names: lea, connector: via("clay_enrich_person"), added: [{ content: "Clay: Fernbrook Outdoor has 85 stores; Head of Operations Lea Hoffmann.", tools: ["clay"] }] });
+  assert.equal(connectorStep("o2-enrich").check(enriched), true);
+  assert.match(connectorStep("o2-enrich").check({ ...enriched, connector: via("clay_enrich_person", "clay_enrich_person") }), /2 Clay enrichments, not one/);
+  assert.match(connectorStep("o2-enrich").check({ ...enriched, connector: [] }), /0 Clay enrichments/);
+  assert.match(connectorStep("o2-enrich").check({ ...enriched, added: [] }), /no note names Lea Hoffmann/, "the told step's checks still apply");
+  // content: keywords and the brief come from Surfer, the article is written by the agent
+  const topics = evidence({ reply: "Posts: 'store pickup returns', 'reduce return rate retail'; customers drown after Black Friday.", saw: () => true, connector: via("surfer_keyword_research") });
+  assert.equal(connectorStep("c1-topics").check(topics), true);
+  assert.match(connectorStep("c1-topics").check({ ...topics, connector: [] }), /did not check the keywords in Surfer/);
+  assert.match(connectorStep("c1-topics").check({ ...topics, connector: via("surfer_keyword_research", "surfer_generate_article") }), /Surfer credit nobody asked for/);
+  assert.match(connectorStep("c2-draft").check(evidence({ connector: via("surfer_create_content_editor", "surfer_generate_article") })), /Surfer wrote the article/);
+  assert.match(connectorStep("c2-draft").check(evidence({ connector: via("surfer_create_content_editor") })), /the choice is not saved/, "then the told step's checks");
+});
+
+test("connector fixtures: each server lists its tools, answers from the canned data and traces the call", () => {
+  const dir = mkdtempSync(join(tmpdir(), "gtm-demo-fixture-")), trace = join(dir, "trace.jsonl");
+  const fixture = fileURLToPath(new URL("./live/gtm-connectors-fixture.mjs", import.meta.url));
+  const talk = (server, ...messages) => spawnSync(process.execPath, [fixture, server, trace], { input: messages.map(m => JSON.stringify({ jsonrpc: "2.0", ...m })).join("\n") + "\n", encoding: "utf8" })
+    .stdout.split("\n").filter(Boolean).map(l => JSON.parse(l));
+  const listed = Object.fromEntries(CONNECTOR_SERVERS.map(s => [s, talk(s, { id: 1, method: "initialize", params: {} }, { id: 2, method: "tools/list" })[1].result.tools]));
+  for (const [server, tools] of Object.entries(listed)) for (const t of tools) assert.ok(t.name.startsWith(`${server}_`) && t.description && t.inputSchema, t.name);
+  // every tool a connectors check names exists, and the ones that spend a credit say so
+  for (const name of ["zynt_list_signals", "clay_find_people", "clay_enrich_person", "surfer_keyword_research", "surfer_create_content_editor", "surfer_generate_article"]) assert.ok(Object.values(listed).flat().some(t => t.name === name), name);
+  for (const name of ["clay_enrich_person", "surfer_generate_article"]) assert.match(Object.values(listed).flat().find(t => t.name === name).description, /Spends 1 .*credit.*ask the person/, name);
+  const [signals] = talk("zynt", { id: 1, method: "tools/call", params: { name: "zynt_list_signals", arguments: {} } });
+  assert.match(signals.result.content[0].text, /Fernbrook Outdoor posted a Head of Returns job/);
+  const [email] = talk("clay", { id: 1, method: "tools/call", params: { name: "clay_enrich_person", arguments: { name: "Lea Hoffmann" } } });
+  assert.match(email.result.content[0].text, /lea\.hoffmann@fernbrook-outdoor\.example/);
+  assert.equal(talk("clay", { id: 1, method: "tools/call", params: { name: "clay_delete_all", arguments: {} } })[0].result.isError, true);
+  const lines = readFileSync(trace, "utf8").split("\n").filter(Boolean).map(l => JSON.parse(l));
+  assert.deepEqual(lines.map(l => `${l.server}:${l.kind}:${l.tool}`), ["zynt:call:zynt_list_signals", "zynt:result:zynt_list_signals", "clay:call:clay_enrich_person", "clay:result:clay_enrich_person"]);
+  assert.equal(spawnSync(process.execPath, [fixture, "hubspot", trace], { input: "", encoding: "utf8" }).status, 2);
+});
+
 // A stand-in for codex that answers every turn with the right words and does nothing: no tool call, no
 // file, no note. The runner must fail every step, exit 1, resume one session per loop and start the last turn fresh.
+// FAKE_CODEX_CALLS ("clay:clay_enrich_person,...") makes each turn call those tools on the connector servers its
+// argv declares, the way Codex would: the calls reach the runner only through the trace the fixture writes.
 function fakeCodex(more = {}) {
   const dir = mkdtempSync(join(tmpdir(), "gtm-demo-run-")), bin = join(dir, "bin"), log = join(dir, "argv.jsonl");
   mkdirSync(bin);
@@ -186,6 +251,10 @@ let stdin = ""; process.stdin.on("data", d => { stdin += d; }); process.stdin.on
   fs.appendFileSync(${JSON.stringify(log)}, JSON.stringify({ argv, stdin, home: process.env.CODEX_HOME || null }) + "\\n");
   // a real chat's first GTM Brain call starts the dashboard server of the brain; it outlives the chat
   if (process.env.FAKE_CODEX_DASH && argv.includes("-C")) require("node:child_process").spawnSync(process.execPath, [process.env.FAKE_CODEX_DASH, argv[argv.indexOf("-C") + 1], "--start"], { stdio: "ignore" });
+  for (const [server, name] of (process.env.FAKE_CODEX_CALLS || "").split(",").filter(Boolean).map(c => c.split(":"))) {
+    const declared = key => JSON.parse(argv.find((a, i) => argv[i - 1] === "-c" && a.startsWith("mcp_servers." + server + "." + key + "=")).split("=").slice(1).join("="));
+    require("node:child_process").spawnSync(declared("command"), declared("args"), { input: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: { name: "Lea Hoffmann", company: "Fernbrook Outdoor" } } }) + "\\n" });
+  }
   console.log(JSON.stringify({ type: "thread.started", thread_id: "thread-" + fs.readFileSync(${JSON.stringify(log)}, "utf8").split("\\n").filter(Boolean).length }));
   fs.writeFileSync(argv[argv.indexOf("-o") + 1], "Fernbrook Outdoor first, then Heron Home. Contact: Lea Hoffmann. ERP migration, call on 14 January, prospect. Posts: 'store pickup returns', 'reduce return rate retail'; customers say they drown after Black Friday. 1,240 visits, 3 demo requests. Next: peak season. Saved and drafted everything.");
 });
@@ -215,6 +284,7 @@ test("demo runner: an agent that only talks fails every step", { timeout: 180000
   for (const t of turns) assert.ok(!t.argv.includes("resume") === /synthetic GTM Brain company brain/.test(t.stdin), "a new chat gets the preamble, a resumed turn only the sentence");
   for (const t of turns) {
     assert.equal(config(t.argv, `mcp_servers.${STUB_SERVER}.command`), undefined, "told mode declares no stub tools");
+    for (const s of CONNECTOR_SERVERS) assert.equal(config(t.argv, `mcp_servers.${s}.command`), undefined, "told mode declares no connector fixtures");
     assert.equal(config(t.argv, "model_reasoning_effort"), JSON.stringify(process.env.GTM_BRAIN_EVAL_EFFORT || "medium"));
     // Codex filters an MCP server's environment: the proxy only sees what the env table passes
     assert.equal(config(t.argv, "mcp_servers.gtm_brain_eval.env.GTM_BRAIN_EVAL_ALLOW"), JSON.stringify("workflow"));
@@ -250,12 +320,47 @@ test("demo runner: stub mode declares the stub server beside GTM Brain and passe
   }
 });
 
+test("demo runner: connectors mode declares Clay, Zynt and Surfer beside GTM Brain, and no stub tools", { timeout: 180000 }, () => {
+  const fake = fakeCodex();
+  assert.equal(fake.run(["--step", "o2-find"]).status, 2, "o2-find exists only with --connectors");
+  const run = fake.run(["--connectors", "--step", "o1-pick,o2-find"]);
+  assert.equal(run.status, 1, run.stdout + run.stderr);
+  const report = fake.report(), turns = fake.turns();
+  assert.equal(report.mode, "connectors");
+  assert.deepEqual(report.results.map(r => r.id), ["o1-pick", "o2-find"]);
+  assert.match(report.results[0].why, /did not read the signals in Zynt/); assert.match(report.results[1].why, /did not look for the contact in Clay/);
+  for (const r of report.results) assert.deepEqual(r.connectors, []);
+  assert.ok(!lib.effectiveMemories(lib.readMemories(report.brain, "market")).some(m => /Fernbrook Outdoor/.test(m.content)), "the run's brain does not hold the signal Zynt returns");
+  for (const [i, t] of turns.entries()) {
+    for (const s of CONNECTOR_SERVERS) {
+      assert.equal(config(t.argv, `mcp_servers.${s}.command`), JSON.stringify(process.execPath));
+      const args = JSON.parse(config(t.argv, `mcp_servers.${s}.args`));
+      assert.match(args[0], /test\/live\/gtm-connectors-fixture\.mjs$/); assert.equal(args[1], s); assert.match(args[2], /outreach-connectors\.jsonl$/);
+    }
+    assert.equal(config(t.argv, `mcp_servers.${STUB_SERVER}.command`), undefined);
+    assert.ok(t.stdin.endsWith(connectorStep(report.results[i].id).say));
+  }
+  assert.match(turns[0].stdin, /Clay, Zynt and Surfer are connected as test fixtures/);
+});
+
+test("demo runner: connectors mode judges each turn on the calls its fixtures traced, and a credit nobody asked for fails", { timeout: 180000 }, () => {
+  const fake = fakeCodex({ FAKE_CODEX_CALLS: "clay:clay_find_people,clay:clay_enrich_person" });
+  const run = fake.run(["--connectors", "--step", "o1-pick,o2-find"]);
+  assert.equal(run.status, 1, run.stdout + run.stderr);
+  const [pick, find] = fake.report().results;
+  // two turns of one loop share a trace file: each is judged on its own calls, not on the turn before
+  for (const r of [pick, find]) assert.deepEqual(r.connectors, ["clay:clay_find_people", "clay:clay_enrich_person"], r.id);
+  assert.match(pick.why, /did not read the signals in Zynt/);
+  assert.match(find.why, /spent a Clay credit nobody asked for/);
+  assert.match(run.stdout, /connectors: clay:clay_find_people > clay:clay_enrich_person/);
+});
+
 test("presenter text: GUIDE.md carries the sentences the live run checks, word for word, within a page", () => {
   const guide = readFileSync(fileURLToPath(new URL("../../../GUIDE.md", import.meta.url)), "utf8");
   const section = guide.slice(guide.indexOf("## Workshop demo: the two loops"), guide.indexOf("## Workshop demo on stub tools"));
   const stubs = guide.slice(guide.indexOf("## Workshop demo on stub tools"), guide.indexOf("## Three habits"));
   assert.ok(guide.indexOf("## Workshop demo on stub tools") > guide.indexOf("## Workshop demo: the two loops"), "the stub tools section follows the demo");
-  for (const said of ["--stub", "stub-gtm-tools.mjs", "--fail expired_key", "--fail empty", "sign-in", "rate limits", "cost", "data shapes"]) assert.ok(stubs.includes(said), `stub tools section: ${said}`);
+  for (const said of ["--connectors", "gtm-connectors-fixture.mjs", "--stub", "stub-gtm-tools.mjs", "--fail expired_key", "--fail empty", "sign-in", "rate limits", "cost", "data shapes"]) assert.ok(stubs.includes(said), `stub tools section: ${said}`);
   assert.doesNotMatch(stubs, /[\u2013\u2014]/);
   const flat = section.replace(/\s+/g, " ");
   for (const s of STEPS) assert.ok(flat.includes(`*${s.say}*`), `${s.id}: the sentence in GUIDE.md differs from the one the live run types`);

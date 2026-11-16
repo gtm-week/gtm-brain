@@ -168,7 +168,7 @@ flowchart TB
 
 ## 6. Run setup
 
-1. In the chat you just opened, type **`/gtm-brain-start`** (or simply "start") and press
+1. In the chat you just opened, type **`/gtmb-start`** (or simply "start") and press
    Enter.
 2. From here Codex drives and you correct. It will:
    - check the machine and create the brain in your project
@@ -259,7 +259,7 @@ mistakes the brain makes from assumptions and unanswered questions. If you skipp
 1. In the Codex app, open your brain project, then **Scheduled tasks**, then new task.
 2. Paste as the task:
 
-   > Run the gtm-brain-sync skill as the scheduled run: compile every context whose summary is
+   > Run the gtmb-sync skill as the scheduled run: compile every context whose summary is
    > behind with by: schedule, render the dashboard. Do nothing else.
 
 3. Timing: daily (06:00) or weekly (Sunday 20:00). Choose **run in the local project**.
@@ -272,7 +272,7 @@ mistakes the brain makes from assumptions and unanswered questions. If you skipp
 > 🛠 **If it goes wrong:**
 > - **The task ran but nothing changed.** Check it is set to run **in the local project**,
 >   not a background copy.
-> - **You want to sync now.** `/gtm-brain-sync` in the brain project.
+> - **You want to sync now.** `/gtmb-sync` in the brain project.
 
 ---
 
@@ -287,8 +287,8 @@ There are two different actions. Do not mix them up:
 
 | You want | Say | What GTM Brain does |
 |---|---|---|
-| a **new** folder for a piece of work | `/gtm-brain-project`, choose **New** | creates it as a subfolder of the brain, with the contexts you pick |
-| GTM Brain to follow an **existing** folder | open that folder as a Codex project, `/gtm-brain-project`, choose **Link** | attaches it as it is, flat; nothing is moved or restructured |
+| a **new** folder for a piece of work | `/gtmb-project`, choose **New** | creates it as a subfolder of the brain, with the contexts you pick |
+| GTM Brain to follow an **existing** folder | open that folder as a Codex project, `/gtmb-project`, choose **Link** | attaches it as it is, flat; nothing is moved or restructured |
 
 After linking, every chat in that folder opens with its own contexts and every note is
 tagged with the folder. It is all still one brain, searchable from anywhere. Say **"list
@@ -497,7 +497,7 @@ From here the brain earns its keep one sentence at a time. Three habits for this
 - **Say what happened.** A decision, an answer, something sent: one line each.
 - **Say yes to compile.** A summary that is behind is a brain that half-knows.
 
-Before a call, `/gtm-brain-deepdive`. When you do not know what to do next, `/gtm-brain-todo`.
+Before a call, `/gtmb-deepdive`. When you do not know what to do next, `/gtmb-todo`.
 On Monday morning the summaries will be current and the dashboard fresh, without you doing
 anything.
 

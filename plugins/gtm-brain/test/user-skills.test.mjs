@@ -25,7 +25,7 @@ function brain() {
   return root;
 }
 const folder = () => realpathSync(mkdtempSync(join(tmpdir(), "gtm-brain-uskill-folder-")));
-const project = (root, ...args) => execFileSync(process.execPath, [`${P}/skills/gtm-brain-project/project.mjs`, ".", ...args], { cwd: root, encoding: "utf8", env });
+const project = (root, ...args) => execFileSync(process.execPath, [`${P}/skills/gtmb-project/project.mjs`, ".", ...args], { cwd: root, encoding: "utf8", env });
 const skill = (root, ...args) => execFileSync(process.execPath, [`${P}/scripts/gtm-brain-skills/skill.mjs`, ".", ...args], { cwd: root, encoding: "utf8", env });
 const refused = (root, ...args) => { try { skill(root, ...args); return null; } catch (e) { return { code: e.status, text: String(e.stderr || e.stdout) }; } };
 const lastCommit = root => execFileSync("git", ["-C", root, "log", "-1", "--format=%s"], { encoding: "utf8" }).trim();
@@ -33,29 +33,32 @@ const lastCommit = root => execFileSync("git", ["-C", root, "log", "-1", "--form
 const skillAsync = (root, extraEnv, ...args) => new Promise((resolvePromise, reject) => execFile(process.execPath, [`${P}/scripts/gtm-brain-skills/skill.mjs`, ".", ...args], { cwd: root, encoding: "utf8", env: { ...env, ...extraEnv } }, (e, stdout, stderr) => e ? reject(Object.assign(e, { status: e.code, stdout, stderr })) : resolvePromise(stdout)));
 
 test("ids carry the prefix and frontmatter reads blocks and nested maps", () => {
-  assert.equal(us.skillId("Circle Event"), "gtm-brain-circle-event");
-  assert.equal(us.skillId("gtm-brain-sales"), "gtm-brain-sales");
-  const { fm, body } = us.readSkillFrontmatter("---\nname: gtm-brain-x\ndescription: |\n  Two\n  lines\nmetadata:\n  by: marta\n  created: 2026-09-16\n---\n\n# Body\n");
-  assert.equal(fm.name, "gtm-brain-x"); assert.equal(fm.description, "Two lines"); assert.deepEqual(fm.metadata, { by: "marta", created: "2026-09-16" }); assert.equal(body.trim(), "# Body");
+  assert.equal(us.skillId("Circle Event"), "gtmb-circle-event");
+  assert.equal(us.skillId("gtmb-sales"), "gtmb-sales");
+  const { fm, body } = us.readSkillFrontmatter("---\nname: gtmb-x\ndescription: |\n  Two\n  lines\nmetadata:\n  by: marta\n  created: 2026-09-16\n---\n\n# Body\n");
+  assert.equal(fm.name, "gtmb-x"); assert.equal(fm.description, "Two lines"); assert.deepEqual(fm.metadata, { by: "marta", created: "2026-09-16" }); assert.equal(body.trim(), "# Body");
 });
 
 test("validation refuses shipped names, bad ids, long descriptions and unknown keys", () => {
   const root = brain();
-  assert.match(us.validateSkill(root, { id: "gtm-brain-todo", description: "x", keys: ["name", "description"] }), /shipped/);
-  assert.match(us.validateSkill(root, { id: "sales", description: "x", keys: ["name", "description"] }), /gtm-brain-/);
-  assert.match(us.validateSkill(root, { id: "gtm-brain-a", description: "x".repeat(201), keys: ["name", "description"] }), /201/);
-  assert.match(us.validateSkill(root, { id: "gtm-brain-a", description: "x", keys: ["name", "description", "tools"] }), /tools/);
-  assert.equal(us.validateSkill(root, { id: "gtm-brain-a", description: "x", keys: ["name", "description", "metadata"] }), null);
+  assert.match(us.validateSkill(root, { id: "gtmb-todo", description: "x", keys: ["name", "description"] }), /shipped/);
+  assert.match(us.validateSkill(root, { id: "sales", description: "x", keys: ["name", "description"] }), /gtmb-/);
+  // a skill made before 0.36 keeps its name and stays valid; an old spelling of a shipped name is still refused
+  assert.equal(us.validateSkill(root, { id: "gtm-brain-weekly-pipeline", description: "x", keys: ["name", "description"] }), null);
+  assert.match(us.validateSkill(root, { id: "gtm-brain-" + "todo", description: "x", keys: ["name", "description"] }), /shipped/);   // written in two parts: no file names a shipped skill the old way (skill-names.test.mjs)
+  assert.match(us.validateSkill(root, { id: "gtmb-a", description: "x".repeat(201), keys: ["name", "description"] }), /201/);
+  assert.match(us.validateSkill(root, { id: "gtmb-a", description: "x", keys: ["name", "description", "tools"] }), /tools/);
+  assert.equal(us.validateSkill(root, { id: "gtmb-a", description: "x", keys: ["name", "description", "metadata"] }), null);
 });
 
 test("writeUserSkill renders both files, listUserSkills reads them back, save covers .agents", () => {
   const root = brain();
-  const path = us.writeUserSkill(root, { id: "gtm-brain-circle-event", title: "Circle event", description: "Create a Circle event from a meeting note.", body: "1. Ask for the date.\n2. Create it in Circle.", by: "marta-nowak", version: "0.22.0" });
-  assert.equal(path, join(root, ".agents", "skills", "gtm-brain-circle-event"));
+  const path = us.writeUserSkill(root, { id: "gtmb-circle-event", title: "Circle event", description: "Create a Circle event from a meeting note.", body: "1. Ask for the date.\n2. Create it in Circle.", by: "marta-nowak", version: "0.22.0" });
+  assert.equal(path, join(root, ".agents", "skills", "gtmb-circle-event"));
   const md = readFileSync(join(path, "SKILL.md"), "utf8");
-  assert.match(md, /^name: gtm-brain-circle-event$/m); assert.match(md, /^# GTM Brain skill: Circle event$/m); assert.ok(md.includes(us.HEADER_LINE));
+  assert.match(md, /^name: gtmb-circle-event$/m); assert.match(md, /^# GTM Brain skill: Circle event$/m); assert.ok(md.includes(us.HEADER_LINE));
   assert.match(readFileSync(join(path, "agents", "openai.yaml"), "utf8"), /display_name: "GTM Brain: Circle event"/);
-  assert.deepEqual(us.listUserSkills(root).map(s => [s.id, s.title, s.by]), [["gtm-brain-circle-event", "Circle event", "marta-nowak"]]);
+  assert.deepEqual(us.listUserSkills(root).map(s => [s.id, s.title, s.by]), [["gtmb-circle-event", "Circle event", "marta-nowak"]]);
   assert.ok(lib.BRAIN_PATHS.includes(".agents"));
 });
 
@@ -63,16 +66,16 @@ test("links skip a project folder that is gone, and never replace a symlink that
   const root = brain(), gone = folder(), other = folder();
   lib.writeProjects(root, [{ slug: "gone", title: "Gone", path: gone, contexts: [], linkedAt: new Date().toISOString(), by: null }, { slug: "other", title: "Other", path: other, contexts: [], linkedAt: new Date().toISOString(), by: null }]);
   rmSync(gone, { recursive: true, force: true });
-  mkdirSync(join(root, ".agents", "skills-other", "gtm-brain-x"), { recursive: true });
+  mkdirSync(join(root, ".agents", "skills-other", "gtmb-x"), { recursive: true });
   mkdirSync(join(other, ".agents", "skills"), { recursive: true });
-  const foreign = join(other, ".agents", "skills", "gtm-brain-x");
-  symlinkSync(join(root, ".agents", "skills-other", "gtm-brain-x"), foreign, "dir");
-  us.writeUserSkill(root, { id: "gtm-brain-x", title: "X", description: "x.", body: "y", by: null, version: "0.22.0" });
-  const { linked, failed } = us.linkSkillIntoProjects(root, "gtm-brain-x");
+  const foreign = join(other, ".agents", "skills", "gtmb-x");
+  symlinkSync(join(root, ".agents", "skills-other", "gtmb-x"), foreign, "dir");
+  us.writeUserSkill(root, { id: "gtmb-x", title: "X", description: "x.", body: "y", by: null, version: "0.22.0" });
+  const { linked, failed } = us.linkSkillIntoProjects(root, "gtmb-x");
   assert.deepEqual(linked, []); assert.deepEqual(failed.map(f => f.slug), ["other"]); assert.match(failed[0].error, /not a GTM Brain link/);
   assert.equal(existsSync(gone), false, "a missing project folder is not recreated");
-  assert.equal(readlinkSync(foreign), join(root, ".agents", "skills-other", "gtm-brain-x"), "the foreign link is untouched");
-  assert.deepEqual(us.unlinkSkillFromProjects(root, "gtm-brain-x"), []);
+  assert.equal(readlinkSync(foreign), join(root, ".agents", "skills-other", "gtmb-x"), "the foreign link is untouched");
+  assert.deepEqual(us.unlinkSkillFromProjects(root, "gtmb-x"), []);
 });
 
 test("a linked code repo never sees the skill links in git status, its worktrees included (Maksymilian, 2026-10-01)", () => {
@@ -81,9 +84,9 @@ test("a linked code repo never sees the skill links in git status, its worktrees
   const app = join(repo, "apps", "web"); mkdirSync(app, { recursive: true });
   assert.match(project(root, "--link", app, "--slug", "web"), /Git: the link is a block .*every worktree/);
   skill(root, "--create", "--title", "Circle event", "--description", "Create a Circle event.", "--body", "1. Ask.", "--by", "marta-nowak");
-  assert.ok(lstatSync(join(app, ".agents/skills/gtm-brain-circle-event")).isSymbolicLink());
+  assert.ok(lstatSync(join(app, ".agents/skills/gtmb-circle-event")).isSymbolicLink());
   const exclude = readFileSync(join(repo, ".git/info/exclude"), "utf8");
-  assert.ok(exclude.split("\n").includes("/apps/web/.agents/skills/gtm-brain-circle-event"), exclude);
+  assert.ok(exclude.split("\n").includes("/apps/web/.agents/skills/gtmb-circle-event"), exclude);
   const status = execFileSync("git", ["-C", repo, "status", "--porcelain", "--untracked-files=all"], { encoding: "utf8" });
   assert.doesNotMatch(status, /\.agents/, status);
   // a second reconcile adds nothing twice
@@ -95,11 +98,11 @@ test("create writes the skill, links it into linked projects, commits; a second 
   const root = brain(), external = folder();
   project(root, "--link", external, "--slug", "website");
   const out = skill(root, "--create", "--title", "Circle event", "--description", "Create a Circle event from a meeting note.", "--body", "1. Ask for the date.\n2. Create it in Circle.", "--by", "marta-nowak");
-  assert.match(out, /created gtm-brain-circle-event/); assert.match(out, /quit and reopened/); assert.match(out, /website/);
-  assert.ok(existsSync(join(root, ".agents/skills/gtm-brain-circle-event/SKILL.md")));
-  const link = join(external, ".agents/skills/gtm-brain-circle-event");
-  assert.ok(lstatSync(link).isSymbolicLink()); assert.equal(readlinkSync(link), join(root, ".agents/skills/gtm-brain-circle-event"));
-  assert.equal(lastCommit(root), "Added skill gtm-brain-circle-event");
+  assert.match(out, /created gtmb-circle-event/); assert.match(out, /quit and reopened/); assert.match(out, /website/);
+  assert.ok(existsSync(join(root, ".agents/skills/gtmb-circle-event/SKILL.md")));
+  const link = join(external, ".agents/skills/gtmb-circle-event");
+  assert.ok(lstatSync(link).isSymbolicLink()); assert.equal(readlinkSync(link), join(root, ".agents/skills/gtmb-circle-event"));
+  assert.equal(lastCommit(root), "Added skill gtmb-circle-event");
   const again = refused(root, "--create", "--title", "Circle event", "--description", "x", "--body", "y");
   assert.equal(again.code, 2); assert.match(again.text, /already exists/);
   const shipped = refused(root, "--create", "--title", "todo", "--description", "x", "--body", "y");
@@ -113,7 +116,7 @@ test("list shows the brain's skills and the shipped ones; remove deletes the fol
   project(root, "--link", external, "--slug", "website");
   skill(root, "--create", "--title", "Weekly update", "--description", "Draft the weekly account update.", "--body", "Draft it.");
   const rows = JSON.parse(skill(root, "--list", "--json"));
-  assert.deepEqual(rows.yours.map(s => s.id), ["gtm-brain-weekly-update"]); assert.ok(rows.plugin.includes("gtm-brain-todo"));
+  assert.deepEqual(rows.yours.map(s => s.id), ["gtmb-weekly-update"]); assert.ok(rows.plugin.includes("gtmb-todo"));
   assert.deepEqual(rows.yours[0].projects, ["website"]);
   // three kinds, said as three groups: shipped with the plugin, yours in this brain, Codex's own on this machine
   const home = mkdtempSync(join(tmpdir(), "gtm-brain-skills-home-")); mkdirSync(join(home, ".agents", "skills", "analyze-account-signals"), { recursive: true });
@@ -121,16 +124,16 @@ test("list shows the brain's skills and the shipped ones; remove deletes the fol
   const listed = execFileSync(process.execPath, [`${P}/scripts/gtm-brain-skills/skill.mjs`, ".", "--list"], { cwd: root, encoding: "utf8", env: { ...env, HOME: home } });
   const [shipped, yours, personal] = ["Shipped with GTM Brain", "Yours, in this brain", "Codex's own, on this machine"].map(h => listed.indexOf(h));
   assert.ok(shipped >= 0 && yours > shipped && personal > yours, `three groups in order:\n${listed}`);
-  assert.match(listed.slice(shipped, yours), /updated with the plugin/); assert.match(listed.slice(shipped, yours), /\/gtm-brain-todo/);
-  assert.match(listed.slice(yours, personal), /travel with the brain/); assert.match(listed.slice(yours, personal), /gtm-brain-weekly-update/);
+  assert.match(listed.slice(shipped, yours), /updated with the plugin/); assert.match(listed.slice(shipped, yours), /\/gtmb-todo/);
+  assert.match(listed.slice(yours, personal), /travel with the brain/); assert.match(listed.slice(yours, personal), /gtmb-weekly-update/);
   assert.match(listed.slice(personal), /GTM Brain never sees or updates them/); assert.match(listed.slice(personal), /analyze-account-signals/);
   const withPersonal = JSON.parse(execFileSync(process.execPath, [`${P}/scripts/gtm-brain-skills/skill.mjs`, ".", "--list", "--json"], { cwd: root, encoding: "utf8", env: { ...env, HOME: home } }));
   assert.deepEqual(withPersonal.personal, ["analyze-account-signals"]);
-  const out = skill(root, "--remove", "gtm-brain-weekly-update");
-  assert.match(out, /removed gtm-brain-weekly-update/);
-  assert.equal(existsSync(join(root, ".agents/skills/gtm-brain-weekly-update")), false);
-  assert.equal(existsSync(join(external, ".agents/skills/gtm-brain-weekly-update")), false);
-  assert.equal(lastCommit(root), "Removed skill gtm-brain-weekly-update");
+  const out = skill(root, "--remove", "gtmb-weekly-update");
+  assert.match(out, /removed gtmb-weekly-update/);
+  assert.equal(existsSync(join(root, ".agents/skills/gtmb-weekly-update")), false);
+  assert.equal(existsSync(join(external, ".agents/skills/gtmb-weekly-update")), false);
+  assert.equal(lastCommit(root), "Removed skill gtmb-weekly-update");
   assert.match(refused(root, "--remove", "gtm-brain-nope").text, /no such skill/);
 });
 
@@ -153,10 +156,10 @@ test("install fetches a skill folder, renames it under the prefix, adds the head
   const good = await fixtureRepo({ "skills/sales/SKILL.md": "---\nname: sales\ndescription: Run the weekly sales review from the CRM.\n---\n\n# Sales review\n\nOpen the pipeline.\n", "skills/sales/references/steps.md": "1. Open the CRM.\n" });
   t.after(good.close);
   const out = await skillAsync(root, { GTM_BRAIN_SKILL_SOURCE: good.base }, "--install", "--repo", "allethic/skills", "--path", "skills/sales");
-  assert.match(out, /installed gtm-brain-sales/);
-  const md = readFileSync(join(root, ".agents/skills/gtm-brain-sales/SKILL.md"), "utf8");
-  assert.match(md, /^name: gtm-brain-sales$/m); assert.ok(md.includes(us.HEADER_LINE)); assert.ok(existsSync(join(root, ".agents/skills/gtm-brain-sales/references/steps.md")));
-  assert.equal(lastCommit(root), "Installed skill gtm-brain-sales from allethic/skills skills/sales");
+  assert.match(out, /installed gtmb-sales/);
+  const md = readFileSync(join(root, ".agents/skills/gtmb-sales/SKILL.md"), "utf8");
+  assert.match(md, /^name: gtmb-sales$/m); assert.ok(md.includes(us.HEADER_LINE)); assert.ok(existsSync(join(root, ".agents/skills/gtmb-sales/references/steps.md")));
+  assert.equal(lastCommit(root), "Installed skill gtmb-sales from allethic/skills skills/sales");
   const bad = await fixtureRepo({ "skills/bad/SKILL.md": "---\nname: bad\ndescription: x\ntools: [a]\n---\nbody\n" });
   t.after(bad.close);
   let failure = null; try { await skillAsync(root, { GTM_BRAIN_SKILL_SOURCE: bad.base }, "--install", "--repo", "allethic/skills", "--path", "skills/bad"); } catch (e) { failure = { code: e.status, text: String(e.stderr) }; }
@@ -167,18 +170,18 @@ test("linking a project links the existing skills; unlinking removes them; the s
   const root = brain(), external = folder();
   skill(root, "--create", "--title", "Weekly update", "--description", "Draft the weekly account update.", "--body", "Draft it.");
   project(root, "--link", external, "--slug", "website");
-  const link = join(external, ".agents/skills/gtm-brain-weekly-update");
+  const link = join(external, ".agents/skills/gtmb-weekly-update");
   assert.ok(lstatSync(link).isSymbolicLink(), "link made at link time");
   // a teammate's skill arrives through git, not through the script: only the hook can link it
-  mkdirSync(join(root, ".agents/skills/gtm-brain-pulled"), { recursive: true });
-  writeFileSync(join(root, ".agents/skills/gtm-brain-pulled/SKILL.md"), "---\nname: gtm-brain-pulled\ndescription: Pulled from a teammate.\n---\n\n# GTM Brain skill: Pulled\n");
-  rmSync(join(root, ".agents/skills/gtm-brain-weekly-update"), { recursive: true, force: true }); // and one removed by hand: its link dangles
+  mkdirSync(join(root, ".agents/skills/gtmb-pulled"), { recursive: true });
+  writeFileSync(join(root, ".agents/skills/gtmb-pulled/SKILL.md"), "---\nname: gtmb-pulled\ndescription: Pulled from a teammate.\n---\n\n# GTM Brain skill: Pulled\n");
+  rmSync(join(root, ".agents/skills/gtmb-weekly-update"), { recursive: true, force: true }); // and one removed by hand: its link dangles
   const hook = execFileSync("bash", [`${P}/session/session-start.sh`], { cwd: external, encoding: "utf8", input: JSON.stringify({ session_id: "t", cwd: external }), env: { ...env, GTM_BRAIN_NO_VERSION_CHECK: "1" } });
   assert.match(hook, /PROJECT website/);
-  assert.ok(lstatSync(join(external, ".agents/skills/gtm-brain-pulled")).isSymbolicLink(), "pulled skill linked by the hook");
+  assert.ok(lstatSync(join(external, ".agents/skills/gtmb-pulled")).isSymbolicLink(), "pulled skill linked by the hook");
   assert.equal(existsSync(link), false, "dangling link removed by the hook");
   project(root, "--unlink", "website");
-  assert.equal(existsSync(join(external, ".agents/skills/gtm-brain-pulled")), false, "unlink removes the links");
+  assert.equal(existsSync(join(external, ".agents/skills/gtmb-pulled")), false, "unlink removes the links");
   // a project inside the brain already sees the brain's skills: no link there, or Codex would list each twice
   project(root, "--link", join(root, "research"), "--create", "--slug", "research");
   assert.equal(existsSync(join(root, "research", ".agents")), false, "no links inside the brain");

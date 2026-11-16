@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // compile: rewrite a context's cover from its memories. The script does the deterministic part;
-// the model writes the summary and working guidance (see ../../skills/gtm-brain-use-brain/references/compile.md).
+// the model writes the summary and working guidance (see ../../skills/gtmb-use-brain/references/compile.md).
 // Since 0.35.0 a summary is written on demand, in the chat that asks (load_context prints the digest and as_of
 // when the cached summary is older than the newest note); no background run starts after a save.
 //   node compile.mjs <root> --stale                       which contexts need compiling (json)

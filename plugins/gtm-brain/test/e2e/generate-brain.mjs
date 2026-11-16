@@ -133,7 +133,7 @@ export async function generate({ shape = "small", out, seed = 1, gold: goldPath 
 
   /* ---------- projects ---------- */
   const projects = PROJECTS.slice(0, cfg.projects);
-  for (const [slug, title] of projects) mkdirSync(join(root, "projects"), { recursive: true }), execFileSync(process.execPath, [join(P, "skills/gtm-brain-project/project.mjs"), ".", "--link", join(root, "projects", slug), "--create", "--slug", slug, "--title", title, "--contexts", "icp,offer", "--by", by], { cwd: root, env, stdio: ["ignore", "ignore", "pipe"], timeout: 60000 });
+  for (const [slug, title] of projects) mkdirSync(join(root, "projects"), { recursive: true }), execFileSync(process.execPath, [join(P, "skills/gtmb-project/project.mjs"), ".", "--link", join(root, "projects", slug), "--create", "--slug", slug, "--title", title, "--contexts", "icp,offer", "--by", by], { cwd: root, env, stdio: ["ignore", "ignore", "pipe"], timeout: 60000 });
 
   // an established brain: onboarding finished on the first day (the six outcomes, then the marker setup left is closed)
   const T0 = Date.parse("2026-01-05T08:00:00Z"), SPAN = 300 * 86400000;   // Jan 5 to Nov 1, 2026
@@ -235,7 +235,10 @@ export async function generate({ shape = "small", out, seed = 1, gold: goldPath 
   // meetings
   const meetingEvents = [];
   for (let i = 0; i < cfg.meetings; i++) {
-    const c = i === 0 && hub ? hub : pick(customerSet), staff = [...jobs].filter(([, j]) => j.org === c).map(([p]) => p).slice(0, int(1, 3));
+    // the first meeting always has someone from the customer in it: the page and the checks open that meeting's
+    // attendee, and a shifted random sequence (a relation type added to the schema) once left every meeting without one
+    const manned = x => [...jobs].some(([, j]) => j.org === x);
+    const c = i === 0 ? (hub && manned(hub) ? hub : customerSet.find(manned) || hub || pick(customerSet)) : pick(customerSet), staff = [...jobs].filter(([, j]) => j.org === c).map(([p]) => p).slice(0, int(1, 3));
     const f = 0.1 + rnd() * 0.88, occurred = timeAt(f), title = `${pick(["Discovery call", "QBR", "Pilot review", "Pricing walkthrough", "Security review"])} with ${c.name}`;
     const ref = `https://meetings.fixture.test/recordings/${i + 1}?account=work`;
     const participants = [{ name: "Marta Nowak", role: "attended" }, ...staff.map(p => ({ name: p.name, role: "attended" }))];

@@ -26,7 +26,7 @@ function fixture(t) {
   return { scratch, root, path: join(root, "website"), env: { ...env, CODEX_HOME: join(scratch, "profile"), GTM_BRAIN_NO_RENDER: "1" } };
 }
 function run(f, ...args) {
-  return spawnSync(process.execPath, [join(P, "skills/gtm-brain-project/project.mjs"), f.root, "--link", f.path, ...args], { env: f.env, encoding: "utf8" });
+  return spawnSync(process.execPath, [join(P, "skills/gtmb-project/project.mjs"), f.root, "--link", f.path, ...args], { env: f.env, encoding: "utf8" });
 }
 const create = f => run(f, "--create", "--starter", "web-design-system");
 
@@ -96,7 +96,7 @@ test("a later project query finds the compatible shared website and never resets
   const file = join(f.path, "src/styles/global.css"); writeFileSync(file, read(file) + "\n/* approved company values */\n");
   const s = await starter(); assert.equal(s.readStarterProject(f.path).compatible, true);
   assert.equal(create(f).status, 2); assert.match(read(file), /approved company values/);
-  const r = spawnSync(process.execPath, [join(P, "skills/gtm-brain-project/project.mjs"), f.root, "--list", "--json"], { env: f.env, encoding: "utf8" });
+  const r = spawnSync(process.execPath, [join(P, "skills/gtmb-project/project.mjs"), f.root, "--list", "--json"], { env: f.env, encoding: "utf8" });
   assert.equal(r.status, 0, r.stderr); const rows = JSON.parse(r.stdout).projects;
   assert.equal(rows.length, 1); assert.equal(rows[0].starter.id, "web-design-system"); assert.equal(rows[0].starter.compatible, true);
   rmSync(join(f.path, "docs/workflows/add-section/SKILL.md"));

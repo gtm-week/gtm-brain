@@ -10,14 +10,21 @@ on:
 permissions:
   contents: read
 
+# A new push to a pull request replaces the run before it; a run on main is never cancelled.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
+      # Node 22.16 and 24: the first releases whose node:sqlite has FTS5 (not 22.13-22.15, not 23).
+      # A pull request runs Linux on both and macOS on one; main runs all four. The second macOS job took
+      # 25 to 35 minutes and in the runs of 16 November found nothing the other three had not.
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        node: ["22.16", "24"]  # the first releases whose node:sqlite has FTS5 (not 22.13-22.15, not 23)
+        include: ${{ fromJSON(github.event_name == 'pull_request' && '[{"os":"ubuntu-latest","node":"22.16"},{"os":"ubuntu-latest","node":"24"},{"os":"macos-latest","node":"24"}]' || '[{"os":"ubuntu-latest","node":"22.16"},{"os":"ubuntu-latest","node":"24"},{"os":"macos-latest","node":"22.16"},{"os":"macos-latest","node":"24"}]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,6 +39,23 @@ jobs:
         run: node --test 'plugins/gtm-brain/test/*.test.mjs'
       - name: Derived text and schema in sync
         run: node scripts/sync-derived.mjs --check
+
+  # A pull request into main that changes what ships (plugins/gtm-brain/, test/ aside) bumps the version.
+  # Release branches carry their version already, so PRs into them are not checked.
+  version:
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.16"
+      - name: Version bumped when shipped files change
+        env:
+          BASE: ${{ github.base_ref }}
+        run: node scripts/check-version-bump.mjs "origin/$BASE"
 
   dashboard:
     runs-on: ubuntu-latest

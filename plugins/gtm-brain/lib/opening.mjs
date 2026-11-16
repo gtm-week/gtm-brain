@@ -13,7 +13,7 @@ export function pendingQuestionsLine(root, { max = 2 } = {}) {
   if (!open.length) return "";
   const cut = s => { const t = String(s || "").replace(/\s+/g, " ").trim(); return t.length > 110 ? `${t.slice(0, 107)}...` : t; };
   const shown = open.slice(0, max).map(m => `${m.title}, ${m.id}: "${cut(m.content)}"`).join("; ");
-  return `questions waiting for an answer: ${open.length} (${open.length > max ? "newest: " : ""}${shown}). Mention them only when they bear on the request or the person asks what is open; an answer is saved with retracts = the id.`;
+  return `questions waiting for an answer: ${open.length} (${open.length > max ? "newest: " : ""}${shown}). Mention them only when they bear on the request or the person asks what is open; when the person answers one, answer_question with question = its id closes it in one call.`;
 }
 
 /* The first call of a chat is often still query (status), out of habit or an older rulebook. Its opening lines

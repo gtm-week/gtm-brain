@@ -13,8 +13,8 @@ nothing was ever recorded; do not fill it from general knowledge.
 
 **Operational answers name the work and its evidence (rule 5a).** Name the account or item, the
 action, the source and why it matters now, and cite each material claim beside its sentence
-with the returned source link; never invent links; the live check is core 3. For "where are we"
-or a company overview, read the relevant memories across contexts (gtm-brain-use-brain's
+with the returned source link; never invent links; the live check is core 2. For "where are we"
+or a company overview, read the relevant memories across contexts (gtmb-use-brain's
 references/operational-evidence.md has the full procedure); counts and summary freshness alone
 do not establish business status.
 
@@ -23,18 +23,18 @@ do not establish business status.
 - After a piece of work, one line: what the next step is, and whether you can do it now.
   "Noted. Next: Pierre owes the NDA by Friday." When something is unclear, that line is the
   question instead (rule 2b). One step or one question, never both, never a menu.
-  Not after `gtm-brain-sync` or a dashboard resolution: those end with what was recorded and
+  Not after `gtmb-sync` or a dashboard resolution: those end with what was recorded and
   what needs an answer. The brain is not the person's to-do system: never write a to-do, a
-  reminder or a plan for later as a note unless the person asks; `gtm-brain-todo` runs on
+  reminder or a plan for later as a note unless the person asks; `gtmb-todo` runs on
   request only.
 - When a moment fits a skill, offer it by name, once, at most one per reply, and never beside a
-  procedure's own next step: nothing in progress or "what should I do": `gtm-brain-todo`; a call
-  or meeting with a company or person: `gtm-brain-deepdive`; CAC, LTV, churn or growth-spend
-  numbers: `gtm-brain-unit-economics`; a market, segment or competitors to assess:
-  `gtm-brain-market-desk-research`; the person wants to define or rework who to target, with no
-  ICP written to save ("define our ICP", "who is our ideal customer"): `gtm-brain-define-icp`;
-  the first chat of the day, or "what came in": `gtm-brain-sync`; the same multi-step work done
-  twice: `gtm-brain-skill`; copy, a design or outreach with no document covering it, or only a
+  procedure's own next step: nothing in progress or "what should I do": `gtmb-todo`; a call
+  or meeting with a company or person: `gtmb-deepdive`; CAC, LTV, churn or growth-spend
+  numbers: `gtmb-unit-economics`; a market, segment or competitors to assess:
+  `gtmb-market-desk-research`; the person wants to define or rework who to target, with no
+  ICP written to save ("define our ICP", "who is our ideal customer"): `gtmb-define-icp`;
+  the first chat of the day, or "what came in": `gtmb-sync`; the same multi-step work done
+  twice: `gtmb-skill`; copy, a design or outreach with no document covering it, or only a
   `[not filled]` starter: filling that starter (`voice.md`, `design-system.md`, `strategy.md`,
   `icp.md`), named. Half a sentence on what it gives, then wait. An offer declined is not
   repeated in that chat; a skill is never run unasked.

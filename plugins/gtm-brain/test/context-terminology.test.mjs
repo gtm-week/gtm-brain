@@ -48,7 +48,7 @@ test(`context labels change without translating custom titles or evidence`, () =
 });
 
 test('an older summary, rule or note that says channel is read as context and rewritten on the next compile (ALL-212)', () => {
-  const template = wholeRulebook(readFileSync(join(root, 'templates/AGENTS.md'), 'utf8')), compile = readFileSync(join(root, 'skills/gtm-brain-use-brain/references/compile.md'), 'utf8');
+  const template = wholeRulebook(readFileSync(join(root, 'templates/AGENTS.md'), 'utf8')), compile = readFileSync(join(root, 'skills/gtmb-use-brain/references/compile.md'), 'utf8');
   assert.match(template, /older summary, rule or note that says "channel" means a context/);
   assert.match(compile, /Write "context", never "channel"/);
 });

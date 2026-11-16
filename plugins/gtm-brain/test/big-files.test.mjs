@@ -67,7 +67,7 @@ test('add-file refuses a small recording with the big-files advice and lands not
   const out = f.fail('--file', join(f.outside, 'discovery-call.m4a'), '--entity', 'Acme');
   assert.match(out, /discovery-call\.m4a is a recording: recordings stay out of git, not kept/);
   assert.ok(out.includes(lib.bigFileAdvice(f.root)));
-  assert.match(out, /big-files walk-through \(gtm-brain-use-brain\/references\/big-files\.md\)/);
+  assert.match(out, /big-files walk-through \(gtmb-use-brain\/references\/big-files\.md\)/);
   assert.match(out, /"Reflow GTM Brain files"/, 'the one named Drive folder');
   assert.match(out, /\{kind: google-drive, account, ref, url\}/);
   assert.match(out, /not connected in this Codex, say so and ask for the file's Drive link/);
@@ -151,17 +151,17 @@ test('the big-files question: not asked until its answer note exists; local wait
 
 test('the walk-through is one reference the start skill, discovery and the saving path all link to', () => {
   const read = p => readFileSync(join(P, p), 'utf8');
-  const guide = read('skills/gtm-brain-use-brain/references/big-files.md');
-  for (const p of ['skills/gtm-brain-start/SKILL.md', 'skills/gtm-brain-start/references/discovery.md', 'skills/gtm-brain-use-brain/references/files.md', 'skills/gtm-brain-use-brain/references/save.md', 'skills/gtm-brain-use-brain/SKILL.md']) assert.match(read(p), /big-files\.md\)/, p);
+  const guide = read('skills/gtmb-use-brain/references/big-files.md');
+  for (const p of ['skills/gtmb-start/SKILL.md', 'skills/gtmb-start/references/discovery.md', 'skills/gtmb-use-brain/references/files.md', 'skills/gtmb-use-brain/references/save.md', 'skills/gtmb-use-brain/SKILL.md']) assert.match(read(p), /big-files\.md\)/, p);
   assert.ok(lib.BIG_FILES_GUIDE.endsWith('references/big-files.md') && existsSync(join(P, 'skills', lib.BIG_FILES_GUIDE)));
   assert.match(guide, /--big/); assert.match(guide, /--drive "<link or file id>" --account/);
   assert.match(guide, /never Computer Use/i); assert.match(guide, /Never commit the bytes/);
   assert.match(guide, /ask for the file's Drive link instead/);
-  const discovery = read('skills/gtm-brain-start/references/discovery.md');
+  const discovery = read('skills/gtmb-start/references/discovery.md');
   assert.match(discovery, /Where big files go: the one question before the draft/);
   assert.match(discovery, /"Google Drive, shared with the team", "This computer only"/, 'recommended option first');
   assert.match(discovery, /`Big files: google-drive\.` or `Big files: local\.`/);
-  assert.match(read('skills/gtm-brain-start/references/questions.md'), /Where big files go.*Google Drive, shared with the team \(Recommended\); This computer only/);
+  assert.match(read('skills/gtmb-start/references/questions.md'), /Where big files go.*Google Drive, shared with the team \(Recommended\); This computer only/);
 });
 
 // Review round (lane M): the cases the first tests could not fail on.
@@ -215,7 +215,7 @@ test('the question state reads only a current answer note, and a finished onboar
 });
 
 test('the walk-through offers before it copies and never sends a "this computer" answer to Drive', () => {
-  const guide = readFileSync(join(P, 'skills/gtm-brain-use-brain/references/big-files.md'), 'utf8');
+  const guide = readFileSync(join(P, 'skills/gtmb-use-brain/references/big-files.md'), 'utf8');
   assert.match(guide, /Yes, move it \/ No,\s+leave it/);
   assert.match(guide, /until it is applied, leave the file where it is/);
   assert.doesNotMatch(guide, /carry on with the current setting/);

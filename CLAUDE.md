@@ -59,7 +59,7 @@ gitignored `.dev-brains`); it never deletes a real brain.
 
 Everything that ships is under `plugins/gtm-brain/`. The layers, from the outside in:
 
-- **Skills** (`skills/gtm-brain-*/SKILL.md`): the twenty-one user-facing workflows. Detailed procedures
+- **Skills** (`skills/gtm-brain-*/SKILL.md`): the twenty-six user-facing workflows. Detailed procedures
   live in each skill's `references/`. These are what people install, so developer workflows never
   go here.
 - **MCP server** (`server/server.mjs`): hand-rolled stdio JSON-RPC, Node built-ins only. Each tool
@@ -144,7 +144,7 @@ work/                                  gitignored: dashboard, loaded set, tools.
 
 `plugins/gtm-brain/policies/questions.md` and `computer-use.md` are the sources for the marked blocks
 (`<!-- generated: <name>; edit plugins/gtm-brain/policies/<name>.md -->`) in `AGENTS.md`, `INSTALL.md`,
-`plugins/gtm-brain/templates/AGENTS.md` and `skills/gtm-brain-start/references/questions.md`. The batch
+`plugins/gtm-brain/templates/AGENTS.md` and `skills/gtmb-start/references/questions.md`. The batch
 memory schema in the ontology is derived from `remember.input_schema.properties` the same way.
 `policies/core.md` (the core rules) fills only the template's first section, and `server/server.mjs`
 reads it into the MCP instructions.
@@ -167,6 +167,6 @@ snapshot of the outgoing file in `templates/legacy/AGENTS-<old version>.md` plus
 Describe a feature once, in its owning document, and link from the others: `INSTALL.md`
 (standalone instructions for the installing agent), `ONBOARDING.md` (first-use walkthrough),
 `GUIDE.md` (everyday use), `plugins/gtm-brain/MANUAL.md` (how a brain works and how to change it; ships with the plugin, Codex answers "how does the brain work?" from it), `COMMANDS.md` (every tool and command and the files it writes),
-`SETUP.md` (manual install and contributor verification), `DOCUMENTS.md` (documents
+`SETUP.md` (manual install and contributor verification), `RELEASE-0.35.md` (what 0.35 changes and its known limits; the update steps live in MANUAL.md), `DOCUMENTS.md` (documents
 feature), `USER-SKILLS.md`, `skill-template/README.md` (contributing a shipped skill), `IMPORT.md` (its text is duplicated word for word as the body of
 `plugins/gtm-brain/claude/gtm-brain-export/SKILL.md`; keep the two in step).

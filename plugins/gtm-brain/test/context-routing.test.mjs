@@ -16,8 +16,8 @@ import { contextRoutingCases } from './live/context-routing-cases.mjs';
 const P = new URL('../', import.meta.url).pathname;
 
 test('routing references resolve from every owning workflow', () => {
-  for (const relative of ['gtm-brain-use-brain/SKILL.md', 'gtm-brain-use-brain/references/load-context.md', 'gtm-brain-use-brain/references/create-context.md',
-    'gtm-brain-use-brain/references/recall.md', 'gtm-brain-use-brain/references/remember.md']) {
+  for (const relative of ['gtmb-use-brain/SKILL.md', 'gtmb-use-brain/references/load-context.md', 'gtmb-use-brain/references/create-context.md',
+    'gtmb-use-brain/references/recall.md', 'gtmb-use-brain/references/remember.md']) {
     const file = join(P, 'skills', relative);
     const links = [...readFileSync(file, 'utf8').matchAll(/\]\(([^)]*context-routing\.md)\)/g)];
     assert.equal(links.length, 1, relative);

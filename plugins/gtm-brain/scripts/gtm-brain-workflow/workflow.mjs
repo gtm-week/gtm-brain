@@ -41,7 +41,7 @@ const json = obj => console.log(JSON.stringify(obj, null, 2));
 const slugs = () => wf.listWorkflows(root).map(w => w.slug).join(", ") || "none";
 const parseJSON = (text, flag) => { try { const v = JSON.parse(text || "{}"); if (!v || typeof v !== "object" || Array.isArray(v)) throw new Error(); return v; } catch { refuse(`--${flag} must be a JSON object`); } };
 const parseActions = text => String(text || "").split(",").map(s => s.trim()).filter(Boolean).map(a => { const [tool, action, ...ref] = a.split(":"); return ref.length ? { tool, action, ref: ref.join(":") } : { tool, action }; });
-const off = () => { if (wf.workflowsOff(root)) refuse("workflows are off in this brain (workflows: off in brain/admin.md); nothing is started or moved. Turning them on is a workplace change (gtm-brain-configure)."); };
+const off = () => { if (wf.workflowsOff(root)) refuse("workflows are off in this brain (workflows: off in brain/admin.md); nothing is started or moved. Turning them on is a workplace change (gtmb-configure)."); };
 
 /* ---------- records: the shapes a run is made of ---------- */
 // depth:<n> only past the first link of a chain, so a run nobody started from another run keeps the 0.34 tags
@@ -149,7 +149,7 @@ if (opt.start) {
   const raw = wf.readWorkflow(root, String(opt.start)); if (!raw) refuse(`no workflow "${opt.start}"; workflows: ${slugs()}`);
   if (raw.ok && raw.header.status === "paused") refuse(`${raw.slug} is paused; workflow resume switches it back on`);
   const held = raw.ok ? tr.effectiveStatus(root, raw).flag : null;
-  if (held) refuse(`${raw.slug} is held: ${held}. Fix the header, or the schema through /gtm-brain-schema, then workflow check`);
+  if (held) refuse(`${raw.slug} is held: ${held}. Fix the header, or the schema through /gtmb-schema, then workflow check`);
   let ev = null;
   if (opt.event) {
     const id = String(opt.event), offer = tr.pendingOffers(root).find(o => o.workflow.slug === raw.slug);

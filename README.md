@@ -2,7 +2,7 @@
 
 # GTM Brain
 
-[Website](https://gtm-brain.ai/) · [Install](#install-in-codex) · [Screenshots](#the-dashboard) · [Architecture](#how-it-fits-together) · [Workflows](#built-in-workflows)
+[Website](https://gtm-brain.ai/) · [Start here](#start-here) · [Install](#install-in-codex) · [Configure](#configure-your-brain) · [Put it to work](#put-it-to-work) · [Dashboard](#the-dashboard) · [Architecture](#how-it-fits-together) · [Workflows](#built-in-workflows)
 
 **For GTM engineers building research, account and campaign workflows in Codex.**
 
@@ -13,31 +13,65 @@ and playbook progress in local files that your agent can use across chats and li
 It installs as the **`gtm-brain` plugin**. Open source under [MIT](LICENSE).
 [Codex](#install-in-codex) is the primary host; [Claude Code support is in beta](#claude-code-beta).
 
-## What it solves
+## Start here
 
-| The work you keep repeating | What GTM Brain does |
-| --- | --- |
-| **Re-explaining who you sell to and why you win.** Every research or campaign chat needs the same ICP, offer, proof and messaging rules. | Keeps those as standing documents and shared context. Linked project folders use the same brain, so a new project can reuse what you have already established. |
-| **Reconstructing an account from CRM records, emails and call notes.** The useful detail is scattered, and yesterday's summary may miss today's change. | Builds a sourced account brief from retained evidence and targeted reads of connected tools: where things stand, who is involved, what happened and what remains unanswered. |
-| **Losing the state of a multi-step GTM playbook.** The prompt is saved, but which step ran, what is due and what needs approval are not. | Keeps reusable playbooks with tracked runs, steps, dates and approval gates. Resume a run in chat with its recorded progress. |
-| **Getting a GTM recommendation you cannot check.** Market claims lack evidence; CAC and LTV use incompatible inputs. | Runs sourced market research and unit-economics reviews that expose evidence, assumptions and missing inputs. You can inspect the basis for the conclusion. |
+**New to GTM Brain**
 
-## The dashboard
+1. Install it: [Install in Codex](#install-in-codex), one message to Codex.
+2. Open a new Codex chat in an empty folder and send `/gtmb-start`. It creates the brain, asks
+   about your business and connects your tools.
+3. Work as usual. Say what happened ("just got off a call with ..."), ask what you need
+   ("brief me on Acme", "what should I focus on this week?"), and say "open the dashboard" to
+   see what the brain holds.
+4. Shape it with the two commands that matter most: `/gtmb-rules` (what Codex saves and asks,
+   where files go) and `/gtmb-schema` (what is kept about each person and company).
 
-The dashboard makes the agent's working knowledge inspectable: contexts, source-backed memories,
-people and companies, decisions, open questions and workflow progress. Work happens in chat;
-the dashboard is a read-only view of the same files.
+**Already using it (0.35 or earlier)**
 
-**Actual GTM Brain dashboard, populated with fictional demo data.** These are captures
-of the shipped app, not mockups. No customer or private workspace data is shown.
+1. Everyone on the team says "update GTM Brain" in Codex, then quits and reopens Codex.
+2. Start a new chat in the brain folder and read the first reply: it says what was refreshed.
+3. The skills are now `/gtmb-<name>` (they were `/gtm-brain-<name>`). An old name still works:
+   Codex runs the new skill and tells you its name. If your brain's own files still use old
+   names, Codex offers once to update them.
+4. If the reply says the brain can be upgraded, the owner says "upgrade the brain". Only after
+   everyone has updated: a teammate on an older version cannot use an upgraded brain.
 
-![GTM Brain dashboard showing the shared contexts and their summaries](diagrams/screenshots/dashboard-contexts.png)
+Details: [Updating to 0.36](plugins/gtm-brain/MANUAL.md#updating-to-036-short-skill-names) ·
+[Updating to 0.35](plugins/gtm-brain/MANUAL.md#updating-to-035).
 
-![A context with its summary, evidence and related people and companies](diagrams/screenshots/context-evidence.png)
+**How the brain works**
+
+![The brain in one picture. Configuration, on the left, says what is allowed: it sets the fields and kinds of entities and checks every save into memories, and it changes only when you edit the file or approve a change Codex proposes. Entities are who and what the memories are about; names resolve and links derive from the memories. Codex, where you talk, is the only thing that reads your tools, reads the brain and saves into it. Notes and entities keep a link back to their source in your tools. Workflows, underneath, run through Codex under the rules and save each step as a note.](diagrams/brain-in-one-picture.svg)
+
+Read it left to right. **Configuration** says what is allowed; it shapes the entities and checks
+every save, and it changes only two ways (red): you ask in chat and approve what Codex proposes,
+or you edit the file. **Memories** are what happened and **entities** are who and what they are
+about. **Codex** is where you talk, and the only thing that reads your tools, reads the brain
+and saves into it. **Your tools** keep the raw material; a dashed line is the link a note or an
+entity keeps back to its original. **Workflows** are the part that acts: they run through
+Codex, under the rules, and leave each step as a note.
+
+- **It is a folder of plain files in git on your computer.** Nothing is stored anywhere else.
+- **You talk, Codex saves.** What happened, was decided or is open becomes a dated note with
+  its source. Notes are never edited; a correction replaces the old note and keeps it.
+- **People, companies and products are linked across notes,** with their relationships and
+  history (who worked where, who is a customer).
+- **Your base documents steer the work:** strategy, ideal customer profile, tone of voice,
+  design system. Codex reads them before the work they apply to.
+- **Your rules and schema decide** what Codex saves and asks, where files go, and what is kept
+  about each person and company.
+- **The dashboard shows the same files:** what needs you, housekeeping, entities, notes,
+  workflows and configuration. Documents, entities and notes can be edited there.
+
+More: [How GTM Brain works](#how-gtm-brain-works) · [How a brain works](plugins/gtm-brain/MANUAL.md).
+
+**Configure it:** one table of commands in [Configure your brain](#configure-your-brain).
 
 ## Install in Codex
 
 Already using the previous plugin? Follow the [rename migration](MIGRATING.md) to keep your existing brain and switch installations safely.
+
+Coming from 0.34? [What is new in 0.35 and how to update](RELEASE-0.35.md).
 
 Requires the **Codex desktop app** and **Node 22.16+ (22.x) or Node 24+**. The guided installer checks your environment.
 
@@ -52,6 +86,66 @@ and guides you through your business context and tool connections. No GitHub inv
 sign-in is required to download the plugin.
 
 [First-use walkthrough](ONBOARDING.md) · [Everyday guide](GUIDE.md) · [Manual installation](#manual-installation)
+
+## Configure your brain
+
+Type a command in a Codex chat opened in the brain's folder, or say the sentence beside it.
+Every skill is `/gtmb-<name>`.
+
+**First: rules and schema.** These two decide how the brain behaves for everyone on the team.
+
+| To change | Command | Or say |
+| --- | --- | --- |
+| Rules: what Codex saves, what it asks, where files go | `/gtmb-rules` | "add a rule: ...", "from now on ...", "always ask before ..." |
+| Schema: what is kept about people, companies and products, and how they relate | `/gtmb-schema` | "every company must have a budget owner" |
+
+**Then: setup and the base documents.**
+
+| To set up or change | Command | Or say |
+| --- | --- | --- |
+| Create the brain in a folder | `/gtmb-start` | |
+| Company, team, tools, settings | `/gtmb-configure` | "connect my tools" |
+| Strategy | `/gtmb-strategy` | "run the strategic intake" |
+| Ideal customer profile | `/gtmb-define-icp` | "define our ICP" |
+| Tone of voice | `/gtmb-voice` | "draft our voice" |
+| Design system | `/gtmb-design-system` | "build our design system" |
+
+**As you need them.**
+
+| To do | Command | Or say |
+| --- | --- | --- |
+| A process with steps | `/gtmb-workflow` | "start the outbound workflow" |
+| Your own skill | `/gtmb-skill` | "make this a skill" |
+| A working folder linked to the brain | `/gtmb-project` | "link this folder" |
+| A tool | `/gtmb-clay-setup`, `/gtmb-zynt-setup`, `/gtmb-freckle-setup`, `/gtmb-woodpecker-setup`, `/gtmb-surfer-setup`, `/gtmb-heyreach-setup` | |
+| What waits on you | `/gtmb-todo` | "lets do housekeeping" |
+| The latest from connected tools | `/gtmb-sync` | "catch up" |
+| Update the plugin, upgrade the brain | | "update GTM Brain", "upgrade the brain" |
+
+Where each part lives is in the picture under [Start here](#start-here). Who can change what:
+
+```mermaid
+flowchart LR
+  owner["Owner"] -->|"asks for a change"| show["Codex shows the change"]
+  mate["Teammate"] -->|"asks for a change"| where{"Which file?"}
+  where -->|"about-us/ or config/"| proposal["Kept as a proposal<br/>brain/proposals/"]
+  where -->|"notes, people, companies,<br/>workflows, documents"| saved["Saved at once"]
+  proposal -->|"shown at the owner's<br/>next chat start"| show
+  show -->|"APPROVE"| applied["Applied and committed<br/>Recorded: who asked, who approved"]
+  show -->|"No"| unchanged["Nothing changes"]
+```
+
+Three things to know:
+
+- A change to company, team or tools is shown first and applies only when you choose APPROVE.
+- Only the brain's owner changes the base documents (`about-us/`) and the rules, schema and
+  settings (`config/`). A teammate's change becomes a proposal the owner approves.
+- Documents can also be read and edited in the dashboard: Configuration, open the document, Edit.
+
+The whole list, with what each change does, is in
+[How a brain works: Changing how it works](plugins/gtm-brain/MANUAL.md#changing-how-it-works).
+Until 0.35 the skills were named `/gtm-brain-<name>`; see
+[Updating to 0.36](plugins/gtm-brain/MANUAL.md#updating-to-036-short-skill-names).
 
 ## Put it to work
 
@@ -92,8 +186,31 @@ called out. The review makes a recommendation; budget and campaign changes remai
 > Make this research process a skill I can reuse in our other projects.
 
 Keep your own skills in the brain and use them from linked project folders. Plugin updates
-preserve them. See the [command reference](COMMANDS.md) for all twenty-one workflows, including
+preserve them. See the [command reference](COMMANDS.md) for all twenty-six workflows, including
 strategy, source sync, documents and project setup.
+
+## What it solves
+
+| The work you keep repeating | What GTM Brain does |
+| --- | --- |
+| **Re-explaining who you sell to and why you win.** Every research or campaign chat needs the same ICP, offer, proof and messaging rules. | Keeps those as standing documents and shared context. Linked project folders use the same brain, so a new project can reuse what you have already established. |
+| **Reconstructing an account from CRM records, emails and call notes.** The useful detail is scattered, and yesterday's summary may miss today's change. | Builds a sourced account brief from retained evidence and targeted reads of connected tools: where things stand, who is involved, what happened and what remains unanswered. |
+| **Losing the state of a multi-step GTM playbook.** The prompt is saved, but which step ran, what is due and what needs approval are not. | Keeps reusable playbooks with tracked runs, steps, dates and approval gates. Resume a run in chat with its recorded progress. |
+| **Getting a GTM recommendation you cannot check.** Market claims lack evidence; CAC and LTV use incompatible inputs. | Runs sourced market research and unit-economics reviews that expose evidence, assumptions and missing inputs. You can inspect the basis for the conclusion. |
+
+## The dashboard
+
+The dashboard shows what the brain holds, from the same files Codex reads: what needs you and
+what to tidy, the people and companies with their relationships and history, the notes with
+their sources, the workflows, and the configuration. Most work happens in chat; documents,
+entities and notes can also be edited here.
+
+**Actual GTM Brain dashboard, populated with fictional demo data.** These are captures
+of the shipped app, not mockups. No customer or private workspace data is shown.
+
+![The Overview tab: what is coming up and what to tidy, each with a link that prepares the work in Codex](diagrams/screenshots/dashboard-overview.png)
+
+![The Entities tab with a company opened: its relation to us, its details, the people who work there, what it uses and its history](diagrams/screenshots/dashboard-entity.png)
 
 ## How GTM Brain works
 
@@ -277,29 +394,34 @@ does not mean offline AI processing.
 
 ## Built-in workflows
 
-Ask for an outcome in ordinary language, or invoke one of the twenty-one shipped skills:
+Ask for an outcome in ordinary language, or invoke one of the twenty-six shipped skills:
 
 | Command | Use it for |
 | --- | --- |
-| `/gtm-brain-start` | Set up the brain and continue first-use discovery. |
-| `/gtm-brain-use-brain` | Recall evidence, save findings and resume everyday work. |
-| `/gtm-brain-deepdive` | Build a sourced brief on an account, person, deal or context. |
-| `/gtm-brain-market-desk-research` | Assess a segment, buying pains, alternatives and evidence for fit. |
-| `/gtm-brain-define-icp` | Define company fit, buying roles and readiness with Chris Pawlak's interview; keep one draft ICP. |
-| `/gtm-brain-unit-economics` | Compare CAC, LTV, payback and retention with explicit inputs and gaps. |
-| `/gtm-brain-strategy` | Work through a strategic intake and maintain the strategy document. |
-| `/gtm-brain-voice` | Draft a tone of voice: whose it is first (company, person or team), then from writing that fits, tested on one fresh piece; the company's is `voice.md`. |
-| `/gtm-brain-zynt-setup` | Set up ZYNT buying signals from the brain when you paste ZYNT's setup prompt; ZYNT then shows in the brain's tools. |
-| `/gtm-brain-workflow` | Create a playbook, start a run and advance through its steps and gates. |
-| `/gtm-brain-sync` | Pull relevant updates from connected sources and retain useful findings. |
-| `/gtm-brain-todo` | Review what is waiting on you across the brain and connected tools. |
-| `/gtm-brain-project` | Create or link a working folder to the shared brain. |
-| `/gtm-brain-design-system` | Build our website design system from the existing brand with Brian Woloszczak and Peakout's starter. |
-| `/gtm-brain-add-section` | Add a reusable section to the website design system. |
-| `/gtm-brain-build-landing-page` | Build a campaign page on the shared website; stops at a local preview. |
-| `/gtm-brain-publish-website` | Publish the shared website on Vercel: preview first, production on its own decision. |
-| `/gtm-brain-skill` | Turn a repeated process into your own reusable skill. |
-| `/gtm-brain-configure` | Change workplace information, tools and settings through the approval flow. |
+| `/gtmb-start` | Set up the brain and continue first-use discovery. |
+| `/gtmb-use-brain` | Recall evidence, save findings and resume everyday work. |
+| `/gtmb-deepdive` | Build a sourced brief on an account, person, deal or context. |
+| `/gtmb-market-desk-research` | Assess a segment, buying pains, alternatives and evidence for fit. |
+| `/gtmb-define-icp` | Define company fit, buying roles and readiness with Chris Pawlak's interview; keep one draft ICP. |
+| `/gtmb-unit-economics` | Compare CAC, LTV, payback and retention with explicit inputs and gaps. |
+| `/gtmb-strategy` | Work through a strategic intake and maintain the strategy document. |
+| `/gtmb-voice` | Draft a tone of voice: whose it is first (company, person or team), then from writing that fits, tested on one fresh piece; the company's is `voice.md`. |
+| `/gtmb-zynt-setup` | Set up ZYNT buying signals from the brain when you paste ZYNT's setup prompt; ZYNT then shows in the brain's tools. |
+| `/gtmb-freckle-setup` | Connect Freckle (lead enrichment) on your yes and build its first list of target companies and people from the brain; runs that spend credits ask first. |
+| `/gtmb-clay-setup` | Connect Clay on your yes and find the brain's target companies and people in it (search is free); enrichment that spends credits asks first. |
+| `/gtmb-woodpecker-setup` | Connect Woodpecker on your yes, see how your campaigns perform, and save one email sequence written from the brain as a draft; it never starts a campaign. |
+| `/gtmb-surfer-setup` | Connect Surfer on your yes, get topics from the brain's strategy, market and call notes, and brief the first article; a full article asks first, nothing is published. |
+| `/gtmb-heyreach-setup` | Connect HeyReach with your workspace's Connection URL, see how your LinkedIn campaigns do, and get a connection note and follow-ups from the brain to paste in; nothing is sent. |
+| `/gtmb-workflow` | Create a playbook, start a run and advance through its steps and gates. |
+| `/gtmb-sync` | Pull relevant updates from connected sources and retain useful findings. |
+| `/gtmb-todo` | Review what is waiting on you across the brain and connected tools. |
+| `/gtmb-project` | Create or link a working folder to the shared brain. |
+| `/gtmb-design-system` | Build our website design system from the existing brand with Brian Woloszczak and Peakout's starter. |
+| `/gtmb-add-section` | Add a reusable section to the website design system. |
+| `/gtmb-build-landing-page` | Build a campaign page on the shared website; stops at a local preview. |
+| `/gtmb-publish-website` | Publish the shared website on Vercel: preview first, production on its own decision. |
+| `/gtmb-skill` | Turn a repeated process into your own reusable skill. |
+| `/gtmb-configure` | Change workplace information, tools and settings through the approval flow. |
 
 The website workflows use Brian Woloszczak and Peakout's GTM Tech Week starter. GTM Brain
 bundles its pinned source unchanged, adapts only its packaging and connects it to company
@@ -344,7 +466,7 @@ codex plugin add gtm-brain@gtm-brain
 
 The upgrade line refreshes an existing marketplace snapshot. GTM Brain has no hooks to approve.
 In a new chat in an empty project folder, send "Set up GTM Brain here" or
-`/gtm-brain-start`.
+`/gtmb-start`.
 
 To verify the first use, ask the agent to remember a test finding, recall it in a new chat and
 show the dashboard. The same record should appear in the context and the read-only view.
@@ -378,16 +500,18 @@ plugins/gtm-brain/
   .mcp.json  server/          the operations as MCP tools (Remembering, Searching the brain, ...);
                               dash.mjs serves the read-only dashboard and revision events
   lib/                        shared readers, validators, writers, search and identity logic; Node built-ins
-  skills/                     the twenty-one workflows a person can ask for (all prefixed gtm-brain-): start,
+  skills/                     the twenty-six workflows a person can ask for (all prefixed gtm-brain-): start,
                               todo, sync, workflow, deepdive, strategy, unit-economics, define-icp,
-                              market-desk-research, voice, zynt-setup, project, design-system, add-section,
+                              market-desk-research, voice, zynt-setup, freckle-setup, clay-setup,
+                              woodpecker-setup, surfer-setup, heyreach-setup,
+                              project, design-system, add-section,
                               build-landing-page, publish-website, configure, skill, rules, schema,
                               use-brain; what
                               they used to be as separate skills lives on as their references
-    gtm-brain-use-brain/references/    load, create and edit contexts, remember, recall, names, compile,
+    gtmb-use-brain/references/    load, create and edit contexts, remember, recall, names, compile,
                               dashboard, manual save
-    gtm-brain-configure/references/ workplace approval, connect tools, update plugin
-    gtm-brain-start/references/  onboarding, the handoff import
+    gtmb-configure/references/ workplace approval, connect tools, update plugin
+    gtmb-start/references/  onboarding, the handoff import
   scripts/gtm-brain-*/           the operation scripts the MCP server, session scripts and skills run (no SKILL.md)
   starters/web-design-system/ Brian and Peakout's unchanged starter source and its preservation manifest
   templates/                  AGENTS.md, brain/admin.md, .gitignore, the pre-commit hook

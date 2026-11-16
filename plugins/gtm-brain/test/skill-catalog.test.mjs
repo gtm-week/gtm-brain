@@ -22,7 +22,7 @@ test('the real renderer publishes the skill catalog in both page and data',t=>{
  const data=JSON.parse(readFileSync(join(root,'work/home/data.json'),'utf8'));
  assert.deepEqual(data.skills,skillCatalog());
  for(const file of ['dashboard.js','dashboard.css'])assert.equal(readFileSync(join(root,'work/home/ui',file),'utf8'),readFileSync(join(plugin,'scripts/gtm-brain-render/ui',file),'utf8'));
- const html=readFileSync(join(root,'work/home/index.html'),'utf8');assert.match(html,/id="admin-skills"/);assert.match(html,/gtm-brain-sync/);assert.doesNotMatch(html,/__DATA__/);
+ const html=readFileSync(join(root,'work/home/index.html'),'utf8');assert.match(html,/id="admin-skills"/);assert.match(html,/gtmb-sync/);assert.doesNotMatch(html,/__DATA__/);
 });
 
 test('the catalog covers exactly the shipped user skills',()=>{
@@ -37,9 +37,9 @@ test('the catalog covers exactly the shipped user skills',()=>{
 });
 test('missing workflows and internal script folders are never advertised',t=>{
  const root=mkdtempSync(join(tmpdir(),'gtm-skill-catalog-'));t.after(()=>{ try { rmSync(root,{recursive:true,force:true}); } catch {} });
- mkdirSync(join(root,'skills/gtm-brain-sync'),{recursive:true});writeFileSync(join(root,'skills/gtm-brain-sync/SKILL.md'),'name: gtm-brain-sync');
- mkdirSync(join(root,'skills/gtm-brain-project'),{recursive:true});writeFileSync(join(root,'skills/gtm-brain-project/project.mjs'),'');
- assert.deepEqual(skillCatalog(root).map(s=>s.id),['gtm-brain-sync']);
+ mkdirSync(join(root,'skills/gtmb-sync'),{recursive:true});writeFileSync(join(root,'skills/gtmb-sync/SKILL.md'),'name: gtmb-sync');
+ mkdirSync(join(root,'skills/gtmb-project'),{recursive:true});writeFileSync(join(root,'skills/gtmb-project/project.mjs'),'');
+ assert.deepEqual(skillCatalog(root).map(s=>s.id),['gtmb-sync']);
 });
 const fixture=()=>({brain:'/tmp/FDE OS & Łódź #1',name:'FDE OS',generatedAt:'2026-09-13T10:00:00Z',
  contexts:[],names:[],recent:[],loaded:[],questions:[],decisions:[],tools:[],activity:[],projects:[],
@@ -52,12 +52,12 @@ test(`shortcuts and searchable examples open exact workflow drafts`,()=>{
  const links=[...results.matchAll(/href="([^"]+)"/g)].map(m=>new URL(m[1].replaceAll('&amp;','&')));
  for(let i=0;i<links.length;i++){const url=links[i],s=D.skills[i];assert.equal(url.protocol,'codex:');assert.equal(url.hostname,'threads');assert.equal(url.pathname,'/new');
   assert.equal(url.searchParams.get('path'),D.brain);assert.equal(url.searchParams.get('prompt'),s.command+'\n\n'+s.example);assert.deepEqual([...url.searchParams.keys()],['path','prompt']);}
- p.node('#skill-search').oninput({target:{value:'gtm-brain-sync'}});
+ p.node('#skill-search').oninput({target:{value:'gtmb-sync'}});
  assert.equal((p.node('#skill-results').innerHTML.match(/<article /g)||[]).length,1);
- assert.ok(p.node('#skill-results').innerHTML.includes(D.skills.find(s=>s.id==='gtm-brain-sync').example));
+ assert.ok(p.node('#skill-results').innerHTML.includes(D.skills.find(s=>s.id==='gtmb-sync').example));
  p.run('renderSkillLibrary("zzzz-no-match")');assert.match(p.node('#skill-results').innerHTML,/No matching skills/);
- p.run('show("admin")');p.node('#skill-search').value='gtm-brain-sync';p.run('refreshPage()');
- const fresh=page(D,{saved:p.saved});assert.equal(fresh.node('#skill-search').value,'gtm-brain-sync');
+ p.run('show("admin")');p.node('#skill-search').value='gtmb-sync';p.run('refreshPage()');
+ const fresh=page(D,{saved:p.saved});assert.equal(fresh.node('#skill-search').value,'gtmb-sync');
  assert.equal((fresh.node('#skill-results').innerHTML.match(/<article /g)||[]).length,1);
  assert.doesNotMatch(results,/<form|data-say=|onclick=|https?:/);
 });
@@ -75,8 +75,8 @@ test('copy prompt copies the exact command and example without navigating',async
  assert.match(p.node('#copy-status-'+s.id).textContent,/Copied/);assert.equal(p.run('view'),'home','copying does not navigate away from the front page');
 });
 
-test('the person can ask for twenty-one shipped workflows; internal procedures remain references',()=>{
- assert.deepEqual(skillCatalog().map(s=>s.id).sort(),['gtm-brain-add-section','gtm-brain-build-landing-page','gtm-brain-configure','gtm-brain-deepdive','gtm-brain-define-icp','gtm-brain-design-system','gtm-brain-market-desk-research','gtm-brain-project','gtm-brain-publish-website','gtm-brain-rules','gtm-brain-schema','gtm-brain-skill','gtm-brain-start','gtm-brain-strategy','gtm-brain-sync','gtm-brain-todo','gtm-brain-unit-economics','gtm-brain-use-brain','gtm-brain-voice','gtm-brain-workflow','gtm-brain-zynt-setup']);
+test('the person can ask for twenty-six shipped workflows; internal procedures remain references',()=>{
+ assert.deepEqual(skillCatalog().map(s=>s.id).sort(),['gtmb-add-section','gtmb-build-landing-page','gtmb-clay-setup','gtmb-configure','gtmb-deepdive','gtmb-define-icp','gtmb-design-system','gtmb-freckle-setup','gtmb-heyreach-setup','gtmb-market-desk-research','gtmb-project','gtmb-publish-website','gtmb-rules','gtmb-schema','gtmb-skill','gtmb-start','gtmb-strategy','gtmb-surfer-setup','gtmb-sync','gtmb-todo','gtmb-unit-economics','gtmb-use-brain','gtmb-voice','gtmb-woodpecker-setup','gtmb-workflow','gtmb-zynt-setup']);
 });
 
 test('a brain with a skill of its own gets a "yours" group after the shipped ones; the shipped set is unchanged',()=>{

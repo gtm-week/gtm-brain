@@ -78,7 +78,7 @@ test("skill documents use plain hyphens, no long dashes", () => {
 });
 
 test("a slash command named in a skill document is a shipped skill or a documented example", () => {
-  // the shipped set, plus the examples gtm-brain-skill uses to show what a person's own skill looks like
+  // the shipped set, plus the examples gtmb-skill uses to show what a person's own skill looks like
   const examples = new Set(["gtm-brain-x"]);
   const unknown = [];
   for (const file of docs) {

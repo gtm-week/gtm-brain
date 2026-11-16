@@ -59,9 +59,12 @@ test("a bare first name is saved as written and asked about; a full name is kept
   const typo = remember("--content", "Max Kowalsky joined.", "--people", "Max Kowalsky");
   assert.equal(typo.status, 2);
   assert.match(typo.stderr, /"Max Kowalsky" looks like Max Kowalski \(P4\)/);
-  assert.match(typo.stderr, /decide by P4\. One or two letters off a known name: ask "same as X\?".*A clearly different surname: someone else, send it in new_names without asking/);
-  assert.equal(remember("--content", "Max Weber joined.", "--people", "Max Weber").status, 2);
-  assert.equal(remember("--content", "Max Weber joined.", "--people", "Max Weber", "--new", "Max Weber").status, 0);
+  assert.match(typo.stderr, /"Max Kowalsky": ask "same as X\?"\. Yes: add_name with aliases \[this spelling\]\. No: resend with new_names\. Ask one question, /);
+  // the same first name with a clearly different surname is someone else (P4): saved at once, no new_names and no question
+  const weber = remember("--content", "Max Weber joined.", "--people", "Max Weber");
+  assert.equal(weber.status, 0, weber.stderr + weber.stdout);
+  assert.doesNotMatch(weber.stdout + weber.stderr, /looks like/);
+  assert.match(weber.stdout, /new person in entities\/: Max Weber/);
   // a second Max makes "Max" ambiguous again: never guessed; the note is saved and the question names both (0.35.0)
   const two = remember("--content", "Max called.", "--people", "Max");
   assert.equal(two.status, 0, two.stderr);

@@ -11,7 +11,7 @@ Quit and reopen Codex after `./dev-install.sh` when the version changed, then st
 
 ## A. RULES.md (0.33.9)
 
-1. `/gtm-brain-rules what are our rules?`
+1. `/gtmb-rules what are our rules?`
    Numbered "Where things go" rows, "Our rules" empty, nothing written.
 2. `from now on, always ask before tagging a client`
    Offers a line in RULES.md "Our rules" (a rule about saving and asking); on yes, one line at the end,
@@ -50,7 +50,7 @@ Quit and reopen Codex after `./dev-install.sh` when the version changed, then st
 
 ## C. SCHEMA.md (0.34.0, 0.34.2)
 
-13. `/gtm-brain-schema what do we keep about companies?`
+13. `/gtmb-schema what do we keep about companies?`
     Organization fields (website and industry required) and subtypes; nothing written.
 14. `every company must have a budget owner`
     Offers or adds a budget_owner row (required) in SCHEMA.md, commit "SCHEMA.md: ...".
@@ -64,5 +64,5 @@ Quit and reopen Codex after `./dev-install.sh` when the version changed, then st
     SCHEMA.md gaps with three choices each: Northwind (industry, budget owner), Tom Berg ("Tom Berg works
     at ...?"). Our own company is never listed. `brain/entities/northwind.md` shows Fields with citations
     (no note IDs inside the values) and Relationships, current and ended.
-18. `/gtm-brain-schema add a kind called event`
+18. `/gtmb-schema add a kind called event`
     Refused; offers an organization subtype or a project folder.

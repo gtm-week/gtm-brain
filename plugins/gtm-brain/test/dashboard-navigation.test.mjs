@@ -331,7 +331,7 @@ test(`resolution draft contains only displayed questions, without record IDs or 
  assert.equal(url.searchParams.get('path'),D.brain);
  for(let i=0;i<3;i++)assert.ok(prompt.includes('Question '+i+'?'));
  for(let i=3;i<5;i++)assert.ok(!prompt.includes('Question '+i+'?'));
- assert.doesNotMatch(prompt,/m_[0-9a-f]{6}|\/gtm-brain-sync|Start with|Zacznij od/);
+ assert.doesNotMatch(prompt,/m_[0-9a-f]{6}|\/gtmb-sync|Start with|Zacznij od/);
  assert.match(prompt,/summary and stop/);
  assert.match(prompt,/ask if a match is ambiguous/);
  // A newly published question cannot enlarge an already prepared draft.

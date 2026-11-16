@@ -1,7 +1,7 @@
 // SCHEMA.md: what a brain keeps about each kind of entity (person, organization, product, event, tool,
 // meeting, offering and any kind the person adds), and how they relate
 // (GTM week sync, 2026-11-13: "schema defines the shape of the universe, rules define how we act in it").
-// The person edits it, by hand or through /gtm-brain-schema; setup writes it, a brain without one gets it at
+// The person edits it, by hand or through /gtmb-schema; setup writes it, a brain without one gets it at
 // the chat start, an unedited one follows the shipped template, an edited one is never touched. A file that
 // cannot be read is reported with a fix per line and left as it is. Field values are never stored here: they
 // stay cited claims from memories (the entity brief's Fields), and relationships are memories with a
@@ -31,7 +31,12 @@ export const MEETING_FIELDS = [
   { name: "title", about: "What the meeting was called", required: false },
   { name: "organizer", about: "Who set it up", required: false },
   { name: "source", about: "Where the transcript or recording is, as a link or tool:id; it stays there", required: false }];
-export const BUILT_IN = { customer_of: { from: ["person", "organization"], to: [US], about: "Customer status, kept by the customer notes", required: false, one: true, formerly: [], built_in: true } };
+// sponsor_of is known in every brain, like partner_of in the shipped SCHEMA.md, without a row in the file (a
+// shipped SCHEMA.md changes only with a legacy snapshot). It is an ordinary relation saved with remember's
+// relation block; a row of that name in the brain's own file, or a type renamed from it, wins.
+export const BUILT_IN = {
+  sponsor_of: { from: ["organization"], to: [US], about: "A sponsor of ours: pays for or backs an event, a programme or the company", required: false, one: false, formerly: [] },
+  customer_of: { from: ["person", "organization"], to: [US], about: "Customer status, kept by the customer notes", required: false, one: true, formerly: [], built_in: true } };
 // One at a time: a new current link of the type ends the previous one from the same entity (lib/relation-log.mjs).
 // SCHEMA.md says it per type in its One at a time column; a file without the column (0.34, early 0.35), or a row
 // that leaves the cell empty, gets these: one employer, one manager. Every other type allows many.
@@ -136,7 +141,10 @@ export function parseSchema(text) {
   if (problems.length) throw new SchemaFormatError(problems);
   if (!kinds.meeting.fields.length) kinds.meeting.fields = MEETING_FIELDS.map(f => ({ ...f }));
   if (relations.attended && !relations.attended.to.includes("meeting")) relations.attended.to.push("meeting");
-  for (const [type, def] of Object.entries(BUILT_IN)) relations[type] = { ...def, about: relations[type]?.about || def.about, built_in: true };
+  for (const [type, def] of Object.entries(BUILT_IN)) {
+    if (def.built_in) relations[type] = { ...def, about: relations[type]?.about || def.about, built_in: true };
+    else if (!relations[type] && !Object.values(relations).some(r => r.formerly?.includes(type))) relations[type] = { ...def };
+  }
   const shape = { kinds, relations };
   return { ...shape, hash: digest(shape) };
 }
@@ -162,7 +170,7 @@ export function relationType(schema, type) {
 /* At write time only: an old record of a type removed later stays valid in its file. */
 export function checkRelation(schema, { type, fromKind, toKind }) {
   const r = relationType(schema, type);
-  if (!r) throw new Error(`relationship type ${type} is not in SCHEMA.md (it lists ${Object.keys(schema?.relations || {}).join(", ") || "none"}); save it as a plain note and offer to add the type with /gtm-brain-schema`);
+  if (!r) throw new Error(`relationship type ${type} is not in SCHEMA.md (it lists ${Object.keys(schema?.relations || {}).join(", ") || "none"}); save it as a plain note and offer to add the type with /gtmb-schema`);
   if (r.built_in) throw new Error("customer status is recorded with remember.customer, not relation");
   if (!r.from.includes(fromKind)) throw new Error(`${r.type} goes from ${r.from.join(" or ")}, not ${fromKind}`);
   if (!r.to.includes(toKind)) throw new Error(`${r.type} goes to ${r.to.join(" or ")}, not ${toKind}`);
@@ -208,11 +216,11 @@ export function ensureSchema(root, templates) {
 export function schemaLine(root) {
   const r = readSchema(root);
   if (r.missing) return "";
-  if (r.error) return `${schemaFile(root)} cannot be read, and was left as it is: ${r.error.message}. Show the fix to the person and offer to apply it (/gtm-brain-schema). Until then relationship saves are refused and briefs show no Fields.`;
+  if (r.error) return `${schemaFile(root)} cannot be read, and was left as it is: ${r.error.message}. Show the fix to the person and offer to apply it (/gtmb-schema). Until then relationship saves are refused and briefs show no Fields.`;
   const s = r.schema, f = list => list.map(x => `${x.name}${x.required ? "*" : ""}`).join(", ") || "none";
   const subs = Object.entries(s.kinds.organization.subtypes).map(([n, v]) => v.fields.length ? `${n} (+${f(v.fields)})` : n).join(", ");
   const rels = Object.entries(s.relations).map(([t, v]) => v.built_in ? `${t} (the customer block)` : `${t} ${v.from.join("|")}>${v.to.join("|")}${v.required ? "*" : ""}`).join(", ");
-  return [`${schemaFile(root)} says what the brain keeps (the person's to edit; /gtm-brain-schema changes it), * = required:`,
+  return [`${schemaFile(root)} says what the brain keeps (the person's to edit; /gtmb-schema changes it), * = required:`,
     `  ${Object.entries(s.kinds).map(([k, v]) => `${k}: ${f(v.fields)}${k === "organization" && subs ? `; subtypes ${subs}` : ""}`).join(". ")}.`,
     `  relationships: ${rels}. A field value goes plainly in the note's text; a listed relationship goes in remember's relation block (saving rules S1-S3).`].join("\n");
 }

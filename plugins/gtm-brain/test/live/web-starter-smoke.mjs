@@ -33,7 +33,7 @@ try {
   verifyBundledStarter();
   run("git", ["init", "-q"], brain);
   run("bash", [join(plugin, "scripts/gtm-brain-setup/setup.sh"), "--company", "Starter Smoke", "--one-liner", "Synthetic event campaign", "--owner", "Starter Smoke <smoke@example.invalid>", "--dashboard", "on-demand"], brain);
-  run(process.execPath, [join(plugin, "skills/gtm-brain-project/project.mjs"), brain, "--link", project, "--create", "--starter", "web-design-system", "--slug", "website", "--title", "Website"], brain);
+  run(process.execPath, [join(plugin, "skills/gtmb-project/project.mjs"), brain, "--link", project, "--create", "--starter", "web-design-system", "--slug", "website", "--title", "Website"], brain);
   verifyPreparedStarter(project);
   run("npm", ["ci"]);
   run("npx", ["playwright", "install", "chromium"]);

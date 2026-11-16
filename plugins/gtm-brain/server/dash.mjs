@@ -18,6 +18,7 @@ import { listDocuments, BODY_MAX } from '../lib/documents.mjs';
 import { DESIGN_IMAGES } from '../lib/dashboard-pillars.mjs';
 import { createMemoryReader } from './memory-reader.mjs';
 import { createEntityEdit } from './entity-edit.mjs';   // POST /entity-edit: the Entities tab's forms
+import { host as hostAdapter } from '../lib/host.mjs';   // GET /chat: which chat the page's prepared messages go to
 import { createMemoryEdit } from './memory-edit.mjs';   // POST /memory-edit: the Memories tab's menu on a note
 import { workDir } from '../lib/brain-paths.mjs';
 const lib = await import(new URL("../lib/brain.mjs", import.meta.url));
@@ -184,6 +185,9 @@ function serve() {
     if (req.method === "POST" && url.pathname === "/document") return saveDocument(req, res, host);
     if (req.method === "POST" && url.pathname === "/entity-edit") return entityEdit(req, res, host);
     if (req.method === "POST" && url.pathname === "/memory-edit") return memoryEdit(req, res, host);
+    // GET /chat: the newest chat of this brain on this computer, so a prepared message lands in the chat the person
+    // already has open (a new chat would replace the pane the dashboard is shown in). A read; no chat is the answer null.
+    if (req.method === "GET" && url.pathname === "/chat") { let thread = null; try { thread = hostAdapter().currentChat?.(root) || null; } catch {} return json(res, 200, { thread }); }
     if (req.method === "GET" && url.pathname === "/search") return searchNotes(req, res, url);
     if (req.method !== "GET" && req.method !== "HEAD") return json(res, 405, { ok: false, note: "GET only" });
     if (url.pathname === '/file') {

@@ -10,7 +10,7 @@ if (process.argv.slice(2).some(arg => arg !== "--check")) throw new Error("Usage
 const read = path => readFileSync(new URL(path, root), "utf8");
 const outputs = new Map();
 
-// The question reference (gtm-brain-start/references/questions.md) no longer carries the blocks: every chat already
+// The question reference (gtmb-start/references/questions.md) no longer carries the blocks: every chat already
 // holds them through the brain's AGENTS.md and the session line, so the reference keeps only the tool details.
 for (const path of ["AGENTS.md", "INSTALL.md", "plugins/gtm-brain/templates/AGENTS.md"]) {
   let text = read(path);
@@ -41,6 +41,7 @@ const properties = remember.input_schema.properties;
 const slim = (schema, keep) => { const { description, ...rest } = schema; const out = keep ? { ...schema } : rest;
   if (out.properties) out.properties = Object.fromEntries(Object.entries(out.properties).map(([k, v]) => [k, slim(v, false)]));
   if (out.items && typeof out.items === "object") out.items = slim(out.items, false);
+  if (Array.isArray(out.anyOf)) out.anyOf = out.anyOf.map(v => slim(v, false));
   return out; };
 properties.memories.items.properties = Object.fromEntries(Object.entries(properties)
   .filter(([name]) => !["by", "project", "memories"].includes(name)).map(([name, schema]) => [name, slim(schema, ["content", "sources"].includes(name))]));

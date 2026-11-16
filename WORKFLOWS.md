@@ -43,7 +43,7 @@ There is no owner field: a run says who started it.
 `## Steps` is a numbered list. Each step is
 
 ```
-1. **Title** (tool: crm) (skill: gtm-brain-deepdive). What to do. Milestone: a note tagged brief-done. Gate: after 3 days.
+1. **Title** (tool: crm) (skill: gtmb-deepdive). What to do. Milestone: a note tagged brief-done. Gate: after 3 days.
 ```
 
 - `(tool: <category>)`, optional: mapped to whatever admin.md lists for that category.
@@ -70,7 +70,7 @@ metadata:
 
 `workflow needs <skill or workflow>` compares that with SCHEMA.md and admin.md and returns one
 proposal listing what is missing. It changes nothing: a schema change goes through
-`/gtm-brain-schema` with your yes, a tool through `connect my tools`. Shipped skills that declare
+`/gtmb-schema` with your yes, a tool through `connect my tools`. Shipped skills that declare
 needs: define-icp, deepdive, market-desk-research, publish-website.
 
 ## Switching one on

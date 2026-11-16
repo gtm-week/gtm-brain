@@ -176,3 +176,5 @@ export const MANAGED_TOP = root => (inLayout4(root) ? [CONFIGURATION_DIR, ENTITI
 /* The layout-3 move: each old path and where it goes. Base files are worked out from the documents
    (lib/config-folders.mjs); these are the fixed ones. */
 export const FIXED_MOVES = [[ROOT_RULES, CONFIG_RULES], [ROOT_SCHEMA, CONFIG_SCHEMA]];
+// The page a starter document has beside it (the design system as HTML): GTM Brain writes it, so it is no stray file.
+export const PAGE_FILES = ["design-system.html"];

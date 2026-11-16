@@ -23,9 +23,9 @@ const key = k => { const m = top.match(new RegExp(`^\\s*${k}\\s*=\\s*(.+?)\\s*$`
 const provider = key('model_provider');
 const slim = !process.env.GTM_BRAIN_COMPILE_FULL_CONFIG && (!provider || /^"(openai)?"$/.test(provider));
 
-const proc = name => read(join(plugin, 'skills/gtm-brain-use-brain/references', name));
+const proc = name => read(join(plugin, 'skills/gtmb-use-brain/references', name));
 const prompt = [
-  `You are the scheduled run of the gtm-brain-sync skill: compile summaries, nothing else. brain is ${JSON.stringify(process.cwd())}, by is ${by}. Call the GTM Brain tools directly, without listing or inspecting tools first:`,
+  `You are the scheduled run of the gtmb-sync skill: compile summaries, nothing else. brain is ${JSON.stringify(process.cwd())}, by is ${by}. Call the GTM Brain tools directly, without listing or inspecting tools first:`,
   `- compile_facts {brain, context} returns the facts and an as_of id; then compile_apply {brain, context, by, as_of, summary, now} writes the summary (now: the learned working guidance, "" when none).`,
   `- query {brain, object: "memories", filters: {context}, search} looks up older notes when the facts say some are not shown.`,
   `- entity_facts {brain, entity} returns an entity's evidence and as_of; then compile_entity {brain, entity, by, as_of, brief} writes its brief.`,

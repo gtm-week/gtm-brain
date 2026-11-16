@@ -201,10 +201,18 @@ export function outOfRange(p, r = POPULATION_RANGES) {
 }
 
 /* The compact health-line part, or null when every number is in range. */
+/* The chat start's part of the health line. Only what a person would act on is spelled out: a week far emptier
+   or fuller than usual (capture or sync is probably broken). Things to tidy (copies, notes without a source,
+   entities without notes or a required field) are never counted here: a count read at every chat start was taken
+   as a job ("41 items") and worked through unasked, 84 calls in a manual run on 2026-11-15. It says only that
+   housekeeping exists; lib/health-line.mjs adds how it starts. The numbers stay in query population and the
+   housekeeping view. The dashboard shows this part too, so it reads as words for a person. */
+export const HOUSEKEEPING_HINT = "housekeeping: there are things to tidy, when asked for";
 export function populationPart(root, options) {
   let p; try { p = population(root, options); } catch { return null; }
-  const out = outOfRange(p);
-  return out.length ? `population: ${out.join(", ")} (query population)` : null;
+  const out = outOfRange(p), week = out.filter(o => /^too (empty|full)/.test(o));
+  const parts = [week.length ? `population: ${week.join(", ")} (query population)` : "", out.length > week.length ? HOUSEKEEPING_HINT : ""].filter(Boolean);
+  return parts.length ? parts.join(" | ") : null;
 }
 
 /* The view's text: every number, the range it is judged by, and what is not measured. */

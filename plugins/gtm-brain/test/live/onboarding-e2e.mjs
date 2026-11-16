@@ -176,7 +176,7 @@ ${turn.prompt}`;
   if (turn.finish) {
     // The closing names one task to send, in a copyable block, never a new project first.
     const block = (text.match(/```[a-z]*\n([\s\S]*?)```/) || [])[1] || '';
-    checks.firstTaskBlock = !!block.trim() && !/gtm-brain-project/.test(block);
+    checks.firstTaskBlock = !!block.trim() && !/gtmb-project/.test(block);
     if (turn.firstTask) checks.firstTaskFromSource = turn.firstTask.test(block);
   }
   if (turn.business) checks.businessAnswer = /security/i.test(text) && /Krzysztof|Pawlak/i.test(text);

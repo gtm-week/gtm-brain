@@ -58,7 +58,7 @@ export function readPreferences() {
   return data;
 }
 /* The brains this machine has opened (the chat start registers a brain chat, setup registers a
-   new brain): what the gtm-brain-project skill offers when a folder is linked. Paths that are gone are
+   new brain): what the gtmb-project skill offers when a folder is linked. Paths that are gone are
    dropped on read; nothing else in the preferences is touched. */
 function writePreferences(preferences) {
   const dir = join(process.env.CODEX_HOME || join(homedir(), ".codex"), "gtm-brain"); mkdirSync(dir, { recursive: true });
@@ -357,7 +357,7 @@ export function pausedCoversHint(root) {
   let seen = ""; try { seen = JSON.parse(readFileSync(memo, "utf8")).slugs || ""; } catch {}
   try { mkdirSync(workDir(root), { recursive: true }); writeFileSync(memo, JSON.stringify({ slugs: key, at: new Date().toISOString() })); } catch {}
   if (!paused.length || key === seen) return "";
-  return `Summaries paused, not updating: ${paused.map(pausedText).join("; ")}. Each was edited by hand outside a summary run, so no run replaces it until the person reviews the edit. Say it in one line and offer the review: show the edit, keep what matters as sourced notes or the context rule, and only after an explicit yes release it (gtm-brain-use-brain compile.md, compile.mjs --release with --reviewed-cover).`;
+  return `Summaries paused, not updating: ${paused.map(pausedText).join("; ")}. Each was edited by hand outside a summary run, so no run replaces it until the person reviews the edit. Say it in one line and offer the review: show the edit, keep what matters as sourced notes or the context rule, and only after an explicit yes release it (gtmb-use-brain compile.md, compile.mjs --release with --reviewed-cover).`;
 }
 export function adoptGeneratedCover(root, slug) {
   const state = manualCoverState(root, slug);
@@ -728,6 +728,29 @@ export function similarNames(names, mention) {
   const fuzzy = new Set(rankEntityCandidates(names, mention, { limit: 10 }).matches.map(m => m.entry));
   return names.filter(n => (fuzzy.has(n) || [n.name, ...n.aliases].some(x => nameLetters(x) === letters || nameWords(x).some(w => words.has(w))))).map(n => ({ name: n.name, kind: n.kind }));
 }
+/* P4, second sentence: the same first name with a clearly different surname is someone else, never a look-alike
+   ("Borys Zielony" beside "Borys Nowicki": a manual run on 2026-11-15 was refused for it and asked the
+   person). Only between two full personal names: one or two letters off the same name, a first name alone, a
+   shared surname or a company word is still asked about. entry: {name, aliases, kind}. */
+const nameDistance = (a, b) => { let row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) { const next = [i]; for (let j = 1; j <= b.length; j++) next[j] = Math.min(next[j - 1] + 1, row[j] + 1, row[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); row = next; }
+  return row[b.length]; };
+export function otherPerson(mention, entry) {
+  if (!entry || (entry.kind && entry.kind !== "person")) return false;
+  const parts = s => foldName(s).split(/[\s-]+/).map(w => w.replace(/[^a-z0-9]/g, "")).filter(Boolean);
+  const mine = parts(mention); if (mine.length < 2) return false;
+  let other = false;
+  for (const x of [entry.name, ...(entry.aliases || [])]) {
+    const theirs = parts(x); if (!theirs.length) continue;
+    const shared = mine.filter(w => theirs.includes(w));
+    if (nameDistance(mine.join(""), theirs.join("")) <= 2) return false;                          // a spelling of the same name
+    if (theirs.length < 2) { if (shared.length) return false; continue; }                       // a first name alone
+    if (shared.some(w => w !== mine[0] || w !== theirs[0])) return false;                       // a shared surname or middle name
+    if (nameDistance(mine[mine.length - 1], theirs[theirs.length - 1]) <= 2) return false;      // surnames a letter or two apart
+    if (mine[0] === theirs[0]) other = true;
+  }
+  return other;
+}
 /* add a person, or merge aliases/emails into an existing one (matched by name, alias or email) */
 export function addName(root, name, options = {}) {
   if (typeof name !== "string" || !name.trim() || /[\r\n]/.test(name)) throw new Error("Entity name must be a non-empty single line");
@@ -915,7 +938,7 @@ export function normalisePeople(root, mentions, { confirmedNew = [], companies =
     const guess = inferredName(names, t); if (guess) { inferred.push({ mention: t, name: guess }); take(guess); note(t, guess, "inferred_first_name", "P2"); continue; }
     const one = !/\s/.test(t) && !plain.has(foldName(t));
     if (saveUnclear && one) { const several = sharing(t); if (several.length > 1) { askLater(t, several); continue; } }
-    const like = similarNames(names, t);
+    const like = similarNames(names, t).filter(x => !otherPerson(t, names.find(n => n.name === x.name) || x));
     if (like.length) { similar.push({ mention: t, matches: like }); continue; }
     if (one) { if (saveUnclear) askLater(t, []); else unnamed.push(t); continue; }
     names.push({ name: t, aliases: [], emails: [], kind: "person" }); fresh.push(t); take(t); note(t, t, "new", plain.has(foldName(t)) ? "C1" : "P1");
@@ -1159,7 +1182,7 @@ export function pushInBackground(root, remote) {
   spawn(process.execPath, [fileURLToPath(new URL("./push-runner.mjs", import.meta.url)), root, remote], { detached: true, stdio: "ignore" }).unref();
 }
 /* What pulling teammates left behind (session maintenance): { status: "ok" | "merged" | "conflict" | "failed", files, at }.
-   Not work/sync.json: that file is the source sync's own (gtm-brain-sync), and its presence means a sync has finished. */
+   Not work/sync.json: that file is the source sync's own (gtmb-sync), and its presence means a sync has finished. */
 export const syncStatePath = root => join(workDir(root), "teammates.json");
 /* The chat-start lines for sharing: a failed last push, or a teammate merge that conflicted. Empty when all is well. */
 export function syncNotice(root) {
@@ -1189,7 +1212,7 @@ export function bigFilesDriveFolder(root) {
   return named || `${String(a?.company || "").trim() || "Company"} GTM Brain files`;
 }
 // The walk-through every big file follows, from save, the chat start, add-file and onboarding.
-export const BIG_FILES_GUIDE = "gtm-brain-use-brain/references/big-files.md";
+export const BIG_FILES_GUIDE = "gtmb-use-brain/references/big-files.md";
 /* The one instruction for a file too big for git, shared by save, the chat start and add-file. */
 export function bigFileAdvice(root) {
   const { mode, folder } = bigFiles(root);
@@ -1681,7 +1704,7 @@ export function validateMemoriesFile(path, context = null) {
 export const INTERACTIONS_PATH = paths.INTERACTIONS_OLD;   // layouts 1 to 3; interactionsFile(root) answers for a brain
 // every name the plugin serves; server.test.mjs holds this equal to the live catalog, so a company
 // interaction can never shadow a tool
-export const RESERVED_TOOLS = new Set(["memory_index", "capture_chats", "update_plugin", "where_we_are", "list_contexts", "load_context", "recall", "compile_facts", "compile_apply", "render_dashboard", "open_dashboard", "new_context", "fork_context", "edit_context", "archive_context", "advise", "who_is", "why_here", "check_rules", "add_name", "check_tools", "mark_tool", "propose_admin_change", "approve_change", "keep_approved_file", "save", "check_environment", "setup_brain", "upgrade_brain", "list_objects", "describe_object", "query", "remember", "interact", "propose_interaction", "link_project", "unlink_project", "list_projects", "list_brains", "customer_overview", "meeting_overview", "entity_facts", "compile_entity", "update_entity", "merge_entities", "archive_entity", "undo_entity_merge", "skill", "guideline", "document", "workflow", "share_brain"]);
+export const RESERVED_TOOLS = new Set(["memory_index", "capture_chats", "update_plugin", "where_we_are", "list_contexts", "load_context", "recall", "compile_facts", "compile_apply", "render_dashboard", "open_dashboard", "new_context", "fork_context", "edit_context", "archive_context", "advise", "who_is", "why_here", "check_rules", "add_name", "check_tools", "mark_tool", "propose_admin_change", "approve_change", "ask_person", "keep_approved_file", "save", "check_environment", "setup_brain", "upgrade_brain", "list_objects", "describe_object", "query", "remember", "interact", "propose_interaction", "link_project", "unlink_project", "list_projects", "list_brains", "customer_overview", "meeting_overview", "entity_facts", "compile_entity", "update_entity", "merge_entities", "archive_entity", "undo_entity_merge", "skill", "guideline", "document", "workflow", "share_brain", "answer_question"]);
 const LONG_DASH = /[\u2013\u2014\u2015\u2212]/;
 const interactionOf = (raw, parsed) => ({
   name: parsed.name, title: String(raw.title || parsed.name), tool: String(raw.tool || "").trim(), operation: String(raw.operation || "").trim(), description: String(raw.description || "").trim(),

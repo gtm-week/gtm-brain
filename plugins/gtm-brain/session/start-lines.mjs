@@ -1,6 +1,6 @@
 // The chat start's closing lines, in one process instead of one node per line (each spawn cost about 0.1 s,
 // more on a laptop, and they made the first status call slow): the health line, the open brain questions, the documents, the approved
-// files, the workflow runs, the stray folders, the rules refresh, RULES.md, Ask the source, SCHEMA.md, the
+// files, the workflow runs, the stray folders, the rules refresh, the layout upgrade offer, RULES.md, Ask the source, SCHEMA.md, the
 // paused summaries and the unplaced files, in that order. Each part stands alone: one that fails prints nothing.
 //   node start-lines.mjs <root> <project> <templates>
 const [root, project = "", templates] = process.argv.slice(2);
@@ -17,7 +17,11 @@ const parts = [
   async () => say((await lib("workflows.mjs")).runsLine(root)),
   async () => { if (!project) say((await lib("documents.mjs")).strayFoldersHint(root)); },
   async () => say((await lib("upgrade-files.mjs")).autoRefresh(root, templates)),
+  // a brain still in an older file layout, for the person who can say yes to the move: offered, never started (lib/upgrade-files.mjs layoutOffer)
+  async () => { if (!project) say((await lib("upgrade-files.mjs")).layoutOffer(root)); },
   async () => (await lib("upgrade-files.mjs")).refreshReadme(root, templates),
+  // 0.36: the skills are gtmb-<name>; the brain's own files that still say gtm-brain-<name> are offered for an update (lib/skill-names.mjs)
+  async () => { if (!project) say((await lib("skill-names.mjs")).skillNamesLine(root)); },
   async () => { const w = await lib("where.mjs"); w.ensureRules(root, templates); say(w.whereLine(root)); },
   async () => say((await lib("ask-source.mjs")).askSourceLine(root)),
   async () => { const s = await lib("schema.mjs"); s.ensureSchema(root, templates); say(s.schemaLine(root)); },

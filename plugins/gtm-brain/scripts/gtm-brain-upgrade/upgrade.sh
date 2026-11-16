@@ -69,7 +69,7 @@ if [ -n "$kind_out" ]; then
   kind_layout="$(printf '%s\n' "$kind_out" | sed -n 's/^layout //p')"
   [ "$kind_n" -gt 0 ] && echo "moved $kind_n entity page$([ "$kind_n" = 1 ] || echo s) into a folder per kind (brain/entities/people/, organizations/, ...), each named with its short id"
   if [ -n "$kind_layout" ]; then
-    if [ "$kind_n" -gt 0 ]; then echo "changed the brain's file layout to $kind_layout (brain/layout.json): a teammate's older GTM Brain needs an update before it saves here again"
+    if [ "$kind_n" -gt 0 ]; then echo "changed the brain's file layout to $kind_layout (brain/layout.json): entity pages are in kind folders now; a teammate still on GTM Brain 0.34 keeps saving notes but does not find these pages until they update"
     else echo "recorded the brain's file layout as $kind_layout (brain/layout.json): the entity pages were already in kind folders"; fi
     layout_said=1; paths="$paths $LAYOUT_F"
   fi
@@ -153,9 +153,9 @@ git config gtm-brain.lib "$PLUGIN/lib/brain.mjs" 2>/dev/null || true
 # has short ones; they change only through APPROVE, so say so instead of touching admin.md.
 node -e 'const l=await import(process.argv[1]);const a=l.readAdmin(".")||{};const old=(a.team||[]).filter(p=>p.handle!==l.handleFor(p.name));if(old.length)console.log(`team handles predate the full-name rule: ${old.map(p=>`${p.handle} (now ${l.handleFor(p.name)})`).join(", ")}. In Codex: "change the team handles to full names", then APPROVE. Old memories keep the old handle; both mean the same person.`)' "$PLUGIN/lib/brain.mjs" 2>/dev/null || true
 if [ "$changed" = 1 ]; then
-  node --input-type=module - "$PLUGIN/lib/brain.mjs" $paths <<'JS'
+  KIND_MOVED="${kind_n:-0}" node --input-type=module - "$PLUGIN/lib/brain.mjs" $paths <<'JS'
 const lib = await import(process.argv[2]);
-const result = lib.commit(".", process.argv.slice(3), "upgrade: rules and hook refreshed");
+const result = lib.commit(".", process.argv.slice(3), process.env.KIND_MOVED > 0 ? `layout 2: ${process.env.KIND_MOVED} entity pages into a folder per kind (upgrade)` : "upgrade: rules and hook refreshed");
 console.log(`upgrade done: rules and hook refreshed; ${result.note}`);
 JS
 fi
@@ -175,5 +175,10 @@ moved4=""
 if [ "$CONFIRM" = 1 ]; then
   moved4="$(node --input-type=module -e 'const u=await import(process.argv[1]),f=await import(process.argv[2]);if(!u.layoutStep(".",true).startsWith("CHANGE"))process.exit(0);const r=f.migrateToTabs(".");if(!r.layout){if(r.refused)console.log(`not moved to layout 4: ${r.refused}`);process.exit(0);}for(const [a,b] of r.moves)console.log(`moved ${a} -> ${b}`);console.log(`moved ${r.notes} note${r.notes===1?"":"s"} of ${r.topics} topic${r.topics===1?"":"s"} into ${r.months.length} month file${r.months.length===1?"":"s"} in memories/, every line unchanged`);if(r.indexes.length)console.log(`removed ${r.indexes.length} generated index.md from the entity folders`);if(r.leftover)console.log(`left in brain/: ${r.leftover} file${r.leftover===1?"":"s"} GTM Brain does not know`);console.log(`changed the brain'"'"'s file layout to 4 (layout.json): the folders are configuration/, entities/, memories/ and workflows/; this computer'"'"'s files are in .gtm-brain/ (${r.note}). The copy of everything as it was: ${r.backup}. A teammate on an older GTM Brain needs to update before reading or saving here.`);if(r.pages&&r.pages!=="nothing to commit")console.log(`entity pages refreshed for the new folders (${r.pages})`)' "$PLUGIN/lib/upgrade-files.mjs" "$PLUGIN/lib/layout-four.mjs")"
   [ -n "$moved4" ] && echo "$moved4"
+fi
+# A teammate's yes moved the entity pages; the second move (the four folders) is the owner's, said here once so
+# nobody waits for it in this run (the run that has nothing to ask says the same line at its top).
+if [ "$layout_said" = 1 ] && [ -z "$moved3" ] && [ -z "$moved4" ]; then
+  node --input-type=module -e 'const u=await import(process.argv[1]);const s=u.layoutStep(".",false);if(s.startsWith("NOTE\t"))console.log(s.slice(5))' "$PLUGIN/lib/upgrade-files.mjs" 2>/dev/null || true
 fi
 [ "$changed" = 1 ] || [ -n "$moved3" ] || [ -n "$moved4" ] || echo "already current"

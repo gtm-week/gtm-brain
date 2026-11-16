@@ -1,7 +1,7 @@
 // This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
 // (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
 process.env.GTM_BRAIN_TEST_LAYOUT = "3";
-// gtm-brain-voice (0.35.0): the shipped skill that settles whose voice it is, drafts it from fitting evidence,
+// gtmb-voice (0.35.0): the shipped skill that settles whose voice it is, drafts it from fitting evidence,
 // tests it on fresh work and checks that a new chat uses it.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -13,23 +13,23 @@ import { skillCases } from './live/skill-cases.mjs';
 import { documentsLine } from '../lib/documents.mjs';
 const P = fileURLToPath(new URL('..', import.meta.url)).replace(/\/$/, '');
 const R = resolve(P, '../..');
-const file = join(P, 'skills/gtm-brain-voice/SKILL.md');
+const file = join(P, 'skills/gtmb-voice/SKILL.md');
 const skill = readFileSync(file, 'utf8');
-const method = readFileSync(join(P, 'skills/gtm-brain-voice/references/method.md'), 'utf8');
+const method = readFileSync(join(P, 'skills/gtmb-voice/references/method.md'), 'utf8');
 const call = (tool, args = {}) => ({ tool, arguments: args });
 const section = (from, to) => { const i = skill.indexOf(from); assert.ok(i >= 0, from); return skill.slice(i, to ? skill.indexOf(to, i) : undefined); };
 
 test('the voice skill follows the shipped-skill template: name, links, openai.yaml, catalog, counts and tables', () => {
-  assert.match(skill, /^---\nname: gtm-brain-voice\n/);
+  assert.match(skill, /^---\nname: gtmb-voice\n/);
   for (const [, ref] of skill.matchAll(/\]\(([^)]+\.md)\)/g)) assert.ok(existsSync(resolve(dirname(file), ref)), ref);
-  assert.match(readFileSync(join(P, 'skills/gtm-brain-voice/agents/openai.yaml'), 'utf8'), /display_name: "GTM Brain: Voice"/);
+  assert.match(readFileSync(join(P, 'skills/gtmb-voice/agents/openai.yaml'), 'utf8'), /display_name: "GTM Brain: Voice"/);
   const catalog = JSON.parse(readFileSync(join(P, 'scripts/gtm-brain-render/skill-catalog.json'), 'utf8'));
-  const i = catalog.findIndex(s => s.id === 'gtm-brain-voice');
+  const i = catalog.findIndex(s => s.id === 'gtmb-voice');
   assert.ok(i > 0 && catalog[i].group === 'setup' && catalog[i].featured === false);
   assert.ok(catalog.slice(i + 1).every(s => s.group === 'setup'), 'after the last one of its group');
-  for (const doc of ['README.md', 'COMMANDS.md', 'ONBOARDING.md']) assert.match(readFileSync(join(R, doc), 'utf8'), /gtm-brain-voice/, doc);
+  for (const doc of ['README.md', 'COMMANDS.md', 'ONBOARDING.md']) assert.match(readFileSync(join(R, doc), 'utf8'), /gtmb-voice/, doc);
   for (const doc of ['README.md', 'CLAUDE.md', 'CONTRIBUTING.md', 'USER-SKILLS.md']) assert.match(readFileSync(join(R, doc), 'utf8'), /twenty/, doc);
-  assert.match(readFileSync(join(R, 'GUIDE.md'), 'utf8'), /\/gtm-brain-voice/);
+  assert.match(readFileSync(join(R, 'GUIDE.md'), 'utf8'), /\/gtmb-voice/);
 });
 
 test('the skill reads connectors first, the public web only, and saves through the document path on a yes', () => {
@@ -44,7 +44,7 @@ test('the skill reads connectors first, the public web only, and saves through t
   assert.match(skill, /Re-run any time|revises it any time/);
   assert.match(method, /copied word for word from a real text/);
   assert.match(skill, /Not saving a voice guide the\s+person already wrote/, 'the overlap is named in both descriptions');
-  assert.match(readFileSync(join(P, 'skills/gtm-brain-use-brain/references/documents.md'), 'utf8'), /Voice: run \[gtm-brain-voice\]/);
+  assert.match(readFileSync(join(P, 'skills/gtmb-use-brain/references/documents.md'), 'utf8'), /Voice: run \[gtmb-voice\]/);
 });
 
 test('whose voice is settled first, with one question under the shared policy, and reused on a re-run', () => {
@@ -55,7 +55,7 @@ test('whose voice is settled first, with one question under the shared policy, a
   assert.match(one, /"The company's voice"\s+\(recommended; one standard for everything we publish and send, no persona per medium\), "My own\s+voice", "A team's voice"/);
   assert.match(one, /reuse that, or an\s+answer already in the request \("our voice" is not one\), and never ask again/);
   assert.match(one, /whose voice it is and what it governs/);
-  assert.match(skill, /\[question handling\]\(\.\.\/gtm-brain-start\/references\/questions\.md\)/);
+  assert.match(skill, /\[question handling\]\(\.\.\/gtmb-start\/references\/questions\.md\)/);
   assert.match(method, /one standard for what the company publishes and sends, across\s+media/);
   assert.match(method, /never a separate persona/);
 });
@@ -116,14 +116,14 @@ test('the skill and its method stay short: no longer than the 0.35.0 files combi
 });
 
 test('onboarding offers the voice skill at the end, skippable, and the chat line points to it', () => {
-  const tour = readFileSync(join(P, 'skills/gtm-brain-start/references/skills-tour.md'), 'utf8');
-  assert.match(tour, /the voice is \[gtm-brain-voice\]\(\.\.\/\.\.\/gtm-brain-voice\/SKILL\.md\), skippable/);
+  const tour = readFileSync(join(P, 'skills/gtmb-start/references/skills-tour.md'), 'utf8');
+  assert.match(tour, /the voice is \[gtmb-voice\]\(\.\.\/\.\.\/gtmb-voice\/SKILL\.md\), skippable/);
   assert.match(tour, /"Later"/);
-  assert.match(documentsLine.toString(), /voice: \/gtm-brain-voice/);
+  assert.match(documentsLine.toString(), /voice: \/gtmb-voice/);
 });
 
 test('the live case gates reject the wrong route and an unsourced or invented draft', () => {
-  for (const name of ['skill-voice', 'skill-voice-save']) assert.ok(skillCases.some(c => c.name === name && c.workflow === 'gtm-brain-voice'), `${name} is listed in skill-cases.mjs, so tool-routing.mjs skills runs it`);
+  for (const name of ['skill-voice', 'skill-voice-save']) assert.ok(skillCases.some(c => c.name === name && c.workflow === 'gtmb-voice'), `${name} is listed in skill-cases.mjs, so tool-routing.mjs skills runs it`);
   const show = call('document', { action: 'show', ref: 'voice' }), update = call('document', { action: 'update', ref: 'voice', status: 'draft' });
   // asking: the draft is read and shown, nothing is written before the answer
   assert.ok(voiceRoute([call('query', { object: 'status' }), show]));
@@ -159,7 +159,7 @@ test('the live case gates reject the wrong route and an unsourced or invented dr
   assert.equal(two.calls([show, update], { turns: [{ calls: [show, update], final: whose }, { calls: [], final: ask }] }), false, 'nothing written in either turn');
   const save = voiceCases.find(c => c.name === 'skill-voice-save');
   assert.match(save.prompt, /The company's voice/, 'whose voice is settled in the request, so it is not asked');
-  assert.ok(save.responseCheck('Saved voice.md as a draft. It applies to copy, outreach, emails, posts and landing pages. In a new chat, type: "Write a two-line follow-up to a prospect who went quiet." Shall I test it on a short email first? /gtm-brain-voice revises it.'));
-  assert.equal(save.responseCheck('Saved voice.md; it is now in use for posts. Test it on a short email? In a new chat. /gtm-brain-voice'), false, 'no claim of use before it is seen');
+  assert.ok(save.responseCheck('Saved voice.md as a draft. It applies to copy, outreach, emails, posts and landing pages. In a new chat, type: "Write a two-line follow-up to a prospect who went quiet." Shall I test it on a short email first? /gtmb-voice revises it.'));
+  assert.equal(save.responseCheck('Saved voice.md; it is now in use for posts. Test it on a short email? In a new chat. /gtmb-voice'), false, 'no claim of use before it is seen');
   assert.match(skill, /An explicit instruction already in the request to save this draft/);
 });

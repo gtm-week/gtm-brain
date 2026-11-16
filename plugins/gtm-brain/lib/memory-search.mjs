@@ -30,6 +30,7 @@ const STOP = new Set(`a an the and or but nor of to in on at for from by with wi
  note notes brain memory memories mention mentioned mentions remember remembered recorded saved write wrote written
  regarding re vs via also just only ever again much many more most less than then so if up out off very really
  thing things stuff kind sort one ones yet still already latest recent recently currently current now ago
+ focus priority priorities morning hi hello hey brief briefing prep prepare
  talk talked talking discuss discussed want wanted wants happen happens happened happening going news hear heard`.split(/\s+/).filter(Boolean));
 
 const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
@@ -53,7 +54,7 @@ export function parsePeriod(question, now = nowDate(), isName = () => false) {
     [/\b(\d{4})-(\d{2})-(\d{2})\b/, m => { const d = new Date(+m[1], +m[2] - 1, +m[3]); return day(d, ymd(d), [`${d.getDate()} ${MONTHS[d.getMonth()]}`, `${MONTHS[d.getMonth()]} ${d.getDate()}`, ymd(d)]); }],
     [new RegExp(`\\b(?:on\\s+)?(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?${MONTH_RE}\\b(?:,?\\s+(\\d{4}))?`, 'i'), m => dated(+m[1], m[2], m[3])],
     [new RegExp(`\\b(?:on\\s+)?${MONTH_RE}\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b(?:,?\\s+(\\d{4}))?`, 'i'), m => dated(+m[2], m[1], m[3])],
-    [/\btoday\b/i, () => ({ from: today, to: addDays(today, 1), label: 'today' })],
+    [/\b(?:later\s+)?(?:today|tonight|this\s+(?:morning|afternoon|evening))\b/i, () => ({ from: today, to: addDays(today, 1), label: 'today' })],
     [/\byesterday\b/i, () => ({ from: addDays(today, -1), to: today, label: 'yesterday' })],
     [/\b(?:in\s+the\s+)?(?:last|past)\s+(\d{1,3})\s+days\b/i, m => ({ from: addDays(today, -Number(m[1])), to: addDays(today, 1), label: `the last ${m[1]} days` })],
     [/\b(\d{1,3})\s+days\s+ago\b/i, m => day(addDays(today, -Number(m[1])), ymd(addDays(today, -Number(m[1]))))],
@@ -61,7 +62,11 @@ export function parsePeriod(question, now = nowDate(), isName = () => false) {
     [/\btomorrow\b/i, () => { const d = addDays(today, 1); return day(d, 'tomorrow', dateWords(d)); }],
     [/\b(this|last|past|next)\s+week\b/i, m => { const monday = addDays(today, -((today.getDay() + 6) % 7)), w = m[1].toLowerCase();
       if (w === 'next') { const from = addDays(monday, 7); return { from, to: addDays(from, 7), label: 'next week', mention: [...[0, 1, 2, 3, 4, 5, 6].flatMap(i => dateWords(addDays(from, i)))] }; }
-      return w === 'this' ? { from: monday, to: addDays(monday, 7), label: 'this week' } : { from: addDays(monday, -7), to: monday, label: 'last week' }; }],
+      // this week is partly ahead: what is planned for its days is found by the dates the notes mention
+      // ("what should I focus on this week?" returned only what was typed that morning; app run, 2026-11-16).
+      // Its date words carry no year ("18 november"), so a note recorded more than a year before the week is
+      // about another year's 18 November: since is the oldest recording time a mention counts from.
+      return w === 'this' ? { from: monday, to: addDays(monday, 7), label: 'this week', ahead: true, since: addDays(monday, -365), mention: [0, 1, 2, 3, 4, 5, 6].flatMap(i => dateWords(addDays(monday, i))) } : { from: addDays(monday, -7), to: monday, label: 'last week' }; }],
     [/\b(this|last|past|next)\s+month\b/i, m => { const first = new Date(today.getFullYear(), today.getMonth(), 1), w = m[1].toLowerCase();
       if (w === 'next') { const from = new Date(today.getFullYear(), today.getMonth() + 1, 1); return { from, to: new Date(from.getFullYear(), from.getMonth() + 1, 1), label: 'next month', mention: [MONTHS[from.getMonth()]] }; }
       return w === 'this' ? { from: first, to: new Date(today.getFullYear(), today.getMonth() + 1, 1), label: 'this month' } : { from: new Date(today.getFullYear(), today.getMonth() - 1, 1), to: first, label: 'last month' }; }],
@@ -82,7 +87,7 @@ export function parsePeriod(question, now = nowDate(), isName = () => false) {
       const i = WEEKDAYS.indexOf(m[2].toLowerCase());
       const back = (today.getDay() - i + 7) % 7 || (m[1]?.toLowerCase() === 'last' ? 7 : 0);
       const d = m[1]?.toLowerCase() === 'next' ? addDays(today, (i - today.getDay() + 7) % 7 || 7) : addDays(today, -back);
-      return { ...day(d, `${cap(WEEKDAYS[i])} ${ymd(d)}`, [WEEKDAYS[i]]), part: m[3]?.toLowerCase() || null };
+      return { ...day(d, `${cap(WEEKDAYS[i])} ${ymd(d)}`, [WEEKDAYS[i]]), part: m[3]?.toLowerCase() || null, weekday: m[1]?.toLowerCase() || '' };
     }],
     [/\b(?:in|during)\s+(\d{4})\b/, m => ({ from: new Date(+m[1], 0, 1), to: new Date(+m[1] + 1, 0, 1), label: m[1] })],
   ];
@@ -129,7 +134,9 @@ export function parseQuestion(question, names, { now = nowDate() } = {}) {
   let rest = String(question).replace(/"[^"]{2,200}"/g, ' ');
   const tags = [];
   rest = rest.replace(/(?:^|\s)(?:#|tag:)([\p{L}\p{N}][\p{L}\p{N}:_-]*)/gu, (_, t) => { tags.push(t.toLowerCase()); return ' '; });
-  const { period, rest: left } = parsePeriod(rest, now, w => !!lib.canonicalName(names, w)); rest = left;
+  // a greeting is no search word: "Good morning, what should I focus on this week?" searched for "good"
+  rest = rest.replace(/\bgood\s+(?:morning|afternoon|evening|day)\b/gi, ' ');
+  let { period, rest: left } = parsePeriod(rest, now, w => !!lib.canonicalName(names, w)); rest = left;
   const tokens = words(rest), used = new Array(tokens.length).fill(false), entities = [], ambiguous = [];
   // names: the longest run of words that is a known name, alias, email or id; a single word must be
   // capitalized, an email, an id, or the full name itself (so "sites" is not the alias Sites)
@@ -165,7 +172,23 @@ export function parseQuestion(question, names, { now = nowDate() } = {}) {
     terms.push(w);
   });
   for (const q of quoted) terms.push(fold(q));
-  return { entities, ambiguous, kind, kindHint, tags, period, terms: [...new Set(terms)], quoted: quoted.map(fold), sequence };
+  // Getting ready for a call with someone known ("I have a call with Acme tomorrow, brief me"): the day of the
+  // call is when the answer is needed, not which notes to read. Their newest notes are the brief, so neither the
+  // day nor the words "call" and "meeting" narrow them (app run, 2026-11-16: one note came back out of twelve).
+  // The asking itself is no search word either: "get ready", "help me prepare", "I need a briefing".
+  // The day is ahead when it has not ended: tomorrow, a date to come, today ("a call today", "later this afternoon"),
+  // and this week on any of its days. A weekday named in such a question is the coming one ("on Friday", "this
+  // Friday"), not the last, unless it says last. A question in the past tense ("what did Acme say this week, brief
+  // me") is about what was recorded, so there today and this week stay periods.
+  const past = /\b(did|was|were|had|happened|decided|saved|said|told|agreed|went)\b/i.test(String(question));
+  const asksPrep = entities.length > 0 && /\b(brief(?:ing)?|prep(?:are)?|get ready|ready for)\b/i.test(String(question));
+  const today = startOfDay(now);
+  let when = period;
+  if (asksPrep && !past && when?.weekday !== undefined && when.weekday !== 'last' && when.from < today) { const d = addDays(when.from, 7); when = { ...when, from: d, to: addDays(d, 1), label: `${cap(WEEKDAYS[d.getDay()])} ${ymd(d)}` }; }
+  const prep = asksPrep && !!when && when.to > now && (when.mention ? when.from >= today || (!!when.ahead && !past) : when.label === 'today' && !past);
+  if (prep) period = when;
+  if (prep) return { entities, ambiguous, kind, kindHint, tags, period: null, prep: period.label, terms: [...new Set(terms)].filter(w => !/^(call|calls|meeting|meetings|chat|sync|ready|help|need)$/.test(w)), quoted: quoted.map(fold), sequence };
+  return { entities, ambiguous, kind, kindHint, tags, period, terms: [...new Set(terms)], quoted: quoted.map(fold), sequence, ...(past ? { past } : {}) };
 }
 
 const parts = w => w.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
@@ -269,7 +292,7 @@ export function searchIndex(index, question, { filters = {}, project = null, now
     if (tags) for (const t of q.tags) { where.push("EXISTS(SELECT 1 FROM members v WHERE v.memory=m.rowid AND v.field='tags' AND lower(json_extract(v.value,'$'))=?)"); params.push(t); }
     if (period && q.period) {
       const p = q.period, range = 'm.time>=? AND m.time<?';
-      if (p.mention?.length) { mention = p.mention.map(x => `"${parts(x).join(' ')}"`).join(' OR '); where.push(`((${range}) OR m.rowid IN (SELECT rowid FROM keywords WHERE keywords MATCH ?))`); params.push(p.from.getTime(), p.to.getTime(), mention); }
+      if (p.mention?.length) { mention = p.mention.map(x => `"${parts(x).join(' ')}"`).join(' OR '); where.push(`((${range}) OR (m.time>=? AND m.rowid IN (SELECT rowid FROM keywords WHERE keywords MATCH ?)))`); params.push(p.from.getTime(), p.to.getTime(), p.since ? p.since.getTime() : 0, mention); }
       else { where.push(range); params.push(p.from.getTime(), p.to.getTime()); }
     }
     return { prefix: base.prefix, where, params, mention, entities: entities && q.entities.length > 0 };
@@ -309,7 +332,9 @@ export function searchIndex(index, question, { filters = {}, project = null, now
     // a calendar word ranks the notes that mention it (an event that day) above those only recorded then,
     // and "night" or "morning" the notes with an evening or morning time; tags, project and "decided" add a little
     const oneDay = q.period && q.period.to - q.period.from <= DAY + 3600000;   // a day, not a month: an event that day
-    const mention = scope.mention && oneDay ? set(scope.mention) : null, part = scope.mention && DAYPART[q.period?.part];
+    // A week partly ahead ranks them first only for a question that looks ahead: "what did we decide this week"
+    // is about what was recorded, and a note that only mentions one of its dates must not come above that.
+    const mention = scope.mention && (oneDay || (q.period?.ahead && !q.past)) ? set(scope.mention) : null, part = scope.mention && DAYPART[q.period?.part];
     const linked = scope.entities && q.entities.length > 1 ? db.prepare(`SELECT count(*) AS n FROM members WHERE memory=? AND field='entities' AND value IN (${q.entities.map(() => '?').join(',')})`) : null;
     const contentOf = part ? db.prepare('SELECT content FROM memories WHERE rowid=?') : null;
     const tagWords = new Set(q.terms), tagOf = db.prepare("SELECT json_extract(value,'$') AS t FROM members WHERE memory=? AND field='tags'");
@@ -477,6 +502,17 @@ const describeNarrowing = q => [
   ...(q.period ? [`${q.period.label}${q.period.mention ? ' (recorded then or mentioning it)' : ''}`] : []),
 ].join(', ');
 
+/* The reply's last line keeps the model in the brain. Two runs in the Codex app on 2026-11-16: asked for a short
+   invitation to a workshop, Codex read the notes and the voice document, then searched the web three and six
+   times for the event's public page, whose address the notes carried as a source. Core rule 5 names a person
+   or a company only, and the old last line asked for one to three sentences with a fact, which a draft is not. */
+const NO_WEB = 'What these notes do not hold is not recorded: nothing is looked up on the web and no source link above is opened unless the person asks for exactly that.';
+const DRAFT_CLOSE = 'A draft is asked for: write it now from these notes and the document this kind of work follows, at the length asked; a second search is needed only for a different question. Nothing is looked up on the web and no source link above is opened for a draft unless the person asks for exactly that: a detail these notes do not hold (an agenda, a time, a link) is left out of the draft, and one line after the draft says what is missing.';
+const DRAFT_PIECE = /\b(?:messages?|dm|e-?mails?|mail|invitations?|invites?|inviting|posts?|repl(?:y|ies)|follow-?ups?|outreach|copy|announcements?|newsletters?|captions?|intros?|introductions?|pitch|text|letter|headline|tagline|bio|script)\b/i;
+const DRAFT_ASK = /^\W*(?:(?:please|can you|could you|would you|help me|i need you to|i want you to|let'?s)\W+)*(?:draft|write|compose|reword|rewrite)\b/i;
+/* A request to write a piece of text (a message, a post, an email), as opposed to a question about one. */
+export const asksForDraft = question => { const q = String(question || ''); return /\bdraft (?:me |us )?(?:an?|the|our|my|some|\d+|two|three)\b/i.test(q) || (DRAFT_ASK.test(q) && DRAFT_PIECE.test(q)); };
+
 /* query (object answer): the question as asked, one reply. */
 export function answerText(index, root, question, { filters = {}, limit, project = null, now = nowDate(), relationsFor = () => [] } = {}) {
   question = String(question || '').trim();
@@ -516,7 +552,7 @@ export function answerText(index, root, question, { filters = {}, limit, project
     const m = fetchRow(index, row.r);
     const line = `${shown + 1}. ${noteText(m, now, shown < 3 ? FULL_NOTE_CHARS : SHORT_NOTE_CHARS, row.later)}`;
     const size = Buffer.byteLength(line) + 1;
-    if (shown && bytes + size > maxBytes - 200) break;
+    if (shown && bytes + size > maxBytes - 360) break;
     if (!shown) out.push('');
     out.push(line); notes.push(m); bytes += size; shown++;
   }
@@ -528,7 +564,7 @@ export function answerText(index, root, question, { filters = {}, limit, project
     const ask = askSourceLines(root, notes, { day: at => lib.localDateTime(at).slice(0, 10) });
     if (ask.length) out.push('', ...ask);
     // the reply is as long as the question needs (ALL-716: answers were as long as before the round, 451 characters at the median)
-    out.push('', 'Answer from these notes; a second search is needed only for a different question. Keep the reply to what was asked: one to three sentences with the fact, its date and who or what it came from. No list of everything found and no offers, unless the person asks for more.');
+    out.push('', asksForDraft(question) ? DRAFT_CLOSE : `Answer from these notes; a second search is needed only for a different question. Keep the reply to what was asked: one to three sentences with the fact, its date and who or what it came from. No list of everything found and no offers, unless the person asks for more. ${NO_WEB}`);
   }
   return out.join('\n');
 }

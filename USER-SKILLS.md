@@ -8,7 +8,7 @@ plugin, is a pull request: see [skill-template/](skill-template/README.md).
 
 A skill is a folder with a `SKILL.md` file that tells Codex how to do one kind of work the same
 way every time (draft the weekly account update, prepare a Circle event, run the sales review).
-GTM Brain ships twenty-one of them (`/gtm-brain-todo`, `/gtm-brain-sync`, `/gtm-brain-deepdive`, ...). From
+GTM Brain ships twenty-six of them (`/gtmb-todo`, `/gtmb-sync`, `/gtmb-deepdive`, ...). From
 0.22.0 you can add your own. They live inside your company brain folder, they show in Codex
 next to the shipped ones as `/gtm-brain-<name>`, they reach everyone who shares the brain, and
 no GTM Brain update ever touches them.
@@ -24,7 +24,7 @@ no GTM Brain update ever touches them.
 1. **Say it after doing it.** You just did something in a few steps (created an event in Circle,
    drafted an update from the CRM). Say `turn what we just did into a skill` or
    `make this a skill`. Codex drafts the skill from the steps it just ran.
-2. **Ask for it.** Type `/gtm-brain-skill` or say `add a skill`. Codex asks one question: what the
+2. **Ask for it.** Type `/gtmb-skill` or say `add a skill`. Codex asks one question: what the
    skill does, when it applies, which connected tool it uses, and what it produces and where
    that lands. A skill that writes a document says so in its last step: decisions go to the
    brain as notes, a document the work must follow is written as a document, a draft stays in the
@@ -32,7 +32,7 @@ no GTM Brain update ever touches them.
    root that nobody else receives.
 3. **The health check suggests it.** When the same action shows up on three separate days in
    the last month (three different days, not thirteen events in one afternoon), the advisor
-   behind `/gtm-brain-todo` and the dashboard's attention list says
+   behind `/gtmb-todo` and the dashboard's attention list says
    `Say: make a skill for "move deal" in attio.` Say that sentence and Codex drafts the skill
    from the notes that carry that action.
 
@@ -43,7 +43,7 @@ written before you answer. Then quit and reopen Codex: the skill is there in you
 Rules the tool enforces:
 
 - The name is `gtm-brain-` plus lowercase letters, digits and hyphens, made from the title.
-  A shipped name (`gtm-brain-todo` and the other ten) is refused.
+  A shipped name (`gtmb-todo` and the other ten) is refused.
 - The description is English, one sentence, at most 200 characters. It is what Codex reads in
   every chat to decide when the skill applies, so it is the whole cost of the skill until it
   is used.
@@ -51,7 +51,7 @@ Rules the tool enforces:
 
 Codex has its own general skill creator (`$skill-creator`). Inside a GTM Brain brain the rulebook
 tells Codex not to use it: it would put the skill in a personal folder outside the brain, where
-teammates never see it and where GTM Brain cannot list it. In a brain, `/gtm-brain-skill` is the way.
+teammates never see it and where GTM Brain cannot list it. In a brain, `/gtmb-skill` is the way.
 
 ## Where a skill lives
 
@@ -71,7 +71,7 @@ plugin, never the brain, so skills survive every update.
 - **In Codex:** type `/` in the chat box and the skill is listed as `/gtm-brain-<name>` next to
   the shipped GTM Brain skills. `$gtm-brain-<name>` mentions it inside a longer prompt. Codex also
   picks it by itself when your request matches its description.
-- **In a linked project folder** (a folder you connected with `/gtm-brain-project`): the skill is
+- **In a linked project folder** (a folder you connected with `/gtmb-project`): the skill is
   linked into that folder automatically, at link time and every time a chat starts there, so
   it is visible there too. Folders inside the brain folder see it without any link.
 - **On the dashboard:** Help, then Ways to work in Codex, under the group "Your skills". Each

@@ -1,0 +1,4 @@
+interface:
+  display_name: "GTM Brain: Set up Clay"
+  short_description: "Connect Clay and find the brain's target companies in it"
+  default_prompt: "Use $gtmb-clay-setup to set up Clay from what the brain already knows."

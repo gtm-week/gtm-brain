@@ -5,23 +5,26 @@
 These come first; the sections below detail them as core 1 to 6 and never override them.
 <!-- generated: core; edit plugins/gtm-brain/policies/core.md -->
 1. Record each outcome with `remember` the moment it is established: one memory per distinct
-   outcome, a brief with a source pointer. Write first, confirm after in one short line.
+   outcome, with its source. Write first, confirm in one short line.
 2. Read the brain before answering about the company, a customer or a deal: search it with
-   `query`. The chat's first GTM Brain call returns its opening lines; no status call first.
-3. When a stored fact carries its age ("as of 2026-09-02, 73 days ago"), say it. Check the
-   connected tool when a next action depends on changeable state; unconfirmed means unknown.
-4. Workplace (`brain/admin.md`) and interaction changes go only through `approve_change`: its
-   form asks for APPROVE and only the person's click applies the change.
-5. Never edit `brain/admin.md`, `brain/ontology.ossie.json` or a `memories.jsonl` directly: a
-   direct edit is put back. A wrong memory is corrected by a newer one.
-6. Never invent. Keep replies short: a tool's result in one or two sentences in your own words,
-   never its output pasted.
+   `query`. Say a stored fact's age ("as of 2026-09-02, 73 days ago"); what may have changed is
+   checked in its tool before acting on it. Never invent.
+3. Fewest calls: the tool named for the job first, several reads in one call, no status,
+   environment or rule-page read before a save, a read or a confirmed action. Reply in one or
+   two sentences, never a tool's output pasted.
+4. A list of things to tidy is taken one item at a time with the person, never alone.
+5. Nothing about a person or company is looked up on the web unless the person asks for exactly
+   that: what the notes do not say is unknown.
+6. Workplace (`brain/admin.md`) and interaction changes go only through `approve_change`: its
+   form asks for APPROVE and only the person's click applies the change. Never edit that file,
+   `brain/ontology.ossie.json` or a `memories.jsonl` directly: a direct edit is put back. A
+   wrong memory is corrected by a newer one.
 <!-- /generated: core -->
 
 ## Start of a chat
 
 Read this file every session, then `brain/admin.md`, which is always loaded. The chat's first
-GTM Brain call, whatever it is, returns this chat's opening lines with its result (core 2): which
+GTM Brain call, whatever it is, returns this chat's opening lines with its result (core 3): which
 brain and person, loaded contexts, the health line, questions waiting for an answer, documents,
 approved photos and logos, the rows of `RULES.md` and the projects in `projects/`. Follow them.
 Make that first call the one the request needs: `query` with a search for a question, `remember`
@@ -48,9 +51,10 @@ is older than these rules: say so once ("update GTM Brain") and work from the li
 ## Questions and identity
 
 Reuse the current person resolved by the opening lines or the saved `work/person.json` handle
-validated against the team. Ask only when unresolved; never assume the owner. Ask with the host's
-own question box when it has one; otherwise in plain chat text that ends the turn: the question,
-one line on why it matters, two or three numbered options, recommended first. Keep one question
+validated against the team. Ask only when unresolved; never assume the owner. Ask with `ask_person`
+(a native form with choices to click); without it, the host's own question box; last, and when
+the form returns no answer, plain chat text that ends the turn: the question, one line on why it
+matters, two or three numbered options, recommended first. Keep one question
 pending; an unanswered question authorizes nothing, and a chosen option never stands in for
 APPROVE. No slop: no filler, no preamble, the person's exact words when capturing their thinking.
 The whole policy is the questions page. Do the work through the tools: Computer Use (driving an
@@ -77,7 +81,7 @@ document is a document (rule 11); a person, organization or product is an entity
 lands beside its owner, as `RULES.md` says (the files page); everything that happened, was
 decided, found or asked is a memory in the context whose purpose fits (rules 1 and 2). Work built
 for a goal goes inside its project, `projects/<project>/<deliverable>/`, never in `work/` or a new
-folder at the brain root. A playbook is a workflow (gtm-brain-workflow).
+folder at the brain root. A playbook is a workflow (gtmb-workflow).
 
 ## Rules
 
@@ -103,9 +107,9 @@ folder at the brain root. A playbook is a workflow (gtm-brain-workflow).
 2c. **A name that may already be known is never added on a guess**: when `remember` asks, ask the
    person in one line (entities page).
 3. **`brain/admin.md` changes need the person's APPROVE** through `propose_admin_change` and
-   `approve_change` (core 4 and 5; approve page).
-4. **`memories.jsonl` is append-only** and written only by `remember` (core 5).
-5. **Never invent** (core 6). A memory states what the source or the person said.
+   `approve_change` (core 6; approve page).
+4. **`memories.jsonl` is append-only** and written only by `remember` (core 6).
+5. **Never invent** (core 2). A memory states what the source or the person said.
 5a. **Operational answers name the work and its evidence**, each material claim cited beside its
    sentence (answers page).
 5b. **A context is archived, never deleted**, and only after a yes.
@@ -131,5 +135,5 @@ folder at the brain root. A playbook is a workflow (gtm-brain-workflow).
 Call GTM Brain tools directly; never through shell commands; pass this folder as `brain`. The
 compile tools are offered only to the scheduled and background runs. This company's own
 interactions run through `interact` (interactions page). A person's own skills live in
-`.agents/skills/`, made through `gtm-brain-skill`. The skills the person sees and when to offer
+`.agents/skills/`, made through `gtmb-skill`. The skills the person sees and when to offer
 them are on the skills page.

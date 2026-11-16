@@ -9,9 +9,9 @@ import { resolve, dirname } from 'node:path';
 import { interviewRoute, updateRoute, icpBodyChecks, icpCases, plainRequestRouted, writtenICPRoute } from './live/icp-cases.mjs';
 import { documentSlug, documentPathFor } from '../lib/documents.mjs';
 import { wholeRulebook } from '../lib/rule-pages.mjs';
-const file = fileURLToPath(new URL('../skills/gtm-brain-define-icp/SKILL.md', import.meta.url));
+const file = fileURLToPath(new URL('../skills/gtmb-define-icp/SKILL.md', import.meta.url));
 const skill = readFileSync(file, 'utf8');
-const method = readFileSync(new URL('../skills/gtm-brain-define-icp/references/method.md', import.meta.url), 'utf8');
+const method = readFileSync(new URL('../skills/gtmb-define-icp/references/method.md', import.meta.url), 'utf8');
 const call = (tool, args = {}) => ({ tool, arguments: args });
 const reads = [call('load_context', { contexts: ['icp'], mode: 'add' }), call('document', { action: 'list' })];
 
@@ -57,22 +57,22 @@ test('interview response check accepts a truthful no-write acknowledgement', () 
 
 test('a plain request reaches Define ICP and a written ICP still goes to documents', () => {
   const rules = wholeRulebook(readFileSync(new URL('../templates/AGENTS.md', import.meta.url), 'utf8'));
-  const documents = readFileSync(new URL('../skills/gtm-brain-use-brain/references/documents.md', import.meta.url), 'utf8');
-  assert.match(rules, /define or rework who to target[^:]*: `gtm-brain-define-icp`/);
-  assert.match(rules, /`gtm-brain-define-icp` \(Chris Pawlak's interview/);
-  assert.match(documents, /\[Define ICP\]\(\.\.\/\.\.\/gtm-brain-define-icp\/SKILL\.md\), which interviews first/);
-  assert.match(documents, /ICP: run `gtm-brain-define-icp`\. Its draft replaces the starter's body in `icp\.md`/);
+  const documents = readFileSync(new URL('../skills/gtmb-use-brain/references/documents.md', import.meta.url), 'utf8');
+  assert.match(rules, /define or rework who to target[^:]*: `gtmb-define-icp`/);
+  assert.match(rules, /`gtmb-define-icp` \(Chris Pawlak's interview/);
+  assert.match(documents, /\[Define ICP\]\(\.\.\/\.\.\/gtmb-define-icp\/SKILL\.md\), which interviews first/);
+  assert.match(documents, /ICP: run `gtmb-define-icp`\. Its draft replaces the starter's body in `icp\.md`/);
   assert.match(documents, /An ICP the person already wrote is added here/);
 });
 
 test('plain-request gates: offer or interview without writes; a written ICP is created without an interview', () => {
   const ask = call('question', { question: 'Which companies are your best customers?' });
-  assert.ok(plainRequestRouted([], 'I can run /gtm-brain-define-icp to work it out with you.'));
+  assert.ok(plainRequestRouted([], 'I can run /gtmb-define-icp to work it out with you.'));
   assert.ok(plainRequestRouted([...reads, ask], 'Question asked.'));
   assert.ok(plainRequestRouted([...reads, ask, ask], 'Question asked.'));
   assert.equal(plainRequestRouted([call('question', { question: 'Which context should I use?' }), ask], 'Question asked.'), false);
   assert.equal(plainRequestRouted([], 'Here is your ICP: retailers.'), false);
-  assert.equal(plainRequestRouted([call('document', { action: 'create' })], 'Saved. Run gtm-brain-define-icp to refine.'), false);
+  assert.equal(plainRequestRouted([call('document', { action: 'create' })], 'Saved. Run gtmb-define-icp to refine.'), false);
   const keep = call('question', { question: 'Keep this?', options: ['Keep as a draft', 'Change something'] });
   assert.ok(plainRequestRouted([...reads, ask, keep, call('document', { action: 'create' })], 'Draft kept.'));
   assert.equal(plainRequestRouted([...reads, ask, keep, call('document', { action: 'create' }), call('remember')], 'Draft kept.'), false);

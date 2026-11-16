@@ -239,3 +239,12 @@ test("page: a document opens in the page; the editor shows only with this server
   assert.equal(editor.run(`docInfo("brain/contexts/company/memories.jsonl")`), null);
   assert.equal(editor.run(`docInfo("memories/2026-11.jsonl")`), null);
 });
+
+test("page: the layout click is read from the layout buttons only, never from #doc-view, which carries the same attribute", () => {
+  // #doc-view has data-doc-mode for the CSS. A handler that matched it took every click inside an open document, so
+  // the outline and the two conflict buttons did nothing (the browser test in frontend/dashboard/e2e clicks them).
+  const tpl = readFileSync(`${P}/scripts/gtm-brain-render/home.template.html`, "utf8");
+  assert.match(tpl, /\$\("#doc-view"\)\.dataset\.docMode=/);
+  assert.match(tpl, /closest\("button\[data-doc-mode\]"\)/);
+  assert.doesNotMatch(tpl, /closest\("\[data-doc-mode\]"\)|querySelectorAll\("\[data-doc-mode\]"\)/);
+});

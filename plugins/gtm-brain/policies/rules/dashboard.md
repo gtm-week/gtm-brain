@@ -17,4 +17,4 @@ For a business request, handle it directly; for a greeting, briefly orient to th
 context. The live onboarding state from the opening lines wins over old reminders; completed
 onboarding stays complete, and onboarding is never announced or asked about inside a business
 answer. Resuming, continuation notes and a required new chat:
-gtm-brain-start/references/continuation.md.
+gtmb-start/references/continuation.md.

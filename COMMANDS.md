@@ -7,25 +7,30 @@ to distinguish these workflows from other installed skills.
 
 | Skill identifier | Display name | What it does |
 |---|---|---|
-| `gtm-brain-project` | GTM Brain: Projects | Create a project folder, or link an existing one to your brain; repair, unlink, list |
-| `gtm-brain-design-system` | GTM Brain: Build our design system | Brian Woloszczak and Peakout's starter: one shared website project (`link_project` with `starter: "web-design-system"`), tokens, components and a local catalogue; `design-system.md` points to it |
-| `gtm-brain-add-section` | GTM Brain: Add a reusable section | A section from a source page or a brief, registered once in the website project for every page |
-| `gtm-brain-build-landing-page` | GTM Brain: Build a landing page | A campaign page on the shared website from strategy, ICP, voice and offer; stops at a local preview |
-| `gtm-brain-publish-website` | GTM Brain: Publish the website | Vercel preview first, production only on its own decision, through the Vercel and GitHub connectors |
-| `gtm-brain-start` | GTM Brain: Start | The first command in a project: creates the brain here, gets to know the business, connects the tools, opens the dashboard; resumes what is unfinished |
-| `gtm-brain-sync` | GTM Brain: Sync | Pull what came in through the connected tools since the last sync, one subagent per tool, and record what matters |
-| `gtm-brain-todo` | GTM Brain: Todo | What should I do now: everything waiting on you, ordered, walked through one by one |
-| `gtm-brain-workflow` | GTM Brain: Workflows | Start a run of a workflow document (an outbound campaign, ads then outbound), see where it stands, do the next step, skip or abandon; switch one on so a schedule or a save offers it; the brain keeps the steps, dates and milestones |
-| `gtm-brain-deepdive` | GTM Brain: Deep dive | A one-page brief on an entity or a context, from the notes and the tools read live |
-| `gtm-brain-define-icp` | GTM Brain: Define ICP | Chris Pawlak's exploratory interview: company examples, fit and exclusions, buying committee, awareness and readiness; reuses brain evidence and keeps one formal draft ICP document |
-| `gtm-brain-unit-economics` | GTM Brain: Unit economics | Lech Kaniuk's unit economics review: CAC, LTV12 and LTV24, LTV:CAC, both paybacks and retention from the chat and the brain, then PUSH, FIX, STOP or MEASURE overall and per acquisition source or segment; offers to keep the decision as a note and the missing inputs as questions |
-| `gtm-brain-market-desk-research` | GTM Brain: Market desk research | Chris Pawlak's market desk research: a 5-8 minute intake, a confirmed research frame, 15-30 sourced web and community reads, an interim checkpoint, then `market-desk-research-<slug>.md` with a positioning map and, when the numbers allow, a growth chart; market attractiveness and right to win judged separately, no offering design; accepted conclusions become notes |
-| `gtm-brain-use-brain` | GTM Brain: Use the company brain | Everyday work: remember, recall, where we are |
-| `gtm-brain-configure` | GTM Brain: Configure GTM Brain | Workplace info, team, tools and settings through APPROVE |
-| `gtm-brain-skill` | GTM Brain: Your skills | Turn a repeated workflow into a Codex skill kept in the brain's `.agents/skills`; install from GitHub, list, remove, share |
-| `gtm-brain-strategy` | GTM Brain: Strategic intake | A 10-15 minute conversation with a founder or a head of sales, growth or GTM that fills `strategy.md`, the document every brain starts with, mapped silently to Playing to Win; files shared on the way land in `strategy/` |
-| `gtm-brain-voice` | GTM Brain: Voice | Asks whose voice it is (the company's, a person's, a team's), then reads evidence that fits: pasted texts at once, for the company the website, public posts and outbound mail (never internal chat), for a person their own writing (smallest reads, connectors only). Fills `voice.md` through `document` (a person's or team's voice is its own document): rules in the structure the evidence supports, observed apart from suggested, corrections quoted; saved as a draft on the person's yes, tested on one fresh email or post, then the kinds of work it governs and the sentence to try in a new chat; re-run to revise |
-| `gtm-brain-zynt-setup` | GTM Brain: Set up ZYNT | Started by the prompt ZYNT gives after "Set up with my AI agent": reads strategy, ICP, market, voice and the target companies from the brain, asks only what is missing (usually the segment), sends drafts as drafts through ZYNT's MCP tools or its HTTP API with the pasted key (never saved), lets the person confirm in ZYNT, records a read test so ZYNT shows in the brain's tools as connected through its API, no MCP needed, and keeps one note in Target customers |
+| `gtmb-project` | GTM Brain: Projects | Create a project folder, or link an existing one to your brain; repair, unlink, list |
+| `gtmb-design-system` | GTM Brain: Build our design system | Brian Woloszczak and Peakout's starter: one shared website project (`link_project` with `starter: "web-design-system"`), tokens, components and a local catalogue; `design-system.md` points to it |
+| `gtmb-add-section` | GTM Brain: Add a reusable section | A section from a source page or a brief, registered once in the website project for every page |
+| `gtmb-build-landing-page` | GTM Brain: Build a landing page | A campaign page on the shared website from strategy, ICP, voice and offer; stops at a local preview |
+| `gtmb-publish-website` | GTM Brain: Publish the website | Vercel preview first, production only on its own decision, through the Vercel and GitHub connectors |
+| `gtmb-start` | GTM Brain: Start | The first command in a project: creates the brain here, gets to know the business, connects the tools, opens the dashboard; resumes what is unfinished |
+| `gtmb-sync` | GTM Brain: Sync | Pull what came in through the connected tools since the last sync, one subagent per tool, and record what matters |
+| `gtmb-todo` | GTM Brain: Todo | What should I do now: everything waiting on you, ordered, walked through one by one |
+| `gtmb-workflow` | GTM Brain: Workflows | Start a run of a workflow document (an outbound campaign, ads then outbound), see where it stands, do the next step, skip or abandon; switch one on so a schedule or a save offers it; the brain keeps the steps, dates and milestones |
+| `gtmb-deepdive` | GTM Brain: Deep dive | A one-page brief on an entity or a context, from the notes and the tools read live |
+| `gtmb-define-icp` | GTM Brain: Define ICP | Chris Pawlak's exploratory interview: company examples, fit and exclusions, buying committee, awareness and readiness; reuses brain evidence and keeps one formal draft ICP document |
+| `gtmb-unit-economics` | GTM Brain: Unit economics | Lech Kaniuk's unit economics review: CAC, LTV12 and LTV24, LTV:CAC, both paybacks and retention from the chat and the brain, then PUSH, FIX, STOP or MEASURE overall and per acquisition source or segment; offers to keep the decision as a note and the missing inputs as questions |
+| `gtmb-market-desk-research` | GTM Brain: Market desk research | Chris Pawlak's market desk research: a 5-8 minute intake, a confirmed research frame, 15-30 sourced web and community reads, an interim checkpoint, then `market-desk-research-<slug>.md` with a positioning map and, when the numbers allow, a growth chart; market attractiveness and right to win judged separately, no offering design; accepted conclusions become notes |
+| `gtmb-use-brain` | GTM Brain: Use the company brain | Everyday work: remember, recall, where we are |
+| `gtmb-configure` | GTM Brain: Configure GTM Brain | Workplace info, team, tools and settings through APPROVE |
+| `gtmb-skill` | GTM Brain: Your skills | Turn a repeated workflow into a Codex skill kept in the brain's `.agents/skills`; install from GitHub, list, remove, share |
+| `gtmb-strategy` | GTM Brain: Strategic intake | A 10-15 minute conversation with a founder or a head of sales, growth or GTM that fills `strategy.md`, the document every brain starts with, mapped silently to Playing to Win; files shared on the way land in `strategy/` |
+| `gtmb-voice` | GTM Brain: Voice | Asks whose voice it is (the company's, a person's, a team's), then reads evidence that fits: pasted texts at once, for the company the website, public posts and outbound mail (never internal chat), for a person their own writing (smallest reads, connectors only). Fills `voice.md` through `document` (a person's or team's voice is its own document): rules in the structure the evidence supports, observed apart from suggested, corrections quoted; saved as a draft on the person's yes, tested on one fresh email or post, then the kinds of work it governs and the sentence to try in a new chat; re-run to revise |
+| `gtmb-zynt-setup` | GTM Brain: Set up ZYNT | Started by the prompt ZYNT gives after "Set up with my AI agent": reads strategy, ICP, market, voice and the target companies from the brain, asks only what is missing (usually the segment), sends drafts as drafts through ZYNT's MCP tools or its HTTP API with the pasted key (never saved), lets the person confirm in ZYNT, records a read test so ZYNT shows in the brain's tools as connected through its API, no MCP needed, and keeps one note in Target customers |
+| `gtmb-freckle-setup` | GTM Brain: Set up Freckle | Started by "Set up Freckle for me": reads the ICP, personas and target companies from the brain, adds Freckle's MCP on the person's yes (`codex mcp add freckle`, the person signs in), records a read test, shows one plan in the brain's words, builds it on a yes and runs it (credits) only on a second yes, then keeps one note in Target customers so Freckle shows in the brain's tools |
+| `gtmb-clay-setup` | GTM Brain: Set up Clay | Started by "Set up Clay for me": uses Clay's MCP tools when listed, else Clay's plugin and CLI (`codex plugin marketplace add clay-run/agent-plugins` on the person's yes, the person signs in), records a read test, reads the ICP, personas and target companies from the brain, runs the free search on a yes and enrichment (credits) only on a second yes, then keeps one note in Target customers so Clay shows in the brain's tools |
+| `gtmb-woodpecker-setup` | GTM Brain: Set up Woodpecker | Started by "Set up Woodpecker for me": adds Woodpecker's hosted MCP on the person's yes (`codex mcp add woodpecker`, the person signs in), records a read test, shows the campaigns and their rates, drafts one sequence from the brain's strategy, ICP and voice, saves it as a draft on a yes (never `runCampaign`, no prospects added), then keeps one note in Target customers so Woodpecker shows in the brain's tools |
+| `gtmb-surfer-setup` | GTM Brain: Set up Surfer | Started by "Set up Surfer for me": adds Surfer's hosted MCP on the person's yes (`codex mcp add surfer`, the person signs in), records a read test, proposes topics from the brain's strategy, ICP, market, call notes and voice, creates one content brief on a yes and a full article (credits) only on a second yes, never publishes, then keeps one note in Market so Surfer shows in the brain's tools |
+| `gtmb-heyreach-setup` | GTM Brain: Set up HeyReach | Started by "Set up HeyReach for me": the person adds their workspace's Connection URL (a secret, never pasted in the chat) with `codex mcp add heyreach`, then the skill records a read test, shows the campaigns and their rates, drafts a connection note and two follow-ups from the brain for the person to paste into HeyReach (no sends, no leads, no campaign changes), and keeps one note in Target customers so HeyReach shows in the brain's tools |
 
 Find workflow examples from Overview or Help > Ways to work in Codex.
 Each entry explains the workflow, shows an example and its command, and opens a prepared
@@ -40,8 +45,9 @@ run a sequence of memory commands.
 The sections below document the underlying operations, tools, and script paths for reference.
 They are not additional discoverable skills. Tools show outcomes such as "Remembering" or
 "Searching the brain" in chat. Review proposals on the dashboard (it changes nothing but a document you edit and save there). APPROVE is a choice in the form `approve_change` shows; in a chat nothing else applies it.
+A question to you comes the same way: `ask_person` shows a form with the choices to click (or a field to type in) and hands your answer back to Codex. It records nothing and applies nothing. Where the host shows no form, Codex asks in its own question box, or in chat text with numbered options.
 Scripts retain their paths for terminal use with
-`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.35.0`.
+`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.37.0`.
 
 Legend for "writes": what files the command changes. Nothing else is ever touched.
 
@@ -64,7 +70,7 @@ Tool: `load_context`. Writes: `work/loaded-contexts.json` (local).
 *"remember that Pierre asked for a three-year TCO before 12.09"*, *"note this"*, *"log that we decided ..."*,
 *"correct memory m_xxxxxx: ..."*, *"forget memory m_xxxxxx, it was wrong"*
 
-The saving rules are one numbered page, `skills/gtm-brain-use-brain/references/saving-rules.md`, printed at
+The saving rules are one numbered page, `skills/gtmb-use-brain/references/saving-rules.md`, printed at
 every chat start with the "Our rules" section of the brain's own [RULES.md](#rulesmd) after it (its people's
 rules, which win). A held note quotes the rule it broke. Codex offers a line there when a save is questioned.
 
@@ -143,7 +149,7 @@ process, pain, champion, competition) from the memories about that company only.
 confirmed, weak or missing, and every score cites the memory it rests on; the missing ones become
 up to three questions for the next conversation. It reads only and saves nothing: answers are
 remembered like any finding and the next read scores them. The rubric is
-`skills/gtm-brain-use-brain/references/deal-health.md`.
+`skills/gtmb-use-brain/references/deal-health.md`.
 
 Tool: `query` with object `deal` and search = the company. Off for a brain whose `brain/admin.md`
 front matter has `deal_scoring: off` (new brains get `deal_scoring: on`; a brain without the line
@@ -162,7 +168,7 @@ with the Drive connector; `local` copies it to a folder on this computer outside
 way the note that says what it is keeps a pointer (`{kind: "google-drive", account, ref, url}` or
 `{kind: "file", ref: <absolute path>}`, `lib/pointers.mjs` `bigFilePointer`), never the bytes.
 `save`, the chat start and `add-file.mjs` give the same instruction (`lib.bigFileAdvice`) and the
-walk-through is `skills/gtm-brain-use-brain/references/big-files.md`: `add-file.mjs --file <path>
+walk-through is `skills/gtmb-use-brain/references/big-files.md`: `add-file.mjs --file <path>
 --big` copies and checks the file (local) or names the Drive folder, `add-file.mjs --drive <link>
 [--account <a>]` prints the Drive pointer. Onboarding asks the choice once and saves the answer as
 the note `Big files: google-drive.` or `Big files: local.` in `company` (`lib.bigFilesChoice`). It
@@ -280,7 +286,7 @@ A grey pill is an ID that no longer resolves (withdrawn, or in a context this da
 hold). A sentence with no pill has no source note, so the summary itself is what is wrong.
 Correcting a wrong sentence means forgetting the note behind its pill, not editing the summary.
 
-The dashboard server answers reads only, except `POST /document`: saving a document edited on the page runs `document.mjs --update <path> --body` (the same validation, header and commit as in chat; on layout 3 a teammate's change to a base file becomes a proposal). It asks for the page's own Origin and Host, a token made at each server start and served only inside the page, JSON, a text within the 64 KB document limit, a path `lib/documents` lists, and the hash of the version that was opened (a file changed meanwhile is not overwritten); never during a scheduled run. `GET /search?q=` reads the memory index for the search box. Two of the reads belong to the Design system document: `GET /design-file?path=` serves a png, jpg, svg or webp the last render listed from the `design-system/` folder beside it, and `GET /design-visual` serves the one `design-system.html` beside it; both go out sandboxed (`Content-Security-Policy: sandbox`, nosniff), so nothing in them runs script. `POST /entity-edit` takes one of nine named operations for the Entities tab (create, update, merge, archive, set_fields, add_relation, end_relation, retract_relation, set_customer) behind the same checks; each runs the entities or remember script, so a relation or a field saved on the page is a note with its author. `POST /memory-edit` takes one of five named operations for the menu on a note in the Memories tab (correct, retract, move, set_kind, answer) behind the same checks; each is one call of the remember script and never edits or removes a line: a correction or a change of kind is a new note that supersedes the old one, "This was wrong" and an answer to an open question are notes that retract it, and a move withdraws the note in its topic and saves it again in the other, with the person at this computer as the author and the dashboard as a source beside the note's own.
+The dashboard server answers reads only, except `POST /document`: saving a document edited on the page runs `document.mjs --update <path> --body` (the same validation, header and commit as in chat; on layout 3 a teammate's change to a base file becomes a proposal). It asks for the page's own Origin and Host, a token made at each server start and served only inside the page, JSON, a text within the 64 KB document limit, a path `lib/documents` lists, and the hash of the version that was opened (a file changed meanwhile is not overwritten); never during a scheduled run. `GET /search?q=` reads the memory index for the search box. Two of the reads belong to the Design system document: `GET /design-file?path=` serves a png, jpg, svg or webp the last render listed from the `design-system/` folder beside it, and `GET /design-visual` serves the one `design-system.html` beside it; both go out sandboxed (`Content-Security-Policy: sandbox`, nosniff), so nothing in them runs script. `POST /entity-edit` takes one of nine named operations for the Entities tab (create, update, merge, archive, set_fields, add_relation, end_relation, retract_relation, set_customer) behind the same checks; each runs the entities or remember script, so a relation or a field saved on the page is a note with its author. `POST /memory-edit` takes one of five named operations for the menu on a note in the Memories tab (correct, retract, move, set_kind, answer) behind the same checks; each is one call of the remember script and never edits or removes a line: a correction or a change of kind is a new note that supersedes the old one, "This was wrong" and an answer to an open question are notes that retract it, and a move withdraws the note in its topic and saves it again in the other, with the person at this computer as the author and the dashboard as a source beside the note's own. `GET /chat` answers which chat of this brain is newest on this computer, so a prepared message on the page opens in that chat (`codex://threads/<id>?prompt=`) and not in a new one.
 
 Tools: `render_dashboard` (rebuild), `open_dashboard` (rebuild, start the server, open the browser). Writes: `work/home/` (local); `work/dash.json`, `work/session.json`
 (the chat recorded at chat start).
@@ -423,7 +429,8 @@ Facts stay in context memories; narrative sections are compiled with citations. 
 when only one person has it.
 
 Tools: `who_is`, `add_name` (aliases, emails, kind, external references and identity sources),
-`update_entity` (explicit set/add/remove by stable ID), `merge_entities` (preview then apply),
+`update_entity` (explicit set/add/remove by stable ID), `merge_entities` (one call with `confirmed: true` once the person has confirmed; otherwise preview then apply),
+`answer_question` (closes an open question with the person's answer as the note that retracts it, and carries out same or different for two names; without a question it lists the open ones),
 `archive_entity` (`undo: true` restores), `undo_entity_merge` (preview then reverse a recorded merge),
 `entity_facts` and `compile_entity` (a cited brief from current evidence). Writes:
 `brain/entities/*.md` and `brain/entities/.history/`, through the library. Aliases cannot
@@ -556,7 +563,7 @@ as the sixth onboarding step. Completed v1 onboarding resumes only this new choi
 
 *"create a project for the curriculum at ~/curriculum"*, *"link this folder"*, *"unlink this project"*, *"list projects"*
 
-`/gtm-brain-project` creates `<brain-root>/projects/<project-slug>/` by default, the projects
+`/gtmb-project` creates `<brain-root>/projects/<project-slug>/` by default, the projects
 folder [RULES.md](#rulesmd) names. A project inside the brain is the team's: its files go in the brain's git, and only
 its two pointer files (`AGENTS.md`, `CLAUDE.md`, which name this machine's brain path) stay out, in
 `.git/info/exclude`. A folder an earlier version kept out of git whole is shared at the next chat start. It reuses the known brain and name, combines the destination and capture consent
@@ -564,9 +571,9 @@ in one question when needed, and handles relevant existing context in the backgr
 context selection or matching context creation is needed. An explicit alternative location
 is respected. The tool uses `create: true` to refuse occupied destinations and protects the
 brain's internal storage, including paths through symlinks.
-`/gtm-brain-project` connects an existing folder where it already lives, preserving its
+`/gtmb-project` connects an existing folder where it already lives, preserving its
 files and instructions. It also repairs broken connections, unlinks projects, and lists them. The former
-`/gtm-brain-project` workflow is now Link Project.
+`/gtmb-project` workflow is now Link Project.
 
 An external linked folder stays one working project. For several new projects, use separate
 folders in the GTM Brain workspace's `projects/`. Nested or overlapping linked projects are
@@ -586,14 +593,14 @@ the folder linked. An existing task in the brain keeps its brain-wide scope.
 Tools: `list_brains`, `link_project`, `unlink_project`, `list_projects`. Writes: the pointer
 block in the project's `AGENTS.md`, plus `work/projects.json` and the project's loaded set
 inside the brain. The underlying script path remains stable:
-`node $PLUGIN_ROOT/skills/gtm-brain-project/project.mjs . --link <path> [--create] [--starter web-design-system] [--slug s] [--title "T"] [--contexts a,b] [--by handle]`, `... --unlink <slug>`, `... --list`
+`node $PLUGIN_ROOT/skills/gtmb-project/project.mjs . --link <path> [--create] [--starter web-design-system] [--slug s] [--title "T"] [--contexts a,b] [--by handle]`, `... --unlink <slug>`, `... --list`
 
 ### Build and publish a company website
 
 *"build our design system from our website"*, *"add a comparison table to our website"*,
 *"build a page for our event"*, *"prepare a hosted preview of our website"*
 
-`/gtm-brain-design-system` reuses the company's one website project, or creates
+`/gtmb-design-system` reuses the company's one website project, or creates
 `<brain-root>/projects/website` through `link_project` with `create: true` and
 `starter: "web-design-system"`, after capture consent. That copies Brian Woloszczak and
 Peakout's pinned starter into a project with its own local git. Installing dependencies and
@@ -605,9 +612,9 @@ the project, the company knowledge and one "Website" section in `design-system.m
 the project. Design values stay in the project's code and manual. Later campaigns add pages
 to the same component library, and plugin updates never rewrite a company's project.
 
-`/gtm-brain-add-section` takes a source URL and heading or a brief, including interactive
-sections. `/gtm-brain-build-landing-page` uses the strategy, ICP, voice and offer, then
-composes registered sections. Both end at a local preview. `/gtm-brain-publish-website` runs
+`/gtmb-add-section` takes a source URL and heading or a brief, including interactive
+sections. `/gtmb-build-landing-page` uses the strategy, ICP, voice and offer, then
+composes registered sections. Both end at a local preview. `/gtmb-publish-website` runs
 only on its own request: a Vercel preview first, production on a separate decision. See the
 [preservation and packaging contract](plugins/gtm-brain/starters/web-design-system/README.md).
 
@@ -675,7 +682,7 @@ undo (via codex, pushed at once), `work/capture.json` (settings, heartbeat, curs
 with its tokens), `work/hooks.log`.
 `node $PLUGIN_ROOT/scripts/gtm-brain-schedule/capture.mjs /path/to/brain --run | --start | --undo | --status | --off | --on | --cap <tokens> | --chat-cap <tokens>`
 
-### gtm-brain-configure
+### gtmb-configure
 *"update GTM Brain"*, *"check the installed GTM Brain version"*
 
 Runs from the Codex app, even without a brain. Checks the installed plugin or refreshes it
@@ -727,10 +734,24 @@ moves pages. A brain already in kind folders whose file says 1 or is missing is 
 upgrade, the next chat start or the next save, with nothing moved. What a teammate on an older
 version sees is in [MANUAL.md](plugins/gtm-brain/MANUAL.md#saving-what-you-say-what-it-keeps).
 
-Tool: `upgrade_brain` (`confirm`). Writes: `AGENTS.md`, `.githooks/pre-commit`, `.gitignore`,
+For the owner the same question also covers layout 3: the base files into `about-us/`, `RULES.md`,
+`SCHEMA.md` and `brain/admin.md` into `config/`, in a commit of its own. A teammate's yes moves the
+entity pages only. The chat start offers the upgrade in one line to whoever can say yes to a move
+still waiting. The order for a team, what a 0.34 teammate sees and how to go back are in
+[MANUAL.md, Updating to 0.35](plugins/gtm-brain/MANUAL.md#updating-to-035).
+
+Tool: `upgrade_brain` (`confirm`, `skill_names`). Writes: `AGENTS.md`, `.githooks/pre-commit`, `.gitignore`,
 `RULES.md`, `SCHEMA.md`, missing starter documents, `brain/layout.json`, upgrade backups, and
 identity files only when migration is needed.
 `bash $PLUGIN_ROOT/scripts/gtm-brain-upgrade/upgrade.sh . [--confirm]`
+
+With `skill_names: true` it does one thing only: in the brain's own files (the README, the rules,
+workflow documents, base documents and the skills made in the brain) it rewrites the skill names
+of 0.35 and earlier, `gtm-brain-<name>`, to `gtmb-<name>`, and commits. Without it, the chat start
+names those files and Codex asks first. A teammate's run leaves `about-us/` and `config/` to the
+owner. Notes are never rewritten. See
+[MANUAL.md, Updating to 0.36](plugins/gtm-brain/MANUAL.md#updating-to-036-short-skill-names).
+`node $PLUGIN_ROOT/scripts/gtm-brain-upgrade/skill-names.mjs . [--apply] [--by <handle>]`
 
 ## What runs by itself
 
@@ -761,7 +782,7 @@ brain/admin.md                       workplace info; APPROVE to change
 brain/entities/*.md                     identity and cited briefs
 brain/contexts/<slug>/context.md     the context cover
 brain/contexts/<slug>/memories.jsonl the context's time series, append-only
-strategy.md                          the strategy document, there from setup; gtm-brain-strategy fills it
+strategy.md                          the strategy document, there from setup; gtmb-strategy fills it
 <slug>.md, <folder>/<slug>.md        the documents the work must follow (kind: document); document tool or a hand edit
 <folder>/<slug>/                     a document's files; add-file.mjs --document, or dropped in by hand
 brain/entities/<id>/                 an entity's files; add-file.mjs --entity
@@ -844,13 +865,13 @@ object `reference` (search = `kind:ref`, `kind:account/ref` or a record URL) ret
 references include it and every note citing it, from the memory index's `source` members; a search
 that names an account also finds what was saved without one.
 
-`/gtm-brain-schema` (*"what do we keep about people"*, *"every company must have a budget owner"*,
+`/gtmb-schema` (*"what do we keep about people"*, *"every company must have a budget owner"*,
 *"investors are a subtype"*) shows the file and adds, renames or removes one row in the person's
 words, then calls `save`. A relationship rename keeps the old name in `Was called`.
 
 ## RULES.md
 
-`/gtm-brain-rules` (*"show my rules"*, *"from now on ..."*, *"change where X goes"*) shows the file
+`/gtmb-rules` (*"show my rules"*, *"from now on ..."*, *"change where X goes"*) shows the file
 and adds, changes or removes one row or one line in the person's words, then calls `save`. A rule
 cannot switch off APPROVE, the protected files or W1.
 
@@ -867,7 +888,7 @@ line with hyphens, slashes, commas or full stops between the parts reads the sam
 lists an untagged rule as "not filed yet" with the tag line Codex proposes, a tag line it cannot read
 with its line and a fix, and an instruction that starts work ("whenever a company becomes a
 customer, send the welcome pack", or a schedule: "every Monday, send the pipeline summary") with a
-one-step workflow to create instead; `/gtm-brain-rules`
+one-step workflow to create instead; `/gtmb-rules`
 writes the line, or creates the workflow, only on the person's yes. A filed rule rides along with the
 reply that needs it, once per chat: `remember` (saving, for the people and companies in the note),
 `query` object `brief` (reading and drafting, by the entity's kind and current relationships), and

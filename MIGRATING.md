@@ -7,6 +7,9 @@ format and location. Historical notes and custom skills are preserved.
 The project is now [gtm-week/gtm-brain](https://github.com/gtm-week/gtm-brain), with its website at
 [gtm-brain.ai](https://gtm-brain.ai/). GitHub redirects the former project URL.
 
+Since 0.36 the skills are named `/gtmb-<name>` instead of `/gtm-brain-<name>`. That needs no reinstall: see
+[Updating to 0.36](plugins/gtm-brain/MANUAL.md#updating-to-036-short-skill-names).
+
 ## Codex
 
 Use the [guided installer](INSTALL.md), or run this explicit migration:

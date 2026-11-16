@@ -6,13 +6,14 @@ attach: add_name update_entity merge_entities archive_entity undo_entity_merge
 The identity registry and the readable briefs are the entity pages (`query` with object
 entities lists them; the opening lines and a brief give each one's file). Create identities with
 `add_name`; rename, replace and change metadata with `update_entity` by stable ID.
-`merge_entities`, `archive_entity` and `undo_entity_merge` preview first and apply only for a
-confirmed match. Use `query` (entities) to resolve a name or ID, and `query` with object brief
+`merge_entities` with `confirmed: true` merges in one call once the person has said the two
+are the same (without it: a preview); `archive_entity` and `undo_entity_merge` apply only
+what the person asked for. Use `query` (entities) to resolve a name or ID, and `query` with object brief
 and `search` = the name for its brief. Similarity is never identity confirmation, and zero
 results never authorize merging. Facts stay in context memories; never erase identities or
 history. Entity files are editable: preserve handwritten Markdown and propose a minimal repair
-when parsing fails. The procedures for a merge, a split or a CRM lookup are
-gtm-brain-use-brain's references/entities.md and entity-search.md, read only for that work.
+when parsing fails. A confirmed merge needs no procedure. A split or a CRM lookup has one in
+gtmb-use-brain's references/entities.md and entity-search.md, read only for that work.
 
 **Every company, product, team and person a note names is an entity (rule 2a).** Pass them all
 in `people`, as written; use `add_name` with kind person, organization or product and an
