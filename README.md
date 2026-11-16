@@ -63,7 +63,7 @@ Codex, under the rules, and leave each step as a note.
 - **The dashboard shows the same files:** what needs you, housekeeping, entities, notes,
   workflows and configuration. Documents, entities and notes can be edited there.
 
-More: [How GTM Brain works](#how-gtm-brain-works) · [How a brain works](plugins/gtm-brain/MANUAL.md).
+More: [The folders of a brain](#what-is-stored-on-disk) · [How GTM Brain works](#how-gtm-brain-works) · [How a brain works](plugins/gtm-brain/MANUAL.md).
 
 **Configure it:** one table of commands in [Configure your brain](#configure-your-brain).
 
@@ -109,6 +109,7 @@ Every skill is `/gtmb-<name>`.
 | Ideal customer profile | `/gtmb-icp` | "define our ICP" |
 | Tone of voice | `/gtmb-voice` | "draft our voice" |
 | Design system | `/gtmb-design-system` | "build our design system" |
+| Market | `/gtmb-market` | "fill in the market" |
 
 **As you need them.**
 
@@ -186,7 +187,7 @@ called out. The review makes a recommendation; budget and campaign changes remai
 > Make this research process a skill I can reuse in our other projects.
 
 Keep your own skills in the brain and use them from linked project folders. Plugin updates
-preserve them. See the [command reference](COMMANDS.md) for all twenty-seven workflows, including
+preserve them. See the [command reference](COMMANDS.md) for all the shipped workflows, including
 strategy, source sync, documents and project setup.
 
 ## What it solves
@@ -242,8 +243,8 @@ Customer, partner and employer are relationships supported by memories, not extr
 
 Alongside these objects:
 
-- **Workplace settings** in `brain/admin.md` describe the company, team and tools. Changes require `APPROVE`.
-- **Documents** such as `strategy.md`, an ICP or pricing guide are standing instructions for future work. They carry a `kind: document` marker and are authored by people, not rewritten by summary compilation. Their supporting files live beside them.
+- **Workplace settings** in `config/settings.yaml` describe the company, owner, team and tools. Changes require `APPROVE`.
+- **Documents** such as `about-us/strategy.md`, an ICP or pricing guide are standing instructions for future work. They carry a `kind: document` marker and are authored by people, not rewritten by summary compilation. Their supporting files live beside them.
 - **Workflows** in `workflows/` describe repeatable steps, prerequisites, gates and learning questions. Each run's state is recorded as memories in its context.
 - **Projects** are working folders linked to the same brain. Each has its own loaded contexts; its notes carry a `project:<slug>` tag. Linking a campaign folder does not create a second memory store.
 
@@ -338,34 +339,47 @@ automatic replacement until reviewed. Refreshing a summary is not a live check o
 
 ### What is stored on disk
 
+A brain is one folder. Each part of the picture above has its place in it, and the dashboard's
+tabs show the same parts.
+
 ```text
 your-brain/
-  AGENTS.md                         Workspace instructions for the agent
-  CLAUDE.md                         Claude Code entry point
+  about-us/                         Base documents: what the work must follow
+    strategy.md  icp.md  voice.md  market.md
+    design-system.md  design-system.html
+  config/                           How the brain behaves; only the owner changes it
+    rules.md                        What Codex saves and asks, where files go, which tool to ask
+    schema.md                       What is kept per person, company and product; relationship types
+    settings.yaml                   Company, owner, team, tools and settings
   brain/
-    admin.md                        Company, team, tools and settings
-    contexts/
-      icp/
-        context.md                  Summary, standing rules, working guidance
-        memories.jsonl              Append-only evidence, decisions and questions
-      offer/ ...                    Other shared contexts
-    entities/
-      <entity>.md                   Stable identity and cited cross-context brief
-      .history/                     Identity merge and recovery records
-  strategy.md                       A standing document (kind: document)
-  strategy/                         Files belonging to that document
-  workflows/
-    outbound.md                     Playbook definition; run state lives in memories
-  .agents/skills/                    Your own reusable skills
-  work/                             Local state and caches, ignored by version control
-    memory-index.sqlite             Rebuildable SQLite search index
-    loaded-contexts.json             Working context selection
-    home/                           Rendered dashboard and data
+    entities/                       One page per person, company, product, event, tool, meeting
+      people/  organizations/  products/  events/  tools/  meetings/  offerings/
+    contexts/                       Memories, grouped by topic
+      company/  icp/  market/  offer/  strategy/
+        memories.jsonl              The notes: one per line, never edited
+        context.md                  The topic's summary and working guidance
+    proposals/                      A teammate's change to about-us/ or config/, waiting for the owner
+  workflows/                        Processes with steps; a run's state is kept as notes
+  projects/                         Working folders for an event, a campaign, a client
+  .agents/skills/                   Skills your team made
+  AGENTS.md  CLAUDE.md  README.md   Written by GTM Brain; refreshed on update, never edited by hand
+  work/                             This computer only, not in git: search index, dashboard, caches
 ```
 
+| Dashboard tab | Folder | Changed with |
+| --- | --- | --- |
+| Configuration | `config/`, `about-us/` | `/gtmb-rules`, `/gtmb-schema`, `/gtmb-configure`, the document commands, or Edit in the dashboard |
+| Entities | `brain/entities/` | what you say in chat ("Chris is Krzysztof Pawlak"), or the Entities tab |
+| Memories | `brain/contexts/` | what you say in chat; a correction adds a note, it never rewrites one |
+| Workflows | `workflows/`, `.agents/skills/` | `/gtmb-workflow`, `/gtmb-skill` |
+
+A brain made before 0.35 keeps the base documents and `RULES.md`, `SCHEMA.md` at the top and its
+settings in `brain/admin.md` until its owner says "upgrade the brain"
+([Updating to 0.35](plugins/gtm-brain/MANUAL.md#updating-to-035)).
+
 The plugin's source and your brain are separate folders. Updating the plugin does not replace
-your memories, documents or custom skills. The brain keeps local version history; remote
-sharing and backup depend on how you configure your workspace.
+your memories, documents or custom skills. Every change is committed to the brain's own git
+history at once; sharing with a team and backup go through the git remote you give it.
 
 ### Sources, permissions and boundaries
 
@@ -385,7 +399,7 @@ save and kept aside in `work/manual-edits/protected/`. These checks complement t
 permission system. External sends, account changes
 and other actions still go through the relevant integration and its permission flow.
 
-The dashboard is read-only and opens when requested. A workflow records prerequisites, step
+The dashboard opens when requested; documents, entities and notes can be edited there, and it starts no work on its own. A workflow records prerequisites, step
 progress, dates and approval gates; its tracker does not autonomously perform the step. The
 agent carries out authorized work through connected tools and then records what happened.
 
@@ -394,7 +408,7 @@ does not mean offline AI processing.
 
 ## Built-in workflows
 
-Ask for an outcome in ordinary language, or invoke one of the twenty-seven shipped skills:
+Ask for an outcome in ordinary language, or invoke one of the shipped skills:
 
 | Command | Use it for |
 | --- | --- |
@@ -469,7 +483,7 @@ In a new chat in an empty project folder, send "Set up GTM Brain here" or
 `/gtmb-start`.
 
 To verify the first use, ask the agent to remember a test finding, recall it in a new chat and
-show the dashboard. The same record should appear in the context and the read-only view.
+show the dashboard. The same record should appear in the chat and in the dashboard.
 The installation bundles the dashboard assets; users do not need to build the frontend.
 
 ### Moving from GTM OS
@@ -491,40 +505,31 @@ paths need updating. [MIGRATING.md](MIGRATING.md) contains the full compatibilit
 
 ## Source layout
 
-```
-.agents/plugins/marketplace.json
-plugins/gtm-brain/
-  .codex-plugin/plugin.json
-  session/                    the chat start the MCP server runs on a chat's first call (list
-                              contexts, put back direct edits of protected files); no hooks
-  .mcp.json  server/          the operations as MCP tools (Remembering, Searching the brain, ...);
-                              dash.mjs serves the read-only dashboard and revision events
-  lib/                        shared readers, validators, writers, search and identity logic; Node built-ins
-  skills/                     the twenty-seven workflows a person can ask for (all prefixed gtmb-): start,
-                              todo, sync, workflow, deepdive, strategy, unit-economics, define-icp,
-                              market-desk-research, voice, zynt-setup, freckle-setup, clay-setup,
-                              woodpecker-setup, surfer-setup, heyreach-setup,
-                              project, design-system, add-section,
-                              build-landing-page, publish-website, configure, skill, rules, schema,
-                              use-brain; what
-                              they used to be as separate skills lives on as their references
-    gtmb-use-brain/references/    load, create and edit contexts, remember, recall, names, compile,
-                              dashboard, manual save
-    gtmb-configure/references/ workplace approval, connect tools, update plugin
-    gtmb-start/references/  onboarding, the handoff import
-  scripts/gtm-brain-*/           the operation scripts the MCP server, session scripts and skills run (no SKILL.md)
-  starters/web-design-system/ Brian and Peakout's unchanged starter source and its preservation manifest
-  templates/                  AGENTS.md, brain/admin.md, .gitignore, the pre-commit hook
-  test/                       node --test 'plugins/gtm-brain/test/*.test.mjs'
-frontend/dashboard/           React dashboard source; built assets ship with the plugin
-scripts/sync-derived.mjs       generate shared policy blocks, schemas and host declarations
-dev-install.sh                install this checkout into Codex, no GitHub round trip
+For contributors. This is the plugin's repository, not a brain.
+
+```text
+plugins/gtm-brain/              everything that ships
+  .codex-plugin/plugin.json     the manifest and the version; the Claude Code files are generated from it
+  skills/gtmb-*/                the shipped skills, one folder each: SKILL.md and its references/
+  server/                       the MCP server (server.mjs) and the dashboard server (dash.mjs)
+  scripts/gtm-brain-*/          one folder per operation the server runs: remember, load, compile,
+                                render, setup, approve, upgrade, ...
+  lib/                          the file format and the only write path: notes, entities, documents,
+                                search, owner rules, paths; Node built-ins only
+  session/                      what runs at a chat's first call: the opening lines, the refresh
+  ontology/                     the plugin's own tools, described once and generated as MCP tools
+  policies/                     shared instruction text, copied into the marked blocks by sync-derived
+  templates/                    what setup writes into a new brain; legacy/ holds every shipped rulebook
+  starters/                     the website design system starter
+  test/                         node --test 'plugins/gtm-brain/test/*.test.mjs'; live/ and e2e/ are benchmarks
+frontend/dashboard/             dashboard frontend source and browser tests; built assets ship with the plugin
+scripts/sync-derived.mjs        regenerates derived text, schemas and the Claude Code declarations
+diagrams/                       the pictures and screenshots in this README
+dev-install.sh  dev-reset.sh    install this checkout into Codex; wipe and reinstall a test brain
 ```
 
-The plugin ships from `gtm-week/gtm-brain`, branch `main`.
-
-Describe a feature in its owning reference and link to it from the other guides. Shared
-agent policies are embedded automatically where an agent needs a self-contained document.
+The plugin ships from `gtm-week/gtm-brain`, branch `main`. Describe a feature once, in its owning
+document, and link to it from the others. More in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Before pushing to main
 
