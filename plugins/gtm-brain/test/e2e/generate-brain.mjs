@@ -165,10 +165,12 @@ export async function generate({ shape = "small", out, seed = 1, gold: goldPath 
     for (const p of persons) {
       if (traps.merged && p === traps.merged.survivor) continue;
       let org = p === traps.maxes?.[0] ? traps.employers.maxWeber : p === traps.maxes?.[1] ? traps.employers.maxWagner : traps.lookalike?.includes(p) ? traps.employers.jana : p === traps.merged?.duplicate ? companies[4] : chance(0.06) && hub ? hub : pick(employers);
+      // the hub always has staff, so its first meeting has an attendee whatever the random sequence gives (a schema change shifts it)
+      let pinned = false; if (hub && org !== hub && p === persons[persons.length - 1] && ![...jobs.values()].some(j => j.org === hub)) { org = hub; pinned = true; }
       const f0 = rnd() * 0.3;
       relation(f0, "icp", "works_at", p, org, "current", `${p.name} works at ${org.name} as ${pick(["head of operations", "CFO", "returns manager", "COO", "IT lead", "buyer", "category manager", "VP finance"])}.`);
       jobs.set(p, { org, since: f0 });
-      if (!traps.maxes?.includes(p) && chance(0.22)) {
+      if (!pinned && !traps.maxes?.includes(p) && chance(0.22)) {
         const f1 = 0.35 + rnd() * 0.55, next = pick(employers.filter(o => o !== org));
         relation(f1, "icp", "works_at", p, org, "ended", `${p.name} left ${org.name}.`);
         relation(f1 + 0.0001, "icp", "works_at", p, next, "current", `${p.name} joined ${next.name}.`);
