@@ -41,7 +41,15 @@ Details: [Updating to 0.36](plugins/gtm-brain/MANUAL.md#updating-to-036-short-sk
 
 **How the brain works**
 
-![A GTM Brain in one picture: you in a Codex chat on top; below it the brain, a folder of plain files, with memories, configuration and entities side by side; workflows under them; connected tools, the dashboard and your team at the bottom](diagrams/brain-in-one-picture.svg)
+![The brain in one picture. Configuration, on the left, says what is allowed: it sets the fields and kinds of entities and checks every save into memories, and it changes only when you edit the file or approve a change Codex proposes. Entities are who and what the memories are about; names resolve and links derive from the memories. Codex, where you talk, is the only thing that reads your tools, reads the brain and saves into it. Notes and entities keep a link back to their source in your tools. Workflows, underneath, run through Codex under the rules and save each step as a note.](diagrams/brain-in-one-picture.svg)
+
+Read it left to right. **Configuration** says what is allowed; it shapes the entities and checks
+every save, and it changes only two ways (red): you ask in chat and approve what Codex proposes,
+or you edit the file. **Memories** are what happened and **entities** are who and what they are
+about. **Codex** is where you talk, and the only thing that reads your tools, reads the brain
+and saves into it. **Your tools** keep the raw material; a dashed line is the link a note or an
+entity keeps back to its original. **Workflows** are the part that acts: they run through
+Codex, under the rules, and leave each step as a note.
 
 - **It is a folder of plain files in git on your computer.** Nothing is stored anywhere else.
 - **You talk, Codex saves.** What happened, was decided or is open becomes a dated note with
