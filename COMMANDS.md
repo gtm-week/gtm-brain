@@ -17,9 +17,9 @@ to distinguish these workflows from other installed skills.
 | `gtmb-todo` | GTM Brain: Todo | What should I do now: everything waiting on you, ordered, walked through one by one |
 | `gtmb-workflow` | GTM Brain: Workflows | Start a run of a workflow document (an outbound campaign, ads then outbound), see where it stands, do the next step, skip or abandon; switch one on so a schedule or a save offers it; the brain keeps the steps, dates and milestones |
 | `gtmb-deepdive` | GTM Brain: Deep dive | A one-page brief on an entity or a context, from the notes and the tools read live |
-| `gtmb-define-icp` | GTM Brain: Define ICP | Chris Pawlak's exploratory interview: company examples, fit and exclusions, buying committee, awareness and readiness; reuses brain evidence and keeps one formal draft ICP document |
+| `gtmb-icp` | GTM Brain: Define ICP | Chris Pawlak's exploratory interview: company examples, fit and exclusions, buying committee, awareness and readiness; reuses brain evidence and keeps one formal draft ICP document |
 | `gtmb-unit-economics` | GTM Brain: Unit economics | Lech Kaniuk's unit economics review: CAC, LTV12 and LTV24, LTV:CAC, both paybacks and retention from the chat and the brain, then PUSH, FIX, STOP or MEASURE overall and per acquisition source or segment; offers to keep the decision as a note and the missing inputs as questions |
-| `gtmb-market-desk-research` | GTM Brain: Market desk research | Chris Pawlak's market desk research: a 5-8 minute intake, a confirmed research frame, 15-30 sourced web and community reads, an interim checkpoint, then `market-desk-research-<slug>.md` with a positioning map and, when the numbers allow, a growth chart; market attractiveness and right to win judged separately, no offering design; accepted conclusions become notes |
+| `gtmb-market-research` | GTM Brain: Market desk research | Chris Pawlak's market desk research: a 5-8 minute intake, a confirmed research frame, 15-30 sourced web and community reads, an interim checkpoint, then `market-desk-research-<slug>.md` with a positioning map and, when the numbers allow, a growth chart; market attractiveness and right to win judged separately, no offering design; accepted conclusions become notes |
 | `gtmb-use-brain` | GTM Brain: Use the company brain | Everyday work: remember, recall, where we are |
 | `gtmb-configure` | GTM Brain: Configure GTM Brain | Workplace info, team, tools and settings through APPROVE |
 | `gtmb-skill` | GTM Brain: Your skills | Turn a repeated workflow into a Codex skill kept in the brain's `.agents/skills`; install from GitHub, list, remove, share |
@@ -47,7 +47,7 @@ They are not additional discoverable skills. Tools show outcomes such as "Rememb
 "Searching the brain" in chat. Review proposals on the dashboard (it changes nothing but a document you edit and save there). APPROVE is a choice in the form `approve_change` shows; in a chat nothing else applies it.
 A question to you comes the same way: `ask_person` shows a form with the choices to click (or a field to type in) and hands your answer back to Codex. It records nothing and applies nothing. Where the host shows no form, Codex asks in its own question box, or in chat text with numbered options.
 Scripts retain their paths for terminal use with
-`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.36.0`.
+`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.36.1`.
 
 Legend for "writes": what files the command changes. Nothing else is ever touched.
 
