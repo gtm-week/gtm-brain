@@ -1,0 +1,4 @@
+interface:
+  display_name: "GTM Brain: Market"
+  short_description: "Fill the market document: competitors, how buyers choose, where we win"
+  default_prompt: "Use $gtmb-market to fill in our market document from what the brain knows and our main competitors' websites."

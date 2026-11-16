@@ -87,7 +87,7 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
 - Shared question and Computer Use policies are authored in `plugins/gtm-brain/policies/`.
   Run `node scripts/sync-derived.mjs` after editing them or the single-memory input fields
   in the ontology. It refreshes the marked instruction blocks and batch schema; tests
-  enforce `--check`. Historical templates are excluded. See [README.md](README.md#maintaining-shared-text-and-schemas).
+  enforce `--check`. Historical templates are excluded. See [CONTRIBUTING.md](CONTRIBUTING.md#maintaining-shared-text-and-schemas).
 - Three formal ontology objects: contexts, memories and entities. Entity kinds come from the
   brain's SCHEMA.md: every `## <Kind>` section with a field table is a kind, and person,
   organization, product, offering, event, tool and meeting are the defaults that always exist (`lib/kinds.mjs`,
@@ -167,7 +167,7 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
   start. Run them before every commit that touches `lib/`, a skill script, a server or the session scripts.
   Before a push to `main`, `.githooks/pre-push` runs them and, when what ships changed,
   `test/live/harness-bench.mjs`: the plugin must not cost Codex solved tasks on work that is not
-  GTM (see README.md, Before pushing to main).
+  GTM (see CONTRIBUTING.md, Before pushing to main).
 - The model reaches the skills through the MCP server (`server/server.mjs`, one tool per
   operation, each runs the skill's script in the brain). The server runs outside the sandbox, so
   every writer commits what it wrote at once (`lib.commit`, pushed in the background when there

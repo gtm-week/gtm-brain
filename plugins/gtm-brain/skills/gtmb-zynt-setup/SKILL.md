@@ -6,7 +6,7 @@ description: |
   companies, asks only what the brain does not say, connects ZYNT so it shows in the brain's
   tools, and keeps one note. Triggers: "Set up ZYNT for me", "/gtmb-zynt-setup",
   "connect ZYNT", "set up Zynt". Not reading ZYNT's news or signals after setup
-  (gtmb-use-brain), and not market research (gtmb-market-desk-research).
+  (gtmb-use-brain), and not market research (gtmb-market-research).
 metadata:
   author: GTM Brain, with Wojciech Ozimek and Filip (ZYNT)
 allowed-tools: [Bash, Read, WebFetch]

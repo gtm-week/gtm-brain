@@ -1,11 +1,11 @@
 ---
-name: gtmb-market-desk-research
+name: gtmb-market-research
 description: |
   Market desk research: a 5-8 minute intake, then 15-30 minutes of sourced desk research that
   assesses a market through the lens of the current offering and proof: market and segment
   growth, customer pains, the buying committee, competitors, positioning and the current right
   to win, in one report with charts. A diagnosis only, never a product or offering design.
-  Triggers: "/gtmb-market-desk-research", "research this market", "assess the market for",
+  Triggers: "/gtmb-market-research", "research this market", "assess the market for",
   "is this segment worth it", "market sizing", "who competes in", "desk research on".
 metadata:
   needs: "kind:organization, kind:product"

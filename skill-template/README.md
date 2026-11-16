@@ -4,7 +4,7 @@ For experts and tool vendors (Zynt, Surfer, a course lecturer) adding a skill th
 the plugin to every brain. A skill one company keeps for itself is not this: see
 [USER-SKILLS.md](../docs/USER-SKILLS.md), no pull request needed.
 
-`gtmb-define-icp` (Chris Pawlak, PR #5) is the worked example. Read it next to this page.
+`gtmb-icp` (Chris Pawlak, PR #5) is the worked example. Read it next to this page.
 
 ## What a skill is
 
