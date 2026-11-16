@@ -36,7 +36,7 @@ export const toolsFor = (root, category) => CATEGORIES[category] ? declaredTools
 /* ---------- skills and their needs ---------- */
 const PLUGIN_SKILLS = new URL("../skills/", import.meta.url).pathname;
 const skillDirs = root => [join(root, ".agents", "skills"), PLUGIN_SKILLS];
-/* A skill by its name (gtmb-define-icp, or define-icp): the brain's own first, then the shipped ones. */
+/* A skill by its name (gtmb-icp, or define-icp): the brain's own first, then the shipped ones. */
 export function findSkill(root, name) {
   const n = String(name || "").trim().toLowerCase(); if (!n) return null;
   for (const dir of skillDirs(root)) for (const id of [n, `gtm-brain-${n}`]) {

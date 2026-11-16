@@ -13,7 +13,8 @@ const names = await import(`${P}/lib/skill-names.mjs`);
 
 test("every shipped skill is gtmb-<name>, and the list of renamed skills is the list on disk", () => {
   const dirs = readdirSync(join(P, "skills")).filter(d => existsSync(join(P, "skills", d, "SKILL.md")));
-  assert.deepEqual(dirs.map(d => d.replace(/^gtmb-/, "")).sort(), [...names.RENAMED].sort());
+  assert.deepEqual(dirs.map(d => d.replace(/^gtmb-/, "")).sort(), names.SHIPPED);
+  assert.equal(names.RENAMED.length, 26, "the 26 names of 0.35 stay listed: they are what an old brain says");
   for (const d of dirs) { assert.match(d, /^gtmb-[a-z-]+$/); assert.match(readFileSync(join(P, "skills", d, "SKILL.md"), "utf8"), new RegExp(`^name: ${d}$`, "m")); }
   // operation scripts keep their folders, the old script path under skills/ stays
   assert.ok(existsSync(join(P, "scripts", "gtm-brain-workflow", "workflow.mjs"))); assert.ok(existsSync(join(P, "skills", "gtm-brain-add-file", "add-file.mjs")));
@@ -35,8 +36,13 @@ test("no file that ships or documents the plugin still names a skill the old way
 
 test("an old name is read as the new one; scripts and a team's own skill keep theirs", () => {
   assert.equal(names.currentSkillName("/gtm-brain-rules"), "/gtmb-rules");
-  assert.equal(names.renameSkillNames("run /gtm-brain-define-icp, then gtm-brain-workflow."), "run /gtmb-define-icp, then gtmb-workflow.");
+  assert.equal(names.renameSkillNames("run /gtm-brain-define-icp, then gtm-brain-workflow."), "run /gtmb-icp, then gtmb-workflow.");
   assert.equal(names.renameSkillNames("scripts/gtm-brain-workflow/workflow.mjs"), "scripts/gtm-brain-workflow/workflow.mjs");
+  // 0.36.1: each base document's command is named after it, from either older spelling
+  assert.equal(names.renameSkillNames("/gtm-brain-" + "define-icp then /gtmb-" + "define-icp"), "/gtmb-icp then /gtmb-icp");
+  assert.equal(names.currentSkillName("/gtmb-" + "market-desk-research"), "/gtmb-market-research");
+  assert.equal(names.currentSkillName("/gtm-brain-" + "market-desk-research"), "/gtmb-market-research");
+  assert.equal(names.renameSkillNames("/gtmb-market and /gtmb-icp"), "/gtmb-market and /gtmb-icp");
   assert.equal(names.renameSkillNames("gtm-brain-weekly-pipeline and gtm-brain-skills and gtm-brain-starter"), "gtm-brain-weekly-pipeline and gtm-brain-skills and gtm-brain-starter");
 });
 
