@@ -81,6 +81,25 @@ const cleanSource = v => {
   return out;
 };
 for (const e of entries || []) if (e && e.sources !== undefined && e.sources !== null) e.sources = Array.isArray(e.sources) ? e.sources.map(cleanSource) : cleanSource(e.sources);
+// A source written as a sentence ("User's firsthand account of the call") names no provider: the chat it was said in
+// is already a source, so the sentence is left out, not refused. And a call the person tells about arrives with its
+// meeting block half in the format: names for participants, a date for observed_at. Both are read, not sent back
+// (app run, 2026-11-16: one spoken note took four saves, three of them refused on these).
+const sentence = v => typeof v === "string" && !/^https?:\/\//i.test(v.trim()) && !/^[A-Za-z][\w.-]*:\S/.test(v.trim());
+const nowUtc = new Date().toISOString().replace(/\.\d+Z$/, "Z");
+for (const e of entries || []) {
+  if (!e || typeof e !== "object") continue;
+  if (Array.isArray(e.sources)) e.sources = e.sources.filter(v => !sentence(v)); else if (sentence(e.sources)) delete e.sources;
+  const m = e.meeting; if (!m || typeof m !== "object" || Array.isArray(m)) continue;
+  if (Array.isArray(m.participants)) m.participants = m.participants.map(p => typeof p === "string" && p.trim() ? { name: p.trim(), role: m.occurrence === "happened" && m.evidence !== "calendar" ? "attended" : "invited" } : p);
+  if (m.basis === "user") {
+    if (typeof m.observed_at !== "string" || !/T\d\d:\d\d:\d\d(\.\d+)?Z$/.test(m.observed_at)) m.observed_at = nowUtc;
+    if (m.capture === undefined) m.capture = "partial";
+    if (m.evidence === undefined) m.evidence = "recollection";
+    if (m.occurred_at === undefined) m.occurred_at = null;
+    if (!Array.isArray(m.participants)) m.participants = [];
+  }
+}
 const session = process.env.GTM_BRAIN_RUN ? null : lib.readSession(root, project);
 const chat = session?.session_id || null, chatKind = session?.host || "codex";
 const authors = list(opt.by).map(w => { const h = lib.teamHandle(root, w); if (!h) die(`"${w}" is not in admin.md team`); return h; });

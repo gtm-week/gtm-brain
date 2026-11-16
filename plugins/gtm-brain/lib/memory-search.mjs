@@ -30,6 +30,7 @@ const STOP = new Set(`a an the and or but nor of to in on at for from by with wi
  note notes brain memory memories mention mentioned mentions remember remembered recorded saved write wrote written
  regarding re vs via also just only ever again much many more most less than then so if up out off very really
  thing things stuff kind sort one ones yet still already latest recent recently currently current now ago
+ focus priority priorities morning hi hello hey brief briefing prep prepare
  talk talked talking discuss discussed want wanted wants happen happens happened happening going news hear heard`.split(/\s+/).filter(Boolean));
 
 const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
@@ -61,7 +62,9 @@ export function parsePeriod(question, now = nowDate(), isName = () => false) {
     [/\btomorrow\b/i, () => { const d = addDays(today, 1); return day(d, 'tomorrow', dateWords(d)); }],
     [/\b(this|last|past|next)\s+week\b/i, m => { const monday = addDays(today, -((today.getDay() + 6) % 7)), w = m[1].toLowerCase();
       if (w === 'next') { const from = addDays(monday, 7); return { from, to: addDays(from, 7), label: 'next week', mention: [...[0, 1, 2, 3, 4, 5, 6].flatMap(i => dateWords(addDays(from, i)))] }; }
-      return w === 'this' ? { from: monday, to: addDays(monday, 7), label: 'this week' } : { from: addDays(monday, -7), to: monday, label: 'last week' }; }],
+      // this week is partly ahead: what is planned for its days is found by the dates the notes mention
+      // ("what should I focus on this week?" returned only what was typed that morning; app run, 2026-11-16)
+      return w === 'this' ? { from: monday, to: addDays(monday, 7), label: 'this week', ahead: true, mention: [0, 1, 2, 3, 4, 5, 6].flatMap(i => dateWords(addDays(monday, i))) } : { from: addDays(monday, -7), to: monday, label: 'last week' }; }],
     [/\b(this|last|past|next)\s+month\b/i, m => { const first = new Date(today.getFullYear(), today.getMonth(), 1), w = m[1].toLowerCase();
       if (w === 'next') { const from = new Date(today.getFullYear(), today.getMonth() + 1, 1); return { from, to: new Date(from.getFullYear(), from.getMonth() + 1, 1), label: 'next month', mention: [MONTHS[from.getMonth()]] }; }
       return w === 'this' ? { from: first, to: new Date(today.getFullYear(), today.getMonth() + 1, 1), label: 'this month' } : { from: new Date(today.getFullYear(), today.getMonth() - 1, 1), to: first, label: 'last month' }; }],
@@ -165,6 +168,11 @@ export function parseQuestion(question, names, { now = nowDate() } = {}) {
     terms.push(w);
   });
   for (const q of quoted) terms.push(fold(q));
+  // Getting ready for a call with someone known ("I have a call with Surfer tomorrow, brief me"): the day of the
+  // call is when the answer is needed, not which notes to read. Their newest notes are the brief, so neither the
+  // day nor the words "call" and "meeting" narrow them (app run, 2026-11-16: one note came back out of twelve).
+  const prep = entities.length > 0 && !!period?.mention && period.from >= startOfDay(now) && /\b(brief(?:ing)?|prep(?:are)?|get ready|ready for)\b/i.test(String(question));
+  if (prep) return { entities, ambiguous, kind, kindHint, tags, period: null, prep: period.label, terms: [...new Set(terms)].filter(w => !/^(call|calls|meeting|meetings|chat|sync)$/.test(w)), quoted: quoted.map(fold), sequence };
   return { entities, ambiguous, kind, kindHint, tags, period, terms: [...new Set(terms)], quoted: quoted.map(fold), sequence };
 }
 
@@ -309,7 +317,7 @@ export function searchIndex(index, question, { filters = {}, project = null, now
     // a calendar word ranks the notes that mention it (an event that day) above those only recorded then,
     // and "night" or "morning" the notes with an evening or morning time; tags, project and "decided" add a little
     const oneDay = q.period && q.period.to - q.period.from <= DAY + 3600000;   // a day, not a month: an event that day
-    const mention = scope.mention && oneDay ? set(scope.mention) : null, part = scope.mention && DAYPART[q.period?.part];
+    const mention = scope.mention && (oneDay || q.period?.ahead) ? set(scope.mention) : null, part = scope.mention && DAYPART[q.period?.part];
     const linked = scope.entities && q.entities.length > 1 ? db.prepare(`SELECT count(*) AS n FROM members WHERE memory=? AND field='entities' AND value IN (${q.entities.map(() => '?').join(',')})`) : null;
     const contentOf = part ? db.prepare('SELECT content FROM memories WHERE rowid=?') : null;
     const tagWords = new Set(q.terms), tagOf = db.prepare("SELECT json_extract(value,'$') AS t FROM members WHERE memory=? AND field='tags'");

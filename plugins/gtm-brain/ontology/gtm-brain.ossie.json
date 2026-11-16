@@ -835,26 +835,36 @@
                           "participants": {
                             "type": "array",
                             "items": {
-                              "type": "object",
-                              "properties": {
-                                "name": {
+                              "anyOf": [
+                                {
                                   "type": "string",
-                                  "minLength": 1
+                                  "minLength": 1,
+                                  "description": "A name alone: read as attended for a meeting that happened, invited otherwise."
                                 },
-                                "role": {
-                                  "type": "string",
-                                  "enum": [
-                                    "attended",
-                                    "invited",
-                                    "mentioned"
-                                  ]
+                                {
+                                  "type": "object",
+                                  "description": "Only explicit attendance evidence permits attended. Names resolve through existing identities.",
+                                  "properties": {
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "role": {
+                                      "type": "string",
+                                      "enum": [
+                                        "attended",
+                                        "invited",
+                                        "mentioned"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "name",
+                                    "role"
+                                  ],
+                                  "additionalProperties": false
                                 }
-                              },
-                              "required": [
-                                "name",
-                                "role"
-                              ],
-                              "additionalProperties": false
+                              ]
                             }
                           },
                           "series": {
@@ -1439,27 +1449,36 @@
                     "participants": {
                       "type": "array",
                       "items": {
-                        "type": "object",
-                        "description": "Only explicit attendance evidence permits attended. Names resolve through existing identities.",
-                        "properties": {
-                          "name": {
+                        "anyOf": [
+                          {
                             "type": "string",
-                            "minLength": 1
+                            "minLength": 1,
+                            "description": "A name alone: read as attended for a meeting that happened, invited otherwise."
                           },
-                          "role": {
-                            "type": "string",
-                            "enum": [
-                              "attended",
-                              "invited",
-                              "mentioned"
-                            ]
+                          {
+                            "type": "object",
+                            "description": "Only explicit attendance evidence permits attended. Names resolve through existing identities.",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "role": {
+                                "type": "string",
+                                "enum": [
+                                  "attended",
+                                  "invited",
+                                  "mentioned"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "role"
+                            ],
+                            "additionalProperties": false
                           }
-                        },
-                        "required": [
-                          "name",
-                          "role"
-                        ],
-                        "additionalProperties": false
+                        ]
                       }
                     },
                     "series": {

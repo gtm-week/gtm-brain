@@ -547,3 +547,23 @@ test("a cited note is evidence only for a relationship it names; customer status
   assert.match(c.stderr, /customer source evidence needs an external source pointer/);
   assert.equal(b.all().length, before);
 });
+
+test("a call the person tells about is saved in one call: names as participants, a date as observed_at, a sentence as source", () => {
+  const b = brain();
+  // the shape Codex sent in the app (16 Nov): three refusals before, one save now
+  const entry = { context: "company", content: "Kasia Nowak, Tidio's new Head of Partnerships, said she wants Tidio to sponsor the Berlin workshop. The budget is around EUR 5,000, and Tidio expects to decide by the end of November 2026.",
+    people: ["Kasia Nowak"], companies: ["Tidio"], new_names: ["Kasia Nowak", "Tidio"], sources: ["User's firsthand account of the call with Kasia Nowak on 2026-11-16"],
+    meeting: { basis: "user", capture: "partial", evidence: "recollection", observed_at: "2026-11-16", occurred_at: "2026-11-16", occurrence: "happened", participants: ["Kasia Nowak"], reference: { account: "user", kind: "user", ref: "2026-11-16 call with Kasia Nowak from Tidio" }, title: "Call with Kasia Nowak from Tidio" } };
+  const r = b.batch([entry]);
+  assert.equal(r.status, 0, r.stderr + r.stdout);
+  const rec = b.live().find(m => /Kasia Nowak/.test(m.content));
+  assert.ok(rec, "the note is kept");
+  assert.deepEqual(rec.meeting.participants, [{ name: "Kasia Nowak", role: "attended" }]);
+  assert.match(rec.meeting.observed_at, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);
+  assert.ok(!rec.source.some(s => /firsthand/.test(s.ref || "")), "a sentence is not kept as a source");
+  assert.ok(rec.source.some(s => s.kind === "user"), "the person's word is the source");
+  // a planned call from a calendar keeps its names as invited, never attended
+  const planned = b.batch([{ context: "company", content: "Planning call with Tidio on 20 November 2026 about the booth.", sources: ["google-calendar:evt-9"], meeting: { basis: "source", capture: "complete", evidence: "calendar", observed_at: "2026-11-16T09:00:00Z", occurred_at: null, scheduled_at: "2026-11-20", occurrence: "planned", participants: ["Kasia Nowak"], reference: { account: "artur@week.test", kind: "google-calendar", ref: "evt-9" }, title: "Tidio booth planning" } }]);
+  assert.equal(planned.status, 0, planned.stderr + planned.stdout);
+  assert.deepEqual(b.live().find(m => /Planning call with Tidio/.test(m.content)).meeting.participants, [{ name: "Kasia Nowak", role: "invited" }]);
+});
