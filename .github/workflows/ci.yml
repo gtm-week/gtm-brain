@@ -33,6 +33,23 @@ jobs:
       - name: Derived text and schema in sync
         run: node scripts/sync-derived.mjs --check
 
+  # A pull request into main that changes what ships (plugins/gtm-brain/, test/ aside) bumps the version.
+  # Release branches carry their version already, so PRs into them are not checked.
+  version:
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.16"
+      - name: Version bumped when shipped files change
+        env:
+          BASE: ${{ github.base_ref }}
+        run: node scripts/check-version-bump.mjs "origin/$BASE"
+
   dashboard:
     runs-on: ubuntu-latest
     steps:
