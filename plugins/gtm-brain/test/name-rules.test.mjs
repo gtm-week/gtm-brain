@@ -59,7 +59,7 @@ test("a bare first name is saved as written and asked about; a full name is kept
   const typo = remember("--content", "Max Kowalsky joined.", "--people", "Max Kowalsky");
   assert.equal(typo.status, 2);
   assert.match(typo.stderr, /"Max Kowalsky" looks like Max Kowalski \(P4\)/);
-  assert.match(typo.stderr, /"Max Kowalsky": ask "same as X\?"\. Yes: add_name with aliases \[this spelling\]\. No: resend with new_names\. Ask one question, /);
+  assert.match(typo.stderr, /"Max Kowalsky": ask "same as X\?"\. Yes: add_name with aliases \[this spelling\]\. No: resend with new_names\. Ask one question /);
   // the same first name with a clearly different surname is someone else (P4): saved at once, no new_names and no question
   const weber = remember("--content", "Max Weber joined.", "--people", "Max Weber");
   assert.equal(weber.status, 0, weber.stderr + weber.stdout);
