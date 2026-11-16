@@ -578,3 +578,33 @@ test("the person corrects a call they told about: one call, the conversation's r
   const now = b.live().filter(m => /Kasia Nowak of Tidio/.test(m.content));
   assert.equal(now.length, 1); assert.match(now[0].content, /8,000/); assert.equal(now[0].meeting.title, "Call with Kasia Nowak");
 });
+
+test("a job change saved as two relationships with the context given once beside the batch is kept in that call", async () => {
+  const b = brain();
+  const { createFilesBackend } = await import(`${P}/server/files-backend.mjs`);
+  const env = { ...process.env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1" };
+  const run = async (cwd, file, args = []) => { const r = spawnSync(process.execPath, [`${P}/scripts/${file}`, ...args], { cwd, env, encoding: "utf8" }); return { code: r.status, out: (r.stdout || "").trim(), err: (r.stderr || "").trim() }; };
+  const backend = createFilesBackend({ run }), call = args => backend.act("remember", { by: "artur-wala", ...args }, { brain: b.root });
+  lib.addName(b.root, "Tomek Zielony"); lib.addName(b.root, "Lumio", { kind: "company" }); lib.addName(b.root, "Brightdesk", { kind: "company" });
+  // their earlier notes sit in Our company, so a guess would place a note about them there
+  assert.equal(b.remember("--context", "company", "--content", "Tomek Zielony of Lumio will speak at the Berlin workshop.", "--people", "Tomek Zielony", "--companies", "Lumio").status, 0);
+  assert.equal(b.remember("--context", "company", "--content", "Tomek Zielony asked for the Lumio logo on the workshop page.", "--people", "Tomek Zielony", "--companies", "Lumio").status, 0);
+  // the shape Codex sent headless (16 Nov): the plain note first, then the same turn as two relationships
+  const sources = [{ kind: "user", ref: "User message in this chat, 2026-11-16" }];
+  const first = await call({ context: "strategy", content: "Tomek Zielony left Lumio on 1 November 2026 and joined Brightdesk as VP Product.", people: ["Tomek Zielony", "Lumio", "Brightdesk"], sources });
+  assert.equal(first.outcome, "ok", first.message);
+  const note = b.live().find(m => /Tomek Zielony left Lumio/.test(m.content));
+  assert.ok(lib.readMemories(b.root, "strategy").some(m => m.id === note.id));
+  const second = await call({ context: "strategy", memories: [
+    { content: "Tomek Zielony left Lumio on 1 November 2026.", people: ["Tomek Zielony", "Lumio"], supersedes: note.id, relation: { from: "Tomek Zielony", to: "Lumio", type: "works_at", status: "ended", basis: "user", observed_at: "2026-11-01" }, sources },
+    { content: "Tomek Zielony joined Brightdesk as VP Product.", people: ["Tomek Zielony", "Brightdesk"], relation: { from: "Tomek Zielony", to: "Brightdesk", type: "works_at", status: "current", basis: "user", observed_at: "2026-11-16" }, sources }] });
+  assert.equal(second.outcome, "ok", second.message);
+  assert.match(second.result, /kept 2 of 2/);
+  const strategy = lib.effectiveMemories(lib.readMemories(b.root, "strategy")).filter(m => /Tomek Zielony/.test(m.content));
+  assert.deepEqual(strategy.map(m => m.relation?.status).sort(), ["current", "ended"]);
+  assert.ok(!strategy.some(m => m.id === note.id), "the plain note is replaced by the one that ends the old job");
+  // an entry's own context still wins over the shared one
+  const own = await call({ context: "strategy", memories: [{ context: "company", content: "Brightdesk moved its office to Gdansk in November 2026.", companies: ["Brightdesk"], sources }] });
+  assert.equal(own.outcome, "ok", own.message);
+  assert.ok(lib.readMemories(b.root, "company").some(m => /Gdansk/.test(m.content)));
+});

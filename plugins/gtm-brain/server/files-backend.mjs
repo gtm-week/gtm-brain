@@ -123,8 +123,11 @@ export function createFilesBackend({ run, memoryRead }) {
       const batch = join(root, "work", `remember-${randomUUID()}.json`);
       try {
         writeFileSync(batch, JSON.stringify(entries));
-        // by is optional: remember takes the person in this chat when it is left out
-        const result = await run(root, "gtm-brain-remember/remember.mjs", [...(by ? ["--by", by] : []), "--batch", batch, ...(project ? ["--project", project] : [])]);
+        // by is optional: remember takes the person in this chat when it is left out. A context given once beside the
+        // batch is the context of every entry without its own: it was dropped, so a correction of a note in Strategy
+        // was placed by a guess and refused as "is in strategy, not company" (headless run, 2026-11-16: one more call).
+        const shared = memories && typeof one.context === "string" && one.context.trim() ? one.context.trim() : null;
+        const result = await run(root, "gtm-brain-remember/remember.mjs", [...(by ? ["--by", by] : []), "--batch", batch, ...(shared ? ["--context", shared] : []), ...(project ? ["--project", project] : [])]);
         const message = [result.out, result.err].filter(Boolean).join("\n").trim();
         if (result.code === 0) return { outcome: "ok", result: message };
         return { outcome: result.code === 2 ? "refused" : "error", message };
