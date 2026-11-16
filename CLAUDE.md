@@ -27,7 +27,7 @@ node --test --test-name-pattern='<regex>' plugins/gtm-brain/test/brain.test.mjs 
 
 node plugins/gtm-brain/test/live/harness-bench.mjs         # live Codex A/B: bare / plugin / brain on 3 tasks (~4 min)
 node plugins/gtm-brain/test/live/tool-routing.mjs skills   # live Codex through the skill cases on a seeded brain; one case: skill-todo
-node plugins/gtm-brain/test/live/claude-smoke.mjs          # live Claude Code: setup, the admin.md guard, go ahead vs APPROVE (~2 min)
+node plugins/gtm-brain/test/live/claude-smoke.mjs          # live Claude Code: setup, the protected-file guard, go ahead vs APPROVE (~2 min)
 node plugins/gtm-brain/test/live/scenarios.mjs             # live Codex: ten saving sentences on a clean brain, pass or fail each (~5 min)
 
 node scripts/sync-derived.mjs                           # regenerate derived blocks and schema
@@ -74,14 +74,14 @@ Everything that ships is under `plugins/gtm-brain/`. The layers, from the outsid
   the skills.
 - **lib** (`lib/brain.mjs` plus focused modules): the file format and the only write path. Records,
   context covers, entity names, the loaded set, `commit`, `save`, `rerender`. The two deliberate
-  exceptions that write `admin.md` outside the lib are `setup` and `approve`.
+  exceptions that write the settings file outside the lib are `setup` and `approve`.
 - **Chat start** (`session/`): the plugin declares no hooks (since Codex 0.164 any plugin change
   switches hooks off until the person reviews them). On a chat's first GTM Brain call the server
   runs `session/session-start.sh`, which refreshes the brain, and returns the opening lines before
   that call's result. `lib.guardProtected` (at each chat start and before every save) puts back a
-  direct edit of a protected file (`admin.md`, `memories.jsonl`, the company ontology) and keeps
-  the edit in `work/manual-edits/protected/`.
-- **Dashboard**: `scripts/gtm-brain-render/render.mjs` builds `work/home/index.html` from the brain
+  direct edit of a protected file (a notes file, the company's interactions file, and `brain/admin.md` in
+  a brain of layout 1 or 2) and keeps the edit in `.gtm-brain/manual-edits/protected/` (`work/` before layout 4).
+- **Dashboard**: `scripts/gtm-brain-render/render.mjs` builds `.gtm-brain/home/index.html` (`work/home/` before layout 4) from the brain
   files; `server/dash.mjs` serves it on 127.0.0.1 with revision events; it is read-only except for the three guarded
   writes named in AGENTS.md (a document save, the entity operations and the note operations). The React
   Overview is built from `frontend/dashboard/` into `scripts/gtm-brain-render/ui/` and committed, so
@@ -95,19 +95,20 @@ layer (`lib/ontology/`, ported from Allethic) turns it into first-class MCP tool
 extends the generated `query` with derived views (status, brief, customers, meetings, health, ...)
 and a read-only SQL mode over the memory index.
 
-A company's own interactions live in its `brain/ontology.ossie.json`. The server does not know the
+A company's own interactions live in its `configuration/interactions.json` (`brain/ontology.ossie.json`
+before layout 4, the same Ossie file). The server does not know the
 brain at startup, so these can never be registered as tools: they are listed per call and run
 through the single fixed tool `interact`. New ones go through `propose_interaction` and the APPROVE
 form of `approve_change`.
 
 `lib/ontology/` is GTM Brain code: it loads Ossie files with the `ALLETHIC` extension block and
-generates the tools. Keep the `ALLETHIC` block name; every company's `brain/ontology.ossie.json`
+generates the tools. Keep the `ALLETHIC` block name; every company's interactions file
 carries it.
 
 ### The memory index
 
 `lib/memory-index*.mjs` and `server/memory-reader.mjs` / `memory-worker.mjs` maintain a disposable
-SQLite search cache in the brain's `work/`. The JSONL files and entity Markdown are the truth; the
+SQLite search cache in the brain's `.gtm-brain/` (`work/` before layout 4). The JSONL files and entity Markdown are the truth; the
 index can always be rebuilt from them and is never a second store.
 
 ### A brain on disk

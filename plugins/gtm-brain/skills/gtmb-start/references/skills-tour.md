@@ -32,7 +32,7 @@ documents are next.
   close is not asked in another chat.
 - **Not the owner.** The opening lines mark the steps "not the owner: tell, do not ask" when
   the person is not the brain's owner (the owner named in `config/settings.yaml`). Their changes
-  to the schema, the rules and the base documents in `about-us/` become proposals for the owner,
+  to the schema, the rules and the base documents in `configuration/about-us/` become proposals for the owner,
   as always. Ask none of the three questions.
   Say one line instead: "The schema, the rules and the base documents are <owner>'s to change;
   say a change any time and it goes to them as a proposal." Save all three notes with the answer
@@ -95,10 +95,10 @@ Then one line: `/gtmb-schema` and `/gtmb-rules` show and change both at any time
 
 ## The documents question
 
-Setup wrote five starters, in `about-us/` (at the top of a brain not yet upgraded):
+Setup wrote five starters, in `configuration/about-us/` (`about-us/` in a brain not yet upgraded):
 `strategy.md`, `icp.md`, `voice.md`, `design-system.md` and `market.md`. They stay in the brain
 whatever the answer; filling them is what is offered. Someone who is not the brain's owner is
-not asked (The close, in order: Not the owner): in a brain with `about-us/` a document they fill
+not asked (The close, in order: Not the owner): in a brain with `configuration/about-us/` a document they fill
 goes to the owner as a proposal. Once schema and rules are settled, ask
 once which to fill now, and end the turn. Say first, in one line, that rules and schema came
 first and these documents are next, and why they matter: Codex reads them before every email,

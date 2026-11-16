@@ -17,7 +17,7 @@ import { readLayout, writeLayout, understandsLayout } from "./layout-version.mjs
 import { diskLayout } from "./layout.mjs";
 import { settingsFromAdmin, logActivity, rerender, readAdmin } from "./brain.mjs";
 const readAdminCompany = root => String(readAdmin(root)?.company || "");
-import { ADMIN_FILE, SETTINGS_FILE, ABOUT_DIR, CONFIG_DIR, CONFIG_RULES, CONFIG_SCHEMA, ROOT_RULES, ROOT_SCHEMA, FIXED_MOVES, inConfigFolders, inLayout4, layoutFile, aboutDir, configDir, rulesFile, schemaFile, settingsFile } from "./brain-paths.mjs";
+import { ADMIN_FILE, SETTINGS_FILE, ABOUT_DIR, CONFIG_DIR, CONFIG_RULES, CONFIG_SCHEMA, ROOT_RULES, ROOT_SCHEMA, FIXED_MOVES, inConfigFolders, inLayout4, layoutFile, aboutDir, configDir, rulesFile, schemaFile, settingsFile, interactionsFile } from "./brain-paths.mjs";
 import { ownerOf, personHere } from "./owner.mjs";
 
 const isDir = p => { try { return statSync(p).isDirectory(); } catch { return false; } };
@@ -131,6 +131,7 @@ function readmeInTabs(text) {
     .replace("in `about-us/`: ", "in `configuration/about-us/`: ")
     .replace("named in `config/settings.yaml` changes `about-us/` and `config/`", "named in `configuration/settings.yaml` changes `configuration/`")
     .replace("`config/settings.yaml` is always loaded", "`configuration/settings.yaml` is always loaded")
+    .replace("in `brain/entities/people/` shows", "in `entities/people/` shows")
     .replace(/- `work\/`: this computer's working files/, "- `.gtm-brain/`: this computer's working files");
   const from = out.indexOf("## Inside `brain/`"), to = out.indexOf("A project is not a separate memory.");
   if (from >= 0 && to > from) out = out.slice(0, from) + `## The four folders
@@ -169,7 +170,7 @@ export function layoutStartLine(root) {
   if (!inConfigFolders(root)) return "";
   const four = inLayout4(root), about = aboutDir(root), config = configDir(root);
   const where = four
-    ? `This brain keeps everything in four folders: ${config}/ (the base documents in ${about}/, ${rulesFile(root)}, ${schemaFile(root)}, ${settingsFile(root)}), entities/, memories/ (every note in the file of its month, a topic's summary in memories/topics/<topic>.md; a topic is what the tools call a context) and workflows/. Where the rules or a tool say ${ROOT_RULES} it is ${rulesFile(root)}, ${ROOT_SCHEMA} is ${schemaFile(root)}, ${ADMIN_FILE} is ${settingsFile(root)}, brain/entities/ is entities/, brain/contexts/ is memories/, work/ is .gtm-brain/ (this computer only; a task's throwaway files go in .gtm-brain/scratch/), and a document "at the top" or "at the brain root" (strategy.md, icp.md, voice.md, design-system.md, market.md, a new one) is in ${about}/. Never create ${ROOT_RULES}, ${ROOT_SCHEMA}, a brain/ folder or a work/ folder.`
+    ? `This brain keeps everything in four folders: ${config}/ (the base documents in ${about}/, ${rulesFile(root)}, ${schemaFile(root)}, ${settingsFile(root)}), entities/, memories/ (every note in the file of its month, a topic's summary in memories/topics/<topic>.md; a topic is what the tools call a context) and workflows/. Where the rules or a tool say ${ROOT_RULES} it is ${rulesFile(root)}, ${ROOT_SCHEMA} is ${schemaFile(root)}, ${ADMIN_FILE} is ${settingsFile(root)}, brain/entities/ is entities/, brain/contexts/ is memories/ (no memories.jsonl or context.md per topic), brain/ontology.ossie.json is ${interactionsFile(root)}, work/ is .gtm-brain/ (this computer only; a task's throwaway files go in .gtm-brain/scratch/), and a document "at the top" or "at the brain root" (strategy.md, icp.md, voice.md, design-system.md, market.md, a new one) is in ${about}/. Never create ${ROOT_RULES}, ${ROOT_SCHEMA}, a brain/ folder or a work/ folder.`
     : `This brain keeps its base documents in ${ABOUT_DIR}/ and its configuration in ${CONFIG_DIR}/: where the rules or a tool say ${ROOT_RULES} is ${CONFIG_RULES}, ${ROOT_SCHEMA} is ${CONFIG_SCHEMA}, ${ADMIN_FILE} is ${SETTINGS_FILE}, and a document "at the top" or "at the brain root" (strategy.md, icp.md, voice.md, design-system.md, market.md, a new one) is in ${ABOUT_DIR}/. Never create ${ROOT_RULES}, ${ROOT_SCHEMA} or ${ADMIN_FILE}.`;
   const folders = four ? `${config}/` : `${ABOUT_DIR}/ and ${CONFIG_DIR}/`, those = four ? "that folder" : "those two folders";
   const owner = ownerOf(root); if (!owner) return where;

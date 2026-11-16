@@ -55,9 +55,11 @@ After these manual commands, run the installed `update.mjs --check` from the ver
 by `codex plugin list`, then quit and reopen Codex. The in-app update performs this check for you.
 
 Brains you already have keep working; open one in Codex and the chat start refreshes its
-git config, or say "upgrade the brain" to refresh its AGENTS.md and pre-commit hook too. Coming from 0.34, the
-upgrade also offers to move files and asks first: see
-[Updating to 0.35](../plugins/gtm-brain/MANUAL.md#updating-to-035). A brain set up
+git config, or say "upgrade the brain" to refresh its AGENTS.md and pre-commit hook too. The upgrade also
+offers to move the brain's files into the four folders of 0.37 and asks first: see
+[Updating to 0.37](../plugins/gtm-brain/MANUAL.md#updating-to-037-the-four-folders) (coming from 0.34:
+[Updating to 0.35](../plugins/gtm-brain/MANUAL.md#updating-to-035)). The paths below are those of a
+brain in the four folders, which is what setup makes. A brain set up
 before the full-name handles (`maciej` instead of `maciej-konczal`) gets a note from upgrade:
 say "change the team handles to full names" and choose APPROVE; old memories keep the old
 handle, and both resolve to the same person.
@@ -105,9 +107,9 @@ these contexts; they do not each get a context.
 Check, in a terminal:
 
 ```bash
-cat brain/admin.md                          # your answers; team with handles like maciej-konczal
-cat brain/contexts/company/context.md       # Our company: identity, team and internal work
-ls brain/contexts/*/                        # context.md + memories.jsonl (empty) per context
+cat configuration/settings.yaml             # your answers; team with handles like maciej-konczal
+cat memories/topics/company.md              # Our company: identity, team and internal work
+ls memories/ memories/topics/               # one notes file per month, one cover per context
 git log --oneline                           # one commit: setup
 git config gtm-brain.lib                       # the pre-commit hook finds the lib through this
 ```
@@ -122,23 +124,25 @@ bash $PLUGIN_ROOT/scripts/gtm-brain-setup/setup.sh --company Reflow --one-liner 
 
 ## 3. Changing the workplace info (step 1c: approve)
 
-`brain/admin.md` is protected. In Codex, in the brain folder:
+`configuration/settings.yaml` changes only through APPROVE. In Codex, in the brain folder:
 
 1. Say: *"Change what we sell to also include UK retailers."*
-   Expected: Codex writes `work/admin.proposed.md`, explains the change and calls
+   Expected: Codex writes `.gtm-brain/admin.proposed.md`, explains the change and calls
    `approve_change`, which shows a form with the change and an APPROVE choice. It does **not**
    edit the file and does not ask for APPROVE in the chat.
 2. Choose APPROVE in the form.
    Expected: *applied and committed <hash>, approved by <your handle>*.
 3. `git log -1` shows the commit; `tail ~/.gtm-brain/approvals.log` shows the audit line.
 4. Type "APPROVE" or "ok" in the chat instead on another change: nothing is applied.
-5. Edit `brain/admin.md` by hand, then start a new chat: the opening lines say the edit was put
-   back, and the edited file is in `work/manual-edits/protected/`.
+5. Change a line of a notes file (`memories/<YYYY-MM>.jsonl`) by hand, then start a new chat: the
+   opening lines say the edit was put back, and the edited file is in
+   `.gtm-brain/manual-edits/protected/`. The owner's own hand edit of the settings is kept and
+   recorded; anyone else's waits as a proposal for the owner.
 
 Without Codex:
 
 ```bash
-sed 's/returns automation/returns automation, also UK/' brain/admin.md > work/admin.proposed.md
+sed 's/returns automation/returns automation, also UK/' configuration/settings.yaml > .gtm-brain/admin.proposed.md
 node $PLUGIN_ROOT/scripts/gtm-brain-approve/approve.mjs . --diff
 node $PLUGIN_ROOT/scripts/gtm-brain-approve/approve.mjs . --apply --by marta@reflow.io      # asks you to type APPROVE; --by: name, email or handle
 ```
@@ -153,14 +157,14 @@ In Codex:
 3. *"Remember that Pierre Aubert asked for a three-year TCO before the 12.09 steering meeting;
    source is the email from today."*
    Expected: *remembered m_xxxxxx in pipeline · note · <your handle> · people: Pierre Aubert*.
-   `cat brain/contexts/pipeline/memories.jsonl` shows one JSON line.
+   `tail -1 memories/$(date -u +%Y-%m).jsonl` shows the JSON line, with `"context":"pipeline"`.
 4. *"Remember that we decided not to discount for Bergstrom."* Expected: kind `decision`.
 5. *"Forget memory m_xxxxxx, it was wrong."* Expected: a new record with `retracts`; `load
    pipeline` no longer shows the old one; the file still has both lines.
 6. *"Create a context for the Berlin expansion; rule: everything about opening the Berlin
-   office."* Expected: it confirms, then `brain/contexts/berlin-expansion/` exists.
-7. `git add brain && git commit -m notes`: passes. Append a broken line to `memories.jsonl` by
-   hand and commit: rejected with the field-by-field reason. `git rm` a memories file and commit:
+   office."* Expected: it confirms, then `memories/topics/berlin-expansion.md` exists.
+7. `git add memories && git commit -m notes`: passes. Append a broken line to a month's notes
+   file by hand and commit: rejected with the field-by-field reason. `git rm` a notes file and commit:
    refused too (append-only means the file cannot go).
 
 Without Codex:
@@ -175,7 +179,8 @@ node $PLUGIN_ROOT/scripts/gtm-brain-contexts/contexts.mjs . --new berlin-expansi
 
 ## 5. Who is who (step 2b: names)
 
-`brain/entities/` holds one Markdown file per identity, including team members from setup.
+`entities/` holds one Markdown file per identity, in a folder per kind (`people/`,
+`organizations/`, ...), including team members from setup.
 Each file has a stable ID, name, aliases and contact references, plus a cited brief compiled
 from context memories. New memories carry stable entity IDs alongside names.
 
@@ -215,7 +220,7 @@ In Codex, after a few memories in `pipeline`:
 1. *"compile"* (or *"compile pipeline"*).
    Expected: it lists what is behind, reads the facts, then reports one line per context:
    *compiled pipeline: 4 memories, people 2, tools 2, related marketing, confidence medium (N=4)*.
-2. `cat brain/contexts/pipeline/context.md`: frontmatter now has `summary`, `people`, `tools`,
+2. `cat memories/topics/pipeline.md`: frontmatter now has `summary`, `people`, `tools`,
    `related`, `last_active`, `confidence`, `compiled_at`, `compiled_by`; "When loaded" has your
    rule, then Working guidance. Not committed yet: say *"save"*, then `git log -1` shows it.
 3. *"compile"* again: "every summary is up to date". Add a memory, compile again: only that context.
@@ -235,8 +240,8 @@ memories, medium under 10, high above.
 
 ## 7. The dashboard (step 4: render)
 
-`work/home/index.html` is a read-only view of the brain, rebuilt after each saved change.
-The local server listens on `127.0.0.1`; `work/dash.json` holds its stable address.
+`.gtm-brain/home/index.html` is a read-only view of the brain, rebuilt after each saved change.
+The local server listens on `127.0.0.1`; `.gtm-brain/dash.json` holds its stable address.
 The dashboard always opens in the Codex pane and needs no login. Legacy `dashboard_browser`
 values are ignored. Chrome setup is offered separately during onboarding for approved website
 work that needs existing logins; MCP connectors remain the first choice.
@@ -261,7 +266,7 @@ combinations in a single-select question. The progress card is view-only.
 ### Checking the dashboard in a browser (contributors)
 
 The browser tests open the live dashboard of a generated brain in headless Chromium and check
-what a person sees: the four tabs and the health line, the base files with their state, entity
+what a person sees: the tabs and the health line, the base files with their state, entity
 counts per kind, an entity page with its notes, notes newest first with a replaced note, the
 workflows with their triggers and a run in progress, no edit or action anywhere, a saved note
 reaching the open page, and no console errors. They use the e2e framework
@@ -288,7 +293,7 @@ which does not block a merge.
 ## 8. Recall (step 5)
 
 Search across every context, loaded or not. Uses Node's built-in SQLite full-text index,
-kept in `work/memory-index.sqlite` and updated when source files change; nothing to install, nothing committed.
+kept in `.gtm-brain/memory-index.sqlite` and updated when source files change; nothing to install, nothing committed.
 The disk-backed cache also serves exact memory queries. It is rebuildable from the brain files,
 uses a small page cache, and reads source records incrementally. Keyword indexing requires
 `node:sqlite` with FTS5: Node 22.16+ or 24+ (22.13-22.15 and 23 lack it).
@@ -298,12 +303,12 @@ In Codex:
 1. *"what do we know about the TCO?"* Expected: the matching memories grouped by context,
    each marked loaded or not loaded, with dates and authors.
 2. *"what do we know about the CFO?"* Expected: the same hits, because "the CFO" is an alias of
-   Pierre Aubert in `brain/entities/` (it says: expanded: Pierre, Aubert).
+   Pierre Aubert in `entities/` (it says: expanded: Pierre, Aubert).
 3. *"did we ever talk about unicorns?"* Expected: "nothing recorded about that", not a guess.
 4. *"tell me about Pierre Aubert"* Expected: a three-line summary and a link to
-   `brain/entities/pierre-aubert.md`: identity, a current cited overview, per-context state,
+   `entities/people/pierre-aubert-<short id>.md`: identity, a current cited overview, per-context state,
    open threads, relationships, recent developments and source pointers. A stale brief shows
-   dated evidence until refreshed. No person page is created under work/.
+   dated evidence until refreshed. No person page is created under `.gtm-brain/`.
 
 Without Codex:
 
@@ -364,7 +369,7 @@ bash $PLUGIN_ROOT/scripts/gtm-brain-schedule/scheduled-run.sh ~/brain-try      #
 Then the plist in `scripts/gtm-brain-schedule/launchd.plist.example` (replace the brain folder, load with
 `launchctl`), or a cron line. Both call `codex exec`, so Codex must be signed in.
 
-Check: `git log --oneline | head` shows `scheduled: compile pipeline`; `work/hooks.log` has
+Check: `git log --oneline | head` shows `scheduled: compile pipeline`; `.gtm-brain/hooks.log` has
 `scheduled-run` lines; the dashboard's "Needs attention" is empty.
 
 ## 12. Connecting the tools (connect)
@@ -378,7 +383,7 @@ Installing one is one command; you sign in once in the app.
 
 The check runs by itself at every chat start (about a second) and feeds the dashboard's Tools
 panel; Codex then offers, unasked, to install a listed tool that is missing or to add an installed
-plugin that `admin.md` does not mention. On demand: *"connect my tools"*. Expected, per tool:
+plugin that the settings do not mention. On demand: *"connect my tools"*. Expected, per tool:
 *installed* / *available, not installed*
 (with the command) / *no official plugin* (export or paste). Say yes to install HubSpot or
 Attio; Codex runs `codex plugin add hubspot@openai-curated-remote` and tells you to sign in
@@ -392,7 +397,7 @@ node $PLUGIN_ROOT/scripts/gtm-brain-connect/connect.mjs . --check
 codex plugin add attio@openai-curated-remote
 ```
 
-Credentials are personal (`work/tools.json` is local and ignored). A teammate runs `connect`
+Credentials are personal (`.gtm-brain/tools.json` is local and ignored). A teammate runs `connect`
 in their own Codex. **This is the part to test first with a real HubSpot or Attio account:**
 whether the sign-in is really one click, and what the read test returns.
 
@@ -404,17 +409,20 @@ plugins/gtm-brain/
   skills/<workflow>/SKILL.md user workflow; references/ holds internal procedures
   skills/gtm-brain-*/           operation scripts keep their existing paths
   session/                   the chat start the MCP server runs (lists contexts, puts back protected-file edits)
-  templates/                 AGENTS.md, admin.md, pre-commit hook, gitignore
+  templates/                 AGENTS.md, the settings, rules and schema, pre-commit hook, gitignore
 ```
 
 A brain, after setup:
 
 ```
-brain/admin.md                          workplace info, protected, changed via APPROVE
-brain/entities/*.md                        identity metadata and cited briefs from context memories
-brain/contexts/<slug>/context.md        the context cover
-brain/contexts/<slug>/memories.jsonl    append-only records; the fields are validated in lib/brain.mjs
-work/                                   ignored: loaded-contexts.json, hooks.log (activity), proposals
+configuration/settings.yaml             workplace info, changed via APPROVE
+configuration/rules.md, schema.md       the brain's rules and what it keeps per kind
+configuration/about-us/*.md             the base documents
+entities/<kind>/*.md                    identity metadata and cited briefs from context memories
+memories/<YYYY-MM>.jsonl                append-only records, a file per month; the fields are validated in lib/brain.mjs
+memories/topics/<slug>.md               the context cover
+workflows/*.md                          the workflows
+.gtm-brain/                             ignored: loaded-contexts.json, hooks.log (activity), drafts for APPROVE
 ```
 
 ## When something is off
@@ -435,7 +443,7 @@ work/                                   ignored: loaded-contexts.json, hooks.log
 - Pre-commit says the plugin is not installed: `git config gtm-brain.lib <path to plugins/gtm-brain/lib/brain.mjs>`,
   or open the folder in Codex once (the chat start sets it).
 - Pre-commit says a record "was changed" or "removed": memories are append-only. Restore the
-  file (`git checkout brain/contexts/<slug>/memories.jsonl`) and record the correction with
+  file (`git checkout memories/<YYYY-MM>.jsonl`) and record the correction with
   `remember --supersedes` or `--retracts`.
 - Setup says the folder is not empty: it makes its own repo, hooks path and git identity there;
   give it an empty folder (a README and a `.gitignore` may stay; the ignore rules are merged).
@@ -448,7 +456,7 @@ Chat about this is a navigation link; changes and approvals happen in Codex.
 
 The protected-file guard and the pre-commit hook stop the model, and you, from changing the
 protected files by mistake: a direct edit is put back at the next chat start or save (the edit
-is kept in `work/manual-edits/protected/`), a changed or removed memory is refused at commit,
+is kept in `.gtm-brain/manual-edits/protected/`), a changed or removed memory is refused at commit,
 admin changes need the person's APPROVE in the `approve_change` form or typed in a terminal. The GTM Brain
 tools run outside the sandbox and commit only through `save`, on your word. They do not
 stop a determined person with the terminal: `git commit --no-verify`, a rewritten history, or

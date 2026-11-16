@@ -259,7 +259,7 @@ brain, searchable from anywhere. Ask "list projects" to see them, "unlink this p
 People and companies are shared by every project, and a project is a folder plus a tag, not a
 second memory: see [One brain, many projects](../plugins/gtm-brain/MANUAL.md#one-brain-many-projects).
 
-A linked code repository stays yours: its own `.claude/` and `brain/` paths are never blocked,
+A linked code repository stays yours: its own `.claude/` paths, and a `brain/` folder of its own, are never blocked,
 and the brain's skill links are kept out of its `git status`. The link itself is a block in the
 repository's `AGENTS.md`: commit it and every clone and worktree uses the brain, or leave it
 uncommitted for this checkout only.
@@ -275,22 +275,26 @@ are summarized again.
 ## Files, if you ever look
 
 ```
-brain/admin.md                       company, team, tools
-brain/entities/<id>.md               identity and cited briefs
-brain/contexts/<context>/context.md  the context summary and rules
-brain/contexts/<context>/memories.jsonl   the notes, one per line
-README.md                            what goes where; setup writes it, upgrade refreshes it while unedited
-strategy.md, icp.md, voice.md, ...  your documents (five from day one), files in a folder of the same name
-RULES.md                             where every file goes and your own saving rules; you edit it
-SCHEMA.md                            fields kept per person, organization, product; relationship types
+configuration/settings.yaml          company, team, tools, settings
+configuration/rules.md               where every file goes and your own saving rules; you edit it
+configuration/schema.md              fields kept per person, organization, product; relationship types
+configuration/about-us/              strategy.md, icp.md, voice.md, ...: the base documents (five from day one), files in a folder of the same name
+entities/<kind>/<name>-<id>.md       identity and cited briefs
+memories/<YYYY-MM>.jsonl             the notes, one per line, a file per month
+memories/topics/<context>.md         the context summary and rules
+workflows/<name>.md                  processes with steps
 projects/<project>/                  one folder per project (an event, a campaign), its deliverables inside
-work/home/index.html                 the dashboard
+README.md                            what goes where; setup writes it, upgrade refreshes it while unedited
+.gtm-brain/home/index.html           the dashboard (this computer only)
 ```
 
-Three places, three jobs. A document is a Markdown you wrote and the work must follow, at the
-top of the folder or in a folder you named, with its files beside it ([DOCUMENTS.md](DOCUMENTS.md)).
+The four folders at the top are the dashboard's tabs: `configuration/`, `entities/`, `memories/`
+and `workflows/`. A brain made before 0.37 keeps the same files in older places until you say
+"upgrade the brain" ([the manual](../plugins/gtm-brain/MANUAL.md#updating-to-037-the-four-folders)).
+A document is a Markdown you wrote and the work must follow: a base document in
+`configuration/about-us/`, or one in a folder you named, with its files beside it ([DOCUMENTS.md](DOCUMENTS.md)).
 A project folder holds drafts and deliverables for one piece of work (the website, an event).
-`brain/` is what Codex remembers: notes by topic, people, companies. Nothing else belongs at the
+`memories/` and `entities/` are what Codex remembers: notes by topic, people, companies. Nothing else belongs at the
 top, and `README.md` says so: a `company/` folder with subfolders is a container nobody reads.
 A strategy is a document plus, once written, its decisions as notes in the Strategy context;
 say `add strategy.md as a document` to register one you wrote by hand. `voice.md` is filled by
@@ -303,12 +307,12 @@ Your own base files: say `add pricing as a base file` (or positioning, competito
 anything). Codex checks whether an existing file already covers it and offers a section there
 first, drafts from what the brain already knows with the notes it used listed (or asks you for
 two or three facts when it knows nothing), shows the draft in full and asks one thing: what work
-should follow it. Picking one saves it as a draft. A Markdown you drop at the top by hand is noticed
+should follow it. Picking one saves it as a draft. A Markdown you drop into `configuration/about-us/` or at the top by hand is noticed
 ("pricing.md is here but the brain does not use it yet") and adopted with only frontmatter added.
 
 Recordings and files over 25 MB never go into git. Drop one in the chat: Codex puts it in your
 Google Drive folder (or the folder outside git that you chose during setup, `big_files` in
-`brain/admin.md`) and the note about it keeps the link.
+the settings) and the note about it keeps the link.
 
 A context's standing instructions (`rule`) describe its purpose, meaningful boundaries and
 how Codex should work there. The dashboard shows them as Instructions; change them in chat.
