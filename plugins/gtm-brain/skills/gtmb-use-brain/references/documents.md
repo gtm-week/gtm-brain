@@ -27,7 +27,7 @@ the path. Do not read any reference first and do not ask a question: the person 
 The steps below are for a document written from material, where a draft needs confirming.
 
 A request to define or rework an ICP with nothing written yet belongs to
-[Define ICP](../../gtmb-define-icp/SKILL.md), which interviews first and then keeps the draft.
+[Define ICP](../../gtmb-icp/SKILL.md), which interviews first and then keeps the draft.
 An ICP the person already wrote is added here like any other document.
 
 1. A file the person already wrote: a path in the chat, or "add strategy.md as a document".
@@ -101,7 +101,7 @@ headings and no guidance. The person fills one when they choose, at the end of o
 thing.
 
 - Strategy: run `gtmb-strategy` (the strategic intake). It writes `strategy.md` itself.
-- ICP: run `gtmb-define-icp`. Its draft replaces the starter's body in `icp.md`
+- ICP: run `gtmb-icp`. Its draft replaces the starter's body in `icp.md`
   (`action: update`, `ref: icp`), never a new ICP document.
 - Voice: run [gtmb-voice](../../gtmb-voice/SKILL.md). It asks whose voice it is first, reads
   writing that fits that choice, and fills `voice.md` itself. A voice guide the person
@@ -112,8 +112,8 @@ thing.
   heading empty rather than guess. The voice follows [authoring](document-authoring.md).
 - Design system: it is a page and a text, filled together as [The design system page](#the-design-system-page)
   says. Never the Markdown alone.
-- Market: draft from the market and competitor notes already in the brain (`query`) and the
-  competitors' websites the person names. Name only competitors and prices a source shows; leave
+- Market: run [gtmb-market](../../gtmb-market/SKILL.md). It drafts from the market and competitor
+  notes already in the brain (`query`) and the competitors' websites the person names. Name only competitors and prices a source shows; leave
   a heading empty rather than guess. Battle cards and reports go in `market/` beside it.
 - Confirm with one question showing the first lines under each heading (under 500 characters):
   "Save it as a draft" first, "Change something". Then `document` with `action: update`, the

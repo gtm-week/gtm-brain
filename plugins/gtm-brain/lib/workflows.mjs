@@ -107,7 +107,7 @@ const bullets = text => text.split("\n").filter(l => /^\s*[-*]\s+/.test(l)).map(
 // numbered items; an indented continuation line belongs to the item above it
 const items = text => { const out = []; for (const line of text.split("\n")) { const m = line.match(/^\s*(\d+)\.\s+(.*)$/); if (m) out.push(m[2].trim()); else if (out.length && line.trim()) out[out.length - 1] += " " + line.trim(); } return out; };
 
-/* One step: **Title** (tool: crm) (skill: gtmb-define-icp). What to do. Milestone: a note tagged x. Gate: after 3 days.
+/* One step: **Title** (tool: crm) (skill: gtmb-icp). What to do. Milestone: a note tagged x. Gate: after 3 days.
    The milestone comes before the gate, so a teammate on 0.34 still reads the gate (it takes the last "Gate:"). */
 function parseStep(text, n, problems) {
   const m = text.match(/^\*\*(.+?)\*\*([\s\S]*)$/);

@@ -329,10 +329,13 @@ calls keep their names, and notes, people and companies are untouched.
 | `/gtm-brain-start` | `/gtmb-start` |
 | `/gtm-brain-configure` | `/gtmb-configure` |
 | `/gtm-brain-rules`, `/gtm-brain-schema` | `/gtmb-rules`, `/gtmb-schema` |
-| `/gtm-brain-strategy`, `/gtm-brain-define-icp`, `/gtm-brain-voice`, `/gtm-brain-design-system` | `/gtmb-strategy`, `/gtmb-define-icp`, `/gtmb-voice`, `/gtmb-design-system` |
+| `/gtm-brain-strategy`, `/gtm-brain-define-icp`, `/gtm-brain-voice`, `/gtm-brain-design-system` | `/gtmb-strategy`, `/gtmb-icp`, `/gtmb-voice`, `/gtmb-design-system` |
 | `/gtm-brain-workflow`, `/gtm-brain-skill`, `/gtm-brain-project` | `/gtmb-workflow`, `/gtmb-skill`, `/gtmb-project` |
 | `/gtm-brain-todo`, `/gtm-brain-sync`, `/gtm-brain-deepdive` | `/gtmb-todo`, `/gtmb-sync`, `/gtmb-deepdive` |
 | `/gtm-brain-<tool>-setup` | `/gtmb-<tool>-setup` |
+| `/gtm-brain-define-icp` (and `/gtmb-define-icp` of 0.36.0) | `/gtmb-icp` |
+| `/gtm-brain-market-desk-research` (and `/gtmb-market-desk-research` of 0.36.0) | `/gtmb-market-research` |
+| new in 0.36.1 | `/gtmb-market`, which fills the market document |
 | any other `/gtm-brain-<name>` | `/gtmb-<name>` |
 
 ### What to do, in order

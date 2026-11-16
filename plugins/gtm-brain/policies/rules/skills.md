@@ -27,8 +27,8 @@ The skills the person sees (when to offer them: rule 7b, the answers page): `gtm
 waits on them, one item at a time), `gtmb-sync` (what came in through the tools),
 `gtmb-deepdive` (a brief before a call or a decision), `gtmb-strategy` (the intake
 that fills `strategy.md`), `gtmb-unit-economics` (PUSH, FIX, STOP or MEASURE for growth
-spend), `gtmb-market-desk-research` (sourced research on a market, as one report),
-`gtmb-define-icp` (Chris Pawlak's interview; it keeps the ICP in `icp.md`),
+spend), `gtmb-market-research` (sourced research on a market, as one report),
+`gtmb-icp` (Chris Pawlak's interview; it keeps the ICP in `icp.md`),
 `gtmb-project` (a working folder; offered only when the opening lines say the folder is not
 linked, never run without a yes), `gtmb-start` (setup and handoffs), `gtmb-configure`
 (workplace changes, tools, plugin updates and this brain's rules; offer a newer GTM Brain once
