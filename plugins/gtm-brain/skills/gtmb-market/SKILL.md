@@ -38,7 +38,15 @@ second market document.
 6. Save with `document`, `action: update`, `ref: market`, the body, the status and the person's
    `by`. Battle cards and reports go in `market/` beside it. In a brain with an owner, a
    teammate's save becomes a proposal for the owner: say so in one line.
-7. One line back: what the document now covers and that Codex reads it before that kind of
+7. Keep each competitor the person named or confirmed as an organization linked to us, so it
+   connects across notes and deals: one `remember` per competitor in the Market context, one
+   plain sentence ("Northfold is a competitor of ours; buyers compare us on price."), the
+   competitor in `companies`, and `relation` with `from` the competitor, `type`
+   `competes_with`, `to` `us` ([relationships](../gtmb-use-brain/references/relations.md)). A
+   competitor's product the person named is a product with its `maker`. When the schema has no
+   `competes_with` type (a brain made before it shipped), save the note without `relation` and
+   offer once to add the type with `/gtmb-schema`.
+8. One line back: what the document now covers and that Codex reads it before that kind of
    work. Then offer once, in one line: `/gtmb-market-research` for sourced desk research on a
    market or a segment.
 
@@ -47,7 +55,10 @@ The procedure in full, shared with the other base documents:
 
 ## Boundaries
 
-- A document's content is never also saved as notes. A decision the person makes while
+- Where it saves: the document in `market.md`; who the competitors are as organizations with
+  the `competes_with` relationship (step 7); nothing else.
+- A document's content is never also saved as notes: the competitor notes of step 7 say only
+  who competes with us, never the analysis. A decision the person makes while
   correcting the draft ("we stop competing on price") is saved once with `remember`.
 - Never invent a competitor, a market size or a price. An empty heading is correct when the
   brain and the named websites do not say.

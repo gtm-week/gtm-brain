@@ -1,15 +1,154 @@
 [
   {
+    "id": "gtmb-strategy",
+    "group": "mentor",
+    "role": "mentor",
+    "featured": false,
+    "title": "Run the strategic intake",
+    "description": "A 10-15 minute conversation about where the company is going that fills strategy.md, the document every brain starts with.",
+    "example": "Run the strategic intake.",
+    "promise": "A 10-15 minute interview turns where the company is going into the strategy every other piece of work reads.",
+    "fills": "strategy",
+    "reads": []
+  },
+  {
+    "id": "gtmb-icp",
+    "group": "mentor",
+    "role": "mentor",
+    "featured": false,
+    "title": "Define our ICP",
+    "description": "Chris Pawlak's interview on company fit, buying roles, awareness and readiness, kept as one working draft.",
+    "example": "Define our ideal customer profile using what we already know.",
+    "promise": "An interview on who buys and why, grounded in the customers already in your brain.",
+    "fills": "icp",
+    "reads": [
+      "strategy"
+    ]
+  },
+  {
+    "id": "gtmb-market",
+    "group": "mentor",
+    "role": "mentor",
+    "featured": false,
+    "title": "Fill in our market",
+    "description": "Who we compete with, how buyers choose and where we win, drafted from the brain and the competitors you name.",
+    "example": "Fill in our market document; our main competitors are Acme and Northfold.",
+    "promise": "Your competitors, how buyers choose and where you win, drafted from your notes and their websites.",
+    "fills": "market",
+    "reads": [
+      "strategy"
+    ]
+  },
+  {
+    "id": "gtmb-voice",
+    "group": "mentor",
+    "role": "mentor",
+    "featured": false,
+    "title": "Draft our tone of voice",
+    "description": "Settle whose voice it is, draft it from writing that fits, test it on one fresh email or post, then check a new chat follows it.",
+    "example": "Draft our tone of voice from our website and posts.",
+    "promise": "How you sound, drawn from your real writing and tested on one fresh piece.",
+    "fills": "voice",
+    "reads": []
+  },
+  {
+    "id": "gtmb-design-system",
+    "group": "mentor",
+    "role": "mentor",
+    "featured": false,
+    "title": "Build our design system",
+    "description": "Use Brian Woloszczak and Peakout's starter to build a reusable web design system from your existing brand.",
+    "example": "Build our design system from our company website.",
+    "promise": "Your brand as a reusable website design system, built from the site you already have.",
+    "fills": "design-system",
+    "reads": [
+      "voice",
+      "strategy"
+    ]
+  },
+  {
+    "id": "gtmb-market-research",
+    "group": "mentor",
+    "role": "mentor",
+    "featured": false,
+    "title": "Research a market",
+    "description": "A short intake, then sourced desk research on market growth, segments, pains, buyers, competitors and your current right to win.",
+    "example": "Assess the market for our offering in the DACH mid-market.",
+    "promise": "Sourced desk research on one market, judged against your own offer and proof.",
+    "produces": "A sourced report with a positioning map",
+    "reads": [
+      "strategy",
+      "icp",
+      "market"
+    ]
+  },
+  {
+    "id": "gtmb-unit-economics",
+    "group": "mentor",
+    "role": "mentor",
+    "featured": false,
+    "title": "Review unit economics",
+    "description": "Check CAC, LTV, payback and retention, then decide where growth spend should go.",
+    "example": "Can we spend more on growth? Here are our CAC, ARPU and churn.",
+    "promise": "CAC, LTV and payback from your own numbers, ending in PUSH, FIX, STOP or MEASURE.",
+    "produces": "A decision note with its inputs and gaps",
+    "reads": [
+      "strategy"
+    ]
+  },
+  {
+    "id": "gtmb-deepdive",
+    "group": "mentor",
+    "role": "mentor",
+    "featured": true,
+    "title": "Prepare for a meeting",
+    "description": "Get a sourced brief on a person, company or topic.",
+    "example": "Help me prepare for my next customer meeting.",
+    "promise": "A one-page brief before a call, from everything the brain holds on the account or person.",
+    "produces": "A one-page sourced brief",
+    "reads": [
+      "icp"
+    ]
+  },
+  {
+    "id": "gtmb-build-landing-page",
+    "group": "mentor",
+    "role": "mentor",
+    "featured": false,
+    "title": "Build a landing page",
+    "description": "Use your offer, audience and voice to compose a campaign page from the shared design system.",
+    "example": "Build a follow-up page for our event leads and show me the local preview.",
+    "promise": "A campaign page written from your strategy, ICP, voice and design system.",
+    "produces": "A page on your website, at a local preview",
+    "reads": [
+      "strategy",
+      "icp",
+      "voice",
+      "design-system"
+    ]
+  },
+  {
     "id": "gtmb-todo",
     "group": "daily",
+    "role": "everyday",
     "featured": true,
     "title": "Choose my next task",
     "description": "Find what needs your attention and work through it.",
     "example": "What should I focus on today?"
   },
   {
+    "id": "gtmb-housekeeping",
+    "group": "daily",
+    "role": "everyday",
+    "featured": false,
+    "title": "Tidy names and gaps",
+    "description": "Settle first names without a surname, names that may be the same and required details nobody stated, one question at a time.",
+    "example": "Let us do housekeeping."
+  },
+  {
     "id": "gtmb-workflow",
     "group": "daily",
+    "role": "everyday",
     "featured": false,
     "title": "Run a workflow",
     "description": "Start a campaign or another multi-step action from a workflow document, and let the brain track its steps and dates.",
@@ -18,54 +157,16 @@
   {
     "id": "gtmb-sync",
     "group": "daily",
+    "role": "everyday",
     "featured": true,
     "title": "Sync the latest updates",
     "description": "Bring recent updates from your connected tools into shared knowledge.",
     "example": "Sync recent updates from my connected tools."
   },
   {
-    "id": "gtmb-deepdive",
-    "group": "daily",
-    "featured": true,
-    "title": "Prepare for a meeting",
-    "description": "Get a sourced brief on a person, company or topic.",
-    "example": "Help me prepare for my next customer meeting."
-  },
-  {
-    "id": "gtmb-unit-economics",
-    "group": "daily",
-    "featured": false,
-    "title": "Review unit economics",
-    "description": "Check CAC, LTV, payback and retention, then decide where growth spend should go.",
-    "example": "Can we spend more on growth? Here are our CAC, ARPU and churn."
-  },
-  {
-    "id": "gtmb-market-research",
-    "group": "daily",
-    "featured": false,
-    "title": "Research a market",
-    "description": "A short intake, then sourced desk research on market growth, segments, pains, buyers, competitors and your current right to win.",
-    "example": "Assess the market for our offering in the DACH mid-market."
-  },
-  {
-    "id": "gtmb-icp",
-    "group": "daily",
-    "featured": false,
-    "title": "Define our ICP",
-    "description": "Chris Pawlak's interview on company fit, buying roles, awareness and readiness, kept as one working draft.",
-    "example": "Define our ideal customer profile using what we already know."
-  },
-  {
-    "id": "gtmb-market",
-    "group": "daily",
-    "featured": false,
-    "title": "Fill in our market",
-    "description": "Who we compete with, how buyers choose and where we win, drafted from the brain and the competitors you name.",
-    "example": "Fill in our market document; our main competitors are Acme and Northfold."
-  },
-  {
     "id": "gtmb-use-brain",
     "group": "knowledge",
+    "role": "everyday",
     "featured": false,
     "title": "Ask or remember something",
     "description": "Use saved knowledge and keep new findings with their sources.",
@@ -74,6 +175,7 @@
   {
     "id": "gtmb-rules",
     "group": "knowledge",
+    "role": "setup",
     "featured": false,
     "title": "Change our rules",
     "description": "See and edit where files go and what Codex saves and asks.",
@@ -82,46 +184,43 @@
   {
     "id": "gtmb-schema",
     "group": "knowledge",
+    "role": "setup",
     "featured": false,
     "title": "Change what we keep",
     "description": "See and edit the fields kept for people, companies and products, and how they relate.",
     "example": "Every company must have a budget owner."
   },
   {
+    "id": "gtmb-interaction",
+    "group": "knowledge",
+    "role": "everyday",
+    "featured": false,
+    "title": "Propose an interaction",
+    "description": "Describe an action you repeat in your own tool; after your APPROVE Codex does it and records it the same way every time.",
+    "example": "Propose an interaction for moving a deal in HubSpot."
+  },
+  {
     "id": "gtmb-project",
     "group": "projects",
+    "role": "everyday",
     "featured": true,
     "title": "Work in a project",
     "description": "Create a project folder, or link an existing one to your brain.",
     "example": "Create a new project for our website."
   },
   {
-    "id": "gtmb-design-system",
-    "group": "projects",
-    "featured": false,
-    "title": "Build our design system",
-    "description": "Use Brian Woloszczak and Peakout's starter to build a reusable web design system from your existing brand.",
-    "example": "Build our design system from our company website."
-  },
-  {
     "id": "gtmb-add-section",
     "group": "projects",
+    "role": "everyday",
     "featured": false,
     "title": "Add a reusable section",
     "description": "Extend your shared website library with a section from a source page or a new brief.",
     "example": "Add a comparison table to our website's reusable sections."
   },
   {
-    "id": "gtmb-build-landing-page",
-    "group": "projects",
-    "featured": false,
-    "title": "Build a landing page",
-    "description": "Use your offer, audience and voice to compose a campaign page from the shared design system.",
-    "example": "Build a follow-up page for our event leads and show me the local preview."
-  },
-  {
     "id": "gtmb-publish-website",
     "group": "projects",
+    "role": "everyday",
     "featured": false,
     "title": "Publish the website",
     "description": "Prepare a Vercel preview and release the reviewed shared website when requested.",
@@ -130,6 +229,7 @@
   {
     "id": "gtmb-start",
     "group": "setup",
+    "role": "setup",
     "featured": false,
     "title": "Set up or resume GTM Brain",
     "description": "Start onboarding or continue from the last saved step.",
@@ -138,6 +238,7 @@
   {
     "id": "gtmb-configure",
     "group": "setup",
+    "role": "setup",
     "featured": false,
     "title": "Change my preferences",
     "description": "Adjust workplace information, language or dashboard preferences.",
@@ -146,30 +247,16 @@
   {
     "id": "gtmb-skill",
     "group": "setup",
+    "role": "everyday",
     "featured": false,
     "title": "Make a skill of your own",
     "description": "Turn a repeated workflow into a Codex skill kept in this brain, or install one from GitHub.",
     "example": "Turn what we just did into a skill."
   },
   {
-    "id": "gtmb-strategy",
-    "group": "setup",
-    "featured": false,
-    "title": "Run the strategic intake",
-    "description": "A 10-15 minute conversation about where the company is going that fills strategy.md, the document every brain starts with.",
-    "example": "Run the strategic intake."
-  },
-  {
-    "id": "gtmb-voice",
-    "group": "setup",
-    "featured": false,
-    "title": "Draft our tone of voice",
-    "description": "Settle whose voice it is, draft it from writing that fits, test it on one fresh email or post, then check a new chat follows it.",
-    "example": "Draft our tone of voice from our website and posts."
-  },
-  {
     "id": "gtmb-zynt-setup",
     "group": "setup",
+    "role": "setup",
     "featured": false,
     "title": "Set up ZYNT",
     "description": "Paste the prompt ZYNT gives you, and the brain fills ZYNT in from what it already knows.",
@@ -178,6 +265,7 @@
   {
     "id": "gtmb-freckle-setup",
     "group": "setup",
+    "role": "setup",
     "featured": false,
     "title": "Set up Freckle",
     "description": "Connect Freckle and build its first list of target companies and people from what the brain already knows.",
@@ -186,6 +274,7 @@
   {
     "id": "gtmb-clay-setup",
     "group": "setup",
+    "role": "setup",
     "featured": false,
     "title": "Set up Clay",
     "description": "Connect Clay and find the target companies and people the brain already names; enrichment asks first.",
@@ -194,6 +283,7 @@
   {
     "id": "gtmb-woodpecker-setup",
     "group": "setup",
+    "role": "setup",
     "featured": false,
     "title": "Set up Woodpecker",
     "description": "Connect Woodpecker, see how your campaigns perform, and save one email sequence written from the brain as a draft.",
@@ -202,6 +292,7 @@
   {
     "id": "gtmb-surfer-setup",
     "group": "setup",
+    "role": "setup",
     "featured": false,
     "title": "Set up Surfer",
     "description": "Connect Surfer, get topics from what the brain knows about the market and customers, and brief the first article.",
@@ -210,6 +301,7 @@
   {
     "id": "gtmb-heyreach-setup",
     "group": "setup",
+    "role": "setup",
     "featured": false,
     "title": "Set up HeyReach",
     "description": "Connect HeyReach, see how your LinkedIn campaigns do, and get a connection note and follow-ups written from the brain.",

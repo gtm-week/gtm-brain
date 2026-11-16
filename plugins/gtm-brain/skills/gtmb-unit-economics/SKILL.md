@@ -63,6 +63,10 @@ Offer once to record the review:
 - Each `MEASURE` item as an open question (`remember`, kind `question`), so it appears in
   `gtmb-todo` until the input is collected.
 
+Where it saves: the decision note and the open questions above, nothing else. A price the person
+confirms for one of our offerings is said in the note with the offering named, so its `price`
+field fills from it; no document is changed.
+
 Nothing is written before the person answers yes.
 
 ## Hard rules

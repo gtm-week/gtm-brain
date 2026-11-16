@@ -24,8 +24,11 @@ It installs as the **`gtm-brain` plugin**. Open source under [MIT](LICENSE).
 3. Work as usual. Say what happened ("just got off a call with ..."), ask what you need
    ("brief me on Acme", "what should I focus on this week?"), and say "open the dashboard" to
    see what the brain holds.
-4. Shape it with the two commands that matter most: `/gtmb-rules` (what Codex saves and asks,
-   where files go) and `/gtmb-schema` (what is kept about each person and company).
+4. Work with a mentor: `/gtmb-strategy`, `/gtmb-icp`, `/gtmb-market` and `/gtmb-voice` each
+   coach you through one base document, using what the brain already knows about your company
+   ([all nine](#configure-your-brain)).
+5. Shape it with `/gtmb-rules` (what Codex saves and asks, where files go) and `/gtmb-schema`
+   (what is kept about each person and company).
 
 **Already using it**
 
@@ -71,7 +74,7 @@ Codex, under the rules, and leave each step as a note.
 
 More: [The four parts of a brain](#the-four-parts-of-a-brain) · [The folders of a brain](#what-is-stored-on-disk) · [How GTM Brain works](#how-gtm-brain-works) · [How a brain works](plugins/gtm-brain/MANUAL.md).
 
-**Configure it:** one table of commands in [Configure your brain](#configure-your-brain).
+**Use it:** the mentors first, then every other command, in [Configure your brain](#configure-your-brain).
 
 ## Install in Codex
 
@@ -97,39 +100,51 @@ sign-in is required to download the plugin.
 Type a command in a Codex chat opened in the brain's folder, or say the sentence beside it.
 Every skill is `/gtmb-<name>`.
 
-**First: rules and schema.** These two decide how the brain behaves.
+**First: work with a mentor.** A mentor is a skill that coaches you through one piece of GTM
+work. It reads what the brain already holds, so its questions and its draft are about your
+company and your customers, not a template. Five of them fill a base document that Codex then
+reads before every email, plan and page; four produce work from those documents.
+
+| Mentor | Command | You say | You get | Brain file |
+| --- | --- | --- | --- | --- |
+| Strategy | `/gtmb-strategy` | "run the strategic intake" | A 10-15 minute interview, then your strategy written down | fills `configuration/about-us/strategy.md` |
+| Ideal customer profile | `/gtmb-icp` | "define our ICP" | Chris Pawlak's interview on who buys and why; one draft ICP with segments and buying roles | fills `configuration/about-us/icp.md`; reads your customers and their notes |
+| Market | `/gtmb-market` | "fill in the market", "who do we compete with" | Competitors, how buyers choose, where you win and lose; shown first, saved on your yes | fills `configuration/about-us/market.md`; keeps each competitor as an organization |
+| Tone of voice | `/gtmb-voice` | "draft our voice" | Your voice from your real writing, tested on one fresh piece | fills `configuration/about-us/voice.md` |
+| Design system | `/gtmb-design-system` | "build our design system" | Your brand as a reusable website design system | fills `configuration/about-us/design-system.md`; creates `projects/website` |
+| Market research | `/gtmb-market-research` | "research this market" | A sourced report with a positioning map, judged against your offer | reads strategy, ICP and market; writes a report document |
+| Unit economics | `/gtmb-unit-economics` | "can we spend more on growth" | CAC, LTV and payback, then PUSH, FIX, STOP or MEASURE | reads strategy and your pricing, spend and churn notes; saves a decision note |
+| Account brief | `/gtmb-deepdive` | "brief me on Acme Retail", "prepare me for the call with Anna Lind" | One page: where things stand, who is involved, what is open | reads the entity, its notes and your tools; saves nothing unasked |
+| Landing page | `/gtmb-build-landing-page` | "build a landing page for our event" | A campaign page at a local preview | reads strategy, ICP, voice and design system; writes in `projects/website` |
+
+**Then: rules and schema.** These two decide how the brain behaves.
 
 | To change | Command | Or say |
 | --- | --- | --- |
 | Rules: what Codex saves, what it asks, where files go, when it reads a live tool | `/gtmb-rules` | "add a rule: ...", "from now on ...", "speaker graphics go in speakers/" |
 | Schema: the fields kept per kind, the kinds and subtypes, the relationship types | `/gtmb-schema` | "every company must have a budget owner", "track venues" |
 
-**Then: setup and the base documents.**
+**Everyday.**
+
+| To do | Command | Or say |
+| --- | --- | --- |
+| Ask or save something | `/gtmb-use-brain` | "just got off a call with ...", "what do we know about pricing?", "add pricing as a base file" |
+| What you owe: questions, follow-ups | `/gtmb-todo` | "what is waiting on me" |
+| The latest from connected tools | `/gtmb-sync` | "catch up", "sync every morning" |
+| Tidy names and gaps, one at a time | `/gtmb-housekeeping` | "let's do housekeeping" |
+| A process with steps | `/gtmb-workflow` | "start the outbound workflow", "make a playbook for ..." |
+| An action you repeat in your own tool | `/gtmb-interaction` | "propose an interaction for moving a deal in HubSpot" |
+| A skill of your own | `/gtmb-skill` | "make this a skill" |
+| A project: a folder plus a tag | `/gtmb-project` | "create a project for the Berlin event", "link this folder" |
+| The website: a section, a hosted release | `/gtmb-add-section`, `/gtmb-publish-website` | "add a comparison table to our sections", "publish the website" |
+
+**Setup and maintenance.**
 
 | To set up or change | Command | Or say |
 | --- | --- | --- |
 | Create the brain in a folder | `/gtmb-start` | |
 | Company, team, tools, settings; connecting tools | `/gtmb-configure` | "connect my tools" |
-| Strategy | `/gtmb-strategy` | "run the strategic intake" |
-| Ideal customer profile | `/gtmb-icp` | "define our ICP" |
-| Market: competitors, how buyers choose, where we win and lose | `/gtmb-market` | "fill in the market", "who do we compete with" |
-| Tone of voice | `/gtmb-voice` | "draft our voice" |
-| Design system | `/gtmb-design-system` | "build our design system" |
-| A base document of your own | | "add pricing as a base file" |
-
-**As you need them.**
-
-| To do | Command | Or say |
-| --- | --- | --- |
-| A process with steps | `/gtmb-workflow` | "start the outbound workflow", "make a playbook for ..." |
-| A skill of your own | `/gtmb-skill` | "make this a skill" |
-| A project: a folder plus a tag | `/gtmb-project` | "create a project for the Berlin event", "link this folder" |
 | A tool | `/gtmb-clay-setup`, `/gtmb-zynt-setup`, `/gtmb-freckle-setup`, `/gtmb-woodpecker-setup`, `/gtmb-surfer-setup`, `/gtmb-heyreach-setup` | "Set up Clay for me" |
-| An action you repeat in your own tool | | "propose an interaction for moving a deal in HubSpot" |
-| What you owe: questions, follow-ups | `/gtmb-todo` | "what is waiting on me" |
-| Tidy names and gaps, one at a time | | "let's do housekeeping" |
-| The latest from connected tools | `/gtmb-sync` | "catch up", "sync every morning" |
-| Who approved what | | "show the approvals" |
 | Update the plugin, upgrade the brain | `/gtmb-configure` | "update GTM Brain", "upgrade the brain" |
 
 Two things to know:
@@ -219,7 +234,7 @@ Four things, read at the start of every chat.
 - **Subtypes** exist only on organizations (company, team, investor, partner, community) and
   can have fields of their own.
 - **Relationships.** The table lists the types Codex may save: `works_at`, `reports_to`,
-  `partner_of`, `investor_in`, `uses`, `speaker_at`, `attended`, `integrates_with`,
+  `partner_of`, `investor_in`, `uses`, `speaker_at`, `attended`, `competes_with`, `integrates_with`,
   `customer_of`. A type marked One at a time ends the previous one when a new one starts, so
   "Anna joined Acme" also ends her job at Northwind. An unlisted type is saved as a plain note
   with an offer to add it.
@@ -365,7 +380,7 @@ Three things sit beside the four parts and are easy to confuse with a workflow.
 
 | Thing | What it is | Where it lives |
 | --- | --- | --- |
-| Shipped skill | One sitting of work. Twenty-seven ship with the plugin as `/gtmb-<name>`: [the list](#shipped-skills). Not yours to edit | the plugin |
+| Shipped skill | One sitting of work. Twenty-nine ship with the plugin as `/gtmb-<name>`: [the list](#shipped-skills). Not yours to edit | the plugin |
 | Your own skill | The same, made by you. Kept in the brain and through updates | `.agents/skills/gtmb-<name>/` |
 | Workflow | Skills chained into steps, with gates and a trigger | `workflows/` |
 | Interaction | One approved action in your own tool, done and recorded the same way every time | `configuration/interactions.json` |
@@ -376,7 +391,7 @@ Three things sit beside the four parts and are easy to confuse with a workflow.
   after you quit and reopen Codex. "install the skill <owner>/<repo> at <path>" brings one in
   from GitHub; "list my skills" and "remove the skill ..." manage them. Detail:
   [USER-SKILLS.md](docs/USER-SKILLS.md).
-- **Interactions.** Say "propose an interaction for moving a deal in HubSpot". After your
+- **Interactions.** Say `/gtmb-interaction`, or "propose an interaction for moving a deal in HubSpot". After your
   APPROVE it is kept in `configuration/interactions.json`. Each time it runs, Codex does it in the
   tool first and saves the note only when the tool confirms; a failed write is saved as a failure.
 - **Projects.** "create a project for the Berlin event" makes `projects/berlin-event/` in the
@@ -463,7 +478,7 @@ preserve them.
 
 The research skills end in something you keep: `/gtmb-deepdive` a one-page brief,
 `/gtmb-market-research` a sourced report with a positioning map, `/gtmb-unit-economics` a PUSH,
-FIX, STOP or MEASURE decision note. All twenty-seven skills are listed under
+FIX, STOP or MEASURE decision note. All twenty-nine skills are listed under
 [Shipped skills](#shipped-skills) and in the [command reference](docs/COMMANDS.md).
 
 ## What it solves
@@ -503,7 +518,9 @@ work happens in chat; the page is for reading, plus three kinds of edit.
 **Actual GTM Brain dashboard, populated with fictional demo data.** These are captures
 of the shipped app, not mockups. No customer or private workspace data is shown.
 
-![The Overview tab: what is coming up and what to tidy, each with a link that prepares the work in Codex](docs/images/screenshots/dashboard-overview.png)
+![The Overview tab: what is coming up, then the mentors, each with the document it fills and a link that prepares the work in Codex](docs/images/screenshots/dashboard-overview.png)
+
+![The Help view: every task Codex can take on, mentors first, each with a prepared message and its command](docs/images/screenshots/dashboard-mentors.png)
 
 The other four tabs are shown with the part of the brain they belong to: [Configuration](#configuration), [Entities](#entities), [Memories](#memories) and [Workflows](#workflows).
 
@@ -733,41 +750,55 @@ Detail: [Updating to 0.37](plugins/gtm-brain/MANUAL.md#updating-to-037-the-four-
 
 ## Shipped skills
 
-Ask for an outcome in ordinary language, or invoke one of the twenty-seven shipped skills. A
+Ask for an outcome in ordinary language, or invoke one of the twenty-nine shipped skills. A
 skill is one sitting of work; for the difference from a workflow, your own skill and an
 interaction see [Skills, projects and interactions](#skills-projects-and-interactions).
 
+**Mentors.** Each coaches you through one piece of GTM work with the brain's context.
+
 | Command | Use it for |
 | --- | --- |
-| `/gtmb-rules` | Show, add, change or remove a rule: what Codex saves and asks, where files go, when it asks the source. |
-| `/gtmb-schema` | Change the fields, kinds, subtypes and relationship types the brain keeps. |
 | `/gtmb-strategy` | Work through a strategic intake and maintain the strategy document. |
 | `/gtmb-icp` | Define company fit, buying roles and readiness with Chris Pawlak's interview; keep one draft ICP. |
 | `/gtmb-market` | Fill or update the market document: who we compete with, how buyers choose, where we win and lose; a draft shown first and saved on your yes. |
 | `/gtmb-voice` | Draft a tone of voice: whose it is first (company, person or team), then from writing that fits, tested on one fresh piece; the company's is `voice.md`. |
 | `/gtmb-design-system` | Build our website design system from the existing brand with Brian Woloszczak and Peakout's starter. |
-| `/gtmb-start` | Set up the brain and continue first-use discovery. |
-| `/gtmb-configure` | Change company, team, tools and settings through APPROVE; connect and test tools; update the plugin. |
+| `/gtmb-market-research` | Assess a segment, buying pains, alternatives and evidence for fit; ends in a sourced report with a positioning map. |
+| `/gtmb-unit-economics` | Compare CAC, LTV, payback and retention with explicit inputs and gaps; ends in PUSH, FIX, STOP or MEASURE. |
+| `/gtmb-deepdive` | Build a one-page sourced brief on an account, person, deal or context. |
+| `/gtmb-build-landing-page` | Build a campaign page on the shared website; stops at a local preview. |
+
+**Everyday.**
+
+| Command | Use it for |
+| --- | --- |
 | `/gtmb-use-brain` | Recall evidence, save findings and resume everyday work. |
 | `/gtmb-todo` | List what you owe: open questions, dated follow-ups, Slack replies; at most eight, one at a time. |
 | `/gtmb-sync` | Pull what changed in connected tools and keep what matters; set up the daily sync. |
-| `/gtmb-deepdive` | Build a one-page sourced brief on an account, person, deal or context. |
-| `/gtmb-market-research` | Assess a segment, buying pains, alternatives and evidence for fit; ends in a sourced report with a positioning map. |
-| `/gtmb-unit-economics` | Compare CAC, LTV, payback and retention with explicit inputs and gaps; ends in PUSH, FIX, STOP or MEASURE. |
+| `/gtmb-housekeeping` | Tidy names and gaps one question at a time: first names without a surname, names that may be the same, required fields nobody stated. |
 | `/gtmb-workflow` | Create a workflow (a playbook), check it, switch it on, start a run and advance through its steps and gates. |
+| `/gtmb-interaction` | Propose an action you repeat in your own tool; after APPROVE Codex does it and records it the same way every time. List or run the ones you have. |
 | `/gtmb-skill` | Turn a repeated process into your own reusable skill. |
 | `/gtmb-project` | Create a project in the brain or link a folder where it already lives. |
+| `/gtmb-add-section` | Add a reusable section to the website design system. |
+| `/gtmb-publish-website` | Publish the shared website on Vercel: preview first, production on its own decision. |
+
+**Setup and maintenance.**
+
+| Command | Use it for |
+| --- | --- |
+| `/gtmb-start` | Set up the brain and continue first-use discovery. |
+| `/gtmb-configure` | Change company, team, tools and settings through APPROVE; connect and test tools; update the plugin. |
+| `/gtmb-rules` | Show, add, change or remove a rule: what Codex saves and asks, where files go, when it asks the source. |
+| `/gtmb-schema` | Change the fields, kinds, subtypes and relationship types the brain keeps. |
 | `/gtmb-clay-setup` | Connect Clay on your yes and find the brain's target companies and people in it (search is free); enrichment that spends credits asks first. |
 | `/gtmb-zynt-setup` | Set up ZYNT buying signals from the brain when you paste ZYNT's setup prompt; ZYNT then shows in the brain's tools. |
 | `/gtmb-freckle-setup` | Connect Freckle (lead enrichment) on your yes and build its first list of target companies and people from the brain; runs that spend credits ask first. |
 | `/gtmb-woodpecker-setup` | Connect Woodpecker on your yes, see how your campaigns perform, and save one email sequence written from the brain as a draft; it never starts a campaign. |
 | `/gtmb-surfer-setup` | Connect Surfer on your yes, get topics from the brain's strategy, market and call notes, and brief the first article; a full article asks first, nothing is published. |
 | `/gtmb-heyreach-setup` | Connect HeyReach with your workspace's Connection URL, see how your LinkedIn campaigns do, and get a connection note and follow-ups from the brain to paste in; nothing is sent. |
-| `/gtmb-add-section` | Add a reusable section to the website design system. |
-| `/gtmb-build-landing-page` | Build a campaign page on the shared website; stops at a local preview. |
-| `/gtmb-publish-website` | Publish the shared website on Vercel: preview first, production on its own decision. |
 
-"Let's do housekeeping" is not `/gtmb-todo`. It lists what to settle (first names without a
+`/gtmb-housekeeping` is not `/gtmb-todo`. It lists what to settle (first names without a
 surname, names that may be the same, required fields nobody stated) with the evidence, one
 question at a time and only when you ask; nothing changes until you answer.
 
