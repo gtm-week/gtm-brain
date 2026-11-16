@@ -132,6 +132,8 @@ export function parseQuestion(question, names, { now = nowDate() } = {}) {
   let rest = String(question).replace(/"[^"]{2,200}"/g, ' ');
   const tags = [];
   rest = rest.replace(/(?:^|\s)(?:#|tag:)([\p{L}\p{N}][\p{L}\p{N}:_-]*)/gu, (_, t) => { tags.push(t.toLowerCase()); return ' '; });
+  // a greeting is no search word: "Good morning, what should I focus on this week?" searched for "good"
+  rest = rest.replace(/\bgood\s+(?:morning|afternoon|evening|day)\b/gi, ' ');
   const { period, rest: left } = parsePeriod(rest, now, w => !!lib.canonicalName(names, w)); rest = left;
   const tokens = words(rest), used = new Array(tokens.length).fill(false), entities = [], ambiguous = [];
   // names: the longest run of words that is a known name, alias, email or id; a single word must be
@@ -171,8 +173,9 @@ export function parseQuestion(question, names, { now = nowDate() } = {}) {
   // Getting ready for a call with someone known ("I have a call with Surfer tomorrow, brief me"): the day of the
   // call is when the answer is needed, not which notes to read. Their newest notes are the brief, so neither the
   // day nor the words "call" and "meeting" narrow them (app run, 2026-11-16: one note came back out of twelve).
+  // The asking itself is no search word either: "get ready", "help me prepare", "I need a briefing".
   const prep = entities.length > 0 && !!period?.mention && period.from >= startOfDay(now) && /\b(brief(?:ing)?|prep(?:are)?|get ready|ready for)\b/i.test(String(question));
-  if (prep) return { entities, ambiguous, kind, kindHint, tags, period: null, prep: period.label, terms: [...new Set(terms)].filter(w => !/^(call|calls|meeting|meetings|chat|sync)$/.test(w)), quoted: quoted.map(fold), sequence };
+  if (prep) return { entities, ambiguous, kind, kindHint, tags, period: null, prep: period.label, terms: [...new Set(terms)].filter(w => !/^(call|calls|meeting|meetings|chat|sync|ready|help|need)$/.test(w)), quoted: quoted.map(fold), sequence };
   return { entities, ambiguous, kind, kindHint, tags, period, terms: [...new Set(terms)], quoted: quoted.map(fold), sequence };
 }
 
