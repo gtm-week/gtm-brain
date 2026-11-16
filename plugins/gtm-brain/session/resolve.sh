@@ -17,6 +17,8 @@ gtm_brain_layout3() { [ -f "$1/config/settings.yaml" ] || gtm_brain_layout4 "$1"
 gtm_brain_settings() { if gtm_brain_layout4 "$1"; then echo configuration/settings.yaml; elif gtm_brain_layout3 "$1"; then echo config/settings.yaml; else echo brain/admin.md; fi; }
 # gtm_brain_work <dir>: this computer's own folder, relative to the brain (lib/brain-paths.mjs workName).
 gtm_brain_work() { if gtm_brain_layout4 "$1"; then echo .gtm-brain; else echo work; fi; }
+# gtm_brain_old_work <dir>: a layout 4 brain whose own files on this computer are still in work/ (lib/layout-four.mjs adoptWork).
+gtm_brain_old_work() { gtm_brain_layout4 "$1" && [ -d "$1/work" ]; }
 # gtm_brain_layout_file <dir>: the layout file, relative to the brain (lib/brain-paths.mjs layoutFile).
 gtm_brain_layout_file() { if gtm_brain_layout4 "$1" || { [ ! -d "$1/brain" ] && [ -f "$1/layout.json" ]; }; then echo layout.json; else echo brain/layout.json; fi; }
 gtm_brain_resolve() {

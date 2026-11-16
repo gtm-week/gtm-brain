@@ -8,12 +8,12 @@ process.env.GTM_BRAIN_NO_COMPILE = "1";
 process.env.GTM_BRAIN_NO_OPEN = "1";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, writeFileSync, existsSync, readdirSync, appendFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync, appendFileSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import * as lib from "../lib/brain.mjs";
 import { withMemoryIndex } from "../lib/memory-index.mjs";
-import { tabsMovePlan, migrateToTabs } from "../lib/layout-four.mjs";
-import { layoutStep } from "../lib/upgrade-files.mjs";
+import { tabsMovePlan, migrateToTabs, adoptWork } from "../lib/layout-four.mjs";
+import { layoutStep, layoutOffer } from "../lib/upgrade-files.mjs";
 import { readLayout } from "../lib/layout-version.mjs";
 import { makeBrain, actAs, exists, tree } from "./helpers/layouts.mjs";
 
@@ -142,10 +142,19 @@ for (const from of [3, 2, 1]) test(`a layout ${from} brain moves to layout 4 wit
 
 test("the move is the owner's: a teammate's upgrade leaves a layout 3 brain where it is, and a scheduled run never moves it", { skip }, t => {
   const { root, upgrade, env } = makeBrain(t, { layout: 3 });
+  // the chat start offers the move to the owner and never starts it
+  const offer = layoutOffer(root);
+  assert.match(offer, /^GTM Brain: this brain needs an upgrade\./);
+  assert.match(offer, /can move the whole brain into four folders, the dashboard's tabs \(configuration\/, entities\/, memories\/ with one file of notes per month, workflows\/\)\. Nothing has moved/);
+  assert.match(offer, /This brain can be upgraded to the four folders of 0\.37\. Say: upgrade this brain\./);
+  assert.match(offer, /never start it unasked/);
+  assert.match(offer, /only on their yes call upgrade_brain again with confirm: true/);
+  assert.equal(lib.diskLayout(root), 3, "the offer moved nothing");
   actAs(root, "bo-chen");
+  assert.equal(layoutOffer(root), "", "a teammate is not offered the owner's move");
   const out = upgrade("--confirm");
   assert.equal(lib.diskLayout(root), 3, out.stdout);
-  assert.match(out.stdout, /is the owner's \(Ann Lee\) to say yes to/);
+  assert.match(out.stdout, /One more move is waiting: the brain into its four folders \(configuration\/, entities\/, memories\/, workflows\/; layout 4\)\. It is the owner's \(Ann Lee\) to say yes to/);
   actAs(root, null);
   process.env.GTM_BRAIN_RUN = "1";
   try { assert.equal(migrateToTabs(root).layout, 0); assert.match(layoutStep(root, true), /^ASK\t.*never changes the layout/); } finally { delete process.env.GTM_BRAIN_RUN; }
@@ -321,4 +330,25 @@ test("the path module is the only place that names the notes, the covers, the en
   roots.forEach(walkSh);
   const sh = /(?:"\$root\/work|[ >"]work\/[a-z]|\$root\/brain\/layout\.json)/;   // background-compile.sh spells both notes folders itself: it runs without the lib
   assert.deepEqual(shells.filter(f => !f.endsWith("session/resolve.sh")).flatMap(f => readFileSync(f, "utf8").split("\n").map((l, i) => `${f.slice(P.length)}:${i + 1}: ${l.trim().slice(0, 100)}`).filter(l => sh.test(l) && !/^\S+:\d+: (#|echo )/.test(l))), []);
+});
+
+test("a teammate's computer after the owner's move: its work/ goes into .gtm-brain/ at the chat start, the person and the logs kept", { skip }, t => {
+  const { root, upgrade } = makeBrain(t, { layout: 3 });
+  assert.match(upgrade("--confirm").stdout, /changed the brain's file layout to 4/);
+  // as a computer that pulled the move has it: its own files still in work/, and a server that already wrote a line
+  mkdirSync(join(root, "work", "cover-state"), { recursive: true });
+  writeFileSync(join(root, "work", "person.json"), JSON.stringify({ handle: "bo-chen" }) + "\n");
+  writeFileSync(join(root, "work", "hooks.log"), "old line\n");
+  writeFileSync(join(root, "work", "memory-index.sqlite"), "a cache");
+  rmSync(join(root, ".gtm-brain", "person.json"), { force: true });
+  writeFileSync(join(root, ".gtm-brain", "hooks.log"), "new line\n");
+  assert.ok(adoptWork(root) > 0);
+  assert.ok(!existsSync(join(root, "work")), "work/ is gone");
+  assert.equal(lib.currentPerson(root), "bo-chen");
+  assert.equal(readFileSync(join(root, ".gtm-brain", "hooks.log"), "utf8"), "old line\nnew line\n");
+  assert.ok(!existsSync(join(root, ".gtm-brain", "memory-index.sqlite")), "the cache is rebuilt, not carried over");
+  assert.equal(adoptWork(root), 0);
+  // a folder of the team's own called work/ is not GTM Brain's to move
+  mkdirSync(join(root, "work")); writeFileSync(join(root, "work", "plan.md"), "ours\n");
+  assert.equal(adoptWork(root), 0); assert.ok(existsSync(join(root, "work", "plan.md")));
 });

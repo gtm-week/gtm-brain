@@ -13,7 +13,7 @@ import { spawnSync } from "node:child_process";
 import * as lib from "../lib/brain.mjs";
 import * as owner from "../lib/owner.mjs";
 import * as paths from "../lib/brain-paths.mjs";
-import { readLayout, LAYOUT } from "../lib/layout-version.mjs";
+import { readLayout, writesLayout } from "../lib/layout-version.mjs";
 import { diskLayout, flatKinds } from "../lib/layout.mjs";
 import { whereRows, ownRules } from "../lib/where.mjs";
 import { readSchema, brainKinds } from "../lib/schema.mjs";
@@ -30,7 +30,7 @@ const ticket = (root, kind) => lib.issueApproval(root, kind);
 
 test("setup makes layout 3: settings, rules and schema in config/, the starters in about-us/, no brain/admin.md", t => {
   const { root, git } = makeBrain(t);
-  assert.equal(LAYOUT, 3);
+  assert.equal(writesLayout(), 3);   // this file plays the layout 3 plugin; the plugin's own layout is 4
   for (const f of ["config/settings.yaml", "config/rules.md", "config/schema.md", ...["strategy", "icp", "voice", "design-system", "market"].map(d => `about-us/${d}.md`)]) assert.ok(exists(root, f), f);
   for (const f of ["brain/admin.md", "RULES.md", "SCHEMA.md", "strategy.md"]) assert.ok(!exists(root, f), f);
   assert.equal(readLayout(root).layout, 3); assert.equal(diskLayout(root), 3);

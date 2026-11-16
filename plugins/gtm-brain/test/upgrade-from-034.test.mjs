@@ -1,3 +1,6 @@
+// This file plays the plugin from before layout 4 (GTM_BRAIN_TEST_LAYOUT=3: about-us/, config/, brain/ and work/). Layout 4
+// (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
+process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // The upgrade a 0.34 team runs on release day, in the suite: a brain as 0.34 kept it (flat entity pages, base files
 // and RULES.md, SCHEMA.md, brain/admin.md at the root) with notes, a correction, an entity with an alias and a
 // filled base document goes to layout 3 through the upgrade with yes answers. Every note line, every entity id and

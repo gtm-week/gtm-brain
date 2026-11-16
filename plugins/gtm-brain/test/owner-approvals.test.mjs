@@ -38,12 +38,12 @@ function client(answer) {
 }
 
 test("a teammate's settings change waits for the owner with no form; the owner's APPROVE applies it, Not now leaves it, and the approval is listed", async () => {
-  const root = brain(), settings = join(root, "config", "settings.yaml"), before = readFileSync(settings, "utf8");
+  const root = brain(), settings = join(root, lib.settingsFile(root)), before = readFileSync(settings, "utf8");
   as(root, "tomek-zielinski");
   const teammate = client(() => ({ action: "accept", content: { selection: "APPROVE" } })); await teammate.init();
   await teammate.call("propose_admin_change", { brain: root, content: before.replace("returns automation", "returns automation for retailers") });
   const kept = await teammate.call("approve_change", { brain: root, kind: "admin", by: "tomek-zielinski" });
-  assert.match(kept.text, /^NOT APPLIED: config\/settings\.yaml is the owner's to change \(Marta Nowak\)\. Kept as proposal (p_[0-9a-f]{10})/);
+  assert.match(kept.text, /^NOT APPLIED: configuration\/settings\.yaml is the owner's to change \(Marta Nowak\)\. Kept as proposal (p_[0-9a-f]{10})/);
   assert.equal(teammate.forms.length, 0, "no form for a teammate: nothing is applied");
   assert.equal(readFileSync(settings, "utf8"), before);
   const id = kept.text.match(/proposal (p_[0-9a-f]{10})/)[1];
@@ -66,6 +66,6 @@ test("a teammate's settings change waits for the owner with no form; the owner's
   assert.match(readFileSync(settings, "utf8"), /for retailers/);
   assert.ok(!existsSync(join(root, "brain", "proposals", id)));
   const listed = await yes.call("query", { brain: root, object: "approvals" });
-  assert.match(listed.text, /approvals recorded: 1\n- [^\n]*Approved a change to config\/settings\.yaml[^\n]*Asked by Tomek Zielinski, approved by Marta Nowak, commit [0-9a-f]+\./);
+  assert.match(listed.text, /approvals recorded: 1\n- [^\n]*Approved a change to configuration\/settings\.yaml[^\n]*Asked by Tomek Zielinski, approved by Marta Nowak, commit [0-9a-f]+\./);
   assert.match(listed.text, /proposals waiting for the owner \(Marta Nowak\): 0/);
 });

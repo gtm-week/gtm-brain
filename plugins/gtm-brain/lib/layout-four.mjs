@@ -48,6 +48,46 @@ function stopServers(root) {
   }
 }
 
+/* work/ becomes .gtm-brain/. A rename, unless .gtm-brain/ is there already: a background run of this brain (the
+   index worker, a render, the server's own log) writes into it from the moment the settings file has moved, and a
+   teammate's computer still has its work/ when the owner's move arrives by pull. Then entry by entry: what
+   .gtm-brain/ lacks moves over, a log is joined (the older lines first), and of two files of one name the one
+   already in .gtm-brain/ is the newer and stays. Returns how many entries moved. */
+function moveWork(root) {
+  const old = join(root, P.WORK_OLD), now = join(root, P.WORK_DIR4);
+  if (!isDir(old)) return 0;
+  if (!existsSync(now)) { renameSync(old, now); return 1; }
+  let moved = 0;
+  for (const f of readdirSync(old)) {
+    const a = join(old, f), b = join(now, f);
+    if (!existsSync(b)) { renameSync(a, b); moved++; continue; }
+    if (isDir(a) && isDir(b)) cpSync(a, b, { recursive: true, force: false, errorOnExist: false });
+    else if (!isDir(a) && !isDir(b) && /\.(jsonl|log)$/.test(f)) writeFileSync(b, Buffer.concat([readFileSync(a), readFileSync(b)]));
+    rmSync(a, { recursive: true, force: true });
+  }
+  rmSync(old, { recursive: true, force: true });
+  return moved;
+}
+/* A layout 4 brain on a computer whose own files are still in work/ (the owner moved the brain, this computer
+   pulled): they go to .gtm-brain/, so who the person is here, the loaded set and the linked projects are kept.
+   Only the folder GTM Brain kept: it holds the plugin's own files and git tracks nothing in it. Returns how many
+   entries moved; the chat start calls it (session/session-start.sh). */
+const OWN_WORK = ["session.json", "hooks.log", "person.json", "tool-usage.jsonl", "projects.json", "plugin-version.json", "README.md"];
+export function adoptWork(root) {
+  if (!P.inLayout4(root) || process.env.GTM_BRAIN_RUN) return 0;
+  const old = join(root, P.WORK_OLD);
+  if (!isDir(old) || !OWN_WORK.some(f => existsSync(join(old, f)))) return 0;
+  try { if (execFileSync("git", ["-C", root, "ls-files", "--", P.WORK_OLD], { encoding: "utf8", stdio: "pipe" }).trim()) return 0; } catch {}
+  stopServers(root);
+  let moved = 0;
+  try {
+    moved = moveWork(root);
+    const work = join(root, P.WORK_DIR4);
+    for (const f of readdirSync(work)) if (DISPOSABLE.some(re => re.test(f))) rmSync(join(work, f), { recursive: true, force: true });
+  } catch {}
+  return moved;
+}
+
 /* The old files of notes, as they are: [{slug, file, lines}] with contexts in name order. Throws on a line that is
    no JSON, has no `at`, or names another context than its folder: nothing is moved for a brain like that. */
 function readOldNotes(root) {
@@ -137,6 +177,7 @@ export function migrateToTabs(root, { commit = !process.env.GTM_BRAIN_NO_COMMIT 
   const undo = () => {
     // this computer's folder first: the copy of the old files is inside it
     if (!existsSync(join(root, "work")) && existsSync(join(root, P.WORK_DIR4))) renameSync(join(root, P.WORK_DIR4), join(root, "work"));
+    else if (existsSync(join(root, "work")) && existsSync(join(root, P.WORK_DIR4))) rmSync(join(root, P.WORK_DIR4), { recursive: true, force: true });   // only what a background run wrote there since the move began
     if (inGit) { try { git("reset", "-q", "HEAD", "--", ...TOUCHED); } catch {} }
     for (const p of [P.CONFIGURATION_DIR, P.ENTITIES_DIR4, P.NOTES_DIR, P.LAYOUT_FILE4]) rmSync(join(root, p), { recursive: true, force: true });
     for (const p of [...MOVED, ".gitattributes", ".gitignore", ".githooks", "README.md"]) if (existsSync(join(backup, p))) { rmSync(join(root, p), { recursive: true, force: true }); cpSync(join(backup, p), join(root, p), { recursive: true }); }
@@ -163,7 +204,8 @@ export function migrateToTabs(root, { commit = !process.env.GTM_BRAIN_NO_COMMIT 
     const prune = dir => { let left = 0; for (const e of readdirSync(dir, { withFileTypes: true })) { const p = join(dir, e.name); if (e.isDirectory()) left += prune(p); else left++; } if (!left) rmSync(dir, { recursive: true, force: true }); return left; };
     const leftover = existsSync(join(root, "brain")) ? prune(join(root, "brain")) : 0;
     // 6. this computer's folder
-    if (existsSync(join(root, "work"))) renameSync(join(root, "work"), join(root, P.WORK_DIR4));
+    moveWork(root);
+    const backupNow = join(root, P.WORK_DIR4, backupRel);   // where the copy is from here on
     const work = join(root, P.WORK_DIR4); mkdirSync(work, { recursive: true });
     for (const f of readdirSync(work)) if (DISPOSABLE.some(re => re.test(f))) rmSync(join(work, f), { recursive: true, force: true });
     // 7. git's own files and the texts that name the old places
@@ -184,7 +226,7 @@ export function migrateToTabs(root, { commit = !process.env.GTM_BRAIN_NO_COMMIT 
       if (company && shipped.some(t => render(t, true) === now || t.replaceAll("{{COMPANY}}", company) === now)) writeFileSync(join(root, "README.md"), render(shipped[0], false));
     } catch {}
     try {
-      const rules = join(root, P.rulesFile(root)), raw = readFileSync(join(TEMPLATES, "RULES.md"), "utf8"), now = readFileSync(rules, "utf8");
+      const rules = join(root, P.rulesFile(root)), raw = readFileSync(join(TEMPLATES, P.TEMPLATES.rules), "utf8"), now = readFileSync(rules, "utf8");
       if (now === rulesInFolders(raw) || now === raw) writeFileSync(rules, rulesInTabs(raw));
     } catch {}
     // 8. the layout file says 4
@@ -202,7 +244,7 @@ export function migrateToTabs(root, { commit = !process.env.GTM_BRAIN_NO_COMMIT 
     if (total !== plan.notes) throw new Error(`${plan.notes} notes before, ${total} after`);
     const idsAfter = new Set(readNames(root).map(e => e.id));
     if (idsAfter.size !== idsBefore.size || [...idsBefore].some(id => !idsAfter.has(id))) throw new Error(`${idsBefore.size} entities before, ${idsAfter.size} after`);
-    for (const c of old) if (existsSync(join(backup, P.CONTEXTS_DIR, c.slug, "context.md")) && readFileSync(join(backup, P.CONTEXTS_DIR, c.slug, "context.md"), "utf8") !== readFileSync(join(root, P.coverFile(root, c.slug)), "utf8")) throw new Error(`the summary of ${c.slug} changed in the move`);
+    for (const c of old) if (existsSync(join(backupNow, P.CONTEXTS_DIR, c.slug, "context.md")) && readFileSync(join(backupNow, P.CONTEXTS_DIR, c.slug, "context.md"), "utf8") !== readFileSync(join(root, P.coverFile(root, c.slug)), "utf8")) throw new Error(`the summary of ${c.slug} changed in the move`);
 
     // 10. one commit. Past the pre-commit hook, which refuses a deleted file of notes: this is the one place
     // that deletes them, after reading every line back.

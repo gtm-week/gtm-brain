@@ -42,7 +42,11 @@ export function configMovePlan(root) {
       add(d.path, `${ABOUT_DIR}/${d.path}`);
       if (isDir(join(root, d.slug)) && !own.has(d.slug)) add(d.slug, `${ABOUT_DIR}/${d.slug}`);
       for (const e of top) if (e.isFile() && e.name !== `${d.slug}.md` && e.name.startsWith(`${d.slug}.`) && !e.name.endsWith(".md")) add(e.name, `${ABOUT_DIR}/${e.name}`);
-    } else if (inOwnFolder(d) && !d.folder.includes("/") && !own.has(d.folder)) add(d.folder, `${ABOUT_DIR}/${d.folder}`);
+    } else if (inOwnFolder(d) && !d.folder.includes("/") && !own.has(d.folder)) {
+      add(d.folder, `${ABOUT_DIR}/${d.folder}`);
+      // a page of the document left at the top when its Markdown went into its folder (design-system.html): beside it again
+      for (const e of top) if (e.isFile() && e.name.startsWith(`${d.slug}.`) && !e.name.endsWith(".md")) add(e.name, `${ABOUT_DIR}/${d.folder}/${e.name}`);
+    }
   }
   for (const [from, to] of FIXED_MOVES) add(from, to);
   return { moves, kept, settings: existsSync(join(root, ADMIN_FILE)) && !existsSync(join(root, SETTINGS_FILE)) };

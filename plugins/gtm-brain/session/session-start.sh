@@ -59,6 +59,11 @@ if [ -z "$where" ] || ! gtm_brain_is "$root"; then
   [ -n "$known" ] && echo "GTM Brain: this folder is not linked to a brain (known: $known). If the person does company work here, offer /gtmb-project once, in half a sentence; never link without a yes."
   exit 0
 fi
+# A layout 4 brain whose own files on this computer are still in work/ (the owner moved the brain and this
+# computer pulled it): they go to .gtm-brain/ once, so the person, the loaded set and the linked projects are kept.
+if gtm_brain_old_work "$root"; then
+  node --disable-warning=ExperimentalWarning -e 'const f=await import(process.argv[1]);f.adoptWork(process.argv[2])' "$P/lib/layout-four.mjs" "$root" >/dev/null 2>&1 || true
+fi
 W="$root/$(gtm_brain_work "$root")"   # work, or .gtm-brain in layout 4
 LF="$root/$(gtm_brain_layout_file "$root")"
 mkdir -p "$W"
