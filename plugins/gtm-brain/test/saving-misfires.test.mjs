@@ -554,8 +554,10 @@ test("a call the person tells about is saved in one call: names as participants,
   const entry = { context: "company", content: "Kasia Nowak, Tidio's new Head of Partnerships, said she wants Tidio to sponsor the Berlin workshop. The budget is around EUR 5,000, and Tidio expects to decide by the end of November 2026.",
     people: ["Kasia Nowak"], companies: ["Tidio"], new_names: ["Kasia Nowak", "Tidio"], sources: ["User's firsthand account of the call with Kasia Nowak on 2026-11-16"],
     meeting: { basis: "user", capture: "partial", evidence: "recollection", observed_at: "2026-11-16", occurred_at: "2026-11-16", occurrence: "happened", participants: ["Kasia Nowak"], reference: { account: "user", kind: "user", ref: "2026-11-16 call with Kasia Nowak from Tidio" }, title: "Call with Kasia Nowak from Tidio" } };
+  b.say("Just had a call with Kasia Nowak from Tidio, save what came of it.");
   const r = b.batch([entry]);
   assert.equal(r.status, 0, r.stderr + r.stdout);
+  assert.match(r.stdout, /left out of sources: "User's firsthand account[^\n]*This chat is the note's source/, "the reply says which source was left out");
   const rec = b.live().find(m => /Kasia Nowak/.test(m.content));
   assert.ok(rec, "the note is kept");
   assert.deepEqual(rec.meeting.participants, [{ name: "Kasia Nowak", role: "attended" }]);
@@ -566,17 +568,58 @@ test("a call the person tells about is saved in one call: names as participants,
   const planned = b.batch([{ context: "company", content: "Planning call with Tidio on 20 November 2026 about the booth.", sources: ["google-calendar:evt-9"], meeting: { basis: "source", capture: "complete", evidence: "calendar", observed_at: "2026-11-16T09:00:00Z", occurred_at: null, scheduled_at: "2026-11-20", occurrence: "planned", participants: ["Kasia Nowak"], reference: { account: "artur@week.test", kind: "google-calendar", ref: "evt-9" }, title: "Tidio booth planning" } }]);
   assert.equal(planned.status, 0, planned.stderr + planned.stdout);
   assert.deepEqual(b.live().find(m => /Planning call with Tidio/.test(m.content)).meeting.participants, [{ name: "Kasia Nowak", role: "invited" }]);
+  // a recorder's list of names is not attendance evidence: a bare name from a source is mentioned, in a chat and in a run
+  const recorded = { context: "company", content: "Tidio asked for a second booth at the Berlin workshop.", sources: ["granola:note-7"], meeting: { basis: "source", capture: "complete", evidence: "summary", observed_at: "2026-11-16T09:00:00Z", occurred_at: "2026-11-15", occurrence: "happened", participants: ["Kasia Nowak", { name: "Ola Testowa", role: "attended" }], reference: { account: "artur@week.test", kind: "granola", ref: "note-7" }, title: "Tidio booth call" } };
+  const rs = b.batch([recorded]);
+  assert.equal(rs.status, 0, rs.stderr + rs.stdout);
+  assert.deepEqual(b.live().find(m => /second booth/.test(m.content)).meeting.participants, [{ name: "Kasia Nowak", role: "mentioned" }, { name: "Ola Testowa", role: "attended" }]);
+});
+
+test("only a plain sentence is left out of sources, only in a chat, and the reply names it", () => {
+  const b = brain(), one = (content, sources, env) => { const f = join(b.root, "work", `one-${Math.random()}.json`); mkdirSync(join(b.root, "work"), { recursive: true }); writeFileSync(f, JSON.stringify([{ context: "company", content, sources }]));
+    return spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, ".", "--by", "artur-wala", "--batch", f], { cwd: b.root, env: { ...process.env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1", ...env }, encoding: "utf8" }); };
+  const kept = text => b.live().find(m => m.content === text);
+  // no chat yet: nothing stands in for the sentence, so it is refused as any malformed source is
+  const early = one("The Berlin venue holds 80 people.", ["What the person said about the venue"]);
+  assert.notEqual(early.status, 0); assert.match(early.stdout + early.stderr, /provider:reference/); assert.ok(!kept("The Berlin venue holds 80 people."));
+  b.say("The Berlin venue holds 80 people, and the catering quote is in my mail.");
+  // a space after the colon is still a pointer (lib.parseSources trims it)
+  const spaced = one("The catering quote is EUR 2,400.", ["gmail: msg-123"]);
+  assert.equal(spaced.status, 0, spaced.stderr + spaced.stdout);
+  assert.deepEqual(kept("The catering quote is EUR 2,400.").source.filter(s => s.kind !== "codex"), [{ kind: "gmail", ref: "msg-123" }]);
+  assert.doesNotMatch(spaced.stdout, /left out of sources/);
+  // a file path, an email address and a provider with nothing after the colon are refused, never dropped
+  for (const bad of ["notes/call-x.md", "ops@week.test", "gmail:", "see notes/call x.md here"]) {
+    const r = one("The florist needs two days of notice.", [bad]);
+    assert.notEqual(r.status, 0, bad); assert.match(r.stdout + r.stderr, /nothing remembered|provider:reference/, bad);
+  }
+  assert.ok(!kept("The florist needs two days of notice."));
+  // a sentence in a chat: left out, said so, and the chat is the source
+  const said = one("The Berlin venue holds 80 people.", ["What the person said about the venue", "gmail:msg-9"]);
+  assert.equal(said.status, 0, said.stderr + said.stdout);
+  assert.match(said.stdout, /left out of sources: "What the person said about the venue"/);
+  assert.deepEqual(kept("The Berlin venue holds 80 people.").source.map(s => s.kind).sort(), ["codex", "gmail"]);
+  // a background run is nobody's chat: the sentence is refused there, not dropped to an empty source
+  const run = one("The projector is rented from the venue.", ["What the summary run read today"], { GTM_BRAIN_RUN: "1" });
+  assert.notEqual(run.status, 0); assert.ok(!kept("The projector is rented from the venue."));
 });
 
 test("the person corrects a call they told about: one call, the conversation's record kept", () => {
   const b = brain();
   const meeting = { basis: "user", capture: "partial", evidence: "recollection", observed_at: "2026-11-16", occurred_at: "2026-11-16", occurrence: "happened", participants: ["Kasia Nowak"], reference: { account: "user", kind: "user", ref: "2026-11-16 call with Kasia Nowak" }, title: "Call with Kasia Nowak" };
+  b.say("Actually the Tidio budget Kasia Nowak mentioned is around EUR 8,000.");
   assert.equal(b.batch([{ context: "company", content: "Kasia Nowak of Tidio said the sponsorship budget is around EUR 5,000.", people: ["Kasia Nowak"], companies: ["Tidio"], new_names: ["Kasia Nowak", "Tidio"], meeting }]).status, 0);
   const old = b.live().find(m => /5,000/.test(m.content));
   const fix = b.batch([{ context: "company", content: "Kasia Nowak of Tidio said the sponsorship budget is around EUR 8,000.", people: ["Kasia Nowak"], companies: ["Tidio"], sources: ["User's correction of the budget in this chat"], supersedes: old.id }]);
   assert.equal(fix.status, 0, fix.stderr + fix.stdout);
   const now = b.live().filter(m => /Kasia Nowak of Tidio/.test(m.content));
   assert.equal(now.length, 1); assert.match(now[0].content, /8,000/); assert.equal(now[0].meeting.title, "Call with Kasia Nowak");
+  // a correction that cites an outside record is a source refresh: refused, and what the person said stays live
+  const mail = b.batch([{ context: "company", content: "Kasia Nowak of Tidio said the sponsorship budget is around EUR 3,000.", people: ["Kasia Nowak"], companies: ["Tidio"], sources: ["gmail:msg-55"], supersedes: now[0].id }]);
+  assert.notEqual(mail.status, 0, mail.stdout);
+  assert.match(mail.stdout + mail.stderr, /Source refresh cannot replace user meeting evidence/);
+  const after = b.live().filter(m => /Kasia Nowak of Tidio/.test(m.content));
+  assert.equal(after.length, 1); assert.equal(after[0].id, now[0].id);
 });
 
 test("a job change saved as two relationships with the context given once beside the batch is kept in that call", async () => {

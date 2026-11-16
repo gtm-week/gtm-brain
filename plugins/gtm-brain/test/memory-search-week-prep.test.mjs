@@ -277,3 +277,62 @@ test('not a prep question: no known name, a day that is past, or a period that i
   // no prep word: the day narrows
   assert.equal(parseQuestion('I have a call with Acme tomorrow', names, { now }).period.label, 'tomorrow');
 });
+
+test('this week in a question about the past: what was recorded comes first, and another year\'s same date is not found', () => {
+  const root = fixture();
+  const y2024 = note(root, 'In 2024 we decided on 18 November to stop the newsletter.', { at: '2024-11-25T10:00:00Z' });
+  const y2023 = note(root, 'The outage was on November 20 and we decided never again.', { at: '2023-11-21T10:00:00Z' });
+  const invoice = note(root, 'Invoice 114 is dated 2026-11-17.', { at: '2026-09-10T10:00:00Z' });
+  const d1 = note(root, 'We decided to move the launch.', { kind: 'decision', at: '2026-11-16T10:00:00Z' });
+  const d2 = note(root, 'We decided to hire a second designer.', { kind: 'decision', at: '2026-11-17T10:00:00Z' });
+  const typed = note(root, 'The printer is out of toner.', { at: '2026-11-18T08:00:00Z' });
+  for (const at of [now, new Date('2026-11-22T21:00:00Z')]) {
+    const d = answer(root, 'what did we decide this week', { now: at });
+    assert.deepEqual(new Set(ids(d)), new Set([d1.id, d2.id]), d);
+    const h = answer(root, 'what happened this week', { now: at });
+    assert.deepEqual(ids(h), [typed.id, d2.id, d1.id, invoice.id], h);
+    assert.ok(!ids(h).includes(y2024.id) && !ids(h).includes(y2023.id), 'a date without a year in a note more than a year old is another year\'s');
+    // looking ahead, the note that mentions a day of the week still comes first, and the old years stay out
+    const f = answer(root, 'What should I focus on this week?', { now: at });
+    assert.equal(ids(f)[0], invoice.id, f);
+    assert.ok(!ids(f).includes(y2024.id) && !ids(f).includes(y2023.id));
+  }
+  assert.equal(parseQuestion('what did we decide this week', [], { now }).past, true);
+  assert.equal(parseQuestion('What should I focus on this week?', [], { now }).past, undefined);
+});
+
+test('a prep question for today, later today, this week on any day, and a bare or "this" weekday returns the newest notes', () => {
+  const { root, notes } = acmeBrain();
+  const names = lib.readNames(root), newestFirst = [...notes].reverse().map(n => n.id);
+  for (const [question, label] of [
+    ['I have a call with Acme today, brief me', 'today'],
+    ['Brief me for the Acme call later this afternoon', 'today'],
+    ['Prep me for the Acme meeting tonight', 'today'],
+    ['Prep me for the Acme call this week', 'this week'],
+    ['Brief me for the Acme call on Friday', 'Friday 2026-11-20'],
+    ['Brief me for the Acme call this Friday', 'Friday 2026-11-20'],
+    ['Brief me for the Acme call on Wednesday', 'Wednesday 2026-11-18'],
+    ['Brief me for the Acme call on Monday', 'Monday 2026-11-23'],
+  ]) {
+    const q = parseQuestion(question, names, { now });
+    assert.equal(q.prep, label, question); assert.equal(q.period, null, question); assert.deepEqual(q.terms, [], question);
+    const x = answer(root, question, { now });
+    assert.match(x, CARD, question);
+    assert.deepEqual(ids(x), newestFirst.slice(0, ANSWER_NOTES), `${question}\n${x}`);
+    assert.doesNotMatch(x, /Nothing for|None of the notes|No note has/, question);
+  }
+  // this week is prep on Monday and on Sunday alike
+  for (const at of ['2026-11-16T09:00:00Z', '2026-11-22T21:00:00Z']) assert.equal(parseQuestion('Prep me for the Acme call this week', names, { now: new Date(at) }).prep, 'this week', at);
+  // not prep: the weekday said to be the last one, a question in the past tense, a past stretch that reaches today, the running month
+  for (const [question, label] of [
+    ['Brief me on the Acme call last Friday', 'Friday 2026-11-13'],
+    ['Brief me on what Acme said on Friday', 'Friday 2026-11-13'],
+    ['Brief me on what Acme said today', 'today'],
+    ['Brief me on what Acme decided this week', 'this week'],
+    ['Brief me on Acme in the last 7 days', 'the last 7 days'],
+    ['Brief me on Acme in November', 'November 2026'],
+  ]) {
+    const q = parseQuestion(question, names, { now });
+    assert.equal(q.prep, undefined, question); assert.equal(q.period?.label, label, question);
+  }
+});

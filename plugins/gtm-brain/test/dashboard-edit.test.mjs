@@ -238,3 +238,12 @@ test("page: a document opens in the page; the editor shows only with this server
   for (const path of [D.pillars.configuration.rules.path, D.pillars.configuration.schema.path, D.pillars.configuration.settings.path]) { await editor.run(`openDoc(${JSON.stringify(path)})`); assert.equal(editor.run("docState.editable"), false, path); }
   assert.equal(editor.run(`docInfo("brain/contexts/company/memories.jsonl")`), null);
 });
+
+test("page: the layout click is read from the layout buttons only, never from #doc-view, which carries the same attribute", () => {
+  // #doc-view has data-doc-mode for the CSS. A handler that matched it took every click inside an open document, so
+  // the outline and the two conflict buttons did nothing (the browser test in frontend/dashboard/e2e clicks them).
+  const tpl = readFileSync(`${P}/scripts/gtm-brain-render/home.template.html`, "utf8");
+  assert.match(tpl, /\$\("#doc-view"\)\.dataset\.docMode=/);
+  assert.match(tpl, /closest\("button\[data-doc-mode\]"\)/);
+  assert.doesNotMatch(tpl, /closest\("\[data-doc-mode\]"\)|querySelectorAll\("\[data-doc-mode\]"\)/);
+});

@@ -2123,14 +2123,15 @@ document.addEventListener("click",e=>{
  if(t.closest("[data-doc-save]")){docSave();return}
  const tool=t.closest("[data-md]");if(tool&&docState?.editable){if(docState.mode==="preview"){docState.mode="split";docMode()}docFormat(tool.dataset.md);return}
  if(t.closest("[data-doc-edit]")&&docState?.editable){let m="split";try{m=sessionStorage.getItem("gtm-doc-mode")||"split"}catch{}docState.mode=m==="write"?"write":"split";docMode();$("#doc-text")?.focus();return}
- const mode=t.closest("[data-doc-mode]");if(mode&&docState){docState.mode=mode.dataset.docMode;docMode();return}
+ /* only the layout buttons: #doc-view carries data-doc-mode too (the CSS reads it), and matching it here took every click in an open document (outline, the two conflict buttons) */
+ const mode=t.closest("button[data-doc-mode]");if(mode&&docState){docState.mode=mode.dataset.docMode;docMode();return}
  const stale=t.closest("[data-doc-stale]");if(stale&&docState?.stale){const s=docState;if(stale.dataset.docStale==="theirs"){s.body=s.text=s.stale.body;s.hash=s.stale.hash;s.stale=null;$("#doc-text").value=s.text;docPaint();docNotice("","")}else{s.hash=s.stale.hash;s.body=s.stale.body;s.stale=null;docSave(true)}return}
  const head=t.closest("[data-doc-head]");if(head&&docState){const ta=docState.editable&&docState.mode!=="preview"?$("#doc-text"):null;
   if(ta&&ta.value!==undefined){const at=ta.value.split("\n").slice(0,Number(head.dataset.docLine)).join("\n").length+(Number(head.dataset.docLine)?1:0);ta.focus();ta.setSelectionRange(at,at);const lh=parseFloat(typeof getComputedStyle==="function"?getComputedStyle(ta).lineHeight:"22")||22;ta.scrollTop=Math.max(0,Number(head.dataset.docLine)*lh-40)}
   document.getElementById(head.dataset.docHead)?.scrollIntoView?.({block:"start",behavior:"smooth"});return}
  const open=t.closest("[data-doc]");if(open&&!t.closest("a")){openDoc(open.dataset.doc);return}
 });
-function docMode(){const s=docState;if(s.mode!=="preview")try{sessionStorage.setItem("gtm-doc-mode",s.mode)}catch{}const body=$("#doc-body");body.className="doc-body mode-"+s.mode;$("#doc-view").dataset.docMode=s.mode;for(const b of document.querySelectorAll("[data-doc-mode]"))b.setAttribute("aria-pressed",String(b.dataset.docMode===s.mode))}
+function docMode(){const s=docState;if(s.mode!=="preview")try{sessionStorage.setItem("gtm-doc-mode",s.mode)}catch{}const body=$("#doc-body");body.className="doc-body mode-"+s.mode;$("#doc-view").dataset.docMode=s.mode;for(const b of document.querySelectorAll("button[data-doc-mode]"))b.setAttribute("aria-pressed",String(b.dataset.docMode===s.mode))}
 document.addEventListener("input",e=>{if(e.target?.id==="doc-text")docChanged()});
 document.addEventListener("keydown",e=>{
  if(view!=="doc"||!docState?.editable)return;

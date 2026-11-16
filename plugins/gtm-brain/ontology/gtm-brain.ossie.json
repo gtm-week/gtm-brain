@@ -837,13 +837,10 @@
                             "items": {
                               "anyOf": [
                                 {
-                                  "type": "string",
-                                  "minLength": 1,
-                                  "description": "A name alone: read as attended for a meeting that happened, invited otherwise."
+                                  "type": "string"
                                 },
                                 {
                                   "type": "object",
-                                  "description": "Only explicit attendance evidence permits attended. Names resolve through existing identities.",
                                   "properties": {
                                     "name": {
                                       "type": "string",
@@ -1451,13 +1448,11 @@
                       "items": {
                         "anyOf": [
                           {
-                            "type": "string",
-                            "minLength": 1,
-                            "description": "A name alone: read as attended for a meeting that happened, invited otherwise."
+                            "type": "string"
                           },
                           {
                             "type": "object",
-                            "description": "Only explicit attendance evidence permits attended. Names resolve through existing identities.",
+                            "description": "Only explicit attendance evidence permits attended.",
                             "properties": {
                               "name": {
                                 "type": "string",

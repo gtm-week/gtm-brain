@@ -81,17 +81,30 @@ const cleanSource = v => {
   return out;
 };
 for (const e of entries || []) if (e && e.sources !== undefined && e.sources !== null) e.sources = Array.isArray(e.sources) ? e.sources.map(cleanSource) : cleanSource(e.sources);
+const session = process.env.GTM_BRAIN_RUN ? null : lib.readSession(root, project);
+const chat = session?.session_id || null, chatKind = session?.host || "codex";
 // A source written as a sentence ("User's firsthand account of the call") names no provider: the chat it was said in
-// is already a source, so the sentence is left out, not refused. And a call the person tells about arrives with its
+// is already a source, so the sentence is left out, not refused, and the reply says so. Only plain prose: three words
+// or more and no colon, slash or @, so "gmail: msg-1" still reaches lib.parseSources (which trims it) and a malformed
+// pointer ("gmail:"), a file path or an email address is still refused. Only in a chat: a background run has no chat
+// source, so there the note would be left with no source at all. And a call the person tells about arrives with its
 // meeting block half in the format: names for participants, a date for observed_at. Both are read, not sent back
 // (app run, 2026-11-16: one spoken note took four saves, three of them refused on these).
-const sentence = v => typeof v === "string" && !/^https?:\/\//i.test(v.trim()) && !/^[{\[]/.test(v.trim()) && !/^[A-Za-z][\w.-]*:\S/.test(v.trim());
+const sentence = v => typeof v === "string" && v.trim().split(/\s+/).length >= 3 && !/[:\/@]/.test(v);
+const leftOutSources = new Map(); // entry index -> the sentences left out of its sources, for the reply
 const nowUtc = new Date().toISOString().replace(/\.\d+Z$/, "Z");
-for (const e of entries || []) {
+for (const [i, e] of (entries || []).entries()) {
   if (!e || typeof e !== "object") continue;
-  if (Array.isArray(e.sources)) e.sources = e.sources.filter(v => !sentence(v)); else if (sentence(e.sources)) delete e.sources;
+  if (chat) {
+    const out = (Array.isArray(e.sources) ? e.sources : [e.sources]).filter(sentence);
+    if (out.length) { leftOutSources.set(i, out); if (Array.isArray(e.sources)) e.sources = e.sources.filter(v => !sentence(v)); else delete e.sources; }
+  }
   const m = e.meeting; if (!m || typeof m !== "object" || Array.isArray(m)) continue;
-  if (Array.isArray(m.participants)) m.participants = m.participants.map(p => typeof p === "string" && p.trim() ? { name: p.trim(), role: m.occurrence === "happened" && m.evidence !== "calendar" ? "attended" : "invited" } : p);
+  // A name alone is attended only for a call the person tells about (their word is the attendance evidence). A
+  // source's list of names is often its invite list, so there a bare name is mentioned (the meeting happened) or
+  // invited (it has not): attended from a source needs the role stated per person.
+  const bare = m.occurrence !== "happened" ? "invited" : m.basis === "user" && m.evidence !== "calendar" && !process.env.GTM_BRAIN_RUN ? "attended" : "mentioned";
+  if (Array.isArray(m.participants)) m.participants = m.participants.map(p => typeof p === "string" && p.trim() ? { name: p.trim(), role: bare } : p);
   if (m.basis === "user") {
     if (typeof m.observed_at !== "string" || !/T\d\d:\d\d:\d\d(\.\d+)?Z$/.test(m.observed_at)) m.observed_at = nowUtc;
     if (m.capture === undefined) m.capture = "partial";
@@ -100,8 +113,6 @@ for (const e of entries || []) {
     if (!Array.isArray(m.participants)) m.participants = [];
   }
 }
-const session = process.env.GTM_BRAIN_RUN ? null : lib.readSession(root, project);
-const chat = session?.session_id || null, chatKind = session?.host || "codex";
 const authors = list(opt.by).map(w => { const h = lib.teamHandle(root, w); if (!h) die(`"${w}" is not in admin.md team`); return h; });
 // by is optional: the person in this chat is known (work/person.json, else the brain's git identity), so a save needs no read of admin.md first
 const named = authors.length === 1 ? authors[0] : null;
@@ -123,9 +134,13 @@ const speakers = (lib.readAdmin(root)?.team || []).filter(p => p && authors.incl
 
 // The person corrects a call they told about ("actually the budget is 8k"): the correction is of that same
 // conversation, so it keeps the conversation's record. Sent without it, the save was refused as a "source refresh"
-// and cost a second call (app run, 2026-11-16).
+// and cost a second call (app run, 2026-11-16). Only a correction that cites no outside record, the same test the
+// relationship correction below uses: one that cites an email or a recorder is a source refresh and stays refused,
+// or what a source says would be signed as the person's recollection and withdraw what they said.
 if (!process.env.GTM_BRAIN_RUN) { let all = null;
   for (const e of entries) if (e && e.supersedes && !e.meeting && !e.meeting_id && !e.meeting_capture && !e.meeting_policy && !e.meeting_coverage) {
+    let src; try { src = lib.parseSources(e.sources); } catch { continue; }
+    if (src.some(s => !(s.kind === "user" || s.kind === "memory" || isChatSource(s)))) continue;
     all ||= lib.listContexts(root).flatMap(c => c.memories);
     const old = all.find(m => m.id === e.supersedes);
     if (old?.meeting?.basis === "user") e.meeting = { ...old.meeting, observed_at: nowUtc };
@@ -535,6 +550,7 @@ for (let i = 0; i < entries.length; i++) {
   if (fromNotes.has(i) && (rec.relation || rec.customer)) lines.push(`${at(n)}${rec.relation ? "relationship" : "customer status"} recorded from notes ${fromNotes.get(i).join(", ")}: say so in your one line.`);
   for (const k of knownOrgs) lines.push(`${at(n)}"${k.name}" is a known ${k.kind}: linked as that, not as a person.`);
   if (notPeople.length) lines.push(`${at(n)}${notPeople.map(x => `"${x}"`).join(", ")} in people ${notPeople.length > 1 ? "read as companies" : "reads as a company"}: no person created, nothing to ask. If the note is about ${notPeople.length > 1 ? "them" : "it"}, add_name with kind organization.`);
+  if (leftOutSources.has(i)) lines.push(`${at(n)}left out of sources: ${leftOutSources.get(i).map(x => `"${x.trim().slice(0, 80)}"`).join(", ")} (a sentence, not a provider:reference or a link). This chat is the note's source. Nothing to do.`);
   if (droppedRelation.has(i)) lines.push(`${at(n)}the note is saved and says it in words; its relationship block was left out (${droppedRelation.get(i)}). Do not save the note again.`);
   if (guessed.has(i)) lines.push(`${at(n)}filed under ${titleOf(ctx)} as the best guess (${guessed.get(i)}). Do not ask about it; if the person says it belongs elsewhere, remember a correction with that context.`);
   if (changes) lines.push(`${at(n)}${changes.beside ? checks.mayChangeLine(changes, titleOf(changes.changed.context)) : checks.changedLine(changes, titleOf(ctx), rec.id)}`);

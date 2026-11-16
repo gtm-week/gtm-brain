@@ -131,6 +131,45 @@ test('a document opens rendered; Edit starts editing in the layout last used; Do
   for (const absent of [edit, done, save, toolbar, text]) await expect(absent).toHaveCount(0);
 });
 
+test('inside an open document the outline scrolls to its heading and a save conflict can be resolved', async ({ app, screen, browser }) => {
+  const f = fixture(app.baseUrl);
+  const written = f.documents.find(d => d.state !== 'not written');
+  await app.open('/');
+  await screen.getByRole('navigation', 'Main navigation').getByRole('button', 'Configuration').tap();
+  await screen.getByRole('table').filter({ has: screen.getByRole('columnheader', 'Document') }).getByRole('button', written!.title).tap();
+  const view = browser.locator('#doc-view'), text = browser.locator('#doc-text'), notice = browser.locator('#doc-notice');
+  const item = browser.locator('#doc-outline [data-doc-head]').first();
+  await expect(item).toBeVisible();
+  // an outline item reaches its heading, reading and editing, and never changes the layout
+  const scrolled = () => browser.evaluate(() => (window as any).__scrolled as string[]);
+  await browser.evaluate(() => { (window as any).__scrolled = []; const was = Element.prototype.scrollIntoView; Element.prototype.scrollIntoView = function (...a: any[]) { (window as any).__scrolled.push(this.id); return was.apply(this, a as any); }; });
+  const head = await item.getAttribute('data-doc-head');
+  await item.tap();
+  expect(await scrolled()).toEqual([head]);
+  await expect(view).toHaveAttribute('data-doc-mode', 'preview');
+  await view.getByRole('button', 'Edit', { exact: true }).tap();
+  const layout = await view.getAttribute('data-doc-mode');
+  await browser.locator('#doc-outline [data-doc-head]').first().tap();
+  expect(await scrolled()).toEqual([head, head]);
+  await expect(view).toHaveAttribute('data-doc-mode', layout!);
+  expect(await browser.evaluate(() => document.activeElement?.id)).toBe('doc-text');
+  // the file changed since it was opened (here: the page holds an outdated hash): the save is refused with both ways out
+  const original: string = await browser.evaluate(() => (document.querySelector('#doc-text') as HTMLTextAreaElement).value);
+  await text.fill(`${original}\nA line that is never saved.\n`);
+  await browser.evaluate(() => { const s = (0, eval)('docState'); s.hash = String(s.hash).replace(/[0-9a-f]/g, '0'); });
+  await view.getByRole('button', 'Save', { exact: true }).tap();
+  await expect(notice).toContainText('This document changed since you opened it. Nothing was saved.');
+  const theirs = notice.getByRole('button', "Load the file's version");
+  await expect(notice.getByRole('button', 'Save mine over it')).toBeVisible();
+  // Load the file's version: the editor holds the file again, the notice goes, nothing is left to save
+  await theirs.tap();
+  await expect(text).toHaveValue(original);
+  await expect(notice).not.toContainText('This document changed');
+  await expect(view.getByRole('button', 'Save', { exact: true })).toBeDisabled();
+  await expect(view).toHaveAttribute('data-doc-mode', layout!);
+  await view.getByRole('button', 'Done editing').tap();
+});
+
 test('Entities: a list to pick from with a count per kind, and the picked entity with its notes beside it', async ({ app, screen, browser }) => {
   const f = fixture(app.baseUrl);
   await app.open('/');
