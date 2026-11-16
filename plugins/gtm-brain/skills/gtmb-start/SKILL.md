@@ -19,8 +19,8 @@ claiming it is active. Reuse prior choices and explicit skips.
 When onboarding completes, take the person through [the close](references/skills-tour.md) before
 anything else: the schema, then the rules, then the documents question, one form each, "Later"
 always a choice, each answer saved so a resumed onboarding never asks it again. Someone who is not
-the brain's owner is told in one line that schema and rules changes go to the owner as proposals,
-and is not asked. Then end with one first task, never a list of commands
+the brain's owner is told in one line that schema, rules and base document changes go to the
+owner as proposals, and is not asked. Then end with one first task, never a list of commands
 or "start working normally". If a calendar passed its read test, read its next few days once and
 pick the first meeting with someone outside the company (this read only picks the task; save
 nothing from it): "Prep my meeting with <name> (<company>)

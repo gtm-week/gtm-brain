@@ -450,8 +450,8 @@ refresh is deferred, as requested." Do not replace that outcome with a promise t
 update later by themselves. Tell the user they can change any of
 it later and where the ten-minute guide is.
 End this closing reply with [the close](skills-tour.md#the-close-in-order), one question at a
-time: the [schema](skills-tour.md#schema) (what the brain keeps, with two or three additions
-proposed from what this discovery learned), then the [rules](skills-tour.md#rules) (anything
+time: the [schema](skills-tour.md#schema) (what the brain keeps, with up to three additions,
+only those this discovery supports), then the [rules](skills-tour.md#rules) (anything
 Codex should always ask before saving, or never save), then
 [the documents question](skills-tour.md#the-documents-question):
 which of the five starters (strategy, ICP, voice, design system, market) to fill now, or later.

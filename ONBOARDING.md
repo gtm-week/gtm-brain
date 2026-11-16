@@ -94,12 +94,14 @@ It closes with a short summary: what connected, what it learned and what is now 
 Before you start working, Codex takes you through the three things that shape everything it
 saves later. Each is one form with the recommended choice first, and **Later** is always a
 choice, so you can pass each in one click. An answer is remembered: if you leave and come back,
-Codex does not ask it again.
+Codex does not ask it again. If you left before answering, it offers the open ones once more
+on your next hello, and not after that.
 
 1. **Schema: what the brain keeps.** Codex shows, in a few lines, what it keeps about each
-   person, company and product, and proposes two or three additions that fit your business
-   (a renewal date, if you sell yearly contracts). Choose **Looks right**, pick an addition, or
-   type your own. `/gtmb-schema` changes it any time.
+   person, company and product, and proposes up to three additions, only ones backed by what
+   it saw during setup (a renewal date, if your site says annual plans); with nothing to go
+   on it proposes none. A proposed field is optional unless you say it must be there. Choose
+   **Looks right**, pick an addition, or type your own. `/gtmb-schema` changes it any time.
 2. **Rules: how Codex saves.** Codex shows the brain's rules in a few lines (where files go,
    which tool it asks, your own rules) and asks one thing: is there something it should always
    ask before saving, or never save? Choose **The defaults are fine** or type the rule.
@@ -108,9 +110,9 @@ Codex does not ask it again.
    five starters to fill now: tone of voice, ICP, strategy, design system, market. Choose some,
    all, or Later.
 
-If you are not the brain's owner, Codex does not ask the first two: it tells you in one line
-that the schema and the rules are the owner's to change, and that a change you ask for goes to
-them as a proposal.
+If you are not the brain's owner, Codex does not ask these three: it tells you in one line
+that the schema, the rules and the base documents are the owner's to change, and that a change
+you ask for goes to them as a proposal. Your answers are your own: the owner is still asked.
 
 Then it gives you one first thing to do, as a sentence you can send, and says where to find
 the ready-made workflows in the dashboard.

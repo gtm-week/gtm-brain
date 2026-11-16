@@ -14,7 +14,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { readOnboarding, readMemories, effectiveMemories, ONBOARDING_VERSION, onboardingInstruction, selectPerson, writeContext, appendMemory, seedOnboarding, closingSteps, closingAnswer, CLOSING_STEPS } from "../lib/brain.mjs";
+import { readOnboarding, readMemories, effectiveMemories, ONBOARDING_VERSION, onboardingInstruction, selectPerson, writeContext, appendMemory, seedOnboarding, CLOSING_OFFERED, closingSteps, closingAnswer, CLOSING_STEPS } from "../lib/brain.mjs";
 import { page } from './helpers/dashboard-page.mjs';
 
 const P = fileURLToPath(new URL("..", import.meta.url));
@@ -531,7 +531,7 @@ test('resuming a legacy gtm workflow in company retains its older step outcomes'
   assert.match(f.call('where_we_are'), /Confirmed earlier in legacy GTM/);
 });
 
-// The close of onboarding (0.36.1): schema, then rules, then the documents question, then the first task.
+// The close of onboarding: schema, then rules, then the documents question, then the first task.
 const startDoc = name => readFileSync(join(P, 'skills/gtmb-start', name), 'utf8');
 const section = (text, title) => { const from = text.indexOf(`\n## ${title}\n`); assert.ok(from >= 0, title); const rest = text.slice(from + 1), to = rest.indexOf('\n## ', 4); return to < 0 ? rest : rest.slice(0, to); };
 
@@ -562,8 +562,16 @@ test('each closing step is one question in one form, recommended choice first, L
     assert.match(text, /"Later"/, `${name}: Later is a choice`);
     assert.match(text, /goes in the form's text field/, `${name}: the person's own answer`);
   }
-  assert.match(schema, /Choices: "Looks\s+right" \(recommended\), the two strongest additions by name, "Later"/);
-  assert.match(schema, /propose two or three\s+additions from what discovery just learned/);
+  assert.match(schema, /Choices: "Looks\s+right" \(recommended\), up to two additions by name, the strongest first, "Later"/);
+  // only what discovery supports: none is a valid number of additions, the reason quotes what was seen, nothing is required
+  assert.match(schema, /propose up to three\s+additions, only those that discovery supports/);
+  assert.match(schema, /one\s+clause on why that quotes what discovery saw/);
+  assert.match(schema, /propose none/);
+  assert.match(schema, /With no\s+addition, the choices are "Looks right" and "Later"/);
+  assert.match(schema, /A proposed field is not required,\s+unless the person says it must or always has to be there/);
+  assert.doesNotMatch(tour + questions + readFileSync(join(P, '../../ONBOARDING.md'), 'utf8') + startDoc('references/discovery.md'), /two or three\s+additions|the two strongest/);
+  assert.match(questions, /up to two proposed additions by name, only ones discovery supports, none marked required; Later\. With no addition: Looks right \(Recommended\); Later\./);
+  assert.match(readFileSync(join(P, '../../ONBOARDING.md'), 'utf8'), /proposes up to three additions, only ones backed by what\s+it saw during setup/);
   assert.match(schema, /\[gtmb-schema\]\(\.\.\/\.\.\/gtmb-schema\/SKILL\.md\), Add, then Keep it\)/);
   assert.match(schema, /"Looks right" or "Later": change nothing/);
   assert.match(rules, /"Is there something Codex should always ask before saving, or never\s+save\?"/);
@@ -597,8 +605,16 @@ test('a settled closing step is remembered and a resumed onboarding does not ask
   assert.match(f.call('remember', { by: 'alex-example', context: 'company', kind: 'note', content: 'Onboarding step 6 (Your projects): Alex skipped project folders.' }),
     /then its close, one question at a time: the schema, the rules, the documents question/);
   assert.equal(readOnboarding(f.root).status, 'completed');
-  // nothing settled yet: a completed brain is not asked in a later chat (and a brain completed before 0.36.1 never is)
-  assert.doesNotMatch(f.hook(), /Close of onboarding/);
+  // the chat ends before the first answer: the close was started, so the next chat takes it up from the schema
+  assert.equal(closingSteps(f.root).started, true);
+  assert.equal(effectiveMemories(readMemories(f.root, 'company')).filter(m => m.content === 'Onboarding closing: started.').length, 1);
+  const unanswered = f.hook();
+  assert.match(unanswered, /Close of onboarding was interrupted/);
+  assert.match(unanswered, /Settled, never ask again: none\. Still open, in this order: schema, rules, documents\./);
+  // one order for a greeting: the close is the named exception, and it is resumed once
+  assert.match(unanswered, /The interrupted close above is the one exception on a greeting; apart from it, do not mention onboarding or its completion in ordinary greetings/);
+  assert.doesNotMatch(unanswered, /\. Do not mention onboarding or its completion in ordinary greetings/);
+  assert.match(unanswered, /resume it once: before the first form, save the note "Onboarding closing: <step> offered again\." for every open step/);
   // the schema answer is saved; the chat ends there
   assert.equal(closingAnswer('schema', 'looks right.'), 'Onboarding closing: schema looks right.');
   f.remember(closingAnswer('schema', 'looks right'), { tags: ['onboarding'] });
@@ -616,7 +632,33 @@ test('a settled closing step is remembered and a resumed onboarding does not ask
   assert.match(f.hook(), /Settled, never ask again: schema \(looks right\), rules \(later\)\. Still open, in this order: documents\./);
   f.remember(closingAnswer('documents', 'voice and ICP'), { tags: ['onboarding'] });
   assert.equal(closingSteps(f.root).next, null);
-  assert.doesNotMatch(f.hook(), /Close of onboarding/, 'all three settled: nothing more is said');
+  const settled = f.hook();
+  assert.doesNotMatch(settled, /Close of onboarding|one exception on a greeting/, 'all three settled: nothing more is said');
+  assert.match(settled, /Do not mention onboarding or its completion in ordinary greetings/);
+
+  // a resumed close is offered once: the offer is saved before the form, so a closed or ignored form is not asked in another chat
+  const once = fixture(t);
+  once.call('setup_brain', { folder: once.root, company: 'Synthetic Example', one_liner: 'Synthetic testing',
+    owner: 'Alex Example <alex@example.invalid>', dashboard: 'on-demand' });
+  selectPerson(once.root, 'alex-example');
+  ['Who you are','Company profile','Your tools','What is going on','Running for you','Your projects'].forEach((title, i) => once.remember(`Onboarding step ${i + 1} (${title}): Done by Alex.`));
+  assert.match(once.hook(), /Close of onboarding was interrupted/);
+  for (const step of CLOSING_STEPS) once.remember(closingAnswer(step, CLOSING_OFFERED), { tags: ['onboarding'] });
+  assert.doesNotMatch(once.hook(), /Close of onboarding/, 'offered again and ignored: not asked in another chat');
+  // the answer that does come is a newer note and wins
+  once.remember(closingAnswer('schema', 'looks right'), { tags: ['onboarding'] });
+  assert.deepEqual(closingSteps(once.root).steps.map(s => s.outcome), ['looks right', 'offered again', 'offered again']);
+
+  // a brain completed before the close existed has no started note and is never asked
+  const old = fixture(t);
+  old.call('setup_brain', { folder: old.root, company: 'Synthetic Example', one_liner: 'Synthetic testing',
+    owner: 'Alex Example <alex@example.invalid>', dashboard: 'on-demand' });
+  selectPerson(old.root, 'alex-example');
+  const pendingMarker = readOnboarding(old.root);
+  appendMemory(old.root, pendingMarker.context, { authors: ['alex-example'], tags: ['onboarding'], supersedes: pendingMarker.marker_id, content: `Onboarding: completed v${ONBOARDING_VERSION} on 2026-10-01.` });
+  assert.equal(readOnboarding(old.root).status, 'completed');
+  assert.equal(closingSteps(old.root).started, false);
+  assert.doesNotMatch(old.hook(), /Close of onboarding|one exception on a greeting/);
   // never in a scheduled or background run, a linked project or for a teammate who did not onboard
   const again = fixture(t);
   again.call('setup_brain', { folder: again.root, company: 'Synthetic Example', one_liner: 'Synthetic testing',
@@ -634,4 +676,11 @@ test('a settled closing step is remembered and a resumed onboarding does not ask
   assert.match(tour, /An unanswered or closed form\s+settles nothing: no note/);
   assert.match(tour, /Never in a scheduled or background run/);
   assert.match(continuation, /Never ask a settled one again/);
+  // the skill says the same about resuming: once, the offer saved first, and the documents question follows that rule
+  const closeRules = section(tour, 'The close, in order');
+  assert.match(closeRules, /\*\*Resumed, once\.\*\*/);
+  assert.match(closeRules, /Before the first form, save\s+`Onboarding closing: <step> offered again\.` for every open step/);
+  assert.match(closeRules, /A form closed or ignored in the resumed\s+close is not asked in another chat/);
+  assert.match(section(tour, 'The documents question'), /Ask the question once, and once more only in a resumed close/);
+  assert.match(continuation, /even before its first answer, the opening lines say so: resume it once/);
 });

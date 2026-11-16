@@ -22,13 +22,21 @@ documents are next.
   "Onboarding closing: documents voice and ICP."). The opening lines and `query` (status) list
   what is settled and what is still open. A settled step is never asked again, in this chat or
   in a resumed one; a resumed close starts at the first open step. An unanswered or closed form
-  settles nothing: no note.
-- **Not the owner.** The opening lines mark these steps "not the owner: tell, do not ask" when
+  settles nothing: no note. The notes are per person: only the notes of the person who is
+  onboarding settle their steps, so a teammate's close never answers for the owner.
+- **Resumed, once.** When the opening lines say the close was interrupted (the chat ended
+  before the last answer, or before the first), take it up on a greeting or a return to setup,
+  never after a business request. Before the first form, save
+  `Onboarding closing: <step> offered again.` for every open step, then ask them in order. A
+  real answer is saved as a newer note and replaces it. A form closed or ignored in the resumed
+  close is not asked in another chat.
+- **Not the owner.** The opening lines mark the steps "not the owner: tell, do not ask" when
   the person is not the brain's owner (the owner named in `config/settings.yaml`). Their changes
-  to the rules and the schema become proposals for the owner, as always. Ask neither question.
-  Say one line instead: "The schema and the rules are <owner>'s to change; say a change any time
-  and it goes to them as a proposal." Save both notes with the answer `told, not the owner`,
-  then ask the documents question.
+  to the schema, the rules and the base documents in `about-us/` become proposals for the owner,
+  as always. Ask none of the three questions.
+  Say one line instead: "The schema, the rules and the base documents are <owner>'s to change;
+  say a change any time and it goes to them as a proposal." Save all three notes with the answer
+  `told, not the owner`, then give the first task.
 - Never in a scheduled or background run, a linked project or another teammate's onboarding:
   nothing here is asked there.
 
@@ -41,14 +49,19 @@ upgraded). Show what it keeps in a few lines, one per kind, required fields mark
 > Organization: website (required), industry (required), size, hq.
 > Product: category (required), maker, pricing.
 
-Take the lines from the file as it is, never from this example. Then propose two or three
-additions from what discovery just learned about this business, each as the exact row it would
-add and one clause on why ("`renewal_date` on organizations: you sell yearly contracts"). Only
-what discovery saw; no addition for its own sake, and none that the file already has.
+Take the lines from the file as it is, never from this example. Then propose up to three
+additions, only those that discovery supports: each as the exact row it would add and one
+clause on why that quotes what discovery saw ("`renewal_date` on organizations: your site
+says 'annual plans'"). No addition for its own sake, none that the file already has, and
+never a reason about the business that discovery did not see. With nothing to support one
+(no tools connected, a one-line company), propose none. A proposed field is not required,
+unless the person says it must or always has to be there: a required field shows as a gap on
+every person, company or product already in the brain.
 
 One question, one form: "Is this what the brain should keep?" with one line of why (Codex fills
 these fields from your notes and asks about a required one nobody has said). Choices: "Looks
-right" (recommended), the two strongest additions by name, "Later". A third addition is named
+right" (recommended), up to two additions by name, the strongest first, "Later". With no
+addition, the choices are "Looks right" and "Later". A third addition is named
 in the question text. The person's own answer goes in the form's text field.
 
 - "Looks right" or "Later": change nothing.
@@ -84,7 +97,9 @@ Then one line: `/gtmb-schema` and `/gtmb-rules` show and change both at any time
 
 Setup wrote five starters, in `about-us/` (at the top of a brain not yet upgraded):
 `strategy.md`, `icp.md`, `voice.md`, `design-system.md` and `market.md`. They stay in the brain
-whatever the answer; filling them is what is offered. Once schema and rules are settled, ask
+whatever the answer; filling them is what is offered. Someone who is not the brain's owner is
+not asked (The close, in order: Not the owner): in a brain with `about-us/` a document they fill
+goes to the owner as a proposal. Once schema and rules are settled, ask
 once which to fill now, and end the turn. Say first, in one line, that rules and schema came
 first and these documents are next, and why they matter: Codex reads them before every email,
 post, design and plan, and a starter holds no guidance yet.
@@ -108,7 +123,8 @@ and run again any time with `/gtmb-voice`). Between two, one line on which comes
 or once the chosen ones are done, say in one line that the rest stay as `[not filled]` and that
 "fill in our tone of voice" (or the ICP, strategy, design system) fills one at any time. Then the
 first task below. Save the answer as the closing note (`Onboarding closing: documents <answer>.`).
-Ask the question once: no reminder on later greetings; the chat line and its
+Ask the question once, and once more only in a resumed close (The close, in order: Resumed,
+once): no other reminder on later greetings; the chat line and its
 offer before work of that kind (rule 11) carry it from there.
 
 ## The first task
