@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-The contributor invariants live in AGENTS.md and apply here in full: @AGENTS.md
+The contributor invariants live in AGENTS.md and apply here in full: @../AGENTS.md
 
 AGENTS.md is written for Codex, the host GTM Brain runs in. Its "Default onboarding interaction" and
 "Computer Use" sections are generated blocks describing how the plugin behaves inside a company
@@ -153,5 +153,5 @@ Describe a feature once, in its owning document, and link from the others: `INST
 `docs/SETUP.md` (manual install and contributor verification), `docs/releases/RELEASE-0.35.md` (what 0.35 changes and its known limits; the update steps live in MANUAL.md), `docs/DOCUMENTS.md` (documents
 feature), `docs/USER-SKILLS.md`, `skill-template/README.md` (contributing a shipped skill), `IMPORT.md` (its text is duplicated word for word as the body of
 `plugins/gtm-brain/claude/gtm-brain-export/SKILL.md`; keep the two in step). Only `README.md`, `INSTALL.md`,
-`IMPORT.md`, `AGENTS.md`, `CLAUDE.md` and `CONTRIBUTING.md` stay in the top folder; every other document goes in
+`IMPORT.md`, `AGENTS.md` and `CONTRIBUTING.md` stay in the top folder (this file lives in `.claude/`, where Claude Code also reads it); every other document goes in
 `docs/`, with a line in the index `docs/README.md`.

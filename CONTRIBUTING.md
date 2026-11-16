@@ -6,7 +6,7 @@ a scratch folder outside the checkout.
 | Read | For |
 | --- | --- |
 | [AGENTS.md](AGENTS.md), "Contributor invariants" | The rules every change keeps |
-| [CLAUDE.md](CLAUDE.md) | The architecture, layer by layer, and every command |
+| [.claude/CLAUDE.md](.claude/CLAUDE.md) | The architecture, layer by layer, and every command |
 | [README.md](README.md#how-it-fits-together) | The architecture as a picture |
 | [SETUP.md](docs/SETUP.md) | Installing from a checkout and verifying by hand |
 | [skill-template/](skill-template/README.md) | Adding a shipped skill |
@@ -49,7 +49,7 @@ The plugin ships from `gtm-week/gtm-brain`, branch `main`. Scripts that used to 
 `skills/gtm-brain-*/` keep those paths (`skills/gtm-brain-add-file/add-file.mjs`).
 
 Describe a feature once, in its owning document, and link to it from the others; the list of
-owners is the "Docs map" in [CLAUDE.md](CLAUDE.md). Shared agent policies are the exception:
+owners is the "Docs map" in [.claude/CLAUDE.md](.claude/CLAUDE.md). Shared agent policies are the exception:
 they are embedded where an agent needs a self-contained document
 ([below](#maintaining-shared-text-and-schemas)).
 
