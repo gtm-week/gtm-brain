@@ -2,8 +2,8 @@
 
 One look for every release post. Copy `release.html`, change the words, render, check it.
 
-    cp release/template/release.html release/template/gtm-brain-0.29.0.html
-    bash release/template/render.sh release/template/gtm-brain-0.29.0.html release/template/gtm-brain-0.29.0.png
+    cp docs/releases/template/release.html docs/releases/template/gtm-brain-0.29.0.html
+    bash docs/releases/template/render.sh docs/releases/template/gtm-brain-0.29.0.html docs/releases/template/gtm-brain-0.29.0.png
 
 `gtm-brain-0.28.1.png` is the reference: the first graphic in this style.
 

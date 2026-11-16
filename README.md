@@ -46,7 +46,7 @@ Details: [Updating and upgrading](#updating-and-upgrading).
 
 **How the brain works**
 
-![The brain in one picture. Configuration, on the left, says what is allowed: it sets the fields and kinds of entities and checks every save into memories, and it changes only when you edit the file or approve a change Codex proposes. Entities are who and what the memories are about; names resolve and links derive from the memories. Codex, where you talk, is the only thing that reads your tools, reads the brain and saves into it. Notes and entities keep a link back to their source in your tools. Workflows, underneath, run through Codex under the rules and save each step as a note.](diagrams/brain-in-one-picture.svg)
+![The brain in one picture. Configuration, on the left, says what is allowed: it sets the fields and kinds of entities and checks every save into memories, and it changes only when you edit the file or approve a change Codex proposes. Entities are who and what the memories are about; names resolve and links derive from the memories. Codex, where you talk, is the only thing that reads your tools, reads the brain and saves into it. Notes and entities keep a link back to their source in your tools. Workflows, underneath, run through Codex under the rules and save each step as a note.](docs/images/brain-in-one-picture.svg)
 
 Read it left to right. **Configuration** says what is allowed; it shapes the entities and checks
 every save, and it changes only two ways (red): you ask in chat and approve what Codex proposes,
@@ -202,7 +202,7 @@ Four things, read at the start of every chat.
 - **What a rule cannot do:** start work ("whenever X, do Y" is offered as a workflow), switch
   off APPROVE or the protected files, or move files that already exist.
 
-![The Rules part of the Configuration tab: each rule as a row to open, with a filter box and the two groups, where things go and where Codex looks first](diagrams/screenshots/dashboard-rules.png)
+![The Rules part of the Configuration tab: each rule as a row to open, with a filter box and the two groups, where things go and where Codex looks first](docs/images/screenshots/dashboard-rules.png)
 
 #### Schema
 
@@ -224,7 +224,7 @@ Four things, read at the start of every chat.
   "Anna joined Acme" also ends her job at Northwind. An unlisted type is saved as a plain note
   with an offer to add it.
 
-![The Schema part of the Configuration tab: one kind at a time, its fields with the required ones marked, and its relationships](diagrams/screenshots/dashboard-schema.png)
+![The Schema part of the Configuration tab: one kind at a time, its fields with the required ones marked, and its relationships](docs/images/screenshots/dashboard-schema.png)
 
 #### Documents
 
@@ -243,7 +243,7 @@ Base documents and your other documents. Detail: [DOCUMENTS.md](docs/DOCUMENTS.m
   design system is also a page, `design-system.html`: one self-contained file shown on the
   dashboard's Visual tab and kept in step with `design-system.md`.
 
-![A document opened from the Configuration tab: the rendered text, its state, what work Codex reads it before, and the Edit button](diagrams/screenshots/dashboard-document.png)
+![A document opened from the Configuration tab: the rendered text, its state, what work Codex reads it before, and the Edit button](docs/images/screenshots/dashboard-document.png)
 
 #### Settings
 
@@ -252,7 +252,7 @@ dashboard timing (`dashboard: always` or `on-demand`), the save reminder (`save_
 workflows on or off (`workflows: off`) and where big files go (`big_files: google-drive` or
 `local`). A change is shown first and applies only when you click APPROVE.
 
-![The Configuration tab: the company and the base documents with their state, with Rules and Schema as parts of the same tab](diagrams/screenshots/dashboard-configuration.png)
+![The Configuration tab: the company and the base documents with their state, with Rules and Schema as parts of the same tab](docs/images/screenshots/dashboard-configuration.png)
 
 ### Entities
 
@@ -274,7 +274,7 @@ A page's own Markdown may be edited by hand; say "save" afterwards. Files that b
 entity sit in a folder of the same name beside its page. Renames, merges and kind changes are shown under History
 on the page. Detail: [How a brain works: Saving](plugins/gtm-brain/MANUAL.md#saving-what-you-say-what-it-keeps).
 
-![The Entities tab with a company opened: its relation to us, its details, the people who work there, what it uses and its history](diagrams/screenshots/dashboard-entity.png)
+![The Entities tab with a company opened: its relation to us, its details, the people who work there, what it uses and its history](docs/images/screenshots/dashboard-entity.png)
 
 ### Memories
 
@@ -315,7 +315,7 @@ Detail: [Contexts](plugins/gtm-brain/MANUAL.md#contexts) ·
 [Summaries](plugins/gtm-brain/MANUAL.md#summaries) ·
 [Chat capture](plugins/gtm-brain/MANUAL.md#chat-capture).
 
-![The Memories tab: notes on a timeline with their topic and sources, a filter box with When and Show, and the other filters behind More filters](diagrams/screenshots/dashboard-memories.png)
+![The Memories tab: notes on a timeline with their topic and sources, a filter box with When and Show, and the other filters behind More filters](docs/images/screenshots/dashboard-memories.png)
 
 ### Workflows
 
@@ -357,7 +357,7 @@ writes: ["tool:email"]
 
 Detail: [WORKFLOWS.md](docs/WORKFLOWS.md).
 
-![The Workflows tab: each workflow with whether it is on, how it starts and where its runs stand](diagrams/screenshots/dashboard-workflows.png)
+![The Workflows tab: each workflow with whether it is on, how it starts and where its runs stand](docs/images/screenshots/dashboard-workflows.png)
 
 ### Skills, projects and interactions
 
@@ -503,7 +503,7 @@ work happens in chat; the page is for reading, plus three kinds of edit.
 **Actual GTM Brain dashboard, populated with fictional demo data.** These are captures
 of the shipped app, not mockups. No customer or private workspace data is shown.
 
-![The Overview tab: what is coming up and what to tidy, each with a link that prepares the work in Codex](diagrams/screenshots/dashboard-overview.png)
+![The Overview tab: what is coming up and what to tidy, each with a link that prepares the work in Codex](docs/images/screenshots/dashboard-overview.png)
 
 The other four tabs are shown with the part of the brain they belong to: [Configuration](#configuration), [Entities](#entities), [Memories](#memories) and [Workflows](#workflows).
 
@@ -832,7 +832,7 @@ build. Then start a new chat in an empty folder and send `/gtmb-start`. More in
 ## Contributing
 
 This repository is the plugin, not a brain. The source layout, the tests, the checks before a
-push to `main` and the generated text are in [CONTRIBUTING.md](CONTRIBUTING.md); the invariants
+push to `main` and the generated text are in [CONTRIBUTING.md](.github/CONTRIBUTING.md); the invariants
 every change keeps are in [AGENTS.md](AGENTS.md). Found a problem or a workflow to improve?
 [Open an issue](https://github.com/gtm-week/gtm-brain/issues).
 
@@ -852,7 +852,7 @@ Each feature is described once, in its own guide:
 | [INSTALL.md](INSTALL.md) | Standalone instructions for the installing agent |
 | [SETUP.md](docs/SETUP.md) | Manual install, terminal commands and verification |
 | [MIGRATING.md](docs/MIGRATING.md) | Moving an installation from the old `gtm-os` name |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Source layout, tests and release checks |
+| [CONTRIBUTING.md](.github/CONTRIBUTING.md) | Source layout, tests and release checks |
 
 ## License
 

@@ -3,10 +3,10 @@
 # First run: switches the "gtm-brain" marketplace to this folder. Every run: refreshes the cached
 # copy. Then start a new chat in Codex (loads skills, hooks and the MCP server per session);
 # quit and reopen the app only if stale skills linger.
-#   ./dev-install.sh --claude   the same for Claude Code: a local marketplace loads in place, so edits
-#                               apply at the next session start or /reload-plugins (no hook trust step).
+#   ./scripts/dev-install.sh --claude   the same for Claude Code: a local marketplace loads in place, so edits
+#                                       apply at the next session start or /reload-plugins (no hook trust step).
 set -eu
-R="$(cd "$(dirname "$0")" && pwd)"
+R="$(cd "$(dirname "$0")/.." && pwd)"
 # the checkout's own git hooks: tests and the harness bench before a push to main
 git -C "$R" config core.hooksPath .githooks
 if [ "${1:-}" = "--claude" ]; then

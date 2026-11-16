@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Render a release graphic: bash release/template/render.sh [page.html] [out.png]
+# Render a release graphic: bash docs/releases/template/render.sh [page.html] [out.png]
 # 1600x900 at 2x (3200x1800), the size Slack and LinkedIn show without cropping.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"

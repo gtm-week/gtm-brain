@@ -7,7 +7,7 @@ both are fine. In every run also check: nothing the person did not say is saved 
 (`git log` in the brain).
 
 Test brain: a folder made with setup, onboarding dismissed (for example `~/Documents/schema-test-brain`).
-Quit and reopen Codex after `./dev-install.sh` when the version changed, then start a new chat there.
+Quit and reopen Codex after `./scripts/dev-install.sh` when the version changed, then start a new chat there.
 
 ## A. RULES.md (0.33.9)
 
@@ -44,7 +44,7 @@ Quit and reopen Codex after `./dev-install.sh` when the version changed, then st
     Keeps the rule (the wordmark alone, no blossom next to the name) and says which documents it followed.
 11. `you put the blossom next to the OpenAI name again`
     Agrees, offers to fix the piece, and offers the rule for partner-brands.md if it is not there yet.
-12. Onboarding (needs a fresh empty folder, `./dev-reset.sh`): at the end, one question which documents to
+12. Onboarding (needs a fresh empty folder, `./scripts/dev-reset.sh`): at the end, one question which documents to
     fill now (Voice and ICP now, All four, Just the voice, Later). "Later" is followed by the first task;
     the question does not come back.
 
