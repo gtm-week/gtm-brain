@@ -44,6 +44,33 @@ test("a server used in chat becomes read-tested, and one removed from config.tom
   f.check(); assert.equal(f.state().pocket, undefined);
 });
 
+// ZYNT's own plugin (getzynt/zynt-plugins) brings its MCP server in the plugin's .mcp.json, not in config.toml.
+function zyntPlugin(f, { version = "0.1.0", inline = false } = {}) {
+  const dir = join(f.home, "plugins/cache/zynt/zynt", version); mkdirSync(join(dir, ".codex-plugin"), { recursive: true });
+  const servers = { mcpServers: { zynt: { type: "http", url: "https://app.getzynt.com/mcp" } } };
+  writeFileSync(join(dir, ".codex-plugin/plugin.json"), JSON.stringify({ name: "zynt", mcpServers: inline ? servers.mcpServers : "./.mcp.json", interface: { displayName: "ZYNT" } }));
+  if (!inline) writeFileSync(join(dir, ".mcp.json"), JSON.stringify(servers));
+}
+
+test("an installed plugin's own MCP server counts as connected, named as the plugin names itself", t => {
+  const f = brain(t, ["HubSpot"], "zynt@zynt installed, enabled 0.1.0 /tmp/zynt-plugins/plugins/zynt"); zyntPlugin(f);
+  const out = f.check(), s = f.state();
+  assert.equal(s.zynt.status, "installed"); assert.equal(s.zynt.mcp, true); assert.equal(s.zynt.tool, "ZYNT");
+  assert.match(out, /connected as MCP servers, not in admin\.md tools: ZYNT\./);
+});
+
+test("a plugin's MCP server matches the tool admin.md names, also when the manifest lists it inline", t => {
+  const f = brain(t, ["HubSpot", "ZYNT"], "zynt@zynt installed, enabled"); zyntPlugin(f, { inline: true });
+  f.check(); assert.equal(f.state().zynt.status, "installed"); assert.equal(f.state().zynt.plugin, "zynt");
+});
+
+test("a disabled or uninstalled plugin's MCP server does not count", t => {
+  const f = brain(t, ["HubSpot", "ZYNT"], "zynt@zynt installed, disabled"); zyntPlugin(f);
+  f.check(); assert.notEqual(f.state().zynt.status, "installed");
+  const g = brain(t, ["HubSpot", "ZYNT"], "zynt@zynt not installed"); zyntPlugin(g);
+  g.check(); assert.notEqual(g.state().zynt.status, "installed");
+});
+
 test("no config.toml changes nothing, and a tool with no entry stays not connected", t => {
   const f = brain(t); f.check();
   assert.notEqual(f.state().zynt.status, "installed");

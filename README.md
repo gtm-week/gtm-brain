@@ -792,7 +792,7 @@ interaction see [Skills, projects and interactions](#skills-projects-and-interac
 | `/gtmb-rules` | Show, add, change or remove a rule: what Codex saves and asks, where files go, when it asks the source. |
 | `/gtmb-schema` | Change the fields, kinds, subtypes and relationship types the brain keeps. |
 | `/gtmb-clay-setup` | Connect Clay on your yes and find the brain's target companies and people in it (search is free); enrichment that spends credits asks first. |
-| `/gtmb-zynt-setup` | Set up ZYNT buying signals from the brain when you paste ZYNT's setup prompt; ZYNT then shows in the brain's tools. |
+| `/gtmb-zynt-setup` | Set up ZYNT buying signals from the brain through ZYNT's own plugin (browser sign-in, no key); without the plugin, the steps to install it. |
 | `/gtmb-freckle-setup` | Connect Freckle (lead enrichment) on your yes and build its first list of target companies and people from the brain; runs that spend credits ask first. |
 | `/gtmb-woodpecker-setup` | Connect Woodpecker on your yes, see how your campaigns perform, and save one email sequence written from the brain as a draft; it never starts a campaign. |
 | `/gtmb-surfer-setup` | Connect Surfer on your yes, get topics from the brain's strategy, market and call notes, and brief the first article; a full article asks first, nothing is published. |
