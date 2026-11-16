@@ -77,9 +77,11 @@ test('a document opens rendered; Edit starts editing in the layout last used; Do
   await expect(preview.getByRole('heading', written!.title, { level: 1 })).toBeVisible();
   for (const hidden of [toolbar, text, done, save]) await expect(hidden).toBeHidden();
   const box = (sel: string) => browser.evaluate((q: string) => { const r = document.querySelector(q)!.getBoundingClientRect(); return { left: r.left, right: r.right, width: r.width }; }, sel);
-  const outline = await box('#doc-view .doc-outline'), read = await box('#doc-preview');
-  expect(outline.width).toBeGreaterThan(0);
-  expect(outline.right).toBeLessThanOrEqual(read.left + 1);   // the outline stays in its own column, left of the text
+  // the document's sections are a closed dropdown beside its actions; the text has the body's full width
+  await expect(browser.locator('#doc-sections > summary')).toBeVisible();
+  await expect(browser.locator('#doc-outline')).toBeHidden();
+  const body = await box('#doc-body'), read = await box('#doc-preview');
+  expect(read.width).toBeGreaterThan(body.width - 4);
   // Edit: the text area beside the preview, focused, with the formatting toolbar; nothing to save yet
   await edit.tap();
   await expect(view).toHaveAttribute('data-doc-mode', 'split');
@@ -138,17 +140,21 @@ test('inside an open document the outline scrolls to its heading and a save conf
   await screen.getByRole('navigation', 'Main navigation').getByRole('button', 'Configuration').tap();
   await screen.getByRole('table').filter({ has: screen.getByRole('columnheader', 'Document') }).getByRole('button', written!.title).tap();
   const view = browser.locator('#doc-view'), text = browser.locator('#doc-text'), notice = browser.locator('#doc-notice');
-  const item = browser.locator('#doc-outline [data-doc-head]').first();
+  const item = browser.locator('#doc-outline [data-doc-head]').first(), sections = browser.locator('#doc-sections > summary');
+  await expect(item).toBeHidden();
+  await sections.tap();
   await expect(item).toBeVisible();
-  // an outline item reaches its heading, reading and editing, and never changes the layout
+  // a section picked from the dropdown reaches its heading, reading and editing, and never changes the layout
   const scrolled = () => browser.evaluate(() => (window as any).__scrolled as string[]);
   await browser.evaluate(() => { (window as any).__scrolled = []; const was = Element.prototype.scrollIntoView; Element.prototype.scrollIntoView = function (...a: any[]) { (window as any).__scrolled.push(this.id); return was.apply(this, a as any); }; });
   const head = await item.getAttribute('data-doc-head');
   await item.tap();
   expect(await scrolled()).toEqual([head]);
+  await expect(item).toBeHidden();   // picking a section closes the dropdown
   await expect(view).toHaveAttribute('data-doc-mode', 'preview');
   await view.getByRole('button', 'Edit', { exact: true }).tap();
   const layout = await view.getAttribute('data-doc-mode');
+  await sections.tap();
   await browser.locator('#doc-outline [data-doc-head]').first().tap();
   expect(await scrolled()).toEqual([head, head]);
   await expect(view).toHaveAttribute('data-doc-mode', layout!);
