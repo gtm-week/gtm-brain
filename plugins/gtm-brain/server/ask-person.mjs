@@ -1,8 +1,6 @@
 // ask_person: one question to the person in the host's native form (MCP elicitation/create, the
 // mechanism approve_change uses), so the choices are buttons in any chat instead of numbered text.
 // Transient: it reads no brain, writes nothing and applies nothing. The answer is the tool result.
-import { SOMETHING_ELSE, buildFollowUp } from '../scripts/gtm-brain-learn-company/question.mjs';
-
 const LIMITS = { question: 300, why: 200, choice: 100, answer: 1000 };
 // A model's own Other or Something else is the typed answer, offered once and by the form.
 const ELSE = /^(other|something else|none of (these|the above)|or type your own)[.:!]?$/i;
@@ -26,9 +24,9 @@ const clean = (value, max, name) => {
   return s;
 };
 
-/* The form for one question. With choices: one single-select field (the host shows them as buttons),
-   its last choice opening a typed answer on a second form, because Codex shows one field per page.
-   Without choices: one text field. No defaults: only a submitted value is an answer. */
+/* The form for one question, always one step. With choices: a single-select field and, last, a text field
+   for the person's own answer, both in the same form. Without choices: one text field.
+   No defaults: only a submitted value is an answer. */
 export function buildForm(args = {}) {
   const question = clean(args.question, LIMITS.question, 'question'), why = clean(args.why, LIMITS.why, 'why');
   if (!question) throw Error('question is required: one sentence');
@@ -42,21 +40,26 @@ export function buildForm(args = {}) {
   const choices = [...new Set(all.filter(c => c && !ELSE.test(c)))];
   const own = args.own_answer !== false || all.some(c => ELSE.test(c));
   if (choices.length < 2 || choices.length > 4) throw Error('choices must be two to four distinct whole answers, the recommended one first (omit choices for a free-text question)');
-  const offered = own ? [...choices, SOMETHING_ELSE] : choices;
+  // One step: the choices and, last, a text field for the person's own answer, in the same form. Codex lays the
+  // fields out by key, in alphabetical order (seen in the app, 16 Nov): choice sorts before your_answer.
+  // The question is the form's message, so the choice field's own title does not repeat it.
+  const offered = choices;
   return { question, message, offered, own, choices,
-    params: { mode: 'form', message, requestedSchema: { type: 'object', properties: { choice: { type: 'string', title: question, enum: offered } }, required: [] } } };
+    params: { mode: 'form', message, requestedSchema: { type: 'object', properties: { choice: { type: 'string', title: 'Pick one', enum: offered }, ...(own ? { your_answer: { type: 'string', title: 'Or type your own answer', maxLength: LIMITS.answer } } : {}) }, required: [] } } };
 }
 
-/* What a form came back with: answered (the choice or the typed text), own (the person picked the
-   typed-answer choice), or none with the reason. A decline, a cancel and an empty submit are all none. */
+/* What a form came back with: answered (the choice or the typed text) or none with the reason.
+   A decline, a cancel and an empty submit are all none. */
 export function readForm(form, result) {
   if (result?.status === 'not_shown') return { status: 'none', reason: 'the host closed the form before the person saw it', host: true };
   if (result?.action === 'decline' || result?.action === 'cancel') return { status: 'none', reason: 'the person closed the form without answering, or it timed out' };
   const content = result?.action === 'accept' && result.content && typeof result.content === 'object' ? result.content : null;
   if (!content) return { status: 'none', reason: 'the host returned no usable form result' };
-  const typed = [content.answer, content.text].find(v => typeof v === 'string' && v.trim());
+  const typed = [content.your_answer, content.answer, content.text].find(v => typeof v === 'string' && v.trim());
   const choice = typeof content.choice === 'string' ? content.choice : '';
-  if (choice && form.offered?.includes(choice)) return choice === SOMETHING_ELSE ? (typed ? { status: 'answered', answer: typed.trim().slice(0, LIMITS.answer), typed: true } : { status: 'own' }) : { status: 'answered', answer: choice, typed: false };
+  // a typed answer wins over a choice left selected beside it: typing is the more deliberate act
+  if (typed && form.own !== false) return { status: 'answered', answer: typed.trim().slice(0, LIMITS.answer), typed: true };
+  if (choice && form.offered?.includes(choice)) return { status: 'answered', answer: choice, typed: false };
   if (choice) return { status: 'none', reason: 'the form returned a choice that was not offered' };
   if (typed) return { status: 'answered', answer: typed.trim().slice(0, LIMITS.answer), typed: true };
   return { status: 'none', reason: 'the form was submitted empty' };
@@ -75,12 +78,6 @@ export async function askPerson(questions, args, requestId) {
   let read;
   try {
     read = readForm(form, await questions.raw(form.params, requestId, true));
-    // The person picked the typed-answer choice: its text field is a second form. They have just seen a
-    // form, so a quick close of this one is theirs, not a host that hides forms.
-    if (read.status === 'own') {
-      read = readForm({ offered: null }, await questions.raw(buildFollowUp({ question: form.question }), requestId, false));
-      if (read.status === 'none') read = { status: 'none', reason: 'the person chose to type an answer and closed the form without one' };
-    }
   } catch (e) {
     // Two questions sent at once: the second is not asked. A form the host failed on is no answer either,
     // and says what to do next like every other one (never a bare failure the model retries).
