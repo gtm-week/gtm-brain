@@ -73,7 +73,7 @@ jobs:
           drift="$(git status --porcelain plugins/gtm-brain/scripts/gtm-brain-render/ui/)"
           [ -z "$drift" ] || { echo "$drift"; echo "Rebuild the dashboard: npm run build --prefix frontend/dashboard, then commit plugins/gtm-brain/scripts/gtm-brain-render/ui/"; exit 1; }
 
-  # The dashboard in headless Chromium (SETUP.md, Checking the dashboard in a browser). Informational: a
+  # The dashboard in headless Chromium (docs/SETUP.md, Checking the dashboard in a browser). Informational: a
   # failure shows on the run but does not fail it, and the job stops after five minutes.
   dashboard-browser:
     runs-on: ubuntu-latest

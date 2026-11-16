@@ -8,7 +8,7 @@ a scratch folder outside the checkout.
 | [AGENTS.md](AGENTS.md), "Contributor invariants" | The rules every change keeps |
 | [CLAUDE.md](CLAUDE.md) | The architecture, layer by layer, and every command |
 | [README.md](README.md#how-it-fits-together) | The architecture as a picture |
-| [SETUP.md](SETUP.md) | Installing from a checkout and verifying by hand |
+| [SETUP.md](docs/SETUP.md) | Installing from a checkout and verifying by hand |
 | [skill-template/](skill-template/README.md) | Adding a shipped skill |
 
 ## Source layout
@@ -37,8 +37,9 @@ plugins/gtm-brain/              everything that ships
 frontend/dashboard/             dashboard frontend source and browser tests; built assets ship with the plugin
 scripts/sync-derived.mjs        regenerates derived text, schemas and the Claude Code declarations
 scripts/check-version-bump.mjs  CI: a pull request that changes what ships bumps the version
-scripts/migrate-install.mjs     moves an installation from the old gtm-os name (MIGRATING.md)
+scripts/migrate-install.mjs     moves an installation from the old gtm-os name (docs/MIGRATING.md)
 skill-template/                 the folder to copy for a new shipped skill
+docs/                           the guides and references (docs/README.md is the index); releases/ holds release notes
 diagrams/                       the pictures and screenshots in the README
 dev-install.sh  dev-reset.sh    install this checkout into Codex (--claude for Claude Code); wipe and
                                 reinstall a test brain
@@ -114,8 +115,8 @@ writing; the suite and CI run that check too.
 ## Shipping a change
 
 - **Version.** A change under `plugins/gtm-brain/` that people should receive bumps the version
-  in `.codex-plugin/plugin.json` and the same number in the cache paths in SETUP.md and
-  COMMANDS.md (a test holds them together), then `node scripts/sync-derived.mjs`. Anything
+  in `.codex-plugin/plugin.json` and the same number in the cache paths in docs/SETUP.md and
+  docs/COMMANDS.md (a test holds them together), then `node scripts/sync-derived.mjs`. Anything
   shipped without a bump is never offered to anyone.
 - **The brain template.** Before editing `templates/AGENTS.md`, snapshot the outgoing file as
   `templates/legacy/AGENTS-<old version>.md` and add it to

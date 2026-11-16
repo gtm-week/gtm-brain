@@ -22,7 +22,7 @@ test("every shipped skill is gtmb-<name>, and the list of renamed skills is the 
 
 test("no file that ships or documents the plugin still names a skill the old way", () => {
   const files = execFileSync("git", ["-C", REPO, "ls-files"], { encoding: "utf8" }).split("\n").filter(f => f && /\.(md|mjs|json|yaml|html|sh|ts|tsx)$/.test(f)
-    && !/templates\/legacy\/|scripts\/gtm-brain-render\/ui\/|^RELEASE-0\.35\.md$|test\/e2e\/(validation|release)-|test\/skill-names\.test\.mjs$|lib\/skill-names\.mjs$|scripts\/gtm-brain-upgrade\/skill-names\.mjs$/.test(f));
+    && !/templates\/legacy\/|scripts\/gtm-brain-render\/ui\/|^docs\/releases\/RELEASE-0\.35\.md$|test\/e2e\/(validation|release)-|test\/skill-names\.test\.mjs$|lib\/skill-names\.mjs$|scripts\/gtm-brain-upgrade\/skill-names\.mjs$/.test(f));
   const left = [];
   for (const f of files) { let t; try { t = readFileSync(join(REPO, f), "utf8"); } catch { continue; }
     // the upgrade guide names the old commands on purpose, in its own section

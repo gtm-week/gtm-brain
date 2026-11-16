@@ -74,7 +74,7 @@ More: [The four parts of a brain](#the-four-parts-of-a-brain) · [The folders of
 ## Install in Codex
 
 Already have GTM Brain? Do not install again: see [Updating and upgrading](#updating-and-upgrading).
-Still on the plugin's old name, `gtm-os`? Follow [MIGRATING.md](MIGRATING.md).
+Still on the plugin's old name, `gtm-os`? Follow [MIGRATING.md](docs/MIGRATING.md).
 
 Requires the **Codex desktop app** and **Node 22.16+ (22.x) or Node 24+**. The guided installer checks your environment.
 
@@ -88,7 +88,7 @@ Follow the setup and permission prompts. Codex installs the plugin, opens your w
 and guides you through your business context and tool connections. No GitHub invitation or
 sign-in is required to download the plugin.
 
-[First-use walkthrough](ONBOARDING.md) · [Everyday guide](GUIDE.md) · [Manual installation](#manual-installation) · [Claude Code (beta)](#claude-code-beta)
+[First-use walkthrough](docs/ONBOARDING.md) · [Everyday guide](docs/GUIDE.md) · [Manual installation](#manual-installation) · [Claude Code (beta)](#claude-code-beta)
 
 ## Configure your brain
 
@@ -222,7 +222,7 @@ Four things, read at the start of every chat.
 
 #### Documents
 
-Base documents and your other documents. Detail: [DOCUMENTS.md](DOCUMENTS.md).
+Base documents and your other documents. Detail: [DOCUMENTS.md](docs/DOCUMENTS.md).
 
 - A document's header says what work it applies to (copy, outreach, landing pages, planning)
   and whether it is a draft or approved. Every chat opens with one line listing the documents.
@@ -346,7 +346,7 @@ writes: ["tool:email"]
 - **Limits.** Three open runs per workflow, five automatic steps a run a day, and
   `workflows: off` in the settings stops them all.
 
-Detail: [WORKFLOWS.md](WORKFLOWS.md).
+Detail: [WORKFLOWS.md](docs/WORKFLOWS.md).
 
 ![The Workflows tab: each workflow with whether it is on, how it starts and where its runs stand](diagrams/screenshots/dashboard-workflows.png)
 
@@ -366,7 +366,7 @@ Three things sit beside the four parts and are easy to confuse with a workflow.
   and saves it on your yes. It appears as `/gtmb-<name>`
   after you quit and reopen Codex. "install the skill <owner>/<repo> at <path>" brings one in
   from GitHub; "list my skills" and "remove the skill ..." manage them. Detail:
-  [USER-SKILLS.md](USER-SKILLS.md).
+  [USER-SKILLS.md](docs/USER-SKILLS.md).
 - **Interactions.** Say "propose an interaction for moving a deal in HubSpot". After your
   APPROVE it is kept in `brain/ontology.ossie.json`. Each time it runs, Codex does it in the
   tool first and saves the note only when the tool confirms; a failed write is saved as a failure.
@@ -411,7 +411,7 @@ Six rules hold in every chat, whatever you configure:
 5. Nothing about a person or company is looked up on the web unless you ask for exactly that.
 6. Company settings and interactions change only through APPROVE.
 
-More phrases: [Everyday guide](GUIDE.md).
+More phrases: [Everyday guide](docs/GUIDE.md).
 
 The requests below are examples, not preloaded data. The answers depend on the context you
 provide and the tools you connect.
@@ -455,7 +455,7 @@ preserve them.
 The research skills end in something you keep: `/gtmb-deepdive` a one-page brief,
 `/gtmb-market-research` a sourced report with a positioning map, `/gtmb-unit-economics` a PUSH,
 FIX, STOP or MEASURE decision note. All twenty-seven skills are listed under
-[Shipped skills](#shipped-skills) and in the [command reference](COMMANDS.md).
+[Shipped skills](#shipped-skills) and in the [command reference](docs/COMMANDS.md).
 
 ## What it solves
 
@@ -692,7 +692,7 @@ Naming a tool in the settings does not connect it. A tool has three states:
   one first job from your ICP and voice, asks again before anything that spends credits, and
   never sends, publishes or starts a campaign.
 
-Detail: [command reference](COMMANDS.md).
+Detail: [command reference](docs/COMMANDS.md).
 
 ## Updating and upgrading
 
@@ -715,7 +715,7 @@ Two separate steps. Updating the plugin moves nothing in your brain.
 - An update on offer appears once at chat start and as a card on the dashboard's Overview.
 
 Detail: [Updating to 0.36](plugins/gtm-brain/MANUAL.md#updating-to-036-short-skill-names) ·
-[Updating to 0.35](plugins/gtm-brain/MANUAL.md#updating-to-035) · [RELEASE-0.35.md](RELEASE-0.35.md).
+[Updating to 0.35](plugins/gtm-brain/MANUAL.md#updating-to-035) · [RELEASE-0.35.md](docs/releases/RELEASE-0.35.md).
 
 ## Shipped skills
 
@@ -813,7 +813,7 @@ codex plugin list | grep gtm-brain
 The upgrade line refreshes a marketplace snapshot that is already on the computer. The last
 line must show the plugin installed and enabled. There are no hooks to approve and nothing to
 build. Then start a new chat in an empty folder and send `/gtmb-start`. More in
-[SETUP.md](SETUP.md).
+[SETUP.md](docs/SETUP.md).
 
 ## Contributing
 
@@ -828,16 +828,16 @@ Each feature is described once, in its own guide:
 
 | Document | Use it for |
 | --- | --- |
-| [ONBOARDING.md](ONBOARDING.md) | A step-by-step first-use walkthrough |
-| [GUIDE.md](GUIDE.md) | Everyday examples and working conventions |
+| [ONBOARDING.md](docs/ONBOARDING.md) | A step-by-step first-use walkthrough |
+| [GUIDE.md](docs/GUIDE.md) | Everyday examples and working conventions |
 | [plugins/gtm-brain/MANUAL.md](plugins/gtm-brain/MANUAL.md) | How a brain works and how to change it; Codex answers "how does the brain work?" from it |
-| [COMMANDS.md](COMMANDS.md) | Tool inputs, scripts and the files each operation changes |
-| [DOCUMENTS.md](DOCUMENTS.md) | Documents and base documents |
-| [WORKFLOWS.md](WORKFLOWS.md) | Workflows: header, steps, triggers, runs, limits |
-| [USER-SKILLS.md](USER-SKILLS.md) | Skills you make yourself |
+| [COMMANDS.md](docs/COMMANDS.md) | Tool inputs, scripts and the files each operation changes |
+| [DOCUMENTS.md](docs/DOCUMENTS.md) | Documents and base documents |
+| [WORKFLOWS.md](docs/WORKFLOWS.md) | Workflows: header, steps, triggers, runs, limits |
+| [USER-SKILLS.md](docs/USER-SKILLS.md) | Skills you make yourself |
 | [INSTALL.md](INSTALL.md) | Standalone instructions for the installing agent |
-| [SETUP.md](SETUP.md) | Manual install, terminal commands and verification |
-| [MIGRATING.md](MIGRATING.md) | Moving an installation from the old `gtm-os` name |
+| [SETUP.md](docs/SETUP.md) | Manual install, terminal commands and verification |
+| [MIGRATING.md](docs/MIGRATING.md) | Moving an installation from the old `gtm-os` name |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Source layout, tests and release checks |
 
 ## License

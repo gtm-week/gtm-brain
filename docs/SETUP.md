@@ -57,7 +57,7 @@ by `codex plugin list`, then quit and reopen Codex. The in-app update performs t
 Brains you already have keep working; open one in Codex and the chat start refreshes its
 git config, or say "upgrade the brain" to refresh its AGENTS.md and pre-commit hook too. Coming from 0.34, the
 upgrade also offers to move files and asks first: see
-[Updating to 0.35](plugins/gtm-brain/MANUAL.md#updating-to-035). A brain set up
+[Updating to 0.35](../plugins/gtm-brain/MANUAL.md#updating-to-035). A brain set up
 before the full-name handles (`maciej` instead of `maciej-konczal`) gets a note from upgrade:
 say "change the team handles to full names" and choose APPROVE; old memories keep the old
 handle, and both resolve to the same person.

@@ -623,7 +623,7 @@ to the same component library, and plugin updates never rewrite a company's proj
 sections. `/gtmb-build-landing-page` uses the strategy, ICP, voice and offer, then
 composes registered sections. Both end at a local preview. `/gtmb-publish-website` runs
 only on its own request: a Vercel preview first, production on a separate decision. See the
-[preservation and packaging contract](plugins/gtm-brain/starters/web-design-system/README.md).
+[preservation and packaging contract](../plugins/gtm-brain/starters/web-design-system/README.md).
 
 ### connect
 *"connect my tools"*, *"is HubSpot connected?"*
@@ -680,7 +680,7 @@ left uncommitted and listed), `work/hooks.log`.
 
 Before it compiles, the scheduled run reads this brain's chats (brain folder and linked project folders
 only) changed since the last pass and saves, through `remember`, the outcomes nobody saved, each resting on
-an exact sentence of its chat (see [MANUAL.md](plugins/gtm-brain/MANUAL.md#chat-capture)). Capped at
+an exact sentence of its chat (see [MANUAL.md](../plugins/gtm-brain/MANUAL.md#chat-capture)). Capped at
 200,000 input tokens per pass and 50,000 per chat; what a cap leaves is read next time.
 
 Tool: `capture_chats` (`mode` run | undo | status | off | on, optional `cap`, `chat_cap`). Writes: notes
@@ -739,13 +739,13 @@ the yes says how many pages would move and names the teammates who saved notes i
 commit. `update_plugin` runs the upgrade without the yes, and a scheduled or background run never
 moves pages. A brain already in kind folders whose file says 1 or is missing is set to 2 by the
 upgrade, the next chat start or the next save, with nothing moved. What a teammate on an older
-version sees is in [MANUAL.md](plugins/gtm-brain/MANUAL.md#saving-what-you-say-what-it-keeps).
+version sees is in [MANUAL.md](../plugins/gtm-brain/MANUAL.md#saving-what-you-say-what-it-keeps).
 
 For the owner the same question also covers layout 3: the base files into `about-us/`, `RULES.md`,
 `SCHEMA.md` and `brain/admin.md` into `config/`, in a commit of its own. A teammate's yes moves the
 entity pages only. The chat start offers the upgrade in one line to whoever can say yes to a move
 still waiting. The order for a team, what a 0.34 teammate sees and how to go back are in
-[MANUAL.md, Updating to 0.35](plugins/gtm-brain/MANUAL.md#updating-to-035).
+[MANUAL.md, Updating to 0.35](../plugins/gtm-brain/MANUAL.md#updating-to-035).
 
 Tool: `upgrade_brain` (`confirm`, `skill_names`). Writes: `AGENTS.md`, `.githooks/pre-commit`, `.gitignore`,
 `RULES.md`, `SCHEMA.md`, missing starter documents, `brain/layout.json`, upgrade backups, and
@@ -757,7 +757,7 @@ workflow documents, base documents and the skills made in the brain) it rewrites
 of 0.35 and earlier, `gtm-brain-<name>`, to `gtmb-<name>`, and commits. Without it, the chat start
 names those files and Codex asks first. A teammate's run leaves `about-us/` and `config/` to the
 owner. Notes are never rewritten. See
-[MANUAL.md, Updating to 0.36](plugins/gtm-brain/MANUAL.md#updating-to-036-short-skill-names).
+[MANUAL.md, Updating to 0.36](../plugins/gtm-brain/MANUAL.md#updating-to-036-short-skill-names).
 `node $PLUGIN_ROOT/scripts/gtm-brain-upgrade/skill-names.mjs . [--apply] [--by <handle>]`
 
 ## What runs by itself

@@ -1,7 +1,7 @@
 # Your company brain: a quick guide
 
 For the person using it, not for the person building it. Ten minutes to read. How the brain works
-inside, and how to change it, is in [the manual](plugins/gtm-brain/MANUAL.md); ask Codex in your brain and it answers from it.
+inside, and how to change it, is in [the manual](../plugins/gtm-brain/MANUAL.md); ask Codex in your brain and it answers from it.
 
 ## What it is
 
@@ -135,7 +135,7 @@ morning sync can put the list at the top of its report. It reads live and only w
 scope you chose once; it never sends, reacts or marks anything read, and nothing from your DMs
 is saved in the brain. Your reply style is learned from your own Slack replies, shown to you
 before it is saved, and kept as a short description, never as your messages. The procedure is
-[slack-replies.md](plugins/gtm-brain/skills/gtmb-todo/references/slack-replies.md).
+[slack-replies.md](../plugins/gtm-brain/skills/gtmb-todo/references/slack-replies.md).
 
 ## Workshop demo: the two loops
 
@@ -257,7 +257,7 @@ you do here, and which contexts this project touches. From then on a chat there 
 own open contexts and every note is tagged with the project; everything is still in the one
 brain, searchable from anywhere. Ask "list projects" to see them, "unlink this project" to stop.
 People and companies are shared by every project, and a project is a folder plus a tag, not a
-second memory: see [One brain, many projects](plugins/gtm-brain/MANUAL.md#one-brain-many-projects).
+second memory: see [One brain, many projects](../plugins/gtm-brain/MANUAL.md#one-brain-many-projects).
 
 A linked code repository stays yours: its own `.claude/` and `brain/` paths are never blocked,
 and the brain's skill links are kept out of its `git status`. The link itself is a block in the

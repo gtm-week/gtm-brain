@@ -23,4 +23,4 @@ existing harness continues to verify underlying data access and navigation behav
 Browser tests: `npm run test:e2e` (after `npm run test:e2e:install` once) opens the live
 dashboard of a generated brain in headless Chromium, with plain assertions and no model. The e2e
 framework and its Playwright engine are dev dependencies here only; the plugin ships none of
-them. See SETUP.md, "Checking the dashboard in a browser".
+them. See [docs/SETUP.md](../../docs/SETUP.md#checking-the-dashboard-in-a-browser-contributors), "Checking the dashboard in a browser".
