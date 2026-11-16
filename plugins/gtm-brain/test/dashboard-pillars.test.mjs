@@ -199,7 +199,7 @@ test("page: the picked entity shows beside the list: relation to us, fields, lin
   fire(p, "keydown", { key: "Enter", target: { id: "ent-q" } });
   let pane = p.node("#ent-detail").innerHTML;
   assert.match(pane, /<h2 id="ent-title" tabindex="-1">Jan Zielinski<\/h2>/); assert.match(pane, />Person</);
-  assert.match(pane, /<dt>Role<\/dt><dd class="ent-unknown">not known yet<\/dd>/); assert.match(pane, /Also not recorded: location, linkedin, how we met\./);
+  assert.match(pane, /<dt>Role<\/dt><dd class="ent-unknown">not known yet<\/dd>/); assert.match(pane, /Also not recorded: location, linkedin, how we met, buying role\./);
   assert.match(pane, /<h4>Works at<\/h4>.*data-ent-id="[^"]+"[^>]*>.*Acme Retail.*ended/s);
   assert.match(pane, /<b>Ended<\/b>: Works at Acme Retail.*<b>Started<\/b>: Works at Acme Retail/s, "history, newest first");
   assert.match(pane, /Jan Zielinski is no longer at Acme Retail\..*Jan Zielinski joined Acme Retail as a buyer\./s, "notes, newest first");
@@ -352,6 +352,17 @@ test("page: Memories shows date, age, source and what replaced what; a filter fe
   assert.match(list, /data-entity-id="[^"]+">Ola Kowalska<\/button>/, "the people and companies a note names are chips that open them"); assert.match(list, /class="mem-topic">Our company</, "the topic is small secondary text, by its title");
   assert.doesNotMatch(p.node("#pm-filters").innerHTML + list, /context/i, "the word context is not shown to a person");
   assert.match(p.node("#pm-filters").innerHTML, /data-pm-kind="decision"[^>]*>Decisions</); assert.match(p.node("#pm-filters").innerHTML, /<label>Who <select id="pm-who">/);
+  // one filter box, When and Show; the rest is folded behind More filters, closed, with a count and one Clear
+  const bar = p.node("#pm-filters").innerHTML, top = bar.slice(0, bar.indexOf('id="pm-more-panel"'));
+  assert.match(top, /id="pm-q"/); assert.match(top, /<label>When <select id="pm-period">/); assert.match(top, /<label>Show <select id="pm-state">/);
+  assert.doesNotMatch(top, /pm-who|pm-entity|pm-topic|pm-project|data-pm-kind/, "everything else sits in the folded part");
+  assert.match(bar, /id="pm-more-btn" aria-expanded="false" aria-controls="pm-more-panel"/); assert.match(bar, /id="pm-more-panel" role="group" aria-label="More filters" hidden>/);
+  assert.equal(p.node("#pm-more-btn").textContent, "More filters"); assert.equal(p.node("#pm-clear").hidden, true);
+  p.run('pmF.who="x";pmF.kind="decision";pmF.period="7";renderNotesTab()');
+  assert.equal(p.node("#pm-more-btn").textContent, "More filters (2)", "the count is the folded filters in use"); assert.equal(p.node("#pm-clear").hidden, false);
+  p.run('pmClear()');
+  assert.equal(p.node("#pm-more-btn").textContent, "More filters"); assert.equal(p.node("#pm-clear").hidden, true);
+  assert.equal(p.run('JSON.stringify(pmF)'), '{"q":"","kind":"","who":"","topic":"","project":"","tag":"","entity":"","period":"","state":"in force"}');
   p.run('pmF.state="";renderNotesTab()');
   assert.match(p.node("#pm-list").innerHTML, /Replaced <time[^>]*>[^<]+<\/time> by: Ola Kowalska runs returns and logistics/); assert.match(p.node("#pm-list").innerHTML, /Withdrawn <time[^>]*>[^<]+<\/time>: Withdrawn: Jan never worked/);
   p.run('pmF.state="in force";pmF.kind="decision";renderNotesTab()');

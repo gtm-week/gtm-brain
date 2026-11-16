@@ -15,6 +15,8 @@ to distinguish these workflows from other installed skills.
 | `gtmb-start` | GTM Brain: Start | The first command in a project: creates the brain here, gets to know the business, connects the tools, opens the dashboard; resumes what is unfinished |
 | `gtmb-sync` | GTM Brain: Sync | Pull what came in through the connected tools since the last sync, one subagent per tool, and record what matters |
 | `gtmb-todo` | GTM Brain: Todo | What should I do now: everything waiting on you, ordered, walked through one by one |
+| `gtmb-housekeeping` | GTM Brain: Housekeeping | Tidy names and gaps: `query` with object `housekeeping`, then one item at a time with the person; nothing looked up on the web |
+| `gtmb-interaction` | GTM Brain: Interaction | Propose one of the company's own interactions (`propose_interaction`, then the APPROVE form of `approve_change`), list them or run one with `interact` |
 | `gtmb-workflow` | GTM Brain: Workflows | Start a run of a workflow document (an outbound campaign, ads then outbound), see where it stands, do the next step, skip or abandon; switch one on so a schedule or a save offers it; the brain keeps the steps, dates and milestones |
 | `gtmb-deepdive` | GTM Brain: Deep dive | A one-page brief on an entity or a context, from the notes and the tools read live |
 | `gtmb-icp` | GTM Brain: Define ICP | Chris Pawlak's exploratory interview: company examples, fit and exclusions, buying committee, awareness and readiness; reuses brain evidence and keeps one formal draft ICP document |
@@ -47,7 +49,7 @@ They are not additional discoverable skills. Tools show outcomes such as "Rememb
 "Searching the brain" in chat. Review proposals on the dashboard (it changes nothing but a document you edit and save there). APPROVE is a choice in the form `approve_change` shows; in a chat nothing else applies it.
 A question to you comes the same way: `ask_person` shows a form with the choices to click (or a field to type in) and hands your answer back to Codex. It records nothing and applies nothing. Where the host shows no form, Codex asks in its own question box, or in chat text with numbered options.
 Scripts retain their paths for terminal use with
-`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.37.0`.
+`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.37.2`.
 
 Legend for "writes": what files the command changes. Nothing else is ever touched. The paths are
 those of a brain in the four folders (file layout 4, what setup makes since 0.37); a brain not

@@ -31,11 +31,11 @@ const sha = path => createHash("sha256").update(readFileSync(path)).digest("hex"
 
 test("the shipped template parses: five kinds with fields, organization subtypes, relationship types and the built-in customer_of", () => {
   const s = schema.parseSchema(readFileSync(join(T, "SCHEMA.md"), "utf8"));
-  assert.deepEqual(s.kinds.person.fields.map(f => `${f.name}${f.required ? "*" : ""}`), ["role*", "location", "linkedin", "how_we_met"]);
+  assert.deepEqual(s.kinds.person.fields.map(f => `${f.name}${f.required ? "*" : ""}`), ["role*", "location", "linkedin", "how_we_met", "buying_role"]);
   assert.deepEqual(Object.keys(s.kinds.organization.subtypes), ["company", "team", "investor", "partner", "community"]);
-  assert.deepEqual(schema.fieldsFor(s, "organization", "investor").map(f => f.name), ["website", "industry", "size", "hq", "stage"]);
-  assert.deepEqual(schema.fieldsFor(s, "organization", "company").map(f => f.name), ["website", "industry", "size", "hq"]);
-  assert.deepEqual(Object.keys(s.relations), ["works_at", "reports_to", "partner_of", "investor_in", "uses", "speaker_at", "attended", "integrates_with", "customer_of", "sponsor_of"]);
+  assert.deepEqual(schema.fieldsFor(s, "organization", "investor").map(f => f.name), ["website", "industry", "size", "hq", "segment", "stage"]);
+  assert.deepEqual(schema.fieldsFor(s, "organization", "company").map(f => f.name), ["website", "industry", "size", "hq", "segment"]);
+  assert.deepEqual(Object.keys(s.relations), ["works_at", "reports_to", "partner_of", "investor_in", "uses", "speaker_at", "attended", "competes_with", "integrates_with", "customer_of", "sponsor_of"]);
   // sponsor_of is known without a row in the file, as an ordinary relation (organization to us), never the customer block
   assert.deepEqual([s.relations.sponsor_of.from, s.relations.sponsor_of.to, s.relations.sponsor_of.built_in, s.relations.sponsor_of.one], [["organization"], ["us"], undefined, false]);
   assert.equal(schema.checkRelation(s, { type: "sponsor_of", fromKind: "organization", toKind: "us" }).type, "sponsor_of");
@@ -80,7 +80,7 @@ test("setup writes and commits SCHEMA.md; the chat start lists it; nothing calls
   assert.equal(execFileSync("git", ["-C", root, "ls-files", "SCHEMA.md"], { encoding: "utf8" }).trim(), "SCHEMA.md");
   const out = start(root);
   assert.match(out, /^SCHEMA\.md says what the brain keeps/m);
-  assert.match(out, /person: role\*, location, linkedin, how_we_met\. organization: website\*, industry\*, size, hq; subtypes company, team, investor \(\+stage\)/);
+  assert.match(out, /person: role\*, location, linkedin, how_we_met, buying_role\. organization: website\*, industry\*, size, hq, segment; subtypes company, team, investor \(\+stage\)/);
   assert.match(out, /works_at person>organization\*/);
   assert.ok(where.MANAGED("SCHEMA.md"));
 });
@@ -90,7 +90,7 @@ test("an edited SCHEMA.md is never overwritten; a broken one is reported with it
   const mine = readFileSync(path, "utf8").replace("| hq | City and country of the head office | no |", "| hq | City and country of the head office | no |\n| budget_owner | Who signs off spend | yes |");
   writeFileSync(path, mine); start(root);
   assert.equal(readFileSync(path, "utf8"), mine);
-  assert.match(start(root), /organization: website\*, industry\*, size, hq, budget_owner\*/);
+  assert.match(start(root), /organization: website\*, industry\*, size, hq, budget_owner\*, segment/);
   writeFileSync(path, mine.replace("| budget_owner | Who signs off spend | yes |", "| Budget Owner | Who signs off spend | sometimes |"));
   const before = sha(path), out = start(root);
   assert.match(out, /SCHEMA\.md cannot be read, and was left as it is: line \d+: field "Budget Owner" must be lowercase words joined by _; Proposed fix: `budget_owner`/);
