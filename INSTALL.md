@@ -225,5 +225,5 @@ linked to notes in the relevant context, not additional default contexts. The pe
 exists from setup. Pipeline, marketing and account/initiative contexts
 are proposed only when sustained work needs a separate scope, then created on agreement.
 Installing or updating the plugin does not rename or delete contexts in an existing brain.
-After refreshing this checkout with ./dev-install.sh, start a new chat so setup uses the new
+After refreshing this checkout with ./scripts/dev-install.sh, start a new chat so setup uses the new
 MCP schema and workflow. Do not reuse an old chat's pipeline/marketing/gtm setup schema.
