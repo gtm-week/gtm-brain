@@ -10,7 +10,7 @@ const NOT_SHOWN = { status: 'not_shown', note: 'The host closed the form before 
 
 // One interactive request per MCP session. No persistent state or timeout-as-answer.
 export function questionInput(send, now = Date.now) {
-  let supported = false, sequence = 0, pending = null, hidden = false;
+  let supported = false, sequence = 0, pending = null, hidden = false, guessed = false;
   async function form(params, parentId, args, first) {
     const sentAt = now();
     const result = await new Promise((resolve, reject) => {
@@ -19,8 +19,14 @@ export function questionInput(send, now = Date.now) {
       try { send({ jsonrpc: '2.0', id, method: 'elicitation/create', params }); }
       catch (error) { pending = null; reject(error); }
     });
-    if (result?.client && /^(decline|cancel)$/.test(result.result?.action) && (byHost(result.result) || (first && now() - sentAt < NOT_SHOWN_MS))) { hidden = true; return NOT_SHOWN; }
-    return readAnswer(args, result?.client ? result.result : result);
+    if (result?.client && /^(decline|cancel)$/.test(result.result?.action)) {
+      if (byHost(result.result)) { hidden = true; return NOT_SHOWN; }
+      // A quick close is a guess. On a raw form (ask_person, asked many times in a chat) the guess stops
+      // further raw forms only: a person who closes a question fast must still get the APPROVE form.
+      if (first && now() - sentAt < NOT_SHOWN_MS) { if (args) hidden = true; else guessed = true; return NOT_SHOWN; }
+    }
+    const answer = result?.client ? result.result : result;
+    return args ? readAnswer(args, answer) : answer;
   }
   return {
     initialize(capabilities = {}) {
@@ -38,6 +44,14 @@ export function questionInput(send, now = Date.now) {
       // The person picked Something else: ask for their own words in the same call. They have just seen
       // a form, so a quick close here is their answer, not a host that hides forms.
       return withFollowUp(args, first, await form(buildFollowUp(args), parentId, { question: args.question }, false));
+    },
+    // One form as given, its result as the host returned it (or NOT_SHOWN): for a caller that builds and
+    // reads its own form (ask-person.mjs). first: a quick close can be the host's, as in ask.
+    async raw(params, parentId, first = true) {
+      if (!supported) throw Error('This client does not support MCP input forms.');
+      if (pending) throw Error('A question is already pending. Wait for its answer or cancellation.');
+      if (first && (hidden || guessed)) return NOT_SHOWN;
+      return form(params, parentId, null, first);
     },
     receive(message) {
       if (message.method || !pending || message.id !== pending.id) return false;

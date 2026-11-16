@@ -44,7 +44,8 @@ run a sequence of memory commands.
 
 The sections below document the underlying operations, tools, and script paths for reference.
 They are not additional discoverable skills. Tools show outcomes such as "Remembering" or
-"Searching the brain" in chat. Review proposals on the read-only dashboard. APPROVE is a choice in the form `approve_change` shows; in a chat nothing else applies it.
+"Searching the brain" in chat. Review proposals on the dashboard (it changes nothing but a document you edit and save there). APPROVE is a choice in the form `approve_change` shows; in a chat nothing else applies it.
+A question to you comes the same way: `ask_person` shows a form with the choices to click (or a field to type in) and hands your answer back to Codex. It records nothing and applies nothing. Where the host shows no form, Codex asks in its own question box, or in chat text with numbered options.
 Scripts retain their paths for terminal use with
 `export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.35.0`.
 
@@ -285,6 +286,8 @@ A grey pill is an ID that no longer resolves (withdrawn, or in a context this da
 hold). A sentence with no pill has no source note, so the summary itself is what is wrong.
 Correcting a wrong sentence means forgetting the note behind its pill, not editing the summary.
 
+The dashboard server answers reads only, except `POST /document`: saving a document edited on the page runs `document.mjs --update <path> --body` (the same validation, header and commit as in chat; on layout 3 a teammate's change to a base file becomes a proposal). It asks for the page's own Origin and Host, a token made at each server start and served only inside the page, JSON, a text within the 64 KB document limit, a path `lib/documents` lists, and the hash of the version that was opened (a file changed meanwhile is not overwritten); never during a scheduled run. `GET /search?q=` reads the memory index for the search box. Two of the reads belong to the Design system document: `GET /design-file?path=` serves a png, jpg, svg or webp the last render listed from the `design-system/` folder beside it, and `GET /design-visual` serves the one `design-system.html` beside it; both go out sandboxed (`Content-Security-Policy: sandbox`, nosniff), so nothing in them runs script. `POST /entity-edit` takes one of nine named operations for the Entities tab (create, update, merge, archive, set_fields, add_relation, end_relation, retract_relation, set_customer) behind the same checks; each runs the entities or remember script, so a relation or a field saved on the page is a note with its author. `POST /memory-edit` takes one of five named operations for the menu on a note in the Memories tab (correct, retract, move, set_kind, answer) behind the same checks; each is one call of the remember script and never edits or removes a line: a correction or a change of kind is a new note that supersedes the old one, "This was wrong" and an answer to an open question are notes that retract it, and a move withdraws the note in its topic and saves it again in the other, with the person at this computer as the author and the dashboard as a source beside the note's own. `GET /chat` answers which chat of this brain is newest on this computer, so a prepared message on the page opens in that chat (`codex://threads/<id>?prompt=`) and not in a new one.
+
 Tools: `render_dashboard` (rebuild), `open_dashboard` (rebuild, start the server, open the browser). Writes: `work/home/` (local); `work/dash.json`, `work/session.json`
 (the chat recorded at chat start).
 `node $PLUGIN_ROOT/scripts/gtm-brain-render/render.mjs . && open work/home/index.html`
@@ -326,6 +329,26 @@ skills). The pages ship with the plugin in `plugins/gtm-brain/policies/rules/` (
 first reply of a chat, once: `load_context` and the other context tools the contexts page, the
 entity tools the entities page, `document` the documents page, `query` meetings and customers
 their pages, and so on. Writes: nothing.
+
+*"Let's do housekeeping"*, *"tidy up"*, *"clean up the duplicates"* is `query` with object
+`housekeeping` (`lib/housekeeping.mjs`): the rules check's list in three groups with counts (people
+known by a first name only, names that may be the same person or company, other findings) and,
+for the first five items of each group, the evidence to ask the person without another read: the
+notes that mention a first-name person (id, date, 200 characters) with the companies and emails in
+them; for a pair both cards side by side, what a merge would keep and the two tool calls with ids.
+`filters.offset` returns the next items, `search` (first names, same names, other) one group. The
+reply stays under 12 KB and ends with the instruction the rules check also ends with
+(`ONE_AT_A_TIME` in `lib/rules-check.mjs`): one item at a time, ask the person, never the web.
+Reads only. Writes: nothing.
+
+Several people or companies in one read: `query` with object `entities` and `filters.name` and/or
+`filters.id` as lists (or names typed into `search` with commas or "and"), at most 25
+(`lib/entity-cards.mjs`). One card each in the order asked: name, kind, id, relation to us, where
+they work (the relation log), the compiled brief's first lines and the newest three notes cut to
+200 characters. A name several entities share lists them in one line; an unknown name says so.
+Same 12 KB cap whatever `limit` says: notes are dropped before entities and the last lines say
+what was left out. The `sql` parameter's description names the tables and columns and gives one
+worked example, so no `describe_object` call comes first. Writes: nothing.
 
 *"Is the brain too full or too empty?"* is `query` with object `population`
 (`scripts/gtm-brain-advisor/population.mjs`, numbers in `lib/population.mjs`). Deterministic, from
@@ -406,7 +429,8 @@ Facts stay in context memories; narrative sections are compiled with citations. 
 when only one person has it.
 
 Tools: `who_is`, `add_name` (aliases, emails, kind, external references and identity sources),
-`update_entity` (explicit set/add/remove by stable ID), `merge_entities` (preview then apply),
+`update_entity` (explicit set/add/remove by stable ID), `merge_entities` (one call with `confirmed: true` once the person has confirmed; otherwise preview then apply),
+`answer_question` (closes an open question with the person's answer as the note that retracts it, and carries out same or different for two names; without a question it lists the open ones),
 `archive_entity` (`undo: true` restores), `undo_entity_merge` (preview then reverse a recorded merge),
 `entity_facts` and `compile_entity` (a cited brief from current evidence). Writes:
 `brain/entities/*.md` and `brain/entities/.history/`, through the library. Aliases cannot
@@ -621,8 +645,17 @@ members can approve. APPROVE, "ok" or "yes" typed in the chat applies nothing. W
 cannot show the form, Codex gives you the `approve.mjs` command to run in a terminal yourself,
 where it asks you to type APPROVE.
 
-Tools: `propose_admin_change` for the proposal, `approve_change` (kind `admin` or `interaction`, `by`) to apply it. Writes: `brain/admin.md`, `~/.gtm-brain/approvals.log`, a commit.
-`node $PLUGIN_ROOT/scripts/gtm-brain-approve/approve.mjs . --diff`, `... --apply --by <handle|name|email>` (in a terminal; asks you to type APPROVE)
+In a brain with `about-us/` and `config/` (layout 3) the settings are `config/settings.yaml` and
+only the owner approves: anyone else's change, and any change they make under `about-us/` or
+`config/` (a tool write or a hand edit), is kept as a proposal in `brain/proposals/<id>/` with a
+note tagged for the owner, who sees it at their next chat start and decides with
+`approve_change` kind `proposal`. Every approval, and every owner's own hand edit there, is
+recorded as a decision note (who asked, who approved, which file, a summary, the commit);
+`query` with object `approvals` lists them and the proposals waiting. See MANUAL.md, "Who can
+change the base files".
+
+Tools: `propose_admin_change` for the proposal, `approve_change` (kind `admin`, `interaction` or `proposal` with `id`, `by`) to apply it. Writes: the settings file, `~/.gtm-brain/approvals.log`, a commit, a decision note.
+`node $PLUGIN_ROOT/scripts/gtm-brain-approve/approve.mjs . --diff`, `... --apply --by <handle|name|email>` (in a terminal; asks you to type APPROVE), `... --proposal <id> --diff | --apply | --drop --by <owner>`
 
 ### schedule
 *"set up the weekly compile"*, *"schedule"*
@@ -701,6 +734,12 @@ moves pages. A brain already in kind folders whose file says 1 or is missing is 
 upgrade, the next chat start or the next save, with nothing moved. What a teammate on an older
 version sees is in [MANUAL.md](plugins/gtm-brain/MANUAL.md#saving-what-you-say-what-it-keeps).
 
+For the owner the same question also covers layout 3: the base files into `about-us/`, `RULES.md`,
+`SCHEMA.md` and `brain/admin.md` into `config/`, in a commit of its own. A teammate's yes moves the
+entity pages only. The chat start offers the upgrade in one line to whoever can say yes to a move
+still waiting. The order for a team, what a 0.34 teammate sees and how to go back are in
+[MANUAL.md, Updating to 0.35](plugins/gtm-brain/MANUAL.md#updating-to-035).
+
 Tool: `upgrade_brain` (`confirm`). Writes: `AGENTS.md`, `.githooks/pre-commit`, `.gitignore`,
 `RULES.md`, `SCHEMA.md`, missing starter documents, `brain/layout.json`, upgrade backups, and
 identity files only when migration is needed.
@@ -764,8 +803,10 @@ block meeting capture or compilation. The system-scheduler entry point is
 `SCHEMA.md` at the brain root says what the brain keeps about each person, organization and
 product, and how they relate. Each kind has a table of fields (`| Field | What it means | Required |`);
 organizations have subtypes (`### Subtypes`) with fields of their own; `## Relationships` lists the
-types (`| Type | From | To | What it means | Required |`, `us` = our company, `customer_of` = the
-customer block). Setup writes it; the chat start lists it in one digest, and reports a file that
+types (`| Type | From | To | What it means | Required | One at a time |`, `us` = our company,
+`customer_of` = the customer block). One at a time `yes` means a new current link of that type from
+the same entity ends the previous one; a file without the column, or an empty cell, keeps works_at
+and reports_to one at a time and every other type many. Setup writes it; the chat start lists it in one digest, and reports a file that
 cannot be read with a fix per line, leaving it unchanged (`lib/schema.mjs`). The kinds are fixed in
 0.34.0: person, organization, product.
 
@@ -776,9 +817,29 @@ SCHEMA.md edit refills the briefs of that kind (at most 20 per pass), never hidi
 
 A relationship is a note with a `relation` block on `remember`: `{from, type, to, status: current |
 ended, basis: user | source, observed_at, reference?}`, the type checked against SCHEMA.md when it is
-written. "Ended" is a new note; a correction uses `supersedes` / `retracts`; a source never replaces
-what the person said. `query` object `relations` (search = an entity, filters.type) shows each one's
-current state, history and disagreeing sources. `query` object `rules` lists entities with a compiled
+written. `{from, type, to}` is enough: the save fills status (ended when the clause of the note that
+names the other end says left, no longer, churned, ended, former, previously, used to, quit, resigned
+or departed, or when the note says so and does not name that end; `saysEnded` in `lib/relation-log.mjs`), observed_at (the
+note's time; a date alone is that day, a month its first day, an offset is put in UTC) and basis (source
+when the note cites a record outside the chat, else user, with the author as the user source); what
+the caller passes is kept. "Ended" is a new note; a correction uses `supersedes` / `retracts`; a
+source never replaces what the person said.
+
+The relationship log (`lib/relation-log.mjs`): each relationship is a record with a stable id, `r_`
+plus a hash of its two ends and its type, derived and never stored; every note that carries it is an
+event (started, changed, ended). For a one-at-a-time type the save writes an ended note for the
+previous link, dated to the new one and tagged `ended-by:<note id>`, in the same context and commit
+(`lib.endPreviousRelations`); a log without that note (a teammate on 0.34 wrote it) is ended when
+read, marked implied. A correction that withdraws or replaces the note which ended a link withdraws
+that ended note too (`lib.withdrawEndedBy`), unless it names another current end of the same type; a
+correction from the chat that cites no outside record counts as the person's word. Renames, merges, undone merges and kind changes append `{at, by, entity, change,
+from, to}` to `brain/entities/.history/events.jsonl` (`lib/entity-events.mjs`), written by the entity
+writers and committed with the entity change. The memory index (version 9) fills `relations`,
+`relation_events` and `entity_events` from both on every refresh; they are readable in SQL mode.
+`query` object `relations` reads them: search = an entity for its relationships and its history
+(relationship events and renames, merges and kind changes, newest first), filters.type for one type,
+filters.at = a date for the ones current then. Each entity page has a `## History` section from the
+same data when there is any. `query` object `rules` lists entities with a compiled
 brief missing a required field or relationship.
 
 Source pointers: `lib/pointers.mjs` gives each source one spelling. Kinds are lowercased and short

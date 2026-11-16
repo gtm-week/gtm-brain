@@ -1,3 +1,6 @@
+// These tests read and write the root files of a layout 2 brain: setup and the lib play a plugin that writes layout 2 at most
+// (lib/layout-version.mjs GTM_BRAIN_TEST_LAYOUT). Layout 3 (about-us/, config/) is covered by config-folders.test.mjs.
+process.env.GTM_BRAIN_TEST_LAYOUT = "2";
 process.env.GTM_BRAIN_NO_WATCH = "1";
 process.env.GTM_BRAIN_NO_COMPILE = "1"; // Model runs are opt-in through test doubles.
 // End-to-end tests of the skill scripts on a brain made by setup.sh. Run: node --test plugins/gtm-brain/test
@@ -738,11 +741,15 @@ test("recall hands over each hit's sources, with the chat it came from as a link
   assert.match(person, /Pierre Aubert signs in October/); assert.match(person, /contexts\/icp\/memories.jsonl/); assert.match(person, /codex:\/\/threads\/01a0-chat/, "the entity brief traces claims to memories and sources");
 });
 
-test("GTM Brain has no question forms: questions go to Codex's own box or plain chat text, and no procedure names a removed tool (2026-11-11)", () => {
+test("questions go to ask_person's form first, then Codex's own box, then plain chat text, and no procedure names a removed tool (2026-11-11, 2026-11-15)", () => {
   const policy = readFileSync(`${P}/policies/questions.md`, "utf8");
-  assert.match(policy, /no question forms of its own/);
+  assert.match(policy, /First `ask_person`/);
   assert.match(policy, /`request_user_input`/);
-  assert.match(policy, /plain chat text and\s+end the turn/);
+  assert.match(policy, /plain chat text that ends\s+the turn/);
+  assert.ok(policy.indexOf("`ask_person`") < policy.indexOf("`request_user_input`") && policy.indexOf("`request_user_input`") < policy.indexOf("plain chat text"), "the form, the host's box, chat text");
+  assert.match(policy, /never stands in for APPROVE, an `ask_person` answer\s+included/);
+  for (const file of ["templates/AGENTS.md", "skills/gtm-brain-start/references/questions.md"]) { const t = readFileSync(`${P}/${file}`, "utf8"); assert.ok(t.includes("`ask_person`") && t.indexOf("`ask_person`") < t.indexOf("question box"), `${file}: ask_person first`); }
+  assert.ok(Buffer.byteLength(readFileSync(`${P}/templates/AGENTS.md`)) < 32768, "the rulebook fits what Codex reads of AGENTS.md");
   assert.match(policy, /`approve_change`/, "APPROVE keeps its own form");
   let found = ""; try { found = execFileSync("grep", ["-rlE", "onboarding_question|configuration_question", `${P}/skills`, `${P}/policies`, `${P}/templates/AGENTS.md`, "--include=*.md"], { encoding: "utf8" }); } catch {}
   const named = found.trim().split("\n").filter(Boolean);

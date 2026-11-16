@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{COMPANY}}: design system</title>
+<meta name="gtm-brain-starter" content="design-system">
+<style>
+/* Placeholder tokens: replace the values, keep the names. The only values this page is styled with. The same block is printed under "Tokens". */
+:root {
+  --color-text: #1F2328;
+  --color-surface: #F7F7F5;
+  --color-accent: #9AA3AF;
+  --color-positive: #4F6B5C;
+  --color-line: #D3D7DC;
+
+  --font-heading: "Brand Heading", Georgia, "Times New Roman", serif;
+  --font-body: "Brand Body", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --weight-heading: 600;
+  --weight-body: 400;
+  --leading-heading: 1.1;
+  --leading-body: 1.5;
+
+  --size-display: 64px;
+  --size-h1: 40px;
+  --size-h2: 24px;
+  --size-body: 16px;
+  --size-small: 13px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 40px;
+  --space-6: 64px;
+
+  --grid-columns: 12;
+  --grid-gutter: 24px;
+  --grid-max: 1120px;
+
+  --rule: 1px solid var(--color-line);
+  --rule-strong: 2px solid var(--color-text);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+body {
+  margin: 0;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-weight: var(--weight-body);
+  font-size: var(--size-body);
+  line-height: var(--leading-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+h1, h2, h3, h4 { font-family: var(--font-heading); font-weight: var(--weight-heading); line-height: var(--leading-heading); margin: 0; letter-spacing: -0.01em; }
+p { margin: 0; }
+a { color: inherit; }
+code, pre, .mono { font-family: var(--font-mono); }
+.wrap { max-width: calc(var(--grid-max) + 2 * var(--space-4)); margin: 0 auto; padding: 0 var(--space-4); }
+.label { font-size: var(--size-small); letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; }
+.note { font-size: var(--size-small); max-width: 62ch; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* Top bar */
+.status { background: var(--color-text); color: var(--color-surface); font-size: var(--size-small); padding: var(--space-2) 0; }
+.status b { color: var(--color-surface); font-weight: 600; }
+nav.top { position: sticky; top: 0; z-index: 5; background: var(--color-surface); border-bottom: var(--rule-strong); }
+nav.top .wrap { display: flex; align-items: center; gap: var(--space-4); min-height: 56px; }
+nav.top .brand { display: flex; align-items: center; gap: var(--space-2); font-family: var(--font-heading); font-weight: 600; font-size: 18px; text-decoration: none; white-space: nowrap; }
+nav.top ol { list-style: none; display: flex; flex-wrap: wrap; gap: 0 var(--space-3); margin: 0 0 0 auto; padding: var(--space-2) 0; font-size: var(--size-small); }
+nav.top ol a { text-decoration: none; padding: var(--space-1) 0; border-bottom: 2px solid transparent; display: inline-block; }
+nav.top ol a:hover, nav.top ol a:focus-visible { border-bottom-color: var(--color-accent); outline: none; }
+nav.top ol span { margin-right: var(--space-1); opacity: 0.55; }
+
+/* Hero */
+.hero { padding: var(--space-6) 0 var(--space-5); border-bottom: var(--rule); }
+.hero .grid { display: grid; grid-template-columns: repeat(12, 1fr); column-gap: var(--grid-gutter); row-gap: var(--space-5); align-items: end; }
+.hero .lead { grid-column: span 8; }
+.hero .facts { grid-column: span 4; }
+.hero h1 { font-size: var(--size-display); line-height: 1.02; letter-spacing: -0.025em; margin-top: var(--space-3); }
+.hero .line { font-family: var(--font-heading); font-size: var(--size-h2); line-height: 1.25; font-weight: 400; margin-top: var(--space-4); max-width: 26ch; }
+.hero .line em { font-style: normal; border-bottom: 4px solid var(--color-accent); }
+.facts dl { margin: 0; border-top: var(--rule-strong); }
+.facts div { display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: var(--rule); font-size: var(--size-small); }
+.facts dt { font-weight: 600; }
+.facts dd { margin: 0; text-align: right; }
+
+/* Sections */
+section.block { padding: var(--space-6) 0; border-bottom: var(--rule); }
+.head { display: grid; grid-template-columns: repeat(12, 1fr); column-gap: var(--grid-gutter); row-gap: var(--space-2); align-items: baseline; margin-bottom: var(--space-5); }
+.head .no { grid-column: span 1; font-family: var(--font-heading); font-size: var(--size-h2); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.head h2 { grid-column: span 4; font-size: var(--size-h1); letter-spacing: -0.02em; }
+.head p { grid-column: span 7; max-width: 60ch; }
+h3 { font-size: var(--size-h2); margin-bottom: var(--space-3); }
+.sub { margin-top: var(--space-5); }
+.caption { font-size: var(--size-small); margin-top: var(--space-2); }
+
+/* Colour */
+.swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--grid-gutter); }
+.swatch { display: flex; flex-direction: column; }
+.chip { height: 216px; padding: var(--space-3); display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--color-text); }
+.chip .aa { font-family: var(--font-heading); font-weight: 600; font-size: var(--size-display); line-height: 1; }
+.chip .hex { font-family: var(--font-mono); font-size: var(--size-small); }
+.swatch h3 { margin: var(--space-3) 0 var(--space-1); }
+.swatch .role { font-size: var(--size-small); min-height: 3em; }
+.contrast { margin: var(--space-3) 0 0; padding: 0; list-style: none; border-top: var(--rule-strong); font-size: var(--size-small); }
+.contrast li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: var(--rule); }
+.contrast .ratio { font-variant-numeric: tabular-nums; font-weight: 600; margin-left: auto; }
+.verdict { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; padding: 2px 6px; min-width: 44px; text-align: center; border: 1.5px solid var(--color-text); }
+.verdict.pass { background: var(--color-positive); border-color: var(--color-positive); color: var(--color-surface); }
+.verdict.fail { background: transparent; color: var(--color-text); }
+.pairings { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--grid-gutter); margin-top: var(--space-3); }
+.pair { padding: var(--space-3); border: 1px solid var(--color-text); font-size: var(--size-small); }
+.pair b { display: block; font-family: var(--font-heading); font-size: var(--size-h2); line-height: 1.1; margin-bottom: var(--space-2); }
+
+/* Type */
+.scale { border-top: var(--rule-strong); }
+.scale .row { display: grid; grid-template-columns: repeat(12, 1fr); column-gap: var(--grid-gutter); padding: var(--space-4) 0; border-bottom: var(--rule); align-items: baseline; }
+.scale .meta { grid-column: span 3; font-size: var(--size-small); }
+.scale .meta b { display: block; font-size: var(--size-body); }
+.scale .meta span { display: block; font-family: var(--font-mono); }
+.scale .sample { grid-column: span 9; min-width: 0; }
+.t-display { font-family: var(--font-heading); font-weight: 600; font-size: var(--size-display); line-height: 1.05; letter-spacing: -0.025em; }
+.t-h1 { font-family: var(--font-heading); font-weight: 600; font-size: var(--size-h1); line-height: 1.1; letter-spacing: -0.02em; }
+.t-h2 { font-family: var(--font-heading); font-weight: 600; font-size: var(--size-h2); line-height: 1.1; }
+.t-body { font-size: var(--size-body); line-height: 1.5; max-width: 62ch; }
+.t-small { font-size: var(--size-small); line-height: 1.45; max-width: 62ch; }
+.t-num { font-size: var(--size-body); font-variant-numeric: tabular-nums; text-align: right; width: 12ch; line-height: 1.5; }
+.t-num span { display: block; border-bottom: var(--rule); }
+.stacks { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--grid-gutter); margin-top: var(--space-4); }
+.stack { border: 1px solid var(--color-text); padding: var(--space-3); }
+.stack code { display: block; font-size: var(--size-small); margin-top: var(--space-2); overflow-wrap: anywhere; }
+
+/* Spacing and grid */
+.steps { display: flex; align-items: flex-end; gap: var(--space-5); flex-wrap: wrap; border-bottom: var(--rule-strong); padding-bottom: var(--space-3); }
+.step { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); }
+.step i { display: block; background: var(--color-accent); }
+.step b { font-variant-numeric: tabular-nums; }
+.step span { font-family: var(--font-mono); font-size: var(--size-small); }
+.cols { display: grid; grid-template-columns: repeat(12, 1fr); column-gap: var(--grid-gutter); height: 168px; }
+.cols i { background: var(--color-line); display: flex; align-items: flex-end; justify-content: center; font-style: normal; font-size: var(--size-small); padding-bottom: var(--space-2); font-variant-numeric: tabular-nums; }
+.spans { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--space-2) var(--grid-gutter); margin-top: var(--space-2); font-size: var(--size-small); }
+.spans div { border: 1px solid var(--color-text); padding: var(--space-2); }
+.s12 { grid-column: span 12; } .s8 { grid-column: span 8; } .s6 { grid-column: span 6; } .s4 { grid-column: span 4; } .s3 { grid-column: span 3; }
+.measure { display: flex; align-items: center; gap: var(--space-2); font-size: var(--size-small); margin-bottom: var(--space-2); }
+.measure::before, .measure::after { content: ""; flex: 1; border-top: 1px solid var(--color-text); }
+
+/* Components */
+.comp { display: grid; grid-template-columns: repeat(12, 1fr); column-gap: var(--grid-gutter); padding: var(--space-5) 0; border-top: var(--rule); }
+.comp:first-of-type { border-top: var(--rule-strong); }
+.comp > .about { grid-column: span 3; }
+.comp > .about p { font-size: var(--size-small); margin-top: var(--space-2); }
+.comp > .show { grid-column: span 9; min-width: 0; }
+.states { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-3) var(--grid-gutter); align-items: start; }
+.states + .states { margin-top: var(--space-4); }
+.state small { display: block; font-size: var(--size-small); margin-top: var(--space-2); }
+
+.btn { display: inline-block; font-family: var(--font-body); font-size: var(--size-body); font-weight: 600; line-height: 1.5; padding: var(--space-2) var(--space-4); border: 2px solid var(--color-accent); background: var(--color-accent); color: var(--color-text); text-decoration: none; cursor: pointer; border-radius: 0; }
+.btn:hover, .btn.is-hover { border-color: var(--color-text); }
+.btn:focus-visible, .btn.is-focus { outline: 2px solid var(--color-text); outline-offset: 3px; }
+.btn:active, .btn.is-active { background: var(--color-text); border-color: var(--color-text); color: var(--color-accent); }
+.btn[disabled], .btn.is-disabled { background: var(--color-line); border-color: var(--color-line); color: var(--color-text); cursor: not-allowed; }
+.btn.secondary { background: transparent; border-color: var(--color-text); color: var(--color-text); }
+.btn.secondary:hover, .btn.secondary.is-hover { background: var(--color-text); color: var(--color-surface); }
+.btn.secondary:active, .btn.secondary.is-active { background: var(--color-text); color: var(--color-line); }
+.btn.secondary[disabled], .btn.secondary.is-disabled { background: transparent; border-color: var(--color-line); color: var(--color-line); }
+
+.card { border: 1px solid var(--color-text); padding: var(--space-4); max-width: 360px; background: var(--color-surface); }
+.card .label { display: block; margin-bottom: var(--space-3); }
+.card .big { font-family: var(--font-heading); font-weight: 600; font-size: var(--size-display); line-height: 1; color: var(--color-accent); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.card h4 { font-size: var(--size-h2); margin: var(--space-2) 0 var(--space-2); }
+.card p { font-size: var(--size-body); }
+.card .foot { margin-top: var(--space-4); padding-top: var(--space-3); border-top: var(--rule); display: flex; justify-content: space-between; align-items: center; font-size: var(--size-small); }
+.pairrow { display: flex; gap: var(--grid-gutter); flex-wrap: wrap; align-items: flex-start; }
+
+table.data { border-collapse: collapse; width: 100%; font-size: var(--size-body); }
+table.data caption { text-align: left; font-size: var(--size-small); padding-bottom: var(--space-2); }
+table.data th { text-align: left; font-size: var(--size-small); letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; padding: var(--space-2) var(--space-3) var(--space-2) 0; border-bottom: var(--rule-strong); }
+table.data td { padding: var(--space-2) var(--space-3) var(--space-2) 0; border-bottom: var(--rule); }
+table.data .r { text-align: right; font-variant-numeric: tabular-nums; padding-right: 0; }
+table.data tfoot td { font-weight: 600; border-bottom: var(--rule-strong); }
+
+.field { display: block; }
+.field span { display: block; font-size: var(--size-small); font-weight: 600; margin-bottom: var(--space-1); }
+.field input { width: 100%; font-family: var(--font-body); font-size: var(--size-body); line-height: 1.5; padding: var(--space-2) var(--space-3); border: 1px solid var(--color-text); border-radius: 0; background: var(--color-surface); color: var(--color-text); }
+.field input::placeholder { color: var(--color-text); opacity: 0.55; }
+.field input:focus, .field.is-focus input { outline: 2px solid var(--color-text); outline-offset: 2px; }
+.field.is-error input { border: 2px solid var(--color-accent); padding: 7px 15px; }
+.field input[disabled] { border-color: var(--color-line); background: var(--color-line); }
+.field small { display: block; font-size: var(--size-small); margin-top: var(--space-1); }
+.field.is-error small { font-weight: 600; }
+.field.is-error small::before { content: ""; display: inline-block; width: 8px; height: 8px; background: var(--color-accent); margin-right: var(--space-2); }
+
+.tags { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+.tag { display: inline-block; font-size: var(--size-small); font-weight: 600; line-height: 1.45; padding: 2px var(--space-2); border: 1px solid var(--color-text); }
+.tag.quiet { border-color: var(--color-line); background: var(--color-line); }
+.tag.positive { background: var(--color-positive); border-color: var(--color-positive); color: var(--color-surface); }
+.tag.accent { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-text); }
+.tag.dark { background: var(--color-text); color: var(--color-surface); }
+
+.frames { display: grid; grid-template-columns: 2fr 1fr; gap: var(--grid-gutter); align-items: start; }
+.frame { border: 1px solid var(--color-text); background: var(--color-surface); position: relative; display: flex; flex-direction: column; justify-content: space-between; padding: var(--space-5); overflow: hidden; }
+.frame.slide { aspect-ratio: 16 / 9; }
+.frame.social { aspect-ratio: 1 / 1; background: var(--color-text); color: var(--color-surface); padding: var(--space-4); }
+.frame .kicker { display: flex; justify-content: space-between; align-items: center; font-size: var(--size-small); }
+.frame .stat { font-family: var(--font-heading); font-weight: 600; font-size: 112px; line-height: 0.9; letter-spacing: -0.03em; color: var(--color-accent); font-variant-numeric: tabular-nums; }
+.frame .say { font-family: var(--font-heading); font-weight: 600; font-size: var(--size-h1); line-height: 1.1; max-width: 16ch; margin-top: var(--space-3); }
+.frame.social .stat { font-size: var(--size-display); white-space: nowrap; }
+.frame.social .say { font-size: var(--size-h2); font-weight: 400; line-height: 1.25; margin-top: 0; }
+.frame .rule { height: 2px; background: currentColor; }
+
+/* Logo and imagery */
+.logos { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--grid-gutter); }
+.logo-cell { border: 1px solid var(--color-text); height: 200px; display: flex; align-items: center; justify-content: center; position: relative; }
+.logo-cell.on-ink { background: var(--color-text); color: var(--color-surface); }
+.logo-cell.clear { background-image: repeating-linear-gradient(45deg, var(--color-line) 0 1px, transparent 1px 8px); }
+.logo-cell.clear .zone { background: var(--color-surface); padding: var(--space-5); border: 1px dashed var(--color-text); }
+.logo-cell figcaption, .cap { position: absolute; left: var(--space-2); bottom: var(--space-2); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600; }
+.lockup { display: flex; align-items: center; gap: var(--space-3); font-family: var(--font-heading); font-weight: 600; font-size: var(--size-h2); line-height: 1; }
+.imagery { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--grid-gutter); }
+.imagery figure { margin: 0; }
+.imagery svg { display: block; width: 100%; height: auto; border: 1px solid var(--color-text); }
+.imagery figcaption { font-size: var(--size-small); margin-top: var(--space-2); }
+.rules { margin: var(--space-4) 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, 1fr); column-gap: var(--grid-gutter); border-top: var(--rule-strong); }
+.rules li { padding: var(--space-2) 0; border-bottom: var(--rule); }
+
+/* Do and do not */
+.dd { display: grid; grid-template-columns: 1fr 1fr; gap: var(--grid-gutter); margin-bottom: var(--space-5); }
+.dd:last-child { margin-bottom: 0; }
+.dd figure { margin: 0; }
+.dd .ex { border: 1px solid var(--color-text); height: 232px; padding: var(--space-4); display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
+.dd figcaption { display: flex; gap: var(--space-3); align-items: baseline; margin-top: var(--space-2); padding-top: var(--space-2); font-size: var(--size-small); }
+.dd .do figcaption { border-top: 4px solid var(--color-positive); }
+.dd .dont figcaption { border-top: 4px solid var(--color-accent); }
+.dd figcaption b { letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+.ex .n { font-family: var(--font-heading); font-weight: 600; font-size: var(--size-display); line-height: 1; font-variant-numeric: tabular-nums; }
+.ex .h { font-family: var(--font-heading); font-weight: 600; font-size: var(--size-h2); line-height: 1.1; margin-top: var(--space-2); }
+.ex.crowded { justify-content: flex-start; padding: var(--space-2); font-size: var(--size-small); line-height: 1.25; }
+.ex.crowded .h { font-size: 18px; margin: 0 0 var(--space-1); }
+.ex.bad-fx { background: linear-gradient(135deg, var(--color-accent), var(--color-positive)); color: var(--color-surface); }
+.ex.bad-fx .boxed { background: var(--color-surface); color: var(--color-text); padding: var(--space-3); box-shadow: 0 12px 28px rgba(20, 22, 26, 0.45); border-radius: 14px; }
+
+/* Tokens */
+pre.tokens { margin: 0; background: var(--color-text); color: var(--color-surface); padding: var(--space-4); font-size: var(--size-small); line-height: 1.6; overflow-x: auto; white-space: pre; tab-size: 2; }
+pre.tokens .c { color: var(--color-line); }
+
+footer { padding: var(--space-5) 0 var(--space-6); font-size: var(--size-small); }
+footer .wrap { display: flex; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; }
+
+@media (max-width: 900px) {
+  :root { --size-display: 44px; --size-h1: 32px; }
+  .hero .lead, .hero .facts, .head .no, .head h2, .head p, .scale .meta, .scale .sample, .comp > .about, .comp > .show { grid-column: 1 / -1; }
+  .comp > .about { margin-bottom: var(--space-3); }
+  .swatches { grid-template-columns: repeat(2, 1fr); }
+  .pairings, .states { grid-template-columns: repeat(2, 1fr); }
+  .frames, .logos, .imagery, .dd, .stacks, .rules { grid-template-columns: 1fr; }
+  .cols { column-gap: var(--space-2); }
+  .frame .stat { font-size: 72px; }
+  nav.top .wrap { flex-wrap: wrap; gap: 0 var(--space-3); }
+  nav.top ol { margin-left: 0; }
+}
+
+@media print {
+  @page { margin: 14mm; }
+  html { scroll-behavior: auto; }
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  nav.top { position: static; }
+  nav.top ol { display: none; }
+  section.block { padding: var(--space-5) 0; }
+  .head, h3 { break-after: avoid; }
+  .swatch, .comp, .dd, .frame, .card, .scale .row, .logo-cell, .imagery figure, pre.tokens, table.data { break-inside: avoid; }
+  pre.tokens { white-space: pre-wrap; background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-text); }
+  pre.tokens .c { color: var(--color-text); }
+  a { text-decoration: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="status"><div class="wrap"><b>Not filled in yet: say 'fill in our design system' in Codex.</b> Every colour, font, size, rule and sample on this page is a placeholder until then.</div></div>
+
+<nav class="top" aria-label="Sections">
+  <div class="wrap">
+    <a class="brand" href="#top">
+      <svg width="24" height="24" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" fill="#1F2328"/><rect x="10" y="26" width="6" height="12" fill="#F7F7F5"/><rect x="21" y="18" width="6" height="20" fill="#F7F7F5"/><rect x="32" y="10" width="6" height="28" fill="#9AA3AF"/></svg>
+      {{COMPANY}}
+    </a>
+    <ol>
+      <li><a href="#colour"><span>01</span>Colour</a></li>
+      <li><a href="#type"><span>02</span>Typography</a></li>
+      <li><a href="#layout"><span>03</span>Spacing and grid</a></li>
+      <li><a href="#components"><span>04</span>Components</a></li>
+      <li><a href="#imagery"><span>05</span>Logo and imagery</a></li>
+      <li><a href="#rules"><span>06</span>Do and do not</a></li>
+      <li><a href="#tokens"><span>07</span>Tokens</a></li>
+    </ol>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap grid">
+    <div class="lead">
+      <span class="label">Design system</span>
+      <h1>{{COMPANY}}</h1>
+      <p class="line">Placeholder: the brand in <em>one line</em> goes here.</p>
+    </div>
+    <div class="facts">
+      <dl>
+        <div><dt>Colours</dt><dd>Text, Surface, Accent, Positive, Line (placeholders)</dd></div>
+        <div><dt>Type</dt><dd>Brand Heading 600, Brand Body 400</dd></div>
+        <div><dt>Grid</dt><dd class="num">12 columns, 24 px gutter, 1,120 px</dd></div>
+        <div><dt>Spacing</dt><dd class="num">4, 8, 16, 24, 40, 64</dd></div>
+        <div><dt>Applies to</dt><dd>Design, graphics, slides, pages, social images</dd></div>
+      </dl>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<section class="block" id="colour">
+  <div class="wrap">
+    <div class="head">
+      <span class="no">01</span>
+      <h2>Colour</h2>
+      <p><b>Placeholder.</b> Five colours. Text and Surface carry almost everything. Accent appears once per page: the main button or a key number. Contrast is the WCAG 2.1 ratio; body text passes at 4.5 or more.</p>
+    </div>
+
+    <div class="swatches">
+      <div class="swatch">
+        <div class="chip" style="background: var(--color-text); color: var(--color-surface);"><span class="aa">Aa</span><span class="hex">#1F2328</span></div>
+        <h3>Text</h3>
+        <p class="role">Text, dark surfaces.</p>
+        <ul class="contrast">
+          <li>On Surface <span class="ratio">14.73</span><span class="verdict pass">PASS</span></li>
+          <li>On Text <span class="ratio">1.00</span><span class="verdict fail">FAIL</span></li>
+        </ul>
+      </div>
+      <div class="swatch">
+        <div class="chip" style="background: var(--color-surface); color: var(--color-text);"><span class="aa">Aa</span><span class="hex">#F7F7F5</span></div>
+        <h3>Surface</h3>
+        <p class="role">Page background.</p>
+        <ul class="contrast">
+          <li>On Surface <span class="ratio">1.00</span><span class="verdict fail">FAIL</span></li>
+          <li>On Text <span class="ratio">14.73</span><span class="verdict pass">PASS</span></li>
+        </ul>
+      </div>
+      <div class="swatch">
+        <div class="chip" style="background: var(--color-accent); color: var(--color-text);"><span class="aa">Aa</span><span class="hex">#9AA3AF</span></div>
+        <h3>Accent</h3>
+        <p class="role">One accent per page: the main button, a key number.</p>
+        <ul class="contrast">
+          <li>On Surface <span class="ratio">2.38</span><span class="verdict fail">FAIL</span></li>
+          <li>On Text <span class="ratio">6.19</span><span class="verdict pass">PASS</span></li>
+        </ul>
+      </div>
+      <div class="swatch">
+        <div class="chip" style="background: var(--color-positive); color: var(--color-surface);"><span class="aa">Aa</span><span class="hex">#4F6B5C</span></div>
+        <h3>Positive</h3>
+        <p class="role">Positive states, confirmations.</p>
+        <ul class="contrast">
+          <li>On Surface <span class="ratio">5.45</span><span class="verdict pass">PASS</span></li>
+          <li>On Text <span class="ratio">2.70</span><span class="verdict fail">FAIL</span></li>
+        </ul>
+      </div>
+      <div class="swatch">
+        <div class="chip" style="background: var(--color-line); color: var(--color-text);"><span class="aa">Aa</span><span class="hex">#D3D7DC</span></div>
+        <h3>Line</h3>
+        <p class="role">Borders, dividers, disabled.</p>
+        <ul class="contrast">
+          <li>On Surface <span class="ratio">1.35</span><span class="verdict fail">FAIL</span></li>
+          <li>On Text <span class="ratio">10.93</span><span class="verdict pass">PASS</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="sub">
+      <h3>What the numbers mean in use</h3>
+      <div class="pairings">
+        <div class="pair" style="background: var(--color-surface); color: var(--color-text);"><b>Text on Surface</b>14.73. The default for all reading text.</div>
+        <div class="pair" style="background: var(--color-accent); color: var(--color-text);"><b>Text on Accent</b>6.19. Text on an Accent fill is always Text, never Surface (2.38).</div>
+        <div class="pair" style="background: var(--color-surface); color: var(--color-accent);"><b>Accent on Surface</b><span style="color: var(--color-text);">2.38. Large numbers and fills only (24 px and up). Not body text.</span></div>
+        <div class="pair" style="background: var(--color-positive); color: var(--color-surface);"><b>Surface on Positive</b>5.45. Confirmations and positive tags.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="type">
+  <div class="wrap">
+    <div class="head">
+      <span class="no">02</span>
+      <h2>Typography</h2>
+      <p><b>Placeholder.</b> "Brand Heading" and "Brand Body" stand for the two brand fonts: until they are named, headings fall back to Georgia and body text to the system font. Sizes follow the spacing steps (64, 40, 24, 16).</p>
+    </div>
+
+    <div class="scale">
+      <div class="row">
+        <div class="meta"><b>Display</b><span>Brand Heading 600</span><span>64 px / 1.05</span></div>
+        <div class="sample t-display">128 sample words in a row</div>
+      </div>
+      <div class="row">
+        <div class="meta"><b>Heading 1</b><span>Brand Heading 600</span><span>40 px / 1.1</span></div>
+        <div class="sample t-h1">One idea per slide, thirty words at most</div>
+      </div>
+      <div class="row">
+        <div class="meta"><b>Heading 2</b><span>Brand Heading 600</span><span>24 px / 1.1</span></div>
+        <div class="sample t-h2">Lead with the number, then say what it means</div>
+      </div>
+      <div class="row">
+        <div class="meta"><b>Body</b><span>Brand Body 400</span><span>16 px / 1.5</span></div>
+        <div class="sample t-body">Body text is set in Text on Surface and kept to a measure of about sixty characters. It explains the number above it in plain words and stops when it has done so. White space around a paragraph is part of the layout, not what is left over.</div>
+      </div>
+      <div class="row">
+        <div class="meta"><b>Small</b><span>Brand Body 400</span><span>13 px / 1.45</span></div>
+        <div class="sample t-small">Captions, table headers, labels and footnotes. Still Text on Surface: small text never uses Accent or Line.</div>
+      </div>
+      <div class="row">
+        <div class="meta"><b>Numbers</b><span>Brand Body 400, tabular figures</span><span>16 px / 1.5, right aligned</span></div>
+        <div class="sample"><div class="t-num"><span>1,120</span><span>412</span><span>38.5</span><span>7</span></div></div>
+      </div>
+    </div>
+
+    <div class="stacks">
+      <div class="stack"><span class="label">Heading stack</span><code>"Brand Heading", Georgia, "Times New Roman", serif</code></div>
+      <div class="stack"><span class="label">Body stack</span><code>"Brand Body", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif</code></div>
+    </div>
+    <p class="caption">The brand font is named first and shows where it is installed. Elsewhere the next font in the stack is used, so this page never loads a font from the network.</p>
+  </div>
+</section>
+
+<section class="block" id="layout">
+  <div class="wrap">
+    <div class="head">
+      <span class="no">03</span>
+      <h2>Spacing and grid</h2>
+      <p><b>Placeholder.</b> Six spacing steps and one grid. Every gap, padding and margin on this page is one of the six steps. Content sits on 12 columns with a 24 px gutter and never grows past 1,120 px.</p>
+    </div>
+
+    <h3>Spacing steps, drawn to scale</h3>
+    <div class="steps">
+      <div class="step"><i style="width: var(--space-1); height: var(--space-1);"></i><b>4</b><span>--space-1</span></div>
+      <div class="step"><i style="width: var(--space-2); height: var(--space-2);"></i><b>8</b><span>--space-2</span></div>
+      <div class="step"><i style="width: var(--space-3); height: var(--space-3);"></i><b>16</b><span>--space-3</span></div>
+      <div class="step"><i style="width: var(--space-4); height: var(--space-4);"></i><b>24</b><span>--space-4</span></div>
+      <div class="step"><i style="width: var(--space-5); height: var(--space-5);"></i><b>40</b><span>--space-5</span></div>
+      <div class="step"><i style="width: var(--space-6); height: var(--space-6);"></i><b>64</b><span>--space-6</span></div>
+    </div>
+    <p class="caption">4 and 8 inside a component. 16 and 24 between related things. 40 and 64 between sections.</p>
+
+    <div class="sub">
+      <h3>The 12-column grid</h3>
+      <div class="measure">1,120 px maximum content width</div>
+      <div class="cols" aria-hidden="true"><i>1</i><i>2</i><i>3</i><i>4</i><i>5</i><i>6</i><i>7</i><i>8</i><i>9</i><i>10</i><i>11</i><i>12</i></div>
+      <div class="spans">
+        <div class="s12">12 columns: full width</div>
+        <div class="s8">8 columns: main text</div><div class="s4">4 columns: side notes</div>
+        <div class="s6">6 columns</div><div class="s6">6 columns</div>
+        <div class="s3">3</div><div class="s3">3</div><div class="s3">3</div><div class="s3">3</div>
+      </div>
+      <p class="caption">At full width one column is 71.3 px and the gutter is 24 px. Elements span whole columns and start on a column edge.</p>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="components">
+  <div class="wrap">
+    <div class="head">
+      <span class="no">04</span>
+      <h2>Components</h2>
+      <p><b>Placeholder.</b> Built only from the tokens above. Surfaces are flat and corners are square: no gradients, no drop shadows. States are shown side by side, and the live elements also respond to hover and keyboard focus.</p>
+    </div>
+
+    <div class="comp">
+      <div class="about"><h3>Buttons</h3><p>Primary is the one Accent element on a page, with Text-coloured text (6.19). Everything else is secondary.</p></div>
+      <div class="show">
+        <div class="states">
+          <div class="state"><a class="btn" href="#components">Primary action</a><small>Primary, default</small></div>
+          <div class="state"><a class="btn is-hover" href="#components">Primary action</a><small>Hover: Text border</small></div>
+          <div class="state"><a class="btn is-focus" href="#components">Primary action</a><small>Focus: 2 px Text outline</small></div>
+          <div class="state"><span class="btn is-disabled" aria-disabled="true">Primary action</span><small>Disabled: Line</small></div>
+        </div>
+        <div class="states">
+          <div class="state"><a class="btn secondary" href="#components">Secondary action</a><small>Secondary, default</small></div>
+          <div class="state"><a class="btn secondary is-hover" href="#components">Secondary action</a><small>Hover: Text fill</small></div>
+          <div class="state"><a class="btn secondary is-focus" href="#components">Secondary action</a><small>Focus: 2 px Text outline</small></div>
+          <div class="state"><span class="btn secondary is-disabled" aria-disabled="true">Secondary action</span><small>Disabled: Line</small></div>
+        </div>
+        <div class="states">
+          <div class="state"><a class="btn is-active" href="#components">Primary action</a><small>Primary, pressed</small></div>
+          <div class="state"><a class="btn secondary is-active" href="#components">Secondary action</a><small>Secondary, pressed</small></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="comp">
+      <div class="about"><h3>Card</h3><p>1 px Text border, 24 px padding. Leads with a number. The second card shows the same pattern without the accent, for pages where Accent is already used.</p></div>
+      <div class="show pairrow">
+        <div class="card">
+          <span class="label">Sample data</span>
+          <div class="big">412</div>
+          <h4>Sample card heading</h4>
+          <p>Two lines of sample body text that say what the number above means.</p>
+          <div class="foot"><span>Sample footer</span><span class="tag positive">Confirmed</span></div>
+        </div>
+        <div class="card">
+          <span class="label">Sample data</span>
+          <div class="big" style="color: var(--color-text);">38</div>
+          <h4>A second sample heading</h4>
+          <p>The same card without the accent, with sample text.</p>
+          <div class="foot"><span>Sample footer</span><span class="tag">Draft</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="comp">
+      <div class="about"><h3>Table</h3><p>Text rule above and below, Line between rows. Numbers use tabular figures and are right aligned.</p></div>
+      <div class="show">
+        <table class="data">
+          <caption>Sample data, not real figures</caption>
+          <thead><tr><th>Row</th><th>Label</th><th>Status</th><th class="r">Count</th><th class="r">Units</th><th class="r">Share</th></tr></thead>
+          <tbody>
+            <tr><td>First</td><td>Sample A</td><td><span class="tag positive">Confirmed</span></td><td class="r">12</td><td class="r">1,120</td><td class="r">96.4%</td></tr>
+            <tr><td>Second</td><td>Sample B</td><td><span class="tag positive">Confirmed</span></td><td class="r">14</td><td class="r">980</td><td class="r">88.0%</td></tr>
+            <tr><td>Third</td><td>Sample C</td><td><span class="tag">Draft</span></td><td class="r">12</td><td class="r">1,040</td><td class="r">71.5%</td></tr>
+          </tbody>
+          <tfoot><tr><td>Total</td><td></td><td></td><td class="r">38</td><td class="r">3,140</td><td class="r">85.5%</td></tr></tfoot>
+        </table>
+      </div>
+    </div>
+
+    <div class="comp">
+      <div class="about"><h3>Form field</h3><p>Label above, 1 px Text border, help text below. An error uses an Accent border and an Accent mark; the message itself stays Text.</p></div>
+      <div class="show">
+        <div class="states">
+          <label class="field"><span>Work email</span><input type="email" placeholder="you@company.com"><small>We send one email.</small></label>
+          <label class="field is-focus"><span>Work email</span><input type="email" value="ada@example.com"><small>Focus: 2 px Text outline</small></label>
+          <label class="field is-error"><span>Work email</span><input type="email" value="ada@example"><small>Add the part after the dot.</small></label>
+          <label class="field"><span>Work email</span><input type="email" value="Closed" disabled><small>Disabled: Line</small></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="comp">
+      <div class="about"><h3>Tag</h3><p>13 px, weight 600. Positive means a positive state. The Accent tag counts as the page's one accent.</p></div>
+      <div class="show">
+        <div class="tags">
+          <span class="tag">Default</span>
+          <span class="tag quiet">Quiet</span>
+          <span class="tag dark">Dark</span>
+          <span class="tag positive">Confirmed</span>
+          <span class="tag accent">New</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="comp">
+      <div class="about"><h3>Slide and social image</h3><p>Slide at 16:9: one idea, never more than 30 words. Social image at 1:1: no more than two type sizes. Both lead with a number.</p></div>
+      <div class="show">
+        <div class="frames">
+          <div>
+            <div class="frame slide">
+              <div class="kicker"><span class="label">{{COMPANY}}</span><span class="num">07</span></div>
+              <div><div class="stat">71%</div><p class="say">of a sample measure, in one line.</p></div>
+              <div class="rule"></div>
+            </div>
+            <p class="caption">Slide, 16:9. 9 words. Sample figure.</p>
+          </div>
+          <div>
+            <div class="frame social">
+              <div class="stat">3 days</div>
+              <p class="say">A sample line in the second type size.</p>
+            </div>
+            <p class="caption">Social image, 1:1. Two type sizes.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="imagery">
+  <div class="wrap">
+    <div class="head">
+      <span class="no">05</span>
+      <h2>Logo and imagery</h2>
+      <p><b>Placeholder.</b> The mark below is a placeholder drawn for this page. It is not the {{COMPANY}} logo: replace it with the real file and the real clear space and minimum size rules.</p>
+    </div>
+
+    <h3>Logo (placeholder)</h3>
+    <div class="logos">
+      <figure class="logo-cell" style="margin: 0;">
+        <div class="lockup"><svg width="48" height="48" viewBox="0 0 48 48" role="img" aria-label="Placeholder mark"><rect width="48" height="48" fill="#1F2328"/><rect x="10" y="26" width="6" height="12" fill="#F7F7F5"/><rect x="21" y="18" width="6" height="20" fill="#F7F7F5"/><rect x="32" y="10" width="6" height="28" fill="#9AA3AF"/></svg>{{COMPANY}}</div>
+        <figcaption>Placeholder, on Surface</figcaption>
+      </figure>
+      <figure class="logo-cell on-ink" style="margin: 0;">
+        <div class="lockup"><svg width="48" height="48" viewBox="0 0 48 48" role="img" aria-label="Placeholder mark, reversed"><rect width="48" height="48" fill="#F7F7F5"/><rect x="10" y="26" width="6" height="12" fill="#1F2328"/><rect x="21" y="18" width="6" height="20" fill="#1F2328"/><rect x="32" y="10" width="6" height="28" fill="#9AA3AF"/></svg>{{COMPANY}}</div>
+        <figcaption>Placeholder, on Text</figcaption>
+      </figure>
+      <figure class="logo-cell clear" style="margin: 0;">
+        <div class="zone"><svg width="48" height="48" viewBox="0 0 48 48" role="img" aria-label="Placeholder mark with clear space"><rect width="48" height="48" fill="#1F2328"/><rect x="10" y="26" width="6" height="12" fill="#F7F7F5"/><rect x="21" y="18" width="6" height="20" fill="#F7F7F5"/><rect x="32" y="10" width="6" height="28" fill="#9AA3AF"/></svg></div>
+        <figcaption style="background: var(--color-surface); padding: 0 var(--space-1);">Clear space: 40 px, proposed</figcaption>
+      </figure>
+    </div>
+
+    <div class="sub">
+      <h3>Imagery</h3>
+      <div class="imagery">
+        <figure>
+          <svg viewBox="0 0 320 200" role="img" aria-label="Placeholder for an event photograph"><rect width="320" height="200" fill="#D3D7DC"/><circle cx="96" cy="84" r="20" fill="#1F2328"/><rect x="66" y="110" width="60" height="90" fill="#1F2328"/><circle cx="176" cy="96" r="18" fill="#1F2328"/><rect x="150" y="120" width="52" height="80" fill="#1F2328"/><rect x="214" y="60" width="78" height="52" fill="#F7F7F5" stroke="#1F2328"/><line x1="224" y1="76" x2="282" y2="76" stroke="#1F2328"/><line x1="224" y1="88" x2="268" y2="88" stroke="#1F2328"/></svg>
+          <figcaption><b>Photo placeholder.</b> Say here what a photo may and may not be.</figcaption>
+        </figure>
+        <figure>
+          <svg viewBox="0 0 320 200" role="img" aria-label="Example diagram in Text on Surface with one Accent highlight"><rect width="320" height="200" fill="#F7F7F5"/><g fill="none" stroke="#1F2328" stroke-width="1.5"><rect x="24" y="76" width="72" height="48"/><rect x="124" y="76" width="72" height="48"/><line x1="96" y1="100" x2="124" y2="100"/><line x1="196" y1="100" x2="224" y2="100"/></g><rect x="224" y="76" width="72" height="48" fill="#9AA3AF"/><g font-family="system-ui, sans-serif" font-size="12" fill="#1F2328" text-anchor="middle"><text x="60" y="104">One</text><text x="160" y="104">Two</text><text x="260" y="104" font-weight="600">Three</text></g></svg>
+          <figcaption><b>Diagram.</b> Text on Surface with one Accent highlight on the step that matters.</figcaption>
+        </figure>
+        <figure>
+          <svg viewBox="0 0 320 200" role="img" aria-label="Example chart in Text with one Accent bar"><rect width="320" height="200" fill="#F7F7F5"/><line x1="24" y1="168" x2="296" y2="168" stroke="#1F2328" stroke-width="1.5"/><rect x="40" y="118" width="40" height="50" fill="#1F2328"/><rect x="104" y="98" width="40" height="70" fill="#1F2328"/><rect x="168" y="78" width="40" height="90" fill="#1F2328"/><rect x="232" y="38" width="40" height="130" fill="#9AA3AF"/><g font-family="system-ui, sans-serif" font-size="12" fill="#1F2328" text-anchor="middle"><text x="60" y="186">Q1</text><text x="124" y="186">Q2</text><text x="188" y="186">Q3</text><text x="252" y="186">Q4</text><text x="252" y="30" font-weight="600">412</text></g></svg>
+          <figcaption><b>Chart.</b> The same rule: Text bars, one Accent bar, the number printed on it.</figcaption>
+        </figure>
+      </div>
+      <ul class="rules">
+        <li>Placeholder rule: what photos show.</li>
+        <li>Placeholder rule: what photos never show.</li>
+        <li>Diagrams in Text on Surface with one Accent highlight.</li>
+        <li>No gradients or drop shadows on images or frames.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="rules">
+  <div class="wrap">
+    <div class="head">
+      <span class="no">06</span>
+      <h2>Do and do not</h2>
+      <p><b>Placeholder.</b> Do: lead with a number, keep one accent colour, leave white space. Do not: gradients, drop shadows, more than two type sizes on a social image. Each pair shows the same content both ways.</p>
+    </div>
+
+    <div class="dd">
+      <figure class="do">
+        <div class="ex"><div class="n" style="color: var(--color-accent);">412</div><div class="h">sample units in one line</div></div>
+        <figcaption><b>Do</b><span>Lead with a number.</span></figcaption>
+      </figure>
+      <figure class="dont">
+        <div class="ex"><div class="h">We are excited to share some truly great news with everyone very soon</div></div>
+        <figcaption><b>Do not</b><span>Open with a sentence that holds no fact.</span></figcaption>
+      </figure>
+    </div>
+
+    <div class="dd">
+      <figure class="do">
+        <div class="ex"><div class="h" style="margin: 0 0 var(--space-3);">A sample headline</div><div class="tags"><span class="btn">Primary action</span><span class="btn secondary">Secondary action</span></div></div>
+        <figcaption><b>Do</b><span>Keep one accent colour: one Accent element.</span></figcaption>
+      </figure>
+      <figure class="dont">
+        <div class="ex"><div class="h" style="margin: 0 0 var(--space-3); color: var(--color-accent);">A sample headline</div><div class="tags"><span class="btn">Primary action</span><span class="btn" style="background: var(--color-positive); border-color: var(--color-positive); color: var(--color-surface);">Secondary action</span><span class="tag accent">New</span></div></div>
+        <figcaption><b>Do not</b><span>Spread Accent and Positive across the same view.</span></figcaption>
+      </figure>
+    </div>
+
+    <div class="dd">
+      <figure class="do">
+        <div class="ex" style="padding: var(--space-6);"><div class="h">One idea per slide.</div></div>
+        <figcaption><b>Do</b><span>Leave white space. 64 px of padding here.</span></figcaption>
+      </figure>
+      <figure class="dont">
+        <div class="ex crowded"><div class="h">One idea per slide and also three more ideas and a list</div><p>Sample text that keeps going well past the point where a reader stops: a first point, then a second point that repeats the first, then a third that belongs on another slide, a list of names in alphabetical order, the opening hours, where to find the coffee, and a closing sentence that says the same as the headline in more words than the headline used.</p></div>
+        <figcaption><b>Do not</b><span>Fill the frame. This slide carries more than 30 words.</span></figcaption>
+      </figure>
+    </div>
+
+    <div class="dd">
+      <figure class="do">
+        <div class="ex" style="background: var(--color-text); color: var(--color-surface);"><div class="n" style="color: var(--color-accent);">3 days</div><div class="h" style="font-weight: 400;">Flat colour, two type sizes.</div></div>
+        <figcaption><b>Do</b><span>Flat surfaces and two type sizes on a social image.</span></figcaption>
+      </figure>
+      <figure class="dont">
+        <div class="ex bad-fx"><div class="boxed"><div style="font-size: 40px; font-family: var(--font-heading); line-height: 1;">3 days</div><div style="font-size: 20px;">A second size</div><div style="font-size: 14px;">A third size for more text</div><div style="font-size: 11px;">A fourth size at the bottom</div></div></div>
+        <figcaption><b>Do not</b><span>Gradients, drop shadows, four type sizes.</span></figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="tokens">
+  <div class="wrap">
+    <div class="head">
+      <span class="no">07</span>
+      <h2>Tokens</h2>
+      <p><b>Placeholder.</b> Every value on this page as CSS custom properties. This is the same block the page is styled with: copy it into a stylesheet and the components above can be rebuilt from it.</p>
+    </div>
+<pre class="tokens"><code>:root {
+  <span class="c">/* Colour */</span>
+  --color-text: #1F2328;      <span class="c">/* text, dark surfaces */</span>
+  --color-surface: #F7F7F5;    <span class="c">/* page background */</span>
+  --color-accent: #9AA3AF;   <span class="c">/* one accent per page */</span>
+  --color-positive: #4F6B5C;     <span class="c">/* positive states, confirmations */</span>
+  --color-line: #D3D7DC;     <span class="c">/* borders, dividers, disabled */</span>
+
+  <span class="c">/* Type */</span>
+  --font-heading: "Brand Heading", Georgia, "Times New Roman", serif;
+  --font-body: "Brand Body", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --weight-heading: 600;
+  --weight-body: 400;
+  --leading-heading: 1.1;
+  --leading-body: 1.5;
+  --size-display: 64px;
+  --size-h1: 40px;
+  --size-h2: 24px;
+  --size-body: 16px;
+  --size-small: 13px;
+
+  <span class="c">/* Spacing */</span>
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 40px;
+  --space-6: 64px;
+
+  <span class="c">/* Grid */</span>
+  --grid-columns: 12;
+  --grid-gutter: 24px;
+  --grid-max: 1120px;
+
+  <span class="c">/* Rules */</span>
+  --rule: 1px solid var(--color-line);
+  --rule-strong: 2px solid var(--color-text);
+}</code></pre>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>{{COMPANY}} design system, not filled in yet. The page is the source for how things look; design-system.md beside it lists the same tokens and rules in words.</span>
+    <a href="#top">Back to top</a>
+  </div>
+</footer>
+
+</body>
+</html>

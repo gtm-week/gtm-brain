@@ -11,7 +11,8 @@ import { existsSync, readdirSync, lstatSync, readFileSync } from "node:fs";
 import { join, posix } from "node:path";
 import { DEFAULT_KINDS } from "./kinds.mjs";
 import { handleFor } from "./brain.mjs";
-import { readLayout, writeLayout, writesLayout, understandsLayout } from "./layout-version.mjs";
+import { readLayout, writeLayout, understandsLayout } from "./layout-version.mjs";
+import { inConfigFolders, schemaFile } from "./brain-paths.mjs";
 
 export const ENTITIES_DIR = "brain/entities";
 export const INDEX_FILE = "index.md";
@@ -53,18 +54,18 @@ export function kindFolders(root) {
 }
 /* "kinds" when the brain has kind folders (setup and upgrade make them), else "flat". */
 export function layout(root) { return kindFolders(root).length ? "kinds" : "flat"; }
-/* The same as the number brain/layout.json records (lib/layout-version.mjs): 2 with kind folders, 1 flat. */
-export const diskLayout = root => (layout(root) === "kinds" ? 2 : 1);
+/* The same as the number brain/layout.json records (lib/layout-version.mjs): 3 with about-us/ and config/
+   (config/settings.yaml, lib/brain-paths.mjs), 2 with kind folders, 1 flat. */
+export const diskLayout = root => (layout(root) !== "kinds" ? 1 : inConfigFolders(root) ? 3 : 2);   // flat pages are 1 whatever else moved
 /* brain/layout.json follows the files: a brain in kind folders is at least layout 2. Whatever makes kind
    folders calls this right after (setup's startKindLayout, the upgrade's migrateToKindFolders), and lib.commit
    and the chat start call it for a brain a 0.35 pre-release moved while the file still said 1 or was missing.
    A plugin from before kind folders does not raise the number, and a file that cannot be read is left alone.
    Returns the layout written, 0 when the file was right. The caller commits brain/layout.json. */
 export function recordKindLayout(root) {
-  const recorded = readLayout(root);
-  if (recorded.error || recorded.layout >= 2 || understandsLayout() < 2 || layout(root) !== "kinds") return 0;
-  const to = Math.max(2, writesLayout());
-  return writeLayout(root, { layout: to }) ? to : 0;
+  const recorded = readLayout(root), on = diskLayout(root);
+  if (recorded.error || on < 2 || recorded.layout >= on || understandsLayout() < on) return 0;
+  return writeLayout(root, { layout: on }) ? on : 0;
 }
 
 /* Every entity page, both layouts, relative to the brain and sorted. Index files and asset folders are skipped. */
@@ -104,7 +105,7 @@ export function movedAsset(root, path) {
    kind folders ("upgrade the brain"), where 0.34 never looks. */
 export const KINDS_034 = ["person", "organization", "product", "event", "tool"];
 export function flatKinds(root) {
-  let text = ""; try { text = readFileSync(join(root, "SCHEMA.md"), "utf8"); } catch {}
+  let text = ""; try { text = readFileSync(join(root, schemaFile(root)), "utf8"); } catch {}
   const sections = [...text.matchAll(/^##[ \t]+([A-Za-z][A-Za-z0-9_]*)[ \t]*$/gm)].map(m => m[1].toLowerCase()).filter(k => k !== "meeting" && k !== "relationships");
   return new Set([...KINDS_034, ...sections]);
 }

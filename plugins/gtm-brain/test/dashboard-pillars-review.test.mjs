@@ -1,3 +1,6 @@
+// These tests read and write the root files of a layout 2 brain: setup and the lib play a plugin that writes layout 2 at most
+// (lib/layout-version.mjs GTM_BRAIN_TEST_LAYOUT). Layout 3 (about-us/, config/) is covered by config-folders.test.mjs.
+process.env.GTM_BRAIN_TEST_LAYOUT = "2";
 process.env.GTM_BRAIN_NO_WATCH = "1";
 process.env.GTM_BRAIN_NO_COMPILE = "1";
 process.env.GTM_BRAIN_NO_SESSION_MAINTENANCE = "1";
@@ -104,7 +107,7 @@ test("health line: what the chat start prints, with real content and without the
   // if the instruction is ever reworded, nothing addressed to the model reaches the page
   assert.doesNotMatch(pillars.healthText(root, overview, () => "health: last sync: gmail 2026-11-13 10:00 UTC. Tell the person only when they ask; never raise it yourself."), /Tell the person|never raise/);
   const p = page(D);
-  assert.match(p.node("#health-line").innerHTML, /last sync: gmail/); assert.doesNotMatch(p.node("#health-line").innerHTML, /Say this/);
+  assert.match(p.node("#settings-sync").innerHTML, /Sync and meeting capture.*last sync: gmail/s, "the status line sits with the tools in Settings, not in the header or on Overview"); assert.doesNotMatch(p.node("#settings-sync").innerHTML, /Say this/); assert.doesNotMatch(p.node("#ov-more").innerHTML, /last sync/);
 });
 
 test("Memories: the first page holds a full page of notes in force, so opening the dashboard fetches nothing", async () => {
@@ -119,7 +122,7 @@ test("Memories: the first page holds a full page of notes in force, so opening t
   assert.equal((live.node("#pm-list").innerHTML.match(/class="pl-row pl-note/g) || []).length, 40);
   // the page is not the end of the list: Show more is there, and it brings the rest
   assert.match(live.node("#pm-list").innerHTML, /data-pm-more/, "the person can go past the first page");
-  assert.match(live.node("#pm-status").textContent, new RegExp(`Showing the 40 newest\\. ${M.total} notes in all`));
+  assert.match(live.node("#pm-status").textContent, new RegExp(`Showing the 40 newest of ${M.total} notes`));
   assert.doesNotMatch(page(D).node("#pm-list").innerHTML, /data-pm-more/, "a saved copy has nothing more to bring");
   live.listeners.click.forEach(fn => fn({ target: { closest: s => s.includes("data-pm-more") ? { hasAttribute: a => a === "data-pm-more", dataset: {} } : null } }));
   await new Promise(r => setTimeout(r, 20));
@@ -200,20 +203,26 @@ test("Workflows and Entities on a brain with runs, its own skill and a customer:
     assert.equal(B.pillars.entities.rows.find(e => e.name === "Northwind")?.relation, "customer", "a customer's relation to us comes from the customer notes");
     const p = page(B); p.run('show("workflows")');
     const w = p.node("#pw-files").innerHTML;
-    assert.match(w, new RegExp(`Step 2 of ${ob.steps}: ${live.step.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} · pending · <b>due 2026-11-20</b>`));
-    assert.match(w, /1 run in progress, 1 ended/); assert.match(w, /Runs whose workflow file is gone.*webinar-2026-11-02-marta/s);
-    const skills = p.node("#pw-skills").innerHTML, own = skills.split("This brain's own")[1] || "";
-    assert.match(own, /Weekly pipeline.*\/gtm-brain-weekly-pipeline.*Go through the open deals every Monday\./s, "the brain's own skill is listed with its one line");
-    assert.doesNotMatch(skills.split("This brain's own")[0], /weekly-pipeline/, "and not among the shipped ones");
-    p.run('show("entities")'); assert.match(p.node("#pe-groups").innerHTML, /Northwind.*class="pl-rel">customer</s);
+    const title = live.step.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    assert.match(w, new RegExp(`1 run in progress.*Last run: on step 2 of ${ob.steps}: ${title}, due 2026-11-20`, "s"), "the card says where the last run stands in words");
+    assert.match(w, /Runs of workflows that were removed.*webinar/s);
+    p.run('pwOpen="outbound";renderWorkflowsTab()');
+    const open = p.node("#pw-files").innerHTML;
+    assert.match(open, new RegExp(`<li class="here"><span>${title}</span> <span class="pl-state ok">a run is here</span>`), "the current step is marked on the path");
+    assert.match(open, /On step 2 of \d+: [^<]+, due 2026-11-20 · pending/); assert.match(open, /Finished \d+ (weeks|months) ago|Finished/); assert.match(open, /<code class="pl-path">outbound-2026-11-01-marta<\/code>/, "the run's own name stays, small");
+    const skills = p.node("#pw-skills").innerHTML, own = skills.split("Made by your team")[1] || "";
+    assert.match(own, /Weekly pipeline.*Go through the open deals every Monday\..*\/gtm-brain-weekly-pipeline/s, "the brain's own skill is listed with its one line");
+    assert.doesNotMatch(skills.split("Made by your team")[0], /weekly-pipeline/, "and not among the shipped ones");
+    p.run('show("entities")'); assert.match(p.node("#ent-list").innerHTML, /Northwind.*class="ent-badge ent-rel-customer">Customer</s);
+    assert.deepEqual(B.pillars.entities.rows.find(e => e.name === "Northwind")?.rel, ["customer"]); assert.match(p.node("#ent-rel").innerHTML, /<option value="customer">Customer \(1\)/);
   } finally { rmSync(b, { recursive: true, force: true }); }
 });
 
 test("health line: a page without the tabs' data claims nothing about the brain's health", () => {
   for (const make of [d => { delete d.pillars; }, d => { d.pillars = null; d.pillarsUnread = true; }]) {
     const older = structuredClone(D); make(older);
-    const p = page(older), el = p.node("#health-line");
+    const p = page(older), el = p.node("#settings-sync");
     assert.ok(el.hidden || !/Nothing to report/.test(el.innerHTML), "an older page or unread tabs do not say all is quiet");
   }
-  assert.match(page({ ...structuredClone(D), pillars: { ...structuredClone(D.pillars), health: null } }).node("#health-line").innerHTML, /Nothing to report yet/, "a brain with nothing to report says so");
+  assert.match(page({ ...structuredClone(D), pillars: { ...structuredClone(D.pillars), health: null } }).node("#settings-sync").innerHTML, /Nothing to report yet/, "a brain with nothing to report says so");
 });

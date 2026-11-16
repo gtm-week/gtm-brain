@@ -12,7 +12,7 @@ import { homedir } from "node:os";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const us = await import(new URL("../../lib/user-skills.mjs", import.meta.url));
 const args = process.argv.slice(2); const root = resolve(args[0] && !args[0].startsWith("--") ? args.shift() : ".");
-if (!existsSync(join(root, "brain", "admin.md"))) { console.error("no brain here (brain/admin.md missing)."); process.exit(1); }
+if (!lib.isBrain(root)) { console.error("no brain here (brain/admin.md missing)."); process.exit(1); }
 const opt = {}; for (let i = 0; i < args.length; i++) if (args[i].startsWith("--")) { const k = args[i].slice(2), v = args[i + 1]; if (v === undefined || v.startsWith("--")) opt[k] = true; else { opt[k] = v; i++; } }
 const refuse = why => { console.error(why); process.exit(2); };
 for (const flag of ["title", "description", "body", "by", "repo", "path", "ref", "remove"]) if (opt[flag] === true) refuse(`--${flag} needs a value`);

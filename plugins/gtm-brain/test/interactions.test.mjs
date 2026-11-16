@@ -103,7 +103,8 @@ test("approve --interaction appends to the company file, commits, removes the pr
   const out = apply(once);
   assert.match(out, /added interaction close_deal \(attio\)/);
   assert.ok(lib.readInteractions(root).actions.some(a => a.name === "close_deal")); assert.ok(!existsSync(join(root, "work", "interaction.proposed.json")));
-  assert.match(execFileSync("git", ["-C", root, "log", "-1", "--format=%s"], { encoding: "utf8" }), /^interactions: close_deal/);
+  // the change, then its record (a decision note citing that commit, lib/owner.mjs recordApproval)
+  assert.deepEqual(execFileSync("git", ["-C", root, "log", "-2", "--format=%s"], { encoding: "utf8" }).trim().split("\n"), ["approval recorded: brain/ontology.ossie.json", "interactions: close_deal"]);
   writeFileSync(join(root, "work", "interaction.proposed.json"), JSON.stringify({ ...MOVE, name: "close_deal" }));
   assert.throws(() => apply(once, { stdio: "pipe" }), e => e.status === 4, "a ticket works once");
   assert.throws(() => apply(ticket(), { stdio: "pipe" }), /already/);

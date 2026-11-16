@@ -19,6 +19,7 @@ editor opens it.
 | Where files go, your own rules | `RULES.md` | you; Codex follows it |
 | What the brain keeps per person, organization and product, and relationship types | `SCHEMA.md` | you; Codex fills the fields from notes |
 | Your documents (strategy, ICP, tone of voice, design system, pricing) | `<name>.md` at the top (the first four from day one), files in a folder of the same name | you or Codex |
+| The design system as a page | `design-system.html` beside `design-system.md`: one self-contained HTML file (no scripts, nothing loaded from the network) shown on the dashboard's Visual tab. The page is the source for how things look; the Markdown says the same in words for Codex, and the two are kept in step | Codex, on your yes ("fill in our design system") |
 | Projects (an event, a campaign, a client) | `projects/<project>/` | you or Codex |
 | Rules Codex follows in this folder (six core rules first, also sent with every GTM Brain chat, then one line per rule; the detail of each is a rule page that ships with the plugin) | `AGENTS.md`, `CLAUDE.md` | GTM Brain; refreshed on update, never edit; your own lines stay at the end under "This brain's own additions" |
 | This computer's working files | `work/` | GTM Brain; not in git, never a deliverable |
@@ -85,6 +86,27 @@ what the turn established; `save_nudge: off` in `brain/admin.md` turns the remin
 Notes are never edited. "Actually the board meeting is on the 19th" saves a correction that
 replaces the old note. "Forget that Lena runs the workshop" withdraws it: the old note leaves every
 view, and a short note says what was withdrawn. Both stay in the file and in git.
+
+### Relationships and history
+
+"Anna works at Northwind", "Northwind is our partner", "Tom reports to Anna": a relationship of a type
+`SCHEMA.md` lists is saved as a note that names both ends and the type; the brain fills in the rest.
+It is current unless your words say it ended ("left", "no longer", "churned", "ended", "used to",
+"former"), dated when you said it, and resting on your word, or on the record the note cites (a CRM,
+LinkedIn). "Anna left Northwind and joined Acme" starts Acme and ends Northwind.
+
+Each relationship is one record with its own id, and every note about it is an event: started,
+changed, ended. Nothing is overwritten: "Anna left Northwind" is a new note, and the old one stays
+as history. Where `SCHEMA.md` says One at a time (an employer, a manager), a new one ends the one
+before it: "Anna joined Acme" also saves "Anna no longer works at Northwind", dated the same day.
+If that was a mistake and you withdraw it, Northwind is current again.
+Partners, investors and attendance can be many at once. What you said beats what a tool says: a
+source that disagrees is listed beside it, never applied.
+
+Renames, merges and kind changes are kept in the same history (`brain/entities/.history/events.jsonl`),
+so "what was Northwind called before?" or "where did Anna work in June?" is answered from the brain,
+not from git: `query` relations for an entity gives its relationships and its history, and with a
+date (filters.at) the ones current then. Each entity page shows the same under `## History`.
 
 ## Contexts
 
@@ -201,8 +223,10 @@ touched keep everything that was learned about them.
   source" table in `RULES.md` allows and the CRM is connected; otherwise the brain answers and says
   how old its note is. A row applies only when its tool is connected; without the section, the
   shipped rows apply.
-- "Open the dashboard" shows contexts, notes, entities, questions and search, read-only. To change
-  anything, use "Chat about this" on a card, or say it in chat.
+- "Open the dashboard" shows what needs you, the base documents, rules, entities, notes and workflows,
+  with one search box. It is for reading, with one exception: a document (a base document or another
+  document) opens in an editor and Save writes it the way Codex does, through the document script. To
+  change anything else, use "Chat about this", or say it in chat.
 
 "Is the brain too full or too empty?" is `query` (population): counted from the files, with no
 model: notes saved in the last 7 days against the weekly average of the 4 weeks before, exact
@@ -247,11 +271,161 @@ the header or the schema is fixed. `query workflows` shows each one, its runs an
 | Which tools are connected | "connect my tools" |
 | A person's or company's name, alias, kind | "Chris is Krzysztof Pawlak", "Telli is a company" |
 | A wrong note | "correct ...", or "forget ..." |
-| GTM Brain itself | "update GTM Brain"; your brain's rules refresh by themselves, with backups in `work/` |
+| GTM Brain itself | "update GTM Brain", quit and reopen Codex; your brain's rules refresh by themselves, with backups in `work/`; a move of files is offered and waits for a yes ("Updating to 0.35" below) |
 
 Do not edit `AGENTS.md`, `CLAUDE.md`, `admin.md`, `memories.jsonl` or `ontology.ossie.json` by
 hand: a direct edit of a protected file is put back at the next chat start and your version is kept
 in `work/manual-edits/protected/`.
+
+## Who can change the base files
+
+A brain set up or upgraded with this release keeps its base files in `about-us/` (strategy, ICP,
+market, voice, the design system and its files, and any base file the team added) and its
+configuration in `config/`: `rules.md` (where things go, Ask the source, Our rules), `schema.md`
+(what the brain keeps) and `settings.yaml` (company, one-liner, owner, team with handles and
+emails, tools and settings; it replaces `brain/admin.md`). An older brain keeps them at the top
+and in `brain/admin.md` until its owner says yes to "upgrade the brain", which moves them in one
+commit, word for word.
+
+Only the brain's owner (`owner` in `config/settings.yaml`; the first owner is whoever ran setup)
+changes anything under `about-us/` or `config/`. When a teammate asks for a change there, or
+edits a file there by hand, nothing there changes: the change is kept as a proposal in
+`brain/proposals/`, a note tagged for the owner says who asked and what, and the owner sees it in
+one line at their next chat start. Only the owner's APPROVE applies it. The owner's own hand edit
+is kept and recorded. Every approval is recorded as a decision note: who asked, who approved,
+which file, a one-line summary and the commit. "Show the approvals" lists them (`query`, object
+approvals) with the proposals still waiting.
+
+The owner is whoever the committed `config/settings.yaml` names. Writing another handle on the
+`owner` line by hand is itself a change that waits for the owner, so the brain changes hands only
+when the current owner edits that line or approves it. A proposal is applied only to files under
+`about-us/` and `config/`, whatever its own file claims. Every chat start in such a brain says in
+one line where the files are that older text calls `RULES.md`, `SCHEMA.md` and `brain/admin.md`.
+
+How far this goes: GTM Brain enforces it, in every write it makes, in every save and at every
+chat start. It does not stop git. A teammate with write access to the repository can still
+change these files and push with git directly, and who is "the owner" on a machine is the
+checkout's own identity (the git email, or the name given there), not a sign-in. GitHub can
+block such a push only with a push rule (a ruleset that restricts file paths), which needs a paid
+plan for a private repository. The paths to protect: `about-us/**`, `config/**`,
+`brain/ontology.ossie.json`, and, for brains not yet upgraded, `brain/admin.md`, `RULES.md` and
+`SCHEMA.md`.
+
+## Updating to 0.35
+
+0.35 changes where a brain keeps some of its files. Updating the plugin moves nothing: the brain
+keeps working as it is until someone says yes to the move. Notes are never rewritten, and every
+person, company and note keeps its id.
+
+### What to do, in order
+
+1. **Everyone on the team updates the plugin first.** In Codex, say "update GTM Brain". Without
+   Codex: `codex plugin marketplace upgrade gtm-brain`, then `codex plugin add gtm-brain@gtm-brain`.
+2. **Quit and reopen Codex, then start a new chat in the brain folder.** A new chat alone is not
+   enough: the running app still holds the old plugin. An update started from the brain's chat
+   may already show the upgrade question; it changes nothing and is asked again in the new chat.
+3. **Read the first reply of that chat.** The first GTM Brain call refreshes what it can on its
+   own and says so: "GTM Brain refreshed this brain's rules (AGENTS.md) from GTM Brain 0.34.x on
+   its own". The old `AGENTS.md` is kept in `work/upgrades/before-<id>/`. It also refreshes
+   `README.md`, `RULES.md` and `SCHEMA.md` when nobody edited them, one commit each. Then Codex adds
+   one line: "This brain can be upgraded to the 0.35 file arrangement. Say: upgrade this brain."
+4. **The owner says "upgrade this brain".** Codex answers with what would move, which teammates
+   saved here in the last 14 days, and one question: "Yes, upgrade the layout / No, not now".
+   Nothing has changed at this point (the tool says "Nothing was changed."). No is safe: the
+   brain keeps working, and the offer comes back in the next chat.
+5. **On yes, the files move** and the reply lists them: "moved 20 entity pages into a folder per
+   kind", "moved strategy.md -> about-us/strategy.md", "moved brain/admin.md ->
+   config/settings.yaml (the same settings, the prose as notes)". It is pushed like any save.
+
+On the real brain used to rehearse this (950 notes, 324 entity pages) step 3 took 5 seconds and
+step 5 took 4 seconds.
+
+### The two moves
+
+| Move | What it does | Who can say yes |
+|---|---|---|
+| Entity pages into kind folders (file layout 2) | `brain/entities/max-jendral.md` becomes `brain/entities/people/max-jendral-3f9a2c.md`; companies go to `organizations/`, and so on. Same page, same id | anyone on the team |
+| Base files and configuration into two folders (file layout 3) | `strategy.md`, `icp.md`, `voice.md`, `design-system.md`, `market.md` and any base file you added move into `about-us/`; `RULES.md` becomes `config/rules.md`, `SCHEMA.md` becomes `config/schema.md`, `brain/admin.md` becomes `config/settings.yaml`. Word for word | only the owner |
+
+The owner is asked once, for both moves together. A teammate who says "upgrade this brain" is
+asked about the first move only and is then told: "One more move is waiting: the base documents
+into about-us/ and the rules, schema and settings into config/. It is the owner's (name) to say
+yes to". The owner's next chat offers it.
+
+The same run adds what the brain lacks and never replaces a file that is there: the starter
+documents (`icp.md`, `voice.md`, `design-system.md`, `market.md`, `strategy.md`), `workflows/`,
+and a page under `brain/entities/meetings/` for each meeting already captured.
+
+What does not move: notes (`brain/contexts/<context>/memories.jsonl`), `workflows/`, `projects/`,
+documents in your own folders (`talks/talk-draft.md`), and files at the top that are not documents.
+
+### Why everyone updates the plugin before the owner says yes
+
+A teammate still on GTM Brain 0.34 is not warned by their plugin. What happens to them, measured
+on 0.34.5:
+
+- **After the first move:** their notes keep saving and nothing is lost. Their GTM Brain no
+  longer finds the entity pages, so a person it knew yesterday answers "Unknown or ambiguous
+  entity: Marta Zawadzka", and each name they save gets a flat page of its own again. The next save
+  from an updated GTM Brain folds those pages back in, under the same id.
+- **After the second move:** their GTM Brain no longer recognises the folder. Every request, a
+  question or a save, answers "... is not a brain: no brain/admin.md there. Pass the workspace
+  folder you are in, or run setup_brain in an empty folder." Nothing is written. The fix is to
+  update GTM Brain and restart Codex, never to run setup.
+
+A teammate already on 0.35 notices nothing until the move, then gets one line at chat start saying
+where the files are now and that only the owner changes `about-us/` and `config/`.
+
+### What is different afterwards
+
+- **Where files are.** Entity pages in a folder per kind. Base documents in `about-us/`. Rules,
+  schema and settings in `config/`. `brain/layout.json` records the arrangement.
+- **Base files and other documents.** A base file (`about-us/`) describes the company and only the
+  owner changes it; a teammate's change waits as a proposal ("Who can change the base files"
+  above). Every other document stays in its own folder and anyone on the team changes it.
+- **One-call search.** A question is answered from one search (`query`, object answer): the best
+  notes with date and source, and the card of the person or company it names. A name typed without
+  its accents finds the person ("Lukasz" finds Łukasz).
+- **Relationships and their history.** Who works where, who is a customer, since when and until
+  when, kept as dated events ("Relationships and history" above).
+- **The dashboard** has four tabs: Configuration, Entities, Memories, Workflows. A document can
+  be edited and saved on the page, an entity can be added, renamed, merged or archived in
+  Entities, and a note can be corrected, withdrawn, moved or answered in Memories. A teammate's
+  save of a base file there becomes a proposal for the owner.
+- **The design system page.** The Design system document is shown as one: type samples, spacing,
+  its files, and a Visual tab when `design-system.html` sits beside it.
+- **Summaries on demand.** A context's summary is written when the context is loaded, not by a
+  background run.
+
+### Going back
+
+Every move is a git commit with renames, and no note is touched, so going back is `git revert` in
+the brain folder. `git log --oneline` shows the commits:
+
+- `upgrade: config/rules.md, the brain's rules` and `layout 3: base files in about-us/, rules,
+  schema and settings in config/`: revert both, newest first, to put the base files, `RULES.md`,
+  `SCHEMA.md` and `brain/admin.md` back. This works after later saves too.
+- `layout 2: N entity pages into a folder per kind (upgrade)`: revert it to put the entity pages
+  back flat. This is clean only before entity pages change again; after later saves git reports
+  conflicts on those pages. Decide on the day of the upgrade.
+
+`work/upgrades/before-<id>/` holds the files a rules refresh replaced (`AGENTS.md`, `.gitignore`,
+the pre-commit hook), on this computer only. It does not hold moved pages or documents; git does.
+
+Going back does not downgrade the plugin: 0.35 reads and writes all three arrangements.
+
+### If something looks wrong
+
+| You see | What it means, and what to do |
+|---|---|
+| "... is not a brain: no brain/admin.md there." | this computer is on an older GTM Brain and the owner has moved the brain to `config/`; say "update GTM Brain", quit and reopen Codex. Do not run setup |
+| A known person or company is "Unknown or ambiguous entity", and saves write pages straight into `brain/entities/` | the same, one move earlier: this computer is on 0.34 and the pages are in kind folders. Update; the stray pages fold in at the next save |
+| "this brain was upgraded to file layout N by a newer GTM Brain ... nothing is written or saved until you update GTM Brain" | a teammate's GTM Brain is newer than yours; say "update GTM Brain", then start a new chat |
+| "Rules contain local edits or come from an older unrecognized template. Nothing replaced. Review .../AGENTS.proposed.md" | someone edited `AGENTS.md` by hand, so the upgrade stopped before changing anything; ask Codex to merge your lines into the proposed file, then say "upgrade this brain" again |
+| "brain/layout.json cannot be read", and nothing saves | the file was edited by hand or holds a merge conflict; restore it from git (`git checkout HEAD -- brain/layout.json`) |
+| "NOT APPLIED: about-us/strategy.md is the owner's to change (name). Kept as proposal ..." | not an error: after the second move a teammate's change to a base file waits for the owner |
+| "One more move is waiting ... It is the owner's (name) to say yes to" | not an error: a teammate ran the upgrade; the owner says "upgrade this brain" in their own chat |
+| No offer to upgrade in the first reply | the brain is already current ("already current" when you say "upgrade this brain"), or the only move left is the owner's and you are not the owner |
 
 ## What it does not do
 
@@ -275,6 +449,7 @@ in `work/manual-edits/protected/`.
 | Summaries never update | `work/hooks.log` lines `scheduled-run ... failed`; `work/runs.jsonl` has one line per compile run with its tokens; no lines at all means no run started |
 | A file in the wrong place | "why is this here?"; fix the `RULES.md` row |
 | "this brain was upgraded ... update GTM Brain", and nothing saves | a teammate's newer GTM Brain changed the brain's file layout (`brain/layout.json`; layout 2 is entity pages in kind folders); yours reads what it can find but writes nothing until you say "update GTM Brain" and start a new chat |
+| Anything else right after an update | "Updating to 0.35" above, "If something looks wrong" |
 | Codex did something you did not ask | `work/tool-usage.jsonl` lists every GTM Brain call with time and title; `git log` lists every change with who made it |
 | A question where none of the options fits | type your own answer in the box's "Or write your own response" field, then Send. The main message field below waits until the question is answered or skipped. Skip closes it, and Codex asks again in plain text. |
 

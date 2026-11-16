@@ -82,7 +82,8 @@ Everything that ships is under `plugins/gtm-brain/`. The layers, from the outsid
   direct edit of a protected file (`admin.md`, `memories.jsonl`, the company ontology) and keeps
   the edit in `work/manual-edits/protected/`.
 - **Dashboard**: `scripts/gtm-brain-render/render.mjs` builds `work/home/index.html` from the brain
-  files; `server/dash.mjs` serves it on 127.0.0.1, read-only, with revision events. The React
+  files; `server/dash.mjs` serves it on 127.0.0.1 with revision events; it is read-only except for the three guarded
+  writes named in AGENTS.md (a document save, the entity operations and the note operations). The React
   Overview is built from `frontend/dashboard/` into `scripts/gtm-brain-render/ui/` and committed, so
   users never run npm. The legacy HTML client remains as the fallback and hosts the evidence views.
 
@@ -149,6 +150,6 @@ snapshot of the outgoing file in `templates/legacy/AGENTS-<old version>.md` plus
 Describe a feature once, in its owning document, and link from the others: `INSTALL.md`
 (standalone instructions for the installing agent), `ONBOARDING.md` (first-use walkthrough),
 `GUIDE.md` (everyday use), `plugins/gtm-brain/MANUAL.md` (how a brain works and how to change it; ships with the plugin, Codex answers "how does the brain work?" from it), `COMMANDS.md` (every tool and command and the files it writes),
-`SETUP.md` (manual install and contributor verification), `DOCUMENTS.md` (documents
+`SETUP.md` (manual install and contributor verification), `RELEASE-0.35.md` (what 0.35 changes and its known limits; the update steps live in MANUAL.md), `DOCUMENTS.md` (documents
 feature), `USER-SKILLS.md`, `skill-template/README.md` (contributing a shipped skill), `IMPORT.md` (its text is duplicated word for word as the body of
 `plugins/gtm-brain/claude/gtm-brain-export/SKILL.md`; keep the two in step).

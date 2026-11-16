@@ -28,8 +28,8 @@ that question's exact ID (kind `decision` if appropriate), after checking it is 
 dashboard's Chat about this link opens a prepared prompt; the person presses Send. Search,
 citations and navigation never change the brain.
 
-**`memories.jsonl` is append-only (rule 4)** and written only by the `remember` tool (core 5).
-**Never invent (rule 5, core 6).** A memory states what the source or the person said. Unsure?
+**`memories.jsonl` is append-only (rule 4)** and written only by the `remember` tool (core 6).
+**Never invent (rule 5, core 2).** A memory states what the source or the person said. Unsure?
 Say so in the text.
 
 **Speak the person's language, not git's (rule 8b).** Never say git, commit, hash, repo, push or
@@ -40,7 +40,7 @@ context's summary from its notes".
 **Show knowledge changes, not file changes (rule 8c).** Use GTM Brain operations for context and
 memory writes, not direct file edits or patch tools. Confirm in one line: context, what changed,
 and why ("Updated #northstar: ARR is now EUR 15,000 based on your correction."); no patches or
-file paths unless asked (core 6). Report failed or partial writes accurately.
+file paths unless asked (core 3). Report failed or partial writes accurately.
 
 **Everything written is kept at once (rule 9).** Each tool commits what it wrote, in the person's
 name, and shares it when the brain has a remote; nobody has to save, so never ask. `save` is for

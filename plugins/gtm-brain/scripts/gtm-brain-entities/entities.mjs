@@ -8,7 +8,7 @@ import { existsSync } from "node:fs"; import { join } from "node:path";
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 function main() {
 const args = process.argv.slice(2); const root = args[0] && !args[0].startsWith("--") ? args.shift() : ".";
-if (!existsSync(join(root, "brain", "admin.md"))) { console.error("no brain here"); process.exit(1); }
+if (!lib.isBrain(root)) { console.error("no brain here"); process.exit(1); }
 if (args[0] === "--brain-legacy-note") process.exit(0);
 // A flag followed by another flag (or by nothing) takes no value: --relations --entity X used to swallow --entity.
 const opt = {}; for (let i = 0; i < args.length; i++) if (args[i].startsWith("--")) { const bare = args[i + 1] === undefined || args[i + 1].startsWith("--"); opt[args[i].slice(2)] = bare ? undefined : args[i + 1]; if (!bare) i++; }
@@ -27,7 +27,7 @@ if (opt.who !== undefined || opt.candidates !== undefined) {
   const exact = remote ? null : lib.exactName(entries, opt.who);
   const resolved = exact ? entries.find(e => e.name === exact) : null;
   const describe = e => ({ id: e.id, name: e.name, kind: e.kind, subtype: e.subtype, status: e.status || "active", aliases: e.aliases || [], emails: e.emails || [], references: remote ? [e.reference] : e.references || [], ...(e._path ? { path: e._path } : {}) });
-  console.log(JSON.stringify({ query: opt.who, scope: remote ? "supplied source candidates only" : "saved entity registry only", status: resolved ? "resolved" : search.total ? "candidates" : "no_match", ...(resolved ? { entity: describe(resolved) } : {}), candidates: search.matches.map(({ entry, score, reason }) => ({ ...describe(entry), score, reason })), total: search.total, truncated: search.truncated, guidance: "Scores rank spelling similarity, not identity confidence. Verify source records and distinguishing details. No result means unknown in this scope. Never merge, add an alias or overwrite identity from a search result alone. For a CRM lookup, follow references/entity-search.md in gtm-brain-use-brain and inspect the connected tool's search schema. Stop after a primary search and one useful fallback both return empty. Reuse records and briefs already read in this turn; do not reread the same entity under its name and ID. Answer saved-fact questions directly from sufficient retained evidence." }, null, 2));
+  console.log(JSON.stringify({ query: opt.who, scope: remote ? "supplied source candidates only" : "saved entity registry only", status: resolved ? "resolved" : search.total ? "candidates" : "no_match", ...(resolved ? { entity: describe(resolved) } : {}), candidates: search.matches.map(({ entry, score, reason }) => ({ ...describe(entry), score, reason })), total: search.total, truncated: search.truncated, guidance: "Scores rank spelling similarity, not identity confidence. Verify source records and distinguishing details. No result means unknown in this scope. Never merge, add an alias or overwrite identity from a search result alone. For a CRM lookup, inspect the connected tool's search schema. Stop after a primary search and one useful fallback both return empty. Reuse records and briefs already read in this turn; do not reread the same entity under its name and ID. Answer saved-fact questions directly from sufficient retained evidence." }, null, 2));
   process.exit(0);
 }
 /* list: team and contacts apart, emails shown, the handle not repeated as an alias, where each

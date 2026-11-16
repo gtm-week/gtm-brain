@@ -8,12 +8,13 @@ the plugin's `check_environment` and `setup_brain` tools do the work.
 ## Default onboarding interaction
 
 <!-- generated: questions; edit plugins/gtm-brain/policies/questions.md -->
-GTM Brain shows no question forms of its own. Ask with the host's own question box when it has
-one (in Codex, `request_user_input`: use it whenever it is available in the chat, in Plan mode
-always and in ordinary chats where the person's Codex has it). Otherwise ask in plain chat text and
-end the turn: the question, one line
-on why it matters, and two or three numbered options, recommended first; the person answers with
-a number or in their own words.
+Ask the person in this order. First `ask_person`: it shows a native form with the choices to
+click, in any chat, and returns the answer as its result. Give it the question, one line on why
+it matters and two to four choices, recommended first. Where `ask_person` is not available, the
+host's own question box when the chat has one (in Codex, `request_user_input`; in Plan mode
+always the host's own). Last, and when `ask_person` returns no answer, plain chat text that ends
+the turn: the question, one line on why it matters, and two or three numbered options,
+recommended first; the person answers with a number or in their own words.
 
 Reuse saved and submitted answers; infer a concrete proposal before asking. Ask only for missing
 information and real decisions. Do not ask the person to enable Plan mode or experimental
@@ -24,7 +25,7 @@ recommended first when appropriate. Never add your own Other or Something else: 
 always answer in their own words. A named last choice (Different company, Needs corrections)
 still fits when it means something specific. Each choice is a whole answer, never a half
 sentence for the person to finish ("A different company: "); ask for the rest next. Where
-several choices can apply together, say the person can pick several numbers; the host's question
+several choices can apply together, say the person can pick several numbers; a form or question
 box has no checkboxes, so offer the likely combinations there. The dashboard is view-only. Aim
 for a number or at most five words per answer. Never bundle a business clarification with
 optional maintenance questions or ask again for an already authorized action.
@@ -35,12 +36,13 @@ gave for that exact step is the answer: act on it and never ask the same questio
 
 Keep one question pending. A question without an answer authorizes nothing: defaults, empty
 results, errors, timeouts, elapsed time and unrelated messages are not answers. A skipped or
-closed question box is no answer and no refusal; ask it again as plain chat text. A plain text
+closed form or question box is no answer and no refusal; ask it once more as plain chat text. A plain text
 question ends the turn and waits for the reply. Do not use shell sleep or a busy loop to wait.
 
 Security permissions and account sign-in stay native. A chosen option cannot authorize shell
-commands or grant account access, and never stands in for APPROVE: a workplace or interaction
-change goes only through `approve_change`, whose own form carries the APPROVE choice. Carry out
+commands or grant account access, and never stands in for APPROVE, an `ask_person` answer
+included: a workplace or interaction change goes only through `approve_change`, whose own form
+carries the APPROVE choice. Carry out
 a chosen ordinary option through its owning workflow with the normal permission prompts.
 
 No slop. No filler phrases, no hedging when facts are cited, no LLM preamble
@@ -183,8 +185,17 @@ reads. The local dashboard needs no login and always belongs in the Codex pane.
   commit path is one activity path; `lib.save()` is the person's save (commit of `BRAIN_PATHS`,
   push when there is a remote). `readContext` exposes `rule` and `now` (learned working guidance, possibly empty); nobody splits
   "When loaded" by hand.
-- The dashboard is a read-only viewer. Its server serves files and revision events only, never
-  actions or background jobs. Chat about this uses a codex://threads/new link with the absolute
+- The dashboard is a viewer with three writes, all accepted only from the page itself (this
+  server's own Origin and Host, a token made at each server start, JSON only, never under
+  `GTM_BRAIN_RUN`). A document can be edited and saved (`POST /document`, which runs
+  `document.mjs --update`). An entity or a relation can be changed through a fixed list of nine
+  operations (`POST /entity-edit`, `server/entity-edit.mjs`), each of which runs the script
+  Codex's tools run. A note can be corrected, withdrawn, moved to another topic, given another
+  kind or, for an open question, answered through five operations (`POST /memory-edit`,
+  `server/memory-edit.mjs`), each one call of the remember script; no line of a `memories.jsonl`
+  is edited or removed. A prepared Codex message on the page is copied for the chat already
+  open, since a new chat would replace the pane the dashboard is shown in. Everything else stays view-only: its server serves files, search reads and
+  revision events, never other actions or background jobs. Chat about this uses a codex://threads/new link with the absolute
   selected project folder (or brain folder for brain-wide views) and a prepared prompt; the person presses Send in Codex. Saved answers link to
   the question ID through retracts and refresh the viewer without waiting for compilation.
   Only questions tagged brain-question enter the pending brain-question list; CRM tasks and

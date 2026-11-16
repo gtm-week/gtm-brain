@@ -21,6 +21,7 @@ delete env.GTM_BRAIN_RUN;
 const lib = await import(`${P}/lib/brain.mjs`);
 const pop = await import(`${P}/lib/population.mjs`);
 const health = await import(`${P}/lib/health-line.mjs`);
+const { housekeepingText } = await import(`${P}/lib/housekeeping.mjs`);
 
 function brain(t) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "gtm-pop-")));
@@ -87,7 +88,10 @@ test("every number on a fixture brain with a fixed clock", t => {
   assert.ok(old.length === 20);
 
   const out = pop.outOfRange(p);
-  assert.ok(out.some(o => /cited nowhere/.test(o)), out.join("; "));
+  // notes no summary cites are counted but no longer reported: summaries are on demand since 0.35.0
+  assert.ok(!out.some(o => /cited nowhere/.test(o)), out.join("; ")); assert.ok(p.citations.uncited > 0);
+  // near duplicates (the same source record on the same day) do not flag a brain; exact copies do
+  assert.ok(!out.some(o => /duplicates/.test(o)), out.join("; "));
   assert.ok(!out.some(o => /too empty|too full/.test(o)), "7 against 5.5 is in range");
   const text = pop.populationText(p);
   assert.match(text, /Capture rate: not measured/); assert.match(text, /Noise rate: not measured/);
@@ -102,13 +106,26 @@ test("the ranges: too empty, too full, and nothing judged on a tiny brain", () =
   assert.deepEqual(pop.outOfRange({ ...p, saved: { last_7_days: 0, average_4_weeks_before: 3, history_days: 90 } }), [], "an average under 4 a week is not compared");
   assert.deepEqual(pop.outOfRange({ ...p, saved: { last_7_days: 31, average_4_weeks_before: 10, history_days: 34 } }), [], "under 35 days of notes the week is not compared");
   assert.deepEqual(pop.outOfRange({ ...p, notes: 5, duplicates: { exact: 5, near: 0, share: 1 }, sources: { without_share: 1 } , saved: { last_7_days: 5, average_4_weeks_before: 5, history_days: 90 } }), [], "under 20 notes no share is judged");
-  assert.match(pop.outOfRange({ ...p, saved: { last_7_days: 10, average_4_weeks_before: 10, history_days: 90 }, duplicates: { exact: 4, near: 2, share: 0.06 } }).join(), /6% duplicates \(4 exact, 2 near\)/);
+  assert.match(pop.outOfRange({ ...p, saved: { last_7_days: 10, average_4_weeks_before: 10, history_days: 90 }, duplicates: { exact: 6, near: 2, share: 0.08, exact_share: 0.06 } }).join(), /6% duplicates \(6 notes with the same content as another\)/);
+  assert.deepEqual(pop.outOfRange({ ...p, saved: { last_7_days: 10, average_4_weeks_before: 10, history_days: 90 }, duplicates: { exact: 0, near: 30, share: 0.3, exact_share: 0 } }), [], "near duplicates alone are in range");
+  const ents = { total: 40, without_notes_share: 0, missing_required: 40, missing_required_share: 1 }, steady = { last_7_days: 10, average_4_weeks_before: 10, history_days: 90 };
+  assert.match(pop.outOfRange({ ...p, saved: steady, entities: ents }).join(), /40 of 40 entities missing a required field/);
+  assert.deepEqual(pop.outOfRange({ ...p, saved: steady, entities: { ...ents, schema_untouched: true } }), [], "not against a SCHEMA.md the team never changed");
 });
 
 test("the health line carries the population only when a number is out of range, and the view answers over query", async t => {
   const { root } = fixture(t);
+  assert.doesNotMatch(health.healthLine(root, { coverage: [], policies: [], meetings: [] }), /population:/, "in range: nothing about the population");
+  write(root, "beta", Array.from({ length: 12 }, (_, i) => rec("beta", ago(0.2 + i / 100), "The same sentence saved again.")));
   const line = health.healthLine(root, { coverage: [], policies: [], meetings: [] });
-  assert.match(line, /population: [^|]*cited nowhere \(query population\)/);
+  // things to tidy are never counted at the chat start: a count there was taken as a job and worked through unasked
+  assert.doesNotMatch(line, /population:|duplicates|\d+ notes with the same content/);
+  assert.match(line, /housekeeping: there are things to tidy, when asked for/);
+  assert.match(line, /Housekeeping starts only when the person asks for it: query \(object housekeeping\) for the names and files to settle, query \(object population\) for the numbers, then one item at a time with them; never start on it or count it out unasked\./);
+  // the hint comes from the population numbers (copies here), which the housekeeping view does not list: the
+  // line names the read that has them, so "there are things to tidy" is never answered with "nothing to settle"
+  assert.match(housekeepingText(root), /Housekeeping: nothing to settle/);
+  assert.match(pop.outOfRange(pop.population(root, { now })).join(), /duplicates \(\d+ notes with the same content as another\)/, "the number stays in the view");
   // the cache: same stamp and hour gives the cached numbers; a new note recomputes
   const cached = JSON.parse(readFileSync(join(root, "work/population.json"), "utf8"));
   assert.equal(cached.population.notes, pop.population(root, { now }).notes);
@@ -231,6 +248,6 @@ test("the cache does not outlive the code that wrote it, and the view never writ
   const file = join(root, "work/population.json"), c = JSON.parse(readFileSync(file, "utf8"));
   writeFileSync(file, JSON.stringify({ key: c.key, population: { notes: -1 } }));   // right key, wrong shape (an older version's cache): recomputed, never a crash in the health line
   assert.ok(pop.population(root, { now }).notes > 0);
-  assert.match(health.healthLine(root, { coverage: [], policies: [], meetings: [] }), /population:/);
+  assert.doesNotMatch(health.healthLine(root, { coverage: [], policies: [], meetings: [] }), /undefined|NaN/);
   assert.equal(tree(), beforeGit, "nothing under brain/ changed");
 });

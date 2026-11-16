@@ -19,9 +19,14 @@ Keep authored brain content in English. Preserve names, source quotes and the ex
 > For humans: the brain knows what is pending. This turns it into a short ordered list and
 > goes through it with you: answer, do, drop, or leave for later.
 
+Not for housekeeping ("let's do housekeeping", "tidy the brain": names, files and gaps to settle):
+that is `query` with object `housekeeping`, then its first item only, one at a time with the
+person, with no skill file read and nothing looked up on the web.
+
 ## Step 1: gather
 
-Read [operational evidence](../gtm-brain-use-brain/references/operational-evidence.md).
+Ground each item in a specific note and its date; an old question or a sent proposal is not
+proof someone still owes an answer.
 Call `query` (status), then `query` on `memories` with `filters: { "kind": "question" }`
 for current open questions. Load relevant contexts to read their summaries and newer
 notes. Use targeted `query` searches for the people and work items those results name.

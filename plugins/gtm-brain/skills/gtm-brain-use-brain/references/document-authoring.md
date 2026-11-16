@@ -19,7 +19,10 @@ output; leave out what Codex already knows.
   6. Worldview: how we frame the problem and the customer, in two or three sentences; every
      piece must agree with it.
   Company voice and founder voice are two documents when they differ; say which applies where.
-- **Design system.** The palette with its values, the type scale, spacing and grid, the
+- **Design system.** A page and a text: `design-system.html` is what people look at and the
+  source for how things look, `design-system.md` beside it says the same in words for Codex;
+  [the design system page](documents.md#the-design-system-page) is how both are written. The
+  palette with its values, the type scale, spacing and grid, the
   component rules (buttons, cards, forms), what an image may and may not be, and the anti-slop
   list (no gradients, no stock photos of handshakes, whatever the person names). A file with
   the assets goes in with `add-file.mjs --document <ref>` and lands in the document's files folder; the document names what matters.

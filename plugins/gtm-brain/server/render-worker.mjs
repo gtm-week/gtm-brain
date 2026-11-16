@@ -2,6 +2,7 @@
 // One short-lived dispatcher per OS user, one bounded renderer at a time.
 import { mkdirSync, readdirSync, rmSync, openSync, closeSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { isBrain as isBrainDir } from '../lib/brain-paths.mjs';
 import { spawn } from 'node:child_process';
 import { renderQueue, readJSON, writeJSON } from '../lib/dashboard-refresh.mjs';
 import { openDatabase } from '../lib/memory-index-store.mjs';
@@ -49,7 +50,7 @@ try {
     for (const file of files) {
       const path = join(queue, file), request = readJSON(path);
       if (!request?.root || !request.renderer || !request.id) { rmSync(path, { force: true }); continue; }
-      if (!existsSync(join(request.root, 'brain', 'admin.md'))) { rmSync(path, { force: true }); continue; }
+      if (!isBrainDir(request.root)) { rmSync(path, { force: true }); continue; }
       const state = join(request.root, 'work', 'render-state.json');
       try {
       writeJSON(state, { request: request.id, status: 'running', requestedAt: request.at, startedAt: new Date().toISOString() });

@@ -1,7 +1,11 @@
+// These tests read and write the root files of a layout 2 brain: setup and the lib play a plugin that writes layout 2 at most
+// (lib/layout-version.mjs GTM_BRAIN_TEST_LAYOUT). Layout 3 (about-us/, config/) is covered by config-folders.test.mjs.
+process.env.GTM_BRAIN_TEST_LAYOUT = "2";
 process.env.GTM_BRAIN_NO_WATCH = "1";
 process.env.GTM_BRAIN_NO_COMPILE = "1"; // Model runs are opt-in through test doubles.
 process.env.GTM_BRAIN_NO_SESSION_MAINTENANCE = "1"; // Dedicated worker tests exercise asynchronous startup.
-// The dashboard server serves the page and revision events. Mutating requests are refused.
+// The dashboard server serves the page and revision events. Mutating requests are refused, except a document saved
+// from the page (POST /document, covered in dashboard-edit.test.mjs).
 // A fake `codex` on PATH records what it was asked to do.
 // Run: node --test 'plugins/gtm-brain/test/*.test.mjs'
 import { test, after } from "node:test";

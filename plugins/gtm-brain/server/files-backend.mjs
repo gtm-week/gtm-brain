@@ -11,7 +11,7 @@ import { shortId } from "../lib/layout.mjs";
 
 const brainRoot = ctx => {
   const root = ctx?.brain;
-  if (typeof root !== "string" || !isAbsolute(root) || !existsSync(join(root, "brain", "admin.md"))) throw new Error("brain must be the absolute path of a GTM Brain workspace with workplace info");
+  if (typeof root !== "string" || !isAbsolute(root) || !lib.isBrain(root)) throw new Error("brain must be the absolute path of a GTM Brain workspace with workplace info");
   return root;
 };
 

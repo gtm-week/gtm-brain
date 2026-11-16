@@ -163,10 +163,10 @@ test('a negative answer is cheap and plain', () => {
 test('the index is version 6 with a stemming tokenizer; a version 5 cache is rebuilt from the source files', () => {
   const root = fixture();
   const n = note(root, 'Invoicing moved.');
-  assert.equal(MEMORY_INDEX_VERSION, 8);
+  assert.equal(MEMORY_INDEX_VERSION, 10);
   const i = new MemoryIndex(root); i.db.exec('PRAGMA user_version=5'); i.close();
   withMemoryIndex(root, index => {
-    assert.equal(index.db.prepare('PRAGMA user_version').get().user_version, 8);
+    assert.equal(index.db.prepare('PRAGMA user_version').get().user_version, 10);
     assert.match(index.db.prepare("SELECT sql FROM sqlite_master WHERE name='keywords'").get().sql, /porter/);
   });
   assert.deepEqual(ids(search(root, 'invoice')), [n.id]);
@@ -201,4 +201,18 @@ test('query object answer through the MCP server: one call, and the tool says on
     assert.match(d.text, /^answer: a derived read/);
     assert.ok(existsSync(join(root, 'work', 'memory-index.sqlite')));
   } finally { server.kill(); }
+});
+
+test('letters typed plainly find the same word written with its own letters: Lukasz finds Łukasz, Soren finds Søren, Strasse finds Straße', () => {
+  const root = fixture();
+  const a = note(root, 'Łukasz Nowak confirmed the venue walk-through for Thursday.');
+  const b = note(root, 'Søren asked for the sponsor deck in Danish.');
+  const c = note(root, 'The office moved to Invalidenstraße 43.');
+  note(root, 'Unrelated note about catering.');
+  assert.deepEqual(ids(search(root, 'Lukasz')), [a.id]);
+  assert.deepEqual(ids(search(root, 'lukasz nowak venue')).slice(0, 1), [a.id]);
+  assert.deepEqual(ids(search(root, 'Łukasz')), [a.id], 'typed with its own letter it still matches');
+  assert.deepEqual(ids(search(root, 'Soren')), [b.id]);
+  assert.deepEqual(ids(search(root, 'Invalidenstrasse')), [c.id]);
+  assert.doesNotMatch(search(root, 'Lukasz'), /No note has/, 'an exact match, not a typo');
 });

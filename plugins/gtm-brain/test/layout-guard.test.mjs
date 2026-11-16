@@ -1,3 +1,6 @@
+// This file plays the layout 2 plugin (GTM_BRAIN_TEST_LAYOUT=2: kind folders, root files); the layout 3 move and its
+// guard are in config-folders.test.mjs.
+process.env.GTM_BRAIN_TEST_LAYOUT = "2";
 // brain/layout.json and the upgrade that is safe for old brains and for teammates (0.35.0 round three, R5).
 // Setup and upgrade record the layout; a brain on a newer layout is read-only for this plugin; a layout change
 // waits for the person's yes, after naming the teammates who saved in the last 14 days; an upgrade delivers
@@ -14,7 +17,7 @@ import { createInterface } from "node:readline";
 import * as lib from "../lib/brain.mjs";
 import { readLayout, layoutBlock, layoutPlan, recentTeammates, LayoutError, LAYOUT_FILE, LAYOUT } from "../lib/layout-version.mjs";
 import { diskLayout } from "../lib/layout.mjs";
-import { legacyTemplates, STARTERS } from "../lib/upgrade-files.mjs";
+import { legacyTemplates, STARTERS, GIVEN } from "../lib/upgrade-files.mjs";
 import { ensureRules } from "../lib/where.mjs";
 import { ensureSchema } from "../lib/schema.mjs";
 import { removeBrain } from "./helpers/dash-cleanup.mjs";
@@ -64,10 +67,10 @@ function era032(root) {
 
 test("a brain made by setup is layout 2 (kind folders), with the five starters as given, all in the setup commit", t => {
   const { root, git } = brain(t);
-  assert.equal(LAYOUT, 2);
+  assert.equal(LAYOUT, 3); assert.equal(process.env.GTM_BRAIN_TEST_LAYOUT, "2", "this file plays a plugin that writes layout 2");
   assert.equal(lib.entityLayout(root), "kinds");
   assert.equal(diskLayout(root), 2);
-  assert.deepEqual(readLayout(root), { layout: 2, starters: [...STARTERS].sort() });
+  assert.deepEqual(readLayout(root), { layout: 2, starters: [...GIVEN].sort() });   // the five documents and the design system page
   assert.equal(layoutBlock(root), "");
   const files = git("show", "--name-only", "--format=", "HEAD");
   assert.match(files, /^brain\/layout\.json$/m);
@@ -198,7 +201,7 @@ test("a plugin that understands only layout 1 meets a layout 2 brain: every writ
   assert.equal(readLayout(root).layout, 2);
   const memories = readFileSync(join(root, "brain/contexts/company/memories.jsonl"), "utf8"), head = git("rev-parse", "HEAD"), before = tree(root);
   process.env.GTM_BRAIN_TEST_LAYOUT = "1";
-  t.after(() => { delete process.env.GTM_BRAIN_TEST_LAYOUT; });
+  t.after(() => { process.env.GTM_BRAIN_TEST_LAYOUT = "2"; });
   const line = layoutBlock(root);
   assert.match(line, /^GTM Brain: this brain was upgraded to file layout 2 by a newer GTM Brain; this one understands layout 1\. It still reads what it knows how to find \(pages the newer layout moved may be missing\), but nothing is written or saved until you update GTM Brain: say "update GTM Brain" \(update_plugin\), then start a new chat\./);
   assert.throws(() => lib.appendMemory(root, "company", { authors: ["ann-lee"], content: "Must not land." }), LayoutError);
@@ -218,7 +221,7 @@ test("a plugin that understands only layout 1 meets a layout 2 brain: every writ
   assert.equal(git("rev-parse", "HEAD"), head);
   assert.deepEqual(tree(root), before);
   // where the pre-release left 1 on a kind-folder brain, the older plugin does not raise the number: it cannot know
-  delete process.env.GTM_BRAIN_TEST_LAYOUT;
+  process.env.GTM_BRAIN_TEST_LAYOUT = "2";
   writeFileSync(join(root, LAYOUT_FILE), JSON.stringify({ layout: 1, starters: [] }) + "\n"); git("add", "-A"); git("-c", "commit.gpgsign=false", "commit", "-qm", "pre-release state");
   process.env.GTM_BRAIN_TEST_LAYOUT = "1";
   writeFileSync(join(root, "draft.md"), "mine\n");
@@ -244,7 +247,7 @@ test("a 0.32-era brain gets RULES.md, SCHEMA.md, the starters it lacks and the l
   assert.equal(readFileSync(join(root, "voice.md"), "utf8"), voice, "the person's voice.md is never replaced");
   assert.equal(readFileSync(join(root, "strategy.md"), "utf8"), strategy);
   assert.doesNotMatch(first.stdout, /added (voice|strategy)\.md/);
-  assert.deepEqual(readLayout(root), { layout: 2, starters: [...STARTERS].sort() });
+  assert.deepEqual(readLayout(root), { layout: 2, starters: [...GIVEN].sort() });   // the five documents and the design system page
   assert.match(first.stdout, /changed the brain's file layout to 2/);
   assert.equal(git("status", "--porcelain").trim(), "", "everything the upgrade wrote is kept");
   const after = tree(root), head = git("rev-parse", "HEAD");
@@ -378,7 +381,7 @@ test("a layout-changing upgrade names the teammates who saved in the last 14 day
   const newer = { ...env, GTM_BRAIN_TEST_LAYOUT: "3" };
   const ask = spawnSync("bash", [join(P, "scripts/gtm-brain-upgrade/upgrade.sh"), root], { cwd: root, env: newer, encoding: "utf8" });
   assert.equal(ask.status, 0, ask.stderr);
-  assert.match(ask.stdout, /not upgraded yet: This upgrade changes the brain's file layout from 2 to 3\. 1 teammate saved here in the last 14 days \(Bo Chen/);
+  assert.match(ask.stdout, /not upgraded yet: This upgrade changes the brain's file layout from 2 to 3\. It moves [^\n]* into about-us\/[^\n]*1 teammate saved here in the last 14 days \(Bo Chen, last [^)]*\); they will need to update GTM Brain: until then their GTM Brain does not find this brain/);
   assert.match(ask.stdout, /Nothing was changed/);
   assert.doesNotMatch(ask.stdout, /Cy Diaz/);
   assert.deepEqual(tree(root), before);

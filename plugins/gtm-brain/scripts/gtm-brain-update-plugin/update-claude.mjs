@@ -6,6 +6,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { homedir } from "node:os";
+import { isBrain as isBrainDir } from "../../lib/brain-paths.mjs";
 import { pluginVersion, olderVersion, verifyRuntime } from "../../lib/plugin-runtime.mjs";
 import { sourceVersion } from "../../lib/plugin-source.mjs";
 
@@ -67,7 +68,7 @@ try {
     console.log(`GTM Brain refreshed: ${before?.version || "missing"} -> ${after.version}.`);
     console.log(`Connector: GTM Brain ${runtime.version} starts and lists ${runtime.tools} tools.`);
     if (brainArg) {
-      if (!existsSync(join(brainArg, "brain", "admin.md"))) console.log(`${brainArg} is not a brain, rules not refreshed.`);
+      if (!isBrainDir(brainArg)) console.log(`${brainArg} is not a brain, rules not refreshed.`);
       else {
         console.log("Refreshing this brain's rules with the new version:");
         const up = spawnSync("bash", [join(after.installPath, "scripts/gtm-brain-upgrade/upgrade.sh"), brainArg], { cwd: brainArg, encoding: "utf8", timeout: 120000 });

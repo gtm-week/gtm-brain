@@ -2,7 +2,7 @@
 // The workshop demo as a live check (ALL-717): the two key loops, outreach lifecycle and content
 // strategy, each a sequence of real Codex turns on one seeded brain, with a file-based check after
 // every turn: what was saved, what was read, what file was written. Pass or fail per step.
-//   node plugins/gtm-brain/test/live/demo-loops.mjs [outreach|content] [--brain-only]
+//   node plugins/gtm-brain/test/live/demo-loops.mjs [outreach|content] [--stub [--fail <mode>] | --connectors] [--step <id>] [--effort medium] [--brain-only]
 // The brain is the e2e small shape (test/e2e/generate-brain.mjs) plus the records the story needs:
 // filled ICP, strategy and voice documents, Zynt signals, customer words from calls, two project
 // folders for drafts. Turns run through the production MCP server behind tool-routing-proxy.mjs
@@ -11,14 +11,20 @@
 // "Read" means the text reached the model: a seeded sentence in a successful tool result or in a shell
 // command's output. A call that failed, or one that only names the thing, is not a read. A resumed turn
 // counts what its session read in earlier turns: it is still in its context.
-// Nothing is ever sent. Clay, Zynt and Surfer are stand-in MCP servers with canned answers
-// (gtm-connectors-fixture.mjs), so the agent reaches them through their tools and a check sees every
-// call; one that spends credits without being asked fails the turn. Gmail and Vercel results are told to
-// Codex in the turn.
+// Nothing is ever sent: connector results (Clay, Surfer, Gmail, Vercel) are told to Codex in the turn.
+// --stub declares stub-gtm-tools.mjs to Codex beside GTM Brain (same isolated -c configuration) and drops the
+// told results: Codex must call the test doubles of Clay, Zynt and Surfer, and the checks read the stub's call
+// log. --fail expired_key|empty|rate_limit makes the stub fail (only --fail-tool's calls with that option);
+// each step that calls a stub tool then has a failure check: Codex says what failed and saves nothing invented.
+// --connectors declares Clay, Zynt and Surfer under their own names instead: three stand-in MCP servers with
+// canned answers (gtm-connectors-fixture.mjs), so the agent reaches them through their tools the way a real
+// brain does, and a check sees every call; one that spends credits without being asked fails the turn. The
+// Fernbrook signal is then not seeded: it comes from Zynt. Gmail and Vercel results stay told in the turn.
+// --step runs only the named steps; --effort sets the model's reasoning effort (default medium).
 // A step that fails because of a product gap carries known_gap, the way test/e2e/e2e.mjs marks them;
 // the run exits 1 only on a plain failure. The brain and every trace are kept for inspection.
 // --brain-only builds the seeded brain, prints its path and stops (the presenter's starting point).
-import { execFileSync, spawn } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -82,7 +88,7 @@ Plain, specific, calm.
 - No "revolutionary", "seamless" or "game-changer".
 - No first-name greetings with a comma splice ("Hi Lea, hope you're well, ...").`;
 
-export async function buildBrain(out) {
+export async function buildBrain(out, { zyntSignal = true } = {}) {
   const { generate } = await import(`${P}/test/e2e/generate-brain.mjs`);
   await generate({ shape: "small", out, quiet: true });
   const lib = await import(`${P}/lib/brain.mjs`), docs = await import(`${P}/lib/documents.mjs`);
@@ -97,6 +103,8 @@ export async function buildBrain(out) {
   const M = (ctx, d, content, extra = {}) => lib.appendMemory(root, ctx, { authors: [by], content, kind: "note", tools: [], people: [], at: at(d), ...extra });
   const zynt = (ref) => ({ tools: ["zynt"], source: [{ kind: "zynt", ref: `https://app.zynt.fixture.test/signals/${ref}` }] });
   const call = (ref) => ({ tools: ["granola"], source: [{ kind: "granola", ref: `https://meetings.fixture.test/recordings/${ref}?account=work` }] });
+  // with the connector fixtures the freshest signal is read from Zynt, not from the brain
+  if (zyntSignal) M("market", 10, "Zynt signal: Fernbrook Outdoor posted a Head of Returns job on 10 November; the post says returns are handled by hand in each store.", { people: ["Fernbrook Outdoor"], ...zynt("fernbrook-1") });
   M("market", 6, "Zynt signal: Heron Home opened 12 new stores in Poland in October.", { people: ["Heron Home"], ...zynt("heron-1") });
   M("market", 4, "Zynt signal: Umber Pharma, a pharmacy chain with 900 stores, is hiring a returns analyst.", { people: ["Umber Pharma"], ...zynt("umber-1") });
   M("market", 3, "Competitors publish weekly posts on return policies; none covers returns of online orders in the store.", { tools: ["web"] });
@@ -127,22 +135,16 @@ const saved = (x, re, why) => need(x.added.some(m => re.test(JSON.stringify(m)))
 const saw = (x, re, why) => need(x.saw(re), why);            // the text reached the model, by a tool result or a command's output
 const sawBrain = (x, re, why) => need(x.sawBrain(re), why);  // it came from a GTM Brain tool result, not from a file in the folder
 // one sentence per seeded source, so "read the ICP" means the ICP document and not a call that names it
-const SEEN = { icp: /Pharmacy chains/, signals: /Head of Returns job/, voice: /No exclamation marks/, strategy: /Returns cost: what a manual return costs/, market: /none covers returns of online orders/, calls: /drown in return tickets|nobody there can process them/ };
-const called = (x, tool) => x.connector.filter(c => c.tool === tool);
-const calledIt = (x, tool, why) => need(called(x, tool).length > 0, why);
-const neverCalled = (x, tool, why) => need(!called(x, tool).length, why);
+const SEEN = { icp: /Pharmacy chains/, signals: /Zynt signal: Fernbrook Outdoor/, voice: /No exclamation marks/, strategy: /Returns cost: what a manual return costs/, market: /none covers returns of online orders/, calls: /drown in return tickets|nobody there can process them/ };
 const words = t => (t.match(/[A-Za-z0-9][\w'’-]*/g) || []).length;
 
 export const STEPS = [
   { loop: "outreach", id: "o1-pick", shows: "accounts picked from the ICP and the signals",
-    say: "We want to start outreach this week. Check this week's buying signals in Zynt, then from our ICP, which two accounts should we contact first, and why? Name the person to write to if we know one. Do not save anything yet.",
-    check: x => all(calledIt(x, "zynt_list_signals", "did not read the signals in Zynt"), saw(x, SEEN.icp, "did not read the ICP document"), saw(x, SEEN.signals, "did not read the signals"), need(has(x.reply, /Fernbrook/), "Fernbrook Outdoor (ICP fit with a fresh signal) not picked"), need(!/Umber Pharma[^.\n]{0,80}(first|contact|pick)/i.test(x.reply) || /not a fit|pharmac/i.test(x.reply), "picked Umber Pharma, which the ICP rules out"), noSaves(x)) },
-  { loop: "outreach", id: "o2-find", shows: "the account and the contact found in Clay, no credits spent",
-    say: "Look up Fernbrook Outdoor in Clay and find their Head of Operations. Do not save anything yet.",
-    check: x => all(calledIt(x, "clay_find_people", "did not look for the contact in Clay"), neverCalled(x, "clay_enrich_person", "spent a Clay credit nobody asked for"), need(has(x.reply, /Lea Hoffmann/), "Lea Hoffmann not named"), noSaves(x)) },
-  { loop: "outreach", id: "o2-enrich", shows: "Clay enrichment on a yes, saved, the contact registered",
-    say: "Get Lea's work email from Clay, one credit is fine. Then save what Clay found about Fernbrook Outdoor and her.",
-    check: x => all(need(called(x, "clay_enrich_person").length === 1, `${called(x, "clay_enrich_person").length} Clay enrichments, not one`), saved(x, /Lea Hoffmann/, "no note names Lea Hoffmann"), saved(x, /85/, "store count not saved"), saved(x, /clay/i, "Clay not recorded as the source"),
+    say: "We want to start outreach this week. From our ICP and the buying signals in the brain, which two accounts should we contact first, and why? Name the person to write to if we know one. Do not save anything yet.",
+    check: x => all(saw(x, SEEN.icp, "did not read the ICP document"), saw(x, SEEN.signals, "did not read the signals"), need(has(x.reply, /Fernbrook/), "Fernbrook Outdoor (ICP fit with a fresh signal) not picked"), need(!/Umber Pharma[^.\n]{0,80}(first|contact|pick)/i.test(x.reply) || /not a fit|pharmac/i.test(x.reply), "picked Umber Pharma, which the ICP rules out"), noSaves(x)) },
+  { loop: "outreach", id: "o2-enrich", shows: "Clay enrichment saved, the contact registered",
+    say: "I ran Clay on Fernbrook Outdoor. It returned: 85 stores in Germany and Austria, about 1,400 employees, returns handled by hand in each store. Their Head of Operations is Lea Hoffmann, lea.hoffmann@fernbrook-outdoor.example, based in Munich. Save what Clay found.",
+    check: x => all(saved(x, /Lea Hoffmann/, "no note names Lea Hoffmann"), saved(x, /85/, "store count not saved"), saved(x, /clay/i, "Clay not recorded as the source"),
       need(x.names.some(n => n.name === "Lea Hoffmann" && n.kind === "person"), "Lea Hoffmann is not a person in the registry"),
       need(x.names.some(n => n.name === "Lea Hoffmann" && n.emails.includes("lea.hoffmann@fernbrook-outdoor.example")) || x.added.some(m => m.content.includes("lea.hoffmann@fernbrook-outdoor.example")), "her email is kept nowhere")) },
   { loop: "outreach", id: "o3-draft", shows: "first email drafted in the company voice, nothing sent",
@@ -162,14 +164,14 @@ export const STEPS = [
     check: x => all(sawBrain(x, /ERP migration/, "did not get the thread from the brain"), need(has(x.reply, /Lea Hoffmann|Lea/), "contact not named"), need(has(x.reply, /migration|ERP/i), "her reply is missing"), need(has(x.reply, /14 Jan|January 14|14 January|2027-01-14/i), "the 14 January call is missing"), need(has(x.reply, /prospect/i), "status missing"), noSaves(x)) },
 
   { loop: "content", id: "c1-topics", shows: "topics proposed from strategy, market, calls and the Surfer keywords",
-    say: "Plan our blog. Read our strategy, the market notes and what customers said on calls. Check the keywords in Surfer. Propose three posts for the landing page blog, each with its keyword and the customer words it uses. Do not save anything yet.",
-    check: x => all(calledIt(x, "surfer_keyword_research", "did not check the keywords in Surfer"), neverCalled(x, "surfer_generate_article", "spent a Surfer credit nobody asked for"), saw(x, SEEN.strategy, "did not read the strategy"), saw(x, SEEN.market, "did not read the market notes"), saw(x, SEEN.calls, "did not read what customers said on calls"), need(["returns automation for retailers", "reduce return rate retail", "store pickup returns"].filter(k => x.reply.toLowerCase().includes(k)).length >= 2, "fewer than two Surfer keywords used"), need(has(x.reply, /drown|Black Friday|return online orders in the store/i), "no customer words from the calls"), noSaves(x)) },
+    say: "Plan our blog. Read our strategy, the market notes and what customers said on calls. Surfer gave us these keywords (monthly searches, difficulty): 'returns automation for retailers' 1,900 / 34; 'reduce return rate retail' 880 / 22; 'store pickup returns' 320 / 12. Propose three posts for the landing page blog, each with its keyword and the customer words it uses. Do not save anything yet.",
+    check: x => all(saw(x, SEEN.strategy, "did not read the strategy"), saw(x, SEEN.market, "did not read the market notes"), saw(x, SEEN.calls, "did not read what customers said on calls"), need(["returns automation for retailers", "reduce return rate retail", "store pickup returns"].filter(k => x.reply.toLowerCase().includes(k)).length >= 2, "fewer than two Surfer keywords used"), need(has(x.reply, /drown|Black Friday|return online orders in the store/i), "no customer words from the calls"), noSaves(x)) },
   { loop: "content", id: "c2-draft", shows: "the choice saved as a decision, the post drafted and SEO-checked",
-    say: "Go with 'store pickup returns' first; save that as a decision. Create its content brief in Surfer, then draft the post yourself from the brief in our tone of voice: about 600 words, an SEO title under 60 characters, a meta description under 155 characters, one H1, the keyword in the title and in the first paragraph. Put the draft in the website project folder as Markdown, with title and description in its front matter.",
+    say: "Go with 'store pickup returns' first; save that as a decision. Then draft the post in our tone of voice: about 600 words, an SEO title under 60 characters, a meta description under 155 characters, one H1, the keyword in the title and in the first paragraph. Put the draft in the website project folder as Markdown, with title and description in its front matter.",
     check: x => {
       const d = drafts(x, "website").sort((a, b) => b.text.length - a.text.length)[0], fm = d ? frontmatter(d) : {}, body = d ? fileText(d) : "";
       const h1 = (body.match(/^# .+$/gm) || []).length, first = body.split(/\n\s*\n/).map(p => p.trim()).find(p => p && !p.startsWith("#")) || "";
-      return all(calledIt(x, "surfer_create_content_editor", "no content brief in Surfer"), neverCalled(x, "surfer_generate_article", "Surfer wrote the article: a credit nobody asked for"), saved(x, /store pickup/i, "the choice is not saved"), need(x.added.some(m => m.kind === "decision"), "not saved as a decision"), saw(x, SEEN.voice, "did not read the tone of voice"), need(!!d, "no draft in projects/website/"),
+      return all(saved(x, /store pickup/i, "the choice is not saved"), need(x.added.some(m => m.kind === "decision"), "not saved as a decision"), saw(x, SEEN.voice, "did not read the tone of voice"), need(!!d, "no draft in projects/website/"),
         d ? need(fm.title && fm.title.length <= 60 && /store pickup returns?/i.test(fm.title), `SEO title "${fm.title || ""}" (${(fm.title || "").length} chars) misses the rule`) : true,
         d ? need(fm.description && fm.description.length <= 155, `meta description is ${(fm.description || "").length} chars`) : true,
         d ? need(h1 === 1, `${h1} H1 headings`) : true, d ? need(/store pickup return/i.test(first), "keyword not in the first paragraph") : true,
@@ -187,6 +189,108 @@ export const STEPS = [
     check: x => all(sawBrain(x, /1,?240/, "did not get the results from the brain"), need(has(x.reply, /store pickup returns|reflow\.example\/blog/i), "the published post is missing"), need(has(x.reply, /1,?240|\b3 demo|three demo/i), "the results are missing"), need(has(x.reply, /peak season|Black[- ]Friday|returns cost|cost of (a |each |every )?(manual )?returns?|returns automation for retailers|reduce return rate/i), "the next post is not one of the two pillars still open (returns cost, peak season)"), noSaves(x)) },
 ];
 
+/* ---------- stub mode: Codex calls the test doubles in stub-gtm-tools.mjs instead of being told their results ----------
+   The steps that used an outside tool ask Codex to call it, and their check also asserts: the right stub tool was
+   called with criteria that came from the brain; what came back was saved as notes with a source pointing at the
+   tool; the brain's tools list (work/tools.json, the dashboard's Tools) shows it as used; nothing was sent. */
+export const STUB_SERVER = "gtm_test_tools";
+const STUB_KIND = "gtm-test-tools";
+const flatKind = s => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+export const fromStub = m => (m.source || []).some(s => s && (flatKind(s.kind) === flatKind(STUB_KIND) || /test-tools\.fixture\.test/.test(`${s.ref || ""} ${s.url || ""}`)));
+const stubCalls = (x, tool) => (x.stub || []).filter(c => c.tool === tool && !c.isError);
+const called = (x, tool, ok, why) => need(stubCalls(x, tool).some(c => ok(c.arguments || {}, c)), (x.stub || []).some(c => c.tool === tool) ? `${tool}: ${why}` : `${tool} was not called`);
+const savedFromStub = (x, re, why) => need(x.added.some(m => fromStub(m) && re.test(JSON.stringify(m))), why);
+const STUB_TOOL_NAMES = /gtm.?test.?tools|company.?search|company.?enrich|buying.?signals|keyword.?research|content.?score/i;
+// The list has one row per server, so after the first step that put it there the row alone proves nothing about
+// a later step: the turn must add its own evidence, a note that names the tool and cites it (what connect.mjs
+// counts) or a read test recorded with mark_tool.
+const creditsStub = m => fromStub(m) && (m.tools || []).some(t => STUB_TOOL_NAMES.test(String(t)));
+const listedAsUsed = x => all(need(Object.entries(x.toolsList || {}).some(([k, s]) => s && STUB_TOOL_NAMES.test(`${k} ${s.tool || ""} ${s.plugin || ""}`) && (s.test === "ok" || !!s.used)), "the brain's tools list does not show the stub tools as used (work/tools.json)"),
+  need(x.added.some(creditsStub) || x.calls.some(c => c.tool === "mark_tool" && STUB_TOOL_NAMES.test(JSON.stringify(c.arguments || {}))), "nothing saved in this turn names the stub tool in tools with its source, and no read test was recorded: the tools list shows it from an earlier step only"));
+// a command that runs one of these, not a file name or a search that contains the word
+const sentNothing = x => all(noSend(x), need(!x.commands.some(c => /(^|[;&|(`'"]\s*)(curl|wget|sendmail|mailx?|nc)(\s|$)/.test(c)), "a shell command could reach the network or send mail"));
+const viaStub = (x, ...checks) => all(...checks, listedAsUsed(x), sentNothing(x));
+const ICP_COUNTRIES = /germany|\bde\b|austria|\bat\b|poland|\bpl\b|dach/i;
+const fromIcp = a => { const countries = (a.countries || []).filter(c => ICP_COUNTRIES.test(c)).length, text = JSON.stringify(a);
+  return countries >= 2 && (/outdoor|home/i.test(JSON.stringify(a.industries || [])) || (a.stores_min >= 10 && a.stores_min <= 30) || (a.stores_max >= 150 && a.stores_max <= 250)) && !/pharmac/i.test(JSON.stringify(a.industries || [])) && text.length > 0; };
+const names = list => (list || []).map(s => String(s).toLowerCase());
+// a failure played by the stub (--fail): Codex says what happened and saves no data the tool did not return
+const FAIL_SAYS = { expired_key: /expired|api key|\bkey\b|401|unauthori[sz]ed|sign(ed)? in|reconnect/i, empty: /no (results?|data|keywords?|match|companies|signals)|nothing (came back|was returned|returned|found)|found nothing|returned (nothing|no)|empty|not found|did not return|didn't return/i, rate_limit: /rate limit|429|too many|try again|retry/i };
+// The step names its tool and what only the tool could have told (never what the seeded brain already holds); the
+// failure judged is the one the run played (--fail), so every step can be run with every failure.
+export const failureCheck = (tool, invented) => Object.assign(mode => x => all(need((x.stub || []).some(c => c.tool === tool), `${tool} was not called`),
+  need((x.stub || []).filter(c => c.tool === tool).length <= 3, `${tool} asked ${(x.stub || []).filter(c => c.tool === tool).length} times after it failed: a failure is an answer, not a reason to keep asking`),
+  need(FAIL_SAYS[mode].test(x.reply), `the reply does not tell the person the tool failed (${mode})`),
+  need(!x.added.some(m => invented.test(JSON.stringify(m))), "saved data the tool did not return"), sentNothing(x)), { tool });
+
+const STUB = {
+  "o1-pick": { say: "Check the prospects we saved with the buying signals tool and tell me which two accounts to contact first, and why. Name the person to write to if we know one. Save the signals you used.",
+    shows: "signals checked for the saved prospects, two accounts picked, the signals saved",
+    check: x => viaStub(x, called(x, "buying_signals", a => names(a.companies).some(c => c.includes("fernbrook")) && names(a.companies).some(c => /heron|juniper/.test(c)) && !names(a.companies).some(c => /umber|kestrel|glade/.test(c)), "not asked for the prospects saved in the brain"),
+      need(has(x.reply, /Fernbrook/), "Fernbrook Outdoor (ICP fit, ready now) not picked"), need(!/Umber Pharma[^.\n]{0,80}(first|contact|pick)/i.test(x.reply) || /not a fit|pharmac/i.test(x.reply), "picked Umber Pharma, which the ICP rules out"),
+      savedFromStub(x, /Head of Returns|in-store returns|returned in all 85 stores|Reverse Logistics/i, "the signals are not saved with a source pointing at the tool")),
+    fail: failureCheck("buying_signals", /Reverse Logistics|returned in all 85 stores|from 1 December/i) },
+  "o2-enrich": { say: "Enrich Fernbrook Outdoor with the company enrichment tool and save what it found, including the person to write to.",
+    shows: "enrichment called and saved with its source, the contact registered",
+    check: x => viaStub(x, called(x, "company_enrich", a => /fernbrook/i.test(a.company || ""), "not asked for Fernbrook Outdoor"),
+      savedFromStub(x, /Lea Hoffmann/, "no note from the tool names Lea Hoffmann"),
+      // the search step may have saved the store count already: any company fact the enrichment returned counts, in words (a bare 85 also matches an id)
+      savedFromStub(x, /\b85 stores|1,?400 employees|by hand|any store|Shopify|in-house/i, "what the enrichment found about the company (stores, returns, systems) is not saved from the tool"),
+      need(x.names.some(n => n.name === "Lea Hoffmann" && n.kind === "person"), "Lea Hoffmann is not a person in the registry"),
+      need(x.names.some(n => n.name === "Lea Hoffmann" && n.emails.includes("lea.hoffmann@fernbrook-outdoor.example")) || x.added.some(m => m.content.includes("lea.hoffmann@fernbrook-outdoor.example")), "her email is kept nowhere")),
+    fail: failureCheck("company_enrich", /Lea Hoffmann|85 stores|1,?400 employees/i) },
+  "o3-draft": { say: "Draft the first outreach email to Lea, tied to her company's buying signal, in our tone of voice. Draft only: do not send anything. Put the draft as a Markdown file in the outbound project folder." },
+  "c1-topics": { say: "Plan our blog. Read our strategy, the market notes and what customers said on calls. Get keyword numbers for our content pillars from the keyword research tool. Propose three posts for the landing page blog, each with its keyword and the customer words it uses. Save the keyword numbers you used as one note, with where they came from.",
+    shows: "topics from strategy, market and calls, keywords from the research tool, the numbers saved with their source",
+    check: x => viaStub(x, saw(x, SEEN.strategy, "did not read the strategy"), saw(x, SEEN.market, "did not read the market notes"), saw(x, SEEN.calls, "did not read what customers said on calls"),
+      called(x, "keyword_research", a => /pickup|cost|peak|black friday/i.test(JSON.stringify(a.seeds || [])), "the seeds are not the content pillars from the strategy"),
+      need(["returns automation for retailers", "reduce return rate retail", "store pickup returns", "buy online return in store", "black friday returns", "cost of processing returns", "retail returns process"].filter(k => x.reply.toLowerCase().includes(k)).length >= 2, "fewer than two keywords from the tool used"),
+      need(has(x.reply, /drown|Black Friday|return online orders in the store/i), "no customer words from the calls"), savedFromStub(x, /\b(320|1,?900|880|1,?300|2,?400|390|720)\b/, "the keyword numbers are not saved with a source pointing at the tool")),
+    fail: failureCheck("keyword_research", /\b(\d[\d,]*)\s*(monthly )?(searches|volume)|volume[^.]{0,20}\d|\b(320|1,?900|880)\b/i) },
+  "c2-draft": { say: "Go with 'store pickup returns' first; save that as a decision. Then draft the post in our tone of voice: about 600 words, an SEO title under 60 characters, a meta description under 155 characters, one H1, the keyword in the title and in the first paragraph. Put the draft in the website project folder as Markdown, with title and description in its front matter. Score the draft with the content score tool, fix what it flags, and save the final score as a note with where it came from.",
+    shows: "the choice saved as a decision, the post drafted, scored by the tool and the score saved",
+    check: x => { const told = STEPS.find(s => s.id === "c2-draft").check(x); return viaStub(x, told,
+      called(x, "content_score", a => /store pickup returns?/i.test(a.keyword || "") && String(a.content || "").length > 1500, "not asked to score the store pickup returns draft"),
+      savedFromStub(x, /score/i, "the score is not saved with a source pointing at the tool")); } },
+};
+const SEARCH = { loop: "outreach", id: "o0-search", stub: true, shows: "companies found by the ICP criteria, the fits saved as prospects",
+  say: "We want to start outreach this week. Search for companies that fit our ICP with the company search tool, using the criteria in our ICP document. Save the ones that fit as prospects, one note each, with where they came from. Do not contact anyone.",
+  check: x => viaStub(x, saw(x, SEEN.icp, "did not read the ICP document"), called(x, "company_search", fromIcp, "the criteria are not the ICP's (regions, industries, store count)"),
+    savedFromStub(x, /Fernbrook Outdoor/, "Fernbrook Outdoor is not saved from the search"), savedFromStub(x, /Heron Home|Juniper Haus/, "the other fits are not saved from the search"),
+    need(!x.added.some(m => /Umber Pharma|Kestrel Sports|Glade Market|Larkspur Garden/.test(m.content) && !/not a fit|rule[sd]? out|excluded|too small/i.test(m.content)), "saved a company the ICP rules out as a prospect")),
+  fail: failureCheck("company_search", /Juniper Haus|Pinewood Living/) };
+// the told steps, with the stub variants and the search step in front of the outreach loop
+export const STUB_STEPS = STEPS.flatMap(s => [...(s.id === "o1-pick" ? [SEARCH] : []), STUB[s.id] ? { ...s, ...STUB[s.id], stub: !!STUB[s.id].check } : s]);
+// a failure run asks only the steps that can be judged: those that call a stub tool, and with --fail-tool that tool's
+export const stepsFor = (stub, fail = "", failTool = "", connectors = false) => (stub ? STUB_STEPS : connectors ? CONNECTOR_STEPS : STEPS).filter(s => !fail || (s.fail && (!failTool || s.fail.tool === failTool)));
+
+/* ---------- connectors mode: Clay, Zynt and Surfer are stand-in MCP servers under their own names (gtm-connectors-fixture.mjs) ----------
+   The agent reaches them through their tools instead of having the results typed into the turn: the signals come
+   from Zynt, the contact is found in Clay and enriched only on the person's yes (o2 is split into find and enrich),
+   the keywords and the content brief come from Surfer. A turn that calls a credit-spending tool nobody asked for fails. */
+const connectorCalls = (x, tool) => (x.connector || []).filter(c => c.tool === tool);
+const calledIt = (x, tool, why) => need(connectorCalls(x, tool).length > 0, why);
+const neverCalled = (x, tool, why) => need(!connectorCalls(x, tool).length, why);
+const ZYNT_SIGNAL = /Head of Returns job/;   // the sentence the Zynt fixture returns; the connectors brain does not hold it
+const told = id => STEPS.find(s => s.id === id);
+const CONNECTOR = {
+  "o1-pick": { say: "We want to start outreach this week. Check this week's buying signals in Zynt, then from our ICP, which two accounts should we contact first, and why? Name the person to write to if we know one. Do not save anything yet.",
+    check: x => all(calledIt(x, "zynt_list_signals", "did not read the signals in Zynt"), saw(x, SEEN.icp, "did not read the ICP document"), saw(x, ZYNT_SIGNAL, "did not read the signals"), need(has(x.reply, /Fernbrook/), "Fernbrook Outdoor (ICP fit with a fresh signal) not picked"), need(!/Umber Pharma[^.\n]{0,80}(first|contact|pick)/i.test(x.reply) || /not a fit|pharmac/i.test(x.reply), "picked Umber Pharma, which the ICP rules out"), noSaves(x)) },
+  "o2-enrich": { shows: "Clay enrichment on a yes, saved, the contact registered",
+    say: "Get Lea's work email from Clay, one credit is fine. Then save what Clay found about Fernbrook Outdoor and her.",
+    check: x => all(need(connectorCalls(x, "clay_enrich_person").length === 1, `${connectorCalls(x, "clay_enrich_person").length} Clay enrichments, not one`), told("o2-enrich").check(x)) },
+  "c1-topics": { say: "Plan our blog. Read our strategy, the market notes and what customers said on calls. Check the keywords in Surfer. Propose three posts for the landing page blog, each with its keyword and the customer words it uses. Do not save anything yet.",
+    check: x => all(calledIt(x, "surfer_keyword_research", "did not check the keywords in Surfer"), neverCalled(x, "surfer_generate_article", "spent a Surfer credit nobody asked for"), told("c1-topics").check(x)) },
+  "c2-draft": { say: "Go with 'store pickup returns' first; save that as a decision. Create its content brief in Surfer, then draft the post yourself from the brief in our tone of voice: about 600 words, an SEO title under 60 characters, a meta description under 155 characters, one H1, the keyword in the title and in the first paragraph. Put the draft in the website project folder as Markdown, with title and description in its front matter.",
+    check: x => all(calledIt(x, "surfer_create_content_editor", "no content brief in Surfer"), neverCalled(x, "surfer_generate_article", "Surfer wrote the article: a credit nobody asked for"), told("c2-draft").check(x)) },
+};
+const FIND = { loop: "outreach", id: "o2-find", connector: true, shows: "the account and the contact found in Clay, no credits spent",
+  say: "Look up Fernbrook Outdoor in Clay and find their Head of Operations. Do not save anything yet.",
+  check: x => all(calledIt(x, "clay_find_people", "did not look for the contact in Clay"), neverCalled(x, "clay_enrich_person", "spent a Clay credit nobody asked for"), need(has(x.reply, /Lea Hoffmann/), "Lea Hoffmann not named"), noSaves(x)) };
+export const CONNECTOR_SERVERS = ["clay", "zynt", "surfer"];
+// the told steps, with the connector variants and the free Clay lookup in front of the paid enrichment
+export const CONNECTOR_STEPS = STEPS.flatMap(s => [...(s.id === "o2-enrich" ? [FIND] : []), CONNECTOR[s.id] ? { ...s, ...CONNECTOR[s.id], connector: true } : s]);
+
 /* ---------- running ---------- */
 const readJSONL = p => existsSync(p) ? readFileSync(p, "utf8").split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean) : [];
 function snapshot(root) {
@@ -195,32 +299,76 @@ function snapshot(root) {
   walk(root); return out;
 }
 
+const USAGE = "usage: demo-loops.mjs [outreach|content] [--stub [--fail expired_key|empty|rate_limit [--fail-tool <tool>]] | --connectors] [--step <id>[,<id>]] [--effort low|medium|high] [--brain-only]";
+export function parseArgs(args) {
+  const o = { loops: [], stub: false, connectors: false, fail: "", failTool: "", steps: [], effort: process.env.GTM_BRAIN_EVAL_EFFORT || "medium", brainOnly: false, error: "" };
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i], value = () => args[++i] ?? "";
+    if (a === "outreach" || a === "content") o.loops.push(a);
+    else if (a === "--stub") o.stub = true;
+    else if (a === "--connectors") o.connectors = true;
+    else if (a === "--brain-only") o.brainOnly = true;
+    else if (a === "--fail") o.fail = value();
+    else if (a === "--fail-tool") o.failTool = value();
+    else if (a === "--step") o.steps.push(...value().split(",").filter(Boolean));
+    else if (a === "--effort") o.effort = value();
+    else o.error = `unknown argument: ${a}`;
+  }
+  const ids = new Set([...STEPS, ...STUB_STEPS, ...CONNECTOR_STEPS].map(s => s.id));
+  if (!o.error && o.fail && !["expired_key", "empty", "rate_limit"].includes(o.fail)) o.error = `unknown failure: ${o.fail}`;
+  if (!o.error && (o.fail || o.failTool) && !o.stub) o.error = "--fail needs --stub";
+  if (!o.error && o.stub && o.connectors) o.error = "--stub and --connectors are two different runs: pick one";
+  if (!o.error && o.steps.some(id => !ids.has(id))) o.error = `unknown step: ${o.steps.filter(id => !ids.has(id)).join(", ")}`;
+  if (!o.error && !["low", "medium", "high", "xhigh"].includes(o.effort)) o.error = `unknown effort: ${o.effort}`;
+  return o;
+}
+
 async function main() {
-  const args = process.argv.slice(2), only = args.filter(a => !a.startsWith("--"));
-  const unknown = args.filter(a => !["outreach", "content", "--brain-only"].includes(a));
-  if (unknown.length) { console.error(`unknown argument: ${unknown.join(" ")}\nusage: demo-loops.mjs [outreach|content] [--brain-only]`); process.exitCode = 2; return; }
+  const o = parseArgs(process.argv.slice(2));
+  if (o.error) { console.error(`${o.error}\n${USAGE}`); process.exitCode = 2; return; }
+  const steps = stepsFor(o.stub, o.fail, o.failTool, o.connectors).filter(s => (!o.steps.length || o.steps.includes(s.id)) && (!o.loops.length || o.loops.includes(s.loop)));
+  if (!steps.length) { console.error(`no step to run${o.fail ? `: a failure run asks only the steps that call ${o.failTool || "a stub tool"}` : o.stub ? " (o2-find needs --connectors)" : o.connectors ? " (o0-search needs --stub)" : " (o0-search needs --stub, o2-find needs --connectors)"}\n${USAGE}`); process.exitCode = 2; return; }
   const lib = await import(`${P}/lib/brain.mjs`), { customerOverview } = await import(`${P}/lib/customers.mjs`);
   const base = resolve(process.env.GTM_BRAIN_EVAL_DIR || tmpdir()), artifacts = mkdtempSync(join(base, "gtm-demo-loops-"));
   // the generator gives the brain a scratch profile (never the real one); the server keeps using it, codex keeps the person's sign-in
-  const { root, by } = await buildBrain(join(artifacts, "brain")), profile = process.env.CODEX_HOME;
-  console.log(`Brain: ${root}\nArtifacts: ${artifacts}`);
-  if (args.includes("--brain-only")) return;
+  const { root, by } = await buildBrain(join(artifacts, "brain"), { zyntSignal: !o.connectors }), profile = process.env.CODEX_HOME;
+  console.log(`Brain: ${root}\nArtifacts: ${artifacts}${o.stub ? `\nMode: stub tools${o.fail ? `, failing with ${o.fail}${o.failTool ? ` on ${o.failTool}` : ""}` : ""}` : o.connectors ? "\nMode: connector fixtures (Clay, Zynt, Surfer)" : "\nMode: told results"} · effort ${o.effort}`);
+  if (o.brainOnly) return;
   // the model retypes this path in shell commands and gets a long hashed checkout path wrong: give it a short one beside the brain
   const pluginPath = join(artifacts, "plugin"); symlinkSync(P, pluginPath, "dir");
-  const env = { ...process.env, CODEX_HOME: profile, GTM_BRAIN_EVAL_PROFILE: profile, PLUGIN_ROOT: P, GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_NO_WATCH: "1", GTM_BRAIN_EVAL_ALLOW: "workflow" };
-  const agentEnv = { ...env }; delete agentEnv.CODEX_HOME; if (process.env.GTM_BRAIN_CODEX_HOME) agentEnv.CODEX_HOME = process.env.GTM_BRAIN_CODEX_HOME;
+  // stub mode lets the model record that a tool returned data (mark_tool): the brain's tools list is part of the check
+  const env = { ...process.env, CODEX_HOME: profile, GTM_BRAIN_EVAL_PROFILE: profile, PLUGIN_ROOT: P, GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_NO_WATCH: "1", GTM_BRAIN_EVAL_ALLOW: o.stub ? "workflow,mark_tool" : "workflow" };
+  // codex exec writes every folder it runs in into its config.toml as a trusted project, --ignore-user-config or not
+  // (15 Nov: eight demo brains landed in the person's ~/.codex/config.toml). It runs on a scratch home beside the
+  // brain that links only the person's sign-in.
+  const codexHome = process.env.GTM_BRAIN_CODEX_HOME || join(artifacts, "codex-home");
+  if (!process.env.GTM_BRAIN_CODEX_HOME) {
+    mkdirSync(codexHome, { recursive: true });
+    const auth = join(process.env.HOME || "", ".codex", "auth.json");
+    if (existsSync(auth)) symlinkSync(auth, join(codexHome, "auth.json"));
+  }
+  const agentEnv = { ...env, CODEX_HOME: codexHome };
+  const stubLog = join(artifacts, "stub-calls.jsonl");
+  // Codex filters the environment of an MCP server it starts: what the proxy and the server must see goes in its env table
+  const serverEnv = Object.entries({ GTM_BRAIN_EVAL_PROFILE: profile, GTM_BRAIN_EVAL_ALLOW: env.GTM_BRAIN_EVAL_ALLOW, GTM_BRAIN_NO_WATCH: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_NO_OPEN: "1" }).filter(([, v]) => v)
+    .flatMap(([k, v]) => ["-c", `mcp_servers.gtm_brain_eval.env.${k}=${JSON.stringify(v)}`]);
+  const stubArgs = [`${P}/test/live/stub-gtm-tools.mjs`, "--log", stubLog, ...(o.fail ? ["--fail", o.fail] : []), ...(o.failTool ? ["--fail-tool", o.failTool] : [])];
   const results = [];
-  for (const loop of ["outreach", "content"].filter(l => !only.length || only.includes(l))) {
+  for (const loop of ["outreach", "content"].filter(l => !o.loops.length || o.loops.includes(l))) {
     const trace = join(artifacts, `${loop}-mcp.jsonl`), ctrace = join(artifacts, `${loop}-connectors.jsonl`); let session = null, seen = [];   // seen: the texts the resumed session has read so far, still in its context
-    const preamble = `This is a synthetic GTM Brain company brain at ${root}, used for a workshop demo. You work for Marta Nowak, confirmed handle ${by}. Use only this synthetic brain and the plugin's workflow instructions; do not read real account data or other company files. Nothing is ever sent or published from this chat. Clay, Zynt and Surfer are connected as test fixtures through their MCP tools; Gmail and Vercel are not connected, and what they returned is told to you. The plugin build under test is ${pluginPath}; use its skills/gtm-brain-use-brain/SKILL.md and the procedures it references.\n\n`;
-    for (const step of STEPS.filter(s => s.loop === loop)) {
-      const fresh = !session || step.fresh, before = { trace: readJSONL(trace).length, ctrace: readJSONL(ctrace).length, notes: new Set(lib.listContexts(root).flatMap(c => c.memories.map(m => m.id))), files: snapshot(root) };
+    const connected = o.stub ? `Nothing is ever sent or published from this chat: Gmail and Vercel are not connected, and what they returned is told to you. The company data, buying signals and SEO tools are the ${STUB_SERVER} tools in this chat.`
+      : o.connectors ? "Nothing is ever sent or published from this chat. Clay, Zynt and Surfer are connected as test fixtures through their MCP tools; Gmail and Vercel are not connected, and what they returned is told to you."
+      : "Nothing is ever sent or published from this chat: Clay, Surfer, Gmail and Vercel are not connected, and what they returned is told to you.";
+    const preamble = `This is a synthetic GTM Brain company brain at ${root}, used for a workshop demo. You work for Marta Nowak, confirmed handle ${by}. Use only this synthetic brain and the plugin's workflow instructions; do not read real account data or other company files. ${connected} The plugin build under test is ${pluginPath}; use its skills/gtm-brain-use-brain/SKILL.md and the procedures it references.\n\n`;
+    for (const step of steps.filter(s => s.loop === loop)) {
+      const fresh = !session || step.fresh, before = { trace: readJSONL(trace).length, ctrace: readJSONL(ctrace).length, stub: readJSONL(stubLog).length, notes: new Set(lib.listContexts(root).flatMap(c => c.memories.map(m => m.id))), files: snapshot(root) };
       const events = join(artifacts, `${step.id}-agent.jsonl`), final = join(artifacts, `${step.id}-final.txt`);
       const mcp = ["-c", "features.apps=false", "-c", "approval_policy=\"never\"", "-c", "sandbox_mode=\"workspace-write\"",
         "-c", `mcp_servers.gtm_brain_eval.command=${JSON.stringify(process.execPath)}`,
         "-c", `mcp_servers.gtm_brain_eval.args=${JSON.stringify([`${P}/test/live/tool-routing-proxy.mjs`, root, trace, step.answer || "", "", "", P])}`,
-        "-c", "mcp_servers.gtm_brain_eval.tool_timeout_sec=120",
-        ...["clay", "zynt", "surfer"].flatMap(s => ["-c", `mcp_servers.${s}.command=${JSON.stringify(process.execPath)}`, "-c", `mcp_servers.${s}.args=${JSON.stringify([`${P}/test/live/gtm-connectors-fixture.mjs`, s, ctrace])}`])];
+        ...serverEnv, "-c", "mcp_servers.gtm_brain_eval.tool_timeout_sec=120", "-c", `model_reasoning_effort=${JSON.stringify(o.effort)}`,
+        ...(o.stub ? ["-c", `mcp_servers.${STUB_SERVER}.command=${JSON.stringify(process.execPath)}`, "-c", `mcp_servers.${STUB_SERVER}.args=${JSON.stringify(stubArgs)}`, "-c", `mcp_servers.${STUB_SERVER}.tool_timeout_sec=30`] : []),
+        ...(o.connectors ? CONNECTOR_SERVERS.flatMap(s => ["-c", `mcp_servers.${s}.command=${JSON.stringify(process.execPath)}`, "-c", `mcp_servers.${s}.args=${JSON.stringify([`${P}/test/live/gtm-connectors-fixture.mjs`, s, ctrace])}`]) : [])];
       const argv = fresh ? ["exec", "--ignore-user-config", "--json", "--skip-git-repo-check", "-C", root, "-m", model, ...mcp, "-o", final, "-"]
         : ["exec", "resume", "--ignore-user-config", "--json", "--skip-git-repo-check", "-m", model, ...mcp, "-o", final, session, "-"];
       const started = Date.now();
@@ -236,7 +384,11 @@ async function main() {
       const thread = ev.find(e => e.type === "thread.started")?.thread_id; if (!session && !step.fresh && thread) session = thread;   // a fresh last turn never becomes the session
       const done = ev.filter(e => e.type === "item.completed" && e.item?.type === "command_execution");
       const commands = done.map(e => String(e.item.command || ""));
-      const records = readJSONL(trace).slice(before.trace), calls = records.filter(r => r.kind === "call");
+      const records = readJSONL(trace).slice(before.trace), calls = records.filter(r => r.kind === "call"), stub = readJSONL(stubLog).slice(before.stub);
+      // a save from a tool the tools list does not know starts a tools check in the background; the eval server runs
+      // without committing, which skips it (remember.mjs), so the harness runs the same check before reading the list
+      if (o.stub && stub.length) spawnSync(process.execPath, [`${P}/scripts/gtm-brain-connect/connect.mjs`, root, "--check"], { cwd: root, env: { ...env, CODEX_HOME: profile, GTM_BRAIN_CODEX_TIMEOUT: "20000" }, stdio: "ignore", timeout: 60000 });
+      let toolsList = {}; try { toolsList = JSON.parse(readFileSync(join(root, "work", "tools.json"), "utf8")); } catch {}
       const crecs = readJSONL(ctrace).slice(before.ctrace), connector = crecs.filter(r => r.kind === "call"), fromConnectors = crecs.filter(r => r.kind === "result").map(r => r.text);
       const after = snapshot(root), files = [...after].filter(([p, h]) => before.files.get(p) !== h).map(([p]) => ({ path: p, text: readFileSync(join(root, p), "utf8") }));
       const added = lib.listContexts(root).flatMap(c => c.memories).filter(m => !before.notes.has(m.id));
@@ -247,15 +399,20 @@ async function main() {
       const context = step.fresh ? [...fromBrain, ...fromShell, ...fromConnectors] : [...seen, ...fromBrain, ...fromShell, ...fromConnectors];
       if (!step.fresh) seen = context;
       const skill = context.some(t => /^name: gtm-brain-use-brain/m.test(t));   // without it the turn ran on the tool descriptions alone
-      const x = { reply, calls, connector, commands, added, files, names, idOf, customers: customerOverview(root).customers, saw: re => context.some(t => re.test(t)), sawBrain: re => fromBrain.some(t => re.test(t)) };
-      let verdict; try { verdict = run.code === 0 && !run.timedOut ? step.check(x) : `codex ${run.timedOut ? "timed out" : `exited ${run.code}`}`; } catch (e) { verdict = `check threw: ${e.message}`; }
+      const x = { reply, calls, stub, connector, toolsList, commands, added, files, names, idOf, customers: customerOverview(root).customers, saw: re => context.some(t => re.test(t)), sawBrain: re => fromBrain.some(t => re.test(t)) };
+      // a played failure is judged by what Codex told the person and saved, on the steps that call a stub tool
+      const check = o.fail ? step.fail && step.fail(o.fail) : step.check;
+      let verdict; try { verdict = !check ? "no failure check for this step" : run.code === 0 && !run.timedOut ? check(x) : `codex ${run.timedOut ? "timed out" : `exited ${run.code}`}`; } catch (e) { verdict = `check threw: ${e.message}`; }
       const r = { loop, id: step.id, shows: step.shows, pass: verdict === true, why: verdict === true ? "" : verdict, ...(verdict !== true && step.known_gap ? { known_gap: step.known_gap } : {}), seconds: Math.round((Date.now() - started) / 1000),
-        skill_read: skill, tools: calls.map(c => c.tool), connectors: connector.map(c => `${c.server}:${c.tool}`), saved: added.map(m => `${m.context} [${m.kind}] ${m.content.slice(0, 160)}`), files: files.map(f => f.path), reply: reply.slice(0, 1200), events, trace };
+        skill_read: skill, brain_calls: calls.length, stub_calls: stub.length, tools: calls.map(c => c.tool), stub_tools: stub.map(c => `${c.tool}${c.isError ? " (error)" : ""}`), connectors: connector.map(c => `${c.server}:${c.tool}`), saved: added.map(m => `${m.context} [${m.kind}] ${m.content.slice(0, 160)}`), files: files.map(f => f.path), reply: reply.slice(0, 1200), events, trace };
       results.push(r);
-      console.log(`${r.pass ? "PASS" : r.known_gap ? "GAP " : "FAIL"}  ${step.id.padEnd(14)} ${String(r.seconds).padStart(4)}s  ${step.shows}${r.why ? `\n      why: ${r.why}${r.known_gap ? ` (known gap: ${r.known_gap})` : ""}` : ""}\n      tools: ${r.tools.join(" > ") || "none"}${r.connectors.length ? `\n      connectors: ${r.connectors.join(" > ")}` : ""}${commands.length ? `\n      shell: ${commands.length} command(s)` : ""}${skill ? "" : "\n      note: the workflow instructions (SKILL.md) were not read in this chat"}${r.saved.length ? `\n      saved: ${r.saved.join("\n             ")}` : ""}${r.files.length ? `\n      files: ${r.files.join(", ")}` : ""}`);
+      console.log(`${r.pass ? "PASS" : r.known_gap ? "GAP " : "FAIL"}  ${step.id.padEnd(14)} ${String(r.seconds).padStart(4)}s  ${String(r.brain_calls).padStart(2)} brain ${String(r.stub_calls).padStart(2)} stub  ${step.shows}${r.why ? `\n      why: ${r.why}${r.known_gap ? ` (known gap: ${r.known_gap})` : ""}` : ""}\n      tools: ${r.tools.join(" > ") || "none"}${r.stub_tools.length ? `\n      stub: ${r.stub_tools.join(" > ")}` : ""}${r.connectors.length ? `\n      connectors: ${r.connectors.join(" > ")}` : ""}${commands.length ? `\n      shell: ${commands.length} command(s)` : ""}${skill ? "" : "\n      note: the workflow instructions (SKILL.md) were not read in this chat"}${r.saved.length ? `\n      saved: ${r.saved.join("\n             ")}` : ""}${r.files.length ? `\n      files: ${r.files.join(", ")}` : ""}`);
     }
   }
-  writeFileSync(join(artifacts, "report.json"), JSON.stringify({ brain: root, model, plugin: P, results }, null, 2) + "\n");
+  // a chat's first GTM Brain call starts the brain's dashboard server and watcher, and they outlive the chat: the
+  // brain is kept for inspection, its processes are not (each live run left one running, 15 Nov)
+  spawnSync(process.execPath, [`${P}/server/dash.mjs`, root, "--stop"], { cwd: root, env, stdio: "ignore", timeout: 30000 });
+  writeFileSync(join(artifacts, "report.json"), JSON.stringify({ brain: root, model, effort: o.effort, mode: o.stub ? "stub" : o.connectors ? "connectors" : "told", fail: o.fail || null, plugin: P, results }, null, 2) + "\n");
   const plain = results.filter(r => !r.pass && !r.known_gap).length, gaps = results.filter(r => !r.pass && r.known_gap).length;
   console.log(`\n${results.filter(r => r.pass).length} of ${results.length} steps pass, ${plain} fail, ${gaps} known gap. Brain kept: ${root}\nReport: ${join(artifacts, "report.json")}`);
   process.exitCode = plain ? 1 : 0;
