@@ -63,7 +63,7 @@ export async function generate({ shape = "small", out, seed = 1, gold: goldPath 
   const pick = a => a[Math.floor(rnd() * a.length)], int = (lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1)), chance = p => rnd() < p;
   const env = { ...process.env, PLUGIN_ROOT: P };
   execFileSync("git", ["init", "-q", root], { env });
-  execFileSync("bash", [join(P, "scripts/gtm-brain-setup/setup.sh"), "--company", "Reflow Fixture", "--one-liner", "Returns automation for retailers", "--owner", "Marta Nowak <marta@example.test>", "--team", "Tomasz Lis <tomasz@example.test>", "--tools", "Attio (CRM), Gmail, Granola", "--dashboard", "on-demand"], { cwd: root, env, stdio: "ignore", timeout: 120000 });
+  execFileSync("bash", [join(P, "scripts/gtm-brain-setup/setup.sh"), "--company", "Northfold", "--one-liner", "Returns automation for retailers", "--owner", "Marta Nowak <marta@example.test>", "--team", "Tomasz Lis <tomasz@example.test>", "--tools", "Attio (CRM), Gmail, Granola", "--dashboard", "on-demand"], { cwd: root, env, stdio: "ignore", timeout: 120000 });
   const admin = lib.readAdmin(root), by = admin.team[0].handle, mate = admin.team[1]?.handle || by;
   log("setup done");
 
@@ -137,7 +137,7 @@ export async function generate({ shape = "small", out, seed = 1, gold: goldPath 
 
   // an established brain: onboarding finished on the first day (the six outcomes, then the marker setup left is closed)
   const T0 = Date.parse("2026-01-05T08:00:00Z"), SPAN = 300 * 86400000;   // Jan 5 to Nov 1, 2026
-  const outcomes = ["Marta Nowak and Reflow Fixture confirmed.", "Company profile approved and applied.", "Attio, Gmail and Granola connected and read-tested.", "First snapshot confirmed from the CRM and recent meetings.", "Daily source sync configured at 08:00.", "Projects linked."];
+  const outcomes = ["Marta Nowak and Northfold confirmed.", "Company profile approved and applied.", "Attio, Gmail and Granola connected and read-tested.", "First snapshot confirmed from the CRM and recent meetings.", "Daily source sync configured at 08:00.", "Projects linked."];
   ["Who you are", "Company profile", "Your tools", "What is going on", "Running for you", "Your projects"].forEach((title, i) => lib.appendMemory(root, "company", { authors: [by], content: `Onboarding step ${i + 1} (${title}): ${outcomes[i]}`, tags: ["onboarding"], source: [{ kind: "user", ref: by }], at: new Date(T0 - 3600000 + i * 60000).toISOString() }));
   { const state = lib.readOnboarding(root); if (state.marker_id) lib.appendMemory(root, "company", { authors: [by], tags: ["onboarding"], supersedes: state.marker_id, content: "Onboarding: completed v2 on 2026-01-05.", at: new Date(T0 - 3600000 + 10 * 60000).toISOString() }); }
 
