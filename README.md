@@ -30,11 +30,22 @@ In this order:
 
 1. **Rules and schema.** `/gtmb-rules` sets what Codex saves and what it asks first.
    `/gtmb-schema` sets what is kept about each person and company.
-2. **Base documents.** Strategy, ideal customer profile, market, tone of voice and design
-   system. Codex reads the one that fits the task: your voice before an email, your ideal
-   customer profile before a prospect list. Write them yourself, or let a mentor interview you
-   and draft one with you: `/gtmb-strategy`, `/gtmb-icp`, `/gtmb-market`, `/gtmb-voice`,
-   `/gtmb-design-system`.
+2. **Base documents.** Five short documents Codex reads before it works: your tone of voice
+   before an email, your ideal customer profile before a prospect list. They start empty.
+   Fill one by typing its command: Codex asks you a short series of questions, shows a draft
+   and saves it when you say yes.
+
+   | Document | Type this | You get |
+   | --- | --- | --- |
+   | Strategy | `/gtmb-strategy` | Where the company is going and what matters this quarter |
+   | Ideal customer profile | `/gtmb-icp` | Who buys, why, and who is involved in the decision |
+   | Market | `/gtmb-market` | Who you compete with and where you win or lose |
+   | Tone of voice | `/gtmb-voice` | How you sound, drawn from your real writing |
+   | Design system | `/gtmb-design-system` | How your pages look, built from your existing site |
+
+   Already have one written? Paste it and say "save this as our strategy". To change one later,
+   say what to change, or open it on the dashboard under Configuration and press Edit. To add
+   your own, say "add pricing as a base file".
 
 ## 4. Use it
 
