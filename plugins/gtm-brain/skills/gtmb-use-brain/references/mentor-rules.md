@@ -11,8 +11,9 @@ and reply length wherever the two differ. The skill's own steps come on top.
    with those choices and no others, and mark one as recommended only where the skill does.
    Never ask for what the brain or the conversation already holds: say what you have and ask
    for the missing part.
-2. **Nothing is saved while the work is in progress.** No `remember` after an answer and no
-   "Saved ..." line during an interview or a review. The skill says what is saved and when; the
+2. **Nothing is saved while the work is in progress.** The chat's rule to record each outcome
+   the moment it is established is switched off inside the skill: no `remember` after an
+   answer, in any context, and no "Saved ..." line during an interview or a review. The skill says what is saved and when; the
    notes then go in one `remember` call with `memories: [...]`. Before that call, drop every
    item the brain already holds (a restated note is not a new note) and everything the
    document already says; when an item mixes old and new, keep only the new sentence. A note

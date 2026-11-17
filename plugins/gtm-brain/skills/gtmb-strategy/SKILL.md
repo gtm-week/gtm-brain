@@ -44,7 +44,9 @@ Read [mentor rules](../gtmb-use-brain/references/mentor-rules.md) once; they hol
    pricing, competitors) and `document` (`action: show`, `ref: strategy`). Nothing else.
 2. The first reply is the opening message below, in full, as chat text.
 3. Every question is chat text that ends the turn: no form, no numbered options, no menu.
-4. Nothing is saved and no "Saved ..." line is written until the closing question is answered.
+4. No `remember` call, in any context, and no "Saved ..." line until the closing question is
+   answered. The chat's rule to record each outcome at once does not apply during the intake:
+   the answers are kept in the conversation and written once, in step 5.
 5. Then two writes: the document, and one `remember` call with the handful of decisions.
 
 ## Opening message (always send this first, before any question)
@@ -106,7 +108,8 @@ the opening and run the conversation like an attentive interviewer gathering inf
 ### Turn pattern
 
 After every answer, silently update what is answered, partly answered, still missing and
-pre-emptively covered. Then choose the smallest useful response:
+pre-emptively covered, in your head, not in the brain: no tool is called between the first
+reply and the closing answer, unless the person shares a file. Then choose the smallest useful response:
 
 1. Ask a contextual follow-up immediately when an important part of the current question is
    missing or vague.

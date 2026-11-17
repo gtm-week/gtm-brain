@@ -59,7 +59,8 @@ Read [mentor rules](../gtmb-use-brain/references/mentor-rules.md) once; they hol
    teammate's save becomes a proposal for the owner: say so in one line.
 7. Keep each competitor the person named or confirmed as an organization linked to us, so it
    connects across notes and deals: one `remember` call, a note per competitor in the Market
-   context, one plain sentence ("Northfold is a competitor of ours; buyers compare us on price."), the
+   context, one plain sentence with the competitor's own name ("<Competitor> is a competitor of
+   ours.", and nothing no source said), the
    competitor in `companies`, and `relation` with `from` the competitor, `type`
    `competes_with`, `to` `us` ([relationships](../gtmb-use-brain/references/relations.md)). A
    competitor's product the person named is a product with its `maker`. When the schema has no
