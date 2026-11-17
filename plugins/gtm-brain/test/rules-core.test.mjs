@@ -113,9 +113,11 @@ test("the server's instructions carry the core once, on either host", async () =
     // the read named for a question is the one the query tool's description opens with (memory-search.test.mjs
     // holds that sentence), here and in the opening: two names for one job cost a round of choosing
     assert.match(readFileSync(join(plugin, "server/server.mjs"), "utf8"), /query\.description = "To answer a question from the brain, call query with object answer and search/);
-    assert.match(head, /query answer with search for a question, remember for a save/);
+    assert.match(head, /remember for a save, query for a list/);
+    // win-recall: a question about one company or person is a page read, not a search call
+    assert.match(text, /To answer a question about a company or a person, read its page under entities\/ \(entities\/INDEX\.md lists them\) or grep the brain folder; use query only for lists across many companies, dates and status views\./);
     assert.doesNotMatch(text.slice(0, text.indexOf("\nQuestions: ")), /query memories with search|object: "memories"/);
-    for (const [i, re] of [/^- Answer from the brain: query \{object: "answer", search: "<the question as asked>"\}$/,/^- Save a note: remember \{content, people: \[names\], sources\}.*answer_question/,
+    for (const [i, re] of [/^- About one company or person: read its page \(entities\/INDEX\.md lists them\) or grep the brain; lists, dates, status: query \{object: "answer", search\}$/,/^- Save a note: remember \{content, people: \[names\], sources\}.*answer_question/,
       /^- Read several people or companies in one call: query \{object: "entities", filters: \{name: \["A", "B"\]\}\} \(or filters\.id\)/,
       /^- Housekeeping, only when the person asks for it: query \{object: "housekeeping"\}, then the first item only, asked with ask_person/,
       /^- Merge two entities the person confirmed are one: merge_entities \{source, target, confirmed: true\}/].entries()) assert.match(shapes[i + 1], re);
