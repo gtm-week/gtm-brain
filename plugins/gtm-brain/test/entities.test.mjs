@@ -134,7 +134,9 @@ test("withdrawals remove current claims and relationships but retain the reason 
   const view = lib.entityBrief(root, "Chris");
   assert.equal(view.evidence.length, 0);
   assert.match(view.markdown, /employer attribution was incorrect/);
-  assert.doesNotMatch(view.markdown, /Chris works at Acme/);
+  // win-recall: the withdrawn claim stays only in Everything recorded, marked withdrawn, never as a current claim
+  assert.doesNotMatch(view.markdown.replace(/\n- [^\n]*\[withdrawn by m_[0-9a-f]+ on [^\]]+\] Chris works at Acme\.[^\n]*/, ""), /Chris works at Acme/);
+  assert.match(view.markdown, /\[withdrawn by m_[0-9a-f]+ on [^\]]+\] Chris works at Acme\./);
   assert.match(view.markdown, /Full memory history/);
 });
 
