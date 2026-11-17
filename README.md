@@ -381,7 +381,7 @@ writes: ["tool:email"]
 
 Detail: [WORKFLOWS.md](docs/WORKFLOWS.md).
 
-![The Workflows tab: each workflow with whether it is on, how it starts and where its runs stand](docs/images/screenshots/dashboard-workflows.png)
+![The Workflows tab: a switch between Workflows and Skills, then each workflow with whether it is on, how it starts and where its runs stand](docs/images/screenshots/dashboard-workflows.png)
 
 ### Skills, projects and interactions
 
@@ -527,7 +527,7 @@ work happens in chat; the page is for reading, plus three kinds of edit.
 **Actual GTM Brain dashboard, populated with fictional demo data.** These are captures
 of the shipped app, not mockups. No customer or private workspace data is shown.
 
-![The Overview tab: what is coming up, then the mentors, each with the document it fills and a link that prepares the work in Codex](docs/images/screenshots/dashboard-overview.png)
+![The Overview tab: Housekeeping, what is coming up, the foundations (rules, schema, base documents) with what is missing, and a line to all skills, mentors first](docs/images/screenshots/dashboard-overview.png)
 
 ![The Help view: every task Codex can take on, mentors first, each with a prepared message and its command](docs/images/screenshots/dashboard-mentors.png)
 

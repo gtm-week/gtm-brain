@@ -22,7 +22,7 @@ test('one flat navigation: Overview first, where the dashboard opens, and every 
 
 test('Overview says what needs the person, or that nothing does, and the header carries no health line', async ({ app, screen, browser }) => {
   await app.open('/');
-  await expect(browser.locator('#ov-inbox').getByRole('heading', /^(Needs your attention|Coming up|Nothing needs you right now)$/, { level: 2 }).first()).toBeVisible();
+  await expect(browser.locator('#ov-inbox, #ov-soon').getByRole('heading', /^(Needs your attention|Coming up|Nothing needs you right now)$/, { level: 2 }).first()).toBeVisible();
   await expect(browser.locator('#health-line')).toHaveCount(0);
   await expect(browser.locator('#brain-health')).toHaveText(/^Updated (just now|\d+ minutes? ago|today)/);
   await expect(browser.locator('#brain-health')).toHaveAttribute('title', /\d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
@@ -362,17 +362,24 @@ test('Workflows: how one runs, a Start link with its prepared message per workfl
   await outbound.getByRole('button', 'Outbound').tap();
   await expect(browser.locator('#pw-files article ol.wf-steps li').first()).toBeVisible();
   await expect(browser.locator('#pw-files article ol.wf-steps li.here')).toContainText(f.run.stepTitles[1]);
-  // the count beside "Things you can ask Codex to do" is the number of rows under it
-  const counted = await browser.evaluate(() => [Number((document.querySelector('#pw-skills summary')!.textContent || '').match(/· (\d+)/)![1]), document.querySelectorAll('#pw-skills li[data-pw-skill]').length]);
-  expect(counted[0]).toBe(counted[1]);
-  expect(counted[1]).toBeGreaterThan(10);
+  // the switch's counts are the rows each part draws
+  const parts = screen.getByRole('tablist', 'Workflows or skills');
+  const workflowsCount = Number((await browser.evaluate(() => document.querySelector('#wf-tab-workflows .pl-count')!.textContent)));
+  expect(workflowsCount).toBe(await browser.locator('#pw-files article.wf-card').count());
+  await parts.getByRole('tab', /^Skills/).tap();
+  await expect(browser.locator('#pw-files')).toBeHidden();
+  const skillsCount = Number((await browser.evaluate(() => document.querySelector('#wf-tab-skills .pl-count')!.textContent)));
+  await expect(browser.locator('#skill-results article.sk-card')).toHaveCount(skillsCount);
+  expect(skillsCount).toBeGreaterThan(10);
   // Coming up on the Overview says the same step, with the same prepared message, and leads to the tracker
   await screen.getByRole('navigation', 'Main navigation').getByRole('button', 'Overview').tap();
-  const soon = browser.locator(`#ov-inbox li[data-soon-run="${f.run.id}"]`);
+  const soon = browser.locator(`#ov-soon li[data-soon-run="${f.run.id}"]`);
   await expect(soon).toContainText(f.run.stepTitles[1]);
   await expect(soon).toContainText('was due');
-  const soonHref = decodeURIComponent((await browser.evaluate(() => document.querySelector('#ov-inbox li[data-soon-run] a.pl-chat')!.getAttribute('href')))!.split('prompt=')[1]);
+  const soonHref = decodeURIComponent((await browser.evaluate(() => document.querySelector('#ov-soon li[data-soon-run] a.pl-chat')!.getAttribute('href')))!.split('prompt=')[1]);
   expect(soonHref).toBe(next);
   await soon.getByRole('button', /^See the run/).tap();
   await expect(browser.locator('.view.on h1')).toHaveText('Workflows');
+  // it opens the Workflows part, even after Skills was chosen
+  await expect(browser.locator('#pw-files .wf-run:not(.ended)').first()).toBeVisible();
 });

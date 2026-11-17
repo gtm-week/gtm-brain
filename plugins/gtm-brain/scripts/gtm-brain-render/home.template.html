@@ -148,31 +148,15 @@ h1,h2,h3{font-family:var(--display);margin:0;letter-spacing:-.01em}
 .help-steps b{display:grid;place-items:center;flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font:600 11px var(--body)}
 .help-steps strong{display:block;font:600 13px var(--body);color:var(--ink);margin-bottom:3px}
 .help-steps p{margin:0;font-size:12px;line-height:1.55;color:var(--muted)}
-.help-header{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:14px}
-.help-header .explore-search{flex:0 1 400px}
-.help-filters{margin-bottom:14px}
-.help-header h2{font-family:var(--display);font-size:16px;font-weight:600;margin:0}
-.help-list{max-height:min(62vh,720px);border:1px solid var(--rule);border-radius:4px;background:#121211}
-.skill-group-head{display:flex;align-items:center;gap:8px;padding:11px 20px;background:var(--paper);border-bottom:1px solid var(--rule);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);position:sticky;top:0;z-index:1}
-.skill-group-head .cnt{padding:1px 5px;border-radius:3px;background:var(--soft);font-size:10px;letter-spacing:0}
-.skill-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:14px 24px;padding:16px 20px;border-bottom:1px solid var(--rule);min-width:0;transition:background .15s,box-shadow .15s}
-.skill-row:last-child{border-bottom:0}
-.skill-row:hover{background:#1c1c19;box-shadow:inset 3px 0 var(--accent)}
-.skill-row h3{font-family:var(--display);font-size:15px;font-weight:600;color:#d4eff3;margin:0 0 4px}
-.skill-description{font-size:13px;line-height:1.55;color:var(--muted);margin:0 0 8px;max-width:78ch}
-.skill-example{display:flex;align-items:baseline;gap:8px;font-size:13px;color:var(--ink);margin:0}
 .skill-example-label{flex-shrink:0;font-size:10px;font-weight:600;letter-spacing:.04em;color:var(--muted);text-transform:uppercase}
-.skill-actions{display:flex;flex-direction:column;align-items:flex-end;gap:7px;max-width:200px}
 .skill-open{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid #32302c;border-radius:3px;background:var(--accent-soft);color:var(--accent);font:600 12px var(--body);text-decoration:none;white-space:nowrap}
 .skill-open:hover{border-color:var(--accent);background:#201f1d}
 .skill-open:focus-visible,.skill-copy:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .skill-copy{font:500 12px var(--body);color:var(--muted);border:1px solid var(--rule);border-radius:3px;background:transparent;padding:6px 12px;cursor:pointer;white-space:nowrap}
 .skill-copy:hover{color:var(--ink);border-color:var(--accent)}
-.skill-row code{font-size:10px;color:var(--muted);overflow-wrap:anywhere;background:none;padding:0}
 .skill-copy-status{font-size:11px;color:var(--green);line-height:1.5;text-align:right}
 .skill-copy-status textarea{width:100%;min-height:100px;background:var(--surface);color:var(--ink);border:1px solid var(--rule);padding:6px}
-@media(max-width:1100px){.help-steps{grid-template-columns:1fr}.help-header{flex-direction:column;align-items:stretch;gap:12px}.help-header .explore-search{flex:1 1 auto}}
-@media(max-width:900px){.skill-row{grid-template-columns:minmax(0,1fr)}.skill-actions{flex-direction:row;align-items:center;max-width:none;flex-wrap:wrap}}
+@media(max-width:1100px){.help-steps{grid-template-columns:1fr}}
 .explore-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:12px 16px;margin:0 0 14px}
 .explore-toolbar[hidden]{display:none}
 .explore-search{position:relative;display:flex;align-items:center;flex:0 1 380px;min-width:220px}
@@ -333,8 +317,21 @@ time.pl-when{white-space:nowrap;cursor:help;text-decoration:underline dotted var
 .ov-house-list li.ov-row{grid-template-columns:minmax(0,1fr) auto;align-items:start}.ov-row>details{min-width:0}.ov-row>details>summary{display:grid;grid-template-columns:52px minmax(0,1fr) 14px;align-items:center;gap:8px 16px;cursor:pointer;list-style:none;min-height:30px}.ov-row>details>summary::-webkit-details-marker{display:none}.ov-row>details>summary::after{content:"";width:7px;height:7px;border-right:2px solid var(--amber);border-bottom:2px solid var(--amber);transform:rotate(45deg);transition:transform .15s;justify-self:end;margin-top:-3px}.ov-row>details[open]>summary::after{transform:rotate(225deg);margin-top:3px}.ov-row>details>summary:focus-visible{outline:2px solid var(--amber);outline-offset:3px;border-radius:4px}
 .ov-detail{margin:10px 0 4px 68px;font-weight:400;font-size:13px}.ov-detail-list{list-style:none;margin:0;padding:0}.ov-detail-list li{display:flex!important;align-items:baseline;justify-content:space-between;gap:14px;padding:6px 0!important;border:0!important;border-top:1px solid #4a3d1c!important;border-radius:0!important;background:none!important;font-size:13px!important;font-weight:400!important}.ov-detail-list li:first-child{border-top:0!important}.ov-detail-list b{font-weight:600}.ov-note{color:var(--muted);font-weight:400;font-size:12px}.ov-rest{color:var(--muted)}.ov-mini{white-space:nowrap;font-size:12.5px;color:var(--amber);text-decoration:none}.ov-mini:hover{text-decoration:underline}
 @media(max-width:700px){.ov-house-list li.ov-row{grid-template-columns:minmax(0,1fr)}.ov-row>details>summary{grid-template-columns:36px minmax(0,1fr) 14px}.ov-detail{margin-left:52px}}
-.mentor-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}.mentor-card{display:flex;flex-direction:column;gap:8px;padding:16px 18px;border:1px solid var(--rule);border-left:3px solid var(--accent);border-radius:6px;background:var(--surface);min-width:0}.mentor-card h3{font-family:var(--display);font-size:15px;font-weight:600;color:#d4eff3;margin:0}.mentor-promise{font-size:13px;line-height:1.5;color:var(--ink);margin:0}.mentor-doc{font-size:12px;line-height:1.6;color:var(--muted);margin:0}.mentor-doc b{color:var(--ink);font-weight:600}.mentor-read{white-space:nowrap}.mentor-card .skill-open{align-self:flex-start;margin-top:auto}.mentor-card code{font-size:10px;color:var(--muted);background:none;padding:0}
-#ov-mentors{margin-top:34px}#ov-mentors h2{font-family:var(--display);font-size:21px;font-weight:650;letter-spacing:-.02em;margin-bottom:4px}#ov-mentors .mentor-lead{font-size:13px;color:var(--muted);margin:0 0 14px;max-width:78ch}.skill-row .mentor-doc{margin:0 0 8px}
+/* Skills, in the Workflows tab: a search with a visible label, category chips, and cards in a grid of one column at
+   the 480 px floor, two from 561 to 900, three, then four on a wide screen. Rows share a height; the button sits at the bottom. */
+.sk-market h2{display:flex;align-items:baseline;gap:8px}.sk-search{margin:14px 0 10px}.sk-label{display:block;font:600 12px var(--body);color:var(--ink);margin:0 0 6px}
+.sk-search-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px}.sk-search-row .explore-search{flex:1 1 280px;max-width:520px;min-width:0}.sk-count{font-size:12px;color:var(--muted)}
+.sk-chips{margin:0 0 16px}
+.sk-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-items:stretch}
+@media(min-width:561px){.sk-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(min-width:901px){.sk-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(min-width:1280px){.sk-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.sk-cat{grid-column:1/-1;display:flex;align-items:center;gap:8px;margin:10px 0 0;font:600 11px var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}.sk-cat:first-child{margin-top:0}
+.sk-card{display:flex;flex-direction:column;gap:8px;padding:14px 16px;border:1px solid var(--rule);border-radius:6px;background:var(--surface);min-width:0;overflow-wrap:anywhere}.sk-card[data-skill-cat="mentor"]{border-left:3px solid var(--accent)}
+.sk-card h3{font-family:var(--display);font-size:15px;font-weight:600;color:#d4eff3;margin:0;overflow-wrap:normal}.sk-promise{font-size:13px;line-height:1.5;color:var(--ink);margin:0}
+.sk-doc{display:flex;flex-direction:column;gap:2px;font-size:12px;line-height:1.55;color:var(--muted);margin:0}.sk-doc b{color:var(--ink);font-weight:600}
+.sk-try{font-size:12.5px;line-height:1.5;color:var(--ink);margin:0}.sk-try .skill-example-label{margin-right:4px}
+.sk-foot{margin-top:auto;display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding-top:4px}.sk-cmd{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin:0;width:100%}.sk-cmd code{font-size:11.5px;color:var(--muted)}.sk-cmd .skill-copy{padding:4px 9px;font-size:11px}
+.sk-foot .skill-copy-status{text-align:left}.sk-foot .skill-copy-status:empty{display:none}.sk-foot .skill-open{min-height:32px}
+.sk-empty{grid-column:1/-1}.ov-house-none{display:flex;align-items:baseline;gap:12px;margin:0 0 22px;padding:10px 0;border-bottom:1px solid var(--rule);font-size:13px;color:var(--muted)}.ov-house-none b{font-family:var(--display);font-size:15px;font-weight:650;color:var(--ink)}.ov-skills{margin:12px 0 0;font-size:13px}.ov-skills .linkbtn{display:inline-flex;align-items:center;column-gap:.3em;min-height:32px}.help-go{margin:14px 0 0}.help-go .skill-open{cursor:pointer}
 #ov-more{margin-top:34px}#ov-more h2{font-family:var(--display);font-size:16px;font-weight:650;margin-bottom:12px}.ov-counts{display:flex;gap:10px;flex-wrap:wrap}.ov-count{display:flex;flex-direction:column;gap:2px;min-width:150px;padding:12px 16px;border:1px solid var(--rule);border-radius:4px;background:var(--surface);color:var(--ink);font:inherit;text-align:left;cursor:pointer}.ov-count:hover{border-color:var(--accent)}.ov-count b{font-family:var(--display);font-size:22px}.ov-count span{font-size:12px;color:var(--muted)}
 .gq-pop{position:absolute;top:calc(100% + 8px);left:0;z-index:40;width:min(600px,calc(100vw - 40px));max-height:min(72vh,640px);overflow:auto;padding:6px;background:var(--surface);border:1px solid var(--rule);border-radius:6px;box-shadow:0 18px 48px #000a}.gq-pop[hidden]{display:none}
 .gq-label{display:flex;align-items:center;gap:8px;padding:10px 10px 4px;font-family:var(--label);font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}.gq-group+.gq-group{border-top:1px solid var(--soft);margin-top:4px}
@@ -404,7 +401,6 @@ time.pl-when{white-space:nowrap;cursor:help;text-decoration:underline dotted var
  .fd{margin-top:26px}.fd-grid{grid-template-columns:minmax(0,1fr);gap:8px}
  .fd-card{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:baseline;column-gap:12px;row-gap:6px;padding:12px 14px}
  .fd-card>*{grid-column:1/-1;margin:0}.fd-card>h3{grid-column:1;font-size:15px}.fd-card>.fd-facts{grid-column:2;font-size:13px}.fd-card>.fd-links{padding-top:0;gap:0 16px}.fd-card>.fd-why{margin-top:-4px}
- .mentor-grid{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}#ov-mentors{margin-top:26px}
  /* Configuration: the three tabs come first and carry a dot where something is missing; above the picked part's
     content only its own card stays, without the link to the part it already shows */
  .view[data-view="config"].on{display:flex;flex-direction:column}.view[data-view="config"]>*{order:3}.view[data-view="config"]>.head{order:0}.view[data-view="config"]>#cfg-tabs{order:1}.view[data-view="config"]>#cfg-peers{order:2}
@@ -441,7 +437,6 @@ time.pl-when{white-space:nowrap;cursor:help;text-decoration:underline dotted var
  .workspace-link .ws-text{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
  .head h1{font-size:24px}
  .fd-card{grid-template-columns:minmax(0,1fr)}.fd-card>.fd-facts{grid-column:1}
- .mentor-grid{grid-template-columns:minmax(0,1fr)}
 }
 </style>
 </head>
@@ -457,9 +452,9 @@ time.pl-when{white-space:nowrap;cursor:help;text-decoration:underline dotted var
   <section class="view" data-view="doc"><div id="doc-view"></div></section>
   <section class="view" data-view="entities"><div class="head"><h1>Entities</h1><p class="sub">The people, companies, products and meetings the brain knows about. Pick a name to read what is known about it and where each note came from.</p></div><div id="pe-groups"><div class="ent-wrap" id="ent-wrap"><div class="ent-side"><div class="ent-tools"><div class="ent-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><label class="sr-only" for="ent-q">Find by name, company or email</label><input id="ent-q" type="search" autocomplete="off" spellcheck="false" placeholder="Find by name, company or email" aria-controls="ent-list"></div><div class="ent-chips" id="ent-kinds" role="group" aria-label="Show only"></div><div class="ent-selects"><label for="ent-rel">Relation to us<select id="ent-rel"></select></label><label for="ent-sort">Sort by<select id="ent-sort"></select></label></div></div><p class="ent-count" id="ent-count" role="status" aria-live="polite"></p><p class="sr-only" id="ent-say" role="status" aria-live="polite"></p><div class="ent-list" id="ent-list" role="listbox" tabindex="0" aria-label="Entities. Arrow keys move, Enter opens."></div></div><section class="ent-detail" id="ent-detail" tabindex="-1" aria-label="What is known about the picked entity"></section></div></div></section>
   <section class="view" data-view="notes"><div class="head"><h1>Memories</h1><p class="sub">Everything the brain was told, newest first: notes, decisions and open questions, each with who said it and where it came from.</p></div><div class="explore-toolbar pl-filters mem-filters" id="pm-filters"></div><p class="m" id="pm-status" role="status" aria-live="polite"></p><div id="pm-list"></div><div id="pm-docs"></div></section>
-  <section class="view" data-view="workflows"><div class="head"><h1>Workflows</h1><p class="sub">Repeatable jobs Codex runs for you, step by step: what each does, whether it is on, and where its runs stand.</p></div><div id="pw-how"></div><div id="pw-files"></div><div id="pw-skills"></div></section>
+  <section class="view" data-view="workflows"><div class="head"><h1>Workflows</h1><p class="sub">Repeatable jobs Codex runs for you, step by step, and the skills you can open in Codex: mentors, everyday work and setup.</p></div><div class="cfg-tabs wf-parts" id="wf-parts" role="tablist" aria-label="Workflows or skills"></div><div id="wf-part-workflows" role="tabpanel" aria-labelledby="wf-tab-workflows"><div id="pw-how"></div><div id="pw-files"></div></div><div id="pw-skills" role="tabpanel" aria-labelledby="wf-tab-skills"></div></section>
   <section class="view" data-view="search"><div class="head"><h1 id="s-title" tabindex="-1">Search</h1><p class="sub" id="s-status" role="status" aria-live="polite"></p></div><div class="search-filters" id="s-filters" aria-label="Search result types"></div><div class="grid" id="s-grid"></div><div class="entity-pager" id="s-pages"></div></section>
-  <section class="view" data-view="home"><div class="head"><h1>Overview</h1></div><div id="h-onboard"></div><div id="ov-inbox"></div><div id="ov-foundations"></div><div id="ov-mentors"></div><div id="ov-more"></div><div class="sec" id="h-recent"></div><div id="h-input" hidden></div><div id="h-skills" hidden></div></section>
+  <section class="view" data-view="home"><div class="head"><h1>Overview</h1></div><div id="h-onboard"></div><div id="ov-inbox"></div><div id="ov-more"></div><div id="ov-soon"></div><div id="ov-foundations"></div><div id="ov-skills"></div><div class="sec" id="h-recent"></div><div id="h-input" hidden></div><div id="h-skills" hidden></div></section>
   <section class="view" data-view="explore"><div class="head"><h1>Explore your knowledge</h1></div><div class="explore-list" id="explore-grid"></div></section>
   <section class="view" data-view="skills"><div class="head"><h1>Help</h1><p class="sub">Every task here opens a prepared message in Codex. Nothing is sent until you send it.</p></div><div id="admin-skills"></div></section>
   <section class="view" data-view="projects"><div id="project-detail"></div></section>
@@ -548,42 +543,64 @@ const dashboardSkills=(D.skills||[]).filter(s=>/^(?:gtmb|gtm-brain)-[a-z0-9-]+$/
 const skillLink=s=>"codex://threads/new?path="+encodeURIComponent(D.brain)+"&prompt="+encodeURIComponent(s.command+"\n\n"+s.example);
 let skillGroup="all";
 /* Mentors: the shipped skills that coach a person through GTM work with the brain's context (role "mentor" in the
-   catalogue). Each says its promise, the base document it fills and whether that document is filled yet, or what it
+   catalogue). Each says its promise, the base document it fills and whether that document is written yet, or what it
    produces and which base documents it reads. Links only: a prepared chat the person sends. */
 const mentorSkills=dashboardSkills.filter(s=>s.role==="mentor"&&s.promise);
 const mentorDocRow=slug=>((typeof PL!=="undefined"&&PL&&PL.configuration&&PL.configuration.documents)||[]).find(d=>d.slug===slug)||null;
 const mentorDocName=slug=>mentorDocRow(slug)?.title||(slug==="icp"?"ICP":String(slug).split("-").map((w,i)=>i?w:w[0].toUpperCase()+w.slice(1)).join(" "));
-const mentorDocState=slug=>{const d=mentorDocRow(slug);return !d?"":d.state==="not written"?"not filled yet":d.state};
-const mentorDocBadge=slug=>{const st=mentorDocState(slug);return st?` <span class="pl-state ${st==="approved"?"ok":st==="draft"?"draft":"missing"}" data-mentor-doc="${esc(slug)}">${esc(st)}</span>`:""};
-/* state=false on the Overview: the Foundations section above the cards already says which document is written. */
-const mentorDocLine=(s,state=true)=>{const badge=slug=>state?mentorDocBadge(slug):"";return `<p class="mentor-doc">${s.fills?`<span class="mentor-read">${esc("Fills")} <b>${esc(mentorDocName(s.fills))}</b>${badge(s.fills)}</span>`:`${esc("You get")}: <b>${esc(s.produces||"")}</b>`}${(s.reads||[]).length?`<br>${esc("Reads")}: ${s.reads.map(r=>`<span class="mentor-read">${esc(mentorDocName(r))}${badge(r)}</span>`).join(", ")}`:""}</p>`};
-const mentorCard=s=>`<article class="mentor-card" data-mentor="${esc(s.id)}"><h3>${esc(s.title)}</h3><p class="mentor-promise">${esc(s.promise)}</p>${mentorDocLine(s,false)}<a class="skill-open" href="${esc(skillLink(s))}" aria-label="${esc("Open in Codex: "+s.title)}">${esc("Open in Codex")}<span aria-hidden="true">↗</span></a><code>${esc(s.command)}</code></article>`;
-/* The Overview's group, under Foundations: mentors whose document is not filled yet come first. */
-function renderMentors(){
- const box=$("#ov-mentors");if(!box)return;
- if(!mentorSkills.length){box.innerHTML="";return}
- const rank=s=>s.fills?(mentorDocState(s.fills)==="not filled yet"?0:1):2,rows=mentorSkills.map((s,i)=>[rank(s),i,s]).sort((a,b)=>a[0]-b[0]||a[1]-b[1]).map(r=>r[2]);
- box.innerHTML=`<section aria-label="${esc("Work with a mentor")}"><h2>${esc("Work with a mentor")}</h2><p class="mentor-lead">${esc("Mentors are how you fill the base documents above, and how you do work from them. Each one coaches you through one piece of GTM work with what this brain already holds, so the questions and the draft are about your company. Opening one prepares a message in Codex; nothing is sent until you send it.")} <button type="button" class="linkbtn" data-v="skills">${esc("Everything Codex can do")} →</button></p><div class="mentor-grid">${rows.map(mentorCard).join("")}</div></section>`;
+/* ---------- Skills: the one list of skills, a small marketplace. It is drawn once, in the Workflows tab under
+   Skills; Help and the Overview link to it. Search and the category chips filter in the page; every count is the
+   number of cards drawn. ---------- */
+const SKILL_CATS=[["mentor","Mentors"],["everyday","Everyday"],["setup","Set up and connect"],["yours","Your skills"]];
+/* the category: the catalogue's role, a brain's own skill is yours; data from before roles falls back on the group */
+const skillCat=s=>s.group==="yours"?"yours":["mentor","everyday","setup"].includes(s.role)?s.role:s.group==="mentor"?"mentor":s.group==="setup"?"setup":"everyday";
+const skillsOrdered=()=>SKILL_CATS.flatMap(([c])=>dashboardSkills.filter(s=>skillCat(s)===c));
+/* a mentor that fills a base document: that document's state, when the render data says it */
+const skillDocState=s=>{const d=s.fills?mentorDocRow(s.fills):null;return d?d.state:""};
+const skillWritten=s=>{const st=skillDocState(s);return !!st&&st!=="not written"};
+const skillHaystack=s=>[s.title,s.id,s.command,s.description,s.promise,s.produces,s.fills?mentorDocName(s.fills):"",...(s.reads||[]).map(mentorDocName),s.example].filter(Boolean).join(" ").toLocaleLowerCase();
+const skillMatches=q=>{const words=q.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);return skillsOrdered().filter(s=>{const h=skillHaystack(s);return words.every(w=>h.includes(w))})};
+function skillDocLine(s){
+ if(skillCat(s)!=="mentor"||!(s.fills||s.produces||(s.reads||[]).length))return "";
+ const st=skillDocState(s),word=st==="not written"?"not written":st==="draft"?"written, draft":st==="approved"?"written, approved":st?"written":"",tone=st==="approved"?"ok":st==="draft"?"draft":"missing";
+ const reads=(s.reads||[]).map(r=>{const d=mentorDocRow(r);return esc(mentorDocName(r))+(d&&d.state==="not written"?` <span class="pl-age">(${esc("not written")})</span>`:"")});
+ return `<p class="sk-doc">${s.fills?`<span>${esc("Fills")} <b>${esc(mentorDocName(s.fills))}</b>${word?` <span class="pl-state ${tone}" data-mentor-doc="${esc(s.fills)}">${esc(word)}</span>`:""}</span>`:s.produces?`<span>${esc("You get")} <b>${esc(s.produces)}</b></span>`:""}${reads.length?`<span>${esc("Reads")} ${reads.join(", ")}</span>`:""}</p>`;
 }
-const skillRow=s=>`<article class="skill-row"${s.role==="mentor"?` data-mentor="${esc(s.id)}"`:""}><div class="skill-body"><h3>${esc(s.title)}</h3><p class="skill-description">${esc(s.role==="mentor"&&s.promise?s.promise:s.description)}</p>${s.role==="mentor"&&s.promise?mentorDocLine(s):""}<p class="skill-example"><span class="skill-example-label">${esc("Try saying")}</span>${esc(s.example)}</p></div><div class="skill-actions"><a class="skill-open" href="${esc(skillLink(s))}" aria-label="${esc("Open in Codex: "+s.title)}">${esc("Open in Codex")}<span aria-hidden="true">↗</span></a><button class="skill-copy" data-skill-copy="${esc(s.id)}" aria-label="${esc("Copy prompt: "+s.title)}">${esc("Copy prompt")}</button><code>${esc(s.command)}</code><span id="copy-status-${esc(s.id)}" class="skill-copy-status" role="status"></span></div></article>`;
-document.addEventListener("click",e=>{const b=e.target.closest("[data-skill-group]");if(!b)return;skillGroup=b.dataset.skillGroup;renderSkillLibrary($("#skill-search")?.value||"")});
+/* A mentor whose document is written opens the same prepared chat: the mentor reads the document and updates it. */
+const skillCard=s=>{const label=skillWritten(s)?"Update in Codex":"Open in Codex",say=s.example&&s.example!==s.command?s.example:"";
+ return `<article class="sk-card" data-skill="${esc(s.id)}" data-skill-cat="${skillCat(s)}"${skillCat(s)==="mentor"?` data-mentor="${esc(s.id)}"`:""}><h3>${esc(s.title)}</h3><p class="sk-promise">${esc(skillCat(s)==="mentor"&&s.promise?s.promise:s.description||"")}</p>${skillDocLine(s)}${say?`<p class="sk-try"><span class="skill-example-label">${esc("Try saying")}</span> <span>“${esc(say)}”</span></p>`:""}<div class="sk-foot"><p class="sk-cmd"><code>${esc(s.command)}</code><button type="button" class="skill-copy" data-skill-copy="${esc(s.id)}" aria-label="${esc("Copy prompt: "+s.title)}">${esc("Copy prompt")}</button></p><span id="copy-status-${esc(s.id)}" class="skill-copy-status" role="status"></span><a class="skill-open" href="${esc(skillLink(s))}" aria-label="${esc(label+": "+s.title)}">${esc(label)}<span aria-hidden="true">↗</span></a></div></article>`};
+document.addEventListener("click",e=>{const t=e.target;if(!t?.closest)return;
+ const b=t.closest("[data-skill-group]");if(b){skillGroup=b.dataset.skillGroup;renderSkillLibrary($("#skill-search")?.value||"");return}
+ if(t.closest("[data-skill-clear]")){const i=$("#skill-search");if(i){i.value="";i.focus?.()}skillGroup="all";renderSkillLibrary("")}});
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-skill-copy]');if(!b)return;const skill=dashboardSkills.find(s=>s.id===b.dataset.skillCopy);if(!skill)return;const prompt=skill.command+'\n\n'+skill.example,status=$('#copy-status-'+skill.id);try{await navigator.clipboard.writeText(prompt);status.textContent='Copied. Paste in Codex.'}catch{status.innerHTML=`<label>${esc('Select and copy this prompt:')}<textarea readonly aria-label="${esc('Prompt to copy')}">${esc(prompt)}</textarea></label>`;status.querySelector('textarea')?.select()}});
-
 function renderSkillLibrary(query=""){
- const q=query.trim().toLocaleLowerCase(),matches=dashboardSkills.filter(s=>[s.title,s.description,s.promise||"",s.example,s.command].join(" ").toLocaleLowerCase().includes(q));
- const groups=[["mentor","Work with a mentor"],["daily","Everyday work"],["knowledge","Shared knowledge"],["projects","Projects"],["setup","Setup and preferences"],["yours","Your skills"]];
- if(!groups.some(([id])=>id===skillGroup))skillGroup="all";
- const pill=(id,label,count)=>`<button class="filter-pill${skillGroup===id?" selected":""}" data-skill-group="${id}" aria-pressed="${skillGroup===id}">${esc(label)}<span class="pill-count">${count}</span></button>`;
- $("#skill-groups").innerHTML=pill("all","All tasks",matches.length)+groups.map(([id,label])=>pill(id,label,matches.filter(s=>s.group===id).length)).join("");
- const sections=groups.filter(([id])=>skillGroup==="all"||skillGroup===id).map(([id,label])=>[label,matches.filter(s=>s.group===id)]).filter(([,rows])=>rows.length);
- $("#skill-results").innerHTML=sections.map(([label,rows])=>`<div class="skill-group-head"><span>${esc(label)}</span><span class="cnt">${rows.length}</span></div>${rows.map(skillRow).join("")}`).join("")||(matches.length&&skillGroup!=="all"?`<p class="quiet-state" role="status">${esc("Nothing matches in this group.")} <button class="linkbtn" data-skill-group="all">${esc("Show all tasks")} (${matches.length})</button></p>`:`<p class="quiet-state" role="status">${esc("No matching skills. Try another name or task.")}</p>`);
+ if(!dashboardSkills.length)return;
+ const q=String(query||"").trim(),matches=skillMatches(q),have=new Set(dashboardSkills.map(skillCat));
+ const cats=SKILL_CATS.filter(([id])=>id!=="yours"||have.has("yours"));
+ if(skillGroup!=="all"&&!cats.some(([id])=>id===skillGroup))skillGroup="all";
+ const chip=(id,label,count)=>`<button type="button" class="filter-pill${skillGroup===id?" selected":""}" data-skill-group="${id}" aria-pressed="${skillGroup===id}">${esc(label)}<span class="pill-count">${count}</span></button>`;
+ $("#skill-groups").innerHTML=chip("all","All",matches.length)+cats.map(([id,label])=>chip(id,label,matches.filter(s=>skillCat(s)===id).length)).join("");
+ const sections=cats.filter(([id])=>skillGroup==="all"||skillGroup===id).map(([id,label])=>[id,label,matches.filter(s=>skillCat(s)===id)]).filter(([,,rows])=>rows.length);
+ const shown=sections.reduce((n,[,,rows])=>n+rows.length,0),catLabel=(cats.find(([id])=>id===skillGroup)||[])[1];
+ $("#skill-count").textContent=q||skillGroup!=="all"?`${shown} of ${dashboardSkills.length} ${dashboardSkills.length===1?"skill":"skills"}`:`${shown} ${shown===1?"skill":"skills"}`;
+ $("#skill-clear").hidden=!q;
+ $("#skill-results").innerHTML=sections.map(([id,label,rows])=>`<h3 class="sk-cat" data-sk-cat="${id}">${esc(label)} <span class="pl-count">${rows.length}</span></h3>${rows.map(skillCard).join("")}`).join("")||
+  (matches.length?`<p class="quiet-state sk-empty" role="status">${esc(`Nothing in ${catLabel} matches “${q}”.`)} <button type="button" class="linkbtn" data-skill-group="all">${esc("Show all categories")} (${matches.length})</button></p>`
+  :`<p class="quiet-state sk-empty" role="status">${esc(`No skill matches “${q}”. Try one word for the work, such as meeting, voice or website, or a command such as /gtmb-sync.`)} <button type="button" class="linkbtn" data-skill-clear>${esc("Show all skills")}</button></p>`);
 }
 function renderSkills(){
- if(!dashboardSkills.length){$("#h-skills").innerHTML="";$("#admin-skills").innerHTML=`<h2>${esc("Skills")}</h2><p>${esc("The skill list is unavailable. Refresh the dashboard with your current GTM Brain plugin.")}</p>`;return}
+ if(!dashboardSkills.length){$("#h-skills").innerHTML="";$("#pw-skills").innerHTML=`<section class="sec pl-card"><h2>${esc("Skills")}</h2><p class="m">${esc("The skill list is unavailable. Refresh the dashboard with your current GTM Brain plugin.")}</p></section>`;$("#admin-skills").innerHTML=`<h2>${esc("Skills")}</h2><p>${esc("The skill list is unavailable. Refresh the dashboard with your current GTM Brain plugin.")}</p>`;return}
  $("#h-skills").innerHTML="";
-  const steps=[["Pick a task","Every row below is work GTM Brain can take on for you. The mentors come first: each coaches you through one piece of GTM work with what this brain already knows."],["A Codex chat opens","The request is already typed into a new conversation. Read it, and change it if you want."],["You press Send","Nothing runs until you do. Then the work happens and what it learns is recorded."]];
- $("#admin-skills").innerHTML=`<ol class="help-steps">${steps.map(([title,body],i)=>`<li><b>${i+1}</b><div><strong>${esc(title)}</strong><p>${esc(body)}</p></div></li>`).join("")}</ol><div class="help-header"><h2>${esc("Ways to work in Codex")}</h2>${searchField("skill-search","Search tasks","Search tasks, for example prepare for a meeting","")}</div><p class="entity-note">${esc("Three kinds of skills. Shipped with GTM Brain: they come with the plugin and update with it. Your skills: made with /gtmb-skill or installed from GitHub, kept in this brain, so teammates get them. Codex's own skills (made with $skill-creator, in ~/.agents/skills) are yours alone and are not listed here.")}</p><div class="explore-filters help-filters" id="skill-groups" role="group" aria-label="${esc("Task groups")}"></div><div class="scroll-list help-list" id="skill-results" tabindex="0" role="region" aria-label="${esc("Ways to work in Codex")}"></div>`;
- $("#skill-search").oninput=e=>renderSkillLibrary(e.target.value);renderSkillLibrary();
+ /* Help is the short how-to; the skills themselves are listed once, in the Workflows tab */
+ const steps=[["Pick a skill","Every card under Workflows, Skills, is work GTM Brain can take on for you. The mentors come first: each coaches you through one piece of GTM work with what this brain already knows."],["A Codex chat opens","The request is already typed into a new conversation. Read it, and change it if you want."],["You press Send","Nothing runs until you do. Then the work happens and what it learns is recorded."]];
+ $("#admin-skills").innerHTML=`<ol class="help-steps">${steps.map(([title,body],i)=>`<li><b>${i+1}</b><div><strong>${esc(title)}</strong><p>${esc(body)}</p></div></li>`).join("")}</ol><p class="entity-note">${esc("Three kinds of skills. Shipped with GTM Brain: they come with the plugin and update with it. Your skills: made with /gtmb-skill or installed from GitHub, kept in this brain, so teammates get them. Codex's own skills (made with $skill-creator, in ~/.agents/skills) are yours alone and are not listed here.")}</p><p class="help-go"><button type="button" class="skill-open" data-v="workflows" data-wf-part="skills">${esc(`Browse all ${dashboardSkills.length} skills`)}<span aria-hidden="true">→</span></button></p>`;
+ $("#pw-skills").innerHTML=`<section class="sec pl-card sk-market" aria-labelledby="sk-title"><h2 id="sk-title">${esc("Skills")} <span class="pl-count">${dashboardSkills.length}</span></h2><p class="m">${esc("Work Codex can take on for you. Mentors come first: each coaches you through one piece of GTM work with what this brain already holds. Opening a skill prepares a message in Codex; nothing happens until you send it.")}</p><div class="sk-search"><label class="sk-label" for="skill-search">${esc("Search skills")}</label><div class="sk-search-row"><div class="explore-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><input id="skill-search" type="search" autocomplete="off" placeholder="${esc("Name, command or task, for example voice")}" aria-describedby="skill-count"></div><button type="button" class="skill-copy" id="skill-clear" data-skill-clear hidden>${esc("Clear")}</button><span class="sk-count" id="skill-count" role="status" aria-live="polite"></span></div></div><div class="explore-filters sk-chips" id="skill-groups" role="group" aria-label="${esc("Skill categories")}"></div><div class="sk-grid" id="skill-results"></div></section>`;
+ $("#skill-search").oninput=e=>{renderSkillLibrary(e.target.value);if(typeof publishRoute==="function")publishRoute(true)};renderSkillLibrary();
+}
+/* The Overview's one line to them, under Foundations. */
+function renderSkillsLink(){
+ const box=$("#ov-skills");if(!box)return;
+ box.innerHTML=dashboardSkills.length?`<p class="ov-skills"><button type="button" class="linkbtn" data-v="workflows" data-wf-part="skills">${esc("All skills, mentors first")} <span aria-hidden="true">→</span></button></p>`:"";
 }
 /* Source disclosures stay in the dashboard. Only explicitly labelled links leave it.
    An opaque connector ID is evidence, not a URL; never invent an account or search route. */
@@ -1882,8 +1899,19 @@ function pwCard(f){
    `<details class="fold"><summary>${esc("Details")}</summary><dl class="pl-dl"><dt>${esc("File")}</dt><dd><code class="pl-path">${esc(f.path||"")}</code></dd><dt>${esc("Status in the file")}</dt><dd>${esc(f.status)}</dd><dt>${esc("Trigger in the file")}</dt><dd>${esc("Trigger")}: ${esc(f.trigger)}</dd>${f.changed?`<dt>${esc("Last changed")}</dt><dd>${whenText(f.changed)}</dd>`:""}</dl>${f.path?`<button type="button" class="linkbtn" data-doc="${esc(f.path)}">${esc("Read the whole file")}</button>`:""}</details></div>`:"")+
   `</div></article>`;
 }
+/* The tab in two parts, Workflows and Skills, one shown at a time: at 640 px both together run to several screens and
+   the skill search would sit below every run tracker. The choice holds for the session. Counts are the rows drawn. */
+let wfPart="workflows";try{if(sessionStorage.getItem("gtm-wf-part")==="skills")wfPart="skills"}catch{}
+function renderWfParts(){
+ const box=$("#wf-parts");if(!box)return;
+ const parts=[["workflows","Workflows",PL&&!plUnread("workflows")?PL.workflows.files.length:null],["skills","Skills",dashboardSkills.length]];
+ box.innerHTML=parts.map(([k,label,n])=>`<button type="button" role="tab" id="wf-tab-${k}" aria-selected="${wfPart===k}" aria-controls="${k==="skills"?"pw-skills":"wf-part-workflows"}" tabindex="${wfPart===k?0:-1}" data-wf-part="${k}" class="${wfPart===k?"on":""}">${esc(label)}${n===null?"":` <span class="pl-count">${n}</span>`}</button>`).join("");
+ $("#wf-part-workflows").hidden=wfPart!=="workflows";$("#pw-skills").hidden=wfPart!=="skills";
+}
+document.addEventListener("click",e=>{const b=e.target?.closest?.("[data-wf-part]");if(!b)return;wfPart=b.dataset.wfPart==="skills"?"skills":"workflows";try{sessionStorage.setItem("gtm-wf-part",wfPart)}catch{}renderWfParts()});
+document.addEventListener("keydown",e=>{const b=e.target?.closest?.("[role=tab][data-wf-part]");if(!b||!["ArrowRight","ArrowLeft"].includes(e.key))return;e.preventDefault();wfPart=wfPart==="skills"?"workflows":"skills";try{sessionStorage.setItem("gtm-wf-part",wfPart)}catch{}renderWfParts();document.getElementById("wf-tab-"+wfPart)?.focus?.()});
 function renderWorkflowsTab(){
- if(!PL){$("#pw-files").innerHTML=plEmpty;$("#pw-how").innerHTML="";return}
+ if(!PL){$("#pw-files").innerHTML=plEmpty;$("#pw-how").innerHTML="";renderWfParts();return}
  const W=PL.workflows;
  /* how one runs, in three steps like Help's, with the sentences that move a run */
  const how=[["Start it in Codex","Press Start in Codex on a workflow below, or say \"start the outbound workflow\". Codex asks what the file lists under Before starting, shows the brief once and starts the run."],["Each step is done in chat and recorded","Codex does the step with your tools, or you do it and say so. The step is saved as a note, and that note opens the next step."],["The brain tells you when the next is due","A due step shows in the first lines of a chat, under Coming up on the Overview and in the run's tracker below. Nothing runs by itself."]];
@@ -1893,10 +1921,7 @@ function renderWorkflowsTab(){
  $("#pw-how").innerHTML=`<details class="wf-how" id="wf-how"${howOpen?" open":""}><summary><h2>${esc("How a workflow runs")}</h2><span class="pl-age">${esc("3 steps, and what to say in Codex")}</span></summary><ol class="help-steps">${how.map(([title,body],i)=>`<li><b>${i+1}</b><div><strong>${esc(title)}</strong><p>${esc(body)}</p></div></li>`).join("")}</ol><p class="wf-say"><span>${esc("Say in Codex:")}</span>${say.map(x=>`<code>${esc(x)}</code>`).join("")}</p></details>`;
  $("#pw-files").innerHTML=`<section class="sec pl-card"><h2>${esc("Your workflows")} <span class="pl-count">${W.files.length}</span></h2><p class="m">${esc("A workflow is a job with steps that Codex carries out the same way every time, for example following up after a meeting. Each run in progress is tracked under its workflow; click a name for the steps and the file.")}</p>${W.files.map(pwCard).join("")||`<p class="empty">${esc("No workflows yet. To make one, describe the job to Codex, for example: \"make a workflow for following up after a demo\".")}</p>`}${W.orphans.length?`<details class="fold"><summary>${esc("Runs of workflows that were removed")} · ${W.orphans.length}</summary><ul class="pl-list pl-runs">${W.orphans.map(r=>`<li><b>${esc(String(r.workflow||"").replace(/-/g," "))}</b> <span class="pl-age">${esc("started")} ${r.started?whenText(r.started):"?"}</span> · ${esc(pwRunLine({slug:r.workflow},r))}</li>`).join("")}</ul></details>`:""}</section>`;
  if(plUnread("workflows"))$("#pw-files").innerHTML=plUnreadMsg;
- /* the count is the number of rows the list below it draws, never a figure of its own */
- const skills=(D.skills||[]).filter(s=>s&&s.command),shipped=skills.filter(s=>s.group!=="yours"),yours=skills.filter(s=>s.group==="yours");
- const skillItem=s=>`<li data-pw-skill><a href="${esc(skillLink({command:s.command,example:s.example||s.command}))}"><b>${esc(s.title)}</b></a> <span class="pl-age">${esc(s.description)}</span> <code class="pl-path">${esc(s.command)}</code></li>`;
- $("#pw-skills").innerHTML=`<section class="sec pl-card"><details class="fold"><summary>${esc("Things you can ask Codex to do")} · ${shipped.length+yours.length}</summary><p class="m">${esc("Each opens a prepared message in Codex; nothing happens until you send it.")}</p><h3>${esc("Shipped with GTM Brain")}</h3><ul class="pl-list">${shipped.map(skillItem).join("")||`<li class="pl-age">${esc("None installed.")}</li>`}</ul><h3>${esc("Made by your team")}</h3><ul class="pl-list">${yours.map(skillItem).join("")||`<li class="pl-age">${esc("None yet. Say \"make this a skill\" after a task worth repeating.")}</li>`}</ul></details></section>`;
+ renderWfParts();
 }
 document.addEventListener("click",e=>{const b=e.target?.closest?.("[data-pw-open]");if(!b)return;pwOpen=pwOpen===b.dataset.pwOpen?"":b.dataset.pwOpen;renderWorkflowsTab()});
 document.addEventListener("click",e=>{const d=e.target?.closest?.("#wf-how>summary")?.parentElement;if(!d)return;try{sessionStorage.setItem("gtm-wf-how",d.open?"closed":"open")}catch{}});
@@ -2049,7 +2074,7 @@ function inboxItems(){
 function comingUp(){
  const rows=[],now=Date.now(),today=localDate(new Date().toISOString());
  for(const f of PL?.workflows?.files||[])for(const r of f.runs||[]){if(r.ended||r.paused||!r.step?.due)continue;const late=String(r.step.due)<today;
-  rows.push({at:String(r.step.due),html:`<li class="${late?"late":""}" data-soon-run="${esc(r.id)}"><div><b>${esc(f.title)}</b>: ${esc(r.step.title||"step "+r.step.n)} <span class="pl-age">${esc(pwRunTitle(f,r))}, ${esc(`step ${r.step.n} of ${r.step.of}`)}, ${esc(late?"was due":"due")} ${whenText(r.step.due)}</span></div><span class="ov-soon-acts"><button type="button" class="linkbtn" data-v="workflows">${esc("See the run")} <span aria-hidden="true">→</span></button><a class="pl-chat" href="${esc(askLink(pwNextPrompt(f,r)))}">${esc("Do it with Codex")} <span aria-hidden="true">↗</span></a></span></li>`})}
+  rows.push({at:String(r.step.due),html:`<li class="${late?"late":""}" data-soon-run="${esc(r.id)}"><div><b>${esc(f.title)}</b>: ${esc(r.step.title||"step "+r.step.n)} <span class="pl-age">${esc(pwRunTitle(f,r))}, ${esc(`step ${r.step.n} of ${r.step.of}`)}, ${esc(late?"was due":"due")} ${whenText(r.step.due)}</span></div><span class="ov-soon-acts"><button type="button" class="linkbtn" data-v="workflows" data-wf-part="workflows">${esc("See the run")} <span aria-hidden="true">→</span></button><a class="pl-chat" href="${esc(askLink(pwNextPrompt(f,r)))}">${esc("Do it with Codex")} <span aria-hidden="true">↗</span></a></span></li>`})}
  for(const m of meetingData.meetings||[]){const t=Date.parse(m.scheduled_at||"");if(!Number.isFinite(t)||t<now||t>now+7*864e5||["skipped","withdrawn"].includes(m.state)||m.occurrence==="cancelled")continue;
   rows.push({at:new Date(t).toISOString(),html:`<li><div><b>${esc(m.title)}</b> <span class="pl-age">${esc(localDateTime(m.scheduled_at))}${m.participants?.length?" · "+esc(m.participants.slice(0,4).map(p=>p.name).join(", ")):""}</span></div><a class="pl-chat" href="${esc(askLink(`Prepare me for the meeting "${m.title}" on ${localDateTime(m.scheduled_at)}: who is coming, what we know about them and what is open.`))}">${esc("Prepare with Codex")} <span aria-hidden="true">↗</span></a></li>`})}
  return rows.sort((a,b)=>a.at.localeCompare(b.at)).slice(0,6);
@@ -2084,15 +2109,16 @@ function housekeeping(){
  return rows;
 }
 function renderInbox(){
- renderFoundations();renderMentors();
+ renderFoundations();renderSkillsLink();
  const items=inboxItems(),box=$("#ov-inbox"),order={high:0,mid:1,low:2};items.sort((a,b)=>order[a.tone]-order[b.tone]);
  const action=a=>a.href?`<a class="ov-act" href="${esc(a.href)}">${esc(a.label)} <span aria-hidden="true">↗</span></a>`:`<button type="button" class="ov-act quiet" data-v="${esc(a.view)}">${esc(a.label)} <span aria-hidden="true">→</span></button>`;
  const soon=comingUp(),kind=t=>t==="high"?"Needs you":"Worth doing";
- box.innerHTML=(items.length?`<div class="ov-head ov-hero"><h2>${esc("Needs your attention")}</h2><span class="ov-badge" aria-label="${esc(items.length+(items.length===1?" item":" items"))}">${items.length}</span></div><ol class="ov-list">${items.map(i=>`<li class="ov-item ${i.tone}"><div class="ov-text"><span class="ov-kind">${esc(kind(i.tone))}</span><h3 title="${esc(i.title)}" data-ov-open tabindex="0">${esc(i.title)}</h3><p>${esc(i.why)}</p>${i.extra||""}</div><div class="ov-actions">${i.actions.map(action).join("")}</div></li>`).join("")}</ol>`:soon.length?"":`<div class="ov-clear" role="status"><span class="ov-clear-mark" aria-hidden="true">✓</span><div><h2>${esc("Nothing needs you right now")}</h2><p>${esc("No question is waiting, nothing needs a decision and every connection works.")}</p></div></div>`)+
-  (soon.length?`<div class="ov-head"><h2>${esc("Coming up")}</h2></div><ul class="ov-soon">${soon.map(r=>r.html).join("")}</ul>`:"")+inboxSuggestion();
+ box.innerHTML=(items.length?`<div class="ov-head ov-hero"><h2>${esc("Needs your attention")}</h2><span class="ov-badge" aria-label="${esc(items.length+(items.length===1?" item":" items"))}">${items.length}</span></div><ol class="ov-list">${items.map(i=>`<li class="ov-item ${i.tone}"><div class="ov-text"><span class="ov-kind">${esc(kind(i.tone))}</span><h3 title="${esc(i.title)}" data-ov-open tabindex="0">${esc(i.title)}</h3><p>${esc(i.why)}</p>${i.extra||""}</div><div class="ov-actions">${i.actions.map(action).join("")}</div></li>`).join("")}</ol>`:soon.length?"":`<div class="ov-clear" role="status"><span class="ov-clear-mark" aria-hidden="true">✓</span><div><h2>${esc("Nothing needs you right now")}</h2><p>${esc("No question is waiting, nothing needs a decision and every connection works.")}</p></div></div>`)+inboxSuggestion();
+ /* The order under it: Housekeeping, then Coming up, then Foundations and the line to the skills. */
+ const soonBox=$("#ov-soon");if(soonBox)soonBox.innerHTML=soon.length?`<div class="ov-head"><h2>${esc("Coming up")}</h2></div><ul class="ov-soon">${soon.map(r=>r.html).join("")}</ul>`:"";
  const house=housekeeping();
  const shut=false;/* open on every load: it is short, and a remembered "closed" hid it */
- $("#ov-more").innerHTML=house.length?`<details class="ov-house" id="ov-house"${shut?"":" open"}><summary><h2>${esc("Housekeeping")}</h2><span class="ov-badge calm">${house.length}</span><span class="ov-house-sub">${esc(house.length===1?"thing to tidy when you have time":"things to tidy when you have time")}</span></summary><ul class="ov-house-list">${house.map(h=>h.detail?`<li class="ov-row"><details><summary><span class="ov-fig">${h.n===null?"·":h.n}</span><span class="ov-what">${esc(h.text)}</span></summary><div class="ov-detail">${h.detail}</div></details>${h.action}</li>`:`<li><span class="ov-fig">${h.n===null?"·":h.n}</span><span class="ov-what">${esc(h.text)}</span>${h.action}</li>`).join("")}</ul></details>`:"";
+ $("#ov-more").innerHTML=house.length?`<details class="ov-house" id="ov-house"${shut?"":" open"}><summary><h2>${esc("Housekeeping")}</h2><span class="ov-badge calm">${house.length}</span><span class="ov-house-sub">${esc(house.length===1?"thing to tidy when you have time":"things to tidy when you have time")}</span></summary><ul class="ov-house-list">${house.map(h=>h.detail?`<li class="ov-row"><details><summary><span class="ov-fig">${h.n===null?"·":h.n}</span><span class="ov-what">${esc(h.text)}</span></summary><div class="ov-detail">${h.detail}</div></details>${h.action}</li>`:`<li><span class="ov-fig">${h.n===null?"·":h.n}</span><span class="ov-what">${esc(h.text)}</span>${h.action}</li>`).join("")}</ul></details>`:`<p class="ov-house-none" id="ov-house" role="status"><b>${esc("Housekeeping")}</b><span>${esc("Nothing to tidy")}</span></p>`;
  /* the chat start's own status line, part by part, sits with the tools in Settings */
  const sync=$("#settings-sync");if(sync)sync.innerHTML=PL?`<div class="settings-card-head"><h2>${esc("Sync and meeting capture")}</h2><p>${esc("When each tool was last read and whether meetings are being captured.")}</p></div><div class="ov-status">${PL.health?`<ul class="pl-list">${String(PL.health).split(/\s+\|\s+/).map(part=>`<li>${esc(part.replace(/\s*\(query [a-z_ ]+\)/g,""))}</li>`).join("")}</ul>`:`<p class="pl-age">${esc("Nothing to report yet: no meeting capture, summary run or sync recorded.")}</p>`}</div>`:"";
 }
@@ -2493,7 +2519,7 @@ function gqOpen(r){
  if(r.kind==="entity"){
   openEntityById(r.id);
  }else if(r.kind==="doc")openDoc(r.path);
- else if(r.kind==="workflow"){pwOpen=r.slug;renderWorkflowsTab();show("workflows")}
+ else if(r.kind==="workflow"){pwOpen=r.slug;wfPart="workflows";renderWorkflowsTab();show("workflows")}
  else if(r.kind==="topic"){contextDirectory=false;chan=r.slug;renderContextDirectory();renderChannels();show("contexts")}
  else if(r.kind==="note")openNote(r.id);
  updateChatLink();publishRoute();
@@ -2630,7 +2656,7 @@ document.addEventListener("click",updateChatLink);document.addEventListener("inp
 // Plain actions: a left click runs them, a right-click opens nothing (ALL-199)
 const ACTION_SELECTOR='button,a[href],[role="button"]';
 // The whole highlighted object travels with the draft, not only its header line (ALL-199)
-const CARD_SELECTOR='.record-row,.recent-item,.row,.mem,.msg,.search-hit,.timeline-row,.entity-proof,.asset-card,.skill-row,.meeting-row,.setting-row,.attention-item,article,li';
+const CARD_SELECTOR='.record-row,.recent-item,.row,.mem,.msg,.search-hit,.timeline-row,.entity-proof,.asset-card,.sk-card,.meeting-row,.setting-row,.attention-item,article,li';
 const clip=(text,max)=>text.length>max?text.slice(0,max).replace(/\s+\S*$/,"")+"…":text;
 function chatTarget(target){
  const card=String(target.closest?.(CARD_SELECTOR)?.innerText||'').replace(/\s+/g,' ').trim().slice(0,1000);
@@ -2741,7 +2767,7 @@ $("#view-back").onclick=()=>{
  else return;
  updateChatLink();publishRoute(true);
 };
-function routeState(){const state={view};if(view==="memories"){if(memoryKinds.length)state.type=memoryKinds.join(",");if(memoryContexts.length)state.context=memoryContexts.join(",")}if(view==='contexts'){if(!contextDirectory&&chan)state.context=chan;else{if(contextQuery)state.query=contextQuery;if(contextStatus!=='active')state.status=contextStatus;}}if(projectSlug)state.project=projectSlug;if(view==='people'&&entName){state.entity=entName;if(entContext)state.context=entContext}if(view==='search'&&searchText){state.search=searchText;state.type=searchFilter}if(view==='doc'&&docState)state.path=docState.path;return state}
+function routeState(){const state={view};if(view==="memories"){if(memoryKinds.length)state.type=memoryKinds.join(",");if(memoryContexts.length)state.context=memoryContexts.join(",")}if(view==='contexts'){if(!contextDirectory&&chan)state.context=chan;else{if(contextQuery)state.query=contextQuery;if(contextStatus!=='active')state.status=contextStatus;}}if(projectSlug)state.project=projectSlug;if(view==='people'&&entName){state.entity=entName;if(entContext)state.context=entContext}if(view==='search'&&searchText){state.search=searchText;state.type=searchFilter}if(view==='doc'&&docState)state.path=docState.path;if(view==="workflows"&&wfPart==="skills"){state.part="skills";const q=$("#skill-search")?.value||"";if(q)state.skill=q}return state}
 function publishRoute(replace=false){
  updateBackLink();
  if(restoringRoute||typeof history==='undefined'||typeof URLSearchParams==='undefined')return;
@@ -2758,6 +2784,7 @@ function restoreRoute(){
   const project=params.get('project');projectSlug=(D.projects||[]).some(p=>p.slug===project)?project:'';renderProject();renderOverview();renderContextDirectory();
   const entity=params.get('entity');entName=D.names.some(n=>n.name===entity)?entity:'';entContext=context&&D.contexts.some(c=>c.slug===context)?context:'';entPair='';renderEntityDetail();
   memoryKinds=(params.get("type")||"").split(",").filter(k=>["note","question","decision","action"].includes(k));memoryContexts=params.get("view")==="memories"?(params.get("context")||"").split(",").filter(slug=>D.contexts.some(c=>c.slug===slug)):[];mems();
+  if(params.get("view")==="workflows"){wfPart=params.get("part")==="skills"?"skills":"workflows";renderWfParts();const sq=params.get("skill")||"";if($("#skill-search")&&dashboardSkills.length){$("#skill-search").value=sq;renderSkillLibrary(sq)}}
   const next=params.get('view');if(next==='doc'&&docInfo(params.get('path'))&&docState?.path!==params.get('path'))openDoc(params.get('path'),true);
   show(next==='search'&&!params.get('search')?'explore':next);
   if(next==='search'&&params.get('search')){$('#gq').value=params.get('search');searchFilter=searchKinds.some(([k])=>k===params.get('type'))?params.get('type'):'all';gsearch(params.get('search'))}

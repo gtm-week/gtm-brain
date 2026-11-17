@@ -228,8 +228,8 @@ test("Workflows and Entities on a brain with runs, its own skill and a customer:
     Object.assign(lateRun.step, { status: "due", due: "2026-01-05" }); Object.assign(lateRun.steps[1], { status: "due", due: "2026-01-05", waits: "waits for a note tagged sequence-written" });
     const lp = page(lateB); lp.run('show("workflows")');
     assert.match(lp.node("#pw-files").innerHTML, /class="wf-run late" data-run="outbound-2026-11-01-marta".*<span class="pl-state late">Overdue<\/span>.*data-step-state="late".*was due.*Waits for a note tagged sequence-written/s);
-    assert.match(lp.node("#ov-inbox").innerHTML, /<li class="late" data-soon-run="outbound-2026-11-01-marta">.*was due.*See the run.*Do it with Codex/s, "Coming up says the same and leads to the tracker");
-    assert.equal(decodeURIComponent(lp.node("#ov-inbox").innerHTML.match(/data-soon-run="outbound-2026-11-01-marta".*?class="pl-chat" href="[^"]*prompt=([^"]+)"/s)[1]), nextHref.searchParams.get("prompt"), "one wording for the next step, on the Overview and in the tracker");
+    assert.match(lp.node("#ov-soon").innerHTML, /<li class="late" data-soon-run="outbound-2026-11-01-marta">.*was due.*See the run.*Do it with Codex/s, "Coming up says the same and leads to the tracker");
+    assert.equal(decodeURIComponent(lp.node("#ov-soon").innerHTML.match(/data-soon-run="outbound-2026-11-01-marta".*?class="pl-chat" href="[^"]*prompt=([^"]+)"/s)[1]), nextHref.searchParams.get("prompt"), "one wording for the next step, on the Overview and in the tracker");
     // a switched-on workflow with a schedule says which trigger; the explainer and the count are drawn from data
     const onB = structuredClone(B), wfOn = onB.pillars.workflows.files.find(f => f.slug === "outbound"); wfOn.trigger = "every monday 09:00";
     const op = page(onB); op.run('show("workflows")');
@@ -239,12 +239,14 @@ test("Workflows and Entities on a brain with runs, its own skill and a customer:
     const howTo = p.node("#pw-how").innerHTML;
     assert.match(howTo, /How a workflow runs.*Start it in Codex.*Each step is done in chat and recorded.*The brain tells you when the next is due/s);
     for (const say of ["where is the &lt;run&gt;", "skip this step", "move step 2 to &lt;date&gt;", "pause the run"]) assert.ok(howTo.includes(`<code>${say}</code>`), say);
-    const listed = p.node("#pw-skills").innerHTML;
-    assert.equal(Number(listed.match(/Things you can ask Codex to do · (\d+)</)[1]), (listed.match(/<li data-pw-skill>/g) || []).length, "the count is the number of rows listed");
-    assert.equal((listed.match(/<li data-pw-skill>/g) || []).length, B.skills.filter(x => x.command).length);
-    const skills = p.node("#pw-skills").innerHTML, own = skills.split("Made by your team")[1] || "";
-    assert.match(own, /Weekly pipeline.*Go through the open deals every Monday\..*\/gtm-brain-weekly-pipeline/s, "the brain's own skill is listed with its one line");
-    assert.doesNotMatch(skills.split("Made by your team")[0], /weekly-pipeline/, "and not among the shipped ones");
+    const listed = p.node("#skill-results").innerHTML, cards = (listed.match(/<article class="sk-card"/g) || []).length;
+    assert.equal(Number(p.node("#pw-skills").innerHTML.match(/Skills <span class="pl-count">(\d+)</)[1]), cards, "the count is the number of cards drawn");
+    assert.equal(Number(p.node("#wf-parts").innerHTML.match(/Skills <span class="pl-count">(\d+)</)[1]), cards, "and so is the switch's");
+    assert.equal(cards, B.skills.filter(x => x.command).length);
+    const own = listed.split('data-sk-cat="yours"')[1] || "";
+    assert.match(own, /Weekly pipeline.*Go through the open deals every Monday\..*\/gtm-brain-weekly-pipeline/s, "the brain's own skill is listed with its one line, under Your skills");
+    assert.doesNotMatch(listed.split('data-sk-cat="yours"')[0], /weekly-pipeline/, "and not among the shipped ones");
+    assert.match(p.node("#skill-groups").innerHTML, /data-skill-group="yours"[^>]*>Your skills<span class="pill-count">1</);
     p.run('show("entities")'); assert.match(p.node("#ent-list").innerHTML, /Northwind.*class="ent-badge ent-rel-customer">Customer</s);
     assert.deepEqual(B.pillars.entities.rows.find(e => e.name === "Northwind")?.rel, ["customer"]); assert.match(p.node("#ent-rel").innerHTML, /<option value="customer">Customer \(1\)/);
   } finally { rmSync(b, { recursive: true, force: true }); }

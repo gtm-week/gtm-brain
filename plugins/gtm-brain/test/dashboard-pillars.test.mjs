@@ -383,10 +383,13 @@ test("page: Memories shows date, age, source and what replaced what; a filter fe
   assert.match(file.node("#pm-status").textContent, /Open the live dashboard to filter all 120 notes/);
 });
 
-test("page: Foundations leads the Overview above the mentors and the Configuration tab: rules, schema and base documents with their real state", () => {
+test("page: the Overview in order (what needs the person, Housekeeping, Coming up, Foundations, the line to the skills) and the Configuration tab: rules, schema and base documents with their real state", () => {
   const p = page(D), C = D.pillars.configuration, tpl = readFileSync(new URL("../scripts/gtm-brain-render/home.template.html", import.meta.url), "utf8");
   const home = tpl.match(/<section class="view" data-view="home">([\s\S]*?)<\/section>/)[1];
-  assert.ok(home.indexOf('id="ov-inbox"') < home.indexOf('id="ov-foundations"') && home.indexOf('id="ov-foundations"') < home.indexOf('id="ov-mentors"'), "Foundations sits under what needs the person and above the mentors");
+  const at = id => home.indexOf(`id="${id}"`);
+  assert.deepEqual(["h-onboard", "ov-inbox", "ov-more", "ov-soon", "ov-foundations", "ov-skills"].map(at).every((n, i, a) => n >= 0 && (!i || n > a[i - 1])), true, "setup card, what needs the person, Housekeeping, Coming up, Foundations, then the line to the skills");
+  assert.equal(at("ov-mentors"), -1, "no mentor grid on the Overview");
+  assert.match(p.node("#ov-skills").innerHTML, /data-v="workflows" data-wf-part="skills">All skills, mentors first/);
   const fd = p.node("#ov-foundations").innerHTML, text = t => t.replace(/<[^>]+>/g, "");
   assert.match(fd, /<h2>Foundations<\/h2>/);
   assert.deepEqual([...fd.matchAll(/<article class="fd-card[^"]*" data-fd="([a-z]+)">/g)].map(m => m[1]), ["rules", "schema", "docs"], "three parts: rules, schema, base documents");
@@ -445,7 +448,10 @@ test("page: Workflows shows each file's status, trigger and runs, and the skills
   assert.match(w, /Outbound.*You start it by asking Codex/s); assert.match(w, /Weekly review.*Starts every Monday at 09:00/s); assert.match(w, /never run/);
   p.run('pwOpen="outbound";renderWorkflowsTab()');
   assert.match(p.node("#pw-files").innerHTML, /<ol class="wf-steps"><li class=""><span>[^<]+<\/span>/, "a click shows the steps as a numbered path"); assert.match(p.node("#pw-files").innerHTML, /<summary>Details<\/summary>.*Trigger: manual/s, "the file's own words stay in Details");
-  assert.match(p.node("#pw-skills").innerHTML, /gtmb-workflow/);
+  assert.match(p.node("#skill-results").innerHTML, /data-skill="gtmb-workflow"/);
+  assert.match(p.node("#wf-parts").innerHTML, /data-wf-part="workflows" class="on">Workflows <span class="pl-count">\d+<\/span>.*data-wf-part="skills" class="">Skills <span class="pl-count">\d+<\/span>/s, "two parts, Workflows first");
+  assert.equal(p.node("#wf-part-workflows").hidden, false); assert.equal(p.node("#pw-skills").hidden, true);
+  p.run('wfPart="skills";renderWfParts()'); assert.equal(p.node("#wf-part-workflows").hidden, true); assert.equal(p.node("#pw-skills").hidden, false);
   p.run('show("contexts")'); assert.match(p.node("#nav").innerHTML, /data-v="notes" class="on"/, "an earlier view lights the place it belongs to; there is no More menu");
   const older = structuredClone(D); delete older.pillars; const o = page(older);
   assert.match(o.node("#cfg-docs").innerHTML, /made by an older version/, "a page rendered by an older plugin still loads");

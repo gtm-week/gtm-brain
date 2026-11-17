@@ -30,8 +30,12 @@ for (const width of [640, 480]) {
     await expect(browser.locator('#ov-foundations .fd-use')).toBeHidden();
     await browser.locator('#ov-foundations .fd-lead > summary').tap();
     await expect(browser.locator('#ov-foundations .fd-uses li')).toHaveCount(3);
-    await expect(browser.locator('#ov-mentors a.skill-open').first()).toBeVisible();
-    expect(await pastEdge(browser, '#ov-mentors a.skill-open')).toBeLessThanOrEqual(0);
+    // the order holds in a narrow pane, and the skills are one line away
+    const top = (sel: string) => browser.evaluate((s: string) => document.querySelector(s)!.getBoundingClientRect().top, sel);
+    expect(await top('#ov-more')).toBeLessThan(await top('#ov-soon'));
+    expect(await top('#ov-soon')).toBeLessThan(await top('#ov-foundations'));
+    await expect(browser.locator('#ov-skills button')).toBeVisible();
+    expect(await pastEdge(browser, '#ov-skills button')).toBeLessThanOrEqual(0);
 
     // Configuration: the parts' tabs come before the summary card, which shows only the part picked
     await nav.getByRole('button', 'Configuration').tap();
@@ -51,6 +55,19 @@ for (const width of [640, 480]) {
     await expect(browser.locator('#pw-files a[data-pw-start]').first()).toBeVisible();
     await browser.locator('#wf-how > summary').tap();
     await expect(browser.locator('#wf-how ol.help-steps')).toBeVisible();
+    // Skills: the search and the chips fit; two columns of cards at 640, one at 480, none past the edge
+    await browser.locator('#wf-tab-skills').tap();
+    await expect(screen.getByRole('searchbox', 'Search skills')).toBeVisible();
+    expect(await pastEdge(browser, '#skill-search')).toBeLessThanOrEqual(0);
+    const columns = await browser.evaluate(() => new Set([...document.querySelectorAll('#skill-results article.sk-card')].map(a => Math.round(a.getBoundingClientRect().left))).size);
+    expect(columns).toBe(width > 560 ? 2 : 1);
+    expect(await browser.evaluate(() => [...document.querySelectorAll('#skill-results article.sk-card, #skill-results article.sk-card *')].filter(e => e.getBoundingClientRect().right > document.documentElement.clientWidth + 0.5).length)).toBe(0);
+    expect(await browser.evaluate(() => [...document.querySelectorAll('#skill-results article.sk-card')].filter(a => a.scrollWidth > a.clientWidth + 1).length)).toBe(0);
+    await screen.getByRole('searchbox', 'Search skills').fill('voice');
+    await expect(browser.locator('#skill-results article[data-skill="gtmb-voice"]')).toBeVisible();
+    expect(await sideways(browser)).toBeLessThanOrEqual(0);
+    await browser.locator('#skill-clear').tap();
+    await browser.locator('#wf-tab-workflows').tap();
 
     // Memories: the filter box is visible and the toolbar wraps inside the width
     await nav.getByRole('button', 'Memories').tap();
