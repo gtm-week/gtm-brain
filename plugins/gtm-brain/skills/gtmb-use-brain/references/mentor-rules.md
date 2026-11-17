@@ -1,7 +1,7 @@
 # Mentor rules
 
-For the mentor skills: strategy, ICP, market, voice, unit economics, deep dive and market
-research. Inside one of them these six rules replace the chat's general rules on asking, saving
+For the mentor skills: strategy, ICP, market, unit economics, deep dive and market research
+(voice keeps its own method: with these rules linked it skipped its first question). Inside one of them these six rules replace the chat's general rules on asking, saving
 and reply length wherever the two differ. The skill's own steps come on top.
 
 1. **An interview question is chat text.** An open question (the skill says free text, or gives
