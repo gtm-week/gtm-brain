@@ -81,6 +81,12 @@ const PROSPECTS = [
   ["Larkspur Living", [["Hugo Lemaire", "COO"]]],
   ["Pinecrest Toys", [["Julia Weiss", "Ops Manager"], ["Tomas Ruiz", "IT manager"]]],
 ];
+// only for a larger history (versus-bench.mjs --notes): no word is shared with a company, and no first name with a person, of the story
+const BIG_A = ["Amber", "Birch", "Cedar", "Dune", "Elm", "Gale", "Heath", "Iris", "Juniper", "Kelp", "Maple", "Nettle", "Oak", "Pebble", "Quill", "Rowan", "Sable", "Thistle", "Umber", "Willow", "Yarrow", "Alder", "Basalt", "Clover", "Delta", "Ember", "Flint", "Garnet", "Hazel", "Indigo"];
+const BIG_B = ["Goods", "Market", "Supply", "Studio", "Collective", "Works", "Trading", "Outfitters", "Provisions", "Wares"];
+const BIG_FIRST = ["Aida", "Bruno", "Celine", "Dario", "Elif", "Fabian", "Gita", "Henrik", "Ilse", "Joel", "Kaia", "Lars", "Mona", "Nadia", "Otto", "Paula", "Rasmus", "Selma", "Tuva", "Ulla", "Viggo", "Wilma", "Yusuf", "Zora"];
+const BIG_LAST = ["Aalto", "Carlin", "Castell", "Dufour", "Ekberg", "Falk", "Gunnar", "Hedlund", "Ivarsson", "Juhl", "Kask", "Moberg", "Norrby", "Pihl", "Rask", "Strand", "Toft", "Udd", "Wikstrom", "Varga"];
+const BIG_ROLES = ["COO", "ecommerce lead", "Head of Ecommerce", "Ops Manager", "VP Operations", "Director of CX", "warehouse lead", "IT manager", "founder"];
 const EVENTS = ["Nordic Commerce Days", "Retail Ops Summit in Stockholm", "Shopify Plus meetup in Oslo"];
 const WMS = ["Ongoing WMS", "Consafe Logistics", "a homegrown WMS", "Microsoft Dynamics WMS"];
 // {c} company, {p} person, {r} role, {p2} second person, {n} {w} numbers, {e} event, {s} wms; [template, latest month (1-12) it may be dated in]
@@ -146,6 +152,21 @@ export function history(seed = 7, filler = 125) {
   for (const t of CUSTOMER_T) pool.push(() => ({ text: t, date: day(11, Date.UTC(2026, 7, 4)), author: I }));
   for (const t of PARTNER_T) pool.push(() => ({ text: t, date: day(), author: pick([A, M]) }));
   for (const t of INTERNAL_T) for (let k = 0; k < (/\{/.test(t) ? 4 : 1); k++) pool.push(() => ({ text: fill(t, { n: int(40, 90), w: int(8, 30), k: (int(40, 75) * 1000).toLocaleString("en-US"), e: pick(EVENTS) }), date: day(), author: pick([A, I, K]) }));
+  // a larger history (filler above the 125 of the standard run) adds made-up prospect accounts built from word
+  // lists, with the same prospect templates; none shares a word with a company or a first name a question asks about
+  if (filler > 125) {
+    const extra = [];
+    for (const a of BIG_A) for (const b of BIG_B) extra.push(`${a} ${b}`);
+    for (let i = extra.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [extra[i], extra[j]] = [extra[j], extra[i]]; }
+    const need = Math.ceil((filler - 100) / PROSPECT_T.length) + 2;
+    for (const c of extra.slice(0, need)) {
+      const people = [0, 1].map(() => [`${pick(BIG_FIRST)} ${pick(BIG_LAST)}`, pick(BIG_ROLES)]);
+      for (const [t, latest] of PROSPECT_T) {
+        const [p, role] = pick(people), others = people.filter(x => x[0] !== p);
+        pool.push(() => ({ text: fill(t, { c, p, r: role, p2: others.length ? `${others[0][0]} (${others[0][1]})` : `${people[0][0]} (${people[0][1]})`, n: int(3, 14), w: int(1, 3), e: pick(EVENTS), s: pick(WMS) }), date: day(latest), author: pick([M, K, K]) }));
+      }
+    }
+  }
   for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
   const seen = new Set(), out = [];
   for (const make of pool) { if (out.length >= filler) break; const n = make(); if (seen.has(n.text)) continue; seen.add(n.text); out.push({ id: `f${String(out.length + 1).padStart(3, "0")}`, ...n }); }
@@ -157,7 +178,8 @@ export const roleOf = name => (TEAM.find(t => t[0] === name) || [])[1] || "";
 export const noteLine = n => `${n.date}, ${n.author} (${roleOf(n.author)}): ${n.text}`;
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const i = process.argv.indexOf("--seed"), notes = history(i > 0 ? Number(process.argv[i + 1]) : 7);
+  const i = process.argv.indexOf("--seed"), j = process.argv.indexOf("--notes");
+  const notes = history(i > 0 ? Number(process.argv[i + 1]) : 7, j > 0 ? Number(process.argv[j + 1]) - STORY.length : 125);
   for (const n of notes) console.log(`[${n.id}] ${noteLine(n)}`);
   console.error(`${notes.length} notes, ${notes.filter(n => n.id[0] === "s").length} story, ${notes.filter(n => n.id[0] === "f").length} filler`);
 }
