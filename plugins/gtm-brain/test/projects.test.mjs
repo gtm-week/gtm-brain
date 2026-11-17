@@ -8,7 +8,11 @@ process.env.GTM_BRAIN_NO_COMPILE = "1"; // Model runs are opt-in through test do
 process.env.GTM_BRAIN_NO_SESSION_START = "1"; // servers here test tools; chat-start.test.mjs covers the chat start
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, realpathSync, symlinkSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, realpathSync, symlinkSync, rmSync } from "node:fs";
+
+/* A brain just used can still have a background writer (render, push) in work/, so a plain rm -rf
+   fails now and then with "Directory not empty", mostly on macOS. Retry instead. */
+const removeTree = path => rmSync(path, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 import { join } from "node:path";
 import { tmpdir, homedir } from "node:os";
 import { execFileSync } from "node:child_process";
@@ -161,7 +165,7 @@ test("the projects index round-trips; the brains registry keeps what exists and 
   assert.equal(lib.readProjects(root)[0].slug, "curriculum");
   lib.registerBrain(root); lib.registerBrain(root);
   const gone = brain(); lib.registerBrain(gone);
-  execFileSync("rm", ["-rf", gone]);
+  removeTree(gone);
   const known = lib.knownBrains();
   assert.deepEqual(known.map(b => [b.path, b.company]), [[root, "Reflow"]], "once, with its company, and the vanished one dropped");
   assert.match(known[0].lastOpened, /^\d{4}-/);
@@ -320,7 +324,7 @@ test("a .gitignore rule written before linking survives link and unlink untouche
 
 test("a brain whose .git is a file (a worktree) links a sub-folder without an exclusion, instead of crashing", () => {
   const root = realpathSync(brain());
-  execFileSync("rm", ["-rf", join(root, ".git")]);
+  removeTree(join(root, ".git"));
   writeFileSync(join(root, ".git"), "gitdir: /nowhere\n");
   const sub = join(root, "projects", "seo");
   const out = project(root, "--link", sub, "--slug", "seo");
@@ -465,7 +469,7 @@ test("the dashboard lists the projects and chips a note with its project; the ad
   assert.deepEqual([c.title, c.path, c.contexts, c.loaded, c.notes, c.pointer], ["Curriculum", a, ["icp"], ["icp"], 1, true]); assert.match(c.lastNote, /^\d{4}-/);
   const html = readFileSync(join(root, "work", "home", "index.html"), "utf8");
   assert.ok(html.includes('id="workspace-folders"') && html.includes("projectChip("), "working folders under Workspace and a project chip on the notes");
-  execFileSync("rm", ["-rf", b]);
+  removeTree(b);
   const f = JSON.parse(execFileSync(process.execPath, [`${P}/scripts/gtm-brain-advisor/advisor.mjs`, ".", "--json"], { cwd: root, encoding: "utf8", env: { ...env, GTM_BRAIN_NOW: new Date(Date.now() + 45 * 864e5).toISOString() } })).findings;
   assert.match(f.find(x => x.key === "project-broken")?.what || "", /website.*pointer/, JSON.stringify(f));
   assert.match(f.find(x => x.key === "project-quiet")?.what || "", /curriculum.*no note for/, JSON.stringify(f));
@@ -560,7 +564,7 @@ test("a linked folder with its own git root keeps the rulebook line; a plain sub
 
 test("a refused repair keeps the old pointer: a validation failure after the stale check must not remove it", () => {
   const old = brain(); const a = folder(); project(old, "--link", a, "--slug", "curriculum");
-  execFileSync("rm", ["-rf", old]);
+  removeTree(old);
   const before = lib.readPointer(a);
   assert.equal(before.missing, true);
   const fresh = brain();
@@ -571,7 +575,7 @@ test("a refused repair keeps the old pointer: a validation failure after the sta
 
 test("a pointer to a brain that is gone is repaired by linking again", () => {
   const old = brain(); const a = folder(); project(old, "--link", a, "--slug", "curriculum");
-  execFileSync("rm", ["-rf", old]);
+  removeTree(old);
   assert.equal(lib.readPointer(a).missing, true);
   const fresh = brain();
   const out = project(fresh, "--link", a, "--slug", "curriculum", "--contexts", "icp");
