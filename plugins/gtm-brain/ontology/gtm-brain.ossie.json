@@ -583,6 +583,9 @@
                           "type": "string"
                         }
                       },
+                      "rule_checked": {
+                        "type": "boolean"
+                      },
                       "asset": {
                         "type": "object",
                         "properties": {
@@ -1185,6 +1188,9 @@
                     "type": "string"
                   },
                   "description": "Names the person confirmed as new after an entry was held; never filled on a guess."
+                },
+                "rule_checked": {
+                  "type": "boolean"
                 },
                 "asset": {
                   "type": "object",
