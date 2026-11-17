@@ -18,12 +18,12 @@ English; quotes stay in their own language. Every question follows
 
 ## 1. Whose voice
 
-Reuse the session's person, company and website. Read the voice
+Reuse the session's person, company, website. Read the voice
 document with `document` (`action: show`, `ref: voice`): setup writes `voice.md` as a starter at
 the brain root. When `action: list` shows another tone of voice document, read that too.
 
 A filled document says on its first line whose voice it is and what it governs: reuse that, or an
-answer already in the request ("our voice" is not one), and never ask again. Otherwise (a starter is never filled) this
+answer already in the request ("our voice" is not one), and never ask again. Otherwise (a starter, whatever it says, is not filled) this
 question comes first, before reading or asking for texts, with one line on why (a company standard is read from what the company publishes and
 sends, a person's from their own writing, a blend fits neither), as the whole first reply. Choices: "The company's voice"
 (recommended; one standard for everything we publish and send, no persona per medium), "My own
