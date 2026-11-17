@@ -373,11 +373,82 @@ time.pl-when{white-space:nowrap;cursor:help;text-decoration:underline dotted var
 @media(max-width:800px){.cfg-schema{grid-template-columns:1fr}.cfg-kinds{position:static;flex-direction:row;flex-wrap:wrap}}
 </style>
 <link rel="stylesheet" href="ui/dashboard.css">
+<style id="pane-style">
+/* The usual place of this page is half of the screen, beside Codex: a pane 480 to 760 px wide. 640 is the width it is
+   designed for, 480 the floor, a whole wide screen the other case. This block comes after the bundle's stylesheet so it
+   wins at equal specificity. Two breakpoints: 760 (the pane) and 560 (the floor). Nothing is removed in a narrow
+   pane: what explains a section folds into a disclosure (drawn by the page script), the facts and links stay. */
+.wf-how{margin:0 0 18px;padding:0 16px;border:1px solid var(--rule);border-radius:6px;background:var(--surface)}.wf-how>summary{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;min-height:44px;padding:12px 22px 12px 0;cursor:pointer;list-style:none;position:relative}.wf-how>summary::-webkit-details-marker{display:none}.wf-how>summary h2{margin:0}.wf-how>summary:after{content:"";position:absolute;right:4px;top:19px;width:7px;height:7px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:rotate(45deg);transition:transform .15s}.wf-how[open]>summary:after{transform:rotate(-135deg);top:22px}.wf-how>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}.wf-how .wf-say{margin-bottom:16px}
+.fd-why{font-size:12.5px;color:var(--muted)}.fd-why>summary{display:inline-flex;align-items:center;gap:6px;min-height:32px;cursor:pointer;list-style:none}.fd-why>summary::-webkit-details-marker{display:none}.fd-why>summary:before{content:"";width:5px;height:5px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:transform .15s}.fd-why[open]>summary:before{transform:rotate(45deg)}.fd-why>summary:hover{color:var(--ink)}.fd-why>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}.fd-why p,.fd-uses{margin:2px 0 8px;line-height:1.5}.fd-uses{padding-left:18px}.fd-uses li{margin:3px 0}.fd-uses b{color:var(--ink);font-weight:600}.fd-lead{margin:-2px 0 8px}
+.cfg-dot{display:none}
+@media(max-width:760px){
+ /* the header: two rows, the brain and its tools, then the five places, which scroll sideways when they do not fit */
+ .header-inner,.main{padding-left:16px;padding-right:16px}
+ .top{flex-wrap:wrap;gap:8px 10px;min-height:0;padding:10px 0 8px}
+ .brand{order:0;max-width:150px;margin-right:0}.brand b{font-size:15px}
+ .top .search-wrap{order:1;flex:1 1 150px;max-width:none;min-width:0}.top .search-wrap kbd{display:none}.top .gq{padding-right:12px}
+ .sync-status{order:2}.help-link{order:3}.workspace-link{order:4;padding:7px 8px}
+ .top .nav{order:5;flex:1 0 100%;min-width:0;display:flex;flex-wrap:nowrap;gap:2px;margin:0 -16px;padding:0 16px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;scroll-padding:0 40px}
+ .top .nav::-webkit-scrollbar{display:none}
+ .top .nav button{flex:none;padding:7px 11px;min-height:36px}
+ .top .nav.more-right{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 44px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 44px),transparent)}
+ .top .nav.more-left{-webkit-mask-image:linear-gradient(90deg,transparent,#000 44px);mask-image:linear-gradient(90deg,transparent,#000 44px)}
+ .top .nav.more-left.more-right{-webkit-mask-image:linear-gradient(90deg,transparent,#000 44px,#000 calc(100% - 44px),transparent);mask-image:linear-gradient(90deg,transparent,#000 44px,#000 calc(100% - 44px),transparent)}
+ .main{padding-top:14px}.view-toolbar{min-height:0;margin-bottom:6px}.head h1{font-size:26px}.view.on>.head{margin-bottom:14px}.view.on>.head .sub{font-size:13.5px}
+ /* a link that does something is at least 32 px high */
+ .fd-links .linkbtn,.fd-go,.ov-soon-acts>a,.ov-soon-acts>button,.ov-suggest>a,.ov-suggest>button,.wf-on .pl-chat,.wf-acts>a,.pl-go>a,.pl-doc-open,.doc-back,a.pl-chat,.pl-links>a,.mem-acts>a,.mem-acts>button,.ent-back,.doc-foot a{display:inline-flex;align-items:center;column-gap:.3em;min-height:32px}
+ .ov-soon li{gap:4px 18px}
+ /* long words and paths wrap; a table that cannot stack scrolls inside its own box */
+ code,.pl-path,.doc-meta code{overflow-wrap:anywhere;word-break:break-word}.pl-table-wrap{max-width:100%;overflow-x:auto}
+ /* Foundations: one compact card each, the title and its facts on one line, then what is missing and the two links */
+ .fd{margin-top:26px}.fd-grid{grid-template-columns:minmax(0,1fr);gap:8px}
+ .fd-card{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:baseline;column-gap:12px;row-gap:6px;padding:12px 14px}
+ .fd-card>*{grid-column:1/-1;margin:0}.fd-card>h3{grid-column:1;font-size:15px}.fd-card>.fd-facts{grid-column:2;font-size:13px}.fd-card>.fd-links{padding-top:0;gap:0 16px}.fd-card>.fd-why{margin-top:-4px}
+ .mentor-grid{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}#ov-mentors{margin-top:26px}
+ /* Configuration: the three tabs come first and carry a dot where something is missing; above the picked part's
+    content only its own card stays, without the link to the part it already shows */
+ .view[data-view="config"].on{display:flex;flex-direction:column}.view[data-view="config"]>*{order:3}.view[data-view="config"]>.head{order:0}.view[data-view="config"]>#cfg-tabs{order:1}.view[data-view="config"]>#cfg-peers{order:2}
+ #cfg-peers .fd-card:not(.on){display:none}#cfg-peers .fd-card.on{box-shadow:none}#cfg-peers .fd-card [data-cfg-tab],#cfg-peers .fd-card>h3{display:none}#cfg-peers .fd-card>.fd-facts{grid-column:1/-1}.fd-peers{margin:0 0 14px}
+ .cfg-tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-bottom:14px}.cfg-tabs::-webkit-scrollbar{display:none}.cfg-tabs{gap:0}.cfg-tabs button{flex:none;gap:6px;padding:10px 9px;min-height:40px;font-size:13.5px}
+ .cfg-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--amber);margin-left:-2px}
+ .pl-card{padding:14px 14px}
+ /* the base documents: each row is a stacked item, the name and its state, what it says, when it changed, the link */
+ #cfg-docs .pl-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+ #cfg-docs .pl-table,#cfg-docs .pl-table tbody{display:block;width:100%}
+ #cfg-docs .pl-table tr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:4px 12px;padding:12px 0;border-top:1px solid var(--soft)}
+ #cfg-docs .pl-table tr:first-child{border-top:0}
+ #cfg-docs .pl-table th,#cfg-docs .pl-table td{display:block;padding:0;border:0;min-width:0}
+ #cfg-docs .pl-table tbody th{grid-column:1;grid-row:1}#cfg-docs .pl-table td:nth-child(2){grid-column:2;grid-row:1;justify-self:end}
+ #cfg-docs .pl-table td.pl-says{grid-column:1/-1;max-width:none}
+ #cfg-docs .pl-table td:nth-child(4){grid-column:1;font-size:11.5px;color:var(--muted)}#cfg-docs .pl-table td:nth-child(4) *{font-size:inherit}
+ #cfg-docs .pl-table td.pl-go{grid-column:2;justify-self:end;white-space:nowrap}
+ .pl-dl{grid-template-columns:minmax(0,max-content) minmax(0,1fr);gap:4px 12px}
+ /* Workflows: the explainer is closed unless opened; the run tracker goes vertical */
+ .wf-how{padding:0 12px}.wf-how .help-steps{grid-template-columns:minmax(0,1fr);gap:8px}.wf-top h3{flex:1 1 200px}
+ .wf-run{padding:12px}.wf-run-head .skill-open{margin-left:0}
+ .wf-track{grid-auto-flow:row}.wf-st{padding:0 0 14px 36px}.wf-st:not(:last-child):after{display:none}.wf-dot{position:absolute;left:0;top:0}.wf-st-body{margin-top:0}
+ /* Memories: the filter box takes the row, the selects share the next */
+ .mem-top .explore-search{flex:1 1 100%}.mem-filters select,.mem-filters label input{min-width:0}.mem-top>label{flex:1 1 140px}
+ /* Help */
+ .help-steps{grid-template-columns:minmax(0,1fr);gap:8px}
+ /* the document: the text takes the width, the toolbar wraps */
+ .doc-preview{padding:16px}.doc-body{height:auto;min-height:0}.doc-body.mode-read .doc-preview,.doc-body.mode-preview .doc-preview{max-height:none}
+}
+@media(max-width:560px){
+ /* the floor: the search box gets a row of its own, Settings keeps only its icon */
+ .top .search-wrap{order:6;flex:1 0 100%}
+ .brand{max-width:none;margin-right:auto}
+ .workspace-link .ws-text{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+ .head h1{font-size:24px}
+ .fd-card{grid-template-columns:minmax(0,1fr)}.fd-card>.fd-facts{grid-column:1}
+ .mentor-grid{grid-template-columns:minmax(0,1fr)}
+}
+</style>
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to content</a>
 <div class="app">
-<header class="app-header"><div class="header-inner"><div class="top"><div class="brand"><div class="brand-copy"><b id="brand-co"></b><span id="sub"></span></div></div><nav class="nav" id="nav" aria-label="Main navigation"></nav><div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><label class="sr-only" for="gq">Search this brain</label><input id="gq" class="gq" type="search" placeholder="Search people, notes, documents" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="gq-results"><kbd aria-hidden="true">/</kbd><div class="gq-pop" id="gq-results" role="listbox" aria-label="Search results" hidden></div></div><span class="sync-status" id="brain-health" role="status"></span><button class="help-link" data-v="skills" aria-label="Help" title="Help: what you can ask Codex to do">?</button><button class="workspace-link" id="workspace-link" data-v="admin">Settings</button></div><div class="project-picker" id="project-picker" hidden><label for="project-select" id="project-label"></label><div class="project-select-wrap"><select id="project-select"></select></div></div><nav class="subnav" id="subnav" aria-label="More" hidden></nav></div></header>
+<header class="app-header"><div class="header-inner"><div class="top"><div class="brand"><div class="brand-copy"><b id="brand-co"></b><span id="sub"></span></div></div><nav class="nav" id="nav" aria-label="Main navigation"></nav><div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><label class="sr-only" for="gq">Search this brain</label><input id="gq" class="gq" type="search" placeholder="Search people, notes, documents" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="gq-results"><kbd aria-hidden="true">/</kbd><div class="gq-pop" id="gq-results" role="listbox" aria-label="Search results" hidden></div></div><span class="sync-status" id="brain-health" role="status"></span><button class="help-link" data-v="skills" aria-label="Help" title="Help: what you can ask Codex to do">?</button><button class="workspace-link" id="workspace-link" data-v="admin"><span class="ws-text">Settings</span></button></div><div class="project-picker" id="project-picker" hidden><label for="project-select" id="project-label"></label><div class="project-select-wrap"><select id="project-select"></select></div></div><nav class="subnav" id="subnav" aria-label="More" hidden></nav></div></header>
 <main class="main" id="main-content" tabindex="-1"><div class="view-toolbar"><button class="view-back" id="view-back" type="button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m12 5-7 7 7 7M5 12h14"/></svg><span id="view-back-label">Back</span></button><div class="location" id="location" hidden></div><p class="chat-instruction" id="chat-instruction"></p></div>
 <p class="m" id="view-scope"></p>
 <div id="manual-edits" role="status"></div>
@@ -452,11 +523,18 @@ const stale=D.contexts.filter(c=>c.stale&&c.status==="active"&&!c.updating);cons
 const PILLARS=["config","entities","notes","workflows"];
 const VIEWS=[["home","Overview"],["config","Configuration"],["entities","Entities"],["notes","Memories"],["workflows","Workflows"]];let view="home";
 const MORE=[["home","Overview"],["explore","Explore"],["skills","Help"]];
+/* The dashboard usually shares the screen with Codex: a pane 480 to 760 px wide. Below 761 px what explains a section
+   folds into a disclosure, so the facts and links come first; a page without matchMedia (tests, a saved copy) is wide. */
+const NARROW_Q=typeof matchMedia==="function"?matchMedia("(max-width: 760px)"):null;const narrow=()=>!!NARROW_Q?.matches;
 const viewLabel=v=>({doc:"Document",config:"Configuration",entities:"Entities",notes:"Memories",workflows:"Workflows",home:"Overview",contexts:"Topics",explore:"Explore",search:"Search",people:"People & organizations",customers:"Customers",meetings:"Meetings",memories:"Memories",questions:"Needs your attention",projects:"Working folders",admin:"Settings",skills:"Help"})[v]||v;
+/* In a narrow pane the five places scroll sideways: the current one is scrolled into view, and a fade marks the side with more. */
+function navFit(){const n=document.getElementById?.("nav");if(!n||!n.classList||typeof n.scrollWidth!=="number")return;const on=n.querySelector?.(".on");if(on&&n.scrollWidth>n.clientWidth+1&&(on.offsetLeft<n.scrollLeft||on.offsetLeft+on.offsetWidth>n.scrollLeft+n.clientWidth))n.scrollLeft=on.offsetLeft-(n.clientWidth-on.offsetWidth)/2;navFade()}
+function navFade(){const n=document.getElementById?.("nav");if(!n||!n.classList)return;n.classList.toggle("more-left",n.scrollLeft>2);n.classList.toggle("more-right",n.scrollLeft+n.clientWidth<n.scrollWidth-2)}
+if(typeof addEventListener==="function"){addEventListener("resize",()=>navFit());addEventListener("DOMContentLoaded",()=>document.getElementById("nav")?.addEventListener("scroll",navFade,{passive:true}))}
 function nav(){
  /* One flat row. A view outside it (a document, a topic, search) lights the place it was opened from. */
  const group=PILLARS.includes(view)||view==="home"?view:view==="admin"||view==="skills"?view:view==="doc"?(typeof docBack==="function"?docBack()[0]:"config"):["people","customers"].includes(view)?"entities":["contexts","memories","meetings","questions","decisions"].includes(view)?"notes":["projects"].includes(view)?"home":"";
- $("#nav").innerHTML=VIEWS.map(([k,label])=>`<button data-v="${k}" class="${group===k?"on":""}" ${group===k?'aria-current="page"':''}><span>${esc(label)}</span></button>`).join("");
+ $("#nav").innerHTML=VIEWS.map(([k,label])=>`<button data-v="${k}" class="${group===k?"on":""}" ${group===k?'aria-current="page"':''}><span>${esc(label)}</span></button>`).join("");navFit();
  $("#workspace-link").classList.toggle("on",view==="admin");
  $("#workspace-link").setAttribute("aria-current",view==="admin"?"page":"false");
  const parent=["contexts","people","customers","meetings","memories","questions"].includes(view)?"home":null;
@@ -1203,19 +1281,20 @@ function foundations(){
  for(const d of drafts.slice(0,2))base.weak.push(`${d.title} is a draft: Codex follows it and says it is not approved.`);
  return [rules,schema,base];
 }
-const fdCard=(f,where,compact)=>`<article class="fd-card${f.weak.length?" weak":""}${where==="config"&&cfgTab===f.tab?" on":""}" data-fd="${f.key}"><h3>${esc(f.title)}</h3>${compact?"":`<p class="fd-use">${esc(f.use)}</p>`}<p class="fd-facts">${f.facts.join(` <span aria-hidden="true">·</span> `)}</p>${f.chips?`<p class="fd-chips">${f.chips}</p>`:""}${f.weak.length?`<ul class="fd-weak">${f.weak.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>`:""}<p class="fd-links">${where==="config"?`<button type="button" class="linkbtn" data-cfg-tab="${f.tab}">${esc(f.open.replace(/^Open/,"Show"))} <span aria-hidden="true">↓</span></button>`:`<button type="button" class="linkbtn" data-v="config" data-cfg-open="${f.tab}">${esc(f.open)} <span aria-hidden="true">→</span></button>`}<a class="fd-go" href="${esc(f.href)}">${esc(f.chat)} <span aria-hidden="true">↗</span></a></p></article>`;
+/* use: "show" the sentence on what Codex uses it for, "fold" it under a disclosure (a narrow pane), or "none". */
+const fdCard=(f,where,compact,use=compact?"none":"show")=>`<article class="fd-card${f.weak.length?" weak":""}${where==="config"&&cfgTab===f.tab?" on":""}" data-fd="${f.key}"><h3>${esc(f.title)}</h3>${use==="show"?`<p class="fd-use">${esc(f.use)}</p>`:""}<p class="fd-facts">${f.facts.join(` <span aria-hidden="true">·</span> `)}</p>${f.chips?`<p class="fd-chips">${f.chips}</p>`:""}${f.weak.length?`<ul class="fd-weak">${f.weak.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>`:""}<p class="fd-links">${where==="config"?`<button type="button" class="linkbtn" data-cfg-tab="${f.tab}">${esc(f.open.replace(/^Open/,"Show"))} <span aria-hidden="true">↓</span></button>`:`<button type="button" class="linkbtn" data-v="config" data-cfg-open="${f.tab}">${esc(f.open)} <span aria-hidden="true">→</span></button>`}<a class="fd-go" href="${esc(f.href)}">${esc(f.chat)} <span aria-hidden="true">↗</span></a></p>${use==="fold"?`<details class="fd-why"><summary>${esc("What Codex uses it for")}</summary><p class="fd-use">${esc(f.use)}</p></details>`:""}</article>`;
 /* The Overview's section, above the mentors. It stays when nothing is missing, shorter. */
 function renderFoundations(){
  const box=$("#ov-foundations");if(!box)return;
  const parts=foundations();if(!parts.length){box.innerHTML="";return}
- const compact=parts.every(f=>!f.weak.length);
- box.innerHTML=`<section class="fd${compact?" compact":""}" aria-label="${esc("Foundations")}"><div class="ov-head"><h2>${esc("Foundations")}</h2>${compact?`<span class="pl-age">${esc("nothing missing")}</span>`:""}</div>${compact?"":`<p class="mentor-lead">${esc("What Codex works from, most important first: the rules and the schema decide what the brain keeps, the base documents say what your work must follow. What is missing here is missing from everything Codex does for you.")}</p>`}<div class="fd-grid">${parts.map(f=>fdCard(f,"home",compact)).join("")}</div></section>`;
+ const compact=parts.every(f=>!f.weak.length),fold=narrow(),lead="What Codex works from, most important first: the rules and the schema decide what the brain keeps, the base documents say what your work must follow. What is missing here is missing from everything Codex does for you.";
+ box.innerHTML=`<section class="fd${compact?" compact":""}" aria-label="${esc("Foundations")}"><div class="ov-head"><h2>${esc("Foundations")}</h2>${compact?`<span class="pl-age">${esc("nothing missing")}</span>`:""}</div>${compact?"":fold?`<details class="fd-why fd-lead"><summary>${esc("What these are")}</summary><p class="mentor-lead">${esc(lead)}</p><ul class="fd-uses">${parts.map(f=>`<li><b>${esc(f.title)}</b>: ${esc(f.use)}</li>`).join("")}</ul></details>`:`<p class="mentor-lead">${esc(lead)}</p>`}<div class="fd-grid">${parts.map(f=>fdCard(f,"home",compact,compact||fold?"none":"show")).join("")}</div></section>`;
 }
 /* The Configuration tab's landing: the same three as peers, before the detail of the one picked. */
 function renderConfigPeers(){
  const box=$("#cfg-peers");if(!box)return;
  const parts=foundations();
- box.innerHTML=parts.length?`<div class="fd-grid fd-peers" role="group" aria-label="${esc("The three parts of the configuration")}">${parts.map(f=>fdCard(f,"config",false)).join("")}</div>`:"";
+ box.innerHTML=parts.length?`<div class="fd-grid fd-peers" role="group" aria-label="${esc("The three parts of the configuration")}">${parts.map(f=>fdCard(f,"config",false,narrow()?"fold":"show")).join("")}</div>`:"";
 }
 function renderConfig(){
  if(!PL){$("#cfg-docs").innerHTML=plEmpty;return}
@@ -1304,7 +1383,9 @@ function renderConfigTabs(){
  if(!PL||plUnread("configuration"))return;
  const C=PL.configuration,tabs=[["rules","Rules",ruleGroupCounts(C.rules).reduce((a,b)=>a+b,0)],["schema","Schema",C.schema.kinds.length],["docs","Base documents and company",C.documents.filter(d=>d.base).length]];
  if(!tabs.some(([k])=>k===cfgTab))cfgTab="docs";
- $("#cfg-tabs").innerHTML=tabs.map(([k,label,n])=>`<button type="button" role="tab" id="cfg-tab-${k}" aria-selected="${cfgTab===k}" aria-controls="cfg-${k}" tabindex="${cfgTab===k?0:-1}" data-cfg-tab="${k}" class="${cfgTab===k?"on":""}">${esc(label)}${n===null?"":` <span class="pl-count">${n}</span>`}</button>`).join("");
+ /* a part where something is missing carries a dot; in a narrow pane the tabs come first and the peer cards above them fold away */
+ let weak=new Set();try{weak=new Set(foundations().filter(f=>f.weak.length).map(f=>f.tab))}catch{}
+ $("#cfg-tabs").innerHTML=tabs.map(([k,label,n])=>`<button type="button" role="tab" id="cfg-tab-${k}" aria-selected="${cfgTab===k}" aria-controls="cfg-${k}" tabindex="${cfgTab===k?0:-1}" data-cfg-tab="${k}" class="${cfgTab===k?"on":""}">${esc(label)}${n===null?"":` <span class="pl-count">${n}</span>`}${weak.has(k)?`<span class="cfg-dot" title="${esc("Something here is missing")}"><span class="sr-only">${esc(", something here is missing")}</span></span>`:""}</button>`).join("");
  for(const [k,id] of [["docs","#cfg-docs"],["docs","#cfg-about"],["docs","#cfg-profile"],["rules","#cfg-rules"],["schema","#cfg-schema"]])$(id).hidden=cfgTab!==k;$("#cfg-settings").hidden=true;
  renderConfigPeers();
 }
@@ -1807,7 +1888,9 @@ function renderWorkflowsTab(){
  /* how one runs, in three steps like Help's, with the sentences that move a run */
  const how=[["Start it in Codex","Press Start in Codex on a workflow below, or say \"start the outbound workflow\". Codex asks what the file lists under Before starting, shows the brief once and starts the run."],["Each step is done in chat and recorded","Codex does the step with your tools, or you do it and say so. The step is saved as a note, and that note opens the next step."],["The brain tells you when the next is due","A due step shows in the first lines of a chat, under Coming up on the Overview and in the run's tracker below. Nothing runs by itself."]];
  const say=["where is the <run>","next step","skip this step","move step 2 to <date>","pause the run","resume the run","cancel the run"];
- $("#pw-how").innerHTML=`<section class="wf-how" aria-label="${esc("How a workflow runs")}"><h2>${esc("How a workflow runs")}</h2><ol class="help-steps">${how.map(([title,body],i)=>`<li><b>${i+1}</b><div><strong>${esc(title)}</strong><p>${esc(body)}</p></div></li>`).join("")}</ol><p class="wf-say"><span>${esc("Say in Codex:")}</span>${say.map(x=>`<code>${esc(x)}</code>`).join("")}</p></section>`;
+ /* a disclosure: open at first only in a wide pane with no run yet; once the person opens or closes it, that holds for the session */
+ let howOpen=!narrow()&&!W.files.some(f=>(f.runs||[]).length);try{const kept=sessionStorage.getItem("gtm-wf-how");if(kept)howOpen=kept==="open"}catch{}
+ $("#pw-how").innerHTML=`<details class="wf-how" id="wf-how"${howOpen?" open":""}><summary><h2>${esc("How a workflow runs")}</h2><span class="pl-age">${esc("3 steps, and what to say in Codex")}</span></summary><ol class="help-steps">${how.map(([title,body],i)=>`<li><b>${i+1}</b><div><strong>${esc(title)}</strong><p>${esc(body)}</p></div></li>`).join("")}</ol><p class="wf-say"><span>${esc("Say in Codex:")}</span>${say.map(x=>`<code>${esc(x)}</code>`).join("")}</p></details>`;
  $("#pw-files").innerHTML=`<section class="sec pl-card"><h2>${esc("Your workflows")} <span class="pl-count">${W.files.length}</span></h2><p class="m">${esc("A workflow is a job with steps that Codex carries out the same way every time, for example following up after a meeting. Each run in progress is tracked under its workflow; click a name for the steps and the file.")}</p>${W.files.map(pwCard).join("")||`<p class="empty">${esc("No workflows yet. To make one, describe the job to Codex, for example: \"make a workflow for following up after a demo\".")}</p>`}${W.orphans.length?`<details class="fold"><summary>${esc("Runs of workflows that were removed")} · ${W.orphans.length}</summary><ul class="pl-list pl-runs">${W.orphans.map(r=>`<li><b>${esc(String(r.workflow||"").replace(/-/g," "))}</b> <span class="pl-age">${esc("started")} ${r.started?whenText(r.started):"?"}</span> · ${esc(pwRunLine({slug:r.workflow},r))}</li>`).join("")}</ul></details>`:""}</section>`;
  if(plUnread("workflows"))$("#pw-files").innerHTML=plUnreadMsg;
  /* the count is the number of rows the list below it draws, never a figure of its own */
@@ -1816,6 +1899,9 @@ function renderWorkflowsTab(){
  $("#pw-skills").innerHTML=`<section class="sec pl-card"><details class="fold"><summary>${esc("Things you can ask Codex to do")} · ${shipped.length+yours.length}</summary><p class="m">${esc("Each opens a prepared message in Codex; nothing happens until you send it.")}</p><h3>${esc("Shipped with GTM Brain")}</h3><ul class="pl-list">${shipped.map(skillItem).join("")||`<li class="pl-age">${esc("None installed.")}</li>`}</ul><h3>${esc("Made by your team")}</h3><ul class="pl-list">${yours.map(skillItem).join("")||`<li class="pl-age">${esc("None yet. Say \"make this a skill\" after a task worth repeating.")}</li>`}</ul></details></section>`;
 }
 document.addEventListener("click",e=>{const b=e.target?.closest?.("[data-pw-open]");if(!b)return;pwOpen=pwOpen===b.dataset.pwOpen?"":b.dataset.pwOpen;renderWorkflowsTab()});
+document.addEventListener("click",e=>{const d=e.target?.closest?.("#wf-how>summary")?.parentElement;if(!d)return;try{sessionStorage.setItem("gtm-wf-how",d.open?"closed":"open")}catch{}});
+/* Crossing the narrow width redraws what folds there. */
+NARROW_Q?.addEventListener?.("change",()=>{try{renderFoundations();renderConfigPeers();renderWorkflowsTab()}catch{}});
 let plObserver=null;
 function plObserve(){
  if(typeof IntersectionObserver==="undefined")return;plObserver?.disconnect();

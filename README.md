@@ -388,7 +388,7 @@ writes: ["tool:email"]
 
 Detail: [WORKFLOWS.md](docs/WORKFLOWS.md).
 
-![The Workflows tab: how a workflow runs in three steps, then each workflow with whether it is on, how it starts, a Start in Codex link and its runs](docs/images/screenshots/dashboard-workflows.png)
+![The Workflows tab: How a workflow runs folded to one line, then each workflow with whether it is on, how it starts, a Start in Codex link and its runs](docs/images/screenshots/dashboard-workflows.png)
 
 ![A run tracked on the Workflows tab: its name, what it is about, and its four steps in order, the first done with its note, the second overdue with what it waits for, two upcoming, and the link that prepares the next step in Codex](docs/images/screenshots/dashboard-workflow-run.png)
 

@@ -310,8 +310,10 @@ test('Workflows: how one runs, a Start link with its prepared message per workfl
   const f = fixture(app.baseUrl);
   await app.open('/');
   await screen.getByRole('navigation', 'Main navigation').getByRole('button', 'Workflows').tap();
-  // the explainer: three steps and the sentences that move a run
+  // the explainer: one line, closed at first when a run exists, and once opened three steps and the sentences that move a run
   await expect(browser.locator('#pw-how').getByRole('heading', 'How a workflow runs', { level: 2 })).toBeVisible();
+  await expect(browser.locator('#pw-how ol.help-steps')).toBeHidden();
+  await browser.locator('#wf-how > summary').tap();
   await expect(browser.locator('#pw-how ol.help-steps li')).toHaveCount(3);
   for (const say of ['where is the <run>', 'skip this step', 'move step 2 to <date>', 'pause the run']) await expect(browser.locator('#pw-how .wf-say')).toContainText(say);
   // every file under workflows/ has a card, and only those
