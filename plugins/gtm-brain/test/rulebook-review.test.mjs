@@ -29,8 +29,8 @@ function brain() {
   execFileSync("bash", [`${P}/scripts/gtm-brain-setup/setup.sh`, "--company", "Pagecraft", "--one-liner", "slim rules", "--owner", "Ann Lee <ann@example.test>"], { cwd: root, env, stdio: "ignore" });
   return root;
 }
-function client() {
-  const child = spawn(process.execPath, [`${P}/server/server.mjs`], { stdio: ["pipe", "pipe", "pipe"], env });
+function client(extra = {}) {
+  const child = spawn(process.execPath, [`${P}/server/server.mjs`], { stdio: ["pipe", "pipe", "pipe"], env: { ...env, ...extra } });
   const pending = new Map(); let seq = 0;
   createInterface({ input: child.stdout }).on("line", line => { const m = JSON.parse(line); const r = pending.get(m.id); if (r) { pending.delete(m.id); r(m); } });
   const rpc = (method, params = {}) => new Promise(res => { const id = ++seq; pending.set(id, res); child.stdin.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n"); });
@@ -63,12 +63,12 @@ test("every page named in AGENTS.md exists, and every tool a page rides along wi
   const named = [...template.replace(/\s+/g, " ").matchAll(/\(([a-z-]+(?: and [a-z-]+)?) page\)|the ([a-z-]+) page\b/g)].flatMap(m => (m[1] || m[2]).split(" and "));
   assert.ok(named.length >= 15, `${named.length} page mentions`);
   for (const n of named) assert.ok(slugs.has(n), `AGENTS.md points at a "${n}" page that is not shipped`);
-  const s = client(); await s.init();
+  const s = client({ GTM_BRAIN_TOOLSET: "full" }); await s.init();   // every tool the server answers, listed or not
   const { result } = await s.rpc("tools/list");
   const tools = new Set(result.tools.map(t => t.name)), objects = new Set(result.tools.find(t => t.name === "query").inputSchema.properties.object.enum);
   for (const p of rulePages()) for (const key of p.attach) {
     if (key.startsWith("query:")) assert.ok(objects.has(key.slice(6)), `${p.slug}: query has no object ${key.slice(6)}`);
-    else assert.ok(tools.has(key), `${p.slug} rides along with ${key}, which is not a tool the chat is offered`);
+    else assert.ok(tools.has(key), `${p.slug} rides along with ${key}, which is not a tool`);
   }
 });
 

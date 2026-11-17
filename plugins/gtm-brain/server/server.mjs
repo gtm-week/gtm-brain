@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 import { questionInput } from "./question-input.mjs";
 import { askPerson, properties as ASK_PERSON, required as ASK_PERSON_REQUIRED } from "./ask-person.mjs";
 import { createInterface } from "node:readline";
-import { loadOntology, buildTools, instructionsText } from "../lib/ontology/index.mjs";
+import { loadOntology, buildTools } from "../lib/ontology/index.mjs";
 import { createFilesBackend } from "./files-backend.mjs";
 import { createMemoryReader } from "./memory-reader.mjs";
 import { host } from "../lib/host.mjs";
@@ -407,8 +407,14 @@ const RETIRED_READS = { recall: "query (memories with search, or object brief)",
 const COMPILE_TOOLSET = new Set(["compile_facts", "compile_apply", "compile_entity", "entity_facts", "render_dashboard", "query"]);   // query: --facts is a digest, older notes are looked up
 // How to ask: ask_person's form first, then the host's own question box, then chat text (lib/host.mjs holds the words).
 const NATIVE_QUESTIONS = (() => { try { return host().nativeQuestions(); } catch { return false; } })();
+// What an ordinary chat is listed (since the diet of 2026-11-17): every listed definition is re-sent with each model
+// step, and 41 of them were 85,500 characters. Reads are answered by reading the brain's own pages (entities/, the
+// cover, grep); the tools are the write side. The others still answer tools/call: a skill or a reply that names one
+// calls it by name. A scheduled or background run (GTM_BRAIN_RUN) and GTM_BRAIN_TOOLSET=full are listed everything.
+const CHAT_TOOLS = new Set(["remember", "query", "update_entity", "approve_change", "workflow", "document", "interact", "check_environment", "setup_brain", "ask_person", "save", "load_context", "compile_apply", "compile_entity"]);
 const offered = t => process.env.GTM_BRAIN_TOOLSET === "compile" ? COMPILE_TOOLSET.has(t.name)
-  : !(RUN_ONLY_TOOLS.has(t.name) && !process.env.GTM_BRAIN_RUN) && !(t.name in RETIRED_READS);
+  : process.env.GTM_BRAIN_RUN || process.env.GTM_BRAIN_TOOLSET === "full" ? !(RUN_ONLY_TOOLS.has(t.name) && !process.env.GTM_BRAIN_RUN) && !(t.name in RETIRED_READS)
+  : CHAT_TOOLS.has(t.name);
 
 // Allethic supplies memory capture and structured reads; the host keeps its native forms
 // and session operations. One registered tool per operation, with existing names preserved.
@@ -590,9 +596,9 @@ const CALL_SHAPES = `Call shapes for the common jobs (each takes brain too). Use
 - Housekeeping, only when the person asks for it: query {object: "housekeeping"}, then the first item only, asked with ask_person
 - Merge two entities the person confirmed are one: merge_entities {source, target, confirmed: true}
 `;
-const INSTRUCTIONS = "GTM Brain: the company brain in this workspace. Pass the workspace folder as brain. In a folder with brain/admin.md, or one whose AGENTS.md names a GTM Brain project, the chat's first GTM Brain call, whatever it is, returns the chat's opening lines with its result; follow them. Make it the call the request needs (query answer with search for a question, remember for a save): no separate status call. Without a brain, setting up GTM Brain follows the gtmb-start skill (check_environment first).\n" + CORE + "Tools return plain text meant for you. Everything a tool writes is kept at once; never ask the person to save, never mention git. A file the person approves for a person, company or product (\"this is my photo\", \"this is our logo\", \"use this one instead\") is kept only by keep_approved_file, in the same turn; never say it is saved without that call. A note or a tag alone is never used again.\n" + CALL_SHAPES + "Files you create, edit, move or delete in the brain folder yourself (a graphic, a brief, RULES.md), not through a GTM Brain tool, are kept by save: call it once when that task is done, with a one-line message and, for each new file or folder, placed (path, RULES.md row, why). Why is this file here: query (object why, search: the path). Housekeeping, tidying or cleaning up the brain (duplicates included) starts with query (object housekeeping): its reply carries the items, their evidence and the one next step, so no skill file, rule page or per-person lookup comes first. Several people or companies are read in one query (object entities, filters.name or filters.id as a list), never one call each. A draft (a message, a post, an email) is written from the brain's notes and the document it follows: nothing is looked up on the web and no link in a note is opened for it unless the person asks for exactly that; a detail the brain does not hold is left out and named in one line.";
+const INSTRUCTIONS = "GTM Brain: the company brain in this workspace; pass its folder as brain. In a brain or a linked project, the chat's first GTM Brain call, whatever it is, returns the chat's opening lines with its result; follow them. Make it the call the request needs (query answer with search for a question, remember for a save): no separate status call. Without a brain, setup follows the gtmb-start skill (check_environment first).\n" + CORE + "Everything a tool writes is kept at once; never ask the person to save, never mention git. A file the person approves for a person, company or product (\"this is our logo\") is kept only by keep_approved_file, in the same turn.\n" + CALL_SHAPES + "Files you change in the brain folder yourself are kept by save, once when the task is done: a one-line message and, per new file, placed (path, RULES.md row, why).";
 
-const WORKFLOWS = `Ordinary questions and saving need no skill file and no rule page: the tool descriptions, the call shapes above and the opening lines carry what they need, and a tool attaches its rule page to a reply that refuses or holds something (the answers page to the first memories search). Never read a skill file, a references file or a rule page in the middle of a save, a read or a confirmed action. Skills are for the workflows a person asks for by name. Asked how the brain works, what it can or cannot do, how to change it, or why something looks wrong: read ${join(P, "MANUAL.md")} and answer from it in a few lines. Read ${join(P, "skills/gtmb-configure/SKILL.md")} for workplace changes and APPROVE. Read ${join(P, "skills/gtmb-configure/references/update-plugin.md")} for plugin updates or brain refresh. Internal operations remain tools; the person does not need to invoke a separate skill for each one.`;
+const WORKFLOWS = `Ordinary questions and saving need no skill file and no rule page. Never read a skill file, a references file or a rule page in the middle of a save, a read or a confirmed action. Skills are for the workflows a person asks for by name. How the brain works, what it can do, why something looks wrong: answer from ${join(P, "MANUAL.md")}. Workplace changes and APPROVE: ${join(P, "skills/gtmb-configure/SKILL.md")}.`;
 
 /* ---------- The start of a chat ---------- */
 // What session/session-start.sh prints (the project line, loaded contexts, tools, documents, update offer)
@@ -623,6 +629,30 @@ async function opening(args) {
     child.stdin.end(JSON.stringify({ session_id: chat || "", cwd }));
   });
   return out ? `GTM Brain chat start (once per chat; follow it):\n${out}` : null;
+}
+
+/* The first read of a chat carries the opening lines up to READ_OPENING characters; the saving rules and whatever
+   is past that cut wait for the chat's first write (remember, update_entity and the like), which needs them. A read
+   was 24,000 characters of saving rules, schema and context list before it answered anything. */
+const READ_OPENING = 2500;
+const SAVING = /\n--- The saving rules for this chat ---\n[\s\S]*?\n---(?=\n|$)/;
+const heldOpening = new Map();
+const READ_KEEPS = /^(GTM Brain chat start|brain: |project: |questions waiting|Today is|Before the first question)/;
+function splitOpening(args, tool, start) {
+  const key = isBrain(args.brain) ? `${resolve(args.brain)}\t${typeof args.project === "string" ? args.project : ""}` : "";
+  if (start && tool.readOnly && !(tool.name === "query" && args.object === "status")) {   // a status read asks for all of it
+    let rest = "", head = start;
+    const rules = head.match(SAVING); if (rules) { rest = rules[0].trim(); head = head.replace(SAVING, ""); }
+    if (head.length > READ_OPENING) {   // line by line, in order; who and where, the waiting questions and today always stay
+      const keep = [], later = []; let size = 0;
+      for (const line of head.split("\n")) { if (READ_KEEPS.test(line) || size + line.length + 1 <= READ_OPENING) { keep.push(line); size += line.length + 1; } else later.push(line); }
+      head = keep.join("\n"); rest = [...later, rest].filter(Boolean).join("\n");
+    }
+    if (rest) { heldOpening.set(key, rest); head += "\n(The saving rules and the rest of the opening lines come with this chat's first save.)"; }
+    return head;
+  }
+  if (!tool.readOnly && heldOpening.has(key)) { const rest = heldOpening.get(key); heldOpening.delete(key); return [start, `GTM Brain opening lines for saving (once per chat; follow them):\n${rest}`].filter(Boolean).join("\n"); }
+  return start;
 }
 
 /* ---------- The rule pages that ride along ---------- */
@@ -684,7 +714,36 @@ const send = m => process.stdout.write(JSON.stringify(m) + "\n");
    reject anyOf, oneOf, allOf, not and enum there, and Codex then offers the tool with no inputs at
    all (remember() => any, 0.28.2). The rule they state (remember: content or memories) stays
    enforced where the call runs. */
-const advertised = ({ anyOf, oneOf, allOf, not, enum: _, ...schema }) => schema;
+// The listed text of the largest definitions; the full rules ride on the chat's first write and on a refusal.
+const LISTED_DESCRIPTION = {
+  remember: "Save a decision, commitment, finding, meeting outcome, question or answer. Append-only. Call it at once when the person states a fact, no reads first: the brain matches names and context, says already kept, and turns a changed date, amount or count into a correction. One note per outcome; never a note that only says a meeting happened. A whole turn in one call through memories. Quote the note back as echoed. supersedes corrects an id, retracts withdraws one. A held entry: ask what the reply says, once, resend only it. Outcomes: ok, denied, refused (tell the person why), error.",
+};
+// remember (the largest) also has its top-level field prose cut to a sentence, content's rule on dates excepted.
+const advertised = ({ anyOf, oneOf, allOf, not, enum: _, ...schema }, name) => {
+  const out = compact(schema, 0, name === "remember");
+  if (name === "remember" && schema.properties?.content?.description) out.properties.content.description = schema.properties.content.description;
+  return out;
+};
+// tools/list carries field names and types; prose is cut to its first sentence at the top level and dropped below it.
+// A refusal names what was wrong and what to send, so the detail is learned when it is needed.
+const firstSentence = d => { const m = String(d).match(/^.*?(?<!\b(?:e\.g|i\.e|etc))[.;:](\s|$)/); const t = (m ? m[0] : String(d)).trim().replace(/[;:]$/, "."); return t.length > 140 ? t.slice(0, 137).replace(/\s+\S*$/, "") + "..." : t; };
+// An object field of an import (remember customer, meeting, ...): its fields as one typed line, not a schema each.
+const typeOf = p => !p || typeof p !== "object" ? "any" : p.type === "object" && p.properties ? `{${signature(p)}}` : p.type === "array" ? (p.items?.anyOf ? `(${typeOf(p.items)})[]` : `${typeOf(p.items)}[]`) : p.anyOf ? p.anyOf.map(typeOf).join("|") : p.type || "any";
+const signature = o => Object.entries(o.properties).map(([n, p]) => `${n}${(o.required || []).includes(n) ? "" : "?"}: ${typeOf(p)}`).join(", ");
+function compact(node, depth, cutTop = false) {
+  if (depth === 1 && node?.type === "object" && node.properties && JSON.stringify(node).length > 300) return { type: "object", description: `${node.description ? firstSentence(node.description) + " " : ""}Fields: ${signature(node)}.` };
+  if (Array.isArray(node)) return node.map(n => compact(n, depth));
+  if (!node || typeof node !== "object") return node;
+  const out = {};
+  for (const [k, v] of Object.entries(node)) {
+    if (k === "examples" || k === "example" || (depth >= 2 && (k === "minLength" || k === "minimum" || k === "additionalProperties" || k === "enum"))) continue;   // a wrong value is refused with the values allowed (lib/ontology/validation.mjs)
+    // a batch of notes (remember memories): each entry has the fields of one note, listed by name, not again in full
+    if (k === "items" && v?.type === "object" && Object.keys(v.properties || {}).length > 12) { out[k] = { type: "object", description: `The fields of one note: ${Object.keys(v.properties).join(", ")}.`, ...(v.required ? { required: v.required } : {}) }; continue; }
+    if (k === "description" && typeof v === "string") { if (depth === 0 || (depth === 1 && !cutTop)) out[k] = v; else if (depth === 1) out[k] = firstSentence(v); continue; }
+    out[k] = k === "properties" ? Object.fromEntries(Object.entries(v).map(([n, p]) => [n, compact(p, depth + 1, cutTop)])) : compact(v, depth + (k === "items" ? 1 : 0), cutTop);
+  }
+  return out;
+}
 const questions = questionInput(send);
 const reply = (id, result) => send({ jsonrpc: "2.0", id, result });
 const fail = (id, code, message) => send({ jsonrpc: "2.0", id, error: { code, message } });
@@ -693,9 +752,9 @@ async function handle(req) {
   const { id, method, params = {} } = req;
   if (method === "initialize") questions.initialize(params.capabilities);
   if (method === "notifications/cancelled") { questions.cancel(params.requestId); return; }
-  if (method === "initialize") return reply(id, { protocolVersion: params.protocolVersion || "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "gtm-brain", title: "GTM Brain", version: VERSION }, instructions: INSTRUCTIONS + host().texts.questions({ form: questions.available(), boxOn: NATIVE_QUESTIONS }) + "\n" + instructionsText(ontology) + "\n" + WORKFLOWS + "\nGTM Brain speaks English. Author brain records in English. Preserve names, IDs, source quotes, and the exact token APPROVE." });
+  if (method === "initialize") return reply(id, { protocolVersion: params.protocolVersion || "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "gtm-brain", title: "GTM Brain", version: VERSION }, instructions: INSTRUCTIONS + host().texts.questions({ form: questions.available(), boxOn: NATIVE_QUESTIONS }) + "\n" + WORKFLOWS + "\nRecords in English; names, IDs, quotes and APPROVE stay as given." });
   if (method === "ping") return reply(id, {});
-  if (method === "tools/list") return reply(id, { tools: TOOLS.filter(offered).map(t => ({ name: t.name, title: t.title, description: t.description, inputSchema: advertised(t.inputSchema), annotations: { title: t.title, readOnlyHint: t.readOnly, destructiveHint: false, openWorldHint: !!t.openWorld } })) });
+  if (method === "tools/list") return reply(id, { tools: TOOLS.filter(offered).map(t => ({ name: t.name, title: t.title, description: LISTED_DESCRIPTION[t.name] || t.description, inputSchema: advertised(t.inputSchema, t.name), annotations: { title: t.title, readOnlyHint: t.readOnly, destructiveHint: false, openWorldHint: !!t.openWorld } })) });
   if (method === "tools/call") {
     const tool = TOOLS.find(t => t.name === params.name);
     if (!tool) return fail(id, -32602, `unknown tool ${params.name}`);
@@ -710,7 +769,8 @@ async function handle(req) {
     if (blocked && !tool.readOnly && !LOCAL_ONLY.has(tool.name)) { const r = text(blocked, true); logCall(args, tool.name, r); return reply(id, r); }
     // Every writer script logs its change (lib.commit) and re-renders the dashboard itself.
     // The chat start runs first: it pulls, refreshes the rules and re-loads contexts the call then reads.
-    const start = blocked ? null : await opening(args).catch(() => null);
+    let start = blocked ? null : await opening(args).catch(() => null);
+    start = splitOpening(args, tool, start);
     let r; try { r = await tool.call(args, id); } catch (e) { r = text(`${tool.name} failed: ${e.message}`, true); }
     logCall(args, tool.name, r);
     r = foldStatus(tool.name, args, r, start);

@@ -97,7 +97,9 @@ test("2b: the ten read tools leave the chat's catalog, still answer as deprecate
   const { result } = await rpc("tools/list");
   const names = result.tools.map(t => t.name);
   for (const n of ["recall", "who_is", "entity_facts", "list_contexts", "list_projects", "list_brains", "customer_overview", "meeting_overview", "advise", "where_we_are"]) assert.ok(!names.includes(n), `${n} is not offered to a chat`);
-  assert.ok(names.includes("query") && names.includes("describe_object") && names.includes("list_objects"));
+  assert.ok(names.includes("query"));
+  // describe_object and list_objects left the chat's list in the diet of 2026-11-17; they still answer tools/call
+  for (const n of ["describe_object", "list_objects"]) { const r = await rpc("tools/call", { name: n, arguments: { brain: root, ...(n === "describe_object" ? { object: "memories" } : {}) } }); assert.ok(!/unknown tool/.test(JSON.stringify(r)), `${n} still answers`); }
   const old = await call("recall", { brain: root, query: "Castorama" });
   assert.ok(!old.isError, old.text); assert.match(old.text, /^deprecated: use query/); assert.match(old.text, /60-day pilot/, "an old rules file still gets its answer");
   const brief = await call("query", { brain: root, object: "brief", search: "Castorama" });

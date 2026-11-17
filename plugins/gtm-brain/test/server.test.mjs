@@ -17,7 +17,7 @@ const lib = await import(`${P}/lib/brain.mjs`);
 // Keep real installation preferences out of synthetic test brains.
 process.env.CODEX_HOME = mkdtempSync(join(tmpdir(), "gtm-brain-test-profile-"));
 
-const server = spawn(process.execPath, [`${P}/server/server.mjs`], { stdio: ["pipe", "pipe", "pipe"], env: { ...process.env, GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_SESSION_START: "1", GTM_BRAIN_NO_SAVE_NUDGE: "1" } });
+const server = spawn(process.execPath, [`${P}/server/server.mjs`], { stdio: ["pipe", "pipe", "pipe"], env: { ...process.env, GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_SESSION_START: "1", GTM_BRAIN_NO_SAVE_NUDGE: "1", GTM_BRAIN_TOOLSET: "full" } });   // full: these tests read every definition; the chat's short list is tested on its own below
 const pending = new Map(); let seq = 0;
 createInterface({ input: server.stdout }).on("line", line => { const m = JSON.parse(line); const r = pending.get(m.id); if (r) { pending.delete(m.id); r(m); } });
 const rpc = (method, params = {}) => new Promise(res => { const id = ++seq; pending.set(id, res); server.stdin.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n"); });
@@ -139,11 +139,11 @@ test("memory dates stay in content while MCP capture assigns the recording times
   assert.match(view.text, /Recorded:/);
   const { result: catalog } = await rpc("tools/list");
   const schema = catalog.tools.find(t => t.name === "remember").inputSchema;
-  for (const fields of [schema.properties, schema.properties.memories.items.properties]) {
-    assert.ok(!Object.hasOwn(fields, "occurred_at"));
-    assert.ok(!Object.hasOwn(fields, "recorded_at"));
-    assert.match(fields.content.description, /relevant dates/);
-  }
+  // a batch entry has the fields of one note, named in its description (the diet of 2026-11-17)
+  assert.doesNotMatch(schema.properties.memories.items.description, /occurred_at|recorded_at/);
+  assert.ok(!Object.hasOwn(schema.properties, "occurred_at"));
+  assert.ok(!Object.hasOwn(schema.properties, "recorded_at"));
+  assert.match(schema.properties.content.description, /relevant dates/);
 });
 
 test("formal entities can be created, described and queried through MCP with organization subtypes", async () => {
@@ -674,13 +674,13 @@ test("remember echoes the note it wrote, in quotes, and its schema is small enou
   assert.ok(tool.description.length < 1000, `description is ${tool.description.length} chars (was 2637)`);
   assert.match(tool.description, /quot/i, "it tells the model to quote the note back");
   const bytes = JSON.stringify(tool.inputSchema).length;
-  assert.ok(bytes < 17000, `schema is ${bytes} bytes (was 23729; the rest is enums and shapes the validator needs)`);
-  const batch = tool.inputSchema.properties.memories.items.properties;
-  assert.deepEqual(Object.keys(batch).sort(), Object.keys(tool.inputSchema.properties).filter(k => !["brain", "by", "project", "memories"].includes(k)).sort(), "the batch item keeps every field");
-  assert.ok(Object.entries(batch).every(([k, v]) => !v.description || ["content", "sources"].includes(k)), "batch fields carry no repeated paragraphs");
+  assert.ok(bytes < 6000, `schema is ${bytes} bytes (was 23729, then 17000; the validator's refusals carry the enums and shapes)`);
+  // the batch item names every field of one note in a line, not a second schema
+  const batch = tool.inputSchema.properties.memories.items.description;
+  for (const k of Object.keys(tool.inputSchema.properties).filter(k => !["brain", "by", "project", "memories"].includes(k))) assert.match(batch, new RegExp(`\\b${k}\\b`), `the batch item names ${k}`);
   assert.match(tool.inputSchema.properties.memories.description, /same fields/i);
   // events ride on a save, single and batch (rule E1), within the same size
-  assert.ok(tool.inputSchema.properties.events && batch.events, "events is a field of a save");
+  assert.ok(tool.inputSchema.properties.events && /\bevents\b/.test(batch), "events is a field of a save");
   const ev = await call("remember", { brain: root, by: "marta", context: "icp", content: "We ran Northfold Summit for 140 founders.", events: [{ name: "Northfold Summit", date: "2026-10-08" }] });
   assert.ok(!ev.isError, ev.text);
   assert.match(ev.text, /new event in entities\/: Northfold Summit \(2026-10-08/);
@@ -771,4 +771,21 @@ test("query object reference finds every note citing a source pointer, whatever 
   assert.match((await call("query", { brain: refRoot, object: "reference", search: "attio:fixture/people/0a1b2c3d-4e5f-6789-abcd-ef0123456789" })).text, /Notes citing it \(2\)[\s\S]*Older two-entry note[\s\S]*Renewal moved/);
   const odd = await call("query", { brain: refRoot, object: "reference", search: "hubspot:it's; DROP x" });
   assert.ok(!odd.isError, odd.text); assert.match(odd.text, /Notes citing it: none/);
+});
+
+test("an ordinary chat is listed at most 14 tools in under 40,000 characters; a hidden tool still answers", async () => {
+  const child = spawn(process.execPath, [`${P}/server/server.mjs`], { stdio: ["pipe", "pipe", "pipe"], env: { ...process.env, GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_SESSION_START: "1", GTM_BRAIN_TOOLSET: "", GTM_BRAIN_RUN: "" } });
+  after(() => child.kill());
+  const waiting = new Map(); let n = 0;
+  createInterface({ input: child.stdout }).on("line", line => { const m = JSON.parse(line); waiting.get(m.id)?.(m); });
+  const ask = (method, params = {}) => new Promise(res => { const id = ++n; waiting.set(id, res); child.stdin.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n"); });
+  const init = await ask("initialize", { capabilities: { elicitation: { form: {} } } });
+  assert.ok(init.result.instructions.length < 4000, `instructions are ${init.result.instructions.length} characters (were 6,665)`);
+  const tools = (await ask("tools/list")).result.tools, size = JSON.stringify(tools).length;
+  assert.ok(tools.length <= 14, `${tools.length} tools listed (were 41)`);
+  assert.ok(size < 40000, `tools/list is ${size} characters (was 85,535)`);
+  for (const name of ["remember", "query", "update_entity", "approve_change", "workflow", "document", "interact", "check_environment", "setup_brain"]) assert.ok(tools.some(t => t.name === name), `${name} is listed`);
+  assert.ok(JSON.stringify(tools.find(t => t.name === "remember")).length < 6000, "remember under 6,000 characters (was 18,084)");
+  const hidden = await ask("tools/call", { name: "check_tools", arguments: { brain: root } });
+  assert.ok(hidden.result && !/unknown tool/.test(JSON.stringify(hidden)), "a tool left off the list still answers tools/call");
 });
