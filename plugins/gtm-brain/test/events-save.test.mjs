@@ -172,5 +172,5 @@ test("a long list of events stays inside the reply's cap and says how many are l
   const text = answer(b.root, "what events did we organize?");
   assert.match(text, /^Events in the brain \(30\)/m);
   assert.match(text, /^\d+ more: query object entities with filters\.kind event\.$/m);
-  assert.ok(Buffer.byteLength(text) < 12 * 1024, `the reply is ${Buffer.byteLength(text)} bytes`);
+  assert.ok(Buffer.byteLength(text) <= 40000, `the reply is ${Buffer.byteLength(text)} bytes (the answer budget since win-a)`);
 });

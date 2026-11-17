@@ -644,7 +644,8 @@ export function answerText(index, root, question, { filters = {}, limit, project
       : 'Not found: the brain holds no notes yet. Say so plainly.');
     return out.join('\n');
   }
-  if (!r.rows.length && !q.entities.length) {
+  if (!r.rows.length && listed.length) out.push(`Answer for "${question}": no note matches the words, and the brain has the list below (${r.total} notes searched).`);
+  else if (!r.rows.length && !q.entities.length) {
     out.push(`Not found: no note matches "${question}" (${r.total} notes searched${narrowing ? `; narrowed to ${narrowing}` : ''}${words.length ? `; words: ${words.join(', ')}` : ''}${r.missing.length ? `; no note has ${r.missing.map(w => `"${w}"`).join(', ')} or a spelling one letter off` : ''}).`);
     const given = Object.keys(filters || {});
     out.push(given.length ? `Nothing matched within the filters given (${given.join(', ')}); the brain was not searched outside them, and the notes below are only those within them. The same question without filters reads all of it.`
