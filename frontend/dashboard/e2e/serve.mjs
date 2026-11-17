@@ -4,7 +4,8 @@
 // The e2e runner starts this as app.command with a free port, waits until the port answers, and stops it
 // (SIGTERM) when the run ends; the brain and its scratch folder go with it.
 // Steps: generate the small brain (plugins/gtm-brain/test/e2e/generate-brain.mjs), add what the four tabs need
-// through the plugin's own scripts (an adopted document, a scheduled workflow, a run in progress), render,
+// through the plugin's own scripts (an adopted document, a scheduled workflow, a run in progress on its second
+// step and a cancelled one), render,
 // then run server/dash.mjs in the foreground on the port. What the tests expect is written next to the brain
 // in fixture.json, read from the brain itself (the generator's gold ledger, the memories, the workflow
 // files), never from the render the page shows.
@@ -82,6 +83,7 @@ try {
   const gold = JSON.parse(readFileSync(join(base, "gold.json"), "utf8"));
   const by = "marta@example.test";
   const workflow = (...args) => node("scripts/gtm-brain-workflow/workflow.mjs", [root, ...args]);
+  const wf0 = await import(join(P, "lib/workflows.mjs"));
 
   // A document adopted in place: a file the person wrote at the brain root becomes a base document.
   writeFileSync(join(root, "pricing.md"), "# Pricing\n\nThree plans, billed yearly. The middle plan is the one we lead with.\n");
@@ -95,9 +97,22 @@ try {
   // A run in progress of the shipped outbound workflow.
   const settled = { "Target accounts": "the five retail chains in the ICP", "Why now": "the returns season", "Owner": "Marta Nowak", "Sequencer": "Gmail" };
   await workflow("--start", "outbound", "--context", "company", "--handle", "Q4 retail push", "--settled", JSON.stringify(settled), "--by", by);
-  const open = JSON.parse(await workflow("--list", "--json")).runs.filter(r => !r.ended);
-  const run = open.find(r => r.workflow === "outbound");
-  need(run, "outbound run in progress");
+  const listed = async () => JSON.parse(await workflow("--list", "--json")).runs;
+  const started = (await listed()).find(r => r.workflow === "outbound" && !r.ended);
+  need(started, "outbound run in progress");
+  // The run is tracked: its first step done with a note, its second due since three days ago (moved there, so
+  // the tracker and Coming up have an overdue step to show).
+  await workflow("--advance", started.id, "--step", "1", "--note", "Five retail chains and 14 contacts pulled from the CRM; list saved with the run.", "--by", by);
+  const late = wf0.addDays(wf0.localDate(), -3);
+  await workflow("--move", started.id, "--step", "2", "--to", late, "--reason", "the sequence was promised for that day", "--by", by);
+  // An earlier run of the same workflow that was stopped: it folds under the finished and stopped runs.
+  await workflow("--start", "outbound", "--context", "company", "--handle", "Spring pilot", "--settled", JSON.stringify({ ...settled, "Target accounts": "ten pilot accounts", "Why now": "the spring price change" }), "--by", by);
+  const pilot = (await listed()).find(r => r.workflow === "outbound" && !r.ended && r.id !== started.id);
+  need(pilot, "second outbound run");
+  await workflow("--cancel", pilot.id, "--reason", "the price change was postponed", "--by", by);
+  const open = (await listed()).filter(r => !r.ended);
+  const run = open.find(r => r.id === started.id);
+  need(run && run.current?.n === 2, "outbound run on its second step");
 
   await node("scripts/gtm-brain-render/render.mjs", [root]);
 
@@ -120,6 +135,10 @@ try {
     return { title: w.title, status: String(fm.status), trigger: String(fm.trigger || "manual"), runs: open.filter(r => r.workflow === w.slug).length };
   });
   need(workflows.some(w => w.status === "active" && w.trigger !== "manual") && workflows.some(w => w.status === "draft"), "scheduled workflow beside a draft");
+  const { readSchema } = await import(join(P, "lib/schema.mjs")), { whereRows } = await import(join(P, "lib/where.mjs")), { readAskSource } = await import(join(P, "lib/ask-source.mjs")), { readOurRules } = await import(join(P, "lib/our-rules.mjs"));
+  const schema = readSchema(root).schema, groups = [readOurRules(root).rules.length, whereRows(root).length, readAskSource(root).rows.length];
+  const foundations = { rules: groups.reduce((a, b) => a + b, 0), ruleGroups: groups.filter(Boolean).length, kinds: Object.keys(schema.kinds).length,
+    fields: Object.values(schema.kinds).reduce((n, k) => n + k.fields.length + Object.values(k.subtypes || {}).reduce((m, st) => m + (st.fields || []).length, 0), 0), relations: Object.keys(schema.relations).length };
   const fixture = {
     root, port,
     // what a test needs to write to this brain with the plugin's own scripts
@@ -130,7 +149,12 @@ try {
     person: { name: person.name, notes },
     correction: { old: byId.get(correction.old).content, new: byId.get(correction.new).content },
     workflows,
-    run: { id: run.id, step: `Step ${run.current.n} of ${wf.readWorkflow(root, "outbound").steps.length}`, status: run.current.status },
+    // what the Foundations section counts, from the brain's own readers
+    foundations,
+    run: { id: run.id, name: "Q4 retail push", step: `Step ${run.current.n} of ${wf.readWorkflow(root, "outbound").steps.length}`, status: run.current.status, due: late, cancelled: pilot.id,
+      // the tracker's states, in step order, as the run's notes give them
+      states: ["done", "late", "upcoming", "upcoming"], stepTitles: wf.readWorkflow(root, "outbound").steps.map(st => st.title),
+      settle: wf.readWorkflow(root, "outbound").settle.map(x => x.label) },
     // the six base files: the adopted one is filled, the others still hold their starter text
     documents: [{ title: "Pricing", state: "approved" }, ...["Strategy", "Ideal customer profile", "Tone of voice", "Design system", "Market"].map(title => ({ title, state: "not written" }))],
     by,

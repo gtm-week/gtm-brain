@@ -148,31 +148,15 @@ h1,h2,h3{font-family:var(--display);margin:0;letter-spacing:-.01em}
 .help-steps b{display:grid;place-items:center;flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font:600 11px var(--body)}
 .help-steps strong{display:block;font:600 13px var(--body);color:var(--ink);margin-bottom:3px}
 .help-steps p{margin:0;font-size:12px;line-height:1.55;color:var(--muted)}
-.help-header{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:14px}
-.help-header .explore-search{flex:0 1 400px}
-.help-filters{margin-bottom:14px}
-.help-header h2{font-family:var(--display);font-size:16px;font-weight:600;margin:0}
-.help-list{max-height:min(62vh,720px);border:1px solid var(--rule);border-radius:4px;background:#121211}
-.skill-group-head{display:flex;align-items:center;gap:8px;padding:11px 20px;background:var(--paper);border-bottom:1px solid var(--rule);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);position:sticky;top:0;z-index:1}
-.skill-group-head .cnt{padding:1px 5px;border-radius:3px;background:var(--soft);font-size:10px;letter-spacing:0}
-.skill-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:14px 24px;padding:16px 20px;border-bottom:1px solid var(--rule);min-width:0;transition:background .15s,box-shadow .15s}
-.skill-row:last-child{border-bottom:0}
-.skill-row:hover{background:#1c1c19;box-shadow:inset 3px 0 var(--accent)}
-.skill-row h3{font-family:var(--display);font-size:15px;font-weight:600;color:#d4eff3;margin:0 0 4px}
-.skill-description{font-size:13px;line-height:1.55;color:var(--muted);margin:0 0 8px;max-width:78ch}
-.skill-example{display:flex;align-items:baseline;gap:8px;font-size:13px;color:var(--ink);margin:0}
 .skill-example-label{flex-shrink:0;font-size:10px;font-weight:600;letter-spacing:.04em;color:var(--muted);text-transform:uppercase}
-.skill-actions{display:flex;flex-direction:column;align-items:flex-end;gap:7px;max-width:200px}
 .skill-open{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid #32302c;border-radius:3px;background:var(--accent-soft);color:var(--accent);font:600 12px var(--body);text-decoration:none;white-space:nowrap}
 .skill-open:hover{border-color:var(--accent);background:#201f1d}
 .skill-open:focus-visible,.skill-copy:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .skill-copy{font:500 12px var(--body);color:var(--muted);border:1px solid var(--rule);border-radius:3px;background:transparent;padding:6px 12px;cursor:pointer;white-space:nowrap}
 .skill-copy:hover{color:var(--ink);border-color:var(--accent)}
-.skill-row code{font-size:10px;color:var(--muted);overflow-wrap:anywhere;background:none;padding:0}
 .skill-copy-status{font-size:11px;color:var(--green);line-height:1.5;text-align:right}
 .skill-copy-status textarea{width:100%;min-height:100px;background:var(--surface);color:var(--ink);border:1px solid var(--rule);padding:6px}
-@media(max-width:1100px){.help-steps{grid-template-columns:1fr}.help-header{flex-direction:column;align-items:stretch;gap:12px}.help-header .explore-search{flex:1 1 auto}}
-@media(max-width:900px){.skill-row{grid-template-columns:minmax(0,1fr)}.skill-actions{flex-direction:row;align-items:center;max-width:none;flex-wrap:wrap}}
+@media(max-width:1100px){.help-steps{grid-template-columns:1fr}}
 .explore-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:12px 16px;margin:0 0 14px}
 .explore-toolbar[hidden]{display:none}
 .explore-search{position:relative;display:flex;align-items:center;flex:0 1 380px;min-width:220px}
@@ -333,8 +317,21 @@ time.pl-when{white-space:nowrap;cursor:help;text-decoration:underline dotted var
 .ov-house-list li.ov-row{grid-template-columns:minmax(0,1fr) auto;align-items:start}.ov-row>details{min-width:0}.ov-row>details>summary{display:grid;grid-template-columns:52px minmax(0,1fr) 14px;align-items:center;gap:8px 16px;cursor:pointer;list-style:none;min-height:30px}.ov-row>details>summary::-webkit-details-marker{display:none}.ov-row>details>summary::after{content:"";width:7px;height:7px;border-right:2px solid var(--amber);border-bottom:2px solid var(--amber);transform:rotate(45deg);transition:transform .15s;justify-self:end;margin-top:-3px}.ov-row>details[open]>summary::after{transform:rotate(225deg);margin-top:3px}.ov-row>details>summary:focus-visible{outline:2px solid var(--amber);outline-offset:3px;border-radius:4px}
 .ov-detail{margin:10px 0 4px 68px;font-weight:400;font-size:13px}.ov-detail-list{list-style:none;margin:0;padding:0}.ov-detail-list li{display:flex!important;align-items:baseline;justify-content:space-between;gap:14px;padding:6px 0!important;border:0!important;border-top:1px solid #4a3d1c!important;border-radius:0!important;background:none!important;font-size:13px!important;font-weight:400!important}.ov-detail-list li:first-child{border-top:0!important}.ov-detail-list b{font-weight:600}.ov-note{color:var(--muted);font-weight:400;font-size:12px}.ov-rest{color:var(--muted)}.ov-mini{white-space:nowrap;font-size:12.5px;color:var(--amber);text-decoration:none}.ov-mini:hover{text-decoration:underline}
 @media(max-width:700px){.ov-house-list li.ov-row{grid-template-columns:minmax(0,1fr)}.ov-row>details>summary{grid-template-columns:36px minmax(0,1fr) 14px}.ov-detail{margin-left:52px}}
-.mentor-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}.mentor-card{display:flex;flex-direction:column;gap:8px;padding:16px 18px;border:1px solid var(--rule);border-left:3px solid var(--accent);border-radius:6px;background:var(--surface);min-width:0}.mentor-card h3{font-family:var(--display);font-size:15px;font-weight:600;color:#d4eff3;margin:0}.mentor-promise{font-size:13px;line-height:1.5;color:var(--ink);margin:0}.mentor-doc{font-size:12px;line-height:1.6;color:var(--muted);margin:0}.mentor-doc b{color:var(--ink);font-weight:600}.mentor-read{white-space:nowrap}.mentor-card .skill-open{align-self:flex-start;margin-top:auto}.mentor-card code{font-size:10px;color:var(--muted);background:none;padding:0}
-#ov-mentors{margin-top:34px}#ov-mentors h2{font-family:var(--display);font-size:21px;font-weight:650;letter-spacing:-.02em;margin-bottom:4px}#ov-mentors .mentor-lead{font-size:13px;color:var(--muted);margin:0 0 14px;max-width:78ch}.skill-row .mentor-doc{margin:0 0 8px}
+/* Skills, in the Workflows tab: a search with a visible label, category chips, and cards in a grid of one column at
+   the 480 px floor, two from 561 to 900, three, then four on a wide screen. Rows share a height; the button sits at the bottom. */
+.sk-market h2{display:flex;align-items:baseline;gap:8px}.sk-search{margin:14px 0 10px}.sk-label{display:block;font:600 12px var(--body);color:var(--ink);margin:0 0 6px}
+.sk-search-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px}.sk-search-row .explore-search{flex:1 1 280px;max-width:520px;min-width:0}.sk-count{font-size:12px;color:var(--muted)}
+.sk-chips{margin:0 0 16px}
+.sk-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-items:stretch}
+@media(min-width:561px){.sk-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(min-width:901px){.sk-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(min-width:1280px){.sk-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.sk-cat{grid-column:1/-1;display:flex;align-items:center;gap:8px;margin:10px 0 0;font:600 11px var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}.sk-cat:first-child{margin-top:0}
+.sk-card{display:flex;flex-direction:column;gap:8px;padding:14px 16px;border:1px solid var(--rule);border-radius:6px;background:var(--surface);min-width:0;overflow-wrap:anywhere}.sk-card[data-skill-cat="mentor"]{border-left:3px solid var(--accent)}
+.sk-card h3{font-family:var(--display);font-size:15px;font-weight:600;color:#d4eff3;margin:0;overflow-wrap:normal}.sk-promise{font-size:13px;line-height:1.5;color:var(--ink);margin:0}
+.sk-doc{display:flex;flex-direction:column;gap:2px;font-size:12px;line-height:1.55;color:var(--muted);margin:0}.sk-doc b{color:var(--ink);font-weight:600}
+.sk-try{font-size:12.5px;line-height:1.5;color:var(--ink);margin:0}.sk-try .skill-example-label{margin-right:4px}
+.sk-foot{margin-top:auto;display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding-top:4px}.sk-cmd{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin:0;width:100%}.sk-cmd code{font-size:11.5px;color:var(--muted)}.sk-cmd .skill-copy{padding:4px 9px;font-size:11px}
+.sk-foot .skill-copy-status{text-align:left}.sk-foot .skill-copy-status:empty{display:none}.sk-foot .skill-open{min-height:32px}
+.sk-empty{grid-column:1/-1}.ov-house-none{display:flex;align-items:baseline;gap:12px;margin:0 0 22px;padding:10px 0;border-bottom:1px solid var(--rule);font-size:13px;color:var(--muted)}.ov-house-none b{font-family:var(--display);font-size:15px;font-weight:650;color:var(--ink)}.ov-skills{margin:12px 0 0;font-size:13px}.ov-skills .linkbtn{display:inline-flex;align-items:center;column-gap:.3em;min-height:32px}.help-go{margin:14px 0 0}.help-go .skill-open{cursor:pointer}
 #ov-more{margin-top:34px}#ov-more h2{font-family:var(--display);font-size:16px;font-weight:650;margin-bottom:12px}.ov-counts{display:flex;gap:10px;flex-wrap:wrap}.ov-count{display:flex;flex-direction:column;gap:2px;min-width:150px;padding:12px 16px;border:1px solid var(--rule);border-radius:4px;background:var(--surface);color:var(--ink);font:inherit;text-align:left;cursor:pointer}.ov-count:hover{border-color:var(--accent)}.ov-count b{font-family:var(--display);font-size:22px}.ov-count span{font-size:12px;color:var(--muted)}
 .gq-pop{position:absolute;top:calc(100% + 8px);left:0;z-index:40;width:min(600px,calc(100vw - 40px));max-height:min(72vh,640px);overflow:auto;padding:6px;background:var(--surface);border:1px solid var(--rule);border-radius:6px;box-shadow:0 18px 48px #000a}.gq-pop[hidden]{display:none}
 .gq-label{display:flex;align-items:center;gap:8px;padding:10px 10px 4px;font-family:var(--label);font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}.gq-group+.gq-group{border-top:1px solid var(--soft);margin-top:4px}
@@ -349,6 +346,20 @@ time.pl-when{white-space:nowrap;cursor:help;text-decoration:underline dotted var
 .mem-filters{display:block}.mem-filters .explore-search input{padding-left:34px;max-width:none}.mem-top{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 12px}.mem-top .explore-search{flex:1 1 320px}.mem-filters label{flex-direction:column;align-items:stretch;gap:3px;font-size:11px}.mem-filters select,.mem-filters label input{font-size:12.5px;border-radius:4px;min-width:150px}.mem-filters select:focus-visible,.mem-filters label input:focus-visible,.mem-morebtn:focus-visible,.mem-clear:focus-visible{outline:2px solid var(--accent);outline-offset:1px}.mem-morebtn{font:500 12.5px var(--body);color:var(--muted);background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:7px 12px;cursor:pointer;white-space:nowrap}.mem-morebtn:after{content:"";display:inline-block;width:6px;height:6px;margin:0 0 2px 8px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg)}.mem-morebtn[aria-expanded="true"]:after{transform:rotate(-135deg);margin-bottom:-2px}.mem-morebtn:hover{color:var(--ink);border-color:var(--muted)}.mem-morebtn.on{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}.mem-clear{padding:7px 2px;font-size:12.5px}.mem-clear[hidden],.mem-fold[hidden]{display:none}.mem-fold{display:flex;flex-direction:column;gap:12px;margin-top:12px;padding:12px 14px;border:1px solid var(--rule);border-radius:4px;background:var(--surface)}.mem-fold select,.mem-fold label input{background:var(--paper)}.mem-selects{display:flex;flex-wrap:wrap;gap:10px 14px}.mem-card{padding:16px 0}.mem-card .pl-text{font-size:15px;line-height:1.6;margin:6px 0 6px;max-width:86ch}.mem-card.focus{box-shadow:inset 3px 0 0 var(--accent);padding-left:14px;background:var(--surface)}.mem-topic{color:var(--muted);font-size:11.5px}.mem-topic:before{content:"in ";opacity:.7}.mem-people{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.mem-people .tag{border:0;font:inherit;font-size:12px;cursor:pointer;background:var(--accent-soft);color:var(--accent)}.mem-people .tag:hover{box-shadow:inset 0 0 0 1px var(--accent)}.mem-older{display:block;margin:18px auto 4px;padding:9px 18px}.mem-docs{margin-top:26px;padding-top:14px;border-top:1px solid var(--rule)}
 .wf-card{padding:16px 0}.wf-card h3 .linkbtn{font-size:16px}.wf-about{margin:2px 0 8px;font-size:14px;max-width:80ch}.wf-wait{margin:8px 0 0;padding:8px 12px;border-left:3px solid var(--amber);background:var(--amber-soft);border-radius:3px;font-size:13px}.wf-detail{margin-top:14px;padding:14px 16px;background:var(--paper);border:1px solid var(--rule);border-radius:4px}.wf-detail h4{font-family:var(--label);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;font-weight:600}.wf-detail h4:not(:first-child){margin-top:16px}
 .wf-steps{list-style:none;counter-reset:step;margin:0;padding:0}.wf-steps li{counter-increment:step;position:relative;padding:5px 0 12px 38px;font-size:13.5px}.wf-steps li:before{content:counter(step);position:absolute;left:0;top:2px;width:24px;height:24px;border-radius:50%;border:1px solid var(--rule);display:grid;place-items:center;font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--surface)}.wf-steps li:not(:last-child):after{content:"";position:absolute;left:12px;top:28px;bottom:0;width:1px;background:var(--rule)}.wf-steps li.here:before{border-color:var(--green);color:var(--green);background:var(--green-soft)}.wf-steps li.here>span:first-child{font-weight:600}
+.fd{margin:34px 0 0}.fd .ov-head{margin-bottom:4px}.fd .mentor-lead{font-size:13px;color:var(--muted);margin:0 0 14px;max-width:92ch}.fd.compact .ov-head{margin-bottom:12px}
+.fd-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.fd-card{display:flex;flex-direction:column;gap:8px;padding:16px 18px;border:1px solid var(--rule);border-top:3px solid var(--green);border-radius:6px;background:var(--surface);min-width:0}.fd-card.weak{border-top-color:var(--amber)}.fd-card h3{font-family:var(--display);font-size:16px;font-weight:650;margin:0}
+.fd-use{font-size:12.5px;line-height:1.5;color:var(--muted);margin:0}.fd-facts{font-size:13.5px;line-height:1.5;margin:0}.fd-facts b{font-family:var(--display);font-size:15px}.fd-chips{display:flex;flex-wrap:wrap;gap:5px;margin:0}.fd-chip{font-family:var(--body);font-size:11.5px;border:0;padding:2px 8px}button.fd-chip{cursor:pointer}button.fd-chip:hover{box-shadow:inset 0 0 0 1px currentColor}button.fd-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fd-weak{list-style:none;margin:0;padding:0;font-size:12.5px;line-height:1.5;color:var(--amber)}.fd-weak li{position:relative;padding-left:13px}.fd-weak li:before{content:"";position:absolute;left:0;top:.6em;width:5px;height:5px;border-radius:50%;background:var(--amber)}
+.fd-links{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;margin:auto 0 0;padding-top:6px;font-size:12.5px}.fd-links .linkbtn{font-size:12.5px}.fd-go{text-decoration:none;font-weight:600}.fd-go:hover{text-decoration:underline}.fd.compact .fd-card{padding:12px 16px;gap:5px}
+.fd-peers{margin:0 0 20px}.fd-peers .fd-card.on{box-shadow:0 0 0 1px var(--accent)}@media(max-width:900px){.fd-grid{grid-template-columns:1fr}}
+.pl-state.late{background:var(--red-soft);color:var(--red)}.pl-says{max-width:46ch}.doc-gist{color:var(--ink)}.ov-soon-acts{display:inline-flex;gap:16px;align-items:baseline;flex-wrap:wrap}
+.wf-how h2{font-family:var(--display);font-size:17px;font-weight:650;margin:0 0 10px}.wf-how .help-steps{margin-bottom:12px}.wf-say{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin:0 0 22px;font-size:12.5px;color:var(--muted)}
+.wf-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px 16px;flex-wrap:wrap}.wf-top h3{margin:0}.wf-acts{display:inline-flex;align-items:center;gap:14px;flex-wrap:wrap}.wf-on{display:flex;gap:4px 12px;flex-wrap:wrap;align-items:baseline;margin:10px 0 0;font-size:12.5px;max-width:110ch}.wf-on .pl-chat{font-weight:600;text-decoration:none;white-space:nowrap}
+.wf-run{margin-top:14px;padding:14px 16px;background:var(--paper);border:1px solid var(--rule);border-radius:4px}.wf-run.late{box-shadow:inset 3px 0 0 var(--red)}.wf-run-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}.wf-run-head h4{font-family:var(--display);font-size:15px;font-weight:650;margin:0}.wf-run-head .skill-open{margin-left:auto}.wf-run-about{margin:6px 0 0;font-size:12.5px;color:var(--muted)}.wf-run>.pl-path{display:inline-block;margin-top:10px}
+.wf-track{list-style:none;margin:16px 0 0;padding:0;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}.wf-st{position:relative;padding:0 16px 0 0;min-width:0}.wf-st:not(:last-child):after{content:"";position:absolute;left:30px;right:6px;top:12px;height:2px;background:var(--rule)}.wf-st.done:not(:last-child):after,.wf-st.skipped:not(:last-child):after{background:var(--green)}
+.wf-dot{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;border:1px solid var(--rule);background:var(--surface);font-family:var(--mono);font-size:11px;color:var(--muted)}.wf-st.done .wf-dot{border-color:var(--green);background:var(--green-soft);color:var(--green)}.wf-st.due .wf-dot{border-color:var(--amber);background:var(--amber-soft);color:var(--amber)}.wf-st.late .wf-dot{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+.wf-st-body{display:flex;flex-direction:column;gap:4px;align-items:flex-start;margin-top:8px;font-size:12.5px}.wf-st-title{font-size:13.5px;font-weight:600;overflow-wrap:anywhere}.wf-st.upcoming .wf-st-title{color:var(--muted);font-weight:500}.wf-st-detail{color:var(--muted);line-height:1.45}.wf-note{display:block}.wf-ended{margin-top:12px}
+@media(max-width:860px){.wf-track{grid-auto-flow:row}.wf-st{padding:0 0 14px 36px}.wf-st:not(:last-child):after{display:none}.wf-dot{position:absolute;left:0;top:0}.wf-st-body{margin-top:0}}
 .cfg-tabs{display:flex;gap:4px;flex-wrap:wrap;margin:0 0 18px;border-bottom:1px solid var(--rule)}.cfg-tabs button{display:inline-flex;align-items:center;gap:8px;border:0;border-bottom:2px solid transparent;background:none;color:var(--muted);font:500 14px var(--body);padding:10px 14px;margin-bottom:-1px;cursor:pointer}.cfg-tabs button:hover{color:var(--ink)}.cfg-tabs button.on{color:var(--ink);border-bottom-color:var(--accent);font-weight:650}.cfg-flag{font-size:11px;font-weight:600;color:var(--amber);background:var(--amber-soft);border-radius:3px;padding:1px 7px}
 .pl-path{font-size:11px;background:none;padding:0;color:var(--muted)}.cfg-group{margin-top:22px}.cfg-group>h3{font-size:15px;margin:0 0 2px}.cfg-group>.m{margin:0 0 8px}
 .cfg-rule{border-top:1px solid var(--soft)}.cfg-rule>summary{display:grid;grid-template-columns:minmax(0,1fr);gap:2px;padding:11px 28px 11px 14px;cursor:pointer;list-style:none;position:relative;border-left:2px solid transparent}.cfg-rule>summary::-webkit-details-marker{display:none}.cfg-rule>summary:after{content:"";position:absolute;right:10px;top:18px;width:6px;height:6px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:rotate(45deg);transition:transform .15s}.cfg-rule[open]>summary:after{transform:rotate(-135deg)}
@@ -359,22 +370,91 @@ time.pl-when{white-space:nowrap;cursor:help;text-decoration:underline dotted var
 @media(max-width:800px){.cfg-schema{grid-template-columns:1fr}.cfg-kinds{position:static;flex-direction:row;flex-wrap:wrap}}
 </style>
 <link rel="stylesheet" href="ui/dashboard.css">
+<style id="pane-style">
+/* The usual place of this page is half of the screen, beside Codex: a pane 480 to 760 px wide. 640 is the width it is
+   designed for, 480 the floor, a whole wide screen the other case. This block comes after the bundle's stylesheet so it
+   wins at equal specificity. Two breakpoints: 760 (the pane) and 560 (the floor). Nothing is removed in a narrow
+   pane: what explains a section folds into a disclosure (drawn by the page script), the facts and links stay. */
+.wf-how{margin:0 0 18px;padding:0 16px;border:1px solid var(--rule);border-radius:6px;background:var(--surface)}.wf-how>summary{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;min-height:44px;padding:12px 22px 12px 0;cursor:pointer;list-style:none;position:relative}.wf-how>summary::-webkit-details-marker{display:none}.wf-how>summary h2{margin:0}.wf-how>summary:after{content:"";position:absolute;right:4px;top:19px;width:7px;height:7px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:rotate(45deg);transition:transform .15s}.wf-how[open]>summary:after{transform:rotate(-135deg);top:22px}.wf-how>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}.wf-how .wf-say{margin-bottom:16px}
+.fd-why{font-size:12.5px;color:var(--muted)}.fd-why>summary{display:inline-flex;align-items:center;gap:6px;min-height:32px;cursor:pointer;list-style:none}.fd-why>summary::-webkit-details-marker{display:none}.fd-why>summary:before{content:"";width:5px;height:5px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:transform .15s}.fd-why[open]>summary:before{transform:rotate(45deg)}.fd-why>summary:hover{color:var(--ink)}.fd-why>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}.fd-why p,.fd-uses{margin:2px 0 8px;line-height:1.5}.fd-uses{padding-left:18px}.fd-uses li{margin:3px 0}.fd-uses b{color:var(--ink);font-weight:600}.fd-lead{margin:-2px 0 8px}
+.cfg-dot{display:none}
+@media(max-width:760px){
+ /* the header: two rows, the brain and its tools, then the five places, which scroll sideways when they do not fit */
+ .header-inner,.main{padding-left:16px;padding-right:16px}
+ .top{flex-wrap:wrap;gap:8px 10px;min-height:0;padding:10px 0 8px}
+ .brand{order:0;max-width:150px;margin-right:0}.brand b{font-size:15px}
+ .top .search-wrap{order:1;flex:1 1 150px;max-width:none;min-width:0}.top .search-wrap kbd{display:none}.top .gq{padding-right:12px}
+ .sync-status{order:2}.help-link{order:3}.workspace-link{order:4;padding:7px 8px}
+ .top .nav{order:5;flex:1 0 100%;min-width:0;display:flex;flex-wrap:nowrap;gap:2px;margin:0 -16px;padding:0 16px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;scroll-padding:0 40px}
+ .top .nav::-webkit-scrollbar{display:none}
+ .top .nav button{flex:none;padding:7px 11px;min-height:36px}
+ .top .nav.more-right{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 44px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 44px),transparent)}
+ .top .nav.more-left{-webkit-mask-image:linear-gradient(90deg,transparent,#000 44px);mask-image:linear-gradient(90deg,transparent,#000 44px)}
+ .top .nav.more-left.more-right{-webkit-mask-image:linear-gradient(90deg,transparent,#000 44px,#000 calc(100% - 44px),transparent);mask-image:linear-gradient(90deg,transparent,#000 44px,#000 calc(100% - 44px),transparent)}
+ .main{padding-top:14px}.view-toolbar{min-height:0;margin-bottom:6px}.head h1{font-size:26px}.view.on>.head{margin-bottom:14px}.view.on>.head .sub{font-size:13.5px}
+ /* a link that does something is at least 32 px high */
+ .fd-links .linkbtn,.fd-go,.ov-soon-acts>a,.ov-soon-acts>button,.ov-suggest>a,.ov-suggest>button,.wf-on .pl-chat,.wf-acts>a,.pl-go>a,.pl-doc-open,.doc-back,a.pl-chat,.pl-links>a,.mem-acts>a,.mem-acts>button,.ent-back,.doc-foot a{display:inline-flex;align-items:center;column-gap:.3em;min-height:32px}
+ .ov-soon li{gap:4px 18px}
+ /* long words and paths wrap; a table that cannot stack scrolls inside its own box */
+ code,.pl-path,.doc-meta code{overflow-wrap:anywhere;word-break:break-word}.pl-table-wrap{max-width:100%;overflow-x:auto}
+ /* Foundations: one compact card each, the title and its facts on one line, then what is missing and the two links */
+ .fd{margin-top:26px}.fd-grid{grid-template-columns:minmax(0,1fr);gap:8px}
+ .fd-card{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:baseline;column-gap:12px;row-gap:6px;padding:12px 14px}
+ .fd-card>*{grid-column:1/-1;margin:0}.fd-card>h3{grid-column:1;font-size:15px}.fd-card>.fd-facts{grid-column:2;font-size:13px}.fd-card>.fd-links{padding-top:0;gap:0 16px}.fd-card>.fd-why{margin-top:-4px}
+ /* Configuration: the three tabs come first and carry a dot where something is missing; above the picked part's
+    content only its own card stays, without the link to the part it already shows */
+ .view[data-view="config"].on{display:flex;flex-direction:column}.view[data-view="config"]>*{order:3}.view[data-view="config"]>.head{order:0}.view[data-view="config"]>#cfg-tabs{order:1}.view[data-view="config"]>#cfg-peers{order:2}
+ #cfg-peers .fd-card:not(.on){display:none}#cfg-peers .fd-card.on{box-shadow:none}#cfg-peers .fd-card [data-cfg-tab],#cfg-peers .fd-card>h3{display:none}#cfg-peers .fd-card>.fd-facts{grid-column:1/-1}.fd-peers{margin:0 0 14px}
+ .cfg-tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-bottom:14px}.cfg-tabs::-webkit-scrollbar{display:none}.cfg-tabs{gap:0}.cfg-tabs button{flex:none;gap:6px;padding:10px 9px;min-height:40px;font-size:13.5px}
+ .cfg-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--amber);margin-left:-2px}
+ .pl-card{padding:14px 14px}
+ /* the base documents: each row is a stacked item, the name and its state, what it says, when it changed, the link */
+ #cfg-docs .pl-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+ #cfg-docs .pl-table,#cfg-docs .pl-table tbody{display:block;width:100%}
+ #cfg-docs .pl-table tr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:4px 12px;padding:12px 0;border-top:1px solid var(--soft)}
+ #cfg-docs .pl-table tr:first-child{border-top:0}
+ #cfg-docs .pl-table th,#cfg-docs .pl-table td{display:block;padding:0;border:0;min-width:0}
+ #cfg-docs .pl-table tbody th{grid-column:1;grid-row:1}#cfg-docs .pl-table td:nth-child(2){grid-column:2;grid-row:1;justify-self:end}
+ #cfg-docs .pl-table td.pl-says{grid-column:1/-1;max-width:none}
+ #cfg-docs .pl-table td:nth-child(4){grid-column:1;font-size:11.5px;color:var(--muted)}#cfg-docs .pl-table td:nth-child(4) *{font-size:inherit}
+ #cfg-docs .pl-table td.pl-go{grid-column:2;justify-self:end;white-space:nowrap}
+ .pl-dl{grid-template-columns:minmax(0,max-content) minmax(0,1fr);gap:4px 12px}
+ /* Workflows: the explainer is closed unless opened; the run tracker goes vertical */
+ .wf-how{padding:0 12px}.wf-how .help-steps{grid-template-columns:minmax(0,1fr);gap:8px}.wf-top h3{flex:1 1 200px}
+ .wf-run{padding:12px}.wf-run-head .skill-open{margin-left:0}
+ .wf-track{grid-auto-flow:row}.wf-st{padding:0 0 14px 36px}.wf-st:not(:last-child):after{display:none}.wf-dot{position:absolute;left:0;top:0}.wf-st-body{margin-top:0}
+ /* Memories: the filter box takes the row, the selects share the next */
+ .mem-top .explore-search{flex:1 1 100%}.mem-filters select,.mem-filters label input{min-width:0}.mem-top>label{flex:1 1 140px}
+ /* Help */
+ .help-steps{grid-template-columns:minmax(0,1fr);gap:8px}
+ /* the document: the text takes the width, the toolbar wraps */
+ .doc-preview{padding:16px}.doc-body{height:auto;min-height:0}.doc-body.mode-read .doc-preview,.doc-body.mode-preview .doc-preview{max-height:none}
+}
+@media(max-width:560px){
+ /* the floor: the search box gets a row of its own, Settings keeps only its icon */
+ .top .search-wrap{order:6;flex:1 0 100%}
+ .brand{max-width:none;margin-right:auto}
+ .workspace-link .ws-text{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+ .head h1{font-size:24px}
+ .fd-card{grid-template-columns:minmax(0,1fr)}.fd-card>.fd-facts{grid-column:1}
+}
+</style>
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to content</a>
 <div class="app">
-<header class="app-header"><div class="header-inner"><div class="top"><div class="brand"><div class="brand-copy"><b id="brand-co"></b><span id="sub"></span></div></div><nav class="nav" id="nav" aria-label="Main navigation"></nav><div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><label class="sr-only" for="gq">Search this brain</label><input id="gq" class="gq" type="search" placeholder="Search people, notes, documents" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="gq-results"><kbd aria-hidden="true">/</kbd><div class="gq-pop" id="gq-results" role="listbox" aria-label="Search results" hidden></div></div><span class="sync-status" id="brain-health" role="status"></span><button class="help-link" data-v="skills" aria-label="Help" title="Help: what you can ask Codex to do">?</button><button class="workspace-link" id="workspace-link" data-v="admin">Settings</button></div><div class="project-picker" id="project-picker" hidden><label for="project-select" id="project-label"></label><div class="project-select-wrap"><select id="project-select"></select></div></div><nav class="subnav" id="subnav" aria-label="More" hidden></nav></div></header>
+<header class="app-header"><div class="header-inner"><div class="top"><div class="brand"><div class="brand-copy"><b id="brand-co"></b><span id="sub"></span></div></div><nav class="nav" id="nav" aria-label="Main navigation"></nav><div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><label class="sr-only" for="gq">Search this brain</label><input id="gq" class="gq" type="search" placeholder="Search people, notes, documents" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="gq-results"><kbd aria-hidden="true">/</kbd><div class="gq-pop" id="gq-results" role="listbox" aria-label="Search results" hidden></div></div><span class="sync-status" id="brain-health" role="status"></span><button class="help-link" data-v="skills" aria-label="Help" title="Help: what you can ask Codex to do">?</button><button class="workspace-link" id="workspace-link" data-v="admin"><span class="ws-text">Settings</span></button></div><div class="project-picker" id="project-picker" hidden><label for="project-select" id="project-label"></label><div class="project-select-wrap"><select id="project-select"></select></div></div><nav class="subnav" id="subnav" aria-label="More" hidden></nav></div></header>
 <main class="main" id="main-content" tabindex="-1"><div class="view-toolbar"><button class="view-back" id="view-back" type="button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m12 5-7 7 7 7M5 12h14"/></svg><span id="view-back-label">Back</span></button><div class="location" id="location" hidden></div><p class="chat-instruction" id="chat-instruction"></p></div>
 <p class="m" id="view-scope"></p>
 <div id="manual-edits" role="status"></div>
 <div id="compile-notice" role="status"></div>
-  <section class="view" data-view="config"><div class="head"><h1>Configuration</h1><p class="sub">What Codex follows when it works for you: your base documents, the rules for keeping notes, and what the brain records about people and companies.</p></div><div class="cfg-tabs" id="cfg-tabs" role="tablist" aria-label="Parts of the configuration"></div><div id="cfg-about"></div><div id="cfg-docs" role="tabpanel"></div><!-- the settings file as raw text is not shown: About the company above says who the company is, and its old "How we work" prose (APPROVE by typing, background summaries) no longer describes the product --><div id="cfg-profile" hidden><div id="admin-panel"></div></div><div id="cfg-rules" role="tabpanel"></div><div id="cfg-schema" role="tabpanel"></div><div id="cfg-settings" role="tabpanel"></div></section>
+  <section class="view" data-view="config"><div class="head"><h1>Configuration</h1><p class="sub">What Codex follows when it works for you: the rules for keeping notes, what the brain records about people and companies, and your base documents.</p></div><div id="cfg-peers"></div><div class="cfg-tabs" id="cfg-tabs" role="tablist" aria-label="Parts of the configuration"></div><div id="cfg-docs" role="tabpanel"></div><div id="cfg-about"></div><!-- the settings file as raw text is not shown: About the company above says who the company is, and its old "How we work" prose (APPROVE by typing, background summaries) no longer describes the product --><div id="cfg-profile" hidden><div id="admin-panel"></div></div><div id="cfg-rules" role="tabpanel"></div><div id="cfg-schema" role="tabpanel"></div><div id="cfg-settings" role="tabpanel"></div></section>
   <section class="view" data-view="doc"><div id="doc-view"></div></section>
   <section class="view" data-view="entities"><div class="head"><h1>Entities</h1><p class="sub">The people, companies, products and meetings the brain knows about. Pick a name to read what is known about it and where each note came from.</p></div><div id="pe-groups"><div class="ent-wrap" id="ent-wrap"><div class="ent-side"><div class="ent-tools"><div class="ent-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><label class="sr-only" for="ent-q">Find by name, company or email</label><input id="ent-q" type="search" autocomplete="off" spellcheck="false" placeholder="Find by name, company or email" aria-controls="ent-list"></div><div class="ent-chips" id="ent-kinds" role="group" aria-label="Show only"></div><div class="ent-selects"><label for="ent-rel">Relation to us<select id="ent-rel"></select></label><label for="ent-sort">Sort by<select id="ent-sort"></select></label></div></div><p class="ent-count" id="ent-count" role="status" aria-live="polite"></p><p class="sr-only" id="ent-say" role="status" aria-live="polite"></p><div class="ent-list" id="ent-list" role="listbox" tabindex="0" aria-label="Entities. Arrow keys move, Enter opens."></div></div><section class="ent-detail" id="ent-detail" tabindex="-1" aria-label="What is known about the picked entity"></section></div></div></section>
   <section class="view" data-view="notes"><div class="head"><h1>Memories</h1><p class="sub">Everything the brain was told, newest first: notes, decisions and open questions, each with who said it and where it came from.</p></div><div class="explore-toolbar pl-filters mem-filters" id="pm-filters"></div><p class="m" id="pm-status" role="status" aria-live="polite"></p><div id="pm-list"></div><div id="pm-docs"></div></section>
-  <section class="view" data-view="workflows"><div class="head"><h1>Workflows</h1><p class="sub">Repeatable jobs Codex runs for you, step by step: what each does, whether it is on, and where its runs stand.</p></div><div id="pw-files"></div><div id="pw-skills"></div></section>
+  <section class="view" data-view="workflows"><div class="head"><h1>Workflows</h1><p class="sub">Repeatable jobs Codex runs for you, step by step, and the skills you can open in Codex: mentors, everyday work and setup.</p></div><div class="cfg-tabs wf-parts" id="wf-parts" role="tablist" aria-label="Workflows or skills"></div><div id="wf-part-workflows" role="tabpanel" aria-labelledby="wf-tab-workflows"><div id="pw-how"></div><div id="pw-files"></div></div><div id="pw-skills" role="tabpanel" aria-labelledby="wf-tab-skills"></div></section>
   <section class="view" data-view="search"><div class="head"><h1 id="s-title" tabindex="-1">Search</h1><p class="sub" id="s-status" role="status" aria-live="polite"></p></div><div class="search-filters" id="s-filters" aria-label="Search result types"></div><div class="grid" id="s-grid"></div><div class="entity-pager" id="s-pages"></div></section>
-  <section class="view" data-view="home"><div class="head"><h1>Overview</h1></div><div id="h-onboard"></div><div id="ov-inbox"></div><div id="ov-mentors"></div><div id="ov-more"></div><div class="sec" id="h-recent"></div><div id="h-input" hidden></div><div id="h-skills" hidden></div></section>
+  <section class="view" data-view="home"><div class="head"><h1>Overview</h1></div><div id="h-onboard"></div><div id="ov-inbox"></div><div id="ov-more"></div><div id="ov-soon"></div><div id="ov-foundations"></div><div id="ov-skills"></div><div class="sec" id="h-recent"></div><div id="h-input" hidden></div><div id="h-skills" hidden></div></section>
   <section class="view" data-view="explore"><div class="head"><h1>Explore your knowledge</h1></div><div class="explore-list" id="explore-grid"></div></section>
   <section class="view" data-view="skills"><div class="head"><h1>Help</h1><p class="sub">Every task here opens a prepared message in Codex. Nothing is sent until you send it.</p></div><div id="admin-skills"></div></section>
   <section class="view" data-view="projects"><div id="project-detail"></div></section>
@@ -438,11 +518,18 @@ const stale=D.contexts.filter(c=>c.stale&&c.status==="active"&&!c.updating);cons
 const PILLARS=["config","entities","notes","workflows"];
 const VIEWS=[["home","Overview"],["config","Configuration"],["entities","Entities"],["notes","Memories"],["workflows","Workflows"]];let view="home";
 const MORE=[["home","Overview"],["explore","Explore"],["skills","Help"]];
+/* The dashboard usually shares the screen with Codex: a pane 480 to 760 px wide. Below 761 px what explains a section
+   folds into a disclosure, so the facts and links come first; a page without matchMedia (tests, a saved copy) is wide. */
+const NARROW_Q=typeof matchMedia==="function"?matchMedia("(max-width: 760px)"):null;const narrow=()=>!!NARROW_Q?.matches;
 const viewLabel=v=>({doc:"Document",config:"Configuration",entities:"Entities",notes:"Memories",workflows:"Workflows",home:"Overview",contexts:"Topics",explore:"Explore",search:"Search",people:"People & organizations",customers:"Customers",meetings:"Meetings",memories:"Memories",questions:"Needs your attention",projects:"Working folders",admin:"Settings",skills:"Help"})[v]||v;
+/* In a narrow pane the five places scroll sideways: the current one is scrolled into view, and a fade marks the side with more. */
+function navFit(){const n=document.getElementById?.("nav");if(!n||!n.classList||typeof n.scrollWidth!=="number")return;const on=n.querySelector?.(".on");if(on&&n.scrollWidth>n.clientWidth+1&&(on.offsetLeft<n.scrollLeft||on.offsetLeft+on.offsetWidth>n.scrollLeft+n.clientWidth))n.scrollLeft=on.offsetLeft-(n.clientWidth-on.offsetWidth)/2;navFade()}
+function navFade(){const n=document.getElementById?.("nav");if(!n||!n.classList)return;n.classList.toggle("more-left",n.scrollLeft>2);n.classList.toggle("more-right",n.scrollLeft+n.clientWidth<n.scrollWidth-2)}
+if(typeof addEventListener==="function"){addEventListener("resize",()=>navFit());addEventListener("DOMContentLoaded",()=>document.getElementById("nav")?.addEventListener("scroll",navFade,{passive:true}))}
 function nav(){
  /* One flat row. A view outside it (a document, a topic, search) lights the place it was opened from. */
  const group=PILLARS.includes(view)||view==="home"?view:view==="admin"||view==="skills"?view:view==="doc"?(typeof docBack==="function"?docBack()[0]:"config"):["people","customers"].includes(view)?"entities":["contexts","memories","meetings","questions","decisions"].includes(view)?"notes":["projects"].includes(view)?"home":"";
- $("#nav").innerHTML=VIEWS.map(([k,label])=>`<button data-v="${k}" class="${group===k?"on":""}" ${group===k?'aria-current="page"':''}><span>${esc(label)}</span></button>`).join("");
+ $("#nav").innerHTML=VIEWS.map(([k,label])=>`<button data-v="${k}" class="${group===k?"on":""}" ${group===k?'aria-current="page"':''}><span>${esc(label)}</span></button>`).join("");navFit();
  $("#workspace-link").classList.toggle("on",view==="admin");
  $("#workspace-link").setAttribute("aria-current",view==="admin"?"page":"false");
  const parent=["contexts","people","customers","meetings","memories","questions"].includes(view)?"home":null;
@@ -456,41 +543,64 @@ const dashboardSkills=(D.skills||[]).filter(s=>/^(?:gtmb|gtm-brain)-[a-z0-9-]+$/
 const skillLink=s=>"codex://threads/new?path="+encodeURIComponent(D.brain)+"&prompt="+encodeURIComponent(s.command+"\n\n"+s.example);
 let skillGroup="all";
 /* Mentors: the shipped skills that coach a person through GTM work with the brain's context (role "mentor" in the
-   catalogue). Each says its promise, the base document it fills and whether that document is filled yet, or what it
+   catalogue). Each says its promise, the base document it fills and whether that document is written yet, or what it
    produces and which base documents it reads. Links only: a prepared chat the person sends. */
 const mentorSkills=dashboardSkills.filter(s=>s.role==="mentor"&&s.promise);
 const mentorDocRow=slug=>((typeof PL!=="undefined"&&PL&&PL.configuration&&PL.configuration.documents)||[]).find(d=>d.slug===slug)||null;
 const mentorDocName=slug=>mentorDocRow(slug)?.title||(slug==="icp"?"ICP":String(slug).split("-").map((w,i)=>i?w:w[0].toUpperCase()+w.slice(1)).join(" "));
-const mentorDocState=slug=>{const d=mentorDocRow(slug);return !d?"":d.state==="not written"?"not filled yet":d.state};
-const mentorDocBadge=slug=>{const st=mentorDocState(slug);return st?` <span class="pl-state ${st==="approved"?"ok":st==="draft"?"draft":"missing"}" data-mentor-doc="${esc(slug)}">${esc(st)}</span>`:""};
-const mentorDocLine=s=>`<p class="mentor-doc">${s.fills?`<span class="mentor-read">${esc("Fills")} <b>${esc(mentorDocName(s.fills))}</b>${mentorDocBadge(s.fills)}</span>`:`${esc("You get")}: <b>${esc(s.produces||"")}</b>`}${(s.reads||[]).length?`<br>${esc("Reads")}: ${s.reads.map(r=>`<span class="mentor-read">${esc(mentorDocName(r))}${mentorDocBadge(r)}</span>`).join(", ")}`:""}</p>`;
-const mentorCard=s=>`<article class="mentor-card" data-mentor="${esc(s.id)}"><h3>${esc(s.title)}</h3><p class="mentor-promise">${esc(s.promise)}</p>${mentorDocLine(s)}<a class="skill-open" href="${esc(skillLink(s))}" aria-label="${esc("Open in Codex: "+s.title)}">${esc("Open in Codex")}<span aria-hidden="true">↗</span></a><code>${esc(s.command)}</code></article>`;
-/* The Overview's group: mentors whose document is not filled yet come first. */
-function renderMentors(){
- const box=$("#ov-mentors");if(!box)return;
- if(!mentorSkills.length){box.innerHTML="";return}
- const rank=s=>s.fills?(mentorDocState(s.fills)==="not filled yet"?0:1):2,rows=mentorSkills.map((s,i)=>[rank(s),i,s]).sort((a,b)=>a[0]-b[0]||a[1]-b[1]).map(r=>r[2]);
- box.innerHTML=`<section aria-label="${esc("Work with a mentor")}"><h2>${esc("Work with a mentor")}</h2><p class="mentor-lead">${esc("Each mentor coaches you through one piece of GTM work. It reads what this brain already holds, so the questions and the draft are about your company. Opening one prepares a message in Codex; nothing is sent until you send it.")} <button type="button" class="linkbtn" data-v="skills">${esc("Everything Codex can do")} →</button></p><div class="mentor-grid">${rows.map(mentorCard).join("")}</div></section>`;
+/* ---------- Skills: the one list of skills, a small marketplace. It is drawn once, in the Workflows tab under
+   Skills; Help and the Overview link to it. Search and the category chips filter in the page; every count is the
+   number of cards drawn. ---------- */
+const SKILL_CATS=[["mentor","Mentors"],["everyday","Everyday"],["setup","Set up and connect"],["yours","Your skills"]];
+/* the category: the catalogue's role, a brain's own skill is yours; data from before roles falls back on the group */
+const skillCat=s=>s.group==="yours"?"yours":["mentor","everyday","setup"].includes(s.role)?s.role:s.group==="mentor"?"mentor":s.group==="setup"?"setup":"everyday";
+const skillsOrdered=()=>SKILL_CATS.flatMap(([c])=>dashboardSkills.filter(s=>skillCat(s)===c));
+/* a mentor that fills a base document: that document's state, when the render data says it */
+const skillDocState=s=>{const d=s.fills?mentorDocRow(s.fills):null;return d?d.state:""};
+const skillWritten=s=>{const st=skillDocState(s);return !!st&&st!=="not written"};
+const skillHaystack=s=>[s.title,s.id,s.command,s.description,s.promise,s.produces,s.fills?mentorDocName(s.fills):"",...(s.reads||[]).map(mentorDocName),s.example].filter(Boolean).join(" ").toLocaleLowerCase();
+const skillMatches=q=>{const words=q.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);return skillsOrdered().filter(s=>{const h=skillHaystack(s);return words.every(w=>h.includes(w))})};
+function skillDocLine(s){
+ if(skillCat(s)!=="mentor"||!(s.fills||s.produces||(s.reads||[]).length))return "";
+ const st=skillDocState(s),word=st==="not written"?"not written":st==="draft"?"written, draft":st==="approved"?"written, approved":st?"written":"",tone=st==="approved"?"ok":st==="draft"?"draft":"missing";
+ const reads=(s.reads||[]).map(r=>{const d=mentorDocRow(r);return esc(mentorDocName(r))+(d&&d.state==="not written"?` <span class="pl-age">(${esc("not written")})</span>`:"")});
+ return `<p class="sk-doc">${s.fills?`<span>${esc("Fills")} <b>${esc(mentorDocName(s.fills))}</b>${word?` <span class="pl-state ${tone}" data-mentor-doc="${esc(s.fills)}">${esc(word)}</span>`:""}</span>`:s.produces?`<span>${esc("You get")} <b>${esc(s.produces)}</b></span>`:""}${reads.length?`<span>${esc("Reads")} ${reads.join(", ")}</span>`:""}</p>`;
 }
-const skillRow=s=>`<article class="skill-row"${s.role==="mentor"?` data-mentor="${esc(s.id)}"`:""}><div class="skill-body"><h3>${esc(s.title)}</h3><p class="skill-description">${esc(s.role==="mentor"&&s.promise?s.promise:s.description)}</p>${s.role==="mentor"&&s.promise?mentorDocLine(s):""}<p class="skill-example"><span class="skill-example-label">${esc("Try saying")}</span>${esc(s.example)}</p></div><div class="skill-actions"><a class="skill-open" href="${esc(skillLink(s))}" aria-label="${esc("Open in Codex: "+s.title)}">${esc("Open in Codex")}<span aria-hidden="true">↗</span></a><button class="skill-copy" data-skill-copy="${esc(s.id)}" aria-label="${esc("Copy prompt: "+s.title)}">${esc("Copy prompt")}</button><code>${esc(s.command)}</code><span id="copy-status-${esc(s.id)}" class="skill-copy-status" role="status"></span></div></article>`;
-document.addEventListener("click",e=>{const b=e.target.closest("[data-skill-group]");if(!b)return;skillGroup=b.dataset.skillGroup;renderSkillLibrary($("#skill-search")?.value||"")});
+/* A mentor whose document is written opens the same prepared chat: the mentor reads the document and updates it. */
+const skillCard=s=>{const label=skillWritten(s)?"Update in Codex":"Open in Codex",say=s.example&&s.example!==s.command?s.example:"";
+ return `<article class="sk-card" data-skill="${esc(s.id)}" data-skill-cat="${skillCat(s)}"${skillCat(s)==="mentor"?` data-mentor="${esc(s.id)}"`:""}><h3>${esc(s.title)}</h3><p class="sk-promise">${esc(skillCat(s)==="mentor"&&s.promise?s.promise:s.description||"")}</p>${skillDocLine(s)}${say?`<p class="sk-try"><span class="skill-example-label">${esc("Try saying")}</span> <span>“${esc(say)}”</span></p>`:""}<div class="sk-foot"><p class="sk-cmd"><code>${esc(s.command)}</code><button type="button" class="skill-copy" data-skill-copy="${esc(s.id)}" aria-label="${esc("Copy prompt: "+s.title)}">${esc("Copy prompt")}</button></p><span id="copy-status-${esc(s.id)}" class="skill-copy-status" role="status"></span><a class="skill-open" href="${esc(skillLink(s))}" aria-label="${esc(label+": "+s.title)}">${esc(label)}<span aria-hidden="true">↗</span></a></div></article>`};
+document.addEventListener("click",e=>{const t=e.target;if(!t?.closest)return;
+ const b=t.closest("[data-skill-group]");if(b){skillGroup=b.dataset.skillGroup;renderSkillLibrary($("#skill-search")?.value||"");return}
+ if(t.closest("[data-skill-clear]")){const i=$("#skill-search");if(i){i.value="";i.focus?.()}skillGroup="all";renderSkillLibrary("")}});
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-skill-copy]');if(!b)return;const skill=dashboardSkills.find(s=>s.id===b.dataset.skillCopy);if(!skill)return;const prompt=skill.command+'\n\n'+skill.example,status=$('#copy-status-'+skill.id);try{await navigator.clipboard.writeText(prompt);status.textContent='Copied. Paste in Codex.'}catch{status.innerHTML=`<label>${esc('Select and copy this prompt:')}<textarea readonly aria-label="${esc('Prompt to copy')}">${esc(prompt)}</textarea></label>`;status.querySelector('textarea')?.select()}});
-
 function renderSkillLibrary(query=""){
- const q=query.trim().toLocaleLowerCase(),matches=dashboardSkills.filter(s=>[s.title,s.description,s.promise||"",s.example,s.command].join(" ").toLocaleLowerCase().includes(q));
- const groups=[["mentor","Work with a mentor"],["daily","Everyday work"],["knowledge","Shared knowledge"],["projects","Projects"],["setup","Setup and preferences"],["yours","Your skills"]];
- if(!groups.some(([id])=>id===skillGroup))skillGroup="all";
- const pill=(id,label,count)=>`<button class="filter-pill${skillGroup===id?" selected":""}" data-skill-group="${id}" aria-pressed="${skillGroup===id}">${esc(label)}<span class="pill-count">${count}</span></button>`;
- $("#skill-groups").innerHTML=pill("all","All tasks",matches.length)+groups.map(([id,label])=>pill(id,label,matches.filter(s=>s.group===id).length)).join("");
- const sections=groups.filter(([id])=>skillGroup==="all"||skillGroup===id).map(([id,label])=>[label,matches.filter(s=>s.group===id)]).filter(([,rows])=>rows.length);
- $("#skill-results").innerHTML=sections.map(([label,rows])=>`<div class="skill-group-head"><span>${esc(label)}</span><span class="cnt">${rows.length}</span></div>${rows.map(skillRow).join("")}`).join("")||(matches.length&&skillGroup!=="all"?`<p class="quiet-state" role="status">${esc("Nothing matches in this group.")} <button class="linkbtn" data-skill-group="all">${esc("Show all tasks")} (${matches.length})</button></p>`:`<p class="quiet-state" role="status">${esc("No matching skills. Try another name or task.")}</p>`);
+ if(!dashboardSkills.length)return;
+ const q=String(query||"").trim(),matches=skillMatches(q),have=new Set(dashboardSkills.map(skillCat));
+ const cats=SKILL_CATS.filter(([id])=>id!=="yours"||have.has("yours"));
+ if(skillGroup!=="all"&&!cats.some(([id])=>id===skillGroup))skillGroup="all";
+ const chip=(id,label,count)=>`<button type="button" class="filter-pill${skillGroup===id?" selected":""}" data-skill-group="${id}" aria-pressed="${skillGroup===id}">${esc(label)}<span class="pill-count">${count}</span></button>`;
+ $("#skill-groups").innerHTML=chip("all","All",matches.length)+cats.map(([id,label])=>chip(id,label,matches.filter(s=>skillCat(s)===id).length)).join("");
+ const sections=cats.filter(([id])=>skillGroup==="all"||skillGroup===id).map(([id,label])=>[id,label,matches.filter(s=>skillCat(s)===id)]).filter(([,,rows])=>rows.length);
+ const shown=sections.reduce((n,[,,rows])=>n+rows.length,0),catLabel=(cats.find(([id])=>id===skillGroup)||[])[1];
+ $("#skill-count").textContent=q||skillGroup!=="all"?`${shown} of ${dashboardSkills.length} ${dashboardSkills.length===1?"skill":"skills"}`:`${shown} ${shown===1?"skill":"skills"}`;
+ $("#skill-clear").hidden=!q;
+ $("#skill-results").innerHTML=sections.map(([id,label,rows])=>`<h3 class="sk-cat" data-sk-cat="${id}">${esc(label)} <span class="pl-count">${rows.length}</span></h3>${rows.map(skillCard).join("")}`).join("")||
+  (matches.length?`<p class="quiet-state sk-empty" role="status">${esc(`Nothing in ${catLabel} matches “${q}”.`)} <button type="button" class="linkbtn" data-skill-group="all">${esc("Show all categories")} (${matches.length})</button></p>`
+  :`<p class="quiet-state sk-empty" role="status">${esc(`No skill matches “${q}”. Try one word for the work, such as meeting, voice or website, or a command such as /gtmb-sync.`)} <button type="button" class="linkbtn" data-skill-clear>${esc("Show all skills")}</button></p>`);
 }
 function renderSkills(){
- if(!dashboardSkills.length){$("#h-skills").innerHTML="";$("#admin-skills").innerHTML=`<h2>${esc("Skills")}</h2><p>${esc("The skill list is unavailable. Refresh the dashboard with your current GTM Brain plugin.")}</p>`;return}
+ if(!dashboardSkills.length){$("#h-skills").innerHTML="";$("#pw-skills").innerHTML=`<section class="sec pl-card"><h2>${esc("Skills")}</h2><p class="m">${esc("The skill list is unavailable. Refresh the dashboard with your current GTM Brain plugin.")}</p></section>`;$("#admin-skills").innerHTML=`<h2>${esc("Skills")}</h2><p>${esc("The skill list is unavailable. Refresh the dashboard with your current GTM Brain plugin.")}</p>`;return}
  $("#h-skills").innerHTML="";
-  const steps=[["Pick a task","Every row below is work GTM Brain can take on for you. The mentors come first: each coaches you through one piece of GTM work with what this brain already knows."],["A Codex chat opens","The request is already typed into a new conversation. Read it, and change it if you want."],["You press Send","Nothing runs until you do. Then the work happens and what it learns is recorded."]];
- $("#admin-skills").innerHTML=`<ol class="help-steps">${steps.map(([title,body],i)=>`<li><b>${i+1}</b><div><strong>${esc(title)}</strong><p>${esc(body)}</p></div></li>`).join("")}</ol><div class="help-header"><h2>${esc("Ways to work in Codex")}</h2>${searchField("skill-search","Search tasks","Search tasks, for example prepare for a meeting","")}</div><p class="entity-note">${esc("Three kinds of skills. Shipped with GTM Brain: they come with the plugin and update with it. Your skills: made with /gtmb-skill or installed from GitHub, kept in this brain, so teammates get them. Codex's own skills (made with $skill-creator, in ~/.agents/skills) are yours alone and are not listed here.")}</p><div class="explore-filters help-filters" id="skill-groups" role="group" aria-label="${esc("Task groups")}"></div><div class="scroll-list help-list" id="skill-results" tabindex="0" role="region" aria-label="${esc("Ways to work in Codex")}"></div>`;
- $("#skill-search").oninput=e=>renderSkillLibrary(e.target.value);renderSkillLibrary();
+ /* Help is the short how-to; the skills themselves are listed once, in the Workflows tab */
+ const steps=[["Pick a skill","Every card under Workflows, Skills, is work GTM Brain can take on for you. The mentors come first: each coaches you through one piece of GTM work with what this brain already knows."],["A Codex chat opens","The request is already typed into a new conversation. Read it, and change it if you want."],["You press Send","Nothing runs until you do. Then the work happens and what it learns is recorded."]];
+ $("#admin-skills").innerHTML=`<ol class="help-steps">${steps.map(([title,body],i)=>`<li><b>${i+1}</b><div><strong>${esc(title)}</strong><p>${esc(body)}</p></div></li>`).join("")}</ol><p class="entity-note">${esc("Three kinds of skills. Shipped with GTM Brain: they come with the plugin and update with it. Your skills: made with /gtmb-skill or installed from GitHub, kept in this brain, so teammates get them. Codex's own skills (made with $skill-creator, in ~/.agents/skills) are yours alone and are not listed here.")}</p><p class="help-go"><button type="button" class="skill-open" data-v="workflows" data-wf-part="skills">${esc(`Browse all ${dashboardSkills.length} skills`)}<span aria-hidden="true">→</span></button></p>`;
+ $("#pw-skills").innerHTML=`<section class="sec pl-card sk-market" aria-labelledby="sk-title"><h2 id="sk-title">${esc("Skills")} <span class="pl-count">${dashboardSkills.length}</span></h2><p class="m">${esc("Work Codex can take on for you. Mentors come first: each coaches you through one piece of GTM work with what this brain already holds. Opening a skill prepares a message in Codex; nothing happens until you send it.")}</p><div class="sk-search"><label class="sk-label" for="skill-search">${esc("Search skills")}</label><div class="sk-search-row"><div class="explore-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><input id="skill-search" type="search" autocomplete="off" placeholder="${esc("Name, command or task, for example voice")}" aria-describedby="skill-count"></div><button type="button" class="skill-copy" id="skill-clear" data-skill-clear hidden>${esc("Clear")}</button><span class="sk-count" id="skill-count" role="status" aria-live="polite"></span></div></div><div class="explore-filters sk-chips" id="skill-groups" role="group" aria-label="${esc("Skill categories")}"></div><div class="sk-grid" id="skill-results"></div></section>`;
+ $("#skill-search").oninput=e=>{renderSkillLibrary(e.target.value);if(typeof publishRoute==="function")publishRoute(true)};renderSkillLibrary();
+}
+/* The Overview's one line to them, under Foundations. */
+function renderSkillsLink(){
+ const box=$("#ov-skills");if(!box)return;
+ box.innerHTML=dashboardSkills.length?`<p class="ov-skills"><button type="button" class="linkbtn" data-v="workflows" data-wf-part="skills">${esc("All skills, mentors first")} <span aria-hidden="true">→</span></button></p>`:"";
 }
 /* Source disclosures stay in the dashboard. Only explicitly labelled links leave it.
    An opaque connector ID is evidence, not a URL; never invent an account or search route. */
@@ -1144,15 +1254,76 @@ const kindTitle=k=>({person:"People",organization:"Organizations",product:"Produ
 const plUnreadMsg=`<p class="empty pl-warn">${esc("This tab could not be read from the brain's files. The other tabs and More still work. Ask Codex to check the brain.")}</p>`;
 const plEmpty=D.pillarsUnread?plUnreadMsg:`<p class="empty">${esc("Refresh the dashboard in Codex to see this tab: it was made by an older version.")}</p>`;
 const plUnread=s=>Array.isArray(PL?.unread)&&PL.unread.includes(s);
+/* ---------- Foundations: the rules, the schema and the base documents, what every piece of work is done from.
+   One reader for the Overview's section and the Configuration tab's three cards, so both say the same. Every figure
+   is counted from D.pillars; a part with nothing missing lists nothing. Links only: a view of the dashboard, or a
+   prepared chat the person sends. ---------- */
+const andList=a=>a.length<2?a.join(""):a.slice(0,-1).join(", ")+" and "+a[a.length-1];
+/* A foundation's chat link opens its skill by command (/gtmb-rules, /gtmb-schema, the mentor that fills the
+   document), like a mentor card; the sentence form is the fallback when the catalogue has no such skill. */
+/* What is done without a base document nobody wrote: the kinds of work its own header says it applies to. */
+const docWithout=d=>{const all=d.applies_to||[];if(!all.length)return "the work it would guide is done without it";return `${all.length>4?all.slice(0,4).join(", ")+" and more":andList(all)} ${all.length===1?"is":"are"} done without it`};
+const docMentor=d=>mentorSkills.find(s=>s.fills===d.slug)||null;
+const docWriteHref=d=>docMentor(d)?skillLink(docMentor(d)):askLink(`Help me write our ${d.title} document.`);
+const ruleGroupCounts=R=>[(R.own_rules||R.own||[]).length,(R.placement_rows||[]).length,(R.ask?.rows||[]).length];
+function foundations(){
+ if(!PL||plUnread("configuration"))return [];
+ const C=PL.configuration,R=C.rules,S=C.schema,P=PL.memories?.population||null,docs=C.documents.filter(d=>d.base);
+ const skill=id=>dashboardSkills.find(s=>s.id===id),work=(id,fallback)=>skill(id)?skillLink(skill(id)):askLink(fallback);
+ const changed=x=>x.path&&x.changed?`${esc("last changed")} ${whenText(x.changed)}`:"";
+ const [own,where,ask]=ruleGroupCounts(R),ruleCount=own+where+ask,groups=[own,where,ask].filter(Boolean).length;
+ const rules={key:"rules",tab:"rules",title:"Rules",use:"Codex follows them on every save: what to keep, where each file goes, and when to ask your tools instead of its own notes.",
+  facts:[`<b>${ruleCount}</b> ${esc(ruleCount===1?"rule":"rules")} ${esc("in")} <b>${groups}</b> ${esc(groups===1?"group":"groups")}`,changed(R)].filter(Boolean),weak:[],
+  open:"Open the rules",chat:"Work on the rules in Codex",href:work("gtmb-rules",R.path?"Let's go through our rules: what should change?":"Set up our rules for this brain.")};
+ if(!R.path)rules.weak.push("No rules file yet: only the built-in rules apply.");
+ else if(!own)rules.weak.push("No rule of your own yet: Codex follows only the rules GTM Brain ships with.");
+ const unreadLines=(R.ask?.problems||[]).length;
+ if(unreadLines)rules.weak.push(`${unreadLines} ${unreadLines===1?"line":"lines"} about where Codex looks first cannot be read, so ${unreadLines===1?"it is":"they are"} ignored.`);
+ const fieldCount=S.kinds.reduce((n,k)=>n+(k.fields||[]).length+(k.subtypes||[]).reduce((m,st)=>m+(st.fields||[]).length,0),0);
+ const schema={key:"schema",tab:"schema",title:"Schema",use:"Codex keeps these details about each person, company and product, asks for a required one that is missing, and saves only the connections listed here.",
+  facts:[`<b>${S.kinds.length}</b> ${esc(S.kinds.length===1?"kind":"kinds")}, <b>${fieldCount}</b> ${esc(fieldCount===1?"field":"fields")}, <b>${S.relations.length}</b> ${esc(S.relations.length===1?"connection type":"connection types")}`,changed(S)].filter(Boolean),weak:[],
+  open:"Open the schema",chat:"Work on the schema in Codex",href:work("gtmb-schema",S.path?"Let's review what the brain keeps about each kind: the fields and the connection types.":"Set up what the brain keeps about each kind.")};
+ if(S.error)schema.weak.push("The schema file cannot be read, so only the built-in kinds apply.");
+ else if(!S.path)schema.weak.push("No schema file yet: only the built-in kinds apply.");
+ else if(P?.schema_untouched)schema.weak.push("Still the schema GTM Brain ships with: nothing in it was chosen for your company.");
+ else if(P?.missing_required)schema.weak.push(`${P.missing_required} of ${P.entities_total} ${P.entities_total===1?"person or company":"people and companies"} ${P.missing_required===1?"misses":"miss"} a detail marked as required.`);
+ const written=docs.filter(d=>d.state!=="not written"),unwritten=docs.filter(d=>d.state==="not written"),drafts=docs.filter(d=>d.state==="draft"),next=unwritten[0]||null;
+ const chip=d=>{const tone=d.state==="approved"?"ok":d.state==="draft"?"draft":"missing",label=`${d.title}: ${d.state}`;
+  return d.path&&d.state!=="not written"?`<button type="button" class="fd-chip pl-state ${tone}" data-doc="${esc(d.path)}" data-fd-doc="${esc(d.slug)}" data-state="${esc(d.state)}" title="${esc(label)}" aria-label="${esc(label)}">${esc(d.title)}</button>`:`<span class="fd-chip pl-state ${tone}" data-fd-doc="${esc(d.slug)}" data-state="${esc(d.state)}" title="${esc(label)}">${esc(d.title)}<span class="sr-only">: ${esc(d.state)}</span></span>`};
+ const base={key:"docs",tab:"docs",title:"Base documents",use:"Codex reads the matching one in full before it writes, plans or researches: your strategy, who you sell to, your market, your voice and your look.",
+  facts:[`<b>${written.length}</b> ${esc("of")} <b>${docs.length}</b> ${esc("written")}`],chips:docs.map(chip).join(""),weak:[],
+  open:"Open the base documents",chat:next?`Write ${next.title} in Codex`:"Review them in Codex",href:next?docWriteHref(next):askLink("Let's review our base documents: which one is out of date or too thin?")};
+ for(const d of unwritten.slice(0,2))base.weak.push(`${d.title} not written: ${docWithout(d)}.`);
+ if(unwritten.length>2)base.weak.push(`Not written either: ${andList(unwritten.slice(2).map(d=>d.title))}.`);
+ for(const d of drafts.slice(0,2))base.weak.push(`${d.title} is a draft: Codex follows it and says it is not approved.`);
+ return [rules,schema,base];
+}
+/* use: "show" the sentence on what Codex uses it for, "fold" it under a disclosure (a narrow pane), or "none". */
+const fdCard=(f,where,compact,use=compact?"none":"show")=>`<article class="fd-card${f.weak.length?" weak":""}${where==="config"&&cfgTab===f.tab?" on":""}" data-fd="${f.key}"><h3>${esc(f.title)}</h3>${use==="show"?`<p class="fd-use">${esc(f.use)}</p>`:""}<p class="fd-facts">${f.facts.join(` <span aria-hidden="true">·</span> `)}</p>${f.chips?`<p class="fd-chips">${f.chips}</p>`:""}${f.weak.length?`<ul class="fd-weak">${f.weak.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>`:""}<p class="fd-links">${where==="config"?`<button type="button" class="linkbtn" data-cfg-tab="${f.tab}">${esc(f.open.replace(/^Open/,"Show"))} <span aria-hidden="true">↓</span></button>`:`<button type="button" class="linkbtn" data-v="config" data-cfg-open="${f.tab}">${esc(f.open)} <span aria-hidden="true">→</span></button>`}<a class="fd-go" href="${esc(f.href)}">${esc(f.chat)} <span aria-hidden="true">↗</span></a></p>${use==="fold"?`<details class="fd-why"><summary>${esc("What Codex uses it for")}</summary><p class="fd-use">${esc(f.use)}</p></details>`:""}</article>`;
+/* The Overview's section, above the mentors. It stays when nothing is missing, shorter. */
+function renderFoundations(){
+ const box=$("#ov-foundations");if(!box)return;
+ const parts=foundations();if(!parts.length){box.innerHTML="";return}
+ const compact=parts.every(f=>!f.weak.length),fold=narrow(),lead="What Codex works from, most important first: the rules and the schema decide what the brain keeps, the base documents say what your work must follow. What is missing here is missing from everything Codex does for you.";
+ box.innerHTML=`<section class="fd${compact?" compact":""}" aria-label="${esc("Foundations")}"><div class="ov-head"><h2>${esc("Foundations")}</h2>${compact?`<span class="pl-age">${esc("nothing missing")}</span>`:""}</div>${compact?"":fold?`<details class="fd-why fd-lead"><summary>${esc("What these are")}</summary><p class="mentor-lead">${esc(lead)}</p><ul class="fd-uses">${parts.map(f=>`<li><b>${esc(f.title)}</b>: ${esc(f.use)}</li>`).join("")}</ul></details>`:`<p class="mentor-lead">${esc(lead)}</p>`}<div class="fd-grid">${parts.map(f=>fdCard(f,"home",compact,compact||fold?"none":"show")).join("")}</div></section>`;
+}
+/* The Configuration tab's landing: the same three as peers, before the detail of the one picked. */
+function renderConfigPeers(){
+ const box=$("#cfg-peers");if(!box)return;
+ const parts=foundations();
+ box.innerHTML=parts.length?`<div class="fd-grid fd-peers" role="group" aria-label="${esc("The three parts of the configuration")}">${parts.map(f=>fdCard(f,"config",false,narrow()?"fold":"show")).join("")}</div>`:"";
+}
 function renderConfig(){
  if(!PL){$("#cfg-docs").innerHTML=plEmpty;return}
  if(plUnread("configuration")){$("#cfg-docs").innerHTML=plUnreadMsg;return}
  const C=PL.configuration,R=C.rules,S=C.schema,T=C.settings;
  const baseDocs=C.documents.filter(d=>d.base);
  const docWho=d=>d.by||d.changed_by?` <span class="pl-age">${esc("by")} ${esc(authorName(d.by||d.changed_by))}</span>`:"";
- const docRow=d=>d.path?`<tr data-doc="${esc(d.path)}"><th scope="row"><button class="linkbtn pl-doc-open" data-doc="${esc(d.path)}">${esc(d.title)}</button>${d.base&&!d.starter?` <span class="pl-age">${esc("added by the team")}</span>`:""}${d.page&&d.page.label?` <span class="pl-age">${esc(d.page.label)}</span> <a class="pl-chat" href="${esc(askLink(d.page.ask))}">${esc(d.page.action)} <span aria-hidden="true">↗</span></a>`:""}</th><td>${stateBadge(d.state)}</td><td>${d.changed?whenText(d.changed)+docWho(d):`<span class="pl-age">${esc("not saved yet")}</span>`}</td><td class="pl-go">${d.state==="not written"?`<a class="pl-chat" href="${esc(askLink(`Help me write our ${d.title} document.`))}" aria-label="${esc("Write "+d.title+" with Codex")}">${esc("Write it with Codex")} <span aria-hidden="true">↗</span></a>`:`<span aria-hidden="true">${esc(LIVE&&EDIT_TOKEN?"Open and edit":"Open")} →</span>`}</td></tr>`
-  :`<tr><th scope="row">${esc(d.title)}</th><td>${stateBadge(d.state)}</td><td><span class="pl-age">${esc("not written yet")}</span></td><td class="pl-go"><a class="pl-chat" href="${esc(askLink(`Help me write our ${d.title} document.`))}" aria-label="${esc("Write "+d.title+" with Codex")}">${esc("Write it with Codex")} <span aria-hidden="true">↗</span></a></td></tr>`;
- $("#cfg-docs").innerHTML=`<section class="sec pl-card"><h2>${esc("Base documents")} <span class="pl-count">${baseDocs.filter(d=>d.state!=="not written").length} / ${baseDocs.length} ${esc("written")}</span></h2><p class="m">${esc("What your company's work must follow: strategy, voice, who you sell to. Codex reads the matching one before it writes or plans. Click a document to read and edit it.")}</p><div class="pl-table-wrap"><table class="pl-table"><thead><tr><th>${esc("Document")}</th><th>${esc("State")}</th><th>${esc("Last changed")}</th><th><span class="sr-only">${esc("Open")}</span></th></tr></thead><tbody>${baseDocs.map(docRow).join("")}</tbody></table></div></section>`;
+ /* a written document: what it says in one line and the work that reads it; an unwritten one: what is done without it */
+ const docSays=d=>d.state==="not written"?`<span class="pl-age">${esc(docWithout(d).replace(/^./,c=>c.toUpperCase())+".")}</span>`:`${d.gist?`<span class="doc-gist">${esc(d.gist)}</span>`:`<span class="pl-age">${esc("Open it to read what it says.")}</span>`}${(d.applies_to||[]).length?`<br><span class="pl-age">${esc("Codex reads it before: "+d.applies_to.join(", "))}</span>`:""}`;
+ const docRow=d=>d.path?`<tr data-doc="${esc(d.path)}"><th scope="row"><button class="linkbtn pl-doc-open" data-doc="${esc(d.path)}">${esc(d.title)}</button>${d.base&&!d.starter?` <span class="pl-age">${esc("added by the team")}</span>`:""}${d.page&&d.page.label?` <span class="pl-age">${esc(d.page.label)}</span> <a class="pl-chat" href="${esc(askLink(d.page.ask))}">${esc(d.page.action)} <span aria-hidden="true">↗</span></a>`:""}</th><td>${stateBadge(d.state)}</td><td class="pl-says">${docSays(d)}</td><td>${d.changed?whenText(d.changed)+docWho(d):`<span class="pl-age">${esc("not saved yet")}</span>`}</td><td class="pl-go">${d.state==="not written"?`<a class="pl-chat" href="${esc(askLink(`Help me write our ${d.title} document.`))}" aria-label="${esc("Write "+d.title+" with Codex")}">${esc("Write it with Codex")} <span aria-hidden="true">↗</span></a>`:`<span aria-hidden="true">${esc(LIVE&&EDIT_TOKEN?"Open and edit":"Open")} →</span>`}</td></tr>`
+  :`<tr><th scope="row">${esc(d.title)}</th><td>${stateBadge(d.state)}</td><td class="pl-says">${docSays(d)}</td><td><span class="pl-age">${esc("not written yet")}</span></td><td class="pl-go"><a class="pl-chat" href="${esc(askLink(`Help me write our ${d.title} document.`))}" aria-label="${esc("Write "+d.title+" with Codex")}">${esc("Write it with Codex")} <span aria-hidden="true">↗</span></a></td></tr>`;
+ $("#cfg-docs").innerHTML=`<section class="sec pl-card"><h2>${esc("Base documents")} <span class="pl-count">${baseDocs.filter(d=>d.state!=="not written").length} / ${baseDocs.length} ${esc("written")}</span></h2><p class="m">${esc("What your company's work must follow: strategy, voice, who you sell to. Codex reads the matching one before it writes or plans. A mentor fills each of the first five with you. Click a document to read and edit it.")}</p><div class="pl-table-wrap"><table class="pl-table"><thead><tr><th>${esc("Document")}</th><th>${esc("State")}</th><th>${esc("What it says")}</th><th>${esc("Last changed")}</th><th><span class="sr-only">${esc("Open")}</span></th></tr></thead><tbody>${baseDocs.map(docRow).join("")}</tbody></table></div></section>`;
  renderRulesBrowser();renderSchemaBrowser();
  const team=(D.admin?.team||[]),byName=new Map((PL.entities?.rows||[]).map(e=>[e.name.toLowerCase(),e.id]));
  const person=p=>byName.has(String(p.name).toLowerCase())?`<button type="button" class="tag" data-entity-id="${esc(byName.get(String(p.name).toLowerCase()))}">${esc(p.name)}</button>`:`<span class="tag">${esc(p.name)}</span>`;
@@ -1227,16 +1398,19 @@ function renderSchemaBrowser(){
 }
 function renderConfigTabs(){
  if(!PL||plUnread("configuration"))return;
- const C=PL.configuration,tabs=[["docs","Company and base documents",C.documents.filter(d=>d.base).length],["rules","Rules",(C.rules.placement_rows||[]).length+(C.rules.own_rules||C.rules.own||[]).length+(C.rules.ask?.rows||[]).length],["schema","Schema",C.schema.kinds.length]];
+ const C=PL.configuration,tabs=[["rules","Rules",ruleGroupCounts(C.rules).reduce((a,b)=>a+b,0)],["schema","Schema",C.schema.kinds.length],["docs","Base documents and company",C.documents.filter(d=>d.base).length]];
  if(!tabs.some(([k])=>k===cfgTab))cfgTab="docs";
- $("#cfg-tabs").innerHTML=tabs.map(([k,label,n])=>`<button type="button" role="tab" id="cfg-tab-${k}" aria-selected="${cfgTab===k}" aria-controls="cfg-${k}" tabindex="${cfgTab===k?0:-1}" data-cfg-tab="${k}" class="${cfgTab===k?"on":""}">${esc(label)}${n===null?"":` <span class="pl-count">${n}</span>`}</button>`).join("");
+ /* a part where something is missing carries a dot; in a narrow pane the tabs come first and the peer cards above them fold away */
+ let weak=new Set();try{weak=new Set(foundations().filter(f=>f.weak.length).map(f=>f.tab))}catch{}
+ $("#cfg-tabs").innerHTML=tabs.map(([k,label,n])=>`<button type="button" role="tab" id="cfg-tab-${k}" aria-selected="${cfgTab===k}" aria-controls="cfg-${k}" tabindex="${cfgTab===k?0:-1}" data-cfg-tab="${k}" class="${cfgTab===k?"on":""}">${esc(label)}${n===null?"":` <span class="pl-count">${n}</span>`}${weak.has(k)?`<span class="cfg-dot" title="${esc("Something here is missing")}"><span class="sr-only">${esc(", something here is missing")}</span></span>`:""}</button>`).join("");
  for(const [k,id] of [["docs","#cfg-docs"],["docs","#cfg-about"],["docs","#cfg-profile"],["rules","#cfg-rules"],["schema","#cfg-schema"]])$(id).hidden=cfgTab!==k;$("#cfg-settings").hidden=true;
+ renderConfigPeers();
 }
 document.addEventListener("click",e=>{const t=e.target;if(!t?.closest)return;
  const tab=t.closest("[data-cfg-tab]");if(tab){cfgTab=tab.dataset.cfgTab;try{sessionStorage.setItem("gtm-cfg",cfgTab)}catch{}renderConfigTabs();return}
  const g=t.closest("[data-cfg-rule-group]");if(g){cfgRuleGroup=g.dataset.cfgRuleGroup;renderRulesBrowser();return}
  const k=t.closest("[data-cfg-kind]");if(k){document.getElementById("cfg-kind-"+k.dataset.cfgKind)?.scrollIntoView?.({block:"start",behavior:"smooth"});return}});
-document.addEventListener("keydown",e=>{const tab=e.target?.closest?.("[data-cfg-tab]");if(!tab||!["ArrowRight","ArrowLeft"].includes(e.key))return;const order=["docs","rules","schema"],i=(order.indexOf(cfgTab)+(e.key==="ArrowRight"?1:-1)+order.length)%order.length;cfgTab=order[i];renderConfigTabs();document.getElementById("cfg-tab-"+cfgTab)?.focus?.()});
+document.addEventListener("keydown",e=>{const tab=e.target?.closest?.("[data-cfg-tab]");if(!tab||!["ArrowRight","ArrowLeft"].includes(e.key))return;const order=["rules","schema","docs"],i=(order.indexOf(cfgTab)+(e.key==="ArrowRight"?1:-1)+order.length)%order.length;cfgTab=order[i];renderConfigTabs();document.getElementById("cfg-tab-"+cfgTab)?.focus?.()});
 document.addEventListener("input",e=>{const id=e.target?.id;if(id!=="cfg-rule-q"&&id!=="cfg-schema-q")return;const pos=e.target.selectionStart;if(id==="cfg-rule-q"){cfgRuleQ=e.target.value;renderRulesBrowser()}else{cfgSchemaQ=e.target.value;renderSchemaBrowser()}const again=document.getElementById(id);again?.focus?.();try{again?.setSelectionRange?.(pos,pos)}catch{}});
 /* Entities: a list to pick from on the left (filter as you type, kind chips, relation and sort), the picked one on
    the right (who or what it is, relation to us, details, links, history, notes). View only. The list draws a window
@@ -1681,25 +1855,78 @@ const pwState=f=>!f.ok?["Needs fixing","draft"]:f.status==="active"?["On","ok"]:
 const pwStarts=t=>!t||t==="manual"?"You start it by asking Codex":/^(every|each|daily|weekly|monthly|on |at |when )/i.test(t)?"Starts "+t.charAt(0).toLowerCase()+t.slice(1):"Starts on: "+t;
 const pwRunTitle=(f,r)=>{const rest=String(r.id||"").replace(new RegExp("^"+String(f.slug||"").replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"-?"),"").replace(/^\d{4}-\d{2}-\d{2}-?/,"").replace(/-\d{3,4}$/,"").replace(/-/g," ").trim();return rest?rest.charAt(0).toUpperCase()+rest.slice(1):"Run"};
 const pwRunLine=(f,r)=>r.ended?(r.ended.how==="done"?"Finished":"Stopped before the end")+" "+ageText(r.ended.at):r.step?`On step ${r.step.n} of ${r.step.of}${r.step.title?": "+r.step.title:""}${r.step.due?", due "+r.step.due:""}`:"Started, no step pending";
-function pwCard(f){
- const [word,tone]=pwState(f),live=f.runs.filter(r=>!r.ended),last=f.runs[0],waiting=live.find(r=>r.waiting),open=pwOpen===f.slug;
- const runs=n=>`${n} ${n===1?"run":"runs"} in progress`;
- return `<article class="pl-row wf-card${open?" open":""}" data-pw="${esc(f.slug)}"><div class="pl-row-main"><h3><button type="button" class="linkbtn" data-pw-open="${esc(f.slug)}" aria-expanded="${open}">${esc(f.title)}</button></h3>${f.about?`<p class="wf-about">${esc(f.about)}</p>`:""}<div class="pl-meta"><span class="pl-state ${tone}">${esc(word)}</span><span>${esc(pwStarts(f.trigger))}</span><span>${esc(runs(live.length))}</span>${last?`<span>${esc("Last run")}: ${esc(pwRunLine(f,last).replace(/^./,c=>c.toLowerCase()))}</span>`:`<span class="pl-age">${esc("never run")}</span>`}</div>${waiting?`<p class="wf-wait"><b>${esc("Waiting for you")}:</b> ${esc(waiting.waiting)}</p>`:""}${f.problems.length?`<ul class="pl-list">${f.problems.map(p=>`<li class="pl-warn">${esc(p)}</li>`).join("")}</ul>`:""}`+
-  (open?`<div class="wf-detail">${(f.step_titles||[]).length?`<h4>${esc("Steps")}</h4><ol class="wf-steps">${f.step_titles.map((t,i)=>{const here=live.filter(r=>r.step?.n===i+1).length;return `<li class="${here?"here":""}"><span>${esc(t||"Step "+(i+1))}</span>${here?` <span class="pl-state ok">${esc(here===1?"a run is here":here+" runs are here")}</span>`:""}</li>`}).join("")}</ol>`:f.steps?`<p class="m">${f.steps} ${esc("steps")}</p>`:""}`+
-   `<h4>${esc("Runs")}</h4>${f.runs.length?`<ul class="pl-list pl-runs">${f.runs.slice(0,12).map(r=>`<li><b>${esc(pwRunTitle(f,r))}</b> <span class="pl-age">${esc("started")} ${r.started?whenText(r.started):"?"}${r.by?" "+esc("by")+" "+esc(authorName(r.by)):""}</span><br>${esc(pwRunLine(f,r))}${r.step&&!r.ended?` · ${esc(r.step.status)}`:""}${r.waiting?`<br><span class="pl-age">${esc("Waiting for you")}: ${esc(r.waiting)}</span>`:""}<br><code class="pl-path">${esc(r.id)}</code></li>`).join("")}</ul>${f.runs.length>12?`<p class="pl-age">${f.runs.length-12} ${esc("older runs")}</p>`:""}`:`<p class="pl-age">${esc("No runs yet. Ask Codex to start it:")} "${esc("run the "+f.title+" workflow")}".</p>`}`+
-   `<details class="fold"><summary>${esc("Details")}</summary><dl class="pl-dl"><dt>${esc("File")}</dt><dd><code class="pl-path">${esc(f.path||"")}</code></dd><dt>${esc("Status in the file")}</dt><dd>${esc(f.status)}</dd><dt>${esc("Trigger in the file")}</dt><dd>${esc("Trigger")}: ${esc(f.trigger)}</dd>${f.changed?`<dt>${esc("Last changed")}</dt><dd>${whenText(f.changed)}</dd>`:""}</dl>${f.path?`<button type="button" class="linkbtn" data-doc="${esc(f.path)}">${esc("Read the whole file")}</button>`:""}</details></div>`:"")+
-  `</div>${rowLinks(null,`Let's discuss the ${f.title} workflow (${f.path}): where its runs stand and what is next.`,f.title)}</article>`;
+/* The prepared messages of the Workflows tab and of Coming up: one wording for each thing a person asks Codex.
+   Starting lists what the file's "Before starting" asks, so the person can answer in the same message. */
+const pwStartPrompt=f=>`Start the ${f.title} workflow.`+((f.settle||[]).length?`\n\nBefore starting it asks for these. What I already know (leave a line empty and ask me):\n${f.settle.map(x=>`- ${x.label}${x.text?` (${x.text.replace(/\.$/,"")})`:""}: `).join("\n")}`:"");
+const pwNextPrompt=(f,r)=>`Let's do the next step of the ${f.title} workflow (run ${r.id}): ${r.step.title||"step "+r.step.n}.`;
+const pwManual=f=>!f.trigger||f.trigger==="manual";
+/* Switching on, for a draft: what it means for this file's own trigger. Pausing and resuming are sentences too. */
+function pwSwitch(f){
+ if(!f.ok)return `<p class="wf-on"><a class="pl-chat" href="${esc(askLink(`The ${f.title} workflow (${f.path||"its file"}) cannot be read as a workflow. Show me what is wrong and help me fix it.`))}">${esc("Fix it with Codex")} <span aria-hidden="true">↗</span></a> <span class="pl-age">${esc("It cannot be started until the file reads as a workflow.")}</span></p>`;
+ if(f.status==="paused")return `<p class="wf-on"><a class="pl-chat" data-pw-on href="${esc(askLink(`Resume the ${f.title} workflow.`))}">${esc("Resume in Codex")} <span aria-hidden="true">↗</span></a> <span class="pl-age">${esc("Paused: nothing is offered and its runs wait.")}</span></p>`;
+ if(f.status!=="draft")return "";
+ return pwManual(f)
+  ?`<p class="wf-on"><a class="pl-chat" data-pw-on href="${esc(askLink(`Give the ${f.title} workflow a trigger (a schedule or an event), then check it and switch it on.`))}">${esc("Give it a trigger and switch it on")} <span aria-hidden="true">↗</span></a> <span class="pl-age">${esc("Switched on, a workflow starts from its trigger. This one's trigger is manual, so it starts only when you ask until it has a schedule or an event.")}</span></p>`
+  :`<p class="wf-on"><a class="pl-chat" data-pw-on href="${esc(askLink(`Switch on the ${f.title} workflow: run its check first and show me what it finds.`))}">${esc("Switch on in Codex")} <span aria-hidden="true">↗</span></a> <span class="pl-age">${esc(`Switched on, it starts from its trigger (${f.trigger}): Codex offers the run at the start of your next chat and starts it on your yes.`)}</span></p>`;
 }
+/* One run, tracked: its name, what it is about, and every step of the workflow in order with the state the run's
+   notes give it. A step is overdue when its date has passed, the same test Coming up uses. */
+function pwTracker(f,r){
+ const today=localDate(new Date().toISOString()),cur=r.ended?null:r.step,late=!!(cur&&!r.paused&&cur.due&&String(cur.due)<today),steps=r.steps||[];
+ const state=s=>s.status==="done"?"done":s.status==="skipped"?"skipped":s.status==="upcoming"?"upcoming":r.ended?"stopped":r.paused?"paused":late?"late":s.status==="due"?"due":"waiting";
+ const WORD={done:"Done",skipped:"Skipped",upcoming:"Upcoming",stopped:"Not done",paused:"Paused",late:"Overdue",due:"Due now",waiting:"Waiting"},TONE={done:"ok",due:"draft",late:"late"};
+ const cap=t=>t.charAt(0).toUpperCase()+t.slice(1);
+ const detail=(s,st)=>st==="done"||st==="skipped"?`${s.at?whenText(s.at):""}${s.by?" "+esc("by")+" "+esc(authorName(s.by)):""}${s.note?`<span class="wf-note">${esc(s.note)}</span>`:""}`
+  :st==="upcoming"?"":`${s.due&&st!=="waiting"?esc(st==="late"?"was due":"due")+" "+whenText(s.due):""}${s.waits?`<span class="wf-note">${esc(cap(s.waits))}</span>`:""}`;
+ const step=s=>{const st=state(s),here=cur&&cur.n===s.n;return `<li class="wf-st ${st}" data-step-state="${st}"${here?' aria-current="step"':""}><span class="wf-dot" aria-hidden="true">${st==="done"?"✓":s.n}</span><div class="wf-st-body"><span class="wf-st-title">${esc(s.title||"Step "+s.n)}</span><span class="pl-state ${TONE[st]||"missing"}">${esc(WORD[st])}</span><span class="wf-st-detail">${detail(s,st)}</span></div></li>`};
+ const go=(label,prompt,mark)=>`<a class="skill-open" ${mark} href="${esc(askLink(prompt))}">${esc(label)}<span aria-hidden="true">↗</span></a>`;
+ const action=r.ended?"":r.paused?go("Resume the run in Codex",`Resume the run ${r.id} of the ${f.title} workflow.`,"data-pw-resume"):cur?go("Do the next step in Codex",pwNextPrompt(f,r),"data-pw-next"):go("Ask Codex where it stands",`Where is the run ${r.id} of the ${f.title} workflow?`,"data-pw-where");
+ const badge=r.ended?`<span class="pl-state ${r.ended.how==="done"?"ok":"missing"}">${esc(r.ended.how==="done"?"Finished":r.ended.how==="cancelled"?"Cancelled":r.ended.how==="failed"?"Failed":"Stopped before the end")} ${esc(ageText(r.ended.at))}</span>`:r.paused?`<span class="pl-state missing">${esc("Paused")}</span>`:late?`<span class="pl-state late">${esc("Overdue")}</span>`:cur?`<span class="pl-age">${esc(`step ${cur.n} of ${cur.of}`)}</span>`:"";
+ return `<div class="wf-run${late?" late":""}${r.ended?" ended":""}" data-run="${esc(r.id)}"><div class="wf-run-head"><h4>${esc(pwRunTitle(f,r))}</h4><span class="pl-age">${esc("started")} ${r.started?whenText(r.started):"?"}${r.by?" "+esc("by")+" "+esc(authorName(r.by)):""}</span>${badge}${action}</div>`+
+  ((r.about||[]).length?`<p class="wf-run-about">${r.about.map(esc).join(` <span aria-hidden="true">·</span> `)}</p>`:"")+
+  (steps.length?`<ol class="wf-track" aria-label="${esc("Steps of this run")}">${steps.map(step).join("")}</ol>`:`<p class="wf-run-about">${esc(pwRunLine(f,r))}</p>`)+
+  (r.waiting&&!r.ended?`<p class="wf-wait"><b>${esc("Waiting for you")}:</b> ${esc(r.waiting)}</p>`:"")+(r.ended?.note?`<p class="wf-run-about">${esc(r.ended.note)}</p>`:"")+
+  `<code class="pl-path">${esc(r.id)}</code></div>`;
+}
+function pwCard(f){
+ const [word,tone]=pwState(f),live=f.runs.filter(r=>!r.ended),ended=f.runs.filter(r=>r.ended),last=live[0]||f.runs[0],open=pwOpen===f.slug;
+ const runs=n=>`${n} ${n===1?"run":"runs"} in progress`;
+ return `<article class="pl-row wf-card${open?" open":""}" data-pw="${esc(f.slug)}"><div class="pl-row-main"><div class="wf-top"><h3><button type="button" class="linkbtn" data-pw-open="${esc(f.slug)}" aria-expanded="${open}">${esc(f.title)}</button></h3><span class="wf-acts">${f.ok&&f.status!=="paused"?`<a class="skill-open" data-pw-start href="${esc(askLink(pwStartPrompt(f)))}" aria-label="${esc("Start in Codex: "+f.title)}">${esc("Start in Codex")}<span aria-hidden="true">↗</span></a>`:""}${rowLinks(null,`Let's discuss the ${f.title} workflow (${f.path}): where its runs stand and what is next.`,f.title)}</span></div>${f.about?`<p class="wf-about">${esc(f.about)}</p>`:""}<div class="pl-meta"><span class="pl-state ${tone}">${esc(word)}</span><span>${esc(pwStarts(f.trigger))}</span><span>${esc(runs(live.length))}</span>${last?`<span>${esc("Last run")}: ${esc(pwRunLine(f,last).replace(/^./,c=>c.toLowerCase()))}</span>`:`<span class="pl-age">${esc("never run")}</span>`}</div>${pwSwitch(f)}${f.problems.length?`<ul class="pl-list">${f.problems.map(p=>`<li class="pl-warn">${esc(p)}</li>`).join("")}</ul>`:""}`+
+  live.map(r=>pwTracker(f,r)).join("")+
+  (ended.length?`<details class="fold wf-ended"><summary>${esc("Finished and stopped runs")} · ${ended.length}</summary>${ended.slice(0,12).map(r=>pwTracker(f,r)).join("")}${ended.length>12?`<p class="pl-age">${ended.length-12} ${esc("older runs")}</p>`:""}</details>`:"")+
+  (open?`<div class="wf-detail">${(f.step_titles||[]).length?`<h4>${esc("Steps")}</h4><ol class="wf-steps">${f.step_titles.map((t,i)=>{const here=live.filter(r=>r.step?.n===i+1).length;return `<li class="${here?"here":""}"><span>${esc(t||"Step "+(i+1))}</span>${here?` <span class="pl-state ok">${esc(here===1?"a run is here":here+" runs are here")}</span>`:""}</li>`}).join("")}</ol>`:f.steps?`<p class="m">${f.steps} ${esc("steps")}</p>`:""}`+
+   ((f.settle||[]).length?`<h4>${esc("Asked before starting")}</h4><ul class="pl-list">${f.settle.map(x=>`<li><b>${esc(x.label)}</b>${x.text?` <span class="pl-age">${esc(x.text)}</span>`:""}</li>`).join("")}</ul>`:"")+
+   `<details class="fold"><summary>${esc("Details")}</summary><dl class="pl-dl"><dt>${esc("File")}</dt><dd><code class="pl-path">${esc(f.path||"")}</code></dd><dt>${esc("Status in the file")}</dt><dd>${esc(f.status)}</dd><dt>${esc("Trigger in the file")}</dt><dd>${esc("Trigger")}: ${esc(f.trigger)}</dd>${f.changed?`<dt>${esc("Last changed")}</dt><dd>${whenText(f.changed)}</dd>`:""}</dl>${f.path?`<button type="button" class="linkbtn" data-doc="${esc(f.path)}">${esc("Read the whole file")}</button>`:""}</details></div>`:"")+
+  `</div></article>`;
+}
+/* The tab in two parts, Workflows and Skills, one shown at a time: at 640 px both together run to several screens and
+   the skill search would sit below every run tracker. The choice holds for the session. Counts are the rows drawn. */
+let wfPart="workflows";try{if(sessionStorage.getItem("gtm-wf-part")==="skills")wfPart="skills"}catch{}
+function renderWfParts(){
+ const box=$("#wf-parts");if(!box)return;
+ const parts=[["workflows","Workflows",PL&&!plUnread("workflows")?PL.workflows.files.length:null],["skills","Skills",dashboardSkills.length]];
+ box.innerHTML=parts.map(([k,label,n])=>`<button type="button" role="tab" id="wf-tab-${k}" aria-selected="${wfPart===k}" aria-controls="${k==="skills"?"pw-skills":"wf-part-workflows"}" tabindex="${wfPart===k?0:-1}" data-wf-part="${k}" class="${wfPart===k?"on":""}">${esc(label)}${n===null?"":` <span class="pl-count">${n}</span>`}</button>`).join("");
+ $("#wf-part-workflows").hidden=wfPart!=="workflows";$("#pw-skills").hidden=wfPart!=="skills";
+}
+document.addEventListener("click",e=>{const b=e.target?.closest?.("[data-wf-part]");if(!b)return;wfPart=b.dataset.wfPart==="skills"?"skills":"workflows";try{sessionStorage.setItem("gtm-wf-part",wfPart)}catch{}renderWfParts()});
+document.addEventListener("keydown",e=>{const b=e.target?.closest?.("[role=tab][data-wf-part]");if(!b||!["ArrowRight","ArrowLeft"].includes(e.key))return;e.preventDefault();wfPart=wfPart==="skills"?"workflows":"skills";try{sessionStorage.setItem("gtm-wf-part",wfPart)}catch{}renderWfParts();document.getElementById("wf-tab-"+wfPart)?.focus?.()});
 function renderWorkflowsTab(){
- if(!PL){$("#pw-files").innerHTML=plEmpty;return}
+ if(!PL){$("#pw-files").innerHTML=plEmpty;$("#pw-how").innerHTML="";renderWfParts();return}
  const W=PL.workflows;
- $("#pw-files").innerHTML=`<section class="sec pl-card"><h2>${esc("Your workflows")} <span class="pl-count">${W.files.length}</span></h2><p class="m">${esc("A workflow is a job with steps that Codex carries out the same way every time, for example following up after a meeting. Click one to see its steps and runs.")}</p>${W.files.map(pwCard).join("")||`<p class="empty">${esc("No workflows yet. To make one, describe the job to Codex, for example: \"make a workflow for following up after a demo\".")}</p>`}${W.orphans.length?`<details class="fold"><summary>${esc("Runs of workflows that were removed")} · ${W.orphans.length}</summary><ul class="pl-list pl-runs">${W.orphans.map(r=>`<li><b>${esc(String(r.workflow||"").replace(/-/g," "))}</b> <span class="pl-age">${esc("started")} ${r.started?whenText(r.started):"?"}</span> · ${esc(pwRunLine({slug:r.workflow},r))}</li>`).join("")}</ul></details>`:""}</section>`;
+ /* how one runs, in three steps like Help's, with the sentences that move a run */
+ const how=[["Start it in Codex","Press Start in Codex on a workflow below, or say \"start the outbound workflow\". Codex asks what the file lists under Before starting, shows the brief once and starts the run."],["Each step is done in chat and recorded","Codex does the step with your tools, or you do it and say so. The step is saved as a note, and that note opens the next step."],["The brain tells you when the next is due","A due step shows in the first lines of a chat, under Coming up on the Overview and in the run's tracker below. Nothing runs by itself."]];
+ const say=["where is the <run>","next step","skip this step","move step 2 to <date>","pause the run","resume the run","cancel the run"];
+ /* a disclosure: open at first only in a wide pane with no run yet; once the person opens or closes it, that holds for the session */
+ let howOpen=!narrow()&&!W.files.some(f=>(f.runs||[]).length);try{const kept=sessionStorage.getItem("gtm-wf-how");if(kept)howOpen=kept==="open"}catch{}
+ $("#pw-how").innerHTML=`<details class="wf-how" id="wf-how"${howOpen?" open":""}><summary><h2>${esc("How a workflow runs")}</h2><span class="pl-age">${esc("3 steps, and what to say in Codex")}</span></summary><ol class="help-steps">${how.map(([title,body],i)=>`<li><b>${i+1}</b><div><strong>${esc(title)}</strong><p>${esc(body)}</p></div></li>`).join("")}</ol><p class="wf-say"><span>${esc("Say in Codex:")}</span>${say.map(x=>`<code>${esc(x)}</code>`).join("")}</p></details>`;
+ $("#pw-files").innerHTML=`<section class="sec pl-card"><h2>${esc("Your workflows")} <span class="pl-count">${W.files.length}</span></h2><p class="m">${esc("A workflow is a job with steps that Codex carries out the same way every time, for example following up after a meeting. Each run in progress is tracked under its workflow; click a name for the steps and the file.")}</p>${W.files.map(pwCard).join("")||`<p class="empty">${esc("No workflows yet. To make one, describe the job to Codex, for example: \"make a workflow for following up after a demo\".")}</p>`}${W.orphans.length?`<details class="fold"><summary>${esc("Runs of workflows that were removed")} · ${W.orphans.length}</summary><ul class="pl-list pl-runs">${W.orphans.map(r=>`<li><b>${esc(String(r.workflow||"").replace(/-/g," "))}</b> <span class="pl-age">${esc("started")} ${r.started?whenText(r.started):"?"}</span> · ${esc(pwRunLine({slug:r.workflow},r))}</li>`).join("")}</ul></details>`:""}</section>`;
  if(plUnread("workflows"))$("#pw-files").innerHTML=plUnreadMsg;
- const skills=(D.skills||[]).filter(s=>s&&s.command),group=g=>skills.filter(s=>g?s.group==="yours":s.group!=="yours");
- const skillItem=s=>`<li><a href="${esc(skillLink({command:s.command,example:s.example||s.command}))}"><b>${esc(s.title)}</b></a> <span class="pl-age">${esc(s.description)}</span> <code class="pl-path">${esc(s.command)}</code></li>`;
- $("#pw-skills").innerHTML=`<section class="sec pl-card"><details class="fold"><summary>${esc("Things you can ask Codex to do")} · ${skills.length}</summary><p class="m">${esc("Each opens a prepared message in Codex; nothing happens until you send it.")}</p><h3>${esc("Shipped with GTM Brain")}</h3><ul class="pl-list">${group(false).map(skillItem).join("")||`<li class="pl-age">${esc("None installed.")}</li>`}</ul><h3>${esc("Made by your team")}</h3><ul class="pl-list">${group(true).map(skillItem).join("")||`<li class="pl-age">${esc("None yet. Say \"make this a skill\" after a task worth repeating.")}</li>`}</ul></details></section>`;
+ renderWfParts();
 }
 document.addEventListener("click",e=>{const b=e.target?.closest?.("[data-pw-open]");if(!b)return;pwOpen=pwOpen===b.dataset.pwOpen?"":b.dataset.pwOpen;renderWorkflowsTab()});
+document.addEventListener("click",e=>{const d=e.target?.closest?.("#wf-how>summary")?.parentElement;if(!d)return;try{sessionStorage.setItem("gtm-wf-how",d.open?"closed":"open")}catch{}});
+/* Crossing the narrow width redraws what folds there. */
+NARROW_Q?.addEventListener?.("change",()=>{try{renderFoundations();renderConfigPeers();renderWorkflowsTab()}catch{}});
 let plObserver=null;
 function plObserve(){
  if(typeof IntersectionObserver==="undefined")return;plObserver?.disconnect();
@@ -1846,8 +2073,8 @@ function inboxItems(){
 /* Coming up, only from what the brain already holds: workflow steps with a due date, and planned meetings in the next week. */
 function comingUp(){
  const rows=[],now=Date.now(),today=localDate(new Date().toISOString());
- for(const f of PL?.workflows?.files||[])for(const r of f.runs||[]){if(r.ended||!r.step?.due)continue;const late=String(r.step.due)<today;
-  rows.push({at:String(r.step.due),html:`<li class="${late?"late":""}"><div><b>${esc(f.title)}</b>: ${esc(r.step.title||"step "+r.step.n)} <span class="pl-age">${esc(late?"was due":"due")} ${whenText(r.step.due)}</span></div><a class="pl-chat" href="${esc(askLink(`Let's do the next step of the ${f.title} workflow (run ${r.id}): ${r.step.title||"step "+r.step.n}.`))}">${esc("Do it with Codex")} <span aria-hidden="true">↗</span></a></li>`})}
+ for(const f of PL?.workflows?.files||[])for(const r of f.runs||[]){if(r.ended||r.paused||!r.step?.due)continue;const late=String(r.step.due)<today;
+  rows.push({at:String(r.step.due),html:`<li class="${late?"late":""}" data-soon-run="${esc(r.id)}"><div><b>${esc(f.title)}</b>: ${esc(r.step.title||"step "+r.step.n)} <span class="pl-age">${esc(pwRunTitle(f,r))}, ${esc(`step ${r.step.n} of ${r.step.of}`)}, ${esc(late?"was due":"due")} ${whenText(r.step.due)}</span></div><span class="ov-soon-acts"><button type="button" class="linkbtn" data-v="workflows" data-wf-part="workflows">${esc("See the run")} <span aria-hidden="true">→</span></button><a class="pl-chat" href="${esc(askLink(pwNextPrompt(f,r)))}">${esc("Do it with Codex")} <span aria-hidden="true">↗</span></a></span></li>`})}
  for(const m of meetingData.meetings||[]){const t=Date.parse(m.scheduled_at||"");if(!Number.isFinite(t)||t<now||t>now+7*864e5||["skipped","withdrawn"].includes(m.state)||m.occurrence==="cancelled")continue;
   rows.push({at:new Date(t).toISOString(),html:`<li><div><b>${esc(m.title)}</b> <span class="pl-age">${esc(localDateTime(m.scheduled_at))}${m.participants?.length?" · "+esc(m.participants.slice(0,4).map(p=>p.name).join(", ")):""}</span></div><a class="pl-chat" href="${esc(askLink(`Prepare me for the meeting "${m.title}" on ${localDateTime(m.scheduled_at)}: who is coming, what we know about them and what is open.`))}">${esc("Prepare with Codex")} <span aria-hidden="true">↗</span></a></li>`})}
  return rows.sort((a,b)=>a.at.localeCompare(b.at)).slice(0,6);
@@ -1874,7 +2101,7 @@ function housekeeping(){
    copies.length?list(copies.slice(0,6).map(n=>`<li><span>${esc(String(n.text||"").slice(0,140))}${String(n.text||"").length>140?"…":""} <span class="ov-note">${n.at?esc("saved")+" "+whenText(n.at):""}${n.sameAs.at?", "+esc("first saved")+" "+whenText(n.sameAs.at):""}</span></span></li>`).join("")+more(P.duplicates_exact,Math.min(copies.length,6))):`<p class="ov-note">${esc("Open Memories and filter by copies to see them.")}</p>`)}
  const base=(PL?.configuration?.documents||[]).filter(d=>d.base),unwritten=base.filter(d=>d.state==="not written");
  if(unwritten.length)add(unwritten.length,`${unwritten.length===1?"base document is":"base documents are"} not written yet`,chat(unwritten.length===1?"Write the "+unwritten[0].title:"Write the first one",`Help me write our ${unwritten[0].title} document.`),
-  list(unwritten.map(d=>`<li><span><b>${esc(d.title)}</b>${d.applies?.length?` <span class="ov-note">${esc("read before: "+d.applies.join(", "))}</span>`:""}</span>${small("Write it",askLink(`Help me write our ${d.title} document.`))}</li>`).join("")));
+  list(unwritten.map(d=>`<li><span><b>${esc(d.title)}</b>${d.applies_to?.length?` <span class="ov-note">${esc("read before: "+d.applies_to.join(", "))}</span>`:""}</span>${small("Write it",askLink(`Help me write our ${d.title} document.`))}</li>`).join("")));
  if(PL?.entities?.rows?.length&&!(customerData.customers||[]).some(c=>["customer","prospect","former_customer"].includes(c.status)))add(null,"Nobody is marked as a customer yet",go("Choose your customers","entities"),`<p class="ov-note">${esc("Open a company in Entities and choose Set relation to us: customer, prospect or former customer. Until then the brain cannot tell customers from other companies.")}</p>`);
  /* nothing is said while the schema is still the shipped one: there is nothing for the person to act on here */ if(!P?.schema_untouched&&P?.missing_required){const fields=Object.entries(P.missing_required_fields||{}).sort((a,b)=>b[1]-a[1]);
   add(P.missing_required,`of ${many(P.entities_total,"person or company","people and companies")} ${P.missing_required===1?"misses":"miss"} a detail you marked as required`,chat("Fill the gaps with Codex","Entities are missing required fields. Show me which fields are missing most and fill what you can from our notes and tools."),
@@ -1882,22 +2109,23 @@ function housekeeping(){
  return rows;
 }
 function renderInbox(){
- renderMentors();
+ renderFoundations();renderSkillsLink();
  const items=inboxItems(),box=$("#ov-inbox"),order={high:0,mid:1,low:2};items.sort((a,b)=>order[a.tone]-order[b.tone]);
  const action=a=>a.href?`<a class="ov-act" href="${esc(a.href)}">${esc(a.label)} <span aria-hidden="true">↗</span></a>`:`<button type="button" class="ov-act quiet" data-v="${esc(a.view)}">${esc(a.label)} <span aria-hidden="true">→</span></button>`;
  const soon=comingUp(),kind=t=>t==="high"?"Needs you":"Worth doing";
- box.innerHTML=(items.length?`<div class="ov-head ov-hero"><h2>${esc("Needs your attention")}</h2><span class="ov-badge" aria-label="${esc(items.length+(items.length===1?" item":" items"))}">${items.length}</span></div><ol class="ov-list">${items.map(i=>`<li class="ov-item ${i.tone}"><div class="ov-text"><span class="ov-kind">${esc(kind(i.tone))}</span><h3 title="${esc(i.title)}" data-ov-open tabindex="0">${esc(i.title)}</h3><p>${esc(i.why)}</p>${i.extra||""}</div><div class="ov-actions">${i.actions.map(action).join("")}</div></li>`).join("")}</ol>`:soon.length?"":`<div class="ov-clear" role="status"><span class="ov-clear-mark" aria-hidden="true">✓</span><div><h2>${esc("Nothing needs you right now")}</h2><p>${esc("No question is waiting, nothing needs a decision and every connection works.")}</p></div></div>`)+
-  (soon.length?`<div class="ov-head"><h2>${esc("Coming up")}</h2></div><ul class="ov-soon">${soon.map(r=>r.html).join("")}</ul>`:"")+inboxSuggestion();
+ box.innerHTML=(items.length?`<div class="ov-head ov-hero"><h2>${esc("Needs your attention")}</h2><span class="ov-badge" aria-label="${esc(items.length+(items.length===1?" item":" items"))}">${items.length}</span></div><ol class="ov-list">${items.map(i=>`<li class="ov-item ${i.tone}"><div class="ov-text"><span class="ov-kind">${esc(kind(i.tone))}</span><h3 title="${esc(i.title)}" data-ov-open tabindex="0">${esc(i.title)}</h3><p>${esc(i.why)}</p>${i.extra||""}</div><div class="ov-actions">${i.actions.map(action).join("")}</div></li>`).join("")}</ol>`:soon.length?"":`<div class="ov-clear" role="status"><span class="ov-clear-mark" aria-hidden="true">✓</span><div><h2>${esc("Nothing needs you right now")}</h2><p>${esc("No question is waiting, nothing needs a decision and every connection works.")}</p></div></div>`)+inboxSuggestion();
+ /* The order under it: Housekeeping, then Coming up, then Foundations and the line to the skills. */
+ const soonBox=$("#ov-soon");if(soonBox)soonBox.innerHTML=soon.length?`<div class="ov-head"><h2>${esc("Coming up")}</h2></div><ul class="ov-soon">${soon.map(r=>r.html).join("")}</ul>`:"";
  const house=housekeeping();
  const shut=false;/* open on every load: it is short, and a remembered "closed" hid it */
- $("#ov-more").innerHTML=house.length?`<details class="ov-house" id="ov-house"${shut?"":" open"}><summary><h2>${esc("Housekeeping")}</h2><span class="ov-badge calm">${house.length}</span><span class="ov-house-sub">${esc(house.length===1?"thing to tidy when you have time":"things to tidy when you have time")}</span></summary><ul class="ov-house-list">${house.map(h=>h.detail?`<li class="ov-row"><details><summary><span class="ov-fig">${h.n===null?"·":h.n}</span><span class="ov-what">${esc(h.text)}</span></summary><div class="ov-detail">${h.detail}</div></details>${h.action}</li>`:`<li><span class="ov-fig">${h.n===null?"·":h.n}</span><span class="ov-what">${esc(h.text)}</span>${h.action}</li>`).join("")}</ul></details>`:"";
+ $("#ov-more").innerHTML=house.length?`<details class="ov-house" id="ov-house"${shut?"":" open"}><summary><h2>${esc("Housekeeping")}</h2><span class="ov-badge calm">${house.length}</span><span class="ov-house-sub">${esc(house.length===1?"thing to tidy when you have time":"things to tidy when you have time")}</span></summary><ul class="ov-house-list">${house.map(h=>h.detail?`<li class="ov-row"><details><summary><span class="ov-fig">${h.n===null?"·":h.n}</span><span class="ov-what">${esc(h.text)}</span></summary><div class="ov-detail">${h.detail}</div></details>${h.action}</li>`:`<li><span class="ov-fig">${h.n===null?"·":h.n}</span><span class="ov-what">${esc(h.text)}</span>${h.action}</li>`).join("")}</ul></details>`:`<p class="ov-house-none" id="ov-house" role="status"><b>${esc("Housekeeping")}</b><span>${esc("Nothing to tidy")}</span></p>`;
  /* the chat start's own status line, part by part, sits with the tools in Settings */
  const sync=$("#settings-sync");if(sync)sync.innerHTML=PL?`<div class="settings-card-head"><h2>${esc("Sync and meeting capture")}</h2><p>${esc("When each tool was last read and whether meetings are being captured.")}</p></div><div class="ov-status">${PL.health?`<ul class="pl-list">${String(PL.health).split(/\s+\|\s+/).map(part=>`<li>${esc(part.replace(/\s*\(query [a-z_ ]+\)/g,""))}</li>`).join("")}</ul>`:`<p class="pl-age">${esc("Nothing to report yet: no meeting capture, summary run or sync recorded.")}</p>`}</div>`:"";
 }
 document.addEventListener("click",e=>{const t=e.target;if(!t?.closest)return;
  if(t.closest("#ov-house>summary")){const d=$("#ov-house");setTimeout(()=>{try{sessionStorage.setItem("gtm-ov-house",d.open?"open":"closed")}catch{}},0)}
  if(t.closest("[data-ov-later]")){try{sessionStorage.setItem("gtm-ov-sync","later")}catch{}renderInbox();return}
- const open=t.closest("[data-cfg-open]");if(open&&typeof renderConfigTabs==="function"){cfgTab=open.dataset.cfgOpen;renderConfigTabs()}});
+ const open=t.closest("[data-cfg-open]");if(open&&typeof renderConfigTabs==="function"){cfgTab=open.dataset.cfgOpen;try{sessionStorage.setItem("gtm-cfg",cfgTab)}catch{}renderConfigTabs()}});
 /* ---------- Documents: read and edit in the page. Markdown is escaped first; only the marks below become tags,
    so nothing a document says can run as script. The one write goes to POST /document (server/dash.mjs). ---------- */
 const mdPlain=t=>String(t).replace(/!?\[([^\]]*)\]\([^)]*\)/g,"$1").replace(/[*_`~]/g,"").trim();
@@ -2291,7 +2519,7 @@ function gqOpen(r){
  if(r.kind==="entity"){
   openEntityById(r.id);
  }else if(r.kind==="doc")openDoc(r.path);
- else if(r.kind==="workflow"){pwOpen=r.slug;renderWorkflowsTab();show("workflows")}
+ else if(r.kind==="workflow"){pwOpen=r.slug;wfPart="workflows";renderWorkflowsTab();show("workflows")}
  else if(r.kind==="topic"){contextDirectory=false;chan=r.slug;renderContextDirectory();renderChannels();show("contexts")}
  else if(r.kind==="note")openNote(r.id);
  updateChatLink();publishRoute();
@@ -2390,7 +2618,7 @@ function chatDraft(scope=chatScope()){
  const inScope=slug=>selected?slug===selected.slug:project?[...(project.contexts||[]),...(project.loaded||[])].includes(slug):broad;
  const questions=(selected?selected.memories:D.questions).filter(m=>m.kind==="question"&&(m.tags||[]).includes("brain-question")&&(project?(m.tags||[]).includes("project:"+project.slug):view==="contexts"||view==="home"||view==="questions"));
  const edits=(D.manualEdits||[]).filter(e=>inScope(e.slug));
- const topics={config:"our configuration: base documents, rules, schema and settings",entities:"the people, organizations and other entities the brain knows",notes:"our saved notes",workflows:"our workflows and their runs",explore:"our company knowledge",skills:"ways to work with GTM Brain",meetings:"our recorded meetings",customers:"our customer relationships",home:"the company overview",projects:"my projects",contexts:"our contexts",questions:"questions about the brain",memories:"our saved notes",people:"our people, companies and files",admin:"our workspace settings"};
+ const topics={config:"our configuration: rules, schema, base documents and settings",entities:"the people, organizations and other entities the brain knows",notes:"our saved notes",workflows:"our workflows and their runs",explore:"our company knowledge",skills:"ways to work with GTM Brain",meetings:"our recorded meetings",customers:"our customer relationships",home:"the company overview",projects:"my projects",contexts:"our contexts",questions:"questions about the brain",memories:"our saved notes",people:"our people, companies and files",admin:"our workspace settings"};
  let topic=project?"project "+quote(project.title||project.slug):scope.entity?quote(scope.entity):selected?"context "+quote(contextTitle(selected)):scope.search?"search results for "+quote(scope.search):topics[view]||topics.home;
  if(scope.label)topic=quote(scope.label);
  const lines=["Use GTM Brain. Let's discuss "+topic+"."];
@@ -2428,7 +2656,7 @@ document.addEventListener("click",updateChatLink);document.addEventListener("inp
 // Plain actions: a left click runs them, a right-click opens nothing (ALL-199)
 const ACTION_SELECTOR='button,a[href],[role="button"]';
 // The whole highlighted object travels with the draft, not only its header line (ALL-199)
-const CARD_SELECTOR='.record-row,.recent-item,.row,.mem,.msg,.search-hit,.timeline-row,.entity-proof,.asset-card,.skill-row,.meeting-row,.setting-row,.attention-item,article,li';
+const CARD_SELECTOR='.record-row,.recent-item,.row,.mem,.msg,.search-hit,.timeline-row,.entity-proof,.asset-card,.sk-card,.meeting-row,.setting-row,.attention-item,article,li';
 const clip=(text,max)=>text.length>max?text.slice(0,max).replace(/\s+\S*$/,"")+"…":text;
 function chatTarget(target){
  const card=String(target.closest?.(CARD_SELECTOR)?.innerText||'').replace(/\s+/g,' ').trim().slice(0,1000);
@@ -2539,7 +2767,7 @@ $("#view-back").onclick=()=>{
  else return;
  updateChatLink();publishRoute(true);
 };
-function routeState(){const state={view};if(view==="memories"){if(memoryKinds.length)state.type=memoryKinds.join(",");if(memoryContexts.length)state.context=memoryContexts.join(",")}if(view==='contexts'){if(!contextDirectory&&chan)state.context=chan;else{if(contextQuery)state.query=contextQuery;if(contextStatus!=='active')state.status=contextStatus;}}if(projectSlug)state.project=projectSlug;if(view==='people'&&entName){state.entity=entName;if(entContext)state.context=entContext}if(view==='search'&&searchText){state.search=searchText;state.type=searchFilter}if(view==='doc'&&docState)state.path=docState.path;return state}
+function routeState(){const state={view};if(view==="memories"){if(memoryKinds.length)state.type=memoryKinds.join(",");if(memoryContexts.length)state.context=memoryContexts.join(",")}if(view==='contexts'){if(!contextDirectory&&chan)state.context=chan;else{if(contextQuery)state.query=contextQuery;if(contextStatus!=='active')state.status=contextStatus;}}if(projectSlug)state.project=projectSlug;if(view==='people'&&entName){state.entity=entName;if(entContext)state.context=entContext}if(view==='search'&&searchText){state.search=searchText;state.type=searchFilter}if(view==='doc'&&docState)state.path=docState.path;if(view==="workflows"&&wfPart==="skills"){state.part="skills";const q=$("#skill-search")?.value||"";if(q)state.skill=q}return state}
 function publishRoute(replace=false){
  updateBackLink();
  if(restoringRoute||typeof history==='undefined'||typeof URLSearchParams==='undefined')return;
@@ -2556,6 +2784,7 @@ function restoreRoute(){
   const project=params.get('project');projectSlug=(D.projects||[]).some(p=>p.slug===project)?project:'';renderProject();renderOverview();renderContextDirectory();
   const entity=params.get('entity');entName=D.names.some(n=>n.name===entity)?entity:'';entContext=context&&D.contexts.some(c=>c.slug===context)?context:'';entPair='';renderEntityDetail();
   memoryKinds=(params.get("type")||"").split(",").filter(k=>["note","question","decision","action"].includes(k));memoryContexts=params.get("view")==="memories"?(params.get("context")||"").split(",").filter(slug=>D.contexts.some(c=>c.slug===slug)):[];mems();
+  if(params.get("view")==="workflows"){wfPart=params.get("part")==="skills"?"skills":"workflows";renderWfParts();const sq=params.get("skill")||"";if($("#skill-search")&&dashboardSkills.length){$("#skill-search").value=sq;renderSkillLibrary(sq)}}
   const next=params.get('view');if(next==='doc'&&docInfo(params.get('path'))&&docState?.path!==params.get('path'))openDoc(params.get('path'),true);
   show(next==='search'&&!params.get('search')?'explore':next);
   if(next==='search'&&params.get('search')){$('#gq').value=params.get('search');searchFilter=searchKinds.some(([k])=>k===params.get('type'))?params.get('type'):'all';gsearch(params.get('search'))}

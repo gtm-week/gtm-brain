@@ -22,7 +22,7 @@ test('one flat navigation: Overview first, where the dashboard opens, and every 
 
 test('Overview says what needs the person, or that nothing does, and the header carries no health line', async ({ app, screen, browser }) => {
   await app.open('/');
-  await expect(browser.locator('#ov-inbox').getByRole('heading', /^(Needs your attention|Coming up|Nothing needs you right now)$/, { level: 2 }).first()).toBeVisible();
+  await expect(browser.locator('#ov-inbox, #ov-soon').getByRole('heading', /^(Needs your attention|Coming up|Nothing needs you right now)$/, { level: 2 }).first()).toBeVisible();
   await expect(browser.locator('#health-line')).toHaveCount(0);
   await expect(browser.locator('#brain-health')).toHaveText(/^Updated (just now|\d+ minutes? ago|today)/);
   await expect(browser.locator('#brain-health')).toHaveAttribute('title', /\d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
@@ -39,8 +39,21 @@ test('Configuration: base documents open in the page; rules and schema are brows
     const row = docs.getByRole('row').filter({ has: screen.getByRole('rowheader', new RegExp(`^${esc(d.title)}`)) });
     await expect(row).toContainText(d.state);
   }
-  await expect(screen.getByRole('heading', /^Base documents/)).toContainText(`${f.documents.filter(d => d.state !== 'not written').length} / `);
+  await expect(screen.getByRole('heading', /^Base documents/, { level: 2 })).toContainText(`${f.documents.filter(d => d.state !== 'not written').length} / `);
   await expect(screen.getByRole('columnheader', 'Applies to')).toHaveCount(0);
+  // the landing presents rules, schema and base documents as three peers with the same facts as the Overview, before the detail
+  await expect(browser.locator('#cfg-peers article.fd-card')).toHaveCount(3);
+  await expect(browser.locator('#cfg-peers article[data-fd="rules"]')).toContainText(`${f.foundations.rules} rules in ${f.foundations.ruleGroups} groups`);
+  await expect(browser.locator('#cfg-peers article[data-fd="schema"]')).toContainText(`${f.foundations.kinds} kinds, ${f.foundations.fields} fields, ${f.foundations.relations} connection types`);
+  await expect(browser.locator('#cfg-peers article[data-fd="docs"]')).toContainText(`${f.documents.filter(d => d.state !== 'not written').length} of ${f.documents.length} written`);
+  // About the company sits below the base documents
+  expect(await browser.evaluate(() => document.querySelector('#cfg-peers')!.getBoundingClientRect().top < document.querySelector('#cfg-docs')!.getBoundingClientRect().top && document.querySelector('#cfg-docs')!.getBoundingClientRect().bottom <= document.querySelector('#cfg-about')!.getBoundingClientRect().top + 1)).toBe(true);
+  // a written document says what it says and what work reads it; an unwritten one what is done without it
+  for (const d of f.documents) {
+    const row = docs.getByRole('row').filter({ has: screen.getByRole('rowheader', new RegExp(`^${esc(d.title)}`)) });
+    await expect(row).toContainText(d.state === 'not written' ? 'done without it.' : 'Codex reads it before:');
+  }
+  await expect(docs.getByRole('row').filter({ has: screen.getByRole('rowheader', /^Pricing/) })).toContainText('Three plans, billed yearly.');
   // a written document opens in the dashboard, with its text and the chat link
   const written = f.documents.find(d => d.state !== 'not written');
   if (written) {
@@ -51,6 +64,9 @@ test('Configuration: base documents open in the page; rules and schema are brows
     await screen.getByRole('button', /Configuration$/).first().tap();
   }
   const parts = screen.getByRole('tablist', 'Parts of the configuration');
+  // a peer card shows its part below
+  await browser.locator('#cfg-peers article[data-fd="schema"]').getByRole('button', /^Show the schema/).tap();
+  await expect(parts.getByRole('tab', /^Schema/)).toHaveAttribute('aria-selected', 'true');
   await parts.getByRole('tab', /^Rules/).tap();
   await expect(screen.getByRole('heading', 'Rules', { level: 2 })).toBeVisible();
   await expect(browser.locator('#cfg-rules details.cfg-rule').first()).toBeVisible();
@@ -290,10 +306,16 @@ test('Memories keeps the extra filters behind More filters: closed at first, a c
   await expect(screen.getByRole('button', 'Everything')).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('Workflows shows each one as a card in plain words; a click shows its steps and its runs', async ({ app, screen, browser }) => {
+test('Workflows: how one runs, a Start link with its prepared message per workflow, and each run tracked step by step', async ({ app, screen, browser }) => {
   const f = fixture(app.baseUrl);
   await app.open('/');
   await screen.getByRole('navigation', 'Main navigation').getByRole('button', 'Workflows').tap();
+  // the explainer: one line, closed at first when a run exists, and once opened three steps and the sentences that move a run
+  await expect(browser.locator('#pw-how').getByRole('heading', 'How a workflow runs', { level: 2 })).toBeVisible();
+  await expect(browser.locator('#pw-how ol.help-steps')).toBeHidden();
+  await browser.locator('#wf-how > summary').tap();
+  await expect(browser.locator('#pw-how ol.help-steps li')).toHaveCount(3);
+  for (const say of ['where is the <run>', 'skip this step', 'move step 2 to <date>', 'pause the run']) await expect(browser.locator('#pw-how .wf-say')).toContainText(say);
   // every file under workflows/ has a card, and only those
   await expect(browser.locator('#pw-files article')).toHaveCount(f.workflows.length);
   for (const w of f.workflows) {
@@ -301,12 +323,63 @@ test('Workflows shows each one as a card in plain words; a click shows its steps
     await expect(row).toHaveCount(1);
     await expect(row).toContainText(`${w.runs} ${w.runs === 1 ? 'run' : 'runs'} in progress`);
     await expect(row).toContainText(w.trigger === 'manual' ? 'You start it by asking Codex' : w.trigger);
+    await expect(row.getByRole('link', /^Start in Codex/)).toHaveAttribute('href', /^codex:\/\/threads\/new\?path=.+&prompt=/);
   }
+  // Start carries the prepared message: the sentence that starts it and what the file asks before starting
+  const start = decodeURIComponent((await browser.evaluate(() => document.querySelector('#pw-files article[data-pw="outbound"] a[data-pw-start]')!.getAttribute('href')))!.split('prompt=')[1]);
+  expect(start).toContain('Use GTM Brain. Start the Outbound workflow.');
+  for (const label of f.run.settle) expect(start).toContain(`\n- ${label}`);
+  // a draft says what switching on means; a workflow that is on has no such link
+  await expect(browser.locator('#pw-files article[data-pw="outbound"] a[data-pw-on]')).toHaveAttribute('href', /^codex:\/\/threads\/new/);
+  await expect(browser.locator('#pw-files article[data-pw="outbound"] .wf-on')).toContainText('starts from its trigger');
+  await expect(browser.locator('#pw-files article[data-pw="weekly-review"] a[data-pw-on]')).toHaveCount(0);
+  // the run in progress is tracked on its card without a click: its name, what it is about, its steps in order
+  const run = browser.locator(`#pw-files .wf-run[data-run="${f.run.id}"]`);
+  await expect(run).toBeVisible();
+  await expect(run).toContainText(f.run.name);
+  await expect(run).toContainText('Target accounts: the five retail chains in the ICP');
+  const states = await browser.evaluate(() => [...document.querySelectorAll('#pw-files .wf-run:not(.ended) ol.wf-track li')].map(li => li.getAttribute('data-step-state')));
+  expect(states).toEqual(f.run.states);
+  for (const title of f.run.stepTitles) await expect(run).toContainText(title);
+  await expect(browser.locator('#pw-files .wf-run:not(.ended) li[data-step-state="done"]')).toContainText('Five retail chains and 14 contacts');
+  await expect(browser.locator('#pw-files .wf-run:not(.ended) li[data-step-state="late"]')).toContainText('was due');
+  await expect(browser.locator('#pw-files .wf-run:not(.ended) li[data-step-state="late"]')).toContainText('Waits for a note tagged sequence-written');
+  await expect(browser.locator('#pw-files .wf-run:not(.ended) li[aria-current="step"]')).toHaveCount(1);
+  await expect(run).toContainText('Overdue');
+  const next = decodeURIComponent((await browser.evaluate(() => document.querySelector('#pw-files a[data-pw-next]')!.getAttribute('href')))!.split('prompt=')[1]);
+  expect(next).toBe(`Use GTM Brain. Let's do the next step of the Outbound workflow (run ${f.run.id}): ${f.run.stepTitles[1]}.`);
+  // read-only: the tracker holds a link to Codex and nothing that acts
+  await expect(browser.locator('#pw-files .wf-run button, #pw-files .wf-run form, #pw-files .wf-run input')).toHaveCount(0);
+  // the cancelled run folds under a disclosure
+  const ended = browser.locator(`#pw-files details.wf-ended .wf-run[data-run="${f.run.cancelled}"]`);
+  await expect(browser.locator('#pw-files details.wf-ended summary')).toHaveText(/Finished and stopped runs · 1/);
+  await expect(ended).not.toBeVisible();
+  await browser.locator('#pw-files details.wf-ended summary').tap();
+  await expect(ended).toBeVisible();
+  await expect(ended).toContainText('Cancelled');
+  // a click on the name shows the steps of the file, with the step a run is on
   const outbound = browser.locator('#pw-files article').filter({ has: screen.getByRole('heading', 'Outbound', { level: 3 }) });
   await outbound.getByRole('button', 'Outbound').tap();
   await expect(browser.locator('#pw-files article ol.wf-steps li').first()).toBeVisible();
-  const run = browser.locator('#pw-files article .pl-runs li').filter({ hasText: f.run.id });
-  await expect(run).toHaveCount(1);
-  await expect(run).toContainText(new RegExp(esc(f.run.step), 'i'));   // the card writes it mid-sentence ("On step 1 of 4")
-  await expect(run).toContainText(f.run.status);
+  await expect(browser.locator('#pw-files article ol.wf-steps li.here')).toContainText(f.run.stepTitles[1]);
+  // the switch's counts are the rows each part draws
+  const parts = screen.getByRole('tablist', 'Workflows or skills');
+  const workflowsCount = Number((await browser.evaluate(() => document.querySelector('#wf-tab-workflows .pl-count')!.textContent)));
+  expect(workflowsCount).toBe(await browser.locator('#pw-files article.wf-card').count());
+  await parts.getByRole('tab', /^Skills/).tap();
+  await expect(browser.locator('#pw-files')).toBeHidden();
+  const skillsCount = Number((await browser.evaluate(() => document.querySelector('#wf-tab-skills .pl-count')!.textContent)));
+  await expect(browser.locator('#skill-results article.sk-card')).toHaveCount(skillsCount);
+  expect(skillsCount).toBeGreaterThan(10);
+  // Coming up on the Overview says the same step, with the same prepared message, and leads to the tracker
+  await screen.getByRole('navigation', 'Main navigation').getByRole('button', 'Overview').tap();
+  const soon = browser.locator(`#ov-soon li[data-soon-run="${f.run.id}"]`);
+  await expect(soon).toContainText(f.run.stepTitles[1]);
+  await expect(soon).toContainText('was due');
+  const soonHref = decodeURIComponent((await browser.evaluate(() => document.querySelector('#ov-soon li[data-soon-run] a.pl-chat')!.getAttribute('href')))!.split('prompt=')[1]);
+  expect(soonHref).toBe(next);
+  await soon.getByRole('button', /^See the run/).tap();
+  await expect(browser.locator('.view.on h1')).toHaveText('Workflows');
+  // it opens the Workflows part, even after Skills was chosen
+  await expect(browser.locator('#pw-files .wf-run:not(.ended)').first()).toBeVisible();
 });
