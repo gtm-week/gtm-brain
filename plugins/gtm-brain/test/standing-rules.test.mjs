@@ -1,13 +1,13 @@
-// The team's standing rules before a save (lib/standing-rules.mjs, remember): a save that may collide with a rule
-// in Our rules or with a note that states a standing rule is held once with the rule's text, date and author, and
-// saved when the same entry comes back with rule_checked: true; an unrelated save goes through; a note that states
-// a rule is recognised and offered for the rules file; the rules ride at the top of a chat's first write only.
+// The team's standing rules reach Codex before any call (lib/standing-rules.mjs): a marked block at the top of the
+// brain's AGENTS.md holds the "Our rules" lines of the rules file and every note saved with states_rule. Nothing is
+// guessed from wording and no save is held on it; a look-alike note never replaces a kept one by itself; said_on
+// dates a note by when it happened.
 // Run: node --test plugins/gtm-brain/test/standing-rules.test.mjs
 process.env.GTM_BRAIN_TEST_LAYOUT = "2";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync, appendFileSync, realpathSync, mkdirSync } from "node:fs";
+import { mkdtempSync, writeFileSync, appendFileSync, readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -17,6 +17,8 @@ const env = { ...process.env, PLUGIN_ROOT: P, CODEX_HOME: mkdtempSync(join(tmpdi
 delete env.GTM_BRAIN_RUN;
 process.env.CODEX_HOME = env.CODEX_HOME; process.env.GTM_BRAIN_NO_COMMIT = "1";
 const S = await import(`${P}/lib/standing-rules.mjs`);
+const lib = await import(`${P}/lib/brain.mjs`);
+const { splitOwn } = await import(`${P}/lib/rule-pages.mjs`);
 
 function brain() {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "gtm-standing-")));
@@ -26,62 +28,71 @@ function brain() {
 }
 const remember = (root, entry) => spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, root, "--by", "anna-lind", "--batch", (() => { const f = join(root, "work", `b-${Math.random()}.json`); writeFileSync(f, JSON.stringify([entry])); return f; })()], { cwd: root, env, encoding: "utf8" });
 const say = r => `${r.stdout}${r.stderr}`;
+const agents = root => readFileSync(join(root, "AGENTS.md"), "utf8");
+const memories = root => lib.listContexts(root).flatMap(c => lib.effectiveMemories(c.memories));
 
-test("statesRule: an instruction to the team, not a fact about someone", () => {
-  assert.ok(S.statesRule("Never send a demo video before the first call."));
-  assert.ok(S.statesRule("From now on we log every booth visit in the events context."));
-  assert.ok(S.statesRule("Ask Anna before quoting a workshop date."));
-  assert.ok(S.statesRule("Standing rule: booth banners are printed in Gdansk."));
-  assert.ok(!S.statesRule("Anna never replies on Fridays."));
-  assert.ok(!S.statesRule("Never send a demo video before the first call.", "question"));
-});
-
-test("a save that may collide with a rule in Our rules is held, then saved with rule_checked", () => {
+test("a note saved with states_rule enters the AGENTS.md block; the person's own text stays", () => {
   const root = brain();
-  appendFileSync(join(root, "RULES.md"), "\nNever promise workshop dates before the venue contract is signed.\n");
-  const entry = { content: "Told Acme Retail the workshop dates are 12 and 13 March, venue still open.", companies: ["Acme Retail"], context: "company" };
-  const r = remember(root, entry);
-  assert.equal(r.status, 2, say(r));
-  assert.match(r.stderr, /^not saved: this may collide with a rule: "Never promise workshop dates before the venue contract is signed\."/);
-  assert.match(r.stderr, /both mention .*workshop/);
-  assert.match(r.stderr, /rule_checked: true/);
-  const again = remember(root, { ...entry, rule_checked: true });
-  assert.equal(again.status, 0, say(again));
-  assert.match(again.stdout, /remembered m_/);
-});
-
-test("a note that states a standing rule is recognised, offered for the rules file, and holds a later colliding save", () => {
-  const root = brain();
-  const rule = remember(root, { content: "From now on booth banners for trade fairs are printed by Northfold Print only.", kind: "decision", context: "company" });
-  assert.equal(rule.status, 0, say(rule));
-  assert.match(rule.stdout, /states a standing rule/);
-  assert.match(rule.stdout, /Our rules in RULES\.md/);
-  assert.match(rule.stdout, /then the rule offer above/);
-  const r = remember(root, { content: "Ordered the booth banners for the Leipzig trade fair from a local shop.", context: "company" });
-  assert.equal(r.status, 2, say(r));
-  assert.match(r.stderr, /not saved: this may collide with a rule: "From now on booth banners/);
-  assert.match(r.stderr, /\(\d{4}-\d{2}-\d{2}, anna-lind\)/);   // date and author
-});
-
-test("an unrelated save goes through unchanged", () => {
-  const root = brain();
-  appendFileSync(join(root, "RULES.md"), "\nNever promise workshop dates before the venue contract is signed.\n");
-  const r = remember(root, { content: "Anna Lind met the Acme Retail team about their spring newsletter.", people: ["Anna Lind"], context: "company" });
+  appendFileSync(join(root, "AGENTS.md"), "\nOur own line: booth photos go to the shared drive.\n");
+  const before = agents(root);
+  assert.ok(!before.includes(S.RULES_START));
+  const r = remember(root, { content: "Booth banners for trade fairs are printed by Northfold Print only.", kind: "decision", context: "company", states_rule: true });
   assert.equal(r.status, 0, say(r));
-  assert.doesNotMatch(say(r), /collide/);
-  assert.doesNotMatch(say(r), /standing rule/);
+  assert.match(r.stdout, /kept as a team rule/);
+  assert.match(r.stdout, /approve_change/);
+  const text = agents(root);
+  assert.ok(text.startsWith(S.RULES_START), text.slice(0, 200));
+  assert.match(text, /## Our rules: check before saving or acting\nWhen a request may break one of these, do not save or act: name the rule and ask\./);
+  assert.match(text, /### Stated in notes, not yet in the rules file\n- Booth banners for trade fairs are printed by Northfold Print only\. \(\d{4}-\d{2}-\d{2}, anna-lind, m_[0-9a-f]{12}\)/);
+  assert.ok(text.includes("Our own line: booth photos go to the shared drive."));
+  assert.equal(S.cutRulesBlock(text).text, before);   // outside the markers, word for word
+  assert.equal(splitOwn(text).rules, splitOwn(before).rules);   // the upgrader still sees the shipped rules
+  // a second refresh with nothing new writes nothing
+  assert.equal(S.refreshRulesBlock(root), false);
 });
 
-test("the rules ride at the top of the first write of a chat, once", () => {
+test("a line under Our rules in the rules file enters the block at chat start", () => {
   const root = brain();
   appendFileSync(join(root, "RULES.md"), "\nNever promise workshop dates before the venue contract is signed.\n");
-  mkdirSync(join(root, "work"), { recursive: true });
-  writeFileSync(join(root, "work", "session.json"), JSON.stringify({ session_id: "chat-standing-1", host: "codex" }));
-  const first = remember(root, { content: "Anna Lind sent the spring newsletter draft to Acme Retail.", people: ["Anna Lind"], context: "company" });
+  execFileSync(process.execPath, [`${P}/session/start-lines.mjs`, root, "", `${P}/templates`], { cwd: root, env, encoding: "utf8" });
+  const text = agents(root);
+  assert.ok(text.startsWith(S.RULES_START));
+  assert.match(text, /\n- Never promise workshop dates before the venue contract is signed\.\n/);
+  assert.doesNotMatch(text, /Stated in notes/);
+});
+
+test("an ordinary sentence with from now on, saved without states_rule, is not a rule and holds nothing", () => {
+  const root = brain();
+  const first = remember(root, { content: "From now on Anna Lind runs the Acme Retail security review.", people: ["Anna Lind"], context: "company" });
   assert.equal(first.status, 0, say(first));
-  assert.match(first.stdout, /^The team's rules \(shown once per chat/);
-  assert.ok(first.stdout.indexOf("Never promise workshop dates") < first.stdout.indexOf("remembered m_"));
-  const second = remember(root, { content: "Anna Lind booked the newsletter slot with Acme Retail.", people: ["Anna Lind"], context: "company" });
-  assert.equal(second.status, 0, say(second));
-  assert.doesNotMatch(second.stdout, /The team's rules/);
+  assert.doesNotMatch(say(first), /team rule/);
+  assert.ok(!agents(root).includes(S.RULES_START));
+  assert.equal(S.collectRules(root).filter(r => !r.fromFile).length, 0);
+  const later = remember(root, { content: "Anna Lind sent the Acme Retail security review questions.", people: ["Anna Lind"], context: "company" });
+  assert.equal(later.status, 0, say(later));
+  assert.doesNotMatch(say(later), /collide/);
+});
+
+test("two look-alike notes both stay in force: a replacement only through supersedes", () => {
+  const root = brain();
+  const a = remember(root, { content: "The Northfold booth at the Leipzig fair is 12 square metres.", context: "company" });
+  assert.equal(a.status, 0, say(a));
+  const b = remember(root, { content: "The Northfold booth at the Leipzig fair is 18 square metres.", context: "company" });
+  assert.equal(b.status, 0, say(b));
+  const now = memories(root).filter(m => /Leipzig fair is/.test(m.content));
+  assert.equal(now.length, 2, JSON.stringify(now.map(m => m.content)));
+  assert.ok(now.every(m => !m.supersedes));
+});
+
+test("said_on is kept and dates the note in the index and the search reply", () => {
+  const root = brain();
+  const r = remember(root, { content: "Acme Retail agreed to a pilot of the workshop kit.", companies: ["Acme Retail"], new_names: ["Acme Retail"], context: "company", said_on: "2026-06-12" });
+  assert.equal(r.status, 0, say(r));
+  const m = memories(root).find(x => /pilot of the workshop kit/.test(x.content));
+  assert.ok(m.tags.includes("said:2026-06-12"), JSON.stringify(m.tags));
+  assert.equal(lib.noteAt(m).slice(0, 10), "2026-06-12");
+  assert.notEqual(m.at.slice(0, 10), "2026-06-12");
+  const bad = remember(root, { content: "Acme Retail asked for the kit list.", context: "company", said_on: "June" });
+  assert.notEqual(bad.status, 0);
+  assert.match(bad.stderr, /said_on "June" is not a date/);
 });

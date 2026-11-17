@@ -631,9 +631,9 @@ async function opening(args) {
   return out ? `GTM Brain chat start (once per chat; follow it):\n${out}` : null;
 }
 
-/* The first read of a chat carries the opening lines up to READ_OPENING characters; the saving rules and whatever
-   is past that cut wait for the chat's first write (remember, update_entity and the like), which needs them. A read
-   was 24,000 characters of saving rules, schema and context list before it answered anything. */
+/* The first read of a chat carries the saving rules whole and the other opening lines up to READ_OPENING characters;
+   only what is past that cut waits for the chat's first write. The saving rules never wait: delivered with the first
+   write's reply they arrive one step after the save they were for (lib/dots.mjs explains why that failed before). */
 const READ_OPENING = 2500;
 const SAVING = /\n--- The saving rules for this chat ---\n[\s\S]*?\n---(?=\n|$)/;
 const heldOpening = new Map();
@@ -642,13 +642,14 @@ function splitOpening(args, tool, start) {
   const key = isBrain(args.brain) ? `${resolve(args.brain)}\t${typeof args.project === "string" ? args.project : ""}` : "";
   if (start && tool.readOnly && !(tool.name === "query" && args.object === "status")) {   // a status read asks for all of it
     let rest = "", head = start;
-    const rules = head.match(SAVING); if (rules) { rest = rules[0].trim(); head = head.replace(SAVING, ""); }
+    const rules = head.match(SAVING); if (rules) head = head.replace(SAVING, "");
     if (head.length > READ_OPENING) {   // line by line, in order; who and where, the waiting questions and today always stay
       const keep = [], later = []; let size = 0;
       for (const line of head.split("\n")) { if (READ_KEEPS.test(line) || size + line.length + 1 <= READ_OPENING) { keep.push(line); size += line.length + 1; } else later.push(line); }
-      head = keep.join("\n"); rest = [...later, rest].filter(Boolean).join("\n");
+      head = keep.join("\n"); rest = later.filter(Boolean).join("\n");
     }
-    if (rest) { heldOpening.set(key, rest); head += "\n(The saving rules and the rest of the opening lines come with this chat's first save.)"; }
+    if (rules) head += `\n${rules[0].trim()}`;
+    if (rest) { heldOpening.set(key, rest); head += "\n(The rest of the opening lines come with this chat's first save.)"; }
     return head;
   }
   if (!tool.readOnly && heldOpening.has(key)) { const rest = heldOpening.get(key); heldOpening.delete(key); return [start, `GTM Brain opening lines for saving (once per chat; follow them):\n${rest}`].filter(Boolean).join("\n"); }
@@ -716,7 +717,7 @@ const send = m => process.stdout.write(JSON.stringify(m) + "\n");
    enforced where the call runs. */
 // The listed text of the largest definitions; the full rules ride on the chat's first write and on a refusal.
 const LISTED_DESCRIPTION = {
-  remember: "Save a decision, commitment, finding, meeting outcome, question or answer. Append-only. Call it at once when the person states a fact, no reads first: the brain matches names and context, says already kept, and turns a changed date, amount or count into a correction. One note per outcome; never a note that only says a meeting happened. A whole turn in one call through memories. Quote the note back as echoed. supersedes corrects an id, retracts withdraws one. A held entry: ask what the reply says, once, resend only it. Outcomes: ok, denied, refused (tell the person why), error.",
+  remember: "Save a decision, commitment, finding, meeting outcome, question or answer. Append-only. Call it at once when the person states a fact, no reads first, unless one of the team's rules (AGENTS.md, Our rules) applies: then name it and ask. The brain matches names and context and says already kept. One note per outcome; never a note that only says a meeting happened. A whole turn in one call through memories. Quote the note back as echoed. supersedes only when the person corrects that exact fact, retracts when they withdraw it; a new note on the same subject sets neither. states_rule when they state a standing rule for the team. A held entry: ask what the reply says, once, resend only it. Outcomes: ok, denied, refused (tell the person why), error.",
 };
 // remember (the largest) also has its top-level field prose cut to a sentence, content's rule on dates excepted.
 const advertised = ({ anyOf, oneOf, allOf, not, enum: _, ...schema }, name) => {

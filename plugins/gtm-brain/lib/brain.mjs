@@ -1645,6 +1645,13 @@ export function unknownTools(root, tools) {
   const admin = readAdmin(root); const known = new Set((admin && admin.tools || []).map(toolKey));
   return tools.filter(t => !known.has(toolKey(t)));
 }
+/* The date a note's fact happened: remember's said_on, kept as the tag said:YYYY-MM-DD (older plugins read a tag
+   as a tag), else the time it was saved. Date filters, the index and pages read this. */
+export const SAID_TAG = /^said:(\d{4}-\d{2}-\d{2})$/;
+export function noteAt(m) {
+  const t = (m?.tags || []).map(x => SAID_TAG.exec(String(x))).find(Boolean);
+  return t ? `${t[1]}T12:00:00.000Z` : m?.at;
+}
 export function appendMemory(root, slug, options) {
   assertWritable(root);
   return withEntityLock(root, () => appendMemoryRecord(root, slug, prepareMeetingMemory(root, slug, options)));

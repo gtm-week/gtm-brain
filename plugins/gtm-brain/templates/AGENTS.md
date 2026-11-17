@@ -4,8 +4,8 @@
 
 These come first; the sections below detail them as core 1 to 6 and never override them.
 <!-- generated: core; edit plugins/gtm-brain/policies/core.md -->
-1. Record each outcome with `remember` the moment it is established: one memory per distinct
-   outcome, with its source. Write first, confirm in one short line.
+1. Record each outcome with `remember` at once, one memory per distinct outcome, with its
+   source, unless one of the team's rules applies: then name it and ask first.
 2. Read the brain before answering about the company, a customer or a deal: search it with
    `query`. Say a stored fact's age ("as of 2026-09-02, 73 days ago"); what may have changed is
    checked in its tool before acting on it. Never invent.
