@@ -7,7 +7,7 @@ process.env.GTM_BRAIN_NO_COMPILE = "1"; // Model runs are opt-in through test do
 // Run: node --test 'plugins/gtm-brain/test/*.test.mjs'
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, existsSync, readFileSync, mkdirSync, writeFileSync, unlinkSync } from "node:fs";
+import { mkdtempSync, existsSync, readFileSync, mkdirSync, writeFileSync, unlinkSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawn, execFileSync } from "node:child_process";
@@ -773,19 +773,35 @@ test("query object reference finds every note citing a source pointer, whatever 
   assert.ok(!odd.isError, odd.text); assert.match(odd.text, /Notes citing it: none/);
 });
 
-test("an ordinary chat is listed at most 14 tools in under 40,000 characters; a hidden tool still answers", async () => {
+test("every tool a shipped text names is listed to an ordinary chat, in under 60,000 characters; a short tool still answers", async () => {
   const child = spawn(process.execPath, [`${P}/server/server.mjs`], { stdio: ["pipe", "pipe", "pipe"], env: { ...process.env, GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_SESSION_START: "1", GTM_BRAIN_TOOLSET: "", GTM_BRAIN_RUN: "" } });
-  after(() => child.kill());
-  const waiting = new Map(); let n = 0;
-  createInterface({ input: child.stdout }).on("line", line => { const m = JSON.parse(line); waiting.get(m.id)?.(m); });
-  const ask = (method, params = {}) => new Promise(res => { const id = ++n; waiting.set(id, res); child.stdin.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n"); });
+  const full = spawn(process.execPath, [`${P}/server/server.mjs`], { stdio: ["pipe", "pipe", "pipe"], env: { ...process.env, GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_SESSION_START: "1", GTM_BRAIN_TOOLSET: "full", GTM_BRAIN_RUN: "" } });
+  after(() => { child.kill(); full.kill(); });
+  const talk = proc => { const waiting = new Map(); let n = 0; createInterface({ input: proc.stdout }).on("line", line => { const m = JSON.parse(line); waiting.get(m.id)?.(m); });
+    return (method, params = {}) => new Promise(res => { const id = ++n; waiting.set(id, res); proc.stdin.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n"); }); };
+  const ask = talk(child), askFull = talk(full);
   const init = await ask("initialize", { capabilities: { elicitation: { form: {} } } });
   assert.ok(init.result.instructions.length < 4000, `instructions are ${init.result.instructions.length} characters (were 6,665)`);
   const tools = (await ask("tools/list")).result.tools, size = JSON.stringify(tools).length;
-  assert.ok(tools.length <= 14, `${tools.length} tools listed (were 41)`);
-  assert.ok(size < 40000, `tools/list is ${size} characters (was 85,535)`);
-  for (const name of ["remember", "query", "update_entity", "approve_change", "workflow", "document", "interact", "check_environment", "setup_brain"]) assert.ok(tools.some(t => t.name === name), `${name} is listed`);
+  assert.ok(size < 60000, `tools/list is ${size} characters (was 85,535 with full descriptions)`);
   assert.ok(JSON.stringify(tools.find(t => t.name === "remember")).length < 6000, "remember under 6,000 characters (was 18,084)");
-  const hidden = await ask("tools/call", { name: "check_tools", arguments: { brain: root } });
-  assert.ok(hidden.result && !/unknown tool/.test(JSON.stringify(hidden)), "a tool left off the list still answers tools/call");
+  // Codex calls only a listed tool (win review, 2026-11-17: the instructions named answer_question and merge_entities,
+  // hidden then). Every tool the server answers that the instructions, a listed description, the opening lines, a
+  // skill or a rule page names by its name must be listed.
+  await askFull("initialize", {});
+  const listed = new Set(tools.map(t => t.name)), every = (await askFull("tools/list")).result.tools.map(t => t.name);
+  const walk = d => readdirSync(d, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(join(d, e.name)) : e.name.endsWith(".md") ? [join(d, e.name)] : []);
+  const texts = [["the server instructions", init.result.instructions], ...tools.map(t => [`the ${t.name} description`, t.description]), ["session/session-start.sh", readFileSync(`${P}/session/session-start.sh`, "utf8")],
+    ...[...walk(`${P}/skills`), ...walk(`${P}/policies`)].map(f => [f.slice(P.length + 1), readFileSync(f, "utf8")])];
+  const unreachable = every.filter(name => !listed.has(name)).flatMap(name => {
+    // a one-word name (save, skill) is an ordinary word too: it counts only written as code
+    const named = name.includes("_") ? new RegExp(`\\b${name}\\b`) : new RegExp("`" + name + "`");
+    return texts.filter(([, t]) => named.test(t)).map(([where]) => `${name} (named in ${where})`);
+  });
+  assert.deepEqual(unreachable, [], "a named tool that an ordinary chat is not listed cannot be called");
+  for (const name of ["answer_question", "merge_entities", "skill", "add_name", "new_context", "link_project", "check_tools", "mark_tool", "open_dashboard", "propose_admin_change"]) assert.ok(listed.has(name), `${name} is listed`);
+  assert.ok(!listed.has("entity_facts") && !listed.has("recall"), "run-only and retired reads stay off the list");
+  assert.ok(tools.find(t => t.name === "check_tools").description.length <= 300, "a tool outside the turn's core is listed in two sentences");
+  const short = await ask("tools/call", { name: "check_tools", arguments: { brain: root } });
+  assert.ok(short.result && !/unknown tool/.test(JSON.stringify(short)), "it still answers tools/call");
 });
