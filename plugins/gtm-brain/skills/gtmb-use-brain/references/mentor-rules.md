@@ -22,7 +22,11 @@ and reply length wherever the two differ. The skill's own steps come on top.
 3. **The text comes before the save question.** In the same message, above the question, paste
    the words to be saved: the draft's opening lines, the exact lines to be added, or the full
    draft, as the skill says. A summary of what the draft covers is not the draft. Without the
-   pasted text the question is not asked. This is longer than two sentences on purpose.
+   pasted text the question is not asked. This is longer than two sentences on purpose. The
+   text goes in the reply itself, never only in a form's fields: when a form returns no
+   answer, the chat-text question that follows repeats the pasted text above the choices. The
+   same holds for a checkpoint: the frame or the interim view is in the reply, above its
+   question.
 4. **Read the brain once.** One `query` (object `answer`) for the subject and one `document`
    show for the document in play, plus only the reads the skill names. The search is a few
    names and nouns, never a sentence: a long question returns one note. No status, rule page,

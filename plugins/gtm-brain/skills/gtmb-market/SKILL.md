@@ -33,7 +33,7 @@ Read [mentor rules](../gtmb-use-brain/references/mentor-rules.md) once; they hol
    when the person named them in the request.
 3. Open the websites of the competitors named, the home page and the pricing page, nothing
    else, and only for the names the person gave or confirmed. Use the site the brain or the
-   person gives; with none, always run one search to find the competitor's own site, and
+   person gives; with none, always run one search per competitor to find its own site, and
    take nothing from the search results themselves. Only after that search or the page read
    has failed, keep one line for step 5: "<name>: website not read, this rests on our notes alone" (or "on
    your report alone").
@@ -65,8 +65,9 @@ Read [mentor rules](../gtmb-use-brain/references/mentor-rules.md) once; they hol
    competitor's product the person named is a product with its `maker`. When the schema has no
    `competes_with` type (a brain made before it shipped), save the note without `relation` and
    offer once to add the type with `/gtmb-schema`.
-8. The reply after the save is two lines, always: what the document now covers, and "Codex
-   reads it before positioning, outreach, pricing and competitive work." Then offer once, in
+8. The reply after the save is two lines, always: what the document now covers (with the
+   step 3 line for any website not read), and "Codex reads it before positioning, outreach,
+   pricing and competitive work." Then offer once, in
    one line: `/gtmb-market-research` for sourced desk research on a market or a segment.
 
 The procedure in full, shared with the other base documents:
