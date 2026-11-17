@@ -61,7 +61,7 @@ open the dashboard
 ## More
 
 - [Everyday use, the dashboard, updating](docs/GUIDE.md)
-- [All twenty-nine skills](docs/SKILLS.md)
+- [Skills marketplace](docs/SKILLS.md)
 - [How it works and what is on disk](docs/HOW-IT-WORKS.md)
 - [Everything else](docs/README.md) · [Contributing](.github/CONTRIBUTING.md) · [Issues](https://github.com/gtm-week/gtm-brain/issues)
 
