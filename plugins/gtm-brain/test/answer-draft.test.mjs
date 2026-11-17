@@ -10,7 +10,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import * as lib from '../lib/brain.mjs';
-import { answer, asksForDraft, SEARCH_MAX_BYTES, ANSWER_ALL_BYTES } from '../lib/memory-search.mjs';
+import { answer, asksForDraft, SEARCH_MAX_BYTES, ANSWER_REPLY_BYTES } from '../lib/memory-search.mjs';
 process.env.TZ = 'UTC';
 process.env.GTM_BRAIN_NO_COMMIT = '1';
 process.env.GTM_BRAIN_NO_COMPILE = '1';
@@ -69,7 +69,7 @@ test('nothing found keeps its own two lines, and a full reply with the longer la
   for (let i = 0; i < 40; i++) lib.appendMemory(root, 'events', { authors: ['ann'], content: `${long} (${i})`, source: [{ kind: 'url', ref: `https://events.fixture.test/listing-${i}` }] });
   for (const q of [ASK, 'Lisbon workshop planning']) {
     const a = answer(root, q);
-    assert.ok(Buffer.byteLength(a) <= ANSWER_ALL_BYTES, `${q}: ${Buffer.byteLength(a)} bytes`);
+    assert.ok(Buffer.byteLength(a) <= ANSWER_REPLY_BYTES, `${q}: ${Buffer.byteLength(a)} bytes`);
     assert.match(last(a), /on the web/);
   }
 });

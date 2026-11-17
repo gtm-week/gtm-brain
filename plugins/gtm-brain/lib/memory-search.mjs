@@ -554,6 +554,8 @@ function kindList(index, root, question, q, now, maxBytes = SEARCH_MAX_BYTES) {
    get what did not fit in one more call. */
 const capWhole = Number(process.env.GTM_BRAIN_ANSWER_MAX_BYTES);
 export const ANSWER_ALL_BYTES = Number.isInteger(capWhole) && capWhole >= 4096 && capWhole <= MAX_RESULT_BYTES ? capWhole : 40000;
+// a whole brain's reply: its lines within ANSWER_ALL_BYTES, plus the cards and best-match pointers above them
+export const ANSWER_REPLY_BYTES = ANSWER_ALL_BYTES + 8000;
 const LONG_NOTE_CHARS = 6000;
 const BEST_NOTE_CHARS = 240;   // a best match is a pointer; its full text is in the list   // one note (a transcript) is cut here in a larger brain; its full text is one sql read
 const oneLineText = m => String(m.content ?? '').replace(/\s*\n\s*/g, ' ').trim();
@@ -561,7 +563,7 @@ const oneLineText = m => String(m.content ?? '').replace(/\s*\n\s*/g, ' ').trim(
 export function compactLine(m, chars = Infinity) {
   const who = [...new Set([...(m.authors || []), ...(m.people || [])])].slice(0, 4).join(', ');
   const text = oneLineText(m);
-  return `- ${lib.localDateTime(m.at).slice(0, 10)} · ${m.context} · ${m.kind}${who ? ` · ${who}` : ''} · ${chars < text.length ? clip(text, chars) : text} · ${m.id}${m.supersedes ? ` (replaces ${m.supersedes})` : ''}${m.retracts ? ` (withdraws ${m.retracts})` : ''}`;
+  return `- ${lib.localDateTime(m.at).slice(0, 10)} · ${m.context}${m.kind && m.kind !== 'note' ? ` · ${m.kind}` : ''}${who ? ` · ${who}` : ''} · ${chars < text.length ? clip(text, chars) : text} · ${m.id}${m.supersedes ? ` (replaces ${m.supersedes})` : ''}${m.retracts ? ` (withdraws ${m.retracts})` : ''}`;
 }
 const MONTH_WORD = new RegExp(`\\b${MONTH_RE}\\.?\\b`, 'gi');
 /* The days a note's text names: 2026-11-14, 14 November (2026), November 14, November 2026, 14.11.2026, 14/11/2026.
@@ -585,13 +587,14 @@ const looseForms = w => { const f = fold(w).toLowerCase(), st = stemish(f); retu
 const noteWords = text => new Set((fold(String(text)).toLowerCase().match(/[\p{L}\p{N}]+/gu) || []));
 const matchesForm = (bag, form) => { if (bag.has(form)) return true; for (const w of bag) if (w.startsWith(form)) return true; return false; };
 
-function everythingRecorded(index, root, question, q, r, filters, now, budget = ANSWER_ALL_BYTES) {
+function everythingRecorded(index, root, question, q, r, filters, now, budget = ANSWER_ALL_BYTES, prefixBytes = 0) {
   const scope = index.filterSql(filters || {});
   const all = index.db.prepare(`${scope.prefix}SELECT m.rowid AS r FROM memories m WHERE ${scope.where.join(' AND ')} ORDER BY m.time ASC, m.id ASC`).all(...scope.params).map(x => x.r);
   const notes = all.map(rowid => ({ rowid, m: fetchRow(index, rowid) }));
   const lines = notes.map(n => compactLine(n.m));
   const total = lines.reduce((a, l) => a + Buffer.byteLength(l) + 1, 0);
-  if (total <= budget) return { whole: true, header: `Everything recorded in the brain: all ${notes.length} current note${notes.length === 1 ? '' : 's'}, oldest to newest (replaced and withdrawn notes left out). Each line: date recorded · context · kind · who · text · id.`, lines, notes: notes.map(n => n.m) };
+  // the threshold is the lines alone (about 40,000 characters), so a brain that fits is never cut by the cards above
+  if (total <= ANSWER_ALL_BYTES && total + prefixBytes + 1500 <= ANSWER_REPLY_BYTES) return { whole: true, header: `Everything recorded in the brain: all ${notes.length} current note${notes.length === 1 ? '' : 's'}, oldest to newest (replaced and withdrawn notes left out). Each line: date recorded · context · kind (when not a plain note) · who · text · id.`, lines, notes: notes.map(n => n.m) };
   // larger brain: every note of each named entity first, then everything the other words, the period or the kind match
   const chosen = new Map(), out = []; let bytes = 0; const left = [];
   const add = (n, section) => {
@@ -670,7 +673,7 @@ export function answerText(index, root, question, { filters = {}, limit, project
   const n = Math.max(1, Math.min(200, Number(limit) || ANSWER_NOTES));
   const best = r.rows.slice(0, n).map((row, i) => `${i + 1}. ${noteText(fetchRow(index, row.r), now, BEST_NOTE_CHARS, row.later)}`);
   if (best.length) out.push('', `Best matches for the words (full text in the list below):`, ...best);
-  const all = everythingRecorded(index, root, question, q, r, filters, now, ANSWER_ALL_BYTES - Buffer.byteLength(out.join('\n')) - 4400);   // room for the closing lines and up to 150 ids
+  const all = everythingRecorded(index, root, question, q, r, filters, now, ANSWER_ALL_BYTES - Buffer.byteLength(out.join('\n')) - 4400, Buffer.byteLength(out.join('\n')));   // room for the closing lines and up to 150 ids
   out.push('', all.header, ...all.lines);
   if (all.left?.length) {
     const ids = all.left.slice(0, 150);
