@@ -63,3 +63,20 @@ test("the list keeps the newest 80 and says how many older notes query lists", (
   assert.match(lines[0], /note 84 · m_/);
   assert.match(lines.at(-1), /5 older notes are not listed here; query/);
 });
+
+test("pages written before the render version are all rewritten once by the next refresh, without a new note (review finding 5)", async () => {
+  const b = brain();
+  assert.equal(b.batch([{ context: "company", content: "Northfold runs 30 stores in the Nordics.", companies: ["Northfold"], sources: ["user:ada-example"] }]).status, 0);
+  const file = join(b.root, b.entity("Northfold")._path);
+  const { refreshEntityPages } = await import(`${P}/lib/entities.mjs`);
+  const { PAGE_RENDER } = await import(`${P}/lib/entity-pages.mjs`);
+  assert.ok(PAGE_RENDER >= 2);
+  // an upgraded brain: the checkpoint has no render version, and the page lacks the section a newer renderer writes
+  const ckpt = join(lib.workDir(b.root), "entity-pages.json"), saved = JSON.parse(readFileSync(ckpt, "utf8"));
+  delete saved.render; for (const p of Object.values(saved.pages)) p.signature = "written-by-0.37";
+  writeFileSync(ckpt, JSON.stringify(saved));
+  refreshEntityPages(b.root);
+  assert.match(readFileSync(file, "utf8"), /## Everything recorded/);
+  assert.equal(JSON.parse(readFileSync(ckpt, "utf8")).render, PAGE_RENDER, "the render version is kept, so the next refresh is cheap again");
+  assert.ok(Object.values(JSON.parse(readFileSync(ckpt, "utf8")).pages).every(p => p.signature !== "written-by-0.37"), "every page was re-rendered");
+});

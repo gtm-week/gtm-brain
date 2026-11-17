@@ -13,7 +13,7 @@ import * as lib from './brain.mjs';
 /* The page renderer's version: part of every page's refresh signature, so a change to how a page is written (the
    Everything recorded section, 0.38.0) re-renders every existing page once after an upgrade, not when each
    entity next gets a note. Bump it whenever publish() writes a page differently. */
-const PAGE_RENDER = 2;
+export const PAGE_RENDER = 2;
 
 export const ENTITY_TIMELINE_LIMIT = 100;
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -29,7 +29,7 @@ export function refreshIndexedPages(root, registry, publish, { readOnly = false 
   const contexts = lib.listContexts(root, { includeMemories: false });
   const sources = () => digest([...contexts.map(c => [c.slug, memoryStamp(c.path)?.key]), ...lib.noteSources(root).map(f => [f.file, memoryStamp(f.path)?.key])]);
   const sourceRevision = sources(), schemaRevision = readSchema(root).schema?.hash || readSchema(root).error?.message || null, askRevision = askSourceRevision(root);
-  if (!readOnly && saved?.format === 1 && saved.sources === sourceRevision && saved.identities === entityStamp(root) && (saved.schema ?? null) === schemaRevision && saved.ask === askRevision) return [];
+  if (!readOnly && saved?.format === 1 && saved.render === PAGE_RENDER && saved.sources === sourceRevision && saved.identities === entityStamp(root) && (saved.schema ?? null) === schemaRevision && saved.ask === askRevision) return [];
   // A pinned snapshot: the cache lock is held only while the cache catches up, not while
   // the pages are built and written, so neither a save nor a read waits on a render.
   const index = openForRead(root), changed = [], checkpoints = {};
@@ -85,7 +85,7 @@ export function refreshIndexedPages(root, registry, publish, { readOnly = false 
     if (readOnly) return changed;
     const temporary = path + '.' + process.pid + '.tmp';
     if (sources() !== sourceRevision) throw new Error('Context files changed during entity refresh. Retry the save.');
-    writeFileSync(temporary, JSON.stringify({ format: 1, epoch, pages: checkpoints, sources: sourceRevision, identities: entityStamp(root), schema: schemaRevision, ask: askRevision, refreshed, checked: registry.length, at: new Date().toISOString() }));
+    writeFileSync(temporary, JSON.stringify({ format: 1, render: PAGE_RENDER, epoch, pages: checkpoints, sources: sourceRevision, identities: entityStamp(root), schema: schemaRevision, ask: askRevision, refreshed, checked: registry.length, at: new Date().toISOString() }));
     renameSync(temporary, path);
     return changed;
   } finally { index.close(); }
