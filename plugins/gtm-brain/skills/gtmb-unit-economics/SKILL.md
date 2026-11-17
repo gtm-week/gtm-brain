@@ -70,7 +70,11 @@ before sending:
   deals from this spend are still open").
 - Every number cites its note (date and context); a stand-in says so ("gross margin used as
   a proxy for contribution margin").
-- Each action carries its metric, a review date and a stop condition.
+- Each action carries its metric, a calendar review date and a stop condition the company
+  can reach.
+- The reply's last line is the Step 3 offer, in one sentence ("Shall I record this decision in
+  Strategy and add the missing inputs as open questions?"); a next-step summary does not
+  replace it.
 
 ## Step 3: keep it
 

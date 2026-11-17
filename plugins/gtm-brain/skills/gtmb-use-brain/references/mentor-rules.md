@@ -15,16 +15,21 @@ and reply length wherever the two differ. The skill's own steps come on top.
    "Saved ..." line during an interview or a review. The skill says what is saved and when; the
    notes then go in one `remember` call with `memories: [...]`. Before that call, drop every
    item the brain already holds (a restated note is not a new note) and everything the
-   document already says. A save that failed is retried or reported with its error; never
-   write "saved" without a call that succeeded.
+   document already says; when an item mixes old and new, keep only the new sentence. A note
+   names only the people and companies its text names, never the person's own company. A save
+   that failed is retried or reported with its error; never write "saved" without a call that
+   succeeded.
 3. **The text comes before the save question.** In the same message, above the question, paste
    the words to be saved: the draft's opening lines, the exact lines to be added, or the full
    draft, as the skill says. A summary of what the draft covers is not the draft. Without the
    pasted text the question is not asked. This is longer than two sentences on purpose.
 4. **Read the brain once.** One `query` (object `answer`) for the subject and one `document`
-   show for the document in play, plus only the reads the skill names. No status, rule page,
-   entity lookup or second search with other words. Every note that read returned is used
-   where it fits, with its date; none is left out by oversight.
+   show for the document in play, plus only the reads the skill names. The search is a few
+   names and nouns, never a sentence: a long question returns one note. No status, rule page,
+   entity lookup or second search with other words. Every note the reads returned is used
+   where it fits and cited as a note with its date, also when the person repeats it in the
+   chat. The date a thing happened ("lost in August 2026") and the date its note was recorded
+   are kept apart; a person is named in full as the brain registers them.
 5. **A named website is opened, not searched.** Open the pages the skill names on the site the
    brain or the person gives. A web search for the name does not stand in for reading the site,
    and nothing is taken from a search result that was not opened. When no site is known or a
@@ -34,4 +39,6 @@ and reply length wherever the two differ. The skill's own steps come on top.
    word for word where the skill quotes it, even when the reply is short.
 
 A fact the person did not state (a currency, a unit, a date worked out from "last week") is
-written as an assumption and shown to them before it is saved.
+listed as an assumption, one line each, above the save question for them to confirm; the word
+"assumed" does not go into the document. Where the person said they do not know, the document
+says Unknown or starts the line with "Hypothesis:"; it is never filled with likely content.

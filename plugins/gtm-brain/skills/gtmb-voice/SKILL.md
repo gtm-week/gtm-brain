@@ -22,7 +22,7 @@ Reuse the session's person, company and website (`query` status only if missing)
 document with `document` (`action: show`, `ref: voice`): setup writes `voice.md` as a starter at
 the brain root. When `action: list` shows another tone of voice document, read that too.
 
-A filled document says on its first line whose voice it is and what it governs: reuse that, or an
+A starter is not filled. A filled document says on its first line whose voice it is and what it governs: reuse that, or an
 answer already in the request ("our voice" is not one), and never ask again. Otherwise this
 question comes first, before reading or asking for texts, with one line on why: a company standard is read from what the company publishes and
 sends, a person's from their own writing, and a blend fits neither. Choices: "The company's voice"
@@ -49,7 +49,7 @@ A tool that is not connected is named as missing ("sent mail: not connected"); c
 [gtmb-configure](../gtmb-configure/SKILL.md)'s job, offered in one line at the end. An
 empty result is a result; an error is reported with its exact text and the run goes on. Before
 the draft, show what was reviewed (source, count, dates, kind) and what is missing, as a
-"Reviewed" list on top of the draft: a line per source, a text without a date called undated.
+"Reviewed" list on top of the draft, a line per source.
 Under six authored texts the draft is a guess: say so and ask for
 texts the person likes, up to six.
 

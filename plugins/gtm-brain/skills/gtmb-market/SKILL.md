@@ -23,30 +23,35 @@ second market document.
 
 Read [mentor rules](../gtmb-use-brain/references/mentor-rules.md) once; they hold here.
 
-1. Read what the brain already holds, in exactly two reads: `query` with object `answer` for
-   the market, the competitors and why deals are won or lost, and `document` with
+1. Read what the brain already holds, in exactly three reads: `query` with object `memories`
+   and `filters: { "context": "market" }` (every market note: the list step 4 is checked
+   against); `query` with object `answer` and `search` the competitors' names plus
+   "competitor pricing lost won" (their notes in other contexts); and `document` with
    `action: show`, `ref: market` for what the document says now. No other read.
 2. Ask one question, with the host's question form: which competitors matter most (offer the
    names the notes already show as choices, the person's own answer last). Skip the question
    when the person named them in the request.
 3. Open the websites of the competitors named, the home page and the pricing page, nothing
    else, and only for the names the person gave or confirmed. Use the site the brain or the
-   person gives; with none, one search to find the competitor's own site, and nothing is
-   taken from the search results themselves. For each site not found or not readable, keep
-   one line for step 5: "<name>: website not read, this rests on our notes alone" (or "on
+   person gives; with none, always run one search to find the competitor's own site, and
+   take nothing from the search results themselves. Only after that search or the page read
+   has failed, keep one line for step 5: "<name>: website not read, this rests on our notes alone" (or "on
    your report alone").
 4. Draft under the starter's own headings. Name only competitors, claims and prices a source
    shows, each with its source and date. What the team believes without a source is written
    as a belief, in the person's words.
-   - Carry every market note the read returned into the draft once, under the heading it
-     fits. Doing nothing or a manual process that a note names as an alternative goes under
-     Competitors and under how we lose.
+   - Carry every market note the reads returned into the draft once, under the heading it
+     fits: a quoted price under Pricing in the market, what buyers compare under how we win
+     and lose, doing nothing or a manual process that a note names as an alternative under
+     Competitors and under how we lose. Before step 5, tick each note off against the draft.
+     Never write that nothing is held on a competitor a note names.
    - A heading with no note of its own stays empty: never repeat a fact from another heading
      to fill it ("Trends we watch" needs a note about a change over time).
    - An addition to a filled document changes only the lines it adds.
 5. The save question, in one message: paste the draft's opening lines word for word (under
    500 characters, from the first filled heading; for a single addition, the exact lines to
-   be added), then the lines kept in step 3, then ask once below them: "Save it as approved",
+   be added and the heading each goes under), then the lines kept in step 3 and any
+   assumption (a currency, a date), then ask once below them: "Save it as approved",
    "Save it as a draft", "Change something". No choice is marked as recommended. Nothing is
    written before that answer.
 6. Save with `document`, `action: update`, `ref: market`, the body, the status and the person's

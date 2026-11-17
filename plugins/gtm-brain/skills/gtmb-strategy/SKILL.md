@@ -277,8 +277,9 @@ one.
 
 ## Closing
 
-Before producing the output, ask one final closing question, together with question 19 when
-that is still open:
+Before asking it, go through questions 0 to 19 one by one and ask the ones still open in
+this turn. Then ask one final closing question, together with question 19 when that is still
+open:
 
 > "Is there anything else important about the company's strategy that we haven't covered?
 > Does everything we discussed check out, or is there anything to add or correct?"
@@ -303,7 +304,8 @@ long written summary in chat.
   surfaced: the aspiration, the boundaries, what they say no to, the 90-day fix. At most six
   notes in the Strategy context, each quoting the person's words. Not the facts behind them
   (customers, numbers, pricing, the team), nothing the brain already holds, and nothing the
-  person only confirmed from the notes. If the call fails, retry it once, then say so.
+  person only confirmed from the notes: compare each candidate with the notes of the first
+  read and drop a restatement. If the call fails, retry it once, then say so.
 - Where it saves, in full: the document `strategy.md`; the decisions as notes in the Strategy
   context (kind `decision` where the person decided); an offering the person names with its
   price and buyer as an offering (`what_it_is`, `price`, `who_it_is_for` fill from the note).
@@ -339,5 +341,6 @@ For each of the five strategy sections include:
   **Hypothesis**. A fact taken from the brain's notes cites the note and its date as source.
 
 Finish the file with **Gaps and contradictions**: missing evidence, vague answers, tensions
-between claims, and every question of the flow that was not asked or not answered. Do not add
-a Suggested next steps section.
+between claims, and every question of the flow that was not asked or not answered, written as
+"Not asked: <question>", never as a statement about the company ("no revenue target has been
+set"). Do not add a Suggested next steps section.

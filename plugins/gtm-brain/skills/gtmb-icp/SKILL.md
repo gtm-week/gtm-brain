@@ -76,8 +76,9 @@ Unknown is not disqualified; title is not decision authority; engagement is not 
 
 Use [documents](../gtmb-use-brain/references/documents.md) and the current `document` tool contract. Setup writes `icp.md` as a starter: keep the ICP there (`action: update`, `ref: icp`), never a second ICP document.
 Synthesize the method's five parts when the areas are covered or the person stops with gaps.
-A line the person did not say and no note holds is a hypothesis and says so; an option you
-offered and the person did not take is left out. Never claim that interview agreement
+A line the person did not say and no note holds is a hypothesis and says so; where the person
+said they do not know, the cell says Unknown. An option you offered and the person did not
+take is left out. Never claim that interview agreement
 validates the market.
 
 - Before a new synthesized document, confirm once: show the title,
@@ -113,8 +114,8 @@ customer findings or explicit targeting decisions from the interview follow the 
 [remember procedure](../gtmb-use-brain/references/remember.md) in Target customers, with
 sources and entity references, preserving the person's exact words. They are saved once, after
 the document, in one `remember` call, never turn by turn. Before that call compare each item
-with the Target customers notes read in step 1 and drop every restatement of a fact or
-decision already recorded. A pilot or a desired account is never called a customer, and a
+with every note read in step 1, in any context, and drop every restatement of a fact or
+decision already recorded and every summary of what the document states. A pilot or a desired account is never called a customer, and a
 platform or a product (a shop system, a connector) is never registered as a company. Do not turn every unknown
 into a brain-question, and do not save an unsent draft, proposed action or fictional example as
 company knowledge. Respect a request not to save and any explicit context restriction.
