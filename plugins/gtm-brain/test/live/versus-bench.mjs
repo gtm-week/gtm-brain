@@ -113,9 +113,10 @@ const asksBack = reply => /\?\s*$/.test(String(reply).trim()) || /\b(shall I|sho
 
 /* ---- arm D: Codex's memories feature. It learns only from interactive chats (CLI or app) that have been
    idle a while, and only while a Codex process stays up long enough after start. A `codex exec` chat is never
-   picked up. So the replayed chats are relabelled as interactive and dated back two days in Codex's own state
-   database, and a long idle `codex exec` turn (a 240 s sleep: consolidation takes one to two minutes and dies with its process)
-   keeps a process up while the memory pipeline runs. ---- */
+   picked up, and a consolidation waits a while after the previous one. So the replayed chats are relabelled
+   as interactive and dated back two days in Codex's own state database, the last consolidation is dated back
+   a day, and a long idle `codex exec` turn (a 240 s sleep: consolidation takes one to two minutes and dies
+   with its process) keeps a process up while the memory pipeline runs. ---- */
 const MEMORY_CONFIG = `[features]\nmemories = true\n\n[memories]\ngenerate_memories = true\nuse_memories = true\nmin_rollout_idle_hours = 0\nmax_rollouts_per_startup = 200\nmin_rate_limit_remaining_percent = 0\n`;
 function relabel(profile, threadIds) {
   const db = new DatabaseSync(join(profile, "state_5.sqlite"));
@@ -139,7 +140,9 @@ function memoryState(profile, threadIds, since) {
 function unstick(profile) {
   const file = join(profile, "memories_1.sqlite"); if (!existsSync(file)) return;
   const db = new DatabaseSync(file);
-  try { db.exec("DELETE FROM jobs WHERE status = 'running'; UPDATE jobs SET retry_at = NULL WHERE status = 'error';"); } finally { db.close(); }
+  // a job left running by a pump that has exited never finishes; a consolidation is not claimed again until some
+  // time after the last one finished, so the last one is dated back a day, as if the next chat were the next day
+  try { db.exec("DELETE FROM jobs WHERE status = 'running'; UPDATE jobs SET retry_at = NULL WHERE status = 'error'; UPDATE jobs SET finished_at = finished_at - 86400 WHERE kind = 'memory_consolidate_global' AND finished_at IS NOT NULL AND finished_at > CAST(strftime('%s', 'now') AS INTEGER) - 86400;"); } finally { db.close(); }
 }
 async function learn(profile, threadIds, tagBase) {
   relabel(profile, threadIds);
