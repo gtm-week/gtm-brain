@@ -229,7 +229,7 @@ Naming a tool in the settings does not connect it. A tool has three states:
 - **Tool setup skills.** Say "Set up Clay for me" (or Freckle, Woodpecker, Surfer, HeyReach;
   for ZYNT, paste ZYNT's own setup prompt). Each connects on your yes, never keeps a key, does
   one first job from your ICP and voice, asks again before anything that spends credits, and
-  never sends, publishes or starts a campaign ([the list](SKILLS.md#setup-and-maintenance)).
+  never sends, publishes or starts a campaign ([the list](SKILLS.md#set-up-and-connect)).
 
 Detail: [command reference](COMMANDS.md#connect).
 
@@ -351,6 +351,17 @@ that calls a tool that spends a credit nobody asked for fails. Calls are logged 
 
 What neither stand-in proves: real sign-in and keys, the real tools' rate limits and cost per call,
 and the real tools' data shapes and quality. The fixture data is small and fits the demo brain.
+
+## Updating
+
+1. Say "update GTM Brain" in Codex, then quit and reopen Codex.
+2. Start a new chat in the brain's folder. The first reply says what was refreshed.
+3. If that reply offers to move the brain's files to the new folder layout, say yes. Nothing
+   moves before you do.
+
+Old skill names (`/gtm-brain-<name>`) still work: Codex runs the new skill and tells you its
+name. Details: [Updating to 0.37](../plugins/gtm-brain/MANUAL.md#updating-to-037-the-four-folders).
+Still on the old plugin name, `gtm-os`? See [MIGRATING.md](MIGRATING.md).
 
 ## Three habits that make it work
 
