@@ -16,7 +16,7 @@ test("the skill follows the shipped-skill template: name, links, openai.yaml, ca
   const catalog = JSON.parse(readFileSync(join(P, "scripts/gtm-brain-render/skill-catalog.json"), "utf8"));
   const i = catalog.findIndex(s => s.id === "gtmb-surfer-setup");
   assert.ok(i > 0 && catalog[i].group === "setup" && catalog[i].featured === false);
-  for (const doc of ["README.md", "docs/COMMANDS.md", "docs/ONBOARDING.md"]) assert.match(readFileSync(join(R, doc), "utf8"), /gtmb-surfer-setup/, doc);
+  for (const doc of ["docs/SKILLS.md", "docs/COMMANDS.md", "docs/ONBOARDING.md"]) assert.match(readFileSync(join(R, doc), "utf8"), /gtmb-surfer-setup/, doc);
 });
 
 test("the hosted MCP is added on a yes and the sign-in stays the person's", () => {
