@@ -6,15 +6,14 @@ description: |
   it on their yes and checks a new chat uses it. Triggers: "/gtmb-voice", "fill in our tone
   of voice", "draft our voice", "how do we sound". Not saving a voice guide the
   person already wrote, or checking a draft against it (gtmb-use-brain, references/documents.md).
-metadata:
-  author: GTM Brain
 allowed-tools: [Bash, Read, WebSearch, WebFetch]
 ---
 
 # GTM Brain: Voice
 
-Read [the method](references/method.md) once and follow it. Work in English; quotes stay in
-their own language. Every question follows
+Read [the method](references/method.md) and
+[mentor rules](../gtmb-use-brain/references/mentor-rules.md) once and follow them. Work in
+English; quotes stay in their own language. Every question follows
 [question handling](../gtmb-start/references/questions.md).
 
 ## 1. Whose voice
@@ -49,13 +48,18 @@ reads, connectors first, never Computer Use and never a page behind a login.
 A tool that is not connected is named as missing ("sent mail: not connected"); connecting it is
 [gtmb-configure](../gtmb-configure/SKILL.md)'s job, offered in one line at the end. An
 empty result is a result; an error is reported with its exact text and the run goes on. Before
-the draft, show what was reviewed (source, count, dates, kind) and what is missing.
-Under six authored texts the draft is a guess: say so and ask for a few texts the person likes.
+the draft, show what was reviewed (source, count, dates, kind) and what is missing, as a
+"Reviewed" list on top of the draft: a line per source, a text without a date called undated.
+Under six authored texts the draft is a guess: say so and ask for
+texts the person likes, up to six.
 
 ## 3. Draft
 
 Sort and weigh the texts by the method; an explicit correction outweighs an inferred habit. Use
-the structure the evidence supports, with no fixed sections, counts, length rules or registers.
+the structure the evidence supports, with no fixed sections, counts, length rules or registers:
+the starter's headings are no template. Look first at how pieces open and close. Each observed
+rule quotes a text and says how many show it; what no text shows, every "do not" included, is
+a suggestion or left out.
 Keep observed patterns apart from suggested improvements; quote every correction in the person's
 exact words. Never invent a quote, a word or a source. Keep voice.md concise; detailed evidence
 and private source references (`gmail:<id>`, Slack links, recipients) stay in the chat. Its first
@@ -65,8 +69,8 @@ line says whose voice it is and what it governs; its last, what it was read from
 
 Show the draft in full (on a re-run, first the proposed changes, per the method), then ask one
 question: "Save it as a draft" (recommended), "Change something". Nothing is written before that
-answer; a change request gets a revised draft and the same question. No default, timeout or empty
-answer is a yes. An explicit instruction already in the request to save this draft ("save it as a
+answer; a change request gets a revised draft and the same question.
+An explicit instruction already in the request to save this draft ("save it as a
 draft when it is ready") is the yes: show the draft and save it, without asking twice.
 
 On the yes, save through [documents](../gtmb-use-brain/references/documents.md): for the
@@ -83,8 +87,8 @@ Where it saves: documents only (`voice.md`, or a person's or team's own); exampl
 ## 5. Check that later chats use it
 
 The message after each save gives: the path; exactly which kinds of work it governs, from the
-document's `applies_to`; and the one sentence to type in a new chat, of a kind it covers ("Write a
-two-line follow-up to a prospect who went quiet."). That chat should say it followed the document
+document's `applies_to`; and the one sentence to type in a new chat, of a kind it covers.
+That chat should say it followed the document
 ("Following Tone of voice."). Do not say it is in use until the person has seen that; if not, fix
 `applies_to`, not the rules. Say `/gtmb-voice` revises it any time, then ask step 6.
 
@@ -92,8 +96,8 @@ two-line follow-up to a prospect who went quiet."). That chat should say it foll
 
 The guide is not done until it has written something. Ask for one short real piece the person
 needs now: "A short email" (recommended), "A post". Write it with the guide and ask the person to
-edit it. Each edit confirms, changes or adds a rule; an edit that fits only this piece (this
-recipient, this week) never silently becomes a rule: ask "Make it a rule" or "Just this once", or
+edit it. Each edit confirms, changes or adds a rule; an edit that fits only this piece
+never silently becomes a rule: ask "Make it a rule" or "Just this once", or
 leave it out. Save the revised rules with the same question. Approved only on the person's own
 word ("approve the voice"), after this test, as a separate update.
 

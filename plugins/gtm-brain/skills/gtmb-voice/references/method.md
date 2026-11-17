@@ -41,15 +41,12 @@ Observed and suggested stay apart. An observed rule traces to texts. A suggested
 rule only on the person's yes.
 
 In every example at least one side is copied word for word from a real text, with its source (a
-public link, or "pasted by <name>"); the other side is marked as a rewrite. No message pointer,
-recipient or thread goes in the document.
+public link, or "pasted by <name>"); the other side is marked as a rewrite.
 
 ## 5. The fresh-work test
 
 One short real piece written from the guide alone, then edited by the person. Their edits are
-corrections, the strongest evidence: a stated or repeated edit is a rule; a single edit tied to
-the situation (this recipient, this deal) is asked about or left out. The guide passes when a
-fresh piece needs only situational edits.
+corrections, the strongest evidence. The guide passes when a fresh piece needs only situational edits.
 
 ## 6. Revising
 

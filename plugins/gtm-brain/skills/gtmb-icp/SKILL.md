@@ -19,6 +19,7 @@ By Chris Pawlak. Read [the method](references/method.md) once and follow its ten
 five-part output. This workflow adapts his standalone Define ICP interview to GTM Brain.
 Conduct the conversation and author the document and brain records in English. Preserve
 names, source quotes and the exact token `APPROVE`.
+Read [mentor rules](../gtmb-use-brain/references/mentor-rules.md) once; they hold here.
 
 ## 1. Reuse the evidence
 
@@ -45,16 +46,26 @@ Fictional demonstrations must never become real company evidence.
 
 ## 2. Interview
 
-Open briefly: we will define near-term company fit, who participates in buying and what shows
-need, budget and trust, using what is already known. We will start with at least three actual
-or desired examples, then generalize the pattern, and keep a working draft. Anonymized examples
-are welcome; fewer are fine when unavailable or declined. Do not promise a fixed completion time.
+The first reply opens briefly, in chat text: we will define near-term company fit, who
+participates in buying and what shows need, budget and trust, using what is already known. We
+will start with at least three actual or desired examples, then generalize the pattern, and
+keep a working draft. Anonymized examples are welcome; fewer are fine when unavailable or
+declined. Do not promise a fixed completion time. Then, in the same reply, name the examples
+and the method areas the brain's notes already cover, in two or three lines, and ask the first
+question about what is missing. Never ask the person to list again accounts the brain holds:
+ask what makes each a good fit, or which is missing.
 
-Follow [question handling](../gtmb-start/references/questions.md). Ask one focused question at a
-time; ask the full interview question as free text without preset choices. Reuse
-answers, skip covered areas and accept uncertainty, skips and confidential ranges. Follow the
-question procedure for unanswered, declined, cancelled and not_shown results; no default or
-timeout is an answer. Do not ask again for a third company after the person says none is available.
+Every interview question is free text in the chat, one area per turn, with no preset choices,
+no numbered options and no form (mentor rules, 1); only the save question below follows
+[question handling](../gtmb-start/references/questions.md). Every turn before the draft ends
+with a question. Reuse answers, skip covered areas and accept uncertainty, skips and
+confidential ranges; no default or timeout is an answer. Do not ask again for a third company
+after the person says none is available.
+
+Keep a list of the ten areas: covered by the brain, covered by the person, open. Write the
+draft when none is open or the person chooses to stop. If the person asks whether anything
+else is needed, name the open areas in one line and ask the next one; "I can write it now" is
+not an answer while areas are open and the person has not asked to stop.
 
 The method covers examples, the wider near-term company pattern, anti-profile, typical buying
 committee, company gains, distinct personal problems/KPIs/proof, five awareness levels, budget,
@@ -64,8 +75,10 @@ Unknown is not disqualified; title is not decision authority; engagement is not 
 ## 3. Keep one working draft
 
 Use [documents](../gtmb-use-brain/references/documents.md) and the current `document` tool contract. Setup writes `icp.md` as a starter: keep the ICP there (`action: update`, `ref: icp`), never a second ICP document.
-Synthesize the method's five parts when there is enough for a useful draft, including when the
-person stops with gaps. Never claim that interview agreement validates the market.
+Synthesize the method's five parts when the areas are covered or the person stops with gaps.
+A line the person did not say and no note holds is a hypothesis and says so; an option you
+offered and the person did not take is left out. Never claim that interview agreement
+validates the market.
 
 - Before a new synthesized document, confirm once: show the title,
   destination and first rules briefly, with "Keep as a draft" and "Change something" choices.
@@ -98,7 +111,11 @@ brain whose schema lacks those fields keeps the notes all the same; offer `/gtmb
 Follow the document rule: do not duplicate the synthesized document as memories. Distinct new
 customer findings or explicit targeting decisions from the interview follow the ordinary
 [remember procedure](../gtmb-use-brain/references/remember.md) in Target customers, with
-sources and entity references, preserving the person's exact words. Do not turn every unknown
+sources and entity references, preserving the person's exact words. They are saved once, after
+the document, in one `remember` call, never turn by turn. Before that call compare each item
+with the Target customers notes read in step 1 and drop every restatement of a fact or
+decision already recorded. A pilot or a desired account is never called a customer, and a
+platform or a product (a shop system, a connector) is never registered as a company. Do not turn every unknown
 into a brain-question, and do not save an unsent draft, proposed action or fictional example as
 company knowledge. Respect a request not to save and any explicit context restriction.
 
