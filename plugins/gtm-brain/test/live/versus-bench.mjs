@@ -214,7 +214,7 @@ async function buildArm(arm) {
       log(`  a direct ${Math.min(i + 50, notes.length)}/${notes.length}: exit ${r.status} ${String(r.stdout || r.stderr).replace(/\s+/g, " ").slice(0, 100)}`);
     }
     for (const [i, c] of (aSeed === "direct" ? [] : chunks).entries()) {
-      const text = `Here are ${c.length} notes from our team's history, ${range(c)}, oldest first. Save every one of them to the brain, one memory each, the way you normally save. Keep each note's own date at the start of its text (the day it happened, not today) and who wrote it. Where a note changes something an earlier note said, save it as the correction it is. All of these are approved for saving, pricing notes included, so do not ask: save them and reply in one line with how many you saved.\n\n${chunkText(c, i)}`;
+      const text = `Here are ${c.length} notes from our team's history, ${range(c)}, oldest first. Save every one of them to the brain, one memory each, the way you normally save. Keep each note's own date at the start of its text (the day it happened, not today) and who wrote it, and pass that date as said_on. Where a note changes something an earlier note said, save it as the correction it is. All of these are approved for saving, pricing notes included, so do not ask: save them and reply in one line with how many you saved.\n\n${chunkText(c, i)}`;
       let t = await codexTurn({ cwd: folder, profile, text, tag: join(logs, `a-seed${i + 1}`) }); const turns = [t];
       for (let f = 0; f < 2 && t.code === 0 && asksBack(t.reply); f++) { t = await codexTurn({ cwd: folder, profile, thread: t.thread, text: "Yes, save them all exactly as written. They are approved, pricing included. Where a first name is ambiguous, use the person the note itself names.", tag: join(logs, `a-seed${i + 1}-f${f + 1}`) }); turns.push(t); }
       manifest.chats.push({ range: range(c), notes: c.length, turns: turns.length, wall_ms: turns.reduce((n, x) => n + x.wall_ms, 0), calls: turns.flatMap(x => x.calls), input_tokens: turns.reduce((n, x) => n + x.input_tokens, 0), reply: turns.at(-1).reply });
@@ -225,7 +225,7 @@ async function buildArm(arm) {
     const saved = all.filter(m => !(m.tags || []).includes("onboarding") && !/^Onboarding:/.test(m.content));
     manifest.backdate = backdate(folder);
     manifest.result = { memories: saved.length, effective: eff.length, corrections: saved.filter(m => m.supersedes).length, retractions: saved.filter(m => m.retracts).length,
-      relations: saved.filter(m => m.relation).length, entities: lib.readNames(folder).length, contexts: contexts.map(c => `${c.slug} (${c.memories.length})`) };
+      relations: saved.filter(m => m.relation).length, said_on: saved.filter(m => (m.tags || []).some(t => /^said:\d{4}-\d{2}-\d{2}$/.test(t))).length, entities: lib.readNames(folder).length, contexts: contexts.map(c => `${c.slug} (${c.memories.length})`) };
     signOut(profile);
   } else if (arm === "d") {
     writeFileSync(join(profile, "config.toml"), MEMORY_CONFIG); signIn(profile);
@@ -248,7 +248,7 @@ async function buildArm(arm) {
   writeFileSync(join(snap, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
   return manifest;
 }
-/* remember has no date field, so every note Codex saved carries the seeding day as its `at`, and the brain then shows
+/* remember's said_on (asked for in the seeding prompt) keeps the note's own date as a tag, but `at` is still the seeding day: every note Codex saved carries it, and the brain then shows
    all 176 as "2026-11-17 (today)" and cannot order them by time, while arms B and C keep each note's own date. A team
    saves each note on its day, so after seeding each record's `at` is set to the date its text starts with (noon UTC,
    a second apart to keep the order), the month files are written again, the disposable search index is dropped and

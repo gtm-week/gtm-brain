@@ -12,7 +12,11 @@
 // A Claude judge scores correct / partly / wrong with a reason, given the whole export as the truth.
 //   node plugins/gtm-brain/test/live/shape-bench.mjs [--tasks first|all|<ids or groups>] [--shapes structured,flat-markdown,flat-vector]
 //        [--from <built brain dir with folder/ and profile/>] [--out <dir>] [--model gpt-5.6-luna] [--effort medium]
-//        [--judge-model claude-fable-5-2] [--no-judge]
+//        [--judge-model claude-fable-5-2] [--no-judge] [--plugin <checkout>] [--rebuild]
+//   --from: the built brain (versus-bench.mjs arm A, <base>/builds/<key>/arm-a); its folder/ is the structured shape and the
+//        source of both flat exports, its profile/ the structured shape's Codex profile.
+//   --plugin: install the plugin from this checkout into the copied structured profile (codex plugin marketplace add +
+//        plugin add), so the structured shape runs that checkout's plugin, not whatever the build was made with.
 //   node plugins/gtm-brain/test/live/shape-bench.mjs --judge-only <out>
 // --tasks first (the default) is the 6-task first pass, two per group; --tasks all is the full 16.
 // The build given by --from is only read: it is copied once to <out>/source, and every task restores a fresh copy.
@@ -36,6 +40,7 @@ const effort = opt("--effort", prior?.effort || "medium");
 let judgeModel = opt("--judge-model", "claude-fable-5-2");
 const FALLBACK_JUDGE = "claude-opus-5-5";
 const SHAPES = { structured: "Structured brain with the plugin", "flat-markdown": "One flat Markdown file", "flat-vector": "Flat keyword-vector chunks" };
+const pluginCheckout = opt("--plugin") ? resolve(opt("--plugin")) : "";
 const shapes = opt("--shapes", "structured,flat-markdown,flat-vector").split(",").filter(s => SHAPES[s]);
 const TURN_TIMEOUT = Number(process.env.GTM_BRAIN_VERSUS_TURN_MS || 600000);
 const realHome = process.env.CODEX_HOME || join(homedir(), ".codex");
@@ -80,7 +85,7 @@ const frontmatter = text => { const m = /^---\n([\s\S]*?)\n---\n?/.exec(text); c
 function exportBrain(folder) {
   const items = [], names = {};
   const entDir = join(folder, "entities");
-  const entFiles = existsSync(entDir) ? readdirSync(entDir).flatMap(k => readdirSync(join(entDir, k)).filter(f => f.endsWith(".md")).map(f => join(entDir, k, f))) : [];
+  const entFiles = existsSync(entDir) ? readdirSync(entDir).filter(k => statSync(join(entDir, k)).isDirectory()).flatMap(k => readdirSync(join(entDir, k)).filter(f => f.endsWith(".md")).map(f => join(entDir, k, f))) : [];
   for (const file of entFiles) { const { f } = frontmatter(readFileSync(file, "utf8")); if (f.id) names[f.id] = f.name; }
   const docs = d => existsSync(join(folder, d)) ? readdirSync(join(folder, d), { recursive: true }).filter(f => f.endsWith(".md")).sort().map(f => join(d, f)) : [];
   const rules = docs("configuration").filter(p => /rules\.md$/.test(p)), schema = docs("configuration").filter(p => /schema\.md$/.test(p));
@@ -131,6 +136,17 @@ function build() {
   rmSync(join(s, "profile", "auth.json"), { force: true });
   // the build's profile trusts the folder it was built in; the live copy here is trusted the same way
   writeFileSync(join(s, "profile", "config.toml"), `${readFileSync(join(s, "profile", "config.toml"), "utf8")}\n[projects."${join(out, "live", "structured", "folder")}"]\ntrust_level = "trusted"\n`);
+  let installed = "";
+  if (pluginCheckout) {
+    copyFileSync(join(realHome, "auth.json"), join(s, "profile", "auth.json"));
+    try {
+      for (const cli of [["plugin", "marketplace", "add", pluginCheckout], ["plugin", "add", "gtm-brain@gtm-brain"]]) {
+        const r = spawnSync("codex", cli, { env: { ...env0, CODEX_HOME: join(s, "profile") }, cwd: pluginCheckout, encoding: "utf8", timeout: 120000 });
+        if (r.status !== 0 && !/already/i.test(`${r.stdout}${r.stderr}`)) throw new Error(`codex ${cli.join(" ")}: ${(r.stderr || r.stdout).trim().slice(0, 300)}`);
+      }
+    } finally { rmSync(join(s, "profile", "auth.json"), { force: true }); }
+    installed = `${JSON.parse(readFileSync(join(pluginCheckout, "plugins/gtm-brain/.codex-plugin/plugin.json"), "utf8")).version} at ${execFileSync("git", ["-C", pluginCheckout, "rev-parse", "--short", "HEAD"], { encoding: "utf8" }).trim()}`;
+  }
   const { items, counts } = exportBrain(join(s, "folder"));
   writeFileSync(join(builds, "export.json"), JSON.stringify(items, null, 1) + "\n");
   const md = markdown(items); writeFileSync(join(builds, "export.md"), md);
@@ -140,7 +156,7 @@ function build() {
   writeFileSync(join(fv, "AGENTS.md"), AGENTS_VEC); copyFileSync(join(here, "versus-store.mjs"), join(fv, "store.mjs"));
   writeFileSync(join(fv, "store.jsonl"), items.map(i => JSON.stringify({ date: i.date || "", author: i.author || "", text: i.kind === "memory" ? i.text : `[${i.section}: ${i.title}] ${i.text}` })).join("\n") + "\n");
   for (const d of ["flat-markdown", "flat-vector"]) execFileSync("git", ["init", "-q", join(builds, d, "folder")]);
-  const m = { from, counts, items: items.length, markdown_bytes: Buffer.byteLength(md), plugin_version: (() => { try { return JSON.parse(readFileSync(join(from, "folder", "layout.json"), "utf8")).version || ""; } catch { return ""; } })() };
+  const m = { from, plugin: pluginCheckout ? `${pluginCheckout} (${installed})` : "the build's own profile", counts, items: items.length, markdown_bytes: Buffer.byteLength(md), plugin_version: (() => { try { return JSON.parse(readFileSync(join(from, "folder", "layout.json"), "utf8")).version || ""; } catch { return ""; } })() };
   writeFileSync(manifest, JSON.stringify(m, null, 2) + "\n");
   return m;
 }
@@ -256,7 +272,7 @@ const med = xs => { const v = xs.filter(Number.isFinite).sort((a, b) => a - b); 
 function report(res) {
   const rows = res.rows, score = rs => { const j = rs.filter(r => r.judge?.verdict); return j.length ? Math.round(100 * j.reduce((n, r) => n + POINTS[r.judge.verdict], 0) / j.length) : null; };
   const L = [`# The same brain in three shapes`, "", `Run ${res.stamp}: ${new Set(rows.map(r => r.id)).size} tasks, Codex ${res.model} (reasoning ${res.effort}), judge ${[...new Set(rows.map(r => r.judge?.model).filter(m => m && m !== "harness"))].join(", ") || "none"}.`,
-    `Source: ${res.build.from} (${res.build.items} exported items: ${Object.entries(res.build.counts).map(([k, v]) => `${v} ${k}`).join(", ")}; BRAIN.md ${res.build.markdown_bytes} bytes). Every task in a fresh chat.`, "",
+    `Source: ${res.build.from}, structured plugin ${res.build.plugin || "the build's own profile"} (${res.build.items} exported items: ${Object.entries(res.build.counts).map(([k, v]) => `${v} ${k}`).join(", ")}; BRAIN.md ${res.build.markdown_bytes} bytes). Every task in a fresh chat.`, "",
     "Score: correct = 1, partly = 0.5, wrong = 0, as a percentage.", "",
     "| shape | group | tasks | score | median s | median tool calls | median input tokens |", "|---|---|---|---|---|---|---|"];
   for (const s of res.shapes) for (const g of ["all", "answer", "act", "keep"]) {
