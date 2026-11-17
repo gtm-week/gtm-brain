@@ -319,7 +319,7 @@ export class MemoryIndex {
             const errors = lib.validateMemory(r);
             if (errors.length || (!this.monthly && r.context !== f.file)) throw new Error(`Invalid memory: ${f.path}:${line}. ${errors.join('; ') || 'Context does not match the source folder.'}`);
             const row = project(r);
-            const rowid = insert.run(f.file, r.context, base + line, r.id, r.context, r.kind, r.via, r.at, Date.parse(r.at) || 0, JSON.stringify(r), JSON.stringify(row.entities), r.authors.join(' '), r.people.join(' '), r.tools.join(' '), r.content, ...asset(r), normalizeMention(r.content)).lastInsertRowid;
+            const rowid = insert.run(f.file, r.context, base + line, r.id, r.context, r.kind, r.via, lib.noteAt(r), Date.parse(lib.noteAt(r)) || 0, JSON.stringify(r), JSON.stringify(row.entities), r.authors.join(' '), r.people.join(' '), r.tools.join(' '), r.content, ...asset(r), normalizeMention(r.content)).lastInsertRowid;
             for (const field of ['authors', 'people', 'tools', 'tags', 'entities']) for (const value of row[field]) member.run(rowid, field, JSON.stringify(value));
             for (const ref of new Set([...(r.entities || []), ...r.people, ...(r.asset ? [r.asset.entity] : []), ...(anchorOf(r) ? [`meeting:${anchorOf(r)}`] : [])])) member.run(rowid, 'identity_ref', String(ref).trim().toLowerCase());
             for (const key of sourceMembers(r.source)) member.run(rowid, 'source', JSON.stringify(key));

@@ -1,70 +1,73 @@
-/* The team's standing rules, read before a save (remember). Two sources: the "Our rules" lines of the rules file
-   (configuration/rules.md, older layouts RULES.md), and every memory in force whose text states a standing rule
-   ("from now on", "always", "never", "ask before ...", "standing rule"). A save that plausibly touches one is held
-   once with the rule's text, date and author; the same call with rule_checked: true saves it. "Plausibly": the
-   rule and the note share a linked entity, or at least two significant words after stop words are dropped. Simple
-   on purpose, so the reply can say why. Reads are never blocked: nothing here runs for a read. */
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+/* The team's standing rules, where Codex reads them before its first call: a generated, marked block at the top of
+   the brain's AGENTS.md (the way lib.writePointer keeps a project's block). Two sources: the "Our rules" lines of
+   the rules file (configuration/rules.md, older layouts RULES.md), and every memory in force saved as a rule
+   (remember with states_rule: true, kept as the tag RULE_TAG). Nothing here guesses from wording: a sentence with
+   "from now on" or "never" is an ordinary note unless the caller said it states a rule. The block is refreshed at
+   chat start, after a rule note is saved and after an approval; the person's own text outside the markers stays.
+   Nothing here holds a save: the block's first line tells Codex to name the rule and ask. */
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import * as lib from "./brain.mjs";
-import { readOurRules, stems } from "./our-rules.mjs";
-import { workDir } from "./brain-paths.mjs";
+import { readOurRules } from "./our-rules.mjs";
 
-// "never" and "always" count only as an instruction to the team: at the start of a sentence ("Never send ...") or
-// after we, the team, everyone ("we always ask ..."). "Anna never replies on Fridays" is a fact, not a rule.
-const STATES = /\b(?:standing rule|from now on|going forward|ask (?:me|us|the owner|[A-Z][a-z]+) (?:first )?before|(?:we|the team|everyone|nobody) (?:should |must )?(?:never|always))\b|(?:^|[.!?:]\s+)(?:never|always|do not ever|don't ever)\s+[a-z]/i;
-/* Does this text state a standing rule for the team? A decision or note only, never a question. */
-export const statesRule = (text, kind = "note") => (kind === "note" || kind === "decision") && STATES.test(String(text || ""));
+export const RULE_TAG = "standing-rule";
+export const RULES_START = "<!-- gtm-brain our rules -->", RULES_END = "<!-- /gtm-brain our rules -->";
+const squash = s => String(s || "").replace(/\s+/g, " ").trim();
 
-// words that carry no topic: the rule cue words and the everyday verbs of a note
-const NOISE = new Set(stems("standing rule from now on going forward never always ask before do not don't ever must should we us me team note said says told want wants will would can could just also only new"));
-const topic = text => [...new Set(stems(text).filter(w => w.length > 2 && !NOISE.has(w)))];
-
-/* Every rule in force: [{text, date, author, source, entities}] */
+/* Every rule in force: [{text, date, author, source, id?}] */
 export function collectRules(root) {
   const out = [];
   let file = ""; try { file = lib.rulesFile(root); } catch {}
-  for (const r of readOurRules(root).rules || []) {
-    const text = String(r.text || "").replace(/\s+/g, " ").trim(); if (!text) continue;
-    // a rule tagged check is evaluated exactly at save (our-rules saveRefusals): it is shown, never held on loose words
-    out.push({ text, date: null, author: null, source: `${file || "rules file"} line ${r.line}`, entities: [], checked: r.tag?.mode === "check" });
-  }
+  try {
+    for (const r of readOurRules(root).rules || []) {
+      const text = squash(r.text); if (!text) continue;
+      out.push({ text, date: null, author: null, source: `${file || "rules file"} line ${r.line}`, fromFile: true });
+    }
+  } catch {}
   for (const c of lib.listContexts(root)) for (const m of lib.effectiveMemories(c.memories)) {
-    if (m.retracts || !statesRule(m.content, m.kind || "note")) continue;
-    out.push({ text: String(m.content).replace(/\s+/g, " ").trim(), date: String(m.at || "").slice(0, 10) || null, author: (m.authors || [])[0] || null, source: `${m.id} in ${c.slug}`, id: m.id, entities: [...(m.people || [])] });
+    if (m.retracts || !(m.tags || []).includes(RULE_TAG)) continue;
+    out.push({ text: squash(m.content), date: String(m.at || "").slice(0, 10) || null, author: (m.authors || [])[0] || null, source: `${m.id} in ${c.slug}`, id: m.id });
   }
   return out;
 }
 
-/* The rules this entry may collide with, each with why. */
-export function collisions(rules, entry, linked = []) {
-  const words = topic(entry.content), names = new Set(linked.map(n => String(n).toLowerCase()));
-  const hits = [];
-  for (const r of rules) {
-    if (r.checked || (r.id && (entry.supersedes === r.id || entry.retracts === r.id))) continue;   // enforced exactly elsewhere, or a correction of the rule itself
-    const entity = r.entities.find(n => names.has(String(n).toLowerCase()));
-    const shared = topic(r.text).filter(w => words.includes(w));
-    if (entity) hits.push({ rule: r, why: `both are about ${entity}` });
-    else if (shared.length >= 2) hits.push({ rule: r, why: `both mention ${shared.slice(0, 4).join(", ")}` });
-  }
-  return hits;
+/* The marked block for these rules; "" when there are none. */
+export function rulesBlock(rules) {
+  if (!rules.length) return "";
+  const own = rules.filter(r => r.fromFile), noted = rules.filter(r => !r.fromFile);
+  const line = r => `- ${r.text.slice(0, 300)}${r.id ? ` (${[r.date, r.author, r.id].filter(Boolean).join(", ")})` : ""}`;
+  return [RULES_START, "## Our rules: check before saving or acting",
+    "When a request may break one of these, do not save or act: name the rule and ask.",
+    ...own.map(line),
+    ...(noted.length ? ["", "### Stated in notes, not yet in the rules file", ...noted.map(line)] : []),
+    RULES_END].join("\n") + "\n";
 }
 
-const said = r => `"${r.text.slice(0, 200)}"${r.date || r.author ? ` (${[r.date, r.author].filter(Boolean).join(", ")})` : ""}, ${r.source}`;
-export const holdLine = hits => `not saved: this may collide with a rule: ${hits.map(h => `${said(h.rule)}; ${h.why}`).join(" | ")}. Ask the person whether the rule applies to this note and end the turn. When they say save it, call remember again with the same entry and rule_checked: true.`;
+/* Text without the block, and the block it held. */
+export function cutRulesBlock(text) {
+  const t = String(text ?? ""), a = t.indexOf(RULES_START), b = t.indexOf(RULES_END);
+  if (a < 0 || b < a) return { text: t, block: "" };
+  const end = b + RULES_END.length;
+  return { text: t.slice(0, a) + t.slice(end).replace(/^\n+/, ""), block: t.slice(a, end) + "\n" };
+}
+/* The block put back at the top of a text. */
+export const withRulesBlock = (text, block) => block ? `${block}\n${String(text ?? "").replace(/^\n+/, "")}` : String(text ?? "");
 
-/* The compact rules block for the first write of a chat; "" after that (work/rules-shown.json, per chat). */
-export function firstWriteRules(root, chat, rules) {
-  if (!rules.length || !chat || process.env.GTM_BRAIN_RUN) return "";   // a chat's first write; a run outside a chat has no chat to tell
-  const file = join(workDir(root), "rules-shown.json"), key = chat;
-  let seen = {}; try { seen = JSON.parse(readFileSync(file, "utf8")) || {}; } catch {}
-  if (seen[key]) return "";
-  seen[key] = new Date().toISOString();
-  const keep = Object.fromEntries(Object.entries(seen).sort((a, b) => Date.parse(b[1]) - Date.parse(a[1])).slice(0, 50));
-  try { mkdirSync(workDir(root), { recursive: true }); writeFileSync(file, JSON.stringify(keep, null, 1) + "\n"); } catch {}
-  const shown = rules.slice(0, 12).map(r => `- ${r.text.slice(0, 160)}${r.date || r.author ? ` (${[r.date, r.author].filter(Boolean).join(", ")})` : ""}`);
-  return `The team's rules (shown once per chat; follow them when saving):\n${shown.join("\n")}${rules.length > 12 ? `\n- and ${rules.length - 12} more in ${lib.rulesFile(root)}` : ""}`;
+/* Write the block into the brain's AGENTS.md (top of the file, everything else kept word for word). True when the
+   file changed. A brain without AGENTS.md gets none: setup writes the rulebook, not this. */
+export function refreshRulesBlock(root) {
+  const file = join(root, "AGENTS.md"); if (!existsSync(file)) return false;
+  const now = readFileSync(file, "utf8"), { text } = cutRulesBlock(now);
+  let rules = []; try { rules = collectRules(root); } catch { return false; }
+  const next = withRulesBlock(text, rulesBlock(rules));
+  if (next === now) return false;
+  writeFileSync(file, next); return true;
+}
+/* Refresh and commit through the lib's one commit path. Returns the commit note or "". */
+export function keepRulesBlock(root, why = "rules: AGENTS.md block refreshed") {
+  if (!refreshRulesBlock(root)) return "";
+  try { return lib.commit(root, ["AGENTS.md"], why, { system: true })?.note || ""; } catch { return ""; }
 }
 
 export const offerLine = (id, root) => { let file = "the rules file"; try { file = lib.rulesFile(root); } catch {}
-  return `${id} states a standing rule: it counts as one for every save from now on. Offer once to add it to Our rules in ${file} (Yes, add it / No, keep it as a note); on yes, add the line under "## Our rules" and call save. Do not do it unasked.`; };
+  return `${id} is kept as a team rule and is in the "Our rules" block of AGENTS.md. Offer once to add it to Our rules in ${file} through approve_change (Yes, add it / No, keep it as a note).`; };

@@ -17,6 +17,8 @@ const parts = [
   async () => say((await lib("workflows.mjs")).runsLine(root)),
   async () => { if (!project) say((await lib("documents.mjs")).strayFoldersHint(root)); },
   async () => say((await lib("upgrade-files.mjs")).autoRefresh(root, templates)),
+  // the team's rules, in the marked block at the top of the brain's AGENTS.md, where Codex reads them before any call
+  async () => { if (!process.env.GTM_BRAIN_RUN) (await lib("standing-rules.mjs")).keepRulesBlock(root, "rules: AGENTS.md block refreshed at chat start"); },
   // a brain still in an older file layout, for the person who can say yes to the move: offered, never started (lib/upgrade-files.mjs layoutOffer)
   async () => { if (!project) say((await lib("upgrade-files.mjs")).layoutOffer(root)); },
   async () => (await lib("upgrade-files.mjs")).refreshReadme(root, templates),

@@ -103,7 +103,7 @@ function pageFacts(root, e, related, contexts, notes, records) {
     for (const row of records.iterate(c.context)) {
       if (count++) hash.update(',');
       hash.update(row.raw);
-      const m = JSON.parse(row.raw);
+      const m = JSON.parse(row.raw); m.at = lib.noteAt(m);   // the date it happened (said_on), else saved
       if (cited.has(m.id) || m.relation || m.customer || (m.meeting && e.kind === 'meeting')) retained.set(m.id, m);
       if (m.retracts) recent(withdrawals, m, 20);
       else {

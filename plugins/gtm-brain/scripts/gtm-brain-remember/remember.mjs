@@ -362,27 +362,25 @@ const shell = e => !!e && !e.supersedes && !e.retracts && (e.kind || "note") ===
   && checks.statesNoOutcome({ ...e, people: list(e.people), companies: list(e.companies) }, { speakers });
 const withChat = source => chat && !source.some(isChatSource) ? [...source, { kind: chatKind, ref: chat }] : source;
 if (problems.length) die(`nothing remembered: ${problems.join("; ")}. Fix these and call again with all the entries.`);
-// The team's standing rules (lib/standing-rules.mjs): shown once at the top of a chat's first write, and an entry
-// that may collide with one is held until the person is asked; the same entry with rule_checked: true is saved.
-const standing = process.env.GTM_BRAIN_RUN ? [] : stand.collectRules(root);
-const ruleHolds = new Map();
-let ruleOffered = false;
-entries.forEach((e, i) => {
-  if (!e || typeof e !== "object") return;
-  const checked = e.rule_checked === true || e.rule_checked === "true"; delete e.rule_checked;
-  if (checked || placeless.has(i)) return;
-  const hits = stand.collisions(standing, e, [...list(e.people), ...list(e.companies)]);
-  if (hits.length) ruleHolds.set(i, hits);
-});
-{ const top = stand.firstWriteRules(root, chat, standing); if (top) console.log(top + "\n"); }
-if (ruleHolds.size && ruleHolds.size === entries.length) {
-  console.error(entries.length === 1 ? stand.holdLine(ruleHolds.get(0)) : [...ruleHolds].map(([i, h]) => `#${i + 1} ${stand.holdLine(h)}`).join("\n"));
-  process.exit(2);
+// The team's standing rules (lib/standing-rules.mjs) reach Codex in the brain's AGENTS.md block, not here: no save is
+// held on wording. An entry with states_rule: true is kept as a rule (tag standing-rule) and enters that block.
+// said_on: the date the thing happened, kept as the tag said:YYYY-MM-DD, which date filters and pages read.
+let ruleOffered = false, ruleSaved = false;
+for (const e of entries) {
+  if (!e || typeof e !== "object") continue;
+  delete e.rule_checked;
+  const rule = e.states_rule === true || e.states_rule === "true"; delete e.states_rule;
+  if (rule) e.tags = [...new Set([...list(e.tags), stand.RULE_TAG])];
+  if (e.said_on !== undefined && e.said_on !== null && e.said_on !== "") {
+    const d = String(e.said_on).trim().slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || !realDate(d)) die(`nothing remembered: said_on "${e.said_on}" is not a date (YYYY-MM-DD). Fix it and call again with all the entries.`);
+    e.tags = [...new Set([...list(e.tags).filter(t => !String(t).startsWith("said:")), `said:${d}`])];
+  }
+  delete e.said_on;
 }
 for (let i = 0; i < entries.length; i++) {
   const e = entries[i] || {}, n = i + 1;
   if (placeless.has(i)) { held.push(placeless.get(i)); continue; }
-  if (ruleHolds.has(i)) { held.push({ n, why: stand.holdLine(ruleHolds.get(i)), mentions: [], ask: true }); continue; }
   // a held question needs the person's reply: while their last message is still the one the question was
   // held on, a resend is the model answering for them (new-brain rerun, 2026-11-12: "Thursday" sent back as the
   // 19th with no reply). Only when the chat can be read; an answer in the same message passes.
@@ -547,8 +545,9 @@ for (let i = 0; i < entries.length; i++) {
       if (!shownBefore(e.content)) { noteShown(e.content); held.push({ n, why: checks.correctsLine(found.corrects, titleOf(found.corrects.context)), mentions: [], ask: false }); continue; }
       found = null;
     }
-    if (found?.changed && found.auto && (!(e.meeting || e.meeting_id) || found.changed.context === ctx)) { changes = found; e.supersedes = found.changed.id; ctx = found.changed.context; }
-    else if (found?.changed) changes = { ...found, beside: true };
+    // a look-alike never replaces a kept note on its own: only the caller's supersedes or retracts does, when the
+    // person corrects or withdraws that exact fact; the reply names the look-alike so Codex can ask
+    if (found?.changed) changes = { ...found, beside: true };
   }
   // the answer reads on its own: the question it answers, then the person's words ("Fabian Struck, the Zauber one" alone says nothing, s05)
   // (only the asked word: "Which Fabian?", never the candidates, so the answer links nobody it rules out)
@@ -629,7 +628,7 @@ for (let i = 0; i < entries.length; i++) {
   const title = titleOf(ctx);
   lines.push(`${at(n)}remembered ${rec.id} in ${ctx}${title && title !== ctx ? ` (${title})` : ""} · ${rec.kind} · ${rec.authors.join(", ")}${rec.people.length ? " · people: " + rec.people.join(", ") : ""} · "${shown}"`);
   if (rec.asset) lines.push(assetSummary(root, rec).trim());
-  if (!process.env.GTM_BRAIN_RUN && !rec.retracts && stand.statesRule(rec.content, rec.kind)) { ruleOffered = true; lines.push(`${at(n)}${stand.offerLine(rec.id, root)}`); }
+  if (!rec.retracts && (rec.tags || []).includes(stand.RULE_TAG)) { ruleSaved = true; if (!process.env.GTM_BRAIN_RUN) { ruleOffered = true; lines.push(`${at(n)}${stand.offerLine(rec.id, root)}`); } }
   for (const w of warnings) lines.push(`${at(n)}warning: ${w}`);
   const names = lib.readNames(root);
   for (const a of added) {
@@ -779,4 +778,6 @@ if (!process.env.GTM_BRAIN_NO_TOOLS_CHECK && !process.env.GTM_BRAIN_NO_COMMIT &&
   const has = new Set(known.map(flat).filter(Boolean)), NEVER = new Set(["memory", "file", "url", "web", "person", "manual", "document"]);
   if (toolsNamed.map(flat).some(x => x.length >= 3 && !NEVER.has(x) && !has.has(x))) spawn(process.execPath, [new URL("../gtm-brain-connect/connect.mjs", import.meta.url).pathname, root, "--check"], { detached: true, stdio: "ignore", env: { ...process.env, GTM_BRAIN_CODEX_TIMEOUT: "20000" } }).unref();
 }
+// a rule note saved, replaced or withdrawn: the AGENTS.md block follows at once, through the one commit path
+if (ruleSaved || keptRecords.some(r => r.retracts || r.supersedes)) { try { stand.keepRulesBlock(root, "rules: a team rule noted"); } catch {} }
 lib.rerender(root);

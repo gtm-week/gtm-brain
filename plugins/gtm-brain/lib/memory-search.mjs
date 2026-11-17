@@ -474,7 +474,7 @@ const sourceLine = m => {
 };
 export function noteText(m, now, chars, later = null) {
   const who = [...new Set([...(m.authors || [])])].join(', ');
-  return `${m.id} · ${lib.localDateTime(m.at).slice(0, 10)} (${age(m.at, now)}) · ${m.context} · ${m.kind}${who ? ` · by ${who}` : ''} · source: ${sourceLine(m)}${m.supersedes ? ` · replaces ${m.supersedes}` : ''}${m.retracts ? ` · withdraws ${m.retracts}` : ''}${later ? ` · no longer current: ${later.what} ${later.status} ${later.observed} (${later.id})` : ''}\n   ${clip(String(m.content).replace(/\s*\n\s*/g, ' '), chars)}`;
+  return `${m.id} · ${lib.localDateTime(lib.noteAt(m)).slice(0, 10)} (${age(lib.noteAt(m), now)}) · ${m.context} · ${m.kind}${who ? ` · by ${who}` : ''} · source: ${sourceLine(m)}${m.supersedes ? ` · replaces ${m.supersedes}` : ''}${m.retracts ? ` · withdraws ${m.retracts}` : ''}${later ? ` · no longer current: ${later.what} ${later.status} ${later.observed} (${later.id})` : ''}\n   ${clip(String(m.content).replace(/\s*\n\s*/g, ' '), chars)}`;
 }
 
 /* The short card of an entity the question names: kind, aliases, the compiled overview, the fields,
@@ -534,7 +534,7 @@ function kindList(index, root, question, q, now, maxBytes = SEARCH_MAX_BYTES) {
   const shown = []; let bytes = 0, listedN = 0;
   for (const x of rows.slice(0, KIND_LIST_MAX)) {
     const block = [`- ${x.e.name} · ${x.e.id}${x.e.aliases?.length ? ` · also: ${x.e.aliases.slice(0, 2).join(', ')}` : ''}${x.fields.length ? ` · ${x.fields.map(f => `${f.field}: ${clip(String(f.text), 60)}`).join('; ')}` : ''} · ${x.n} note${x.n === 1 ? '' : 's'}${x.newest ? `, newest ${ymd(new Date(x.newest))} (${age(x.newest, now)})` : ''}`,
-      ...newest.all(JSON.stringify(x.e.id), per).map(n => fetchRow(index, n.r)).map(m => `    ${m.id} · ${lib.localDateTime(m.at).slice(0, 10)}: ${clip(String(m.content).replace(/\s*\n\s*/g, ' '), 200)}`)];
+      ...newest.all(JSON.stringify(x.e.id), per).map(n => fetchRow(index, n.r)).map(m => `    ${m.id} · ${lib.localDateTime(lib.noteAt(m)).slice(0, 10)}: ${clip(String(m.content).replace(/\s*\n\s*/g, ' '), 200)}`)];
     const size = Buffer.byteLength(block.join('\n')) + 1;
     if (listedN && bytes + size > maxBytes * 0.6) break;
     shown.push(...block); bytes += size; listedN++;
