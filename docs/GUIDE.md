@@ -35,11 +35,42 @@ does not copy your data.
 
 ## Every chat
 
-Codex opens with one line telling you where you are:
+Every new chat starts by itself. On its first GTM Brain call it reloads the topics you had open
+and tells you in its first reply what needs you: open questions, a workflow step due, an update
+or an upgrade on offer. Every offer waits for your yes. It opens with one line telling you where
+you are:
 
 > In Target customers. Two new notes: Pierre asked for a TCO, and Anna confirmed the buying team. The summary is written when you ask about the topic.
 
-Then you just talk. The things worth knowing:
+Then you just talk. The shortest sentences worth knowing:
+
+| Say | What happens |
+| --- | --- |
+| "we decided no discount for Bergstrom" | saved as a decision, with its source |
+| "open question: who signs for Acme?" | kept as a question until you answer it |
+| "actually the meeting is on the 19th" | a correction replaces the old note and keeps it |
+| "forget that ..." | the note is withdrawn from every answer and view |
+| "Ann is Anna Lind" | one person, two names |
+| "why did you add Anna?" | the first note about her: when, by whom, from where |
+| "brief me on Acme", "what do we know about pricing?" | an answer from the notes, with dates and sources |
+| "what is open?", "what is waiting on me" | the open questions; what you owe |
+| "open the dashboard" | the page described in [The dashboard](#the-dashboard) |
+
+Codex never guesses a first name or an unclear date: it saves the note and asks. When it needs
+a decision it asks one question at a time, in a form with two to four choices and a box for
+your own words. Closing the form is not an answer, and a choice never replaces APPROVE.
+
+Six rules hold in every chat, whatever you configure:
+
+1. Save each outcome at once, one note per outcome, with its source.
+2. Read the brain before answering about the company, a customer or a deal, and say how old a
+   stored fact is. Never invent.
+3. Fewest tool calls, short replies.
+4. A list of things to tidy is taken one item at a time, with you.
+5. Nothing about a person or company is looked up on the web unless you ask for exactly that.
+6. Company settings and interactions change only through APPROVE.
+
+The longer list, by what you want to do:
 
 | You want to | Say | What happens |
 |---|---|---|
@@ -55,7 +86,7 @@ Then you just talk. The things worth knowing:
 | see one person | **tell me about Pierre Aubert** | a one-page view built from every note about them |
 | tell Codex two names are one person | **Chris is Krzysztof Pawlak** | from now on "Chris" and "Krzysztof" are the same in search |
 | say a name is not a person | **Telli is a company** | it shows as a company, not a contact; products and teams work the same |
-| refresh a context's summary now | **update the summary now** | rewritten from the notes at once; otherwise it refreshes by itself 2 minutes after your last save; your rules stay |
+| refresh a context's summary now | **update the summary now** | rewritten from the notes at once; otherwise it is written when you next ask about the topic, never by a run after a save; your rules stay |
 | see everything | **open the dashboard** | it opens inside Codex, in the in-app browser; **render** only refreshes it |
 | keep an edit you made by hand | **save** | everything Codex writes is kept at once; this is for a file you changed yourself |
 | open a new context | say what you are starting on; Codex offers | *"Create a `berlin-expansion` context?"* yes, and it is loaded |
@@ -72,26 +103,97 @@ one, it offers a new context when you start a new stream of work, it asks to com
 weekly run when summaries have been behind for days with no schedule, and it offers to install a missing tool or add one it noticed you
 using. Each is a question; nothing happens without your yes.
 
+## Examples by situation
+
+The requests below are examples, not preloaded data. The answers depend on the context you
+provide and the tools you connect.
+
+**Before an account meeting.**
+
+> Brief me on this account. What did they ask for, who is involved, and what is still unanswered?
+
+Get a one-page brief with a dated timeline, source links, open questions and a proposed next
+step. The agent checks the relevant connected sources when the answer needs current information.
+
+**Before entering a new segment.**
+
+> Research this segment against our ICP and offer. What are the buying pains, who buys, and what evidence supports the fit?
+
+Get a sourced market diagnosis that uses your existing strategy and customer evidence.
+Findings, hypotheses and gaps stay separate, so a plausible market story does not pass as proof.
+
+**When a campaign spans more than one chat.**
+
+> Turn this outbound process into a playbook with steps and approval gates. Then show me where the current run stands.
+
+Keep the process and each run's progress together. The agent can carry out a step through a
+connected tool with the required permission, or record a step you completed yourself.
+Playbooks track work; execution happens in chat, with human decisions where the process requires them.
+
+**Before increasing acquisition spend.**
+
+> Compare CAC, LTV and payback for paid search, outbound and referrals. Show the inputs and assumptions. Where should we push, fix, stop or measure?
+
+Get a unit-economics review with comparable periods, explicit assumptions and missing data
+called out. The review makes a recommendation; budget and campaign changes remain separate actions.
+
+**After a useful process becomes repeatable.**
+
+> Make this research process a skill I can reuse in our other projects.
+
+Keep your own skills in the brain and use them from linked project folders. Plugin updates
+preserve them.
+
+The research skills end in something you keep: `/gtmb-deepdive` a one-page brief,
+`/gtmb-market-research` a sourced report with a positioning map, `/gtmb-unit-economics` a PUSH,
+FIX, STOP or MEASURE decision note. All twenty-nine skills are in [SKILLS.md](SKILLS.md).
+
 ## The dashboard
 
-**render** builds it; it is also rebuilt after every change and every time you open Codex in the
-folder, and Codex opens it inside the app, in its in-app browser, every time you start a chat
-in the brain (reusing the tab if it is already there). The live page refreshes itself within seconds of a change.
+Say "open the dashboard". It shows what the brain holds, from the same files Codex reads. Most
+work happens in chat; the page is for reading, plus three kinds of edit.
 
-- **Home** shows questions about the brain, proposed changes, possible duplicate names and contexts.
-- **Contexts** shows summaries, rules, notes and sources. Business follow-ups stay here.
-- **Questions** contains unresolved memory-system questions and a history of recorded decisions.
-- **Entities** shows names, where they appear and the evidence connecting them.
-- **Admin** shows workplace information, connections, linked projects on this computer and update status. Each project shows its folder, contexts and link status. Choose or change projects in Codex chat.
-- **Search** finds information across the brain. Press `/` to focus it.
+| Tab | Shows | What you can do there |
+| --- | --- | --- |
+| Overview | What needs you, what is coming up, what to tidy | Press a card's button: it prepares the work in Codex |
+| Configuration | Base documents, rules, schema, settings | Edit a document. Rules, schema and settings are read here and changed in chat |
+| Entities | People, companies and the other kinds, with relationships and history | Add an entity; edit its name, aliases, emails and kind; fill its fields; add or end a connection; set its relation to us; merge two after a preview; archive one |
+| Memories | The notes by topic, with their sources | On a note's menu: Correct this, This was wrong, Move to another topic, Change what kind it is, Answered |
+| Workflows | Workflows, their runs, and your own skills | Read; "Chat about this" prepares a message |
 
-**Projects** shows notes from a selected folder. **Chat about this** opens that project folder
-in Codex, or the brain folder for other views, with a short prompt
-about the current topic. Right-click any card for it; buttons act on a left click. A notice
-says Codex is opening, since that takes a few seconds. Chat is optional, even when nothing needs attention. Only relevant
-questions and notices are mentioned; technical instructions stay in the workflow. Review the
-prompt and press Send to begin. Answer questions, correct notes, approve proposed
-changes and manage connections in that conversation. There are no editing buttons on the dashboard.
+- **One search box** at the top finds notes, people, tools and topics. **More** holds Explore
+  and Help.
+- **Overview** has three groups. Red cards need a decision: open questions, a broken tool connection, a failed summary, a plugin update. Coming up lists
+  due workflow steps and meetings in the next 7 days. Orange Housekeeping lists look-alike
+  names, first-name-only people, duplicate notes, unwritten base documents and missing required
+  fields.
+- **Edits are saved the way chat saves them,** through the same checked write path. A correction adds a
+  note and never rewrites one, and a document that changed since you opened it is not overwritten.
+- **Buttons prepare, you send.** A button such as "Answer with Codex" puts a prepared message
+  into the Codex chat you already have open; nothing happens until you press Send.
+- **What it never does:** run a campaign, a tool or a Codex job.
+
+**Actual GTM Brain dashboard, populated with fictional demo data.** These are captures
+of the shipped app, not mockups. No customer or private workspace data is shown.
+
+![The Overview tab: what is coming up, then the mentors, each with the document it fills and a link that prepares the work in Codex](images/screenshots/dashboard-overview.png)
+
+![The Help view: every task Codex can take on, mentors first, each with a prepared message and its command](images/screenshots/dashboard-mentors.png)
+
+The other four tabs are shown with the part of the brain they belong to in
+[How GTM Brain works](HOW-IT-WORKS.md#the-four-parts-of-a-brain): Configuration, Entities,
+Memories and Workflows.
+
+The page is rebuilt after every change and every time you open Codex in the folder (**render**
+rebuilds it on demand), and Codex opens it inside the app, in its in-app browser, when you
+start a chat in the brain (reusing the tab if it is already there). The live page refreshes
+itself within seconds of a change.
+
+**Chat about this** opens the selected project folder in Codex, or the brain folder for other
+views, with a short prompt about the current topic. Right-click any card for it; buttons act on
+a left click. A notice says Codex is opening, since that takes a few seconds. Review the prompt
+and press Send to begin. Answer questions, approve proposed changes and manage connections in
+that conversation.
 
 As each answer is saved, its question closes and the live viewer refreshes, keeping your view,
 search and scroll position. Summary compilation starts after each saved change and refreshes the viewer when finished. If the connection is lost, the
@@ -101,6 +203,35 @@ Sources sit inside a compact, counted group of provider pills. Expand the group 
 them; IDs are tucked under Reference details. Links name their destination: a website opens
 in a new tab, and a conversation opens in Codex. A bare connector reference has no guessed
 search link. Note citations stay in the dashboard and take you to the supporting note.
+
+## Your tools and sync
+
+Naming a tool in the settings does not connect it. A tool has three states:
+
+| State | What it means | How it gets there |
+| --- | --- | --- |
+| Declared | Named in `configuration/settings.yaml` | a settings change, through APPROVE |
+| Installed | Its connector is in your Codex, signed in by you | "connect my tools": Codex checks each tool and installs the ones you pick |
+| Tested | A small read returned data (one deal, three subjects, titles only) | the read test; it never writes to a tool and is never saved as knowledge |
+
+- **You do this once per computer.** Sign-in is yours and the result stays on your computer
+  (`.gtm-brain/tools.json`). Codex suggests the floor: email, calendar, CRM. A tool you decline is
+  not proposed again, and one with no official plugin works by export or paste.
+- **Every chat opens with the tools' status.** GTM Brain cannot see other connectors' calls.
+- **Sync.** "catch up" reads what changed in each connected, tested tool since its last sync
+  (the last 7 days the first time) and saves what matters with a link to the source. It never
+  writes to a tool and never saves a to-do or a plan.
+- **Daily sync.** "sync every morning" schedules it in Codex, 09:00 by default. It reads only
+  the approved sources, asks nothing and sends nothing, and it runs only while your computer
+  is on and Codex is running. The alternatives are "sync manually" and "summaries only".
+- **Live reads.** The Ask the source table in `configuration/rules.md` says which questions go to a
+  tool and how old a saved note may be ([Rules](HOW-IT-WORKS.md#rules)).
+- **Tool setup skills.** Say "Set up Clay for me" (or Freckle, Woodpecker, Surfer, HeyReach;
+  for ZYNT, paste ZYNT's own setup prompt). Each connects on your yes, never keeps a key, does
+  one first job from your ICP and voice, asks again before anything that spends credits, and
+  never sends, publishes or starts a campaign ([the list](SKILLS.md#setup-and-maintenance)).
+
+Detail: [command reference](COMMANDS.md#connect).
 
 ## Once a week: make it recurring
 
@@ -235,7 +366,8 @@ and the real tools' data shapes and quality. The fixture data is small and fits 
 - invent a fact: if it is not in a note or a tool, it says so
 - change a context or create one without asking
 - lose a note: everything it writes is kept the moment it is written
-- change the brain through the dashboard; Chat about this opens a prepared Codex conversation
+- change the brain through the dashboard beyond its three checked edits (documents, entities,
+  notes); everything else goes through a prepared Codex conversation
 
 ## Work in your own folders
 
@@ -274,23 +406,11 @@ are summarized again.
 
 ## Files, if you ever look
 
-```
-configuration/settings.yaml          company, team, tools, settings
-configuration/rules.md               where every file goes and your own saving rules; you edit it
-configuration/schema.md              fields kept per person, organization, product; relationship types
-configuration/about-us/              strategy.md, icp.md, voice.md, ...: the base documents (five from day one), files in a folder of the same name
-entities/<kind>/<name>-<id>.md       identity and cited briefs
-memories/<YYYY-MM>.jsonl             the notes, one per line, a file per month
-memories/topics/<context>.md         the context summary and rules
-workflows/<name>.md                  processes with steps
-projects/<project>/                  one folder per project (an event, a campaign), its deliverables inside
-README.md                            what goes where; setup writes it, upgrade refreshes it while unedited
-.gtm-brain/home/index.html           the dashboard (this computer only)
-```
-
 The four folders at the top are the dashboard's tabs: `configuration/`, `entities/`, `memories/`
-and `workflows/`. A brain made before 0.37 keeps the same files in older places until you say
-"upgrade the brain" ([the manual](../plugins/gtm-brain/MANUAL.md#updating-to-037-the-four-folders)).
+and `workflows/`. The whole tree, and which files you may edit by hand, is in
+[What is stored on disk](HOW-IT-WORKS.md#what-is-stored-on-disk). A brain made before 0.37 keeps
+the same files in older places until you say "upgrade the brain"
+([the manual](../plugins/gtm-brain/MANUAL.md#updating-to-037-the-four-folders)).
 A document is a Markdown you wrote and the work must follow: a base document in
 `configuration/about-us/`, or one in a folder you named, with its files beside it ([DOCUMENTS.md](DOCUMENTS.md)).
 A project folder holds drafts and deliverables for one piece of work (the website, an event).

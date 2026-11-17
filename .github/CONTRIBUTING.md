@@ -7,7 +7,7 @@ a scratch folder outside the checkout.
 | --- | --- |
 | [AGENTS.md](../AGENTS.md), "Contributor invariants" | The rules every change keeps |
 | [.claude/CLAUDE.md](../.claude/CLAUDE.md) | The architecture, layer by layer, and every command |
-| [README.md](../README.md#how-it-fits-together) | The architecture as a picture |
+| [docs/HOW-IT-WORKS.md](../docs/HOW-IT-WORKS.md#how-it-fits-together) | The architecture as a picture |
 | [SETUP.md](../docs/SETUP.md) | Installing from a checkout and verifying by hand |
 | [docs/skill-template/](../docs/skill-template/README.md) | Adding a shipped skill |
 
@@ -43,7 +43,7 @@ scripts/dev-reset.sh            wipes a test brain and reinstalls
 docs/                           the guides and references (docs/README.md is the index)
   releases/                     release notes; template/ holds the release graphic and its renderer
   skill-template/               the folder to copy for a new shipped skill
-  images/                       the picture and screenshots in the README
+  images/                       the picture and screenshots in the README and the guides
 .github/                        this file and the CI workflow
 .githooks/pre-push              the checks before a push to main
 ```
