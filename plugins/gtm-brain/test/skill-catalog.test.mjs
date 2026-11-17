@@ -105,7 +105,10 @@ test('the Help view and the Overview lead with the mentors: promise, the documen
  const p=page(D),mentors=D.skills.filter(s=>s.role==='mentor');
  const ov=p.node('#ov-mentors').innerHTML;assert.match(ov,/Work with a mentor/);assert.equal((ov.match(/<article /g)||[]).length,mentors.length);
  assert.ok(ov.indexOf('data-mentor="gtmb-icp"')<ov.indexOf('data-mentor="gtmb-strategy"'),'a mentor whose document is not filled yet comes first');
- assert.match(ov,/Fills <b>Ideal customer profile<\/b> <span class="pl-state missing" data-mentor-doc="icp">not filled yet<\/span>/);assert.match(ov,/Fills <b>Strategy<\/b> <span class="pl-state draft" data-mentor-doc="strategy">draft<\/span>/);assert.match(ov,/Fills <b>[^<]+<\/b> <span class="pl-state ok" data-mentor-doc="voice">approved/);
+ // the Overview's cards name the document; whether it is written is said once, in Foundations above them
+ assert.match(ov,/Fills <b>Ideal customer profile<\/b><\/span>/);assert.match(ov,/Fills <b>Strategy<\/b><\/span>/);assert.doesNotMatch(ov,/data-mentor-doc|not filled yet/);assert.match(ov,/Mentors are how you fill the base documents above/);
+ const fd=p.node('#ov-foundations').innerHTML;
+ assert.match(fd,/data-fd-doc="icp" data-state="not written"/);assert.match(fd,/data-fd-doc="strategy" data-state="draft"/);assert.match(fd,/data-fd-doc="voice" data-state="approved"/);
  assert.match(ov,/You get: <b>A one-page sourced brief<\/b>/);
  for(const s of mentors){assert.ok(ov.includes(s.promise.replaceAll('&','&amp;')),s.id+' promise on the Overview');
   const href=ov.slice(ov.indexOf('data-mentor="'+s.id+'"')).match(/href="([^"]+)"/)[1].replaceAll('&amp;','&'),url=new URL(href);assert.equal(url.protocol,'codex:');assert.equal(url.searchParams.get('prompt'),s.command+'\n\n'+s.example);}

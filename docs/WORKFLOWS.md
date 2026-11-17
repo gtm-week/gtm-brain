@@ -104,6 +104,14 @@ event on every machine.
 
 ## Running one
 
+| To | Say in Codex | On the dashboard |
+| --- | --- | --- |
+| Start one | `start the outbound workflow` | Workflows tab: **Start in Codex** on the workflow prepares that message, with the "Before starting" questions listed |
+| See where it stands | `where is the campaign`, `next step`, `query workflows` | Workflows tab: each run as a tracker with its steps in order (done, due, overdue, upcoming); Overview: Coming up lists the due step |
+| Move it along | `skip this step`, `move step 2 to 2026-12-01`, `pause the run`, `resume the run`, `cancel the run`, `step 3 failed: <why>` | **Do the next step in Codex** on the run's tracker prepares the message for the due step; the rest are typed in chat |
+
+The dashboard only prepares the message: nothing starts or moves until you send it in Codex.
+
 - `start the outbound workflow`: the brain reads the file, proposes the "Before starting"
   answers it can, asks for the blank ones one at a time, shows the brief once, and starts on
   "Start it". The run gets an id from the workflow, the date and the name you give it.

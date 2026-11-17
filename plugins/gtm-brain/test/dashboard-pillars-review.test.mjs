@@ -209,7 +209,39 @@ test("Workflows and Entities on a brain with runs, its own skill and a customer:
     p.run('pwOpen="outbound";renderWorkflowsTab()');
     const open = p.node("#pw-files").innerHTML;
     assert.match(open, new RegExp(`<li class="here"><span>${title}</span> <span class="pl-state ok">a run is here</span>`), "the current step is marked on the path");
-    assert.match(open, /On step 2 of \d+: [^<]+, due 2026-11-20 · pending/); assert.match(open, /Finished \d+ (weeks|months) ago|Finished/); assert.match(open, /<code class="pl-path">outbound-2026-11-01-marta<\/code>/, "the run's own name stays, small");
+    assert.match(open, /Finished \d+ (weeks|months) ago|Finished/); assert.match(open, /<code class="pl-path">outbound-2026-11-01-marta<\/code>/, "the run's own name stays, small");
+    // the run in progress is tracked on the card, open or not: every step of the file in order with the state the run's notes give it
+    assert.deepEqual(live.steps.map(x => [x.n, x.status, x.due]), [[1, "done", null], [2, "pending", "2026-11-20"], [3, "upcoming", null], [4, "upcoming", null]], "the render data carries each step's state from the run's notes");
+    assert.equal(live.steps[1].waits, "waits until 2026-11-20"); assert.equal(live.steps[0].note, "Step 1 of 4: done.", "a note the writer did not open in its own words is shown as written");
+    assert.deepEqual(ob.settle.map(x => x.label), ["Target accounts", "Why now", "Owner", "Sequencer"], "what the workflow asks before starting comes from the file");
+    const tracker = w.slice(w.indexOf('data-run="outbound-2026-11-01-marta"'), w.indexOf('class="fold wf-ended"'));
+    assert.deepEqual([...tracker.matchAll(/data-step-state="([a-z]+)"/g)].map(m => m[1]), ["done", "waiting", "upcoming", "upcoming"], "a stepper: done, then the step it waits on, then what is to come");
+    assert.match(tracker, /aria-current="step"><span class="wf-dot" aria-hidden="true">2<\/span>.*Waits until 2026-11-20/s, "the current step says what it waits for");
+    const nextHref = new URL(tracker.match(/data-pw-next href="([^"]+)"/)[1].replace(/&amp;/g, "&"));
+    assert.equal(nextHref.protocol, "codex:"); assert.equal(nextHref.searchParams.get("prompt"), `Use GTM Brain. Let's do the next step of the Outbound workflow (run outbound-2026-11-01-marta): ${live.step.title}.`, "the next step is a prepared chat that names the run and the step");
+    assert.match(w, /<details class="fold wf-ended"><summary>Finished and stopped runs · 1<\/summary><div class="wf-run ended" data-run="outbound-2026-10-01-marta">/, "a finished run folds under a disclosure");
+    const startHref = new URL(w.slice(w.indexOf('data-pw="outbound"')).match(/data-pw-start href="([^"]+)"/)[1].replace(/&amp;/g, "&")), startPrompt = startHref.searchParams.get("prompt");
+    assert.match(startPrompt, /^Use GTM Brain\. Start the Outbound workflow\.\n\nBefore starting it asks for these\./, "Start is a prepared chat"); for (const label of ob.settle.map(x => x.label)) assert.ok(startPrompt.includes(`\n- ${label}`), `the start message lists ${label}`);
+    assert.match(w.slice(w.indexOf('data-pw="outbound"')), /data-pw-on href="codex:[^"]+">Give it a trigger and switch it on.*This one's trigger is manual/s, "a manual draft says what switching on would need");
+    // a step whose date has passed is overdue in the tracker and in Coming up, by the same test
+    const lateB = structuredClone(B), lateRun = lateB.pillars.workflows.files.find(f => f.slug === "outbound").runs.find(x => x.id === live.id);
+    Object.assign(lateRun.step, { status: "due", due: "2026-01-05" }); Object.assign(lateRun.steps[1], { status: "due", due: "2026-01-05", waits: "waits for a note tagged sequence-written" });
+    const lp = page(lateB); lp.run('show("workflows")');
+    assert.match(lp.node("#pw-files").innerHTML, /class="wf-run late" data-run="outbound-2026-11-01-marta".*<span class="pl-state late">Overdue<\/span>.*data-step-state="late".*was due.*Waits for a note tagged sequence-written/s);
+    assert.match(lp.node("#ov-inbox").innerHTML, /<li class="late" data-soon-run="outbound-2026-11-01-marta">.*was due.*See the run.*Do it with Codex/s, "Coming up says the same and leads to the tracker");
+    assert.equal(decodeURIComponent(lp.node("#ov-inbox").innerHTML.match(/data-soon-run="outbound-2026-11-01-marta".*?class="pl-chat" href="[^"]*prompt=([^"]+)"/s)[1]), nextHref.searchParams.get("prompt"), "one wording for the next step, on the Overview and in the tracker");
+    // a switched-on workflow with a schedule says which trigger; the explainer and the count are drawn from data
+    const onB = structuredClone(B), wfOn = onB.pillars.workflows.files.find(f => f.slug === "outbound"); wfOn.trigger = "every monday 09:00";
+    const op = page(onB); op.run('show("workflows")');
+    const onCard = op.node("#pw-files").innerHTML; const onOut = onCard.slice(onCard.indexOf('data-pw="outbound"'));
+    assert.match(onOut, /data-pw-on href="codex:[^"]+">Switch on in Codex.*it starts from its trigger \(every monday 09:00\)/s);
+    assert.match(decodeURIComponent(onOut.match(/data-pw-on href="[^"]*prompt=([^"]+)"/)[1]), /^Use GTM Brain\. Switch on the Outbound workflow/);
+    const howTo = p.node("#pw-how").innerHTML;
+    assert.match(howTo, /How a workflow runs.*Start it in Codex.*Each step is done in chat and recorded.*The brain tells you when the next is due/s);
+    for (const say of ["where is the &lt;run&gt;", "skip this step", "move step 2 to &lt;date&gt;", "pause the run"]) assert.ok(howTo.includes(`<code>${say}</code>`), say);
+    const listed = p.node("#pw-skills").innerHTML;
+    assert.equal(Number(listed.match(/Things you can ask Codex to do · (\d+)</)[1]), (listed.match(/<li data-pw-skill>/g) || []).length, "the count is the number of rows listed");
+    assert.equal((listed.match(/<li data-pw-skill>/g) || []).length, B.skills.filter(x => x.command).length);
     const skills = p.node("#pw-skills").innerHTML, own = skills.split("Made by your team")[1] || "";
     assert.match(own, /Weekly pipeline.*Go through the open deals every Monday\..*\/gtm-brain-weekly-pipeline/s, "the brain's own skill is listed with its one line");
     assert.doesNotMatch(skills.split("Made by your team")[0], /weekly-pipeline/, "and not among the shipped ones");
