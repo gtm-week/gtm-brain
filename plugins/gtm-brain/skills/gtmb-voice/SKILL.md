@@ -69,8 +69,8 @@ line says whose voice it is and what it governs; its last, what it was read from
 
 Show the draft in full (on a re-run, first the proposed changes, per the method), then ask one
 question: "Save it as a draft" (recommended), "Change something". Nothing is written before that
-answer; a change request gets a revised draft and the same question.
-An explicit instruction already in the request to save this draft ("save it as a
+answer; a change request gets a revised draft and the same question. No default, timeout or empty
+answer is a yes. An explicit instruction already in the request to save this draft ("save it as a
 draft when it is ready") is the yes: show the draft and save it, without asking twice.
 
 On the yes, save through [documents](../gtmb-use-brain/references/documents.md): for the
@@ -97,7 +97,7 @@ That chat should say it followed the document
 The guide is not done until it has written something. Ask for one short real piece the person
 needs now: "A short email" (recommended), "A post". Write it with the guide and ask the person to
 edit it. Each edit confirms, changes or adds a rule; an edit that fits only this piece
-never silently becomes a rule: ask "Make it a rule" or "Just this once", or
+(this recipient, this week) never silently becomes a rule: ask "Make it a rule" or "Just this once", or
 leave it out. Save the revised rules with the same question. Approved only on the person's own
 word ("approve the voice"), after this test, as a separate update.
 
