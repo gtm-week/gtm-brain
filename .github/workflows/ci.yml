@@ -21,10 +21,13 @@ jobs:
     strategy:
       fail-fast: false
       # Node 22.16 and 24: the first releases whose node:sqlite has FTS5 (not 22.13-22.15, not 23).
-      # A pull request runs Linux on both and macOS on one; main runs all four. The second macOS job took
-      # 25 to 35 minutes and in the runs of 16 November found nothing the other three had not.
+      # Linux on both, macOS on one. The second macOS job waited one to two hours for a runner on
+      # 16 and 17 November, was cancelled by GitHub three times, and found nothing the other three had not.
       matrix:
-        include: ${{ fromJSON(github.event_name == 'pull_request' && '[{"os":"ubuntu-latest","node":"22.16"},{"os":"ubuntu-latest","node":"24"},{"os":"macos-latest","node":"24"}]' || '[{"os":"ubuntu-latest","node":"22.16"},{"os":"ubuntu-latest","node":"24"},{"os":"macos-latest","node":"22.16"},{"os":"macos-latest","node":"24"}]') }}
+        include:
+          - { os: ubuntu-latest, node: "22.16" }
+          - { os: ubuntu-latest, node: "24" }
+          - { os: macos-latest, node: "24" }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
