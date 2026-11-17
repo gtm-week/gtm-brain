@@ -49,7 +49,7 @@ They are not additional discoverable skills. Tools show outcomes such as "Rememb
 "Searching the brain" in chat. Review proposals on the dashboard (it changes nothing but a document you edit and save there). APPROVE is a choice in the form `approve_change` shows; in a chat nothing else applies it.
 A question to you comes the same way: `ask_person` shows a form with the choices to click (or a field to type in) and hands your answer back to Codex. It records nothing and applies nothing. Where the host shows no form, Codex asks in its own question box, or in chat text with numbered options.
 Scripts retain their paths for terminal use with
-`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.37.5`.
+`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.38.0`.
 
 Legend for "writes": what files the command changes. Nothing else is ever touched. The paths are
 those of a brain in the four folders (file layout 4, what setup makes since 0.37); a brain not
@@ -207,6 +207,10 @@ as complete. There are at most 32 pending indexed reads per server, with 64 KiB 
 
 ### answer
 *"what did Zak want?"*, *"how many sign-ups did the Merantix opening have?"*, *"what did we decide last week?"*
+
+Since 0.38.0 a question about one company or person is answered from its page under `entities/`
+(`entities/organizations/<slug>.md`, `entities/people/<slug>.md`; `entities/INDEX.md` lists them), read like any Markdown file or found with grep.
+Each page ends with "Everything recorded": every note that names it, newest first, with date, author and corrections; `query answer` is for lists, dates and status across many.
 
 One call for a question: `query` with object `answer` and `search` set to the question as asked
 (`lib/memory-search.mjs`, run in the memory worker). Names, aliases, first names and emails resolve
