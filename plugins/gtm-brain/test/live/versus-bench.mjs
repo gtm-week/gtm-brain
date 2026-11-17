@@ -15,12 +15,16 @@
 // calls, input and output tokens.
 //   node plugins/gtm-brain/test/live/versus-bench.mjs [--arms a,b,c,d] [--questions all|<ids or categories>]
 //        [--seed 7] [--out <run folder>] [--model gpt-5.6-luna] [--effort medium] [--judge-model claude-fable-5-2]
-//        [--rebuild] [--build-only] [--no-judge]
+//        [--rebuild] [--build-only] [--no-judge] [--base <folder>]
+//   --questions holdout: the held-out set (versus-holdout.mjs, its own story and filler, seed 11 unless --seed),
+//        alone or with ids or categories of that set (--questions holdout,recall). Its builds are separate.
 //   node plugins/gtm-brain/test/live/versus-bench.mjs --judge-only <run folder>    judge (again) a past run
 // Each arm is built once per seed and kept under <base>/builds; every question starts from a fresh copy
 // of it, restored at the same path (Codex memory and the brain both remember paths). Codex turns run one
 // at a time. Codex runs in throwaway profiles (the person's auth.json copied in and removed after);
-// the person's own Codex is never changed. <base> is GTM_BRAIN_VERSUS_DIR or ~/gtm-brain-bench/versus.
+// the person's own Codex is never changed. <base> is --base, else GTM_BRAIN_VERSUS_DIR, else ~/gtm-brain-bench/versus;
+// builds, live copies, the memory pump and the judge's folder are all under it, results under --out (default
+// <base>/runs/<time>). Two runs at once need two bases: they would share <base>/live.
 import { mkdirSync, writeFileSync, readFileSync, copyFileSync, existsSync, readdirSync, statSync, lstatSync, rmSync, cpSync, utimesSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve, relative } from "node:path";
@@ -38,26 +42,30 @@ const flag = k => args.includes(k);
 const plugin = fileURLToPath(new URL("../../", import.meta.url));
 const repo = fileURLToPath(new URL("../../../../", import.meta.url));
 const here = fileURLToPath(new URL("./", import.meta.url));
-const QUESTIONS = JSON.parse(readFileSync(join(here, "versus-questions.json"), "utf8"));
 const ARMS = {
   a: "GTM Brain",
   b: "One big Markdown file",
   c: "Keyword-vector search (TF-IDF, a stand-in for an embedding store)",
   d: "Codex memory (the built-in memories feature)",
 };
-const base = resolve(process.env.GTM_BRAIN_VERSUS_DIR || join(homedir(), "gtm-brain-bench", "versus"));
+const base = resolve(opt("--base", process.env.GTM_BRAIN_VERSUS_DIR || join(homedir(), "gtm-brain-bench", "versus")));
 const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
 const judgeOnly = opt("--judge-only");
 const out = resolve(judgeOnly || opt("--out", join(base, "runs", stamp)));
 const prior = judgeOnly ? JSON.parse(readFileSync(join(out, "results.json"), "utf8")) : null;
-const seed = Number(opt("--seed", prior?.seed ?? 7));
+const wantQ = opt("--questions", prior?.set === "holdout" ? "holdout" : "all").split(",").filter(Boolean);
+// the held-out set is read only when asked for, so a checkout without it runs the first set as before
+const set = wantQ.includes("holdout") ? "holdout" : "main";
+const held = set === "holdout" ? await import("./versus-holdout.mjs") : null;
+const QUESTIONS = held ? held.QUESTIONS : JSON.parse(readFileSync(join(here, "versus-questions.json"), "utf8"));
+const seed = Number(opt("--seed", prior?.seed ?? (held ? held.SEED : 7)));
 const model = opt("--model", prior?.model || process.env.GTM_BRAIN_EVAL_MODEL || "gpt-5.6-luna");
 const effort = opt("--effort", prior?.effort || "medium");
 let judgeModel = opt("--judge-model", "claude-fable-5-2");
 const FALLBACK_JUDGE = "claude-opus-5-5";
 const arms = (opt("--arms", "a,b,c,d")).split(",").filter(a => ARMS[a]);
-const wantQ = opt("--questions", "all").split(",").filter(Boolean);
-const questions = QUESTIONS.questions.filter(q => wantQ.includes("all") || wantQ.includes(q.id) || wantQ.includes(q.category));
+const pickQ = wantQ.filter(w => w !== "holdout");
+const questions = QUESTIONS.questions.filter(q => !pickQ.length || pickQ.includes("all") || pickQ.includes(q.id) || pickQ.includes(q.category));
 const TURN_TIMEOUT = Number(process.env.GTM_BRAIN_VERSUS_TURN_MS || 600000);
 const env0 = { ...process.env, NODE_NO_WARNINGS: "1", PLUGIN_ROOT: plugin, GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_NO_WATCH: "1" };
 const realHome = process.env.CODEX_HOME || join(homedir(), ".codex");
@@ -71,13 +79,13 @@ const log = s => console.log(noDash(s));
 // would take hours.
 const totalNotes = Number(opt("--notes", prior?.notes || 0));
 const aSeed = opt("--a-seed", prior?.a_seed || "codex");
-const notes = history(seed, totalNotes && totalNotes !== 176 ? totalNotes - STORY.length : 125);
+const notes = held ? history(seed, (totalNotes || held.NOTES) - held.STORY.length, held.SET) : history(seed, totalNotes && totalNotes !== 176 ? totalNotes - STORY.length : 125);
 const byId = Object.fromEntries(notes.map(n => [n.id, n]));
 const version = JSON.parse(readFileSync(join(plugin, ".codex-plugin/plugin.json"), "utf8")).version;
 const BUILD_VERSION = 1;   // bump when every arm's construction changes
 // bump one arm's number when only that arm's construction changes: its build is made again, the others are kept
 const ARM_VERSION = { a: 1, b: 1, c: 1, d: 2 };
-const buildKey = `seed-${seed}-${createHash("sha256").update(JSON.stringify({ notes, version, BUILD_VERSION, ...(aSeed === "codex" ? {} : { aSeed }) })).digest("hex").slice(0, 10)}`;
+const buildKey = `${held ? "holdout-" : ""}seed-${seed}-${createHash("sha256").update(JSON.stringify({ notes, version, BUILD_VERSION, ...(aSeed === "codex" ? {} : { aSeed }) })).digest("hex").slice(0, 10)}`;
 const builds = join(base, "builds", buildKey);
 const live = arm => join(base, "live", `arm-${arm}`);
 const teamLine = `Our company is ${COMPANY} (${ONE_LINER.toLowerCase()}). The team: ${TEAM.map(([n, r]) => `${n} (${r})`).join(", ")}.`;
@@ -376,7 +384,7 @@ function report(res) {
   const score = rs => rs.length ? Math.round(100 * rs.reduce((n, r) => n + POINTS[r.judge.verdict], 0) / rs.length) : null;
   const count = (rs, f) => rs.filter(f).length;
   const L = [`# GTM Brain against simple memory setups`, "",
-    `Run ${res.stamp}: ${new Set(rows.map(r => r.id)).size} questions, Codex ${res.model} (reasoning ${res.effort}), judge ${[...new Set(rows.map(r => r.judge?.model).filter(m => m && m !== "harness"))].join(", ") || "none"}. History: ${res.notes} made-up notes (seed ${res.seed}). GTM Brain ${res.plugin_version}. Every question in a fresh chat.`, "",
+    `Run ${res.stamp}: ${new Set(rows.map(r => r.id)).size} questions, Codex ${res.model} (reasoning ${res.effort}), judge ${[...new Set(rows.map(r => r.judge?.model).filter(m => m && m !== "harness"))].join(", ") || "none"}. ${res.set === "holdout" ? "Held-out question set. " : ""}History: ${res.notes} made-up notes (seed ${res.seed}). GTM Brain ${res.plugin_version}. Every question in a fresh chat.`, "",
     "Score: correct = 1, partly = 0.5, wrong = 0, as a percentage of the questions asked.", "",
     `| setup | score | correct | partly | wrong | stale | invented | said source | median s | median tool calls | median input tokens |`, "|---|---|---|---|---|---|---|---|---|---|---|"];
   for (const a of armList) { const rs = of(a); L.push(`| ${ARMS[a]} | ${score(rs) ?? "-"}% | ${count(rs, r => r.judge.verdict === "correct")} | ${count(rs, r => r.judge.verdict === "partly")} | ${count(rs, r => r.judge.verdict === "wrong")} | ${count(rs, r => r.judge.stale)} | ${count(rs, r => r.judge.invented)} | ${count(rs, r => r.judge.cited_source)} | ${Math.round((med(rows.filter(r => r.arm === a).map(r => r.wall_ms)) || 0) / 1000)} | ${med(rows.filter(r => r.arm === a).map(r => r.tool_calls)) ?? "-"} | ${med(rows.filter(r => r.arm === a).map(r => r.input_tokens)) ?? "-"} |`); }
@@ -417,8 +425,8 @@ if (judgeOnly) {
 }
 for (const cli of ["codex", ...(flag("--no-judge") || flag("--build-only") ? [] : ["claude"])]) if (spawnSync(cli, ["--version"]).status !== 0) { console.error(`${cli} is not on PATH`); process.exit(2); }
 if (!existsSync(join(realHome, "auth.json"))) { console.error(`no Codex sign-in at ${join(realHome, "auth.json")}: run \`codex login\` first`); process.exit(2); }
-log(`versus bench: arms ${arms.join(",")}, ${questions.length} questions, Codex ${model} (${effort})\nhistory ${notes.length} notes, seed ${seed}, build ${builds}\nresults ${out}\n`);
-const res = { stamp, seed, model, effort, plugin_version: version, notes: notes.length, a_seed: aSeed, arms, builds: {}, rows: [] };
+log(`versus bench: arms ${arms.join(",")}, ${questions.length} questions${held ? " (held-out set)" : ""}, Codex ${model} (${effort})\nhistory ${notes.length} notes, seed ${seed}, build ${builds}\nresults ${out}\n`);
+const res = { stamp, set, seed, model, effort, plugin_version: version, notes: notes.length, a_seed: aSeed, arms, builds: {}, rows: [] };
 for (const arm of arms) {
   const man = join(builds, `arm-${arm}`, "manifest.json");
   const kept = existsSync(man) ? JSON.parse(readFileSync(man, "utf8")) : null;

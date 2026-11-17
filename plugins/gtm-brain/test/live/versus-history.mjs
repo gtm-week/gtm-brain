@@ -137,7 +137,10 @@ function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6d2b79f5) >>>
 const START = Date.UTC(2026, 3, 20), END = Date.UTC(2026, 10, 13);
 const iso = ms => new Date(ms).toISOString().slice(0, 10);
 
-export function history(seed = 7, filler = 125) {
+// set: another story and its own filler accounts (versus-holdout.mjs); without one, the story above
+export const MAIN = { story: STORY, prospects: PROSPECTS, customerT: CUSTOMER_T, partnerT: PARTNER_T, internalT: INTERNAL_T };
+export function history(seed = 7, filler = 125, set = MAIN) {
+  const { story: STORY_SET, prospects: PROSPECTS, customerT: CUSTOMER_T, partnerT: PARTNER_T, internalT: INTERNAL_T } = { ...MAIN, ...set };
   const r = rng(seed), pick = xs => xs[Math.floor(r() * xs.length)], int = (lo, hi) => lo + Math.floor(r() * (hi - lo + 1));
   const day = (latestMonth = 11, from = START) => { const end = Math.min(END, Date.UTC(2026, latestMonth - 1, latestMonth === 11 ? 13 : 28)); return iso(from + Math.floor(r() * ((end - from) / 86400000 + 1)) * 86400000); };
   const fill = (t, vars) => t.replace(/\{(\w+)\}/g, (_, k) => vars[k]);
@@ -170,8 +173,9 @@ export function history(seed = 7, filler = 125) {
   for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
   const seen = new Set(), out = [];
   for (const make of pool) { if (out.length >= filler) break; const n = make(); if (seen.has(n.text)) continue; seen.add(n.text); out.push({ id: `f${String(out.length + 1).padStart(3, "0")}`, ...n }); }
-  const story = STORY.map(([id, date, author, text]) => ({ id, date, author, text }));
-  return [...story, ...out].sort((a, b) => a.date.localeCompare(b.date) || (a.id[0] === b.id[0] ? a.id.localeCompare(b.id) : a.id[0] === "s" ? -1 : 1));
+  const story = STORY_SET.map(([id, date, author, text]) => ({ id, date, author, text }));
+  // on the same day a story note comes before a filler note (filler ids start with f)
+  return [...story, ...out].sort((a, b) => a.date.localeCompare(b.date) || ((a.id[0] === "f") === (b.id[0] === "f") ? a.id.localeCompare(b.id) : a.id[0] === "f" ? 1 : -1));
 }
 
 export const roleOf = name => (TEAM.find(t => t[0] === name) || [])[1] || "";
