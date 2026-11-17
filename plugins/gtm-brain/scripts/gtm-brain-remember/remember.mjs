@@ -35,6 +35,7 @@ const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
 const dots = await import(new URL("../../lib/dots.mjs", import.meta.url));
 const checks = await import(new URL("../../lib/note-checks.mjs", import.meta.url));
 const ourRules = await import(new URL("../../lib/our-rules.mjs", import.meta.url));   // RULES.md Our rules tagged check (S4)
+const stand = await import(new URL("../../lib/standing-rules.mjs", import.meta.url));   // the team's standing rules, read before a save
 const { readSchema, fieldsFor } = await import(new URL("../../lib/schema.mjs", import.meta.url));
 // Events (rule E1): a note names the events it is about in `events`, each a name or {name, date}. A known event
 // (name or alias) is linked; one not known yet is registered as an event entity only when the save gives the
@@ -79,7 +80,7 @@ if (opt.batch) {
   if (!entries) die("--batch json must be a list of memories, or {\"memories\": [...]}");
   if (!entries.length) die("--batch json has no memories");
 } else {
-  entries = [{ content: opt.content, kind: opt.kind, context: opt.context, people: opt.people, companies: opt.companies, events: opt.events, tools: opt.tools, sources: opt.source, actions: opt.action, supersedes: opt.supersedes, retracts: opt.retracts, tags: opt.tags, new_names: opt.new, via: opt.via }];
+  entries = [{ content: opt.content, kind: opt.kind, context: opt.context, people: opt.people, companies: opt.companies, events: opt.events, tools: opt.tools, sources: opt.source, actions: opt.action, supersedes: opt.supersedes, retracts: opt.retracts, tags: opt.tags, new_names: opt.new, via: opt.via, rule_checked: opt["rule-checked"] }];
 }
 
 if (args.includes("--project") && (opt.project === undefined || opt.project === "")) die("--project needs a value", 2);
@@ -361,9 +362,27 @@ const shell = e => !!e && !e.supersedes && !e.retracts && (e.kind || "note") ===
   && checks.statesNoOutcome({ ...e, people: list(e.people), companies: list(e.companies) }, { speakers });
 const withChat = source => chat && !source.some(isChatSource) ? [...source, { kind: chatKind, ref: chat }] : source;
 if (problems.length) die(`nothing remembered: ${problems.join("; ")}. Fix these and call again with all the entries.`);
+// The team's standing rules (lib/standing-rules.mjs): shown once at the top of a chat's first write, and an entry
+// that may collide with one is held until the person is asked; the same entry with rule_checked: true is saved.
+const standing = process.env.GTM_BRAIN_RUN ? [] : stand.collectRules(root);
+const ruleHolds = new Map();
+let ruleOffered = false;
+entries.forEach((e, i) => {
+  if (!e || typeof e !== "object") return;
+  const checked = e.rule_checked === true || e.rule_checked === "true"; delete e.rule_checked;
+  if (checked || placeless.has(i)) return;
+  const hits = stand.collisions(standing, e, [...list(e.people), ...list(e.companies)]);
+  if (hits.length) ruleHolds.set(i, hits);
+});
+{ const top = stand.firstWriteRules(root, chat, standing); if (top) console.log(top + "\n"); }
+if (ruleHolds.size && ruleHolds.size === entries.length) {
+  console.error(entries.length === 1 ? stand.holdLine(ruleHolds.get(0)) : [...ruleHolds].map(([i, h]) => `#${i + 1} ${stand.holdLine(h)}`).join("\n"));
+  process.exit(2);
+}
 for (let i = 0; i < entries.length; i++) {
   const e = entries[i] || {}, n = i + 1;
   if (placeless.has(i)) { held.push(placeless.get(i)); continue; }
+  if (ruleHolds.has(i)) { held.push({ n, why: stand.holdLine(ruleHolds.get(i)), mentions: [], ask: true }); continue; }
   // a held question needs the person's reply: while their last message is still the one the question was
   // held on, a resend is the model answering for them (new-brain rerun, 2026-11-12: "Thursday" sent back as the
   // 19th with no reply). Only when the chat can be read; an answer in the same message passes.
@@ -610,6 +629,7 @@ for (let i = 0; i < entries.length; i++) {
   const title = titleOf(ctx);
   lines.push(`${at(n)}remembered ${rec.id} in ${ctx}${title && title !== ctx ? ` (${title})` : ""} · ${rec.kind} · ${rec.authors.join(", ")}${rec.people.length ? " · people: " + rec.people.join(", ") : ""} · "${shown}"`);
   if (rec.asset) lines.push(assetSummary(root, rec).trim());
+  if (!process.env.GTM_BRAIN_RUN && !rec.retracts && stand.statesRule(rec.content, rec.kind)) { ruleOffered = true; lines.push(`${at(n)}${stand.offerLine(rec.id, root)}`); }
   for (const w of warnings) lines.push(`${at(n)}warning: ${w}`);
   const names = lib.readNames(root);
   for (const a of added) {
@@ -750,7 +770,7 @@ let movedNote = null;
     return old ? keptRecords.filter(x => !x.retracts && x.context !== home.slug && (words(x.content).includes(words(old.content)) || words(old.content).includes(words(x.content)))).map(x => ({ from: home.slug, to: x.context })) : []; });
   if (moved.length) movedNote = `moved from ${moved[0].from} to ${moved[0].to}: the person questioned where it was saved. After fixing it, offer once to keep the rule in RULES.md under "## Our rules" (R2), in their words, for example "Keynote speakers go to Strategy", with Yes, add the rule and No, just this once.`; }
 if (movedNote) console.log(movedNote + " Apart from that offer, reply in one line.");
-else if (kept.length && !held.length && !failed.length && !asks.length && !process.env.GTM_BRAIN_RUN) console.log("Reply to the person in one line: what was saved, no offers.");
+else if (kept.length && !held.length && !failed.length && !asks.length && !process.env.GTM_BRAIN_RUN) console.log(ruleOffered ? "Reply to the person in one line: what was saved, then the rule offer above." : "Reply to the person in one line: what was saved, no offers.");
 // A note from a tool the brain's tools list does not know yet (MagicPath, ZYNT): check the tools in the
 // background, so the dashboard lists it without waiting for someone to ask (connect.mjs: "a memory came from it").
 if (!process.env.GTM_BRAIN_NO_TOOLS_CHECK && !process.env.GTM_BRAIN_NO_COMMIT && !process.env.NODE_TEST_CONTEXT) {   // never from tests or dry runs

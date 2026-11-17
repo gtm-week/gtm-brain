@@ -674,7 +674,7 @@ test("remember echoes the note it wrote, in quotes, and its schema is small enou
   assert.ok(tool.description.length < 1000, `description is ${tool.description.length} chars (was 2637)`);
   assert.match(tool.description, /quot/i, "it tells the model to quote the note back");
   const bytes = JSON.stringify(tool.inputSchema).length;
-  assert.ok(bytes < 17000, `schema is ${bytes} bytes (was 23729; the rest is enums and shapes the validator needs)`);
+  assert.ok(bytes < 17100, `schema is ${bytes} bytes (was 23729; the rest is enums and shapes the validator needs; +80 for rule_checked, the standing-rules hold)`);
   const batch = tool.inputSchema.properties.memories.items.properties;
   assert.deepEqual(Object.keys(batch).sort(), Object.keys(tool.inputSchema.properties).filter(k => !["brain", "by", "project", "memories"].includes(k)).sort(), "the batch item keeps every field");
   assert.ok(Object.entries(batch).every(([k, v]) => !v.description || ["content", "sources"].includes(k)), "batch fields carry no repeated paragraphs");
