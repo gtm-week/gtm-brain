@@ -58,8 +58,6 @@ what is waiting on me?
 open the dashboard
 ```
 
-![The Overview tab: what is coming up, then the mentors, each with the document it fills and a link that prepares the work in Codex](docs/images/screenshots/dashboard-overview.png)
-
 ## More
 
 - [Everyday use, the dashboard, updating](docs/GUIDE.md)
