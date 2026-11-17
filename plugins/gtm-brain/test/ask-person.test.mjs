@@ -146,7 +146,7 @@ test("both hosts describe ask_person and put it first: the form, the host's own 
     assert.match(d, /never stands in for APPROVE/); assert.match(d, /needs no brain/);
     assert.match(line, /^\nQuestions: ask every question with ask_person/);
     assert.ok(line.indexOf("ask_person") < line.indexOf(box) && line.indexOf(box) < line.indexOf("plain chat text and end the turn: one question"), `${id}: form, box, text`);
-    assert.match(line, /never add Other or Something else/); assert.match(line, /APPROVE still goes only through approve_change/);
+    assert.match(line, /never add Other or Something else/); assert.match(line, /APPROVE goes only through approve_change/);
     assert.match(t.questions({ form: false }), new RegExp(`^\\nQuestions: this host cannot show the ask_person form, so ask with ${box}`));
     assert.ok(![8212, 8211].some(c => (d + line).includes(String.fromCharCode(c))), "plain hyphens only");
   }

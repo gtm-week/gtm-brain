@@ -107,7 +107,7 @@ test("the server's instructions carry the core once, on either host", async () =
     for (const must of [/first GTM Brain call, whatever it is/, /no separate status call/, /kept at once/, /keep_approved_file, in the same turn/])
       assert.match(head, must, `${host || "codex"}: ${must} is past the first 2048 characters`);
     // the five common jobs, one line each, right after: no discovery round, no skill or rule page read first
-    const shapes = text.slice(text.indexOf("Call shapes for the common jobs"), text.indexOf("Files you create, edit, move or delete")).trimEnd().split("\n");
+    const shapes = text.slice(text.indexOf("Call shapes for the common jobs"), text.indexOf("Files you change in the brain folder")).trimEnd().split("\n");
     assert.equal(shapes.length, 6, "a lead line and five shapes");
     assert.match(shapes[0], /Use them as written: no list_objects, describe_object, status or rule page first/);
     // the read named for a question is the one the query tool's description opens with (memory-search.test.mjs

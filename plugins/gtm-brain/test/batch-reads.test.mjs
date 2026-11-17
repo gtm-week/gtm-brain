@@ -253,8 +253,9 @@ test('the server: query entities takes lists (and names typed with commas), quer
   const s = server();
   try {
     const init = (await s.rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'test', version: '0' } })).result;
-    assert.match(init.instructions, /Housekeeping, tidying or cleaning up the brain \(duplicates included\) starts with query \(object housekeeping\)/);
-    assert.match(init.instructions, /Several people or companies are read in one query \(object entities, filters\.name or filters\.id as a list\), never one call each\./);
+    // since the diet of 2026-11-17 the call shapes carry these once (the longer sentences were the same rule twice)
+    assert.match(init.instructions, /Housekeeping, only when the person asks for it: query \{object: "housekeeping"\}/);
+    assert.match(init.instructions, /Read several people or companies in one call: query \{object: "entities", filters: \{name: \["A", "B"\]\}\}/);
     const tools = (await s.rpc('tools/list')).result.tools, q = tools.find(t => t.name === 'query');
     assert.ok(q.description.length <= 2048, `query description is ${q.description.length} characters`);
     assert.match(q.description, /housekeeping \(tidying, clean-up, duplicates: the work list with its evidence; start there\)/);
