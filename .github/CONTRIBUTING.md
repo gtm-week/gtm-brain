@@ -45,7 +45,7 @@ docs/                           the guides and references (docs/README.md is the
   skill-template/               the folder to copy for a new shipped skill
   images/                       the picture and screenshots in the README and the guides
 .github/                        this file and the CI workflow
-.githooks/pre-push              the checks before a push to main
+scripts/hooks/pre-push          the checks before a push to main
 ```
 
 The plugin ships from `gtm-week/gtm-brain`, branch `main`. Scripts that used to live under
@@ -83,7 +83,7 @@ people install.
 
 ## Before pushing to main
 
-`./scripts/dev-install.sh` points git at [.githooks/](../.githooks/). Before a push to `main` the pre-push
+`./scripts/dev-install.sh` points git at [scripts/hooks/](../scripts/hooks/). Before a push to `main` the pre-push
 hook runs, in order:
 
 | Step | When | Skip with |

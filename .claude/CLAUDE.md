@@ -46,7 +46,7 @@ build throwaway brains with `setup` and set `GTM_BRAIN_NO_COMMIT` where committi
 `plugins/gtm-brain/test/live/` holds benchmarks and fixtures that talk to real connectors; they are
 not `*.test.mjs` files and are not part of the suite.
 
-`.githooks/pre-push` (enabled by `./scripts/dev-install.sh`) runs the suite before a push to `main`, then
+`scripts/hooks/pre-push` (enabled by `./scripts/dev-install.sh`) runs the suite before a push to `main`, then
 the harness bench when the push changes anything under `plugins/gtm-brain/` but `test/`. The bench
 fails when the plugin makes Codex solve fewer tasks than without it, adds more prompt tokens than
 `GTM_BRAIN_BENCH_MAX_OVERHEAD`, or calls GTM Brain tools for a self-contained puzzle.

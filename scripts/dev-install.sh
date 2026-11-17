@@ -8,7 +8,7 @@
 set -eu
 R="$(cd "$(dirname "$0")/.." && pwd)"
 # the checkout's own git hooks: tests and the harness bench before a push to main
-git -C "$R" config core.hooksPath .githooks
+git -C "$R" config core.hooksPath scripts/hooks
 if [ "${1:-}" = "--claude" ]; then
   src="$(claude plugin marketplace list --json 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const m=JSON.parse(s);const x=(Array.isArray(m)?m:m.marketplaces||[]).find(x=>x.name==="gtm-brain");console.log(x?.path||x?.source?.path||x?.installLocation||"")}catch{console.log("")}})')"
   if [ "$src" != "$R" ]; then

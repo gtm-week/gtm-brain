@@ -8,7 +8,7 @@
 //   APPROVE   the same change applied
 // Every check reads files, no judge. Exit 1 on any failure, 2 when `claude` is missing.
 //   node plugins/gtm-brain/test/live/claude-smoke.mjs [--model sonnet]
-// Runs from .githooks/pre-push after the harness bench. It uses the person's own Claude sign-in and
+// Runs from scripts/hooks/pre-push after the harness bench. It uses the person's own Claude sign-in and
 // settings (other plugins included); only the brain folder is new.
 import { mkdtempSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
