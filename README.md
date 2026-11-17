@@ -63,7 +63,13 @@ open the dashboard
 - [Everyday use, the dashboard, updating](docs/GUIDE.md)
 - [Skills marketplace](docs/SKILLS.md)
 - [How it works and what is on disk](docs/HOW-IT-WORKS.md)
-- [Everything else](docs/README.md) · [Contributing](.github/CONTRIBUTING.md) · [Issues](https://github.com/gtm-week/gtm-brain/issues)
+- [Workflows: campaigns and playbooks with steps](docs/WORKFLOWS.md)
+- [Base documents and your own](docs/DOCUMENTS.md)
+- [Skills you make yourself](docs/USER-SKILLS.md)
+- [First-use walkthrough](docs/ONBOARDING.md)
+- [Manual install and Claude Code (beta)](docs/SETUP.md)
+- [Every tool and the files it writes](docs/COMMANDS.md)
+- [Contributing](.github/CONTRIBUTING.md) · [Issues](https://github.com/gtm-week/gtm-brain/issues)
 
 ## License
 
