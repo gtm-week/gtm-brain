@@ -69,7 +69,7 @@ open the dashboard
 - [First-use walkthrough](docs/ONBOARDING.md)
 - [Manual install and Claude Code (beta)](docs/SETUP.md)
 - [Every tool and the files it writes](docs/COMMANDS.md)
-- [Contributing](.github/CONTRIBUTING.md) · [Issues](https://github.com/gtm-week/gtm-brain/issues)
+- [Contributing](.github/CONTRIBUTING.md)
 
 ## License
 
