@@ -47,7 +47,7 @@ const ARMS = {
 };
 const base = resolve(process.env.GTM_BRAIN_VERSUS_DIR || join(homedir(), "gtm-brain-bench", "versus"));
 const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-const judgeOnly = opt("--judge-only");
+const judgeOnly = opt("--judge-only") || opt("--report-only");   // --report-only <run folder>: write results.md again from results.json
 const out = resolve(judgeOnly || opt("--out", join(base, "runs", stamp)));
 const prior = judgeOnly ? JSON.parse(readFileSync(join(out, "results.json"), "utf8")) : null;
 const seed = Number(opt("--seed", prior?.seed ?? 7));
@@ -76,7 +76,7 @@ const byId = Object.fromEntries(notes.map(n => [n.id, n]));
 const version = JSON.parse(readFileSync(join(plugin, ".codex-plugin/plugin.json"), "utf8")).version;
 const BUILD_VERSION = 1;   // bump when every arm's construction changes
 // bump one arm's number when only that arm's construction changes: its build is made again, the others are kept
-const ARM_VERSION = { a: 1, b: 1, c: 1, d: 2 };
+const ARM_VERSION = { a: 1, b: 1, c: 2, d: 2 };
 const buildKey = `seed-${seed}-${createHash("sha256").update(JSON.stringify({ notes, version, BUILD_VERSION, ...(aSeed === "codex" ? {} : { aSeed }) })).digest("hex").slice(0, 10)}`;
 const builds = join(base, "builds", buildKey);
 const live = arm => join(base, "live", `arm-${arm}`);
@@ -408,6 +408,7 @@ if (flag("--backdate-a")) {
   man.backdate = backdate(join(snap, "folder")); writeFileSync(join(snap, "manifest.json"), JSON.stringify(man, null, 2) + "\n");
   log(`arm A build backdated: ${JSON.stringify(man.backdate)}`); process.exit(0);
 }
+if (opt("--report-only")) { write(prior); log(report(prior).split("\n").slice(0, 8 + prior.arms.length).join("\n")); process.exit(0); }
 if (judgeOnly) {
   writeFileSync(join(out, `results.before-rejudge-${stamp}.json`), JSON.stringify(prior, null, 2) + "\n");
   log(`judging ${prior.rows.length} answers of ${out} again with ${judgeModel}`);

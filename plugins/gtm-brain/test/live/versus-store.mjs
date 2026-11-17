@@ -13,7 +13,8 @@ import { dirname, join } from "node:path";
 
 const file = join(dirname(fileURLToPath(import.meta.url)), "store.jsonl");
 const STOP = new Set("a an and are as at be but by for from has have he her his i in is it its me my of on or our she so that the their them they this to was we were what when where which who will with you your".split(" "));
-const words = text => String(text).toLowerCase().replace(/[^a-z0-9&.,' -]+/g, " ").replace(/[.,']+(\s|$)/g, " ").split(/\s+/).filter(w => w && !STOP.has(w));
+// possessives and apostrophes go ("Acme Retail's" is "acme retail"), as any search would do; numbers keep their dots and commas
+const words = text => String(text).toLowerCase().replace(/[\u2018\u2019]/g, "'").replace(/'s\b/g, "").replace(/'/g, "").replace(/[^a-z0-9&., -]+/g, " ").replace(/[.,]+(\s|$)/g, " ").split(/\s+/).filter(w => w && !STOP.has(w));
 const features = text => { const w = words(text), f = [...w]; for (let i = 0; i + 1 < w.length; i++) f.push(`${w[i]} ${w[i + 1]}`); return f; };
 const read = () => existsSync(file) ? readFileSync(file, "utf8").split("\n").filter(Boolean).map(l => JSON.parse(l)) : [];
 const show = n => `${n.date} ${n.author ? `${n.author}: ` : ""}${n.text}`;
