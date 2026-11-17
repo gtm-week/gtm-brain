@@ -19,8 +19,6 @@ import { inConfigFolders, inLayout4, schemaFile, entitiesDir, ENTITIES_OLD, unde
 export const ENTITIES_DIR = ENTITIES_OLD;
 export { entitiesDir };
 export const INDEX_FILE = "index.md";
-/* entities/INDEX.md: one generated line per entity (name, kind, aliases, path), never an entity page itself. */
-export const BRAIN_INDEX = "INDEX.md";
 /* Entity history records (merges, renames, upgrades): an operation history that travels with git. */
 export const HISTORY_DIR = `${ENTITIES_DIR}/.history`;
 export const historyDir = root => `${entitiesDir(root)}/.history`;
@@ -82,7 +80,7 @@ export function recordKindLayout(root) {
 export function pagePaths(root) {
   const dir = join(root, entitiesDir(root));
   if (!dirOK(dir)) return [];
-  const out = readdirSync(dir, { withFileTypes: true }).filter(d => !d.isDirectory() && d.name.endsWith(".md") && d.name !== BRAIN_INDEX).map(d => `${entitiesDir(root)}/${d.name}`);
+  const out = readdirSync(dir, { withFileTypes: true }).filter(d => !d.isDirectory() && d.name.endsWith(".md") && d.name !== "INDEX.md").map(d => `${entitiesDir(root)}/${d.name}`);   // INDEX.md: a 0.38.0 preview file, removed by refresh
   for (const folder of kindFolders(root)) {
     for (const d of readdirSync(join(dir, folder), { withFileTypes: true })) if (!d.isDirectory() && d.name.endsWith(".md") && d.name !== INDEX_FILE) out.push(`${entitiesDir(root)}/${folder}/${d.name}`);
   }

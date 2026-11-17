@@ -1,7 +1,8 @@
 // win-recall: a question about a company or a person is answered by reading its page, as Codex reads any Markdown
 // file. A benchmark on real Codex (2026-11-17) found one Markdown file read with grep beat the search tool on a
 // 176-note history, so the page now carries every note that names the entity, in full, newest first, with a
-// corrected note marked; a save refreshes it, and entities/INDEX.md lists every page.
+// corrected note marked; a save refreshes it, and refresh removes an entities/INDEX.md left by a 0.38.0 preview
+// (a 0.37.x teammate's plugin reads every top-level file in entities/ as an entity page).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
@@ -23,7 +24,7 @@ const brain = () => {
   return { root, batch, entity, page };
 };
 
-test("an entity page lists every note naming it in full, marks a corrected note, follows each save, and INDEX.md lists it", () => {
+test("an entity page lists every note naming it in full, marks a corrected note, follows each save, and an old INDEX.md is removed", () => {
   const b = brain();
   const long = "Anna Lind made the intro to the Northfold buying committee on the call; she said the pilot budget is 40k and the decision is due by 2026-12-15, after their board meets.";
   let r = b.batch([
@@ -46,13 +47,13 @@ test("an entity page lists every note naming it in full, marks a corrected note,
   assert.match(text, new RegExp(`Northfold runs 45 stores in the Nordics\\. \\(corrects ${stores.id}\\)`));
   assert.ok(text.indexOf("45 stores") < text.indexOf("30 stores in the Nordics. ·"), "newest first");
 
-  const index = join(b.root, lib.entitiesDir ? lib.entitiesDir(b.root) : "entities", "INDEX.md");
-  const indexFile = existsSync(index) ? index : [join(b.root, "entities", "INDEX.md"), join(b.root, "brain", "entities", "INDEX.md")].find(existsSync);
-  assert.ok(indexFile, "entities/INDEX.md is written");
-  const listed = readFileSync(indexFile, "utf8");
-  assert.ok(listed.includes(`- Northfold · organization`) && listed.includes(b.entity("Northfold")._path), listed);
-  assert.ok(listed.includes(b.entity("Anna Lind")._path));
+  const dir = join(b.root, lib.entitiesDir ? lib.entitiesDir(b.root) : "entities");
+  assert.ok(!existsSync(join(dir, "INDEX.md")), "no entities/INDEX.md is written");
+  writeFileSync(join(dir, "INDEX.md"), "# Entities\n\n- Northfold · organization\n");
   assert.ok(!lib.readNames(b.root).some(n => /INDEX/.test(n._path || "")), "INDEX.md is not read as an entity");
+  r = b.batch([{ context: "company", content: "Northfold opened a store in Oslo.", companies: ["Northfold"], sources: ["user:ada-example"] }]);
+  assert.equal(r.status, 0, r.stderr + r.stdout);
+  assert.ok(!existsSync(join(dir, "INDEX.md")), "refresh removes an INDEX.md a preview wrote");
 });
 
 test("the list keeps the newest 80 and says how many older notes query lists", () => {

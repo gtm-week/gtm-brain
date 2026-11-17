@@ -10,6 +10,10 @@ import { entityStamp } from './entity-stamp.mjs';
 import { askSourceRevision } from './ask-source.mjs';
 import { memoryStamp } from './memory-journal.mjs';
 import * as lib from './brain.mjs';
+/* The page renderer's version: part of every page's refresh signature, so a change to how a page is written (the
+   Everything recorded section, 0.38.0) re-renders every existing page once after an upgrade, not when each
+   entity next gets a note. Bump it whenever publish() writes a page differently. */
+const PAGE_RENDER = 2;
 
 export const ENTITY_TIMELINE_LIMIT = 100;
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -54,7 +58,7 @@ export function refreshIndexedPages(root, registry, publish, { readOnly = false 
     for (const e of registry.filter(e => readOnly || e._path)) {
       const previous = saved?.pages?.[e.id], revision = version.get(JSON.stringify(e.id))?.version || 0;
       const notes = editedBody(e) ? { path: e._path, markdown: e._body } : null;
-      const signatureFor = (related, scoped) => digest([identity(e), e._path, related, scoped, notes, revision, e._fm?.compilation, e._fm?.compiled_as_of, e._fm?.compiled_at, e._fm?.compiled_fields, e._fm?.compiled_schema, schemaRevision, e.kind === 'tool' ? askRevision : null]);
+      const signatureFor = (related, scoped) => digest([PAGE_RENDER, identity(e), e._path, related, scoped, notes, revision, e._fm?.compilation, e._fm?.compiled_as_of, e._fm?.compiled_at, e._fm?.compiled_fields, e._fm?.compiled_schema, schemaRevision, e.kind === 'tool' ? askRevision : null]);
       // Most writes do not change this entity's evidence, its known neighbors or
       // its context covers. Check those recorded dependencies before any history
       // query. The index bumps both old and new owners on every relink/correction.

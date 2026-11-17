@@ -507,7 +507,7 @@ const describeNarrowing = q => [
    times for the event's public page, whose address the notes carried as a source. Core rule 5 names a person
    or a company only, and the old last line asked for one to three sentences with a fact, which a draft is not. */
 const NO_WEB = 'What these notes do not hold is not recorded: nothing is looked up on the web and no source link above is opened unless the person asks for exactly that.';
-const DRAFT_CLOSE = 'A draft is asked for: write it now from these notes and the document this kind of work follows, at the length asked; a second search is needed only for a different question. Nothing is looked up on the web and no source link above is opened for a draft unless the person asks for exactly that: a detail these notes do not hold (an agenda, a time, a link) is left out of the draft, and one line after the draft says what is missing.';
+const DRAFT_CLOSE = 'A draft is asked for: write it now from these notes and the document this kind of work follows, at the length asked. Nothing is looked up on the web and no source link above is opened for a draft unless the person asks for exactly that: a detail these notes do not hold (an agenda, a time, a link) is left out of the draft, and one line after the draft says what is missing.';
 const DRAFT_PIECE = /\b(?:messages?|dm|e-?mails?|mail|invitations?|invites?|inviting|posts?|repl(?:y|ies)|follow-?ups?|outreach|copy|announcements?|newsletters?|captions?|intros?|introductions?|pitch|text|letter|headline|tagline|bio|script)\b/i;
 const DRAFT_ASK = /^\W*(?:(?:please|can you|could you|would you|help me|i need you to|i want you to|let'?s)\W+)*(?:draft|write|compose|reword|rewrite)\b/i;
 /* A request to write a piece of text (a message, a post, an email), as opposed to a question about one. */
@@ -545,62 +545,134 @@ function kindList(index, root, question, q, now, maxBytes = SEARCH_MAX_BYTES) {
     `Answer from this list; what a note above does not say about one (its date, whether we ran, sponsored or attended it) is not recorded. All notes of one: query object answer with its name.`];
 }
 
+/* Everything recorded (win-a): the answer reply carries all of the brain the question can need, so the structured
+   brain never knows less than the same notes in one flat file. Measured on real Codex, a chat calls query answer
+   and nothing else: no entity page read, no grep, no second search. So a small brain (every note in about 40,000
+   characters of compact lines) comes back whole, oldest to newest; a larger one brings every note of each entity
+   the question names, then every note one of its other words, a date in the period it asks about or the kind it
+   asks for matches (stems and prefixes, any of the words), within the same budget, and says in one line how to
+   get what did not fit in one more call. */
+const capWhole = Number(process.env.GTM_BRAIN_ANSWER_MAX_BYTES);
+export const ANSWER_ALL_BYTES = Number.isInteger(capWhole) && capWhole >= 4096 && capWhole <= MAX_RESULT_BYTES ? capWhole : 40000;
+const LONG_NOTE_CHARS = 6000;
+const BEST_NOTE_CHARS = 240;   // a best match is a pointer; its full text is in the list   // one note (a transcript) is cut here in a larger brain; its full text is one sql read
+const oneLineText = m => String(m.content ?? '').replace(/\s*\n\s*/g, ' ').trim();
+/* A compact line: date it was recorded · context · kind · who · full text · id (and what it replaces or withdraws). */
+export function compactLine(m, chars = Infinity) {
+  const who = [...new Set([...(m.authors || []), ...(m.people || [])])].slice(0, 4).join(', ');
+  const text = oneLineText(m);
+  return `- ${lib.localDateTime(m.at).slice(0, 10)} · ${m.context} · ${m.kind}${who ? ` · ${who}` : ''} · ${chars < text.length ? clip(text, chars) : text} · ${m.id}${m.supersedes ? ` (replaces ${m.supersedes})` : ''}${m.retracts ? ` (withdraws ${m.retracts})` : ''}`;
+}
+const MONTH_WORD = new RegExp(`\\b${MONTH_RE}\\.?\\b`, 'gi');
+/* The days a note's text names: 2026-11-14, 14 November (2026), November 14, November 2026, 14.11.2026, 14/11/2026.
+   A date without a year takes the year of the note, or the next one when that day is more than a month before it. */
+export function datesInText(text, at) {
+  const t = String(text), base = new Date(at), out = [];
+  const year = (y, mo, d) => { if (y) return Number(y); const guess = new Date(base.getFullYear(), mo, d || 1); return guess < addDays(base, -31) ? base.getFullYear() + 1 : base.getFullYear(); };
+  for (const m of t.matchAll(/\b(20\d\d)-(\d\d)(?:-(\d\d))?\b/g)) out.push({ y: +m[1], mo: +m[2] - 1, d: m[3] ? +m[3] : null });
+  for (const m of t.matchAll(/\b(\d{1,2})[./](\d{1,2})[./](20\d\d)\b/g)) out.push({ y: +m[3], mo: +m[2] - 1, d: +m[1] });
+  for (const m of t.matchAll(new RegExp(`\\b(?:(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?)?${MONTH_RE}\\.?(?:\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b)?(?:,?\\s+(20\\d\\d))?`, 'gi'))) {
+    const mo = monthIndex(m[2]); if (mo < 0) continue;
+    if (/^may$/i.test(m[2]) && !m[1] && !m[3] && !m[4]) continue;   // "may" alone is a verb
+    const d = m[1] ? +m[1] : m[3] ? +m[3] : null;
+    out.push({ y: year(m[4], mo, d), mo, d });
+  }
+  return out.filter(x => x.mo >= 0 && x.mo < 12);
+}
+const inPeriod = (dates, p) => dates.some(x => { const from = new Date(x.y, x.mo, x.d || 1), to = x.d ? addDays(from, 1) : new Date(x.y, x.mo + 1, 1); return from < p.to && to > p.from; });
+/* A question word's forms for a generous match: the stem and, for a longer word, its first five letters. */
+const looseForms = w => { const f = fold(w).toLowerCase(), st = stemish(f); return [...new Set([f, st, ...(st.length >= 6 ? [st.slice(0, 5)] : [])])].filter(x => x.length >= 3); };
+const noteWords = text => new Set((fold(String(text)).toLowerCase().match(/[\p{L}\p{N}]+/gu) || []));
+const matchesForm = (bag, form) => { if (bag.has(form)) return true; for (const w of bag) if (w.startsWith(form)) return true; return false; };
+
+function everythingRecorded(index, root, question, q, r, filters, now, budget = ANSWER_ALL_BYTES) {
+  const scope = index.filterSql(filters || {});
+  const all = index.db.prepare(`${scope.prefix}SELECT m.rowid AS r FROM memories m WHERE ${scope.where.join(' AND ')} ORDER BY m.time ASC, m.id ASC`).all(...scope.params).map(x => x.r);
+  const notes = all.map(rowid => ({ rowid, m: fetchRow(index, rowid) }));
+  const lines = notes.map(n => compactLine(n.m));
+  const total = lines.reduce((a, l) => a + Buffer.byteLength(l) + 1, 0);
+  if (total <= budget) return { whole: true, header: `Everything recorded in the brain: all ${notes.length} current note${notes.length === 1 ? '' : 's'}, oldest to newest (replaced and withdrawn notes left out). Each line: date recorded · context · kind · who · text · id.`, lines, notes: notes.map(n => n.m) };
+  // larger brain: every note of each named entity first, then everything the other words, the period or the kind match
+  const chosen = new Map(), out = []; let bytes = 0; const left = [];
+  const add = (n, section) => {
+    if (chosen.has(n.rowid)) return true;
+    const line = compactLine(n.m, LONG_NOTE_CHARS), size = Buffer.byteLength(line) + 1;
+    if (bytes + size > budget) { left.push(n.m.id); chosen.set(n.rowid, false); return false; }
+    if (section && !out.includes(section)) out.push('', section);
+    out.push(line); chosen.set(n.rowid, true); bytes += size; return true;
+  };
+
+  const member = index.db.prepare(`SELECT v.memory AS r FROM members v WHERE v.field='entities' AND v.value=?`);
+  for (const e of q.entities) {
+    const rows = new Set(member.all(JSON.stringify(e.id)).map(x => x.r));
+    const own = notes.filter(n => rows.has(n.rowid));
+    const title = `Every note about ${e.name} (${own.length}), oldest to newest:`;
+    for (const n of own) add(n, title);
+  }
+  const forms = (q.terms || []).filter(w => !/^\d+$/.test(w)).map(looseForms).filter(f => f.length);
+  const scored = [];
+  const ranked = new Map(r.rows.map((row, i) => [row.r, i]));
+  for (const n of notes) {
+    if (chosen.has(n.rowid)) continue;
+    const bag = noteWords(`${n.m.content} ${(n.m.tags || []).join(' ')}`);
+    let score = forms.filter(f => f.some(x => matchesForm(bag, x))).length;
+    if (q.kind && n.m.kind === q.kind) score += 2;
+    if (q.kindHint && n.m.kind === q.kindHint) score += 1;
+    if (q.period) { const at = new Date(n.m.at); if ((at >= q.period.from && at < q.period.to) || inPeriod(datesInText(n.m.content, n.m.at), q.period)) score += 3; }
+    if (ranked.has(n.rowid)) score += 1;
+    if (score > 0) scored.push({ n, score });
+  }
+  scored.sort((a, b) => b.score - a.score || a.n.m.at.localeCompare(b.n.m.at));
+  const words = [...(q.terms || []), ...(q.period ? [q.period.label] : []), ...(q.kind ? [`${q.kind}s`] : [])];
+  const title = `Every other note matching ${words.length ? words.map(w => `"${w}"`).join(', ') : 'the question'} (any of the words, stems and prefixes${q.period ? ', the period in the record date or a date in the text' : ''}; ${scored.length}), most matched first:`;
+  for (const x of scored) add(x.n, title);
+  return { whole: false, header: `The brain holds ${notes.length} current notes, more than one reply; below is everything about what the question names and every note its words match.`, lines: out, notes: notes.filter(n => chosen.get(n.rowid)).map(n => n.m), left, matched: scored.length };
+}
+
 /* query (object answer): the question as asked, one reply. */
 export function answerText(index, root, question, { filters = {}, limit, project = null, now = nowDate(), relationsFor = () => [] } = {}) {
   question = String(question || '').trim();
   if (!question) return 'answer needs search: the question as asked.';
   const r = searchIndex(index, question, { filters, project, now, relationsFor });
-  const q = r.parsed, n = Math.max(1, Math.min(200, Number(limit) || ANSWER_NOTES));
-  const maxBytes = limit ? Math.min(MAX_RESULT_BYTES, Math.max(SEARCH_MAX_BYTES, n * PER_NOTE_BYTES)) : SEARCH_MAX_BYTES;
+  const q = r.parsed;
   const out = [];
-  const narrowing = describeNarrowing(q);
-  const words = r.searched.map(g => g.word);
-  const listed = kindList(index, root, question, q, now, maxBytes);
-  if (!r.rows.length && listed.length) out.push(`Answer for "${question}": no note matches the words, and the brain has the list below (${r.total} notes searched).`);
-  else if (!r.rows.length) {
-    out.push(`Not found: no note matches "${question}" (${r.total} notes searched${narrowing ? `; narrowed to ${narrowing}` : ''}${words.length ? `; words: ${words.join(', ')}` : ''}${r.missing.length ? `; no note has ${r.missing.map(w => `"${w}"`).join(', ')} or a spelling one letter off` : ''}).`);
+  const listed = kindList(index, root, question, q, now, ANSWER_ALL_BYTES * 0.3);
+  const narrowing = describeNarrowing(q), words = r.searched.map(g => g.word);
+  if (!r.total && !listed.length) {
     const given = Object.keys(filters || {});
-    out.push(given.length ? `Nothing within the filters given (${given.join(', ')}); the brain was not searched outside them. The same question without filters searches all of it.`
-      : 'The brain holds nothing on this. Say so plainly; searching again with other words will not find more.');
-  } else {
-    out.push(`Answer for "${question}": ${r.rows.length} note${r.rows.length === 1 ? '' : 's'} match${r.rows.length === 1 ? 'es' : ''} of ${r.total}, best first${narrowing ? `; narrowed to ${narrowing}` : ''}.`);
+    out.push(given.length ? `Not found: no note within the filters given (${given.join(', ')}); the brain was not searched outside them. The same question without filters reads all of it.`
+      : 'Not found: the brain holds no notes yet. Say so plainly.');
+    return out.join('\n');
   }
-  if (listed.length) out.push('', ...listed, '');
+  if (!r.rows.length && !q.entities.length) {
+    out.push(`Not found: no note matches "${question}" (${r.total} notes searched${narrowing ? `; narrowed to ${narrowing}` : ''}${words.length ? `; words: ${words.join(', ')}` : ''}${r.missing.length ? `; no note has ${r.missing.map(w => `"${w}"`).join(', ')} or a spelling one letter off` : ''}).`);
+    out.push('The notes below are everything the brain holds that could bear on it (the whole brain when it is small): if none of them answers the question, say plainly that the brain holds nothing on this.');
+  } else out.push(`Answer for "${question}"${narrowing ? `; about ${narrowing}` : ''}.`);
   out.push(...r.said);
-  for (const a of q.ambiguous || []) out.push(`"${a.said}" could be ${a.names.join(' or ')}${a.more ? ` (and ${a.more} more)` : ''}; the notes below match the word, not one of them. If it matters, ask which one.`);
   if (r.widened) out.push(r.widened);
-  if (r.literal) out.push('No word matched; these notes contain the text as typed (an id, a tag or a source).');
+  if (r.literal) out.push('No word matched; the best matches contain the text as typed (an id, a tag or a source).');
+  for (const a of q.ambiguous || []) out.push(`"${a.said}" could be ${a.names.join(' or ')}${a.more ? ` (and ${a.more} more)` : ''}; if it matters, ask which one.`);
   if (q.entities.length) {
     const registry = index.entries || lib.readNames(root);
-    // a question that names several ("who are A, B and C") gets a card for each, so no read per person follows
     for (const e of q.entities.slice(0, ANSWER_CARDS)) { const card = entityCard(index, root, e, now, registry, relationsFor); if (card) out.push('', card); }
-    // several named: say what is not recorded, so the next call is not a brief or a search per person
-    if (q.entities.length > 2) {
-      const none = q.entities.slice(0, ANSWER_CARDS).map(e => registry.find(x => x.id === e.id)).filter(e => e && (e.kind || 'person') === 'person' && !relationsFor(e.id).some(r => r.type === 'works_at' && r.from.id === e.id && r.status === 'current')).map(e => e.name);
-      out.push('', `Each one named has its card above${none.length ? `; no employer is recorded as a relationship for ${none.join(', ')} (a brief or a note below may name one: say it as written, else say it is not recorded)` : ''}. The cards and the notes below are what the brain holds on them: no brief or search per person is needed.`);
-    }
     if (q.entities.length > ANSWER_CARDS) out.push('', `${q.entities.length - ANSWER_CARDS} more named (${q.entities.slice(ANSWER_CARDS, ANSWER_CARDS + 8).map(e => e.name).join(', ')}): their cards in one call, query object entities with filters.name as a list.`);
   }
-  let bytes = Buffer.byteLength(out.join('\n')), shown = 0;
-  const notes = [];
-  for (const row of r.rows.slice(0, n)) {
-    const m = fetchRow(index, row.r);
-    const line = `${shown + 1}. ${noteText(m, now, shown < 3 ? FULL_NOTE_CHARS : SHORT_NOTE_CHARS, row.later)}`;
-    const size = Buffer.byteLength(line) + 1;
-    if (shown && bytes + size > maxBytes - 360) break;
-    if (!shown) out.push('');
-    out.push(line); notes.push(m); bytes += size; shown++;
+  if (listed.length) out.push('', ...listed);
+  // the best matches for the question's words first, short, as pointers into the full list below (the list is the answer)
+  const n = Math.max(1, Math.min(200, Number(limit) || ANSWER_NOTES));
+  const best = r.rows.slice(0, n).map((row, i) => `${i + 1}. ${noteText(fetchRow(index, row.r), now, BEST_NOTE_CHARS, row.later)}`);
+  if (best.length) out.push('', `Best matches for the words (${r.rows.length} of ${r.total} matched${narrowing ? `; narrowed to ${narrowing}` : ''}; full text in the list below):`, ...best);
+  const all = everythingRecorded(index, root, question, q, r, filters, now, ANSWER_ALL_BYTES - Buffer.byteLength(out.join('\n')) - 4400);   // room for the closing lines and up to 150 ids
+  out.push('', all.header, ...all.lines);
+  if (all.left?.length) {
+    const ids = all.left.slice(0, 150);
+    out.push('', `${all.left.length} more matching note${all.left.length === 1 ? '' : 's'} did not fit this reply. All of them in one more call: query sql SELECT at, context, kind, content, id FROM memories WHERE id IN (${ids.map(id => `'${id}'`).join(', ')})${all.left.length > ids.length ? ` (the first ${ids.length}; then the same with the rest)` : ''}.`);
   }
-  const cutNote = notes.find((m, i) => String(m.content).replace(/\s*\n\s*/g, ' ').length > (i < 3 ? FULL_NOTE_CHARS : SHORT_NOTE_CHARS));
-  if (cutNote) out.push('', `A note's text is cut where it says "more characters"; its full text, only if the answer needs it: query sql SELECT content FROM memories WHERE id='${cutNote.id}'.`);
-  const more = r.rows.length - shown;
-  if (more > 0) out.push('', `${more} more match${more === 1 ? 'es' : ''}. For them: query object answer with the same search and limit ${Math.min(200, shown + Math.min(more, ANSWER_NOTES))} (the next ${Math.min(more, ANSWER_NOTES)}, a larger reply)${q.entities.length || q.period ? '' : ', or name a person, company or period to narrow'}.`);
-  if (r.rows.length) {
-    const ask = askSourceLines(root, notes, { day: at => lib.localDateTime(at).slice(0, 10) });
-    if (ask.length) out.push('', ...ask);
-    // the reply is as long as the question needs (ALL-716: answers were as long as before the round, 451 characters at the median)
-    out.push('', asksForDraft(question) ? DRAFT_CLOSE : `Answer from these notes in one to three sentences: the fact, its date and who or what it came from. No list of everything found, no offers and no second search, unless the person asks for more. ${NO_WEB}`);
-  }
+  const cut = all.notes.find(m => !all.whole && oneLineText(m).length > LONG_NOTE_CHARS);
+  if (cut) out.push('', `A note's text is cut where it says "more characters"; its full text: query sql SELECT content FROM memories WHERE id='${cut.id}'.`);
+  const ask = askSourceLines(root, all.notes.slice(-40), { day: at => lib.localDateTime(at).slice(0, 10) });
+  if (ask.length) out.push('', ...ask);
+  out.push('', asksForDraft(question) ? DRAFT_CLOSE : `Answer from all the notes shown: they are what the brain holds on this. For a list question (what is due, what we decided, who raised something, what we promised), list every item that fits, each with its date and id; a later note that replaces or withdraws one wins. ${NO_WEB}`);
   return out.join('\n');
 }
 

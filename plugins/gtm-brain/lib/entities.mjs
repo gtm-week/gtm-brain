@@ -13,7 +13,7 @@ import { DEFAULT_KINDS, KIND_NAME, NOT_KINDS } from './kinds.mjs';
 import { pagePaths, isPagePath, linkFrom, layout, recordKindLayout, kindPagePath, isKindPagePath, isFlatPagePath, assetFolder, entitiesDir, historyDir, flatPagePath, flatKinds } from './layout.mjs';
 import { workPath, coverFile, monthFile, monthly, CONTEXTS_DIR, ENTITIES_OLD } from './brain-paths.mjs';
 import { understandsLayout } from './layout-version.mjs';
-import { writeKindIndexes, writeBrainIndex } from './entity-index.mjs';
+import { writeKindIndexes } from './entity-index.mjs';
 import { MemoryIndex } from './memory-index.mjs';
 import { meetingAttendees } from './meeting-entities.mjs';
 import { brainRelationsToUs } from './relation-to-us.mjs';
@@ -896,8 +896,15 @@ function refreshPages(root) {
   // the kind indexes follow the pages: same lock, same write path, committed with them
   const current = changed.length ? lib.readNames(root) : registry;
   changed.push(...writeKindIndexes(root, current, kindRelations(root)));
-  changed.push(...writeBrainIndex(root, current));
+  changed.push(...removeBrainIndex(root));
   return changed;
+}
+/* entities/INDEX.md, written by the 0.38.0 previews only: a 0.37.x plugin reads every top-level .md in entities/ as
+   an entity page and fails on it, so refresh removes one that exists (review finding 4). */
+function removeBrainIndex(root) {
+  const rel = `${entitiesDir(root)}/INDEX.md`, file = join(root, rel);
+  if (!existsSync(file)) return [];
+  try { rmSync(file, { force: true }); return [rel]; } catch { return []; }
 }
 /* Relation to us per entity id, for the kind indexes (lib/relation-to-us.mjs fills it in). */
 function kindRelations(root) {
