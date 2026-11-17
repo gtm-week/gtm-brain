@@ -507,9 +507,10 @@ function recordedByName(contexts, index) {
 const recordedQueries = new WeakMap();
 export function indexedRecorded(index, id) {
   let q = recordedQueries.get(index);
-  if (!q) recordedQueries.set(index, q = index.db.prepare(`SELECT m.raw FROM members v JOIN memories m ON m.rowid=v.memory WHERE v.field='entities' AND v.value=?1
-    UNION SELECT r.raw FROM members v JOIN memories m ON m.rowid=v.memory JOIN corrections c ON c.file=m.file AND c.target=m.id JOIN memories r ON r.rowid=c.memory WHERE v.field='entities' AND v.value=?1`));
-  return q.all(JSON.stringify(id)).map(r => JSON.parse(r.raw));
+  if (!q) recordedQueries.set(index, q = index.db.prepare(`SELECT m.raw FROM members v JOIN memories m ON m.rowid=v.memory WHERE v.field='entities' AND v.value=?
+    UNION SELECT r.raw FROM members v JOIN memories m ON m.rowid=v.memory JOIN corrections c ON c.file=m.file AND c.target=m.id JOIN memories r ON r.rowid=c.memory WHERE v.field='entities' AND v.value=?`));
+  const key = JSON.stringify(id); // two plain ? (numbered ?1 fails to bind on Node 22.16)
+  return q.all(key, key).map(r => JSON.parse(r.raw));
 }
 export const RECORDED_CAP = 80;
 const flatText = s => String(s || "").replace(/\s+/g, " ").trim();
