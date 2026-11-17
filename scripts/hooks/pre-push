@@ -2,7 +2,7 @@
 # Before a push to main: the test suite, then the harness benchmark when the push changes what
 # ships (anything under plugins/gtm-brain/ but its tests). The benchmark runs real `codex exec` turns
 # on the Codex sign-in, about 4 minutes; see plugins/gtm-brain/test/live/harness-bench.mjs.
-# Enabled by ./scripts/dev-install.sh (git config core.hooksPath .githooks).
+# Enabled by ./scripts/dev-install.sh (git config core.hooksPath scripts/hooks).
 #   GTM_BRAIN_SKIP_BENCH=1 git push    skip the benchmark (say why in the PR or commit)
 #   GTM_BRAIN_SKIP_TESTS=1 git push    skip the suite too
 #   GTM_BRAIN_SKIP_CLAUDE=1 git push   skip the Claude Code smoke (setup, guard, APPROVE; about 2 minutes)

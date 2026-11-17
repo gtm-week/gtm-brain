@@ -46,7 +46,7 @@ build throwaway brains with `setup` and set `GTM_BRAIN_NO_COMMIT` where committi
 `plugins/gtm-brain/test/live/` holds benchmarks and fixtures that talk to real connectors; they are
 not `*.test.mjs` files and are not part of the suite.
 
-`.githooks/pre-push` (enabled by `./scripts/dev-install.sh`) runs the suite before a push to `main`, then
+`scripts/hooks/pre-push` (enabled by `./scripts/dev-install.sh`) runs the suite before a push to `main`, then
 the harness bench when the push changes anything under `plugins/gtm-brain/` but `test/`. The bench
 fails when the plugin makes Codex solve fewer tasks than without it, adds more prompt tokens than
 `GTM_BRAIN_BENCH_MAX_OVERHEAD`, or calls GTM Brain tools for a self-contained puzzle.
@@ -166,8 +166,10 @@ snapshot of the outgoing file in `templates/legacy/AGENTS-<old version>.md` plus
 
 ## Docs map
 
-Describe a feature once, in its owning document, and link from the others: `INSTALL.md`
-(standalone instructions for the installing agent), `docs/ONBOARDING.md` (first-use walkthrough),
+Describe a feature once, in its owning document, and link from the others: `README.md` (short:
+what it is, install, start, set up, every day, dashboard, update; at most 160 lines, at most about twelve commands), `INSTALL.md`
+(standalone instructions for the installing agent), `docs/HOW-IT-WORKS.md` (the four parts, the architecture, what is on disk),
+`docs/SKILLS.md` (every shipped skill), `docs/ONBOARDING.md` (first-use walkthrough),
 `docs/GUIDE.md` (everyday use), `plugins/gtm-brain/MANUAL.md` (how a brain works and how to change it; ships with the plugin, Codex answers "how does the brain work?" from it), `docs/COMMANDS.md` (every tool and command and the files it writes),
 `docs/SETUP.md` (manual install and contributor verification), `docs/releases/RELEASE-0.35.md` (what 0.35 changes and its known limits; the update steps live in MANUAL.md), `docs/DOCUMENTS.md` (documents
 feature), `docs/USER-SKILLS.md`, `docs/skill-template/README.md` (contributing a shipped skill), `IMPORT.md` (its text is duplicated word for word as the body of

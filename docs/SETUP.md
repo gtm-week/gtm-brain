@@ -31,6 +31,11 @@ codex plugin add gtm-brain@gtm-brain
 codex plugin list | grep gtm-brain                                      # installed, enabled, 0.37.5
 ```
 
+The [install message](../README.md#1-install) runs these for you. The upgrade line refreshes a
+marketplace snapshot that is already on the computer. The last line must show the plugin
+installed and enabled. There are no hooks to approve and nothing to build. Then start a new
+chat in an empty folder and send `/gtmb-start`.
+
 The install is a snapshot of the configured branch. In the Codex app, say **"update GTM Brain"**
 to use `gtmb-configure`: Codex checks the candidate connector, refreshes the plugin and
 verifies the installed connector. Follow the two actions it gives you: quit and reopen Codex,
@@ -89,6 +94,31 @@ export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.37.5
 In a chat the skills run as GTM Brain tools: you see "Remembering", "Searching the brain",
 "Writing the summary", "Saving" with the plugin's icon, not shell commands. A workplace change is
 applied only when you choose APPROVE in the form the `approve_change` tool shows.
+
+## Claude Code (beta)
+
+In Claude Code, run:
+
+```text
+/plugin marketplace add gtm-week/gtm-brain
+/plugin install gtm-brain@gtm-brain
+```
+
+In the Claude desktop app, choose Add marketplace, enter
+`https://github.com/gtm-week/gtm-brain.git`, click Sync and install `gtm-brain`. Then open an
+empty folder, start a session and say "Set up a company brain here".
+
+Setup, saving, briefs, questions, linked projects and APPROVE work as in Codex. What differs:
+
+| In Claude Code | |
+| --- | --- |
+| Dashboard | A link you open in your browser. Its buttons prepare messages for Codex, not for Claude Code |
+| Schedules | None: a daily sync or a scheduled summary cannot be set up |
+| Tool status | No connector checks; Claude uses the MCP tools the session lists |
+| Your own skills | In `.claude/skills` instead of `.agents/skills` |
+| A note's source | Names the session as `claude:<id>`; reopen it with `claude --resume <id>` |
+| Updates | Say "update GTM Brain" when it is offered, then run `/reload-plugins` or start a new session |
+| Wording | Some skill instructions still say Codex |
 
 ## 2. Create a brain (step 1: objects and setup)
 
