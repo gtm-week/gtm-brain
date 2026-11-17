@@ -407,14 +407,15 @@ const RETIRED_READS = { recall: "query (memories with search, or object brief)",
 const COMPILE_TOOLSET = new Set(["compile_facts", "compile_apply", "compile_entity", "entity_facts", "render_dashboard", "query"]);   // query: --facts is a digest, older notes are looked up
 // How to ask: ask_person's form first, then the host's own question box, then chat text (lib/host.mjs holds the words).
 const NATIVE_QUESTIONS = (() => { try { return host().nativeQuestions(); } catch { return false; } })();
-// What an ordinary chat is listed (since the diet of 2026-11-17): every listed definition is re-sent with each model
-// step, and 41 of them were 85,500 characters. Reads are answered by reading the brain's own pages (entities/, the
-// cover, grep); the tools are the write side. The others still answer tools/call: a skill or a reply that names one
-// calls it by name. A scheduled or background run (GTM_BRAIN_RUN) and GTM_BRAIN_TOOLSET=full are listed everything.
-const CHAT_TOOLS = new Set(["remember", "query", "update_entity", "approve_change", "workflow", "document", "interact", "check_environment", "setup_brain", "ask_person", "save", "load_context", "compile_apply", "compile_entity"]);
+// What an ordinary chat is listed. Codex calls only a listed tool: a tool hidden from tools/list is unreachable,
+// although tools/call would answer it, so every tool a shipped text names (the instructions, the opening lines, a
+// skill, a rule page) is listed; server.test.mjs fails when one is not. The diet of 2026-11-17 keeps its size: the
+// tools of every turn (FULL_TEXT_TOOLS) carry their whole description, the others one or two sentences and the
+// field names with their first sentence; a refusal and the skill that names them carry the rest.
+const FULL_TEXT_TOOLS = new Set(["remember", "query", "update_entity", "approve_change", "workflow", "document", "interact", "check_environment", "setup_brain", "ask_person", "save", "load_context", "compile_apply", "compile_entity"]);
 const offered = t => process.env.GTM_BRAIN_TOOLSET === "compile" ? COMPILE_TOOLSET.has(t.name)
-  : process.env.GTM_BRAIN_RUN || process.env.GTM_BRAIN_TOOLSET === "full" ? !(RUN_ONLY_TOOLS.has(t.name) && !process.env.GTM_BRAIN_RUN) && !(t.name in RETIRED_READS)
-  : CHAT_TOOLS.has(t.name);
+  : !(RUN_ONLY_TOOLS.has(t.name) && !process.env.GTM_BRAIN_RUN) && !(t.name in RETIRED_READS);
+const fullText = name => FULL_TEXT_TOOLS.has(name) || !!process.env.GTM_BRAIN_RUN || process.env.GTM_BRAIN_TOOLSET === "full" || process.env.GTM_BRAIN_TOOLSET === "compile";
 
 // Allethic supplies memory capture and structured reads; the host keeps its native forms
 // and session operations. One registered tool per operation, with existing names preserved.
@@ -719,14 +720,16 @@ const LISTED_DESCRIPTION = {
   remember: "Save a decision, commitment, finding, meeting outcome, question or answer. Append-only. Call it at once when the person states a fact, no reads first: the brain matches names and context, says already kept, and turns a changed date, amount or count into a correction. One note per outcome; never a note that only says a meeting happened. A whole turn in one call through memories. Quote the note back as echoed. supersedes corrects an id, retracts withdraws one. A held entry: ask what the reply says, once, resend only it. Outcomes: ok, denied, refused (tell the person why), error.",
 };
 // remember (the largest) also has its top-level field prose cut to a sentence, content's rule on dates excepted.
-const advertised = ({ anyOf, oneOf, allOf, not, enum: _, ...schema }, name) => {
-  const out = compact(schema, 0, name === "remember");
+const advertised = ({ anyOf, oneOf, allOf, not, enum: _, ...schema }, name, short = false) => {
+  const out = compact(schema, 0, short || name === "remember");
   if (name === "remember" && schema.properties?.content?.description) out.properties.content.description = schema.properties.content.description;
   return out;
 };
 // tools/list carries field names and types; prose is cut to its first sentence at the top level and dropped below it.
 // A refusal names what was wrong and what to send, so the detail is learned when it is needed.
 const firstSentence = d => { const m = String(d).match(/^.*?(?<!\b(?:e\.g|i\.e|etc))[.;:](\s|$)/); const t = (m ? m[0] : String(d)).trim().replace(/[;:]$/, "."); return t.length > 140 ? t.slice(0, 137).replace(/\s+\S*$/, "") + "..." : t; };
+// A tool outside FULL_TEXT_TOOLS: its first two sentences, at most 300 characters.
+const shortDescription = d => { const t = String(d).match(/^(?:.*?(?<!\b(?:e\.g|i\.e|etc))\.(?:\s|$)){1,2}/)?.[0]?.trim() || String(d); return t.length > 300 ? t.slice(0, 297).replace(/\s+\S*$/, "") + "..." : t; };
 // An object field of an import (remember customer, meeting, ...): its fields as one typed line, not a schema each.
 const typeOf = p => !p || typeof p !== "object" ? "any" : p.type === "object" && p.properties ? `{${signature(p)}}` : p.type === "array" ? (p.items?.anyOf ? `(${typeOf(p.items)})[]` : `${typeOf(p.items)}[]`) : p.anyOf ? p.anyOf.map(typeOf).join("|") : p.type || "any";
 const signature = o => Object.entries(o.properties).map(([n, p]) => `${n}${(o.required || []).includes(n) ? "" : "?"}: ${typeOf(p)}`).join(", ");
@@ -754,7 +757,7 @@ async function handle(req) {
   if (method === "notifications/cancelled") { questions.cancel(params.requestId); return; }
   if (method === "initialize") return reply(id, { protocolVersion: params.protocolVersion || "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "gtm-brain", title: "GTM Brain", version: VERSION }, instructions: INSTRUCTIONS + host().texts.questions({ form: questions.available(), boxOn: NATIVE_QUESTIONS }) + "\n" + WORKFLOWS + "\nRecords in English; names, IDs, quotes and APPROVE stay as given." });
   if (method === "ping") return reply(id, {});
-  if (method === "tools/list") return reply(id, { tools: TOOLS.filter(offered).map(t => ({ name: t.name, title: t.title, description: LISTED_DESCRIPTION[t.name] || t.description, inputSchema: advertised(t.inputSchema, t.name), annotations: { title: t.title, readOnlyHint: t.readOnly, destructiveHint: false, openWorldHint: !!t.openWorld } })) });
+  if (method === "tools/list") return reply(id, { tools: TOOLS.filter(offered).map(t => ({ name: t.name, title: t.title, description: fullText(t.name) ? LISTED_DESCRIPTION[t.name] || t.description : shortDescription(t.description), inputSchema: advertised(t.inputSchema, t.name, !fullText(t.name)), annotations: { title: t.title, readOnlyHint: t.readOnly, destructiveHint: false, openWorldHint: !!t.openWorld } })) });
   if (method === "tools/call") {
     const tool = TOOLS.find(t => t.name === params.name);
     if (!tool) return fail(id, -32602, `unknown tool ${params.name}`);
