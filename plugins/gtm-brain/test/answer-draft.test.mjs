@@ -10,7 +10,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import * as lib from '../lib/brain.mjs';
-import { answer, asksForDraft, SEARCH_MAX_BYTES } from '../lib/memory-search.mjs';
+import { answer, asksForDraft, SEARCH_MAX_BYTES, ANSWER_ALL_BYTES } from '../lib/memory-search.mjs';
 process.env.TZ = 'UTC';
 process.env.GTM_BRAIN_NO_COMMIT = '1';
 process.env.GTM_BRAIN_NO_COMPILE = '1';
@@ -56,20 +56,20 @@ test('the second search of a draft turn, worded as a question, also ends with no
   // what Codex asked next in both runs: the event's details, with no word that says draft
   const a = answer(root, 'Lisbon workshop agenda');
   const end = last(a);
-  assert.match(end, /^Answer from these notes in one to three sentences: the fact, its date and who or what it came from\./);
-  assert.match(end, /No list of everything found, no offers and no second search, unless the person asks for more\./);
+  assert.match(end, /^Answer from all the notes shown: they are what the brain holds on this\. For a list question .*list every item that fits/);
+  assert.doesNotMatch(end, /one to three sentences|no second search/, 'nothing limits the answer to a few sentences (win-a)');
   assert.match(end, /What these notes do not hold is not recorded: nothing is looked up on the web and no source link above is opened unless the person asks for exactly that\.$/);
 });
 
 test('nothing found keeps its own two lines, and a full reply with the longer last line stays under the cap', () => {
   const root = fixture();
   const none = answer(root, 'draft an email about the zeppelin');
-  assert.match(none, /^Not found: /); assert.doesNotMatch(none, /A draft is asked for|on the web/);
+  assert.match(none, /^Not found: /); assert.match(none, /say plainly that the brain holds nothing on this/);
   const long = 'Lisbon workshop planning: ' + 'the venue asked about seating, catering and the recording room. '.repeat(14);
   for (let i = 0; i < 40; i++) lib.appendMemory(root, 'events', { authors: ['ann'], content: `${long} (${i})`, source: [{ kind: 'url', ref: `https://events.fixture.test/listing-${i}` }] });
   for (const q of [ASK, 'Lisbon workshop planning']) {
     const a = answer(root, q);
-    assert.ok(Buffer.byteLength(a) <= SEARCH_MAX_BYTES, `${q}: ${Buffer.byteLength(a)} bytes`);
+    assert.ok(Buffer.byteLength(a) <= ANSWER_ALL_BYTES, `${q}: ${Buffer.byteLength(a)} bytes`);
     assert.match(last(a), /on the web/);
   }
 });

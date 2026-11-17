@@ -12,7 +12,7 @@ import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import * as lib from '../lib/brain.mjs';
-import { answer, search, parsePeriod, SEARCH_MAX_BYTES } from '../lib/memory-search.mjs';
+import { answer, search, parsePeriod, SEARCH_MAX_BYTES, ANSWER_ALL_BYTES } from '../lib/memory-search.mjs';
 process.env.TZ = 'UTC';
 process.env.GTM_BRAIN_NO_COMMIT = '1';
 process.env.GTM_BRAIN_NO_COMPILE = '1';
@@ -74,12 +74,13 @@ test('following the last line of a capped reply never asks for a reply many time
   const root = fixture();
   const long = 'Pipeline review: ' + 'the buyer asked about pricing, onboarding and the security questionnaire. '.repeat(12);
   for (let i = 0; i < 300; i++) note(root, `${long} (${i})`, { at: new Date(Date.UTC(2026, 9, 1 + (i % 28), 10, i % 60)).toISOString() });
+  // win-a: the answer reply holds up to its budget and names one sql read of exactly the notes that did not fit
   const a = answer(root, 'pipeline review');
-  const next = Number(a.match(/and limit (\d+)/)?.[1]);
-  assert.ok(next > 0, a.slice(-400));
-  const b = answer(root, 'pipeline review', { limit: next });
-  assert.ok(Buffer.byteLength(b) <= 3 * SEARCH_MAX_BYTES, `the suggested limit ${next} returned ${Buffer.byteLength(b)} bytes`);
-  assert.ok(ids(b).length > ids(a).length, 'and it does show more');
+  assert.ok(Buffer.byteLength(a) <= ANSWER_ALL_BYTES, `${Buffer.byteLength(a)} bytes`);
+  const rest = a.match(/(\d+) more matching notes? did not fit this reply\. All of them in one more call: query sql SELECT at, context, kind, content, id FROM memories WHERE id IN \(([^)]*)\)/);
+  assert.ok(rest, a.slice(-400));
+  const listed = rest[2].split(', ').length;
+  assert.ok(listed > 0 && listed <= 150, `${listed} ids in the follow-up read`);
   const rows = search(root, 'pipeline review');
   const more = Number(rows.match(/with limit (\d+)/)?.[1]);
   const c = search(root, 'pipeline review', { limit: more });
@@ -175,10 +176,11 @@ const ymdOf = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0
 test('an answer that cuts a long note says how to read the rest', () => {
   const root = fixture();
   const big = note(root, 'Transcript: ' + 'the customer talked about onboarding and pricing at length. '.repeat(100));
+  // win-a: a small brain comes back whole, so the long note is there in full; its best-match pointer is cut
   const a = answer(root, 'onboarding');
-  assert.ok(Buffer.byteLength(a) < 4096, `${Buffer.byteLength(a)} bytes`);
+  assert.ok(a.includes(big.content.replace(/\s+$/, '')), 'the full note in the list');
   assert.match(a, /more characters\)/);
-  assert.match(a, new RegExp(`query sql SELECT content FROM memories WHERE id='${big.id}'`));
+  assert.ok(Buffer.byteLength(a) <= ANSWER_ALL_BYTES, `${Buffer.byteLength(a)} bytes`);
   assert.doesNotMatch(answer(root, 'nothing like zqxjvbnonsenseword'), /query sql/);
 });
 

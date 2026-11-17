@@ -646,22 +646,29 @@ export function answerText(index, root, question, { filters = {}, limit, project
   }
   if (!r.rows.length && !q.entities.length) {
     out.push(`Not found: no note matches "${question}" (${r.total} notes searched${narrowing ? `; narrowed to ${narrowing}` : ''}${words.length ? `; words: ${words.join(', ')}` : ''}${r.missing.length ? `; no note has ${r.missing.map(w => `"${w}"`).join(', ')} or a spelling one letter off` : ''}).`);
-    out.push('The notes below are everything the brain holds that could bear on it (the whole brain when it is small): if none of them answers the question, say plainly that the brain holds nothing on this.');
-  } else out.push(`Answer for "${question}"${narrowing ? `; about ${narrowing}` : ''}.`);
+    const given = Object.keys(filters || {});
+    out.push(given.length ? `Nothing matched within the filters given (${given.join(', ')}); the brain was not searched outside them, and the notes below are only those within them. The same question without filters reads all of it.`
+      : 'The notes below are everything the brain holds that could bear on it (the whole brain when it is small): if none of them answers the question, say plainly that the brain holds nothing on this.');
+  } else if (r.rows.length) out.push(`Answer for "${question}": ${r.rows.length} note${r.rows.length === 1 ? '' : 's'} match${r.rows.length === 1 ? 'es' : ''} of ${r.total}, best first${narrowing ? `; narrowed to ${narrowing}` : ''}.`);
+  else out.push(`Answer for "${question}": no note matches the words${narrowing ? `; about ${narrowing}` : ''}; everything recorded about what it names is below.`);
   out.push(...r.said);
   if (r.widened) out.push(r.widened);
   if (r.literal) out.push('No word matched; the best matches contain the text as typed (an id, a tag or a source).');
-  for (const a of q.ambiguous || []) out.push(`"${a.said}" could be ${a.names.join(' or ')}${a.more ? ` (and ${a.more} more)` : ''}; if it matters, ask which one.`);
+  for (const a of q.ambiguous || []) out.push(`"${a.said}" could be ${a.names.join(' or ')}${a.more ? ` (and ${a.more} more)` : ''}; the notes below match the word, not one of them. If it matters, ask which one.`);
   if (q.entities.length) {
     const registry = index.entries || lib.readNames(root);
     for (const e of q.entities.slice(0, ANSWER_CARDS)) { const card = entityCard(index, root, e, now, registry, relationsFor); if (card) out.push('', card); }
+    if (q.entities.length > 2) {
+      const none = q.entities.slice(0, ANSWER_CARDS).map(e => registry.find(x => x.id === e.id)).filter(e => e && (e.kind || 'person') === 'person' && !relationsFor(e.id).some(r => r.type === 'works_at' && r.from.id === e.id && r.status === 'current')).map(e => e.name);
+      out.push('', `Each one named has its card above${none.length ? `; no employer is recorded as a relationship for ${none.join(', ')} (a brief or a note below may name one: say it as written, else say it is not recorded)` : ''}. The cards and the notes below are what the brain holds on them: no brief or search per person is needed.`);
+    }
     if (q.entities.length > ANSWER_CARDS) out.push('', `${q.entities.length - ANSWER_CARDS} more named (${q.entities.slice(ANSWER_CARDS, ANSWER_CARDS + 8).map(e => e.name).join(', ')}): their cards in one call, query object entities with filters.name as a list.`);
   }
   if (listed.length) out.push('', ...listed);
   // the best matches for the question's words first, short, as pointers into the full list below (the list is the answer)
   const n = Math.max(1, Math.min(200, Number(limit) || ANSWER_NOTES));
   const best = r.rows.slice(0, n).map((row, i) => `${i + 1}. ${noteText(fetchRow(index, row.r), now, BEST_NOTE_CHARS, row.later)}`);
-  if (best.length) out.push('', `Best matches for the words (${r.rows.length} of ${r.total} matched${narrowing ? `; narrowed to ${narrowing}` : ''}; full text in the list below):`, ...best);
+  if (best.length) out.push('', `Best matches for the words (full text in the list below):`, ...best);
   const all = everythingRecorded(index, root, question, q, r, filters, now, ANSWER_ALL_BYTES - Buffer.byteLength(out.join('\n')) - 4400);   // room for the closing lines and up to 150 ids
   out.push('', all.header, ...all.lines);
   if (all.left?.length) {
