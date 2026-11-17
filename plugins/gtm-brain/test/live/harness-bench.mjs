@@ -13,7 +13,7 @@
 // puzzle. Time is reported and warned on, never failed: it is too noisy for a gate.
 //   node plugins/gtm-brain/test/live/harness-bench.mjs [--runs 2] [--jobs 4] [--model gpt-5.6-luna] [--tasks coding,reasoning,connector]
 // Budget: GTM_BRAIN_BENCH_MAX_OVERHEAD (extra input tokens on the puzzle, default 14000).
-// Runs from .githooks/pre-push before a push to main; the person's own profile is never touched
+// Runs from scripts/hooks/pre-push before a push to main; the person's own profile is never touched
 // apart from reading auth.json to sign in.
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, existsSync, readdirSync } from "node:fs";
 import { tmpdir, homedir } from "node:os";

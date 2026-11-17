@@ -1,5 +1,5 @@
 # The checks a contributor runs before a push, on every push and pull request.
-# The live benchmarks (test/live/) need Codex and Claude sign-ins and stay local, in .githooks/pre-push.
+# The live benchmarks (test/live/) need Codex and Claude sign-ins and stay local, in scripts/hooks/pre-push.
 name: CI
 
 on:
