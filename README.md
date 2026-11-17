@@ -114,9 +114,7 @@ asks and where files go.
 **Second: the base documents.** Strategy, ideal customer profile, market, tone of voice and
 design system ship as starters in `configuration/about-us/`; add your own with "add pricing as
 a base file". Codex reads the matching one in full before every email, plan and page, so what
-is not written is missing from all of that work. The dashboard's Overview lists the three
-under Foundations: how many rules, what the schema holds, which base documents are written and
-what is done without the others.
+is not written is missing from all of that work.
 
 **Mentors fill the base documents.** A mentor is a skill that coaches you through one piece of
 GTM work. It reads what the brain already holds, so its questions and its draft are about your
@@ -278,7 +276,7 @@ dashboard timing (`dashboard: always` or `on-demand`), the save reminder (`save_
 workflows on or off (`workflows: off`) and where big files go (`big_files: google-drive` or
 `local`). A change is shown first and applies only when you click APPROVE.
 
-![The Configuration tab: rules, schema and base documents as three cards with their state and what is missing, then the base documents table with what each one says or what is done without it](docs/images/screenshots/dashboard-configuration.png)
+![The Configuration tab: the company and the base documents with their state, with Rules and Schema as parts of the same tab](docs/images/screenshots/dashboard-configuration.png)
 
 ### Entities
 
@@ -375,22 +373,15 @@ writes: ["tool:email"]
   run at the start of your next chat, and it starts only when you say yes.
 - **Nothing runs silently** or reaches you outside Codex. A due step or a fired trigger shows
   in the chat's opening lines, in the todo list and on the dashboard.
-- **Running one.** Every move is a sentence in Codex, kept as a note with your reason; the
-  table below has them, and the dashboard prepares the two you use most.
+- **Running one.** "start the outbound workflow", "where is the campaign", "next step", "skip
+  this step", "pause the run", "cancel the run", "step 3 failed: ...". Each is kept as a note
+  with your reason. "which workflows are running" lists every run.
 - **Limits.** Three open runs per workflow, five automatic steps a run a day, and
   `workflows: off` in the settings stops them all.
 
-| To | Say in Codex | On the dashboard |
-| --- | --- | --- |
-| Start one | "start the outbound workflow" | Workflows tab: **Start in Codex** on the workflow prepares that message, with the "Before starting" questions listed so you can answer them in it |
-| See where it stands | "where is the campaign", "next step", "which workflows are running" | Workflows tab: each run as a tracker, its steps in order, done, due, overdue or upcoming. Overview: Coming up lists the step that is due |
-| Move it along | "skip this step", "move step 2 to 2026-12-01", "pause the run", "resume the run", "cancel the run", "step 3 failed: ..." | **Do the next step in Codex** on the run's tracker prepares the message for the due step; the other sentences are typed in chat |
-
 Detail: [WORKFLOWS.md](docs/WORKFLOWS.md).
 
-![The Workflows tab: How a workflow runs folded to one line, then each workflow with whether it is on, how it starts, a Start in Codex link and its runs](docs/images/screenshots/dashboard-workflows.png)
-
-![A run tracked on the Workflows tab: its name, what it is about, and its four steps in order, the first done with its note, the second overdue with what it waits for, two upcoming, and the link that prepares the next step in Codex](docs/images/screenshots/dashboard-workflow-run.png)
+![The Workflows tab: each workflow with whether it is on, how it starts and where its runs stand](docs/images/screenshots/dashboard-workflows.png)
 
 ### Skills, projects and interactions
 
@@ -515,20 +506,18 @@ work happens in chat; the page is for reading, plus three kinds of edit.
 
 | Tab | Shows | What you can do there |
 | --- | --- | --- |
-| Overview | What needs you, what is coming up, the foundations (rules, schema, base documents), the mentors, what to tidy | Press a card's button: it prepares the work in Codex |
-| Configuration | Rules, schema, base documents, the company | Edit a document. Rules, schema and settings are read here and changed in chat |
+| Overview | What needs you, what is coming up, what to tidy | Press a card's button: it prepares the work in Codex |
+| Configuration | Base documents, rules, schema, settings | Edit a document. Rules, schema and settings are read here and changed in chat |
 | Entities | People, companies and the other kinds, with relationships and history | Add an entity; edit its name, aliases, emails and kind; fill its fields; add or end a connection; set its relation to us; merge two after a preview; archive one |
 | Memories | The notes by topic, with their sources | On a note's menu: Correct this, This was wrong, Move to another topic, Change what kind it is, Answered |
-| Workflows | Workflows, each run step by step, and your own skills | Read; "Start in Codex", "Do the next step in Codex" and "Chat about this" prepare a message |
+| Workflows | Workflows, their runs, and your own skills | Read; "Chat about this" prepares a message |
 
 - **One search box** at the top finds notes, people, tools and topics. **More** holds Explore
   and Help.
-- **Overview** has five groups. Red cards need a decision: open questions, a broken tool connection, a failed summary, a plugin update. Coming up lists
-  due workflow steps and meetings in the next 7 days. Foundations shows the rules, the schema
-  and the base documents: how many there are, when each last changed and what is missing, with
-  a link to open each and one to work on it in Codex. Work with a mentor is how the base
-  documents get filled. Orange Housekeeping lists look-alike names, first-name-only people,
-  duplicate notes, unwritten base documents and missing required fields.
+- **Overview** has three groups. Red cards need a decision: open questions, a broken tool connection, a failed summary, a plugin update. Coming up lists
+  due workflow steps and meetings in the next 7 days. Orange Housekeeping lists look-alike
+  names, first-name-only people, duplicate notes, unwritten base documents and missing required
+  fields.
 - **Edits are saved the way chat saves them,** through the same checked write path. A correction adds a
   note and never rewrites one, and a document that changed since you opened it is not overwritten.
 - **Buttons prepare, you send.** A button such as "Answer with Codex" puts a prepared message
@@ -538,7 +527,7 @@ work happens in chat; the page is for reading, plus three kinds of edit.
 **Actual GTM Brain dashboard, populated with fictional demo data.** These are captures
 of the shipped app, not mockups. No customer or private workspace data is shown.
 
-![The Overview tab: what is coming up, then Foundations with the rules, the schema and the base documents and what is missing in each, then the mentors that fill the base documents](docs/images/screenshots/dashboard-overview.png)
+![The Overview tab: what is coming up, then the mentors, each with the document it fills and a link that prepares the work in Codex](docs/images/screenshots/dashboard-overview.png)
 
 ![The Help view: every task Codex can take on, mentors first, each with a prepared message and its command](docs/images/screenshots/dashboard-mentors.png)
 
@@ -774,7 +763,14 @@ Ask for an outcome in ordinary language, or invoke one of the twenty-nine shippe
 skill is one sitting of work; for the difference from a workflow, your own skill and an
 interaction see [Skills, projects and interactions](#skills-projects-and-interactions).
 
-**Mentors.** Each coaches you through one piece of GTM work with the brain's context.
+**Rules and schema.** The two that decide what the brain keeps, what it asks and where files go.
+
+| Command | Use it for |
+| --- | --- |
+| `/gtmb-rules` | Show, add, change or remove a rule: what Codex saves and asks, where files go, when it asks the source. |
+| `/gtmb-schema` | Change the fields, kinds, subtypes and relationship types the brain keeps. |
+
+**Mentors.** Each coaches you through one piece of GTM work with the brain's context; five of them fill a base document.
 
 | Command | Use it for |
 | --- | --- |
@@ -809,10 +805,8 @@ interaction see [Skills, projects and interactions](#skills-projects-and-interac
 | --- | --- |
 | `/gtmb-start` | Set up the brain and continue first-use discovery. |
 | `/gtmb-configure` | Change company, team, tools and settings through APPROVE; connect and test tools; update the plugin. |
-| `/gtmb-rules` | Show, add, change or remove a rule: what Codex saves and asks, where files go, when it asks the source. |
-| `/gtmb-schema` | Change the fields, kinds, subtypes and relationship types the brain keeps. |
 | `/gtmb-clay-setup` | Connect Clay on your yes and find the brain's target companies and people in it (search is free); enrichment that spends credits asks first. |
-| `/gtmb-zynt-setup` | Set up ZYNT buying signals from the brain when you paste ZYNT's setup prompt; ZYNT then shows in the brain's tools. |
+| `/gtmb-zynt-setup` | Set up ZYNT buying signals from the brain through ZYNT's own plugin (browser sign-in, no key); without the plugin, the steps to install it. |
 | `/gtmb-freckle-setup` | Connect Freckle (lead enrichment) on your yes and build its first list of target companies and people from the brain; runs that spend credits ask first. |
 | `/gtmb-woodpecker-setup` | Connect Woodpecker on your yes, see how your campaigns perform, and save one email sequence written from the brain as a draft; it never starts a campaign. |
 | `/gtmb-surfer-setup` | Connect Surfer on your yes, get topics from the brain's strategy, market and call notes, and brief the first article; a full article asks first, nothing is published. |
