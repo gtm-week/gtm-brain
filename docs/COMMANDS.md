@@ -208,9 +208,12 @@ as complete. There are at most 32 pending indexed reads per server, with 64 KiB 
 ### answer
 *"what did Zak want?"*, *"how many sign-ups did the Merantix opening have?"*, *"what did we decide last week?"*
 
-Since 0.38.0 a question about one company or person is answered from its page under `entities/`
-(`entities/organizations/<slug>.md`, `entities/people/<slug>.md`; `entities/INDEX.md` lists them), read like any Markdown file or found with grep.
-Each page ends with "Everything recorded": every note that names it, newest first, with date, author and corrections; `query answer` is for lists, dates and status across many.
+Since 0.38.0 one `query answer` call returns everything recorded that the question can need: a small brain (every
+current note fits in about 40,000 characters of compact lines: date, context, kind, who, full text, id) comes back whole,
+oldest to newest; a larger one brings every note about each company or person the question names, then every note any of
+its other words (stems and prefixes), the period it asks about (record date or a date in the note text) or the kind matches,
+under about 40 KB, with one line naming the single `query sql` read for what did not fit. Entity pages under `entities/`
+(`entities/organizations/<slug>.md`, `entities/people/<slug>.md`) still end with "Everything recorded" for people reading them.
 
 One call for a question: `query` with object `answer` and `search` set to the question as asked
 (`lib/memory-search.mjs`, run in the memory worker). Names, aliases, first names and emails resolve
