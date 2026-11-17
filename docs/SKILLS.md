@@ -60,7 +60,7 @@ question at a time and only when you ask; nothing changes until you answer.
 | `/gtmb-start` | Create the brain in an empty folder and continue first-use discovery. | |
 | `/gtmb-configure` | Change company, team, tools and settings through APPROVE; connect and test tools; update the plugin and upgrade the brain. | "connect my tools", "update GTM Brain", "upgrade the brain" |
 | `/gtmb-clay-setup` | Connect Clay on your yes and find the brain's target companies and people in it (search is free); enrichment that spends credits asks first. | "Set up Clay for me" |
-| `/gtmb-zynt-setup` | Set up ZYNT buying signals from the brain when you paste ZYNT's setup prompt; ZYNT then shows in the brain's tools. | paste ZYNT's own setup prompt |
+| `/gtmb-zynt-setup` | Set up ZYNT buying signals from the brain through ZYNT's own plugin (browser sign-in, no key); without the plugin, the steps to install it. | paste ZYNT's own setup prompt |
 | `/gtmb-freckle-setup` | Connect Freckle (lead enrichment) on your yes and build its first list of target companies and people from the brain; runs that spend credits ask first. | "Set up Freckle for me" |
 | `/gtmb-woodpecker-setup` | Connect Woodpecker on your yes, see how your campaigns perform, and save one email sequence written from the brain as a draft; it never starts a campaign. | "Set up Woodpecker for me" |
 | `/gtmb-surfer-setup` | Connect Surfer on your yes, get topics from the brain's strategy, market and call notes, and brief the first article; a full article asks first, nothing is published. | "Set up Surfer for me" |

@@ -158,7 +158,7 @@ summary is written when you ask about it. When you want a specific workflow:
 | Define who to target: company fit, buying roles and readiness, kept as one draft | `/gtmb-icp` |
 | Fill in the strategy the brain starts with (`strategy.md`), in a 10-15 minute conversation | `/gtmb-strategy` |
 | Draft a tone of voice: first whose it is (the company's, yours or a team's), then from writing that fits, tested on one fresh email or post; `voice.md` for the company; offered at the end of setup, skippable, run again any time | `/gtmb-voice` |
-| Set up ZYNT from what the brain knows: paste the prompt ZYNT gives you after "Set up with my AI agent" | `/gtmb-zynt-setup` |
+| Set up ZYNT from what the brain knows, through ZYNT's plugin: say "Set up ZYNT for me" | `/gtmb-zynt-setup` |
 | Connect Freckle and build its first list of target companies and people from the brain | `/gtmb-freckle-setup` |
 | Connect Clay and find the target companies and people the brain names | `/gtmb-clay-setup` |
 | Connect Woodpecker and save one email sequence written from the brain as a draft | `/gtmb-woodpecker-setup` |
