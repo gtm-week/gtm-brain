@@ -17,6 +17,7 @@ brain works inside is in [the manual](../plugins/gtm-brain/MANUAL.md), which shi
 
 Not part of the reading order:
 
+- [BENCHMARK.md](BENCHMARK.md): GTM Brain against one long notes file, a keyword search and Codex's own memory on 27 questions, with the losses said plainly.
 - [WALKTHROUGH.md](WALKTHROUGH.md): the step-by-step setup with troubleshooting, kept as the source text of the Circle onboarding guide.
 - [DESIGN.md](DESIGN.md): the brand and design rules for the GTM Brain name, logo and pages.
 - [skill-template/](skill-template/README.md): for contributors, the folder to copy for a skill that ships with the plugin.
