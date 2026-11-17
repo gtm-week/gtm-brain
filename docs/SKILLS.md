@@ -6,6 +6,26 @@ For the difference from a workflow, your own skill and an interaction see
 [How GTM Brain works: Skills, projects and interactions](HOW-IT-WORKS.md#skills-projects-and-interactions).
 Every tool and operation behind them, with the files each writes, is in [COMMANDS.md](COMMANDS.md).
 
+## Set up and connect
+
+Start here. One command creates the brain; the rest connect what you already use.
+
+| To do | Command | Or say |
+| --- | --- | --- |
+| Create the brain in an empty folder | `/gtmb-start` | |
+| Connect your CRM, email, calendar or call recorder; change company, team or settings | `/gtmb-configure` | "connect my tools", "change our company details" |
+| Connect Clay and find your target companies and people in it | `/gtmb-clay-setup` | "set up Clay for me" |
+| Connect ZYNT buying signals through ZYNT's own plugin | `/gtmb-zynt-setup` | "set up ZYNT for me" |
+| Connect Freckle and build a first list of target companies and people | `/gtmb-freckle-setup` | "set up Freckle for me" |
+| Connect Woodpecker, see how campaigns perform, draft one email sequence | `/gtmb-woodpecker-setup` | "set up Woodpecker for me" |
+| Connect Surfer, get topics from your notes, brief a first article | `/gtmb-surfer-setup` | "set up Surfer for me" |
+| Connect HeyReach, see how LinkedIn campaigns do, get messages to paste in | `/gtmb-heyreach-setup` | "set up HeyReach for me" |
+| Update GTM Brain | `/gtmb-configure` | "update GTM Brain" |
+
+Each tool setup connects only on your yes, never keeps a key, asks again before anything that
+spends credits, and never sends, publishes or starts a campaign. Company, team and settings
+changes are shown first and apply only when you click APPROVE.
+
 ## Rules and schema
 
 The two that decide what the brain keeps, what it asks and where files go. Start here.
@@ -52,23 +72,6 @@ in full before every email, plan and page; the other four produce work from thos
 `/gtmb-housekeeping` is not `/gtmb-todo`. It lists what to settle (first names without a
 surname, names that may be the same, required fields nobody stated) with the evidence, one
 question at a time and only when you ask; nothing changes until you answer.
-
-## Setup and maintenance
-
-| Command | Use it for | Or say |
-| --- | --- | --- |
-| `/gtmb-start` | Create the brain in an empty folder and continue first-use discovery. | |
-| `/gtmb-configure` | Change company, team, tools and settings through APPROVE; connect and test tools; update the plugin and upgrade the brain. | "connect my tools", "update GTM Brain", "upgrade the brain" |
-| `/gtmb-clay-setup` | Connect Clay on your yes and find the brain's target companies and people in it (search is free); enrichment that spends credits asks first. | "Set up Clay for me" |
-| `/gtmb-zynt-setup` | Set up ZYNT buying signals from the brain through ZYNT's own plugin (browser sign-in, no key); without the plugin, the steps to install it. | paste ZYNT's own setup prompt |
-| `/gtmb-freckle-setup` | Connect Freckle (lead enrichment) on your yes and build its first list of target companies and people from the brain; runs that spend credits ask first. | "Set up Freckle for me" |
-| `/gtmb-woodpecker-setup` | Connect Woodpecker on your yes, see how your campaigns perform, and save one email sequence written from the brain as a draft; it never starts a campaign. | "Set up Woodpecker for me" |
-| `/gtmb-surfer-setup` | Connect Surfer on your yes, get topics from the brain's strategy, market and call notes, and brief the first article; a full article asks first, nothing is published. | "Set up Surfer for me" |
-| `/gtmb-heyreach-setup` | Connect HeyReach with your workspace's Connection URL, see how your LinkedIn campaigns do, and get a connection note and follow-ups from the brain to paste in; nothing is sent. | "Set up HeyReach for me" |
-
-Each tool setup skill connects on your yes, never keeps a key, does one first job from your
-ICP and voice, asks again before anything that spends credits, and never sends, publishes or
-starts a campaign.
 
 ## The website
 

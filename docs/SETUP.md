@@ -31,7 +31,7 @@ codex plugin add gtm-brain@gtm-brain
 codex plugin list | grep gtm-brain                                      # installed, enabled, 0.37.4
 ```
 
-The [install message](../README.md#install) runs these for you. The upgrade line refreshes a
+The [install message](../README.md#1-install) runs these for you. The upgrade line refreshes a
 marketplace snapshot that is already on the computer. The last line must show the plugin
 installed and enabled. There are no hooks to approve and nothing to build. Then start a new
 chat in an empty folder and send `/gtmb-start`.
