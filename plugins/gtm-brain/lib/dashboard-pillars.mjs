@@ -17,7 +17,7 @@ import { readOurRules } from "./our-rules.mjs";
 import { rulesFile, schemaFile, settingsFile, ABOUT_DIR, ABOUT_DIR4 } from "./brain-paths.mjs";
 import { population, POPULATION_RANGES, normalizedContent } from "./population.mjs";
 import { healthLine, summaryRuns } from "./health-line.mjs";
-import { listWorkflows, listRuns, TYPE as WORKFLOW_TYPE } from "./workflows.mjs";
+import { listWorkflows, listRuns, milestoneText, TYPE as WORKFLOW_TYPE } from "./workflows.mjs";
 import { relationOverview } from "./relations.mjs";
 import { buildRelationLog } from "./relation-log.mjs";
 
@@ -72,7 +72,7 @@ export function ourRules(text) {
 function configuration(root, admin, { documents, commits, findings, tools, plugin, compileMode }) {
   const docs = documents.filter(d => d.extra?.type !== WORKFLOW_TYPE);
   const state = d => !d.filled ? "not written" : d.status === "approved" ? "approved" : "draft";
-  const rows = docs.map(d => ({ slug: d.slug, title: d.title, path: d.path, state: state(d), applies_to: d.applies_to, changed: changedAt(root, d.path, commits, d.updated), by: d.by, changed_by: changedBy(d.path, commits), base: !!d.base, starter: STARTERS.includes(d.slug) }));
+  const rows = docs.map(d => ({ slug: d.slug, title: d.title, path: d.path, state: state(d), applies_to: d.applies_to, gist: d.filled ? documentGist(d) : "", changed: changedAt(root, d.path, commits, d.updated), by: d.by, changed_by: changedBy(d.path, commits), base: !!d.base, starter: STARTERS.includes(d.slug) }));
   // The design system is a page as well as a text (design-system.html beside the Markdown): its row says when the
   // page is missing or still the shipped starter, with the message for Codex that makes it.
   for (const r of rows) {
@@ -289,19 +289,55 @@ export function workflowAbout(doc) {
   return "";
 }
 
+/* What a written document says, in one line: its first sentence, or its headings when it opens with none. */
+export function documentGist(doc) {
+  const first = workflowAbout(doc); if (first) return first;
+  const heads = String(doc?.body || "").split("\n").map(l => l.match(/^#{2,3}\s+(.+?)\s*#*$/)?.[1]).filter(Boolean).slice(0, 5);
+  return heads.length ? cut(heads.join(" · ").replace(/[*_`]/g, ""), 220) : "";
+}
+
+/* A run as the Workflows tab tracks it: every step of the workflow file in order, with the state the run's own
+   notes give it (lib/workflows.mjs listRuns), "upcoming" for a step no note has opened yet. What the current step
+   waits for is said the way `query workflows` says it (workflow-triggers.mjs viewText). */
+function stepNote(s, def, total) {
+  let line = String(s.content || "").split("\n")[0].trim();
+  // the writer's own opening ("Step 2 of 4, Launch: done. ") repeats what the tracker already shows
+  const lead = `Step ${s.n} of ${total}, ${def?.title || ""}: ${s.status}. `;
+  if (def?.title && line.startsWith(lead)) line = line.slice(lead.length);
+  return cut(line, 200);
+}
+function stepWaits(r, s, def) {
+  if (r.paused) return "paused by a person";
+  if (s.status === "due") return def?.milestone && def.milestone.kind !== "invalid" ? `waits for ${milestoneText(def.milestone)}` : "";
+  return s.due ? `waits until ${s.due}` : def?.gate?.milestone ? `waits for ${milestoneText(def.gate.milestone)}` : "waiting";
+}
+function runSteps(w, r) {
+  const total = w.ok ? w.steps.length : Math.max(0, ...r.steps.map(s => s.n));
+  return Array.from({ length: total }, (_, i) => {
+    const n = i + 1, def = w.ok ? w.steps[i] : null, s = r.steps.find(x => x.n === n) || null, open = s && (s.status === "pending" || s.status === "due");
+    return { n, title: cut(def?.title || "", 120), status: s ? s.status : "upcoming", due: open ? s.due || null : null, at: s?.at || null, by: s?.by || null,
+      note: s && !open ? stepNote(s, def, total) : null, waits: s && open && !r.ended && r.current?.n === n ? stepWaits(r, s, def) : null };
+  });
+}
+/* What the run is about: the answers its start note carries, one per line after the first. */
+const runAbout = r => String(r.brief || "").split("\n").slice(1).map(l => cut(l.replace(/^\s*[-*]\s+/, ""), 160)).filter(Boolean).slice(0, 8);
+
 function workflows(root, documents, runs, commits) {
   const docs = new Map(documents.filter(d => d.extra?.type === WORKFLOW_TYPE).map(d => [d.slug, d]));
   let parsed = []; try { parsed = listWorkflows(root); } catch {}
   const files = parsed.map(w => {
     try { return fileRow(w); }   // one file nobody can read is one row saying so, not an empty tab
-    catch { return { slug: String(w?.slug || "?"), title: String(w?.title || w?.slug || "?"), path: typeof w?.path === "string" ? w.path : null, status: "draft", ok: false, problems: ["This workflow file could not be read."], steps: null, trigger: "manual", changed: null, runs: [], step_titles: [], about: "" }; }
+    catch { return { slug: String(w?.slug || "?"), title: String(w?.title || w?.slug || "?"), path: typeof w?.path === "string" ? w.path : null, status: "draft", ok: false, problems: ["This workflow file could not be read."], steps: null, trigger: "manual", changed: null, runs: [], step_titles: [], about: "", settle: [] }; }
   });
   function fileRow(w) {
     const d = docs.get(w.slug), own = runs.filter(r => r.workflow === w.slug);
     return { slug: w.slug, title: w.title || w.slug, path: w.path || d?.path || null, status: w.status || d?.status || "draft", ok: !!w.ok, problems: (w.problems || []).map(p => cut(p, 160)),
-      steps: w.ok ? w.steps.length : null, step_titles: w.ok ? w.steps.map(st => cut(st.title || "", 120)) : [], about: workflowAbout(d), trigger: workflowTrigger(d), changed: w.path ? changedAt(root, w.path, commits, d?.updated) : null,
+      steps: w.ok ? w.steps.length : null, step_titles: w.ok ? w.steps.map(st => cut(st.title || "", 120)) : [], about: workflowAbout(d), trigger: workflowTrigger(d),
+      // what "start the <title> workflow" asks before it starts: the file's "Before starting" items
+      settle: w.ok ? w.settle.map(x => ({ label: cut(x.label, 80), text: cut(x.text, 200) })) : [], changed: w.path ? changedAt(root, w.path, commits, d?.updated) : null,
       runs: own.map(r => { const step = r.current, title = step && w.ok ? w.steps[step.n - 1]?.title || null : null;
-        return { id: r.id, started: r.startedAt, by: r.by, context: r.context, ended: r.ended ? { how: r.ended.how, at: r.ended.at } : null,
+        return { id: r.id, started: r.startedAt, by: r.by, context: r.context, ended: r.ended ? { how: r.ended.how, at: r.ended.at, note: cut(String(r.ended.content || "").split("\n")[0], 200) } : null,
+          about: runAbout(r), paused: !!r.paused, steps: runSteps(w, r),
           step: step ? { n: step.n, of: w.ok ? w.steps.length : r.steps.length, title, status: step.status, due: step.due || null } : null, waiting: r.open ? cut(r.open.content, 160) : null }; }) };
   }
   // runs whose workflow file is gone still show, under their own name

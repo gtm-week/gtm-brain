@@ -49,22 +49,44 @@ test('missing workflows and internal script folders are never advertised',t=>{
 const fixture=()=>({brain:'/tmp/FDE OS & Łódź #1',name:'FDE OS',generatedAt:'2026-09-13T10:00:00Z',
  contexts:[],names:[],recent:[],loaded:[],questions:[],decisions:[],tools:[],activity:[],projects:[],
  admin:{company:'FDE OS',owner:'alex',team:[],tools:[],body:'',dashboard:'on-demand'},skills:skillCatalog()});
-test(`shortcuts and searchable examples open exact workflow drafts`,()=>{
+test(`the skills are one searchable list in the Workflows tab; each card opens its exact prepared chat; Help links to it`,()=>{
  const D=fixture(),p=page(D);
- const home=p.node('#h-skills').innerHTML;assert.equal((home.match(/<article /g)||[]).length,0);assert.equal(home,'');p.run('show("skills")');assert.equal(p.run('view'),'skills','Help opens from its own link in the header');assert.equal(p.node('#subnav').hidden,true);
- assert.match(p.node('#admin-skills').innerHTML,/press Send/);
- const results=p.node('#skill-results').innerHTML;assert.equal((results.match(/<article /g)||[]).length,D.skills.length);
- const links=[...results.matchAll(/href="([^"]+)"/g)].map(m=>new URL(m[1].replaceAll('&amp;','&')));
- for(let i=0;i<links.length;i++){const url=links[i],s=D.skills[i];assert.equal(url.protocol,'codex:');assert.equal(url.hostname,'threads');assert.equal(url.pathname,'/new');
-  assert.equal(url.searchParams.get('path'),D.brain);assert.equal(url.searchParams.get('prompt'),s.command+'\n\n'+s.example);assert.deepEqual([...url.searchParams.keys()],['path','prompt']);}
+ assert.equal(p.node('#h-skills').innerHTML,'');p.run('show("skills")');assert.equal(p.run('view'),'skills','Help opens from its own link in the header');assert.equal(p.node('#subnav').hidden,true);
+ const help=p.node('#admin-skills').innerHTML;assert.match(help,/press Send/);assert.doesNotMatch(help,/<article /,'Help lists no skills of its own');
+ assert.match(help,new RegExp('data-v="workflows" data-wf-part="skills">Browse all '+D.skills.length+' skills'),'Help leads to the one list');
+ const results=p.node('#skill-results').innerHTML,cards=[...results.matchAll(/<article class="sk-card" data-skill="([^"]+)"[\s\S]*?<\/article>/g)];
+ assert.equal(cards.length,D.skills.length);assert.equal(new Set(cards.map(c=>c[1])).size,D.skills.length);
+ assert.equal(p.node('#skill-count').textContent,D.skills.length+' skills');assert.ok(p.node('#pw-skills').innerHTML.includes('Skills <span class="pl-count">'+D.skills.length+'</span>'));
+ for(const [card,id] of cards){const s=D.skills.find(x=>x.id===id),hrefs=[...card.matchAll(/href="([^"]+)"/g)];assert.equal(hrefs.length,1,id+': one link');const url=new URL(hrefs[0][1].replaceAll('&amp;','&'));
+  assert.equal(url.protocol,'codex:');assert.equal(url.hostname,'threads');assert.equal(url.pathname,'/new');assert.equal(url.searchParams.get('path'),D.brain);assert.equal(url.searchParams.get('prompt'),s.command+'\n\n'+s.example);assert.deepEqual([...url.searchParams.keys()],['path','prompt']);
+  assert.ok(card.includes('<h3>'+s.title.replaceAll('&','&amp;')+'</h3>'),id+': the human title');assert.ok(card.includes('<code>'+s.command+'</code>'));assert.match(card,/>(Open|Update) in Codex<span/);}
  p.node('#skill-search').oninput({target:{value:'gtmb-sync'}});
  assert.equal((p.node('#skill-results').innerHTML.match(/<article /g)||[]).length,1);
- assert.ok(p.node('#skill-results').innerHTML.includes(D.skills.find(s=>s.id==='gtmb-sync').example));
- p.run('renderSkillLibrary("zzzz-no-match")');assert.match(p.node('#skill-results').innerHTML,/No matching skills/);
+ assert.ok(p.node('#skill-results').innerHTML.includes(D.skills.find(s=>s.id==='gtmb-sync').example));assert.equal(p.node('#skill-count').textContent,'1 of '+D.skills.length+' skills');assert.equal(p.node('#skill-clear').hidden,false);
+ p.run('renderSkillLibrary("zzzz-no-match")');assert.match(p.node('#skill-results').innerHTML,/No skill matches “zzzz-no-match”\. Try one word for the work/);assert.match(p.node('#skill-results').innerHTML,/data-skill-clear>Show all skills/);
+ p.run('renderSkillLibrary("")');assert.equal(p.node('#skill-clear').hidden,true);
  p.run('show("admin")');p.node('#skill-search').value='gtmb-sync';p.run('refreshPage()');
  const fresh=page(D,{saved:p.saved});assert.equal(fresh.node('#skill-search').value,'gtmb-sync');
  assert.equal((fresh.node('#skill-results').innerHTML.match(/<article /g)||[]).length,1);
- assert.doesNotMatch(results,/<form|data-say=|onclick=|https?:/);
+ assert.doesNotMatch(results,/<form|<input|data-say=|onclick=|https?:/);
+});
+test('search reads names, commands, promises, documents and examples; a chip counts the cards it shows; mentors come first',()=>{
+ const D=fixture(),p=page(D),ids=()=>[...p.node('#skill-results').innerHTML.matchAll(/data-skill="([^"]+)"/g)].map(m=>m[1]);
+ const mentors=D.skills.filter(s=>s.role==='mentor').map(s=>s.id);
+ assert.deepEqual(ids().slice(0,mentors.length),mentors,'under All the mentors lead, in catalogue order');
+ assert.match(p.node('#skill-results').innerHTML,/^<h3 class="sk-cat" data-sk-cat="mentor">Mentors <span class="pl-count">9<\/span><\/h3>/);
+ assert.match(p.node('#skill-groups').innerHTML,/^<button[^>]*data-skill-group="all"[^>]*>All<span class="pill-count">29<\/span><\/button><button[^>]*data-skill-group="mentor"[^>]*>Mentors</);
+ assert.doesNotMatch(p.node('#skill-groups').innerHTML,/Your skills/,'no chip for a category with nothing in it');
+ p.node('#skill-search').oninput({target:{value:'voice'}});
+ assert.ok(ids().includes('gtmb-voice'),'the tone of voice mentor');assert.ok(!ids().includes('gtmb-sync'),'not an unrelated skill');
+ p.node('#skill-search').oninput({target:{value:'Acme Northfold'}});assert.deepEqual(ids(),['gtmb-market'],'every word, from the example sentence');
+ p.node('#skill-search').oninput({target:{value:'/gtmb-clay'}});assert.deepEqual(ids(),['gtmb-clay-setup'],'the command');
+ for(const [cat,label] of [['mentor','Mentors'],['everyday','Everyday'],['setup','Set up and connect']]){
+  p.run('skillGroup='+JSON.stringify(cat)+';renderSkillLibrary("")');
+  const n=Number(p.node('#skill-groups').innerHTML.match(new RegExp('data-skill-group="'+cat+'"[^>]*>'+label+'<span class="pill-count">(\\d+)<'))[1]);
+  assert.ok(n>0);assert.equal(ids().length,n,label+': the chip says the cards shown');
+  assert.equal((p.node('#skill-results').innerHTML.match(new RegExp('data-skill-cat="'+cat+'"','g'))||[]).length,n);}
+ p.run('skillGroup="mentor";renderSkillLibrary("clay")');assert.match(p.node('#skill-results').innerHTML,/Nothing in Mentors matches “clay”\..*Show all categories \(1\)/s);
 });
 test('skill text is escaped, malformed commands are hidden, and old dashboard data degrades safely',()=>{
  const D=fixture();D.skills[0]={...D.skills[0],title:'<script>bad()</script>',example:'A & B "quoted" <task>'};D.skills.push({id:'../escape',command:'/wrong'});
@@ -98,26 +120,31 @@ test('the catalogue is the one place that says which skills are mentors, everyda
  for(const s of all.filter(s=>s.role!=='mentor'))assert.equal(s.promise,undefined,s.id+' is not a mentor');
 });
 
-test('the Help view and the Overview lead with the mentors: promise, the document and whether it is filled, a prepared chat and no action',t=>{
+test('the Overview has no mentor grid, only a line to the skills; a mentor card says its promise, its document and whether it is written',t=>{
  const D=JSON.parse(readFileSync(join(renderedBrain(t,'gtm-skill-mentors-'),'work/home/data.json'),'utf8')),docs=D.pillars.configuration.documents;
  assert.deepEqual(docs.filter(d=>d.starter).map(d=>d.state),Array(5).fill('not written'),'setup leaves the five starters unfilled');
  docs.find(d=>d.slug==='strategy').state='draft';docs.find(d=>d.slug==='voice').state='approved';
  const p=page(D),mentors=D.skills.filter(s=>s.role==='mentor');
- const ov=p.node('#ov-mentors').innerHTML;assert.match(ov,/Work with a mentor/);assert.equal((ov.match(/<article /g)||[]).length,mentors.length);
- assert.ok(ov.indexOf('data-mentor="gtmb-icp"')<ov.indexOf('data-mentor="gtmb-strategy"'),'a mentor whose document is not filled yet comes first');
- assert.match(ov,/Fills <b>Ideal customer profile<\/b> <span class="pl-state missing" data-mentor-doc="icp">not filled yet<\/span>/);assert.match(ov,/Fills <b>Strategy<\/b> <span class="pl-state draft" data-mentor-doc="strategy">draft<\/span>/);assert.match(ov,/Fills <b>[^<]+<\/b> <span class="pl-state ok" data-mentor-doc="voice">approved/);
- assert.match(ov,/You get: <b>A one-page sourced brief<\/b>/);
- for(const s of mentors){assert.ok(ov.includes(s.promise.replaceAll('&','&amp;')),s.id+' promise on the Overview');
-  const href=ov.slice(ov.indexOf('data-mentor="'+s.id+'"')).match(/href="([^"]+)"/)[1].replaceAll('&amp;','&'),url=new URL(href);assert.equal(url.protocol,'codex:');assert.equal(url.searchParams.get('prompt'),s.command+'\n\n'+s.example);}
- assert.doesNotMatch(ov,/<form|<input|onclick=|https?:/,'the Overview group is links to a prepared chat, never an action');
- const results=p.node('#skill-results').innerHTML,groups=p.node('#skill-groups').innerHTML;
- assert.ok(groups.indexOf('Work with a mentor')>0&&groups.indexOf('Work with a mentor')<groups.indexOf('Everyday work'));
- assert.ok(results.indexOf('Work with a mentor')<results.indexOf('Everyday work'),'the mentor group is the first group of the Help view');
- assert.equal((results.match(/data-mentor="/g)||[]).length,mentors.length);assert.match(results,/data-mentor-doc="icp">not filled yet/);
+ // the Overview: Foundations, then one quiet line to the Workflows tab's Skills, and no card of a skill
+ assert.equal(p.node('#ov-mentors').innerHTML,'','no mentor grid on the Overview');
+ const line=p.node('#ov-skills').innerHTML;assert.match(line,/<button type="button" class="linkbtn" data-v="workflows" data-wf-part="skills">All skills, mentors first/);assert.doesNotMatch(line,/<article/);
+ const fd=p.node('#ov-foundations').innerHTML;
+ assert.match(fd,/data-fd-doc="icp" data-state="not written"/);assert.match(fd,/data-fd-doc="strategy" data-state="draft"/);assert.match(fd,/data-fd-doc="voice" data-state="approved"/);
+ // the base document's own card links to the mentor that writes the next one
+ assert.match(decodeURIComponent(fd.match(/class="fd-go" href="([^"]+)">Write Ideal customer profile in Codex/)[1]),/prompt=\/gtmb-icp\n\n/);
+ // the Skills cards
+ const results=p.node('#skill-results').innerHTML,card=id=>results.slice(results.indexOf('data-skill="'+id+'"')).split('</article>')[0];
+ assert.equal((results.match(/data-mentor="/g)||[]).length,mentors.length);
+ assert.match(card('gtmb-icp'),/Fills <b>Ideal customer profile<\/b> <span class="pl-state missing" data-mentor-doc="icp">not written<\/span>/);assert.match(card('gtmb-icp'),/>Open in Codex<span/);
+ assert.match(card('gtmb-strategy'),/data-mentor-doc="strategy">written, draft</);assert.match(card('gtmb-strategy'),/aria-label="Update in Codex: Run the strategic intake">Update in Codex<span/);
+ assert.match(card('gtmb-voice'),/data-mentor-doc="voice">written, approved</);assert.match(card('gtmb-voice'),/>Update in Codex<span/);
+ assert.match(card('gtmb-deepdive'),/You get <b>A one-page sourced brief<\/b>/);assert.match(card('gtmb-deepdive'),/Reads Ideal customer profile <span class="pl-age">\(not written\)<\/span>/);
+ for(const s of mentors){assert.ok(card(s.id).includes(s.promise.replaceAll('&','&amp;')),s.id+' promise on its card');
+  const url=new URL(card(s.id).match(/href="([^"]+)"/)[1].replaceAll('&amp;','&'));assert.equal(url.protocol,'codex:');assert.equal(url.searchParams.get('prompt'),s.command+'\n\n'+s.example,'update or open: the same prepared chat');}
  p.run('skillGroup="mentor";renderSkillLibrary("")');assert.equal((p.node('#skill-results').innerHTML.match(/<article /g)||[]).length,mentors.length);
- // an older data file without roles, or without the pillars, still renders: no group, no badge
- const bare=fixture();for(const s of bare.skills){delete s.role;delete s.promise}const q=page(bare);assert.equal(q.node('#ov-mentors').innerHTML,'');
- const noDocs=page(fixture());assert.match(noDocs.node('#ov-mentors').innerHTML,/Fills <b>Strategy<\/b><\/span>/);assert.doesNotMatch(noDocs.node('#ov-mentors').innerHTML,/data-mentor-doc/);
+ // an older data file without roles, or without the pillars, still renders: no badge, the line stays
+ const bare=fixture();for(const s of bare.skills){delete s.role;delete s.promise}const q=page(bare);assert.equal(q.node('#ov-mentors').innerHTML,'');assert.match(q.node('#skill-results').innerHTML,/data-sk-cat="mentor"/);
+ const noDocs=page(fixture()).node('#skill-results').innerHTML;assert.match(noDocs,/Fills <b>Strategy<\/b><\/span>/);assert.doesNotMatch(noDocs,/data-mentor-doc|Update in Codex/);
 });
 
 test('a brain with a skill of its own gets a "yours" group after the shipped ones; the shipped set is unchanged',()=>{

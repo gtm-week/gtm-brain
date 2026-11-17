@@ -11,7 +11,8 @@ export type Fixture = {
   person: { name: string; notes: string[] };
   correction: { old: string; new: string };
   workflows: { title: string; status: string; trigger: string; runs: number }[];
-  run: { id: string; step: string; status: string };
+  run: { id: string; name: string; step: string; status: string; due: string; cancelled: string; states: string[]; stepTitles: string[]; settle: string[] };
+  foundations: { rules: number; ruleGroups: number; kinds: number; fields: number; relations: number };
   documents: { title: string; state: string }[];
 };
 

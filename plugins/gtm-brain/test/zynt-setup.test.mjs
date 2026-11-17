@@ -2,7 +2,7 @@
 // (configuration/, entities/, memories/) is covered by layout-four.test.mjs and the files that run on both layouts.
 process.env.GTM_BRAIN_TEST_LAYOUT = "3";
 // gtmb-zynt-setup (0.35.0): ZYNT set up from the brain when the person pastes ZYNT's prompt;
-// the key stays in the chat and ZYNT ends up in the brain's tools.
+// ZYNT set up from the brain through ZYNT's own plugin only (no key); install steps when it is missing.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
@@ -21,30 +21,33 @@ test('the ZYNT setup skill follows the shipped-skill template: name, links, open
   const i = catalog.findIndex(s => s.id === 'gtmb-zynt-setup');
   assert.ok(i > 0 && catalog[i].group === 'setup' && catalog[i].featured === false);
   assert.ok(catalog.slice(i + 1).every(s => s.group === 'setup'), 'after the last one of its group');
-  for (const doc of ['README.md', 'docs/COMMANDS.md', 'docs/ONBOARDING.md']) assert.match(readFileSync(join(R, doc), 'utf8'), /gtmb-zynt-setup/, doc);
+  for (const doc of ['docs/SKILLS.md', 'docs/COMMANDS.md', 'docs/ONBOARDING.md']) assert.match(readFileSync(join(R, doc), 'utf8'), /gtmb-zynt-setup/, doc);
 });
 
 test('a pasted ZYNT prompt reaches the skill: its first line is a trigger', () => {
   assert.match(skill.split('---')[1], /Triggers: "Set up ZYNT for me"/);
 });
 
-test('the key is used in the chat only and never kept', () => {
-  assert.match(skill, /The key is used in this chat only\. Never write it to a file, a note, a document, a commit or\s+the dashboard/);
-  assert.match(skill, /Not the answers sent, not the key\./);
+test('the key path is gone: a pasted key is never used or kept', () => {
+  assert.match(skill, /\*\*The person pasted a ZYNT key\*\*: do not use it, and do not repeat it\./);
+  assert.doesNotMatch(skill, /agent-setup\.md|mark_tool/);
+  assert.match(skill, /Never connect ZYNT another way: no `codex mcp add`, no key in a header, no curl\./);
 });
 
-test('ZYNT ends up in the brain tools without MCP: a read test with mark_tool, a note naming it, then check_tools', () => {
-  assert.match(skill, /call\s+`mark_tool` with tool `ZYNT`, status `ok`/);
-  assert.match(skill, /with status `fail` and the exact error/);
+// ZYNT's plugin (getzynt/zynt-plugins, 2026-11-16): browser sign-in, so a key never reaches the chat.
+test('ZYNT is set up only through its plugin; without it, the install steps for both hosts', () => {
+  for (const tool of ['add_setup_context', 'get_setup', 'answer_setup']) assert.ok(skill.includes('`' + tool + '`'), tool);
+  for (const step of ['codex plugin marketplace add getzynt/zynt-plugins', 'codex plugin add zynt@zynt', 'codex mcp login zynt',
+    '/plugin marketplace add getzynt/zynt-plugins', '/plugin install zynt@zynt']) assert.ok(skill.includes('`' + step + '`'), step);
+  assert.match(skill, /give the install steps and stop/);
   assert.match(skill, /tools: \["ZYNT"\]/);
   assert.match(skill, /Then call `check_tools`\./);
-  assert.match(skill, /Do not offer MCP/);
-  assert.doesNotMatch(skill, /codex mcp add/);
 });
 
 test('reads the brain before asking, sends guesses as drafts and lets the person confirm in ZYNT', () => {
   for (const ref of ['`strategy`', '`icp`', '`market`', '`voice`']) assert.ok(skill.includes(ref), ref);
   assert.match(skill, /goes as a draft, never as a confirmed fact/);
   assert.match(skill, /Never confirm on the person's behalf/);
+  assert.match(skill, /only with the person's yes to that question/);
   assert.match(skill, /slug `icp`/);
 });

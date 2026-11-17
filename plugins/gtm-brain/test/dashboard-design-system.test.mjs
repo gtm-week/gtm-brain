@@ -127,7 +127,7 @@ test("dashboard server: /design-file serves only listed pictures and /design-vis
   assert.equal(render().pillars.design.visual, null);
 });
 
-test("Settings holds only what the brain needs to work; who the company is sits first in Configuration", () => {
+test("Settings holds only what the brain needs to work; who the company is sits in Configuration, below the foundations", () => {
   const p = page(D), html = readFileSync(new URL("../scripts/gtm-brain-render/home.template.html", import.meta.url), "utf8");
   const section = html.match(/<section class="view" data-view="admin">([\s\S]*?)<\/section>/)[1];
   const ids = [...section.matchAll(/ id="([^"]+)"/g)].map(m => m[1]);
@@ -137,9 +137,9 @@ test("Settings holds only what the brain needs to work; who the company is sits 
   for (const who of ["Reflow", "Marta", "Nowak", "Tomek", "Zielinski", "reflow.io", "returns automation"]) assert.doesNotMatch(settings, new RegExp(who), `Settings does not say ${who}`);
   assert.doesNotMatch(settings, /admin\.md|settings\.yaml|APPROVE/, "plain words, no file names");
   assert.match(p.node("#settings-preferences").innerHTML, /Open dashboard.*Topic summaries.*GTM Brain version/s);
-  // Configuration: the company card comes before the base documents, with the team as people and the way to change it
+  // Configuration: the three foundations lead, then the base documents; the company card comes below them, with the team as people and the way to change it
   const config = html.match(/<section class="view" data-view="config">([\s\S]*?)<\/section>/)[1];
-  assert.ok(config.indexOf('id="cfg-about"') > 0 && config.indexOf('id="cfg-about"') < config.indexOf('id="cfg-docs"'), "About the company is the first card");
+  assert.ok(config.indexOf('id="cfg-peers"') > 0 && config.indexOf('id="cfg-peers"') < config.indexOf('id="cfg-tabs"') && config.indexOf('id="cfg-docs"') < config.indexOf('id="cfg-about"'), "rules, schema and base documents come first; About the company sits below the base documents");
   const about = p.node("#cfg-about").innerHTML;
   assert.match(about, /<h2>About the company<\/h2>.*Change with Codex.*The owner approves every change to it\..*Company<\/dt><dd>Reflow<\/dd>.*Owner<\/dt><dd>Marta Nowak<\/dd>.*Team<\/dt>.*Marta Nowak.*Tomek Zielinski/s);
   assert.doesNotMatch(about, /Open dashboard|Topic summaries|GTM Brain version|Connected tools|Working folders/, "no switch in the company card");

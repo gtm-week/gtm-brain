@@ -27,7 +27,7 @@ to distinguish these workflows from other installed skills.
 | `gtmb-skill` | GTM Brain: Your skills | Turn a repeated workflow into a Codex skill kept in the brain's `.agents/skills`; install from GitHub, list, remove, share |
 | `gtmb-strategy` | GTM Brain: Strategic intake | A 10-15 minute conversation with a founder or a head of sales, growth or GTM that fills `strategy.md`, the document every brain starts with, mapped silently to Playing to Win; files shared on the way land in `strategy/` |
 | `gtmb-voice` | GTM Brain: Voice | Asks whose voice it is (the company's, a person's, a team's), then reads evidence that fits: pasted texts at once, for the company the website, public posts and outbound mail (never internal chat), for a person their own writing (smallest reads, connectors only). Fills `voice.md` through `document` (a person's or team's voice is its own document): rules in the structure the evidence supports, observed apart from suggested, corrections quoted; saved as a draft on the person's yes, tested on one fresh email or post, then the kinds of work it governs and the sentence to try in a new chat; re-run to revise |
-| `gtmb-zynt-setup` | GTM Brain: Set up ZYNT | Started by the prompt ZYNT gives after "Set up with my AI agent": reads strategy, ICP, market, voice and the target companies from the brain, asks only what is missing (usually the segment), sends drafts as drafts through ZYNT's MCP tools or its HTTP API with the pasted key (never saved), lets the person confirm in ZYNT, records a read test so ZYNT shows in the brain's tools as connected through its API, no MCP needed, and keeps one note in Target customers |
+| `gtmb-zynt-setup` | GTM Brain: Set up ZYNT | Reads strategy, ICP, market, voice and the target companies from the brain, asks only what is missing (usually the segment), and fills ZYNT's setup through the tools of ZYNT's own plugin (browser sign-in, no key), drafts sent as drafts. Without the plugin it gives the install steps for Codex and Claude Code; a pasted key is never used. Shows ZYNT's summary and answers it only with the person's yes, keeps one note in Target customers; `check_tools` finds the plugin by itself |
 | `gtmb-freckle-setup` | GTM Brain: Set up Freckle | Started by "Set up Freckle for me": reads the ICP, personas and target companies from the brain, adds Freckle's MCP on the person's yes (`codex mcp add freckle`, the person signs in), records a read test, shows one plan in the brain's words, builds it on a yes and runs it (credits) only on a second yes, then keeps one note in Target customers so Freckle shows in the brain's tools |
 | `gtmb-clay-setup` | GTM Brain: Set up Clay | Started by "Set up Clay for me": uses Clay's MCP tools when listed, else Clay's plugin and CLI (`codex plugin marketplace add clay-run/agent-plugins` on the person's yes, the person signs in), records a read test, reads the ICP, personas and target companies from the brain, runs the free search on a yes and enrichment (credits) only on a second yes, then keeps one note in Target customers so Clay shows in the brain's tools |
 | `gtmb-woodpecker-setup` | GTM Brain: Set up Woodpecker | Started by "Set up Woodpecker for me": adds Woodpecker's hosted MCP on the person's yes (`codex mcp add woodpecker`, the person signs in), records a read test, shows the campaigns and their rates, drafts one sequence from the brain's strategy, ICP and voice, saves it as a draft on a yes (never `runCampaign`, no prospects added), then keeps one note in Target customers so Woodpecker shows in the brain's tools |
@@ -49,7 +49,7 @@ They are not additional discoverable skills. Tools show outcomes such as "Rememb
 "Searching the brain" in chat. Review proposals on the dashboard (it changes nothing but a document you edit and save there). APPROVE is a choice in the form `approve_change` shows; in a chat nothing else applies it.
 A question to you comes the same way: `ask_person` shows a form with the choices to click (or a field to type in) and hands your answer back to Codex. It records nothing and applies nothing. Where the host shows no form, Codex asks in its own question box, or in chat text with numbered options.
 Scripts retain their paths for terminal use with
-`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.37.3`.
+`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.37.5`.
 
 Legend for "writes": what files the command changes. Nothing else is ever touched. The paths are
 those of a brain in the four folders (file layout 4, what setup makes since 0.37); a brain not
@@ -645,7 +645,7 @@ connectors, so a tool stays installed, untested (○) until a read test: the fir
 data in a chat, Codex calls `mark_tool` with status ok. Installs on a yes per tool. Sign-in is
 yours and lives in your Codex.
 
-Tools: `check_tools`, `mark_tool`. Also reads remote MCP servers from Codex's `config.toml`. Writes: `.gtm-brain/tools.json` (local); installs Codex plugins on request.
+Tools: `check_tools`, `mark_tool`. Also reads remote MCP servers from Codex's `config.toml` and the ones an installed plugin from another marketplace brings in its `.mcp.json` (ZYNT's plugin). Writes: `.gtm-brain/tools.json` (local); installs Codex plugins on request.
 `node $PLUGIN_ROOT/scripts/gtm-brain-connect/connect.mjs . --check`, `... --mark <tool> ok|fail "note"`
 
 ### approve

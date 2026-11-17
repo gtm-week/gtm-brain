@@ -77,7 +77,8 @@ try {
   listed = true; // A successful empty list is still a successful check.
   for (const line of output.split("\n")) {
     const m = line.match(/^(\S+)@(\S+)\s+(installed|not installed)(?:,\s*(enabled|disabled))?/); if (!m) continue;
-    put(m[1], { marketplace: m[2], state: m[3] === "installed" ? (m[4] || "enabled") : "not installed" });
+    const source = line.split(/\s+/).find(w => w.startsWith("/"));   // a local marketplace prints the plugin's folder last
+    put(m[1], { marketplace: m[2], state: m[3] === "installed" ? (m[4] || "enabled") : "not installed", ...(source ? { source } : {}) });
   }
 } catch (e) { console.error("could not run `codex plugin list`: " + e.message.split("\n")[0]); }
 // Codex's cache of the remote catalog: display names and availability, refreshed by the app itself.
@@ -139,6 +140,23 @@ const mcpServers = (() => {
   return [...text.matchAll(/^\[mcp_servers\.(?:"([^"]+)"|([A-Za-z0-9_-]+))\]\s*\n((?:^(?!\[).*\n?)*)/gm)]
     .filter(m => /^\s*url\s*=/m.test(m[3])).map(m => m[1] || m[2]).filter(s => !DEV.has(s) && norm(s) !== "gtmbrain");
 })();
+/* Remote MCP servers that an installed plugin brings (ZYNT's own plugin, zynt@zynt): the plugin's .mcp.json, never
+   config.toml. Only plugins from a company's own marketplace: OpenAI's marketplaces are the catalog above. */
+const serverName = new Map();   // server -> the plugin's display name ("ZYNT", not "Zynt")
+for (const p of plugins.values()) {
+  if (p.state !== "enabled" || /^openai-/.test(p.marketplace) || norm(p.id) === "gtmbrain" || DEV.has(p.id)) continue;
+  const cache = join(codexHome, "plugins", "cache", p.marketplace, p.id);
+  let dirs = []; try { dirs = readdirSync(cache).sort().reverse().map(v => join(cache, v)); } catch {}
+  if (p.source) dirs.push(p.source);
+  for (const dir of dirs) {
+    let m = {}; try { m = JSON.parse(readFileSync(join(dir, ".codex-plugin", "plugin.json"), "utf8")); } catch {}
+    let decl = m.mcpServers; if (typeof decl !== "object" || !decl) try { decl = JSON.parse(readFileSync(join(dir, typeof decl === "string" ? decl : ".mcp.json"), "utf8")); } catch { continue; }
+    const servers = decl.mcpServers || decl;
+    const remote = Object.entries(servers).filter(([s, c]) => c && typeof c === "object" && c.url && !DEV.has(s) && norm(s) !== "gtmbrain").map(([s]) => s);
+    for (const s of remote) { if (!mcpServers.includes(s)) mcpServers.push(s); serverName.set(s, m.interface?.displayName || p.display); }
+    break;
+  }
+}
 const mcpFor = tool => { const nk = norm(key(tool)); return mcpServers.find(s => norm(s).length >= 3 && nk.startsWith(norm(s))) || null; };
 const rows = [];
 for (const tool of admin.tools || []) {
@@ -160,10 +178,10 @@ for (const tool of admin.tools || []) {
    connect picker and the session status line show it from the very first check. Recomputed each
    run; disappears the moment admin.md names a tool that covers it. */
 if (listed) for (const k of Object.keys(state)) if (state[k] && state[k].suggested) delete state[k];
-// Connected by hand and not in admin.md: on the page as they are, no APPROVE needed. Gone from config.toml, gone here.
+// Connected by hand or by a plugin, and not in admin.md: on the page as they are, no APPROVE needed. Gone from config.toml or uninstalled, gone here.
 const manual = mcpServers.filter(s => !(admin.tools || []).some(t => mcpFor(t) === s));
 for (const k of Object.keys(state)) if (state[k] && state[k].mcp && !manual.some(s => key(s) === k)) delete state[k];
-for (const s of manual) state[key(s)] = { ...(state[key(s)] || {}), tool: state[key(s)]?.tool || s.replace(/[-_]+/g, " ").replace(/\b\w/g, ch => ch.toUpperCase()), plugin: s, status: "installed", mcp: true, suggested: false };
+for (const s of manual) state[key(s)] = { ...(state[key(s)] || {}), tool: state[key(s)]?.tool || serverName.get(s) || s.replace(/[-_]+/g, " ").replace(/\b\w/g, ch => ch.toUpperCase()), plugin: s, status: "installed", mcp: true, suggested: false };
 const covered = re => rows.some(r => re.test(norm(r.tool)) || (r.p && re.test(norm(r.p.id))));
 const SUGGEST = [{ re: /mail/, ids: ["gmail", "outlook-email"] }, { re: /calendar/, ids: ["google-calendar"] },
   { re: /crm|hubspot|attio|salesforce|pipedrive|zoho|freshsales|^close$|closeio|folk|nutshell/, ids: ["hubspot", "attio"], why: p => p.id === "hubspot" ? "the CRM: the course gives you HubSpot; say so if yours is Attio" : `the CRM: ${p.display || p.id} is installed here` }];

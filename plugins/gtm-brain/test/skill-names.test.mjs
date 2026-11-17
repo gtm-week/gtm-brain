@@ -20,6 +20,13 @@ test("every shipped skill is gtmb-<name>, and the list of renamed skills is the 
   assert.ok(existsSync(join(P, "scripts", "gtm-brain-workflow", "workflow.mjs"))); assert.ok(existsSync(join(P, "skills", "gtm-brain-add-file", "add-file.mjs")));
 });
 
+test("docs/SKILLS.md lists every shipped skill; the short README names at most twelve", () => {
+  const list = readFileSync(join(REPO, "docs", "SKILLS.md"), "utf8"), readme = readFileSync(join(REPO, "README.md"), "utf8");
+  for (const d of readdirSync(join(P, "skills")).filter(d => existsSync(join(P, "skills", d, "SKILL.md")))) assert.match(list, new RegExp("`/" + d + "`"), d);
+  assert.ok(new Set(readme.match(/\/gtmb-[a-z-]+/g)).size <= 12, "the README stays short: the full list is docs/SKILLS.md");
+  assert.ok(readme.split("\n").length <= 161, "the README is at most 160 lines");
+});
+
 test("no file that ships or documents the plugin still names a skill the old way", () => {
   const files = execFileSync("git", ["-C", REPO, "ls-files"], { encoding: "utf8" }).split("\n").filter(f => f && /\.(md|mjs|json|yaml|html|sh|ts|tsx)$/.test(f)
     && !/templates\/legacy\/|scripts\/gtm-brain-render\/ui\/|^docs\/releases\/RELEASE-0\.35\.md$|test\/e2e\/(validation|release)-|test\/skill-names\.test\.mjs$|lib\/skill-names\.mjs$|scripts\/gtm-brain-upgrade\/skill-names\.mjs$/.test(f));

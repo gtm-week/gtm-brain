@@ -131,7 +131,7 @@ test("page: opens on Overview, a base document row opens in the page, every prep
   const chats = [...html(p).matchAll(/class="pl-chat" href="(codex:\/\/threads\/new[^"]*)"/g)].map(m => new URL(m[1].replace(/&amp;/g, "&")));
   assert.ok(chats.length > 10); for (const u of chats) { assert.equal(u.searchParams.get("path"), D.brain); assert.match(u.searchParams.get("prompt"), /^Use GTM Brain\. /); }
   assert.match(p.node("#cfg-rules").innerHTML, /Always ask before tagging a client/); assert.match(p.node("#cfg-rules").innerHTML, /Deal stage and amount/);
-  assert.match(p.node("#cfg-schema").innerHTML, /SCHEMA\.md/); assert.match(p.node("#cfg-about").innerHTML, /About the company.*Reflow.*Marta Nowak/s, "who the company is sits in Configuration, above the base documents"); assert.doesNotMatch(p.node("#settings-preferences").innerHTML, /Reflow/, "Settings holds only what the brain needs to work");
+  assert.match(p.node("#cfg-schema").innerHTML, /SCHEMA\.md/); assert.match(p.node("#cfg-about").innerHTML, /About the company.*Reflow.*Marta Nowak/s, "who the company is sits in Configuration, below the base documents"); assert.doesNotMatch(p.node("#settings-preferences").innerHTML, /Reflow/, "Settings holds only what the brain needs to work");
   assert.doesNotMatch(html(p), /<form|data-say=|>Edit<|>Save<|>Approve<|>Delete</);
 });
 
@@ -383,13 +383,75 @@ test("page: Memories shows date, age, source and what replaced what; a filter fe
   assert.match(file.node("#pm-status").textContent, /Open the live dashboard to filter all 120 notes/);
 });
 
+test("page: the Overview in order (what needs the person, Housekeeping, Coming up, Foundations, the line to the skills) and the Configuration tab: rules, schema and base documents with their real state", () => {
+  const p = page(D), C = D.pillars.configuration, tpl = readFileSync(new URL("../scripts/gtm-brain-render/home.template.html", import.meta.url), "utf8");
+  const home = tpl.match(/<section class="view" data-view="home">([\s\S]*?)<\/section>/)[1];
+  const at = id => home.indexOf(`id="${id}"`);
+  assert.deepEqual(["h-onboard", "ov-inbox", "ov-more", "ov-soon", "ov-foundations", "ov-skills"].map(at).every((n, i, a) => n >= 0 && (!i || n > a[i - 1])), true, "setup card, what needs the person, Housekeeping, Coming up, Foundations, then the line to the skills");
+  assert.equal(at("ov-mentors"), -1, "no mentor grid on the Overview");
+  assert.match(p.node("#ov-skills").innerHTML, /data-v="workflows" data-wf-part="skills">All skills, mentors first/);
+  const fd = p.node("#ov-foundations").innerHTML, text = t => t.replace(/<[^>]+>/g, "");
+  assert.match(fd, /<h2>Foundations<\/h2>/);
+  assert.deepEqual([...fd.matchAll(/<article class="fd-card[^"]*" data-fd="([a-z]+)">/g)].map(m => m[1]), ["rules", "schema", "docs"], "three parts: rules, schema, base documents");
+  const card = key => fd.slice(fd.indexOf(`data-fd="${key}"`)).split("</article>")[0];
+  // every figure is counted from the render data
+  const groups = [C.rules.own_rules.length, C.rules.placement_rows.length, C.rules.ask.rows.length], rules = groups.reduce((a, b) => a + b, 0);
+  assert.ok(C.rules.own_rules.length >= 2, "the fixture has rules of its own");
+  assert.ok(text(card("rules")).includes(`${rules} rules in ${groups.filter(Boolean).length} groups`), text(card("rules")));
+  assert.match(card("rules"), /last changed <time class="pl-when"/); assert.doesNotMatch(card("rules"), /fd-weak/, "rules of its own: nothing is called missing");
+  const fields = C.schema.kinds.reduce((n, k) => n + k.fields.length + k.subtypes.reduce((m, st) => m + st.fields.length, 0), 0);
+  assert.ok(fields > 0 && C.schema.relations.length > 0);
+  assert.ok(text(card("schema")).includes(`${C.schema.kinds.length} kinds, ${fields} fields, ${C.schema.relations.length} connection types`), text(card("schema")));
+  const base = C.documents.filter(d => d.base), written = base.filter(d => d.state !== "not written"), unwritten = base.filter(d => d.state === "not written");
+  assert.ok(written.length && unwritten.length, "the fixture has both");
+  assert.ok(text(card("docs")).includes(`${written.length} of ${base.length} written`));
+  assert.deepEqual([...card("docs").matchAll(/data-fd-doc="([^"]+)" data-state="([^"]+)"/g)].map(m => [m[1], m[2]]), base.map(d => [d.slug, d.state]), "each base document is a chip in its state");
+  assert.match(card("docs"), /<button type="button" class="fd-chip pl-state ok" data-doc="pricing\.md"/, "a written document's chip opens it"); assert.match(card("docs"), /<span class="fd-chip pl-state missing" data-fd-doc="strategy"/);
+  assert.ok(text(card("docs")).includes(`${unwritten[0].title} not written: ${unwritten[0].applies_to.slice(0, -1).join(", ")} and ${unwritten[0].applies_to.at(-1)} are done without it.`), text(card("docs")));
+  // two links each: the part in the dashboard, and the skill that works on it as a prepared chat
+  const go = key => new URL(card(key).match(/class="fd-go" href="([^"]+)"/)[1].replace(/&amp;/g, "&"));
+  for (const [key, tab] of [["rules", "rules"], ["schema", "schema"], ["docs", "docs"]]) { assert.match(card(key), new RegExp(`<button type="button" class="linkbtn" data-v="config" data-cfg-open="${tab}">`)); assert.equal(go(key).protocol, "codex:"); assert.equal(go(key).searchParams.get("path"), D.brain); }
+  assert.match(go("rules").searchParams.get("prompt"), /^\/gtmb-rules\n\n/); assert.match(go("schema").searchParams.get("prompt"), /^\/gtmb-schema\n\n/);
+  const mentor = D.skills.find(x => x.role === "mentor" && x.fills === unwritten[0].slug);
+  assert.ok(mentor, "the first unwritten document has a mentor"); assert.ok(go("docs").searchParams.get("prompt").startsWith(mentor.command + "\n\n"), "the base documents' chat is the mentor that fills the first unwritten one");
+  assert.doesNotMatch(fd, /<form|<input|onclick=|https?:/, "links only");
+  // the Configuration tab opens on the same three as peers, before the detail
+  const peers = p.node("#cfg-peers").innerHTML;
+  assert.deepEqual([...peers.matchAll(/data-fd="([a-z]+)"/g)].map(m => m[1]), ["rules", "schema", "docs"]);
+  assert.ok(text(peers).includes(`${rules} rules in ${groups.filter(Boolean).length} groups`) && text(peers).includes(`${written.length} of ${base.length} written`), "the same facts");
+  assert.match(peers, /data-cfg-tab="rules">Show the rules/); assert.match(peers, /class="fd-card weak on" data-fd="docs"/, "the part shown below is marked");
+  assert.deepEqual([...p.node("#cfg-tabs").innerHTML.matchAll(/data-cfg-tab="([a-z]+)"/g)].map(m => m[1]), ["rules", "schema", "docs"], "the three sub-tabs stay, in the same order");
+  p.run('cfgTab="schema";renderConfigTabs()'); assert.match(p.node("#cfg-peers").innerHTML, /class="fd-card[^"]* on" data-fd="schema"/);
+  // the base documents table: a written one says what it says and what reads it, an unwritten one what is done without it
+  const pricing = C.documents.find(d => d.slug === "pricing");
+  assert.equal(pricing.gist, "Three plans, billed yearly.", "the gist is the document's own first sentence"); assert.equal(C.documents.find(d => d.slug === "strategy").gist, "", "an unwritten document has none");
+  const docs = p.node("#cfg-docs").innerHTML;
+  assert.match(docs, /<td class="pl-says"><span class="doc-gist">Three plans, billed yearly\.<\/span><br><span class="pl-age">Codex reads it before: proposals, outreach<\/span>/);
+  assert.match(docs, /Strategy<\/button><\/th><td><span class="pl-state missing">not written<\/span><\/td><td class="pl-says"><span class="pl-age">Strategy and planning are done without it\.<\/span>/);
+  // nothing missing: the section stays, compact
+  const full = structuredClone(D); for (const d of full.pillars.configuration.documents) if (d.base) Object.assign(d, { state: "approved", path: d.path || `${d.slug}.md` });
+  if (full.pillars.memories.population) Object.assign(full.pillars.memories.population, { schema_untouched: false, missing_required: 0 });
+  const calm = page(full).node("#ov-foundations").innerHTML;
+  assert.match(calm, /<section class="fd compact" aria-label="Foundations">/); assert.equal((calm.match(/<article class="fd-card"/g) || []).length, 3, "all three stay");
+  assert.doesNotMatch(calm, /fd-weak|fd-use/); assert.ok(text(calm).includes(`${base.length} of ${base.length} written`)); assert.match(calm, /Review them in Codex/);
+  // a brain with no rules of its own, the shipped schema and no rules file says so, from the data
+  const bare = structuredClone(D); Object.assign(bare.pillars.configuration.rules, { own_rules: [], own: [] }); bare.pillars.memories.population = { ...(bare.pillars.memories.population || {}), schema_untouched: true };
+  const weak = page(bare).node("#ov-foundations").innerHTML;
+  assert.match(weak, /No rule of your own yet/); assert.match(weak, /Still the schema GTM Brain ships with/);
+  // an older data file without the pillars draws no section
+  const older = structuredClone(D); delete older.pillars; assert.equal(page(older).node("#ov-foundations").innerHTML, "");
+});
+
 test("page: Workflows shows each file's status, trigger and runs, and the skills; the earlier views stay reachable", () => {
   const p = page(D); p.run('show("workflows")');
   const w = p.node("#pw-files").innerHTML;
   assert.match(w, /Outbound.*You start it by asking Codex/s); assert.match(w, /Weekly review.*Starts every Monday at 09:00/s); assert.match(w, /never run/);
   p.run('pwOpen="outbound";renderWorkflowsTab()');
   assert.match(p.node("#pw-files").innerHTML, /<ol class="wf-steps"><li class=""><span>[^<]+<\/span>/, "a click shows the steps as a numbered path"); assert.match(p.node("#pw-files").innerHTML, /<summary>Details<\/summary>.*Trigger: manual/s, "the file's own words stay in Details");
-  assert.match(p.node("#pw-skills").innerHTML, /gtmb-workflow/);
+  assert.match(p.node("#skill-results").innerHTML, /data-skill="gtmb-workflow"/);
+  assert.match(p.node("#wf-parts").innerHTML, /data-wf-part="workflows" class="on">Workflows <span class="pl-count">\d+<\/span>.*data-wf-part="skills" class="">Skills <span class="pl-count">\d+<\/span>/s, "two parts, Workflows first");
+  assert.equal(p.node("#wf-part-workflows").hidden, false); assert.equal(p.node("#pw-skills").hidden, true);
+  p.run('wfPart="skills";renderWfParts()'); assert.equal(p.node("#wf-part-workflows").hidden, true); assert.equal(p.node("#pw-skills").hidden, false);
   p.run('show("contexts")'); assert.match(p.node("#nav").innerHTML, /data-v="notes" class="on"/, "an earlier view lights the place it belongs to; there is no More menu");
   const older = structuredClone(D); delete older.pillars; const o = page(older);
   assert.match(o.node("#cfg-docs").innerHTML, /made by an older version/, "a page rendered by an older plugin still loads");

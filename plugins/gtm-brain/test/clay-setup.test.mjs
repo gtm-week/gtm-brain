@@ -17,7 +17,7 @@ test('the Clay setup skill follows the shipped-skill template: name, links, open
   const catalog = JSON.parse(readFileSync(join(P, 'scripts/gtm-brain-render/skill-catalog.json'), 'utf8'));
   const i = catalog.findIndex(s => s.id === 'gtmb-clay-setup');
   assert.ok(i > 0 && catalog[i].group === 'setup' && catalog[i].featured === false);
-  for (const doc of ['README.md', 'docs/COMMANDS.md', 'docs/ONBOARDING.md']) assert.match(readFileSync(join(R, doc), 'utf8'), /gtmb-clay-setup/, doc);
+  for (const doc of ['docs/SKILLS.md', 'docs/COMMANDS.md', 'docs/ONBOARDING.md']) assert.match(readFileSync(join(R, doc), 'utf8'), /gtmb-clay-setup/, doc);
 });
 
 test('Clay is added on the person\'s yes and the sign-in stays theirs', () => {
