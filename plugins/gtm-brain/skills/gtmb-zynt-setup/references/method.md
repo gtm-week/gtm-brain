@@ -23,10 +23,10 @@ An assumption, a hypothesis or a draft is sent marked as a draft. ZYNT shows it 
 uses it only after the person clicks "Looks right". A wrong signal type costs weeks of noise; a
 draft costs one click.
 
-## 4. A list of real companies
+## 4. Lists of real companies and people
 
-The first list holds the target companies the company already names, not companies guessed to
-fit. ZYNT reads each company's timeline (news, posts, job ads) at once, so the list is useful
+The first lists hold the target companies and people the company already names, not ones guessed
+to fit: one list of companies, one of people, since a ZYNT list holds one kind. ZYNT reads each company's timeline (news, posts, job ads) at once, so the list is useful
 before any signal is scored.
 
 ## 5. The first question
@@ -37,5 +37,5 @@ last 7 days first, then 30, then 90.
 ## Output
 
 - One segment, two to five signal types, drafts marked.
-- One list of named target companies.
+- One list of named target companies, one of named target people.
 - The person's "Looks right" in ZYNT.

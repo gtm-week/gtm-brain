@@ -15,7 +15,7 @@ Start here. One command creates the brain; the rest connect what you already use
 | Create the brain in an empty folder | `/gtmb-start` | |
 | Connect your CRM, email, calendar or call recorder; change company, team or settings | `/gtmb-configure` | "connect my tools", "change our company details" |
 | Connect Clay and find your target companies and people in it | `/gtmb-clay-setup` | "set up Clay for me" |
-| Connect ZYNT buying signals through ZYNT's own plugin | `/gtmb-zynt-setup` | "set up ZYNT for me" |
+| Connect ZYNT buying signals and put the brain's companies and people on ZYNT lists | `/gtmb-zynt-setup` | "set up ZYNT for me" |
 | Connect Freckle and build a first list of target companies and people | `/gtmb-freckle-setup` | "set up Freckle for me" |
 | Connect Woodpecker, see how campaigns perform, draft one email sequence | `/gtmb-woodpecker-setup` | "set up Woodpecker for me" |
 | Connect Surfer, get topics from your notes, brief a first article | `/gtmb-surfer-setup` | "set up Surfer for me" |

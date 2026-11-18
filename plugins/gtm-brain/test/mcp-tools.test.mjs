@@ -167,3 +167,15 @@ test("a read test recorded after a note listed the tool shows as tested, also wh
   const s = Object.values(f.state()).find(x => x && x.tool === "gtm_test_tools");
   assert.equal(s.test, "ok"); assert.equal(s.used, "read through its API", JSON.stringify(s));
 });
+
+// Artur's chat (2026-11-18): ZYNT configured but never signed in, so Codex showed no ZYNT tools while the start said installed.
+test("a remote MCP server Codex is not signed in to is not connected yet, with the sign-in step", t => {
+  const f = brain(t); writeFileSync(join(f.home, "config.toml"), CONFIG);
+  const mcp = JSON.stringify([{ name: "zynt", auth_status: "not_logged_in" }, { name: "pocket", auth_status: "o_auth" }]);
+  writeFileSync(join(f.home, "..", "bin", "codex"), `#!/bin/sh\n[ "$1" = mcp ] && printf '%s\\n' '${mcp}'\nexit 0\n`);
+  const out = f.check(), s = f.state();
+  assert.equal(s.zynt.status, "installed, not signed in");
+  assert.equal(s.pocket.status, "installed", "signed in stays connected");
+  assert.match(out, /sign in: codex mcp login zynt, then open a new chat/);
+  assert.match(out, /zynt ✕/);
+});

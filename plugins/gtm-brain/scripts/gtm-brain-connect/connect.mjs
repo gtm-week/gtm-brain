@@ -157,6 +157,11 @@ for (const p of plugins.values()) {
     break;
   }
 }
+/* Codex shows no tools of a remote server it is not signed in to (`codex mcp list --json`, auth_status), so such a
+   server is not connected yet: ZYNT configured but never signed in looked installed while the chat had no ZYNT tools. */
+const notSignedIn = new Set((() => { try { return JSON.parse(execFileSync("codex", ["mcp", "list", "--json"], { encoding: "utf8", timeout: Number(process.env.GTM_BRAIN_CODEX_TIMEOUT) || 60000, maxBuffer: 64 * 1024 * 1024 })); } catch { return []; } })()
+  .filter(s => s && s.auth_status === "not_logged_in").map(s => s.name));
+const serverStatus = s => notSignedIn.has(s) ? "installed, not signed in" : "installed";
 const mcpFor = tool => { const nk = norm(key(tool)); return mcpServers.find(s => norm(s).length >= 3 && nk.startsWith(norm(s))) || null; };
 const rows = [];
 for (const tool of admin.tools || []) {
@@ -165,7 +170,7 @@ for (const tool of admin.tools || []) {
     : p.state === "enabled" ? "installed" : p.state === "disabled" ? "installed, disabled" : "available, not installed";
   // Without `codex plugin list` the install state is unknown: the last known one stands, never a guess.
   if (!listed) status = prev.status && prev.status !== "not checked" ? prev.status : "not checked (codex plugin list failed)";
-  const server = status === "installed" ? null : mcpFor(tool); if (server) status = "installed";
+  const server = status === "installed" ? null : mcpFor(tool); if (server) status = serverStatus(server);
   state[key(tool)] = { ...prev, suggested: false, mcp: false, tool, plugin: server || (p ? p.id : prev.plugin || null), marketplace: p ? p.marketplace : prev.marketplace || null, display: p ? p.display : prev.display || null, status, ...(listed ? { checked_at: new Date().toISOString() } : {}) };
   rows.push({ tool, p, also, status, test: prev.test || null, note: prev.note || "", stale: !listed && !!prev.checked_at ? prev.checked_at : null });
 }
@@ -181,7 +186,7 @@ if (listed) for (const k of Object.keys(state)) if (state[k] && state[k].suggest
 // Connected by hand or by a plugin, and not in admin.md: on the page as they are, no APPROVE needed. Gone from config.toml or uninstalled, gone here.
 const manual = mcpServers.filter(s => !(admin.tools || []).some(t => mcpFor(t) === s));
 for (const k of Object.keys(state)) if (state[k] && state[k].mcp && !manual.some(s => key(s) === k)) delete state[k];
-for (const s of manual) state[key(s)] = { ...(state[key(s)] || {}), tool: state[key(s)]?.tool || serverName.get(s) || s.replace(/[-_]+/g, " ").replace(/\b\w/g, ch => ch.toUpperCase()), plugin: s, status: "installed", mcp: true, suggested: false };
+for (const s of manual) state[key(s)] = { ...(state[key(s)] || {}), tool: state[key(s)]?.tool || serverName.get(s) || s.replace(/[-_]+/g, " ").replace(/\b\w/g, ch => ch.toUpperCase()), plugin: s, status: serverStatus(s), mcp: true, suggested: false };
 const covered = re => rows.some(r => re.test(norm(r.tool)) || (r.p && re.test(norm(r.p.id))));
 const SUGGEST = [{ re: /mail/, ids: ["gmail", "outlook-email"] }, { re: /calendar/, ids: ["google-calendar"] },
   { re: /crm|hubspot|attio|salesforce|pipedrive|zoho|freshsales|^close$|closeio|folk|nutshell/, ids: ["hubspot", "attio"], why: p => p.id === "hubspot" ? "the CRM: the course gives you HubSpot; say so if yours is Attio" : `the CRM: ${p.display || p.id} is installed here` }];
@@ -262,6 +267,7 @@ for (const r of rows) {
   if (r.status === "available, not installed" && r.p) console.log(`    install: codex plugin add ${r.p.id}@${r.p.marketplace}   (then sign in when Codex asks)`);
   if (r.also.length) console.log(`    also matches: ${r.also.map(p => `"${p.display}" (${p.id})`).join(", ")}; say which if the first is not it`);
   if (r.status === "no official plugin") console.log(`    fallback: export or paste; the context rule should say so`);
+  if (r.status === "installed, not signed in") console.log(`    sign in: codex mcp login ${mcpFor(r.tool)}, then open a new chat (Codex shows its tools only after that)`);
 }
 // installed official plugins that admin.md does not mention: offer to add them. Codex's own defaults
 // (installed by default) and developer plugins are left out; they are not a GTM person's tools.
@@ -269,6 +275,7 @@ const known = new Set(rows.map(r => r.p && r.p.id).filter(Boolean));
 const extra = candidates().filter(p => p.state === "enabled" && !known.has(p.id) && !used.some(u => norm(u.tool) === norm(p.display || p.id)) && !DEV.has(p.id) && p.policy !== "INSTALLED_BY_DEFAULT" && !mcpServers.some(m => norm(p.display).startsWith(norm(m)))).map(p => p.display || p.id);
 if (used.length) console.log(`\nused in this brain, on the dashboard, not in admin.md tools: ${used.map(u => `${u.tool} (${u.why})`).join(", ")}. Offer once to add them to the company profile (gtmb-configure workplace-change procedure).`);
 if (extra.length) console.log(`\ninstalled in Codex but not in admin.md tools: ${extra.join(", ")}. Offer to add them (gtmb-configure workplace-change procedure).`);
+for (const s of manual.filter(m => notSignedIn.has(m))) console.log(`\nnot signed in: ${state[key(s)].tool}. sign in: codex mcp login ${s}, then open a new chat (Codex shows its tools only after that)`);
 if (manual.length) console.log(`\nconnected as MCP servers, not in admin.md tools: ${manual.map(s => state[key(s)].tool).join(", ")}. They are on the dashboard already; offer once to add them to the company profile (gtmb-configure workplace-change procedure).`);
 for (const s of suggested) {
   if (s.declined) { console.log(`\ndeclined earlier: ${s.tool} (not offered again unless they ask)`); continue; }

@@ -31,15 +31,17 @@ test('a pasted ZYNT prompt reaches the skill: its first line is a trigger', () =
 test('the key path is gone: a pasted key is never used or kept', () => {
   assert.match(skill, /\*\*The person pasted a ZYNT key\*\*: do not use it, and do not repeat it\./);
   assert.doesNotMatch(skill, /agent-setup\.md|mark_tool/);
-  assert.match(skill, /Never connect ZYNT another way: no `codex mcp add`, no key in a header, no curl\./);
+  assert.match(skill, /Never put a ZYNT key in a header and never use curl: the tools are the only way\./);
 });
 
-// ZYNT's plugin (getzynt/zynt-plugins, 2026-11-16): browser sign-in, so a key never reaches the chat.
-test('ZYNT is set up only through its plugin; without it, the install steps for both hosts', () => {
+// ZYNT's tools from any connection (2026-11-18): the plugin, a Claude or ChatGPT connector, a server added to Codex.
+test('ZYNT is set up through its tools from any connection; without them, the sign-in or connect steps', () => {
   for (const tool of ['add_setup_context', 'get_setup', 'answer_setup']) assert.ok(skill.includes('`' + tool + '`'), tool);
   for (const step of ['codex plugin marketplace add getzynt/zynt-plugins', 'codex plugin add zynt@zynt', 'codex mcp login zynt',
-    '/plugin marketplace add getzynt/zynt-plugins', '/plugin install zynt@zynt']) assert.ok(skill.includes('`' + step + '`'), step);
-  assert.match(skill, /give the install steps and stop/);
+    '/plugin marketplace add getzynt/zynt-plugins', '/plugin install zynt@zynt', 'https://app.getzynt.com/mcp']) assert.ok(skill.includes('`' + step + '`'), step);
+  assert.match(skill, /The tool names decide, not where they came from\./);
+  assert.match(skill, /installed, not signed in/);
+  assert.match(skill, /give the steps and stop/);
   assert.match(skill, /tools: \["ZYNT"\]/);
   assert.match(skill, /Then call `check_tools`\./);
 });
@@ -50,4 +52,11 @@ test('reads the brain before asking, sends guesses as drafts and lets the person
   assert.match(skill, /Never confirm on the person's behalf/);
   assert.match(skill, /only with the person's yes to that question/);
   assert.match(skill, /slug `icp`/);
+});
+
+test('puts the brain\'s companies and people on two ZYNT lists after a yes, and ends with what to ask', () => {
+  for (const tool of ['list_audiences', 'create_audience', 'add_companies', 'lookup_person', 'add_to_audience']) assert.ok(skill.includes('`' + tool + '`'), tool);
+  assert.match(skill, /"GTM Brain · <segment> · Companies"/);
+  assert.match(skill, /Yes, add them;\s+No, skip\./);
+  assert.match(skill, /"Signals for me"/);
 });
