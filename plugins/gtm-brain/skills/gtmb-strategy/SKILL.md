@@ -32,14 +32,28 @@ Every brain starts with `strategy.md` at its root: a document (`kind: document`,
 that says it is waiting for this intake. This skill fills it. Anything the person shares along
 the way (a deck, a one-pager, notes) lands beside it in `strategy/` through
 [files](../gtmb-use-brain/references/files.md) with `--document strategy`. The decisions
-the interview surfaces are also remembered in the Strategy context, in the person's words:
-the document is the statement, the notes are the evidence.
+the interview surfaces are also remembered in the Strategy context, in the person's words,
+once, after the document is written: the document is the statement, the notes are the
+evidence.
+
+## The intake in five lines
+
+Read [mentor rules](../gtmb-use-brain/references/mentor-rules.md) once; they hold here.
+
+1. Two reads before the first reply: `query` (object `answer`: the strategy, goals, customers,
+   pricing, competitors) and `document` (`action: show`, `ref: strategy`). Nothing else.
+2. The first reply is the opening message below, in full, as chat text.
+3. Every question is chat text that ends the turn: no form, no numbered options, no menu.
+4. No `remember` call, in any context, and no "Saved ..." line until the closing question is
+   answered. The chat's rule to record each outcome at once does not apply during the intake:
+   the answers are kept in the conversation and written once, in step 5.
+5. Then two writes: the document, and one `remember` call with the handful of decisions.
 
 ## Opening message (always send this first, before any question)
 
 Use the following opening closely. Preserve its tone, pacing and level of detail. Translate it
 naturally when the respondent is speaking Polish, but do not shorten it into setup bullets or a
-form-like greeting.
+form-like greeting. It is the whole first reply: no question form, no choices beside it.
 
 > This is a quick conversation to build a first picture of your company's go-to-market
 > strategy, so later work can build on real context instead of starting from zero. It'll take
@@ -57,6 +71,11 @@ Reuse identity and company details already resolved by the session or brain (the
 person and `brain/admin.md`). Do not ask the person to repeat known information. Adapt only
 the final paragraph to request the missing role, company or website while keeping the same
 natural tone.
+
+What the brain's notes already answer (a goal, the pricing, the customers, a boundary) is not
+asked again. Put it to the person inside that round's question as one line to confirm or
+correct ("The notes have 40 paying customers by the end of 2027 as the goal; still right?"),
+ask only the uncovered part, and cite the note in the document.
 
 ## Pre-research (if a website is given)
 
@@ -89,7 +108,8 @@ the opening and run the conversation like an attentive interviewer gathering inf
 ### Turn pattern
 
 After every answer, silently update what is answered, partly answered, still missing and
-pre-emptively covered. Then choose the smallest useful response:
+pre-emptively covered, in your head, not in the brain: no tool is called between the first
+reply and the closing answer, unless the person shares a file. Then choose the smallest useful response:
 
 1. Ask a contextual follow-up immediately when an important part of the current question is
    missing or vague.
@@ -99,6 +119,13 @@ pre-emptively covered. Then choose the smallest useful response:
 
 Do not use all three elements mechanically. Most turns should be short. The conversation
 should move forward.
+
+Pace. When the person names a time limit or answers several questions at once, a turn asks
+one round: its open questions together, each in the flow's own wording, minus what the notes
+or earlier answers cover. A round that is fully covered is skipped with a one-line coverage
+note. A full intake is then seven or eight turns, not twenty. Otherwise ask one or two
+questions per turn. No question of the flow is dropped silently: at the closing every one is
+answered, skipped by the person, or listed as a gap.
 
 ### Coverage notes
 
@@ -163,8 +190,8 @@ Contextualize the canonical question without weakening it:
 - If an earlier answer fully covers a question, skip it. If it covers only part, ask the
   uncovered part explicitly at the original level of precision.
 - When time is limited, select fewer complete questions instead of vague compressed versions.
-- One turn may contain two tightly related parts from the same original question or adjacent
-  questions. Do not stack unrelated topics.
+- One turn may contain the questions of one round (see Pace). Do not stack questions from
+  different rounds.
 
 Ask for facts, examples, mechanisms, numbers, comparisons and decision processes. Never
 challenge the answer, debate its validity or ask the respondent to defend it. The role is to
@@ -173,8 +200,10 @@ internal until writing `strategy.md`.
 
 When asking, place the optional coverage note and topic
 header in the message immediately before the question. Ask the complete
-precise question as free text without preset options. Reserve numbered choices and short
-answers for simple setup facts.
+precise question as free text without preset options. Never attach numbered options, an
+answer menu ("one or two sentences", "a fuller answer") or a skip option to an interview
+question, and do not send it through a question form: the question is the last lines of the
+reply. A coverage note never says anything was saved.
 
 ## Question flow
 
@@ -251,12 +280,15 @@ one.
 
 ## Closing
 
-Before producing the output, ask one final closing question:
+Before asking it, go through questions 0 to 19 one by one and ask the ones still open in
+this turn. Then ask one final closing question, together with question 19 when that is still
+open:
 
 > "Is there anything else important about the company's strategy that we haven't covered?
 > Does everything we discussed check out, or is there anything to add or correct?"
 
-Give them room to amend anything before you finalize.
+Give them room to amend anything before you finalize. Their answer starts the output: write
+the document and the notes in that turn, without another question.
 
 ## Output
 
@@ -271,8 +303,12 @@ long written summary in chat.
 - Write the result with `document` (`action: update`, `ref: strategy`, `body` the full text
   below). Leave the status as draft; the person approves it with "approve the strategy" once
   they have read it.
-- Remember the decisions the interview surfaced (the aspiration, the boundaries, what they say
-  no to, the 90-day fix) as notes in the Strategy context, in the person's words.
+- Then, in one `remember` call (`memories: [...]`), keep only the decisions the interview
+  surfaced: the aspiration, the boundaries, what they say no to, the 90-day fix. At most six
+  notes in the Strategy context, each quoting the person's words. Not the facts behind them
+  (customers, numbers, pricing, the team), nothing the brain already holds, and nothing the
+  person only confirmed from the notes: compare each candidate with the notes of the first
+  read and drop a restatement. If the call fails, retry it once, then say so.
 - Where it saves, in full: the document `strategy.md`; the decisions as notes in the Strategy
   context (kind `decision` where the person decided); an offering the person names with its
   price and buyer as an offering (`what_it_is`, `price`, `who_it_is_for` fill from the note).
@@ -303,6 +339,11 @@ For each of the five strategy sections include:
 - Use only the strongest useful quotations, placed under the relevant point.
 - Include insights in every section they materially support rather than forcing each answer
   into one category.
+- **Confirmed** is for what the person said or a source shows, in their terms. A conclusion
+  you drew (a pattern across customers, a target read from today's customers) is a
+  **Hypothesis**. A fact taken from the brain's notes cites the note and its date as source.
 
-Finish the file with **Gaps and contradictions**: missing evidence, vague answers and tensions
-between claims. Do not add a Suggested next steps section.
+Finish the file with **Gaps and contradictions**: missing evidence, vague answers, tensions
+between claims, and every question of the flow that was not asked or not answered, written as
+"Not asked: <question>", never as a statement about the company ("no revenue target has been
+set"). Do not add a Suggested next steps section.

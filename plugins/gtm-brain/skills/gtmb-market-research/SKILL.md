@@ -28,6 +28,24 @@ direct and conversational, like an attentive strategy interviewer rather than a 
 
 Conduct every interaction and write every output in English.
 
+## The run, start to end
+
+Read [mentor rules](../gtmb-use-brain/references/mentor-rules.md) once; they hold here.
+
+A run passes these gates in this order. Each ends a turn and waits for the person:
+
+1. The opening, then the intake questions the brain does not answer (steps 1 and 2).
+2. The research frame and its question: "Looks right, start research" (step 3).
+3. The interim view and its question: "Direction is right, finish it" (step 5).
+4. The report document, one sentence with its path, and "Accept the report" (step 7).
+
+The market question ("is it worth going deeper?") is answered only in the report. A chat
+reply with a verdict, a recommendation or target segments in place of gate 3 or 4 is a
+failed run: after "start research" the next reply is the interim view, after "finish it" the
+next reply is the report's path. Until the person picks "Accept the report" the only write is
+the report document itself (status draft): no `remember` for the frame, the interim findings
+or a provisional verdict, and a verdict is never a note of kind `decision`.
+
 ## Opening
 
 Always open with a natural explanation close to this:
@@ -48,7 +66,7 @@ Always open with a natural explanation close to this:
 > are.
 
 Adapt the wording slightly to the situation, but preserve the promise, timing, checkpoints and
-output.
+output. It opens the first reply, also when the brain answers most of the intake.
 
 ## Conversation style
 
@@ -107,7 +125,9 @@ Before asking questions, read what the brain already holds:
 
 Use this context to sharpen or skip questions. Treat prior material as evidence to confirm or
 correct, not unquestionable truth. Tell the participant briefly when prior context has allowed
-you to skip or narrow a question.
+you to skip or narrow a question. What the brain holds about this market (customers in the
+geography, competitors met, how buyers compare, lost deals) goes into the frame and the report
+by name, with its note and date as the source.
 
 ### 2. Run the focused intake
 
@@ -140,7 +160,9 @@ Use the following as a coverage map, not a rigid script. Normally ask 6-8 main q
    the option of doing nothing.
 
 Combine closely related questions when the participant has already supplied useful detail. Do
-not exceed the input time target merely to complete every prompt.
+not exceed the input time target merely to complete every prompt. Question 7 (where the
+audience is and which sources matter) is rarely in the brain: ask it before the frame unless
+the participant already answered it.
 
 ### 3. Confirm the research frame
 
@@ -186,7 +208,8 @@ never by driving a browser login without approval (rule on Computer Use in the b
 
 Aim for roughly 15-30 useful sources across different evidence types. Prefer primary and
 current sources. Use secondary sources when they add interpretation or access to otherwise
-unavailable data.
+unavailable data. A handful of searches is not the scan. A figure or a claim is cited only
+from a page you opened; a search result's snippet is a lead, not a source.
 
 Do not mistake one proxy for market growth. For example, package downloads, repository activity
 or search interest show adoption or attention, not necessarily market revenue or buying intent.
@@ -271,6 +294,8 @@ the same name, `market-desk-research-<market-slug>/`, referenced by relative pat
   and reference the landed path.
 
 Never leave the report as a loose Markdown at the brain root without the document marker.
+The report is written only after the step 5 question is answered; if it was not asked, go
+back and ask it.
 
 Target roughly 1,500-2,500 words plus compact tables and embedded evidence-based charts. Keep the
 report decision-oriented rather than dumping research.
@@ -352,5 +377,6 @@ the participant wants to pursue become open questions (`remember`, kind `questio
 competitor the accepted report names and the participant confirms as one they meet is kept as an
 organization with the `competes_with` relationship to `us`, one note each in the Market context
 ([relationships](../gtmb-use-brain/references/relations.md)); the report itself is a document,
-beside `market.md` when the brain has a `market/` folder. Do not record provisional hypotheses or
-unconfirmed interim findings as facts, and write nothing before the report is accepted.
+beside `market.md` when the brain has a `market/` folder. These notes go in one `remember`
+call. Do not record provisional hypotheses or unconfirmed interim findings as facts, and write
+nothing before the report is accepted.

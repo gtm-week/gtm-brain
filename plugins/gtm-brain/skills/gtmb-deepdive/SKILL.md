@@ -17,6 +17,8 @@ Keep authored brain content in English. Preserve names, source quotes and the ex
 > For humans: before a call or a decision, one page with what we know, where it comes from,
 > what is open, and what to do next.
 
+Read [mentor rules](../gtmb-use-brain/references/mentor-rules.md) once; they hold here.
+
 ## Step 1: the subject
 
 For an entity, follow [entity search](../gtmb-use-brain/references/entity-search.md).
@@ -27,6 +29,8 @@ For an entity, follow [entity search](../gtmb-use-brain/references/entity-search
 
 `query` (brief) with `search` = the entity = the resolved name or ID for a person, organization or product.
 Add `context` when the person asks for that perspective; use `query` for an unregistered topic.
+When the request names a second entity (the person on tomorrow's call, the competitor in the
+deal), read its brief too, in the same way: what that note says belongs in the brief.
 Read the existing cited brief first. When it needs refreshing, follow
 [entity compilation](../gtmb-use-brain/references/entity-compile.md) before the live checks. For a context, the loaded block already holds the
 summary, learned working guidance and the recent notes.
@@ -43,17 +47,21 @@ Expand to other tools or public news when the requested scope calls for them.
 
 ## Step 4: the brief
 
-One page, in this order, every line traceable to a note or a tool read:
+One page, every line traceable to a note or a tool read. Use these six bold labels word for
+word, in this order, also for a short call brief; a section with nothing says "none recorded":
 
     **<Subject>** (<kind>, in <contexts>)
     **Where it stands.** three to five sentences
     **Timeline.** the dated notes, oldest first, one line each with the source
     **People.** who is who on their side and ours
     **Open.** the open questions and anything unresolved in the tools
-    **Next.** one suggested next step, and why
+    **Next.** one suggested next step, the note it follows from (date, who said it) and why
 
-Then offer once: record the brief's new facts as notes (only what came from the tools and is
-not in the brain yet, with sources), and record the open items as questions.
+A source is a date and where it came from ("note, 14 October 2026, Market"), never a file path.
+When no tool is connected, say so in one line under the header.
+
+The reply's last line is always the one offer: "Shall I record the open items as questions?"
+(and, when a tool showed something the brain lacks, those facts as notes with their sources).
 
 ## Hard rules
 
