@@ -7,7 +7,7 @@
 process.env.GTM_BRAIN_TEST_LAYOUT = "2";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawnSync, spawn } from "node:child_process";
 import { mkdtempSync, writeFileSync, appendFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -117,4 +117,80 @@ test("never X before Y: a note that says Y is not held; a rule tagged check is l
   const hits = S.rulesForSave(root, { content: "The Leipzig venue contract is signed." });
   assert.equal(hits.length, 1); assert.equal(hits[0].hold, false);
   assert.ok(hits.every(h => !/customer before a signed contract/.test(h.rule.text)), "the check rule is our-rules' job");
+});
+
+// Review of 0.38.0: the dashboard's note menu and a done interaction have nobody to ask, so the hold never stops them
+const { createMemoryEdit } = await import(`${P}/server/memory-edit.mjs`);
+const pageEdit = async (root, input) => {
+  const edit = createMemoryEdit({ root, token: "t".repeat(64), json: (res, code, body) => { res.code = code; res.body = body; } });
+  const raw = Buffer.from(JSON.stringify(input)), res = {};
+  const req = { headers: { origin: "http://127.0.0.1:1", "content-type": "application/json", "x-gtm-brain-token": "t".repeat(64), "content-length": String(raw.length) }, resume() {}, async *[Symbol.asyncIterator]() { yield raw; } };
+  await edit(req, res, "127.0.0.1:1"); return res;
+};
+
+test("the dashboard's note menu is the person's own edit: a note a rule is about is moved, corrected and changed, never left in force nowhere", async () => {
+  const root = brain();
+  writeFileSync(join(lib.workDir(root), "person.json"), JSON.stringify({ handle: "anna-lind" }) + "\n");
+  lib.writeContext(root, "pipeline", { title: "Pipeline", rule: "Deals and renewals." });
+  const add = content => lib.appendMemory(root, "company", { authors: ["anna-lind"], at: new Date(Date.now() - 864e5).toISOString(), content }).rec;
+  const inForce = ctx => lib.effectiveMemories(lib.readMemories(root, ctx)).filter(m => !m.retracts).map(m => m.content);
+  const note = add("Bramble Foods pays 0.30 EUR per return.");
+  const moved = await pageEdit(root, { op: "move", id: note.id, topic: "pipeline" });
+  assert.equal(moved.code, 200, JSON.stringify(moved.body));
+  assert.ok(inForce("pipeline").includes(note.content) && !inForce("company").includes(note.content));
+  const other = add("Acme Retail pays 0.25 EUR per return.");
+  const fixed = await pageEdit(root, { op: "correct", id: other.id, text: "Acme Retail pays 0.28 EUR per return." });
+  assert.equal(fixed.code, 200, JSON.stringify(fixed.body));
+  assert.doesNotMatch(JSON.stringify(fixed.body), /rule_checked/);
+  const kind = await pageEdit(root, { op: "set_kind", id: fixed.body.memory, kind: "decision" });
+  assert.equal(kind.code, 200, JSON.stringify(kind.body));
+});
+
+test("an interaction: the rule is asked at its check, before the tool; the record of what was done is never held", async () => {
+  const root = brain();
+  lib.writeInteractions(root, [{ name: "send_quote", title: "Sending a quote", tool: "hubspot", operation: "Send the quote in HubSpot.", description: "A quote goes out.",
+    input_schema: { type: "object", properties: { company: { type: "string" }, price: { type: "string" } }, required: ["company", "price"], additionalProperties: false },
+    record: { context: "company", kind: "note", companies: ["company"], people: [], content: "Sent {company} the quote of {price}.", action: "hubspot:send quote:{company}", tags: [] } }]);
+  const call = args => new Promise((res, rej) => {
+    const p = spawn(process.execPath, [`${P}/server/server.mjs`], { env: { ...env, GTM_BRAIN_NO_SESSION_START: "1" } }); let out = "";
+    p.stdout.on("data", d => out += d);
+    p.on("close", () => { const r = out.split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).find(l => l && l.id === 2); r ? res({ text: r.result.content.map(c => c.text).join("\n"), isError: !!r.result.isError }) : rej(new Error(out)); });
+    p.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {} } }) + "\n");
+    p.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "interact", arguments: { brain: root, by: "anna-lind", name: "send_quote", ...args } } }) + "\n");
+    p.stdin.end();
+  });
+  const params = { company: "Bramble Foods", price: "0.30 EUR per return" };
+  const check = await call({ params });
+  assert.equal(check.isError, false, check.text);
+  assert.match(check.text, /Team rule "Ask before saving anything about pricing[^\n]*ask the person, naming the rule \(Yes, go ahead \/ No, leave it\)[^\n]*Only after their yes do it in hubspot/);
+  const done = await call({ params, outcome: "done", refs: ["4242"] });
+  assert.equal(done.isError, false, done.text);
+  assert.ok(notes(root).some(c => /quote of 0\.30 EUR/.test(c)), done.text);
+});
+
+test("a rule holds a note only on what the rule is about: no count, no quoted person, no one shared word, no condition read as a ban", () => {
+  const root = brain({ rules: "" });
+  const hits = (rule, content) => S.rulesForSave(root, { content }, { rules: [{ text: rule, fromFile: true, source: "RULES.md line 1" }] });
+  const pricing = "Ask before saving anything about pricing. Check with Anna first, every time.";
+  assert.deepEqual(hits(pricing, "The Bramble Foods newsletter has 50k subscribers."), [], "a count is no price");
+  assert.deepEqual(hits(pricing, "Anna Lind quoted the Bramble Foods CEO in the November newsletter."), [], "quoted a person, and Anna is whom to ask");
+  assert.equal(hits(pricing, "Bramble Foods pays 50k EUR a year.")[0]?.hold, true);
+  assert.equal(hits(pricing, "We sent Bramble Foods a new quote.")[0]?.hold, true);
+  assert.ok(hits("Always confirm the meeting time in the customer's time zone.", "Met Acme Retail; next meeting is on Tuesday.").every(h => !h.hold), "confirm the time is guidance, not ask first");
+  assert.deepEqual(hits("Ask the customer for a reference after every successful workshop.", "The Leipzig workshop is on 3 December."), []);
+  assert.deepEqual(hits("If the customer is not in the EU, add a VAT note.", "Added Bramble Foods to the newsletter list."), [], "\"not\" in a condition forbids nothing");
+  assert.ok(hits("Do not email partners on Fridays.", "Our partner Bramble Foods emailed us the signed contract.").every(h => !h.hold), "no Friday in the note");
+  assert.equal(hits("Do not email partners on Fridays.", "Emailed our partner Bramble Foods the deck on Friday.")[0]?.hold, true);
+  assert.deepEqual(hits("Notes about webinars go to Strategy with the date of the webinar.", "The launch date moved to March."), [], "date is not what the rule is about");
+  assert.equal(hits("Notes about webinars go to Strategy with the date of the webinar.", "The October webinar on returns drew 140 sign-ups.").length, 1);
+});
+
+test("a rule fires on every form of its word and on a two-letter acronym", () => {
+  const root = brain({ rules: "" });
+  const hits = (rule, content) => S.rulesForSave(root, { content }, { rules: [{ text: rule, fromFile: true, source: "RULES.md line 1" }] });
+  for (const content of ["Karl has a new role: partnerships.", "Karl has two roles now: sales and partnerships."]) assert.equal(hits("Ask before saving any role change.", content)[0]?.hold, true, content);
+  assert.equal(hits("Ask before saving anything about rates.", "Our day rate goes up in January.")[0]?.hold, true);
+  assert.equal(hits("Ask before saving anything about HR.", "HR: Karl is on leave until January.")[0]?.hold, true);
+  assert.equal(hits("Ask before saving anything about PR.", "The PR agency sent the November plan.")[0]?.hold, true);
+  assert.deepEqual(hits("Ask before saving anything about HR.", "Karl is on leave until January."), []);
 });

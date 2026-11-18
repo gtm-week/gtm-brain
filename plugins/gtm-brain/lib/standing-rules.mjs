@@ -85,34 +85,56 @@ export const offerLine = (id, root) => { let file = "the rules file"; try { file
 const STOP_W = new Set(("a an the of to for with on in at by is are be was were has have had our their its his her and or any every each before after until unless without from as that this it them they we you us " +
   "ask asks asked asking sav save saves saved saving check checks checked confirm confirmed first time times always never again note notes record records recorded team anything something everything " +
   "thing things someone anyone people company compan companies customer customers client clients need needs must should make sure keep also only what when which who whom will would can could get use " +
-  "said say says tell like just ever even all one new now today then than more less very much many not no don do does done there here into over under about while each other another same such way").split(" "));
-const stemW = w => { w = w.replace(/'s$/, "").replace(/(?<=..)ies$/, "y"); return w.length > 4 ? w.replace(/(?:ings?|ed|es|s|e)$/, "") : w; };
+  "said say says tell like just ever even all one new now today then than more less very much many not no don do does done there here into over under about while each other another same such way again").split(" "));
+// One stem for a word's forms: role, roles; rate, rates; sale, sales; price, prices, pricing, priced. A plural loses
+// its s before anything else, so a five-letter plural and its four-letter singular meet (roles was "rol", role "role").
+const stemW = w => {
+  w = w.replace(/'s$/, "");
+  if (w.length > 4 && w.endsWith("ies")) w = w.slice(0, -3) + "y";
+  else if (w.length > 3 && /[^su]s$/.test(w) && !/is$/.test(w)) w = w.slice(0, -1);
+  return w.replace(/(?<=.{3})(?:ing|ed)$/, "").replace(/(?<=.{3})e$/, "");
+};
+// a number with a currency (50k EUR, EUR 1,200, $40), never a bare count ("50k subscribers"); a quote is the noun
+// (a quote, the quotes), never "quoted the CEO"; a fee only with what kind of fee it is
 const CONCEPTS = [
-  [/(?:\d[\d.,]*\s*(?:eur|usd|gbp|pln|chf|sek|€|\$|£|k\b))|(?:[€$£]\s*\d)|\bdiscount\w*|\bper (?:seat|user|month|year|return|unit|order|licen[cs]e)\b|\bfees?\b|\brate card\b|\bquot(?:e|ed|es)\b|\bpric\w*/i, "pric"],
+  [/(?:\d[\d.,]*\s*k?\s*(?:eur|usd|gbp|pln|chf|sek|euros?|dollars?|€|\$|£)(?![a-z]))|(?:\b(?:eur|usd|gbp|pln|chf|sek)\s*\d)|(?:[€$£]\s*\d)|\bdiscount\w*|\bper (?:seat|user|month|year|return|unit|order|licen[cs]e)\b|\b(?:setup|set-up|licen[cs]e|monthly|annual|yearly|service|platform|subscription|onboarding) fees?\b|\brate card\b|\b(?:a|the|our|their|this|that|new|revised) quotes?\b|\bpric\w*/i, "pric"],
   [/\bchurn\w*|\bcancel+(?:ed|s|ing|ation)?\b|\bnot renewing\b|\bdid not renew\b|\bformer customer\b|\bleft us\b|\bgave (?:us )?notice\b/i, "churn"],
 ];
 const NAME_PART = /^[a-z]+$/;
+// two letters count only as an acronym written in capitals: HR, PR, AI, QA, EU
+const ACRO_SKIP = new Set(["ok", "am", "pm", "id", "vs", "eg", "ie"]);
 function wordsOf(text, skip = new Set()) {
   const out = new Map(), t = String(text || "");
-  for (const raw of t.toLowerCase().match(/[a-z][a-z0-9'-]*/g) || []) for (const w of raw.split(/[-']/)) {
+  for (const raw of t.match(/[A-Za-z][A-Za-z0-9'-]*/g) || []) for (const part of raw.split(/[-']/)) {
+    const w = part.toLowerCase();
+    if (w.length === 2 && /^[A-Z][A-Z0-9]$/.test(part)) { if (!STOP_W.has(w) && !ACRO_SKIP.has(w) && !skip.has(w) && !out.has(w)) out.set(w, part); continue; }
     if (w.length < 3 || STOP_W.has(w) || skip.has(w)) continue;
     const s = stemW(w); if (s.length < 3 || STOP_W.has(s)) continue;
-    if (!out.has(s)) out.set(s, w);
+    if (!out.has(s)) out.set(s, part);
   }
   for (const [re, s] of CONCEPTS) { const m = t.match(re); if (m && !out.has(s)) out.set(s, m[0].trim()); }
   return out;   // stem -> the word as written
 }
-const ASK = /\b(?:ask|asks|asking|check with|confirm|approv\w*|sign[- ]?off|run (?:it|this|that) (?:by|past))\b/i;
-const FORBID = /\b(?:never|do not|don'?t|must not|no longer|not)\b/i;
-/* The rule's keywords: its words without filler, attribution ("(Anna Lind, 2026-04-30)") or the names of the
-   brain's people; split at the forbidding word into condition (before) and the forbidden thing (after). */
+// Ask first: the rule makes asking a step before the save or the act ("ask before saving", "check with Anna first",
+// "without asking Anna first", "needs approval"). "Ask the customer for a reference" or "always confirm the meeting
+// time" tell what to do, not to ask before saving.
+const ASK = /\b(?:ask|asks|asking|check|checking|confirm|confirming|clear)\b(?:\W+[\w']+){0,3}?\W+(?:first|before)\b|\b(?:check|checking|confirm|confirming|clear (?:it|this|that))\s+with\b|\b(?:approval|sign[- ]?off)\b|\b(?:needs?|get|gets|requires?)\b[^.]{0,30}\bapprov\w*|\brun (?:it|this|that) (?:by|past)\b/i;
+// who to ask is not what the rule is about: "Check with Anna first" makes no note about Anna a pricing note
+const ASKED = /\b(?:[Aa]sk(?:s|ing)?|[Cc]heck(?:ing)?|[Cc]onfirm(?:ing)?|[Cc]lear it|[Rr]un it)\s+(?:with\s+|by\s+|past\s+)?[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?/g;
+// a prohibition, never a bare "not": "If the customer is not in the EU, add a VAT note" forbids nothing
+const FORBID = /\b(?:never|do not|don'?t|must not|may not|should not|shouldn'?t|cannot|can'?t|no longer|not allowed|is not to|are not to)\b/i;
+// a day or a month in the forbidden thing is part of it: "Do not email partners on Fridays" is not broken by an email on a Tuesday
+const QUALIFIER = new Set([..."monday tuesday wednesday thursday friday saturday sunday weekend january february march april may june july august september october november december".split(" ")].map(stemW));
+/* The rule's keywords: its words without filler, attribution ("(Anna Lind, 2026-04-30)"), whom to ask or the names
+   of the brain's people; split at the forbidding word into condition (before) and the forbidden thing (after). */
 function ruleKeys(text, names) {
-  const t = String(text).replace(/\([^)]*\b\d{4}-\d{2}-\d{2}[^)]*\)/g, " ");
-  const m = t.match(FORBID), cut = m ? m.index : -1;
+  const t = String(text).replace(/\([^)]*\b\d{4}-\d{2}-\d{2}[^)]*\)/g, " "), ask = ASK.test(t);
+  const words = t.replace(ASKED, m => m.split(/\s+/)[0]);
+  const m = words.match(FORBID), cut = m ? m.index : -1;
   // "never X before (without, until, unless) Y": Y is what makes X allowed, never a sign the note breaks it
-  const tail = cut >= 0 ? t.slice(cut) : "", ex = tail.search(/\b(?:before|without|until|unless|except|other than)\b/i);
-  const all = wordsOf(t, names), cond = cut > 0 ? wordsOf(t.slice(0, cut), names) : new Map(), act = cut >= 0 ? wordsOf(ex > 0 ? tail.slice(0, ex) : tail, names) : all;
-  return { all: [...all.keys()], cond: [...cond.keys()], act: [...act.keys()], ask: ASK.test(t), forbids: !!m, unless: ex > 0 };
+  const tail = cut >= 0 ? words.slice(cut) : "", ex = tail.search(/\b(?:before|without|until|unless|except|other than)\b/i);
+  const all = wordsOf(words, names), cond = cut > 0 ? wordsOf(words.slice(0, cut), names) : new Map(), act = cut >= 0 ? wordsOf(ex > 0 ? tail.slice(0, ex) : tail, names) : all;
+  return { all: [...all.keys()], cond: [...cond.keys()], act: [...act.keys()], ask, forbids: !!m, unless: ex > 0 };
 }
 const many = v => Array.isArray(v) ? v.map(String) : typeof v === "string" ? v.split(",").map(x => x.trim()).filter(Boolean) : [];
 
@@ -143,12 +165,16 @@ export function rulesForSave(root, entry, { rules = null, registry = null, memor
       const said = k.all.filter(s => note.has(s)); if (!said.length) continue;
       const known = [];
       if (ents.length) for (const s of (k.cond.length ? k.cond : k.all)) if (!note.has(s)) { const h = history().find(x => x.words.has(s)); if (h) known.push({ stem: s, id: h.m.id, name: h.e.name, word: h.words.get(s), text: squash(h.m.content).slice(0, 160).replace(/[.\s]+$/, "") }); }
-      const need = k.all.length >= 4 ? 2 : 1;   // a long rule needs two of its words (or its condition known from earlier notes)
+      // one shared word is enough only when it is what the rule is about, its first word ("Notes about webinars go to
+      // Strategy with the date": webinars, not date); a rule of four words or more always needs two (or its condition
+      // known from earlier notes)
+      const first = k.all[0], lead = note.has(first) || known.some(x => x.stem === first);
+      const need = k.all.length === 1 ? 1 : k.all.length >= 4 ? 2 : lead ? 1 : 2;
       if (said.length + known.length < need) continue;
       // appears to break it: the condition is known (in the note or an earlier note) and the forbidden thing is in the note
       const condMet = !k.cond.length || k.cond.some(s => note.has(s) || known.some(x => x.stem === s));
       if (k.forbids && !condMet) continue;   // "a churned customer is never a prospect": a company nobody says churned is not its business
-      const breaks = k.forbids && !k.unless && k.act.some(s => note.has(s));
+      const breaks = k.forbids && !k.unless && k.act.some(s => !QUALIFIER.has(s) && note.has(s)) && k.act.every(s => !QUALIFIER.has(s) || note.has(s));
       out.push({ rule, said: said.map(s => note.get(s)), known, ask: k.ask, breaks, hold: k.ask || breaks });
     }
     return out;

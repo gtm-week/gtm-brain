@@ -33,6 +33,9 @@ import { relativeDates } from "../lib/dots.mjs";
 import { rulePageAnswer, pageForCall, rulePageText, rulePageIndex, rulePages } from "../lib/rule-pages.mjs";
 import { foldStatus as foldStatusText } from "../lib/opening.mjs";
 import { workDir } from '../lib/brain-paths.mjs';
+import { rulesForSave } from "../lib/standing-rules.mjs";
+// the team rules that hold an interaction's note (ask first, or it appears to break one); [] in a background run
+const teamRulesFor = (brain, note) => process.env.GTM_BRAIN_RUN ? [] : rulesForSave(brain, { content: note.content, people: note.people, companies: note.companies, tags: note.tags }).filter(h => h.hold);
 
 const P = dirname(dirname(fileURLToPath(import.meta.url)));
 const lib = await import(join(P, "lib", "brain.mjs"));
@@ -308,12 +311,14 @@ const TOOLS = [
           : dated.length ? `its note would say ${dated.map(d => `"${d.word}"`).join(", ")}; give the date itself in params (${dated.map(d => d.means.join(" or ")).join("; ")})` : "";
         if (why) return text(`refused: ${why}; nothing recorded, and do nothing in ${a.tool} yet`, true);
         const rule = a.refuse_when ? `First check: refuse when ${a.refuse_when}. If it holds, stop and tell the person why; nothing is recorded.\n` : "";
-        return text(`checked: ${name}; nothing recorded yet.\n${rule}Now in ${a.tool}: ${a.operation}\nThen call interact again with the same name and params and outcome: done with refs (the record id or direct link ${a.tool} returned, with the account when known), or failed with error (what ${a.tool} said). Only that call records it.`);
+        // the team's rules are asked here, before anything is done in the tool: the record after it is not held by them
+        const team = teamRulesFor(brain, note).map(h => `Team rule "${h.rule.text.slice(0, 300)}" (${h.rule.fromFile ? h.rule.source : `note ${h.rule.id}`}) applies: ${h.breaks && !h.ask ? "this appears to break it; ask the person whether this is an exception" : "it says to ask first; ask the person, naming the rule"} (Yes, go ahead / No, leave it) and end the turn. Only after their yes do it in ${a.tool}.\n`).join("");
+        return text(`checked: ${name}; nothing recorded yet.\n${team}${rule}Now in ${a.tool}: ${a.operation}\nThen call interact again with the same name and params and outcome: done with refs (the record id or direct link ${a.tool} returned, with the account when known), or failed with error (what ${a.tool} said). Only that call records it.`);
       }
       // failed never records that it happened, whatever the interaction's external flag says
       const failed = outcome === "failed";
       const m = lib.interactionMemory(a, params, { outcome: failed ? "failed" : "done", error });
-      const r = await run(brain, "gtm-brain-remember/remember.mjs", ["--by", by, "--via", "codex", "--context", m.context, "--kind", m.kind, "--content", m.content, ...(m.people.length ? ["--people", m.people.join(", ")] : []), ...(m.companies.length ? ["--companies", m.companies.join(", ")] : []), ...(m.tools.length ? ["--tools", m.tools.join(", ")] : []), ...m.actions.flatMap(x => ["--action", x]), ...sources.flatMap(x => ["--source", JSON.stringify(x)]), ...(m.tags.length ? ["--tags", m.tags.join(", ")] : []), ...(project ? ["--project", project] : [])]);
+      const r = await run(brain, "gtm-brain-remember/remember.mjs", ["--by", by, "--via", "codex", "--context", m.context, "--kind", m.kind, "--content", m.content, ...(m.people.length ? ["--people", m.people.join(", ")] : []), ...(m.companies.length ? ["--companies", m.companies.join(", ")] : []), ...(m.tools.length ? ["--tools", m.tools.join(", ")] : []), ...m.actions.flatMap(x => ["--action", x]), ...sources.flatMap(x => ["--source", JSON.stringify(x)]), ...(m.tags.length ? ["--tags", m.tags.join(", ")] : []), ...(project ? ["--project", project] : []), "--rule-checked", "true"]);
       const said = [r.out, r.err].filter(Boolean).join("\n").trim();
       if (r.code !== 0) return text(`${r.code === 2 ? "refused" : "error"}: ${said}`, true);
       if (failed) return text(`recorded failure: ${name} was not done in ${a.tool || "the tool"}\n${said}\nTell the person it failed and what ${a.tool || "the tool"} said; do not retry a create without checking whether it happened.`);

@@ -181,3 +181,40 @@ test('a due question for last week and for a month also counts commitments dated
   // without a due word, last week is what was said then: an older note naming a date is not "what happened"
   assert.equal(parseQuestion('What happened last week?', [], { now }).period.mention, undefined);
 });
+
+// Review of 0.38.0: a date that belongs to something else is not today; a count after a quarter is not its year;
+// what is due looks ahead
+test('a date that belongs to something in the question is not the day it is', () => {
+  for (const q of ['What did we promise in the 2026-11-10 meeting and has it slipped this week?', "What is due this week? It's 20 November for the Acme launch."]) {
+    const r = parsePeriod(q, now);
+    assert.equal(`${iso(r.period.from)}..${last(r.period.to)}`, '2026-11-16..2026-11-22', q);
+    assert.equal(r.today, undefined, q);
+  }
+  assert.equal(statedToday('Which invoices dated 5 November were paid last week?', now).today, null);
+  const root = fixture(); note(root, 'Acme Retail paid the October invoice.', { at: '2026-11-11T10:00:00Z' });
+  assert.match(answer(root, 'Which invoices dated 5 November were paid last week?', { now }), /Period asked: last week = Mon 2026-11-09 to Sun 2026-11-15, both included \(today 2026-11-18;/);
+  // the forms that do say the day still do
+  assert.equal(iso(statedToday('Today is 25 November what is due this week', now).today), '2026-11-25');
+  assert.equal(iso(statedToday('slipping this week 2026-11-25', now).today), '2026-11-25');
+});
+
+test('a quarter takes a four-digit year, or two after an apostrophe; a count after it stays a count', () => {
+  assert.equal(range('In Q4 12 accounts churned, who?'), '2026-10-01..2026-12-31');
+  assert.match(parsePeriod('In Q4 12 accounts churned, who?', now).rest, /\b12 accounts\b/);
+  assert.equal(range('Q2 10 deals'), '2026-04-01..2026-06-30');
+  assert.equal(range("Q3 '25 numbers"), '2025-07-01..2025-09-30');
+  assert.equal(range('Q2 of 2025'), '2025-04-01..2025-06-30');
+});
+
+test('what is due looks ahead: a month or a weekday alone is the coming one; what was due looks back', () => {
+  assert.equal(range('What is due in December?'), '2026-12-01..2026-12-31');
+  assert.equal(range('What is due on Friday?'), '2026-11-20..2026-11-20');
+  assert.equal(range('What is due this Friday?'), '2026-11-20..2026-11-20');
+  assert.equal(range('What is due on 10 January?'), '2027-01-10..2027-01-10');
+  assert.equal(range('What is due in March?'), '2027-03-01..2027-03-31');
+  assert.equal(range('What is due on 5 December?'), '2026-12-05..2026-12-05');
+  assert.equal(range('What is due in November?'), '2026-11-01..2026-11-30');
+  assert.equal(range('What was due on Friday?'), '2026-11-13..2026-11-13');
+  assert.equal(range('What did we decide in December?'), '2025-12-01..2025-12-31');
+  assert.equal(range('What is due last Friday?'), '2026-11-13..2026-11-13');
+});

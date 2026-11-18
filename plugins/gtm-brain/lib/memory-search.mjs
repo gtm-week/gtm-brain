@@ -72,15 +72,24 @@ const RELATIVE = /\b(?:this|last|past|previous|prior|next|coming)\s+(?:week|mont
    2026-11-18)"), or a lone date beside a period counted from today ("slipping this week, 2026-11-18"): a period
    is then counted from that day, never narrowed to it (a real brain, 2026-11-17: "what is slipping this week,
    today is <date>" was read as that one day). Returns the day and the question without it. */
+// The stated day ends its clause: "It's 20 November for the Acme launch" names the launch's day, not today.
+const CLAUSE_END = '(?=\\s*(?:$|[.,;:!?)\\]]|(?:and|so|but|now|then|what|which|who|how|where|when|is|are|was|were|did|do|does|can|show|list|tell|give)\\b))';
 export function statedToday(question, now = nowDate()) {
   const q = String(question);
-  const said = new RegExp(`\\(?\\b(?:today(?:'s\\s+date)?(?:\\s+is|\\s*[:=,])?|the\\s+date\\s+is|it\\s+is(?:\\s+now)?|it'?s(?:\\s+now)?|now\\s+is|date\\s*:)\\s+(${DATE_SRC})\\)?|\\(?\\b(${DATE_SRC})\\s+is\\s+today\\b\\)?`, 'ig');
+  const said = new RegExp(`\\(?\\b(?:today(?:'s\\s+date)?(?:\\s+is|\\s*[:=,])?|the\\s+date\\s+is|it\\s+is(?:\\s+now)?|it'?s(?:\\s+now)?|now\\s+is|date\\s*:)\\s+(${DATE_SRC})\\)?${CLAUSE_END}|\\(?\\b(${DATE_SRC})\\s+is\\s+today\\b\\)?`, 'ig');
   for (const m of q.matchAll(said)) {
     const d = parseDay(m[1] || m[2], now); if (!d) continue;
     return { today: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12), rest: (q.slice(0, m.index) + ' ' + q.slice(m.index + m[0].length)).replace(/\s+([,.?!])/g, '$1').trim(), said: true };
   }
   if (RELATIVE.test(q)) {
-    const lone = [...q.matchAll(new RegExp(`(^|[^\\w-])(${DATE_SRC})`, 'ig'))].filter(m => !/\b(?:on|since|from|between|and|of|until|till|to|through|before|after|by|starting|beginning|commencing)\s*$/i.test(q.slice(0, m.index + m[1].length)));
+    // set apart, the way a person adds the day ("slipping this week, 2026-11-18", "slipping this week 2026-11-25"),
+    // never a date that belongs to something else ("in the 2026-11-10 meeting", "invoices dated 5 November")
+    const lone = [...q.matchAll(new RegExp(`(^|[^\\w-])(${DATE_SRC})`, 'ig'))].filter(m => {
+      const before = q.slice(0, m.index + m[1].length), after = q.slice(m.index + m[0].length);
+      if (/\b(?:on|since|from|between|and|of|until|till|to|through|before|after|by|starting|beginning|commencing|dated|the|a|in|at|for|our|their|its|that|this|each|every)\s*$/i.test(before)) return false;
+      if (!/^\s*(?:$|[.,;:!?)\]])/.test(after)) return false;
+      return /(?:^|[,;:([.?!-])\s*$/.test(before) || /^[\s.?!)\]]*$/.test(after);
+    });
     const all = [...q.matchAll(new RegExp(DATE_SRC, 'ig'))];
     if (lone.length === 1 && all.length === 1) {
       const d = parseDay(lone[0][2], now);
@@ -90,7 +99,13 @@ export function statedToday(question, now = nowDate()) {
   return { today: null, rest: q };
 }
 
+// What is due looks ahead: a month or a weekday without a year or a "last" is the coming one ("what is due in
+// December?" asked in November is this December, "due on Friday" this week's Friday). Anything said in the past
+// tense, or about what slipped, keeps the look back.
+const AHEAD = /\b(?:is|are|'s|falls?|coming|comes?)\s+due\b|\bdue\s+(?:in|on|by|before|this|next)\b|\bupcoming\b|\bcoming\s+up\b|\b(?:is|are)\s+(?:planned|scheduled)\b/i;
+const BACK = /\b(?:was|were|had|did|happened|overdue|slip\w*|late|missed|last|past|previous|ago)\b/i;
 export function parsePeriod(question, now = nowDate(), isName = () => false) {
+  const ahead = AHEAD.test(question) && !BACK.test(question);
   const stated = statedToday(question, now);
   if (stated.today) { now = stated.today; question = stated.rest; }
   const today = startOfDay(now), tomorrow = addDays(today, 1);
@@ -135,7 +150,8 @@ export function parsePeriod(question, now = nowDate(), isName = () => false) {
       return w === 'this' ? { from: first, to: new Date(today.getFullYear(), today.getMonth() + 1, 1), label: 'this month' } : { from: new Date(today.getFullYear(), today.getMonth() - 1, 1), to: first, label: 'last month' }; }],
     [/\b(this|last|past|previous|prior|next|coming)\s+quarter\b/i, m => { const w = m[1].toLowerCase(), k = Math.floor(today.getMonth() / 3) + (w === 'this' ? 0 : w === 'next' || w === 'coming' ? 1 : -1); return quarter(today.getFullYear() + Math.floor(k / 4), ((k % 4) + 4) % 4); }],
     [/\b(?:quarter[\s-]to[\s-]date|qtd)\b/i, () => ({ from: new Date(today.getFullYear(), Math.floor(today.getMonth() / 3) * 3, 1), to: tomorrow, label: 'this quarter to date' })],
-    [/\bQ([1-4])(?:\s*(?:of\s+)?'?(\d{4}|\d{2}))?\b/, m => quarter(m[2] ? (m[2].length === 2 ? 2000 + +m[2] : +m[2]) : today.getFullYear(), +m[1] - 1)],
+    // its year: four digits (Q2 2025, Q2 of 2025, Q2-2025) or two after an apostrophe (Q2 '25); "Q4 12 accounts" is a count
+    [/\bQ([1-4])(?:(?:\s+(?:of\s+)?|\s*[-/]\s*)(\d{4})|\s*'(\d{2}))?\b/, m => quarter(m[2] ? +m[2] : m[3] ? 2000 + +m[3] : today.getFullYear(), +m[1] - 1)],
     [/\b(first|second|third|fourth|1st|2nd|3rd|4th)\s+quarter(?:\s+(?:of\s+)?(\d{4}))?\b/i, m => quarter(m[2] ? +m[2] : today.getFullYear(), { first: 0, '1st': 0, second: 1, '2nd': 1, third: 2, '3rd': 2, fourth: 3, '4th': 3 }[m[1].toLowerCase()])],
     [/\b(this|last|past|previous|prior)\s+year\b/i, m => m[1].toLowerCase() === 'this' ? { from: new Date(today.getFullYear(), 0, 1), to: new Date(today.getFullYear() + 1, 0, 1), label: 'this year' } : { from: new Date(today.getFullYear() - 1, 0, 1), to: new Date(today.getFullYear(), 0, 1), label: 'last year' }],
     [/\b(\d{4})-(\d{2})-(\d{2})\b/, m => { const d = new Date(+m[1], +m[2] - 1, +m[3]); return day(d, ymd(d), [`${d.getDate()} ${MONTHS[d.getMonth()]}`, `${MONTHS[d.getMonth()]} ${d.getDate()}`, ymd(d)]); }],
@@ -152,14 +168,15 @@ export function parsePeriod(question, now = nowDate(), isName = () => false) {
       if (['may', 'mar', 'march'].includes(word) && !m[1] && !m[3]) return null;
       if (!m[1] && !m[3] && isName(m[2])) return null;   // Jan, April, June, August: a person in the registry comes first
       const i = monthIndex(word); let y = m[3] ? +m[3] : today.getFullYear();
-      if (!m[3] && i > today.getMonth()) y--;
+      if (!m[3] && !ahead && i > today.getMonth()) y--;
+      if (!m[3] && ahead && i < today.getMonth() && m[1]?.toLowerCase() !== 'since') y++;
       if (m[1]?.toLowerCase() === 'since') return { from: new Date(y, i, 1), to: addDays(today, 1), label: `since ${cap(MONTHS[i])} ${y}` };
       return { from: new Date(y, i, 1), to: new Date(y, i + 1, 1), label: `${cap(MONTHS[i])} ${y}`, mention: [MONTHS[i]] };
     }],
     [/\b(?:(last|this|on|next)\s+)?(sunday|monday|tuesday|wednesday|thursday|friday|saturday)(?:\s+(night|evening|morning|afternoon))?\b/i, m => {
       const i = WEEKDAYS.indexOf(m[2].toLowerCase());
-      const back = (today.getDay() - i + 7) % 7 || (m[1]?.toLowerCase() === 'last' ? 7 : 0);
-      const d = m[1]?.toLowerCase() === 'next' ? addDays(today, (i - today.getDay() + 7) % 7 || 7) : addDays(today, -back);
+      const back = (today.getDay() - i + 7) % 7 || (m[1]?.toLowerCase() === 'last' ? 7 : 0), w = m[1]?.toLowerCase();
+      const d = w === 'next' ? addDays(today, (i - today.getDay() + 7) % 7 || 7) : ahead && w !== 'last' ? addDays(today, (i - today.getDay() + 7) % 7) : addDays(today, -back);
       return { ...day(d, `${cap(WEEKDAYS[i])} ${ymd(d)}`, [WEEKDAYS[i]]), part: m[3]?.toLowerCase() || null, weekday: m[1]?.toLowerCase() || '' };
     }],
     [/\b(?:in|during)\s+(\d{4})\b/, m => ({ from: new Date(+m[1], 0, 1), to: new Date(+m[1] + 1, 0, 1), label: m[1] })],
@@ -182,7 +199,8 @@ export function parsePeriod(question, now = nowDate(), isName = () => false) {
   function dated(d, month, year) {
     const i = monthIndex(month); if (i < 0 || d < 1 || d > 31) return null;
     let y = year ? +year : today.getFullYear();
-    if (!year && new Date(y, i, d) > addDays(today, 31)) y--;   // a date without a year: the last one, unless it is this coming month
+    if (!year && new Date(y, i, d) > addDays(today, 31) && !ahead) y--;   // a date without a year: the last one, unless it is this coming month
+    if (!year && ahead && new Date(y, i, d) < today) y++;   // or, for what is due, the next one
     const at = new Date(y, i, d);
     return day(at, `${d} ${cap(MONTHS[i])} ${y}`, [`${d} ${MONTHS[i]}`, `${MONTHS[i]} ${d}`, ymd(at)]);
   }
