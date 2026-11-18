@@ -21,7 +21,7 @@ export function collectRules(root) {
   try {
     for (const r of readOurRules(root).rules || []) {
       const text = squash(r.text); if (!text) continue;
-      out.push({ text, date: null, author: null, source: `${file || "rules file"} line ${r.line}`, fromFile: true });
+      out.push({ text, date: null, author: null, source: `${file || "rules file"} line ${r.line}`, fromFile: true, ...(r.check ? { checked: true } : {}) });
     }
   } catch {}
   for (const c of lib.listContexts(root)) for (const m of lib.effectiveMemories(c.memories)) {
@@ -109,8 +109,10 @@ const FORBID = /\b(?:never|do not|don'?t|must not|no longer|not)\b/i;
 function ruleKeys(text, names) {
   const t = String(text).replace(/\([^)]*\b\d{4}-\d{2}-\d{2}[^)]*\)/g, " ");
   const m = t.match(FORBID), cut = m ? m.index : -1;
-  const all = wordsOf(t, names), cond = cut > 0 ? wordsOf(t.slice(0, cut), names) : new Map(), act = cut >= 0 ? wordsOf(t.slice(cut), names) : all;
-  return { all: [...all.keys()], cond: [...cond.keys()], act: [...act.keys()], ask: ASK.test(t), forbids: !!m };
+  // "never X before (without, until, unless) Y": Y is what makes X allowed, never a sign the note breaks it
+  const tail = cut >= 0 ? t.slice(cut) : "", ex = tail.search(/\b(?:before|without|until|unless|except|other than)\b/i);
+  const all = wordsOf(t, names), cond = cut > 0 ? wordsOf(t.slice(0, cut), names) : new Map(), act = cut >= 0 ? wordsOf(ex > 0 ? tail.slice(0, ex) : tail, names) : all;
+  return { all: [...all.keys()], cond: [...cond.keys()], act: [...act.keys()], ask: ASK.test(t), forbids: !!m, unless: ex > 0 };
 }
 const many = v => Array.isArray(v) ? v.map(String) : typeof v === "string" ? v.split(",").map(x => x.trim()).filter(Boolean) : [];
 
@@ -136,6 +138,7 @@ export function rulesForSave(root, entry, { rules = null, registry = null, memor
     })();
     const out = [];
     for (const rule of rules) {
+      if (rule.checked) continue;   // a rule tagged check is evaluated exactly by lib/our-rules.mjs saveRefusals
       const k = ruleKeys(rule.text, names); if (!k.all.length) continue;
       const said = k.all.filter(s => note.has(s)); if (!said.length) continue;
       const known = [];
@@ -145,7 +148,7 @@ export function rulesForSave(root, entry, { rules = null, registry = null, memor
       // appears to break it: the condition is known (in the note or an earlier note) and the forbidden thing is in the note
       const condMet = !k.cond.length || k.cond.some(s => note.has(s) || known.some(x => x.stem === s));
       if (k.forbids && !condMet) continue;   // "a churned customer is never a prospect": a company nobody says churned is not its business
-      const breaks = k.forbids && k.act.some(s => note.has(s));
+      const breaks = k.forbids && !k.unless && k.act.some(s => note.has(s));
       out.push({ rule, said: said.map(s => note.get(s)), known, ask: k.ask, breaks, hold: k.ask || breaks });
     }
     return out;
