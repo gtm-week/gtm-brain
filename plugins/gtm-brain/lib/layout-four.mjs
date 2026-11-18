@@ -36,6 +36,9 @@ const TEMPLATES = fileURLToPath(new URL("../templates/", import.meta.url));
    dashboard, the page cache, the append receipts (keyed by context before, by month now) and what a running
    server or lock left behind. Everything else in work/ moves as it is. */
 export const DISPOSABLE = [/^memory-index/, /^home$/, /^memory-appends$/, /^entity-pages\.json$/, /^population\.json$/, /^dash\.json$/, /^brain-watch\.(json|lock)$/, /^render-(lock\.sqlite.*|request\.json|state\.json)$/, /^entity-write\.lock$/];
+// a background render or index worker can write into a disposable folder while it is removed (ENOTEMPTY): retry
+const RM_DISPOSABLE = { recursive: true, force: true, maxRetries: 5, retryDelay: 100 };
+const dropDisposable = work => { for (const f of readdirSync(work)) if (DISPOSABLE.some(re => re.test(f))) rmSync(join(work, f), RM_DISPOSABLE); };
 
 /* The dashboard server and the file watcher of this brain keep work/ open: stopped before the folder is renamed.
    Only a process whose command line names this folder and that script: a brain copied from another folder carries
@@ -63,6 +66,7 @@ function moveWork(root) {
   let moved = 0;
   for (const f of readdirSync(old)) {
     const a = join(old, f), b = join(now, f);
+    if (DISPOSABLE.some(re => re.test(f))) { rmSync(a, RM_DISPOSABLE); continue; }   // rebuilt where it belongs; never moved onto one a render is writing
     if (!existsSync(b)) { renameSync(a, b); moved++; continue; }
     if (isDir(a) && isDir(b)) cpSync(a, b, { recursive: true, force: false, errorOnExist: false });
     else if (!isDir(a) && !isDir(b) && /\.(jsonl|log)$/.test(f)) writeFileSync(b, Buffer.concat([readFileSync(a), readFileSync(b)]));
@@ -86,7 +90,7 @@ export function adoptWork(root) {
   try {
     moved = moveWork(root);
     const work = join(root, P.WORK_DIR4);
-    for (const f of readdirSync(work)) if (DISPOSABLE.some(re => re.test(f))) rmSync(join(work, f), { recursive: true, force: true });
+    dropDisposable(work);
   } catch {}
   return moved;
 }
@@ -214,7 +218,7 @@ export function migrateToTabs(root, { commit = !process.env.GTM_BRAIN_NO_COMMIT 
     moveWork(root);
     const backupNow = join(root, P.WORK_DIR4, backupRel);   // where the copy is from here on
     const work = join(root, P.WORK_DIR4); mkdirSync(work, { recursive: true });
-    for (const f of readdirSync(work)) if (DISPOSABLE.some(re => re.test(f))) rmSync(join(work, f), { recursive: true, force: true });
+    dropDisposable(work);
     // 7. git's own files and the texts that name the old places
     const ignore = join(root, ".gitignore"), ignored = existsSync(ignore) ? readFileSync(ignore, "utf8") : "";
     if (!ignored.split("\n").includes(`${P.WORK_DIR4}/`)) writeFileSync(ignore, `${ignored}${ignored && !ignored.endsWith("\n") ? "\n" : ""}${P.WORK_DIR4}/\n`);
