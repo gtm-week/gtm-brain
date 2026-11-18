@@ -58,7 +58,9 @@ test('the second search of a draft turn, worded as a question, also ends with no
   const end = last(a);
   assert.match(end, /^Answer from all the notes shown: they are what the brain holds on this\. For a list question .*list every item that fits/);
   assert.doesNotMatch(end, /one to three sentences|no second search/, 'nothing limits the answer to a few sentences (win-a)');
-  assert.match(end, /What these notes do not hold is not recorded: nothing is looked up on the web and no source link above is opened unless the person asks for exactly that\.$/);
+  assert.match(end, /What these notes do not hold is not recorded: nothing is looked up on the web and no source link above is opened unless the person asks for exactly that\. Answering writes nothing: no remember for the answer or for what these notes say\.$/);
+  // a question alone never invites a save (a benchmark run on 2026-11-17 saved its own answer as a note)
+  assert.doesNotMatch(a, /save it now|remember it|worth saving/i);
 });
 
 test('nothing found keeps its own two lines, and a full reply with the longer last line stays under the cap', () => {

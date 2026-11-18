@@ -586,6 +586,9 @@
                       "states_rule": {
                         "type": "boolean"
                       },
+                      "rule_checked": {
+                        "type": "boolean"
+                      },
                       "said_on": {
                         "type": "string"
                       },
@@ -1195,6 +1198,10 @@
                 "states_rule": {
                   "type": "boolean",
                   "description": "True when the person states a standing rule for the team (how we always or never do something); the note is kept as a team rule."
+                },
+                "rule_checked": {
+                  "type": "boolean",
+                  "description": "True only after the person, asked about a team rule that held this entry, said to save it anyway."
                 },
                 "said_on": {
                   "type": "string",
