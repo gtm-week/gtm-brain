@@ -28,8 +28,13 @@ GTM Brain call, whatever it is, returns this chat's opening lines with its resul
 brain and person, loaded contexts, the health line, questions waiting for an answer, documents,
 approved photos and logos, the rows of `RULES.md` and the projects in `projects/`. Follow them.
 Make that first call the one the request needs: `query` with a search for a question, `remember`
-for a save. Before saying or deciding where a file goes, follow `RULES.md` and name the project
-folder that exists for it.
+for a save. Where the tools are called from code (Codex's `exec`), these calls are complete as
+written, with `brain` = this folder's absolute path, so call one at once, with no lookup in
+`ALL_TOOLS` first:
+`await tools.mcp__gtm_brain__query({brain, object: "answer", search: "<the question as asked>"})`,
+`await tools.mcp__gtm_brain__remember({brain, content, people: ["<each name>"]})` (this chat is
+its source; add `sources` only for a record from a tool). Before saying or deciding where a file
+goes, follow `RULES.md` and name the project folder that exists for it.
 
 Never run shell commands to look around (versions, sign-in, listing files, reading the brain):
 `check_environment` for the machine, `query` for the brain. Never read the plugin's skill files to
