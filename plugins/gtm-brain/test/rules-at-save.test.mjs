@@ -111,3 +111,10 @@ test("a background run (GTM_BRAIN_RUN) is nobody's chat: no rule hold", () => {
   const r = spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, root, "--by", "anna-lind", "--batch", f], { cwd: root, env: { ...env, GTM_BRAIN_RUN: "test" }, encoding: "utf8" });
   assert.doesNotMatch(say(r), /team rule/);
 });
+
+test("never X before Y: a note that says Y is not held; a rule tagged check is left to the exact check", () => {
+  const root = brain({ rules: "- Never promise workshop dates before the venue contract is signed.\n\n- Never call a company a customer before a signed contract.\n> applies to: organization · check" });
+  const hits = S.rulesForSave(root, { content: "The Leipzig venue contract is signed." });
+  assert.equal(hits.length, 1); assert.equal(hits[0].hold, false);
+  assert.ok(hits.every(h => !/customer before a signed contract/.test(h.rule.text)), "the check rule is our-rules' job");
+});
