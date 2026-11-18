@@ -32,8 +32,9 @@ for a save. Where the tools are called from code (Codex's `exec`), these calls a
 written, with `brain` = this folder's absolute path, so call one at once, with no lookup in
 `ALL_TOOLS` first:
 `await tools.mcp__gtm_brain__query({brain, object: "answer", search: "<the question as asked>"})`,
-`await tools.mcp__gtm_brain__remember({brain, content, people: ["<each name>"]})` (this chat is
-its source; add `sources` only for a record from a tool). Before saying or deciding where a file
+`await tools.mcp__gtm_brain__remember({brain, content, people: ["<each name>"]})` (`content` is
+one outcome, a relative date in it such as "today" written as the date; this chat is its
+source, so `sources` only for a record from a tool). Before saying or deciding where a file
 goes, follow `RULES.md` and name the project folder that exists for it.
 
 Never run shell commands to look around (versions, sign-in, listing files, reading the brain):
