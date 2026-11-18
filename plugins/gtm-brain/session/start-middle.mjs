@@ -7,6 +7,7 @@
 //   node start-middle.mjs <root> <project> <work dir> <settings file, relative> <rules dir>
 import { readFileSync, existsSync } from "node:fs";
 import { basename, join } from "node:path";
+import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 const [root, project = "", W, settings, rulesDir = root] = process.argv.slice(2);
 const P = process.env.PLUGIN_ROOT || fileURLToPath(new URL("..", import.meta.url)).replace(/\/$/, "");
@@ -53,8 +54,7 @@ const parts = [
   async () => { const d = await lib("dots.mjs"), t = d.rulebookText(root); if (t) { say(t); d.markRulebookSent(root, (await l()).readSession(root, project || null)?.session_id); } },
   async () => say("Answer the person's request using relevant saved evidence. To answer a question, call query with object answer and the question as asked: one query answer call returns everything recorded about the companies and people in the question. Never open, inspect or refresh the dashboard before an ordinary answer: its maintenance runs in the background, and open_dashboard is for when the person asks to see it. External source sync runs only when requested or by an approved schedule."),
   async () => {   // a handoff another assistant wrote by following IMPORT.md, said once per chat; the model offers, never imports by itself
-    const home = process.env.GTM_BRAIN_HOME || process.env.GTM_OS_HOME || process.env.HOME;
-    for (const hf of [".gtm-brain/handoff.md", ".gtm-brain/claude-export.md", ".gtm-os/handoff.md", ".gtm-os/claude-export.md"].map(f => join(home, f))) {
+    for (const hf of [".gtm-brain/handoff.md", ".gtm-brain/claude-export.md", ".gtm-os/handoff.md", ".gtm-os/claude-export.md"].map(f => join(process.env.GTM_BRAIN_HOME || process.env.GTM_OS_HOME || homedir(), f))) {
       if (!existsSync(hf)) continue;
       const text = read(hf), field = k => (text.match(new RegExp(`^${k}: *(.*)$`, "m")) || [])[1] || "";
       say(`HANDOFF waiting: ${hf} (by ${field("by") || "another assistant"}, confirmed: ${field("confirmed") || "unknown"}; skill gtmb-start). Offer once, in one line, to bring it in; every line is played back before it enters the brain.`);

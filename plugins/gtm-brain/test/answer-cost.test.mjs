@@ -23,7 +23,7 @@ test("the rulebook's exec calls name listed tools and fields, so a Codex chat ca
   const template = readFileSync(join(P, "templates", "AGENTS.md"), "utf8");
   const calls = [...template.matchAll(/await tools\.mcp__gtm_brain__(\w+)\(\{([^}]*)\}\)/g)].map(m => [m[1], [...m[2].matchAll(/(?:^|,)\s*(\w+)/g)].map(x => x[1])]);
   assert.deepEqual(calls.map(c => c[0]), ["query", "remember"]);
-  assert.match(template, /no lookup in `ALL_TOOLS` first/);
+  assert.match(template, /no lookup in\s+`ALL_TOOLS` first/);
   const out = execFileSync(process.execPath, [join(P, "server", "server.mjs")], { input: [{ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {} } }, { jsonrpc: "2.0", id: 2, method: "tools/list" }].map(m => JSON.stringify(m)).join("\n") + "\n", env, encoding: "utf8" });
   const tools = out.split("\n").filter(Boolean).map(l => JSON.parse(l)).find(m => m.id === 2).result.tools;
   for (const [name, fields] of calls) {
