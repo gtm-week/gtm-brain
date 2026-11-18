@@ -6,7 +6,8 @@ attach: remember
 **Capture broadly (rule 2, core 1):** completed actions or decisions, meaningful changes from
 MCP results, meeting notes and other artifacts, findings, observations, commitments, and
 questions or answers. A tool call is a chance to check its result; reads with no new
-information add nothing. Record what was actually established, not an attempted action as a
+information add nothing, and a question the brain answers saves nothing: neither the question
+nor the answer. Record what was actually established, not an attempted action as a
 success or a proposal as a decision. Not company knowledge, so not recorded unless the person
 asks to keep it: an unsent draft, an event or reminder on the person's own calendar with no one
 else invited, and a lookup's result that changes nothing about a customer, a deal, a partner or

@@ -116,6 +116,8 @@ test("the server's instructions carry the core once, on either host", async () =
     assert.match(head, /remember for a save, query for a list/);
     // win-recall: a question about one company or person is a page read, not a search call
     assert.match(text, /To answer a question, call query with object answer and the question as asked: one call returns everything recorded about the companies and people in the question and every note its words match\./);
+    // a read-only question never leads to a save: the instructions say so where they name the read
+    assert.match(text, /every note its words match\. A question alone saves nothing\./);
     assert.doesNotMatch(text.slice(0, text.indexOf("\nQuestions: ")), /query memories with search|object: "memories"/);
     for (const [i, re] of [/^- Any question about the brain \(a company, a person, lists, dates\): query \{object: "answer", search\}; one call returns everything recorded about what it names$/,/^- Save a note: remember \{content, people: \[names\], sources\}.*answer_question/,
       /^- Read several people or companies in one call: query \{object: "entities", filters: \{name: \["A", "B"\]\}\} \(or filters\.id\)/,

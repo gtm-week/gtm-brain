@@ -640,6 +640,9 @@ const describeNarrowing = q => [
    times for the event's public page, whose address the notes carried as a source. Core rule 5 names a person
    or a company only, and the old last line asked for one to three sentences with a fact, which a draft is not. */
 const NO_WEB = 'What these notes do not hold is not recorded: nothing is looked up on the web and no source link above is opened unless the person asks for exactly that.';
+/* An answer is a read: nothing in it is saved (a benchmark run on 2026-11-17 saved its own answer to "what is slipping
+   this week?" as a note). */
+export const NO_SAVE = 'Answering writes nothing: no remember for the answer or for what these notes say.';
 const DRAFT_CLOSE = 'A draft is asked for: write it now from these notes and the document this kind of work follows, at the length asked. Nothing is looked up on the web and no source link above is opened for a draft unless the person asks for exactly that: a detail these notes do not hold (an agenda, a time, a link) is left out of the draft, and one line after the draft says what is missing.';
 const DRAFT_PIECE = /\b(?:messages?|dm|e-?mails?|mail|invitations?|invites?|inviting|posts?|repl(?:y|ies)|follow-?ups?|outreach|copy|announcements?|newsletters?|captions?|intros?|introductions?|pitch|text|letter|headline|tagline|bio|script)\b/i;
 const DRAFT_ASK = /^\W*(?:(?:please|can you|could you|would you|help me|i need you to|i want you to|let'?s)\W+)*(?:draft|write|compose|reword|rewrite)\b/i;
@@ -836,7 +839,7 @@ export function answerText(index, root, question, { filters = {}, limit, project
   if (cut) out.push('', `A note's text is cut where it says "more characters"; its full text: query sql SELECT content FROM memories WHERE id='${cut.id}'.`);
   const ask = askSourceLines(root, all.notes.slice(-40), { day: at => lib.localDateTime(at).slice(0, 10) });
   if (ask.length) out.push('', ...ask);
-  out.push('', asksForDraft(question) ? DRAFT_CLOSE : `Answer from all the notes shown: they are what the brain holds on this. For a list question (what is due, what we decided, who raised something, what we promised), list every item that fits, each with its date and id; a later note that replaces or withdraws one wins. ${NO_WEB}`);
+  out.push('', asksForDraft(question) ? DRAFT_CLOSE : `Answer from all the notes shown: they are what the brain holds on this. For a list question (what is due, what we decided, who raised something, what we promised), list every item that fits, each with its date and id; a later note that replaces or withdraws one wins. ${NO_WEB} ${NO_SAVE}`);
   return out.join('\n');
 }
 

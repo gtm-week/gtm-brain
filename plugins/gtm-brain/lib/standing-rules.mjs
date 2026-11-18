@@ -21,7 +21,7 @@ export function collectRules(root) {
   try {
     for (const r of readOurRules(root).rules || []) {
       const text = squash(r.text); if (!text) continue;
-      out.push({ text, date: null, author: null, source: `${file || "rules file"} line ${r.line}`, fromFile: true });
+      out.push({ text, date: null, author: null, source: `${file || "rules file"} line ${r.line}`, fromFile: true, ...(r.check ? { checked: true } : {}) });
     }
   } catch {}
   for (const c of lib.listContexts(root)) for (const m of lib.effectiveMemories(c.memories)) {
@@ -71,3 +71,98 @@ export function keepRulesBlock(root, why = "rules: AGENTS.md block refreshed") {
 
 export const offerLine = (id, root) => { let file = "the rules file"; try { file = lib.rulesFile(root); } catch {}
   return `${id} is kept as a team rule and is in the "Our rules" block of AGENTS.md. Offer once to add it to Our rules in ${file} through approve_change (Yes, add it / No, keep it as a note).`; };
+
+/* ---------- At save: the rules a note falls under (0.38.0) ----------
+   The block above reaches Codex as text before the first save, so whether a save honours a rule was up to the
+   model (benchmark: the churned-customer rule held in one run and not in the next). remember reads the rules
+   again on every save and matches each one against the note in hand, with no model call: the rule's own words
+   (stemmed, without filler and without people's names) against the note's words, its tags and its status block,
+   plus a few fixed concepts (a price or a discount is "pricing", a cancellation is "churn"). The rule's
+   condition may also sit in the earlier notes about a company or person the note names ("Quarry Lane Books
+   churned"): those are the evidence. A rule that tells to ask first, or one the note appears to break (its
+   condition known, its forbidden thing in the note), holds the save until the person answered; any other rule
+   that applies is printed at the top of the result. rule_checked: true is the person's yes. */
+const STOP_W = new Set(("a an the of to for with on in at by is are be was were has have had our their its his her and or any every each before after until unless without from as that this it them they we you us " +
+  "ask asks asked asking sav save saves saved saving check checks checked confirm confirmed first time times always never again note notes record records recorded team anything something everything " +
+  "thing things someone anyone people company compan companies customer customers client clients need needs must should make sure keep also only what when which who whom will would can could get use " +
+  "said say says tell like just ever even all one new now today then than more less very much many not no don do does done there here into over under about while each other another same such way").split(" "));
+const stemW = w => { w = w.replace(/'s$/, "").replace(/(?<=..)ies$/, "y"); return w.length > 4 ? w.replace(/(?:ings?|ed|es|s|e)$/, "") : w; };
+const CONCEPTS = [
+  [/(?:\d[\d.,]*\s*(?:eur|usd|gbp|pln|chf|sek|€|\$|£|k\b))|(?:[€$£]\s*\d)|\bdiscount\w*|\bper (?:seat|user|month|year|return|unit|order|licen[cs]e)\b|\bfees?\b|\brate card\b|\bquot(?:e|ed|es)\b|\bpric\w*/i, "pric"],
+  [/\bchurn\w*|\bcancel+(?:ed|s|ing|ation)?\b|\bnot renewing\b|\bdid not renew\b|\bformer customer\b|\bleft us\b|\bgave (?:us )?notice\b/i, "churn"],
+];
+const NAME_PART = /^[a-z]+$/;
+function wordsOf(text, skip = new Set()) {
+  const out = new Map(), t = String(text || "");
+  for (const raw of t.toLowerCase().match(/[a-z][a-z0-9'-]*/g) || []) for (const w of raw.split(/[-']/)) {
+    if (w.length < 3 || STOP_W.has(w) || skip.has(w)) continue;
+    const s = stemW(w); if (s.length < 3 || STOP_W.has(s)) continue;
+    if (!out.has(s)) out.set(s, w);
+  }
+  for (const [re, s] of CONCEPTS) { const m = t.match(re); if (m && !out.has(s)) out.set(s, m[0].trim()); }
+  return out;   // stem -> the word as written
+}
+const ASK = /\b(?:ask|asks|asking|check with|confirm|approv\w*|sign[- ]?off|run (?:it|this|that) (?:by|past))\b/i;
+const FORBID = /\b(?:never|do not|don'?t|must not|no longer|not)\b/i;
+/* The rule's keywords: its words without filler, attribution ("(Anna Lind, 2026-04-30)") or the names of the
+   brain's people; split at the forbidding word into condition (before) and the forbidden thing (after). */
+function ruleKeys(text, names) {
+  const t = String(text).replace(/\([^)]*\b\d{4}-\d{2}-\d{2}[^)]*\)/g, " ");
+  const m = t.match(FORBID), cut = m ? m.index : -1;
+  // "never X before (without, until, unless) Y": Y is what makes X allowed, never a sign the note breaks it
+  const tail = cut >= 0 ? t.slice(cut) : "", ex = tail.search(/\b(?:before|without|until|unless|except|other than)\b/i);
+  const all = wordsOf(t, names), cond = cut > 0 ? wordsOf(t.slice(0, cut), names) : new Map(), act = cut >= 0 ? wordsOf(ex > 0 ? tail.slice(0, ex) : tail, names) : all;
+  return { all: [...all.keys()], cond: [...cond.keys()], act: [...act.keys()], ask: ASK.test(t), forbids: !!m, unless: ex > 0 };
+}
+const many = v => Array.isArray(v) ? v.map(String) : typeof v === "string" ? v.split(",").map(x => x.trim()).filter(Boolean) : [];
+
+/* The rules a note falls under: [{rule, said, known, hold, why}]. said: the rule's words the note has, as written;
+   known: [{id, name, word, text}] earlier notes about the note's entities that say the rule's other words. hold:
+   the save waits for the person (an ask rule, or one it appears to break). Never throws; [] with no rules. */
+export function rulesForSave(root, entry, { rules = null, registry = null, memories = null } = {}) {
+  try {
+    if (!entry || typeof entry !== "object" || entry.retracts || (entry.tags || []).includes?.(RULE_TAG)) return [];
+    rules ||= collectRules(root); if (!rules.length) return [];
+    registry ||= lib.readNames(root);
+    const names = new Set(registry.filter(e => (e.kind || "person") === "person").flatMap(e => String(e.name || "").toLowerCase().split(/\s+/)).filter(w => NAME_PART.test(w) && w.length > 2));
+    const note = wordsOf([entry.content, ...many(entry.tags).map(t => t.replace(/[:_]/g, " ")), entry.customer?.status ? String(entry.customer.status).replace(/_/g, " ") : "", entry.relation?.type ? String(entry.relation.type).replace(/_/g, " ") : ""].join(" . "));
+    const ents = [...many(entry.people), ...many(entry.companies), entry.customer?.entity, entry.relation?.from, entry.relation?.to].filter(x => x && x !== "us")
+      .map(n => lib.resolveEntity(registry, n)).filter(Boolean).filter((e, i, a) => a.findIndex(x => x.id === e.id) === i);
+    let pool = null;
+    const history = () => pool ??= (() => {
+      const all = memories || lib.listContexts(root).flatMap(c => lib.effectiveMemories(c.memories)).filter(m => !m.retracts);
+      return ents.flatMap(e => { const nm = String(e.name).toLowerCase();
+        return all.filter(m => (m.entities || []).includes(e.id) || [...(m.people || []), ...(m.companies || [])].some(p => String(p).toLowerCase() === nm) || (m.customer && lib.resolveEntity(registry, m.customer.entity)?.id === e.id))
+          .map(m => ({ m, e, words: wordsOf(`${m.content} ${m.customer?.status === "former_customer" ? "former customer" : ""}`) })); })
+        .sort((a, b) => String(b.m.at || "").localeCompare(String(a.m.at || "")));
+    })();
+    const out = [];
+    for (const rule of rules) {
+      if (rule.checked) continue;   // a rule tagged check is evaluated exactly by lib/our-rules.mjs saveRefusals
+      const k = ruleKeys(rule.text, names); if (!k.all.length) continue;
+      const said = k.all.filter(s => note.has(s)); if (!said.length) continue;
+      const known = [];
+      if (ents.length) for (const s of (k.cond.length ? k.cond : k.all)) if (!note.has(s)) { const h = history().find(x => x.words.has(s)); if (h) known.push({ stem: s, id: h.m.id, name: h.e.name, word: h.words.get(s), text: squash(h.m.content).slice(0, 160).replace(/[.\s]+$/, "") }); }
+      const need = k.all.length >= 4 ? 2 : 1;   // a long rule needs two of its words (or its condition known from earlier notes)
+      if (said.length + known.length < need) continue;
+      // appears to break it: the condition is known (in the note or an earlier note) and the forbidden thing is in the note
+      const condMet = !k.cond.length || k.cond.some(s => note.has(s) || known.some(x => x.stem === s));
+      if (k.forbids && !condMet) continue;   // "a churned customer is never a prospect": a company nobody says churned is not its business
+      const breaks = k.forbids && !k.unless && k.act.some(s => note.has(s));
+      out.push({ rule, said: said.map(s => note.get(s)), known, ask: k.ask, breaks, hold: k.ask || breaks });
+    }
+    return out;
+  } catch { return []; }
+}
+
+/* One line per rule for the save's result. held: the save waits for the person; confirmed: it is their yes. */
+export function ruleSaveLine(hit, { held = false, confirmed = false } = {}) {
+  const r = hit.rule, src = r.fromFile ? r.source : `note ${r.id}`;
+  const facts = hit.known.map(x => `${x.id} says ${x.name} "${x.text}"`).join("; ");
+  const head = `team rule "${r.text.slice(0, 300)}" (${src}) applies: the note says ${hit.said.map(w => `"${w}"`).join(", ")}${facts ? `, and ${facts}` : ""}`;
+  if (confirmed && hit.hold) return `${head}. Saved on the person's yes (rule_checked); say so in your reply.`;
+  if (!held) return `${head}. Saved; follow the rule in your reply and in what you do next.`;
+  return hit.breaks && !hit.ask
+    ? `${head}. This save appears to break the rule: do not save or act on it. Tell the person the rule${facts ? " and that fact" : ""} and ask whether this is an exception (Yes, save it anyway / No, leave it); only after their yes call remember again with rule_checked: true`
+    : `${head}. The rule says to ask first: do not save yet. Ask the person, naming the rule (Yes, save it / No, leave it); only after their yes call remember again with rule_checked: true`;
+}

@@ -362,12 +362,16 @@ const shell = e => !!e && !e.supersedes && !e.retracts && (e.kind || "note") ===
   && checks.statesNoOutcome({ ...e, people: list(e.people), companies: list(e.companies) }, { speakers });
 const withChat = source => chat && !source.some(isChatSource) ? [...source, { kind: chatKind, ref: chat }] : source;
 if (problems.length) die(`nothing remembered: ${problems.join("; ")}. Fix these and call again with all the entries.`);
-// The team's standing rules (lib/standing-rules.mjs) reach Codex in the brain's AGENTS.md block, not here: no save is
-// held on wording. An entry with states_rule: true is kept as a rule (tag standing-rule) and enters that block.
+// The team's standing rules (lib/standing-rules.mjs) reach Codex in the brain's AGENTS.md block, and every save
+// matches its note against them again (rulesForSave, below): an ask-first rule, or one the note appears to break,
+// holds it until the person answered. An entry with states_rule: true is kept as a rule (tag standing-rule).
 // said_on: the date the thing happened, kept as the tag said:YYYY-MM-DD, which date filters and pages read.
 let ruleOffered = false, ruleSaved = false;
-for (const e of entries) {
+// rule_checked: true is the person's yes to a save a team rule held (rulesForSave below); kept by index, entries are copied on the way
+const ruleOk = new Set();
+for (const [i, e] of entries.entries()) {
   if (!e || typeof e !== "object") continue;
+  if (e.rule_checked === true || e.rule_checked === "true") ruleOk.add(i);
   delete e.rule_checked;
   const rule = e.states_rule === true || e.states_rule === "true"; delete e.states_rule;
   if (rule) e.tags = [...new Set([...list(e.tags), stand.RULE_TAG])];
@@ -378,6 +382,7 @@ for (const e of entries) {
   }
   delete e.said_on;
 }
+let teamRules = null; const ruleHits = new Map(), ruleTop = [];   // the rules that applied to each entry, printed first once it is kept
 for (let i = 0; i < entries.length; i++) {
   const e = entries[i] || {}, n = i + 1;
   if (placeless.has(i)) { held.push(placeless.get(i)); continue; }
@@ -396,6 +401,15 @@ for (let i = 0; i < entries.length; i++) {
     || list(e.new_names).some(x => !spoken.includes(fold(x)) && heldWords.some(w => w.split(/\s+/)[0] === fold(x).split(/\s+/)[0]));
   const answersEarlier = !!earlier && !settlesHeld;
   if (heldBefore && !answersEarlier && checks.relatedToHeld({ ...e, people: list(e.people), companies: list(e.companies), new_names: list(e.new_names) }, heldBefore)) { held.push({ n, why: "the person has not answered the question yet: ask it once and end the turn, do not resend this before their reply", mentions: [], ask: true }); continue; }
+  // The team's rules, read again for this save (benchmark 2026-11-17: the churned-customer rule held in one run and
+  // not in the next while it reached Codex only as text). An ask-first rule, or one the note appears to break, holds
+  // the entry: the person answers, rule_checked: true is their yes. Any other rule that applies tops the result.
+  if (!process.env.GTM_BRAIN_RUN) {
+    const hits = stand.rulesForSave(root, e, { rules: teamRules ??= stand.collectRules(root) });
+    const hold = ruleOk.has(i) ? [] : hits.filter(h => h.hold);
+    if (hold.length) { markHeld(hold.flatMap(h => h.said), e.content); held.push({ n, why: hold.map(h => stand.ruleSaveLine(h, { held: true })).join("; "), mentions: [], ask: true }); continue; }
+    if (hits.length) ruleHits.set(i, hits);
+  }
   // "forget that Lena runs the workshop" withdraws the note; a supersedes with "Lena does not run the workshop"
   // puts a claim in the brain the person never made (scenario run, 2026-11-12)
   if (e.supersedes && !e.retracts && FORGET.test(personText)) { held.push({ n, why: `the person asked to forget it: resend with retracts: ${e.supersedes} (not supersedes) and content saying what was withdrawn, in their words`, mentions: [], withdraw: true }); continue; }
@@ -626,6 +640,7 @@ for (let i = 0; i < entries.length; i++) {
   if (changes) lines.push(`${at(n)}${changes.beside ? checks.mayChangeLine(changes, titleOf(changes.changed.context)) : checks.changedLine(changes, titleOf(ctx), rec.id)}`);
   else if (!e.context && !opt.context && !(loaded.length === 1 && loaded[0] === ctx) && evidenceOf(e).why) lines.push(`${at(n)}put in ${titleOf(ctx)}: ${evidenceOf(e).why}.`);
   const title = titleOf(ctx);
+  for (const h of ruleHits.get(i) || []) ruleTop.push(`${at(n)}${stand.ruleSaveLine(h, { confirmed: ruleOk.has(i) })}`);
   lines.push(`${at(n)}remembered ${rec.id} in ${ctx}${title && title !== ctx ? ` (${title})` : ""} · ${rec.kind} · ${rec.authors.join(", ")}${rec.people.length ? " · people: " + rec.people.join(", ") : ""} · "${shown}"`);
   if (rec.asset) lines.push(assetSummary(root, rec).trim());
   if (!rec.retracts && (rec.tags || []).includes(stand.RULE_TAG)) { ruleSaved = true; if (!process.env.GTM_BRAIN_RUN) { ruleOffered = true; lines.push(`${at(n)}${stand.offerLine(rec.id, root)}`); } }
@@ -755,7 +770,7 @@ const holdReport = () => { const loose = held.flatMap(h => h.unnamed || []), ali
 if (!kept.length) { console.error(held.length ? holdReport() : lines.join("\n") + rules()); process.exit(2); }
 
 if (batched) console.log(`kept ${kept.length} of ${entries.length}${failed.length ? `; not kept: ${failed.map(f => "#" + f.n).join(", ")} (see below; call again with only those)` : ""}`);
-for (const l of lines) console.log(l);
+for (const l of [...ruleTop, ...lines]) console.log(l);
 if (held.length) console.log(holdReport());
 if (asks.length) console.log(`Ask the person one question${askIn || ","} after quoting the note${held.some(h => h.ask) ? ", together with the held entries" : ""}: ${asks.map((a, k) => `${k + 1}) ${a}`).join(" ")}`);
 
@@ -769,7 +784,7 @@ let movedNote = null;
     return old ? keptRecords.filter(x => !x.retracts && x.context !== home.slug && (words(x.content).includes(words(old.content)) || words(old.content).includes(words(x.content)))).map(x => ({ from: home.slug, to: x.context })) : []; });
   if (moved.length) movedNote = `moved from ${moved[0].from} to ${moved[0].to}: the person questioned where it was saved. After fixing it, offer once to keep the rule in RULES.md under "## Our rules" (R2), in their words, for example "Keynote speakers go to Strategy", with Yes, add the rule and No, just this once.`; }
 if (movedNote) console.log(movedNote + " Apart from that offer, reply in one line.");
-else if (kept.length && !held.length && !failed.length && !asks.length && !process.env.GTM_BRAIN_RUN) console.log(ruleOffered ? "Reply to the person in one line: what was saved, then the rule offer above." : "Reply to the person in one line: what was saved, no offers.");
+else if (kept.length && !held.length && !failed.length && !asks.length && !process.env.GTM_BRAIN_RUN) console.log(ruleOffered ? "Reply to the person in one line: what was saved, then the rule offer above." : ruleTop.length ? "Reply to the person in one line: what was saved and the team rule it falls under." : "Reply to the person in one line: what was saved, no offers.");
 // A note from a tool the brain's tools list does not know yet (MagicPath, ZYNT): check the tools in the
 // background, so the dashboard lists it without waiting for someone to ask (connect.mjs: "a memory came from it").
 if (!process.env.GTM_BRAIN_NO_TOOLS_CHECK && !process.env.GTM_BRAIN_NO_COMMIT && !process.env.NODE_TEST_CONTEXT) {   // never from tests or dry runs
