@@ -140,10 +140,17 @@ function build() {
   if (pluginCheckout) {
     copyFileSync(join(realHome, "auth.json"), join(s, "profile", "auth.json"));
     try {
+      // the build's profile already has a gtm-brain marketplace (the checkout it was built from): "already added"
+      // kept that one and its cached version, so the run tested the build's plugin, not this checkout (2026-11-18)
+      const codex = cli => spawnSync("codex", cli, { env: { ...env0, CODEX_HOME: join(s, "profile") }, cwd: pluginCheckout, encoding: "utf8", timeout: 120000 });
+      codex(["plugin", "remove", "gtm-brain@gtm-brain"]); codex(["plugin", "marketplace", "remove", "gtm-brain"]);
+      rmSync(join(s, "profile", "plugins", "cache", "gtm-brain"), { recursive: true, force: true });
       for (const cli of [["plugin", "marketplace", "add", pluginCheckout], ["plugin", "add", "gtm-brain@gtm-brain"]]) {
-        const r = spawnSync("codex", cli, { env: { ...env0, CODEX_HOME: join(s, "profile") }, cwd: pluginCheckout, encoding: "utf8", timeout: 120000 });
+        const r = codex(cli);
         if (r.status !== 0 && !/already/i.test(`${r.stdout}${r.stderr}`)) throw new Error(`codex ${cli.join(" ")}: ${(r.stderr || r.stdout).trim().slice(0, 300)}`);
       }
+      const want = JSON.parse(readFileSync(join(pluginCheckout, "plugins/gtm-brain/.codex-plugin/plugin.json"), "utf8")).version;
+      if (!existsSync(join(s, "profile", "plugins", "cache", "gtm-brain", "gtm-brain", want))) throw new Error(`the structured profile did not install ${want} from ${pluginCheckout}`);
     } finally { rmSync(join(s, "profile", "auth.json"), { force: true }); }
     installed = `${JSON.parse(readFileSync(join(pluginCheckout, "plugins/gtm-brain/.codex-plugin/plugin.json"), "utf8")).version} at ${execFileSync("git", ["-C", pluginCheckout, "rev-parse", "--short", "HEAD"], { encoding: "utf8" }).trim()}`;
   }
