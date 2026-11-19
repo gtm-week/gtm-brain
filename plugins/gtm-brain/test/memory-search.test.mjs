@@ -14,7 +14,7 @@ import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import * as lib from '../lib/brain.mjs';
 import { MemoryIndex, withMemoryIndex, MEMORY_INDEX_VERSION } from '../lib/memory-index.mjs';
-import { answer, search, parsePeriod, parseQuestion, SEARCH_MAX_BYTES } from '../lib/memory-search.mjs';
+import { answer, search, parsePeriod, parseQuestion, SEARCH_MAX_BYTES, ANSWER_ALL_BYTES } from '../lib/memory-search.mjs';
 process.env.TZ = 'UTC';
 process.env.GTM_BRAIN_NO_COMMIT = '1';
 process.env.GTM_BRAIN_NO_COMPILE = '1';
@@ -135,14 +135,14 @@ test('ranking: the exact phrase over scattered words, newer over older on ties; 
   assert.match(s, new RegExp(`${fixed.id} .* replaces ${wrong.id}`));
 });
 
-test('one reply stays under the cap, shows date, age, id and source, and its last line says how many more matched', () => {
+test('one reply stays under the answer budget, shows date, age, id and source, and says how to get what did not fit in one call', () => {
   const root = fixture();
   const long = 'Pipeline review: ' + 'the buyer asked about pricing, onboarding and the security questionnaire. '.repeat(12);
   for (let i = 0; i < 60; i++) note(root, `${long} (${i})`, { at: new Date(Date.UTC(2026, 9, 1 + (i % 28), 10)).toISOString(), source: [{ kind: 'hubspot', ref: `deal/${i}` }] });
   const a = answer(root, 'pipeline review');
-  assert.ok(Buffer.byteLength(a) <= SEARCH_MAX_BYTES, `${Buffer.byteLength(a)} bytes`);
+  assert.ok(Buffer.byteLength(a) <= ANSWER_ALL_BYTES, `${Buffer.byteLength(a)} bytes`);
   assert.match(a, /^1\. m_[0-9a-f]{12} · 2026-10-\d\d \(\d+ days ago\) · sales · note · by ann · source: hubspot:deal\/\d+$/m);
-  assert.match(a, /\n\d+ more match(es)?\. For them: query object answer with the same search and limit \d+/);
+  assert.match(a, /\n\d+ more matching notes? did not fit this reply\. All of them in one more call: query sql SELECT at, context, kind, content, id FROM memories WHERE id IN \('m_/);
   const rows = search(root, 'pipeline review');
   assert.ok(Buffer.byteLength(rows) <= SEARCH_MAX_BYTES + 300, `${Buffer.byteLength(rows)} bytes`);
   assert.match(rows, /^\d+ rows:\n\{/);
@@ -155,8 +155,9 @@ test('a negative answer is cheap and plain', () => {
   const root = fixture();
   note(root, 'Something about pricing.');
   const r = answer(root, 'Did anyone mention zqxjvbnonsenseword?');
-  assert.match(r, /^Not found: no note matches "Did anyone mention zqxjvbnonsenseword\?" \(1 notes searched; words: zqxjvbnonsenseword; no note has "zqxjvbnonsenseword" or a spelling one letter off\)\.\nThe brain holds nothing on this\./);
-  assert.ok(Buffer.byteLength(r) < 400);
+  assert.match(r, /^Not found: no note matches "Did anyone mention zqxjvbnonsenseword\?" \(1 notes searched; words: zqxjvbnonsenseword; no note has "zqxjvbnonsenseword" or a spelling one letter off\)\.\nThe notes below are everything the brain holds that could bear on it \(the whole brain when it is small\): if none of them answers the question, say plainly that the brain holds nothing on this\./);
+  assert.match(r, /Something about pricing\./, 'a small brain comes back whole, so the person hears what is there');
+  assert.ok(Buffer.byteLength(r) < 1200);
   assert.match(search(root, 'zqxjvbnonsenseword'), /^no rows/);
   // an id, a tag or a source is still found as typed
   const tagged = note(root, 'Tagged note.', { tags: ['launch-x'] });
@@ -166,10 +167,10 @@ test('a negative answer is cheap and plain', () => {
 test('the index is version 6 with a stemming tokenizer; a version 5 cache is rebuilt from the source files', () => {
   const root = fixture();
   const n = note(root, 'Invoicing moved.');
-  assert.equal(MEMORY_INDEX_VERSION, 11);
+  assert.equal(MEMORY_INDEX_VERSION, 12);
   const i = new MemoryIndex(root); i.db.exec('PRAGMA user_version=5'); i.close();
   withMemoryIndex(root, index => {
-    assert.equal(index.db.prepare('PRAGMA user_version').get().user_version, 11);
+    assert.equal(index.db.prepare('PRAGMA user_version').get().user_version, 12);
     assert.match(index.db.prepare("SELECT sql FROM sqlite_master WHERE name='keywords'").get().sql, /porter/);
   });
   assert.deepEqual(ids(search(root, 'invoice')), [n.id]);

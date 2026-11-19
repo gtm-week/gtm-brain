@@ -478,7 +478,7 @@
             "title": "Remembering",
             "object": "memories",
             "returns": "Opaque",
-            "description": "Save a decision, commitment, finding, meeting outcome, question or answer. Append-only. When the person states a fact, call it at once, no reads first: the brain matches names, finds the context, says \"already kept\" for a fact it has and turns a changed date, amount, code or count into a correction. One statement about one event or one person is one note, even with several clauses; split only into separate outcomes about different people, deals or decisions. Never a note that only says a call or meeting happened: write what came of it; outcomes of one conversation share the meeting block. A whole turn in one call through memories. Quote the note back as echoed. Corrections supersede an id; withdrawals and answers retract it. A held entry: ask what the result says, once, resend only it. asset, customer, meeting imports: see their references.",
+            "description": "Save a decision, commitment, finding, meeting outcome, question or answer. Append-only. When the person states a fact, call it at once, no reads first, unless one of the team's rules (AGENTS.md, Our rules) applies: then name it and ask first. The brain matches names, finds the context, says \"already kept\" for a fact it has and names a kept note this one may change. One statement about one event or one person is one note, even with several clauses; split only into separate outcomes about different people, deals or decisions. Never a note that only says a call or meeting happened: write what came of it; outcomes of one conversation share the meeting block. A whole turn in one call through memories. Quote the note back as echoed. A correction of that exact fact supersedes its id; withdrawals and answers retract it; a new note on the same subject replaces nothing. A held entry: ask what the result says, once, resend only it. asset, customer, meeting imports: see their references.",
             "input_schema": {
               "type": "object",
               "properties": {
@@ -582,6 +582,15 @@
                         "items": {
                           "type": "string"
                         }
+                      },
+                      "states_rule": {
+                        "type": "boolean"
+                      },
+                      "rule_checked": {
+                        "type": "boolean"
+                      },
+                      "said_on": {
+                        "type": "string"
                       },
                       "asset": {
                         "type": "object",
@@ -1166,11 +1175,11 @@
                 },
                 "supersedes": {
                   "type": "string",
-                  "description": "Memory id this one corrects"
+                  "description": "Memory id this one replaces. Only when the person corrects that exact fact; a new note on the same subject sets nothing."
                 },
                 "retracts": {
                   "type": "string",
-                  "description": "Memory id this one withdraws"
+                  "description": "Memory id this one withdraws. Only when the person withdraws that exact fact."
                 },
                 "tags": {
                   "type": "array",
@@ -1185,6 +1194,18 @@
                     "type": "string"
                   },
                   "description": "Names the person confirmed as new after an entry was held; never filled on a guess."
+                },
+                "states_rule": {
+                  "type": "boolean",
+                  "description": "True when the person states a standing rule for the team (how we always or never do something); the note is kept as a team rule."
+                },
+                "rule_checked": {
+                  "type": "boolean",
+                  "description": "True only after the person, asked about a team rule that held this entry, said to save it anyway."
+                },
+                "said_on": {
+                  "type": "string",
+                  "description": "Date the thing happened or was said, YYYY-MM-DD, when it is not today (an imported or older note)."
                 },
                 "asset": {
                   "type": "object",

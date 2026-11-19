@@ -30,6 +30,7 @@ node plugins/gtm-brain/test/live/tool-routing.mjs skills   # live Codex through 
 node plugins/gtm-brain/test/live/claude-smoke.mjs          # live Claude Code: setup, the protected-file guard, go ahead vs APPROVE (~2 min)
 node plugins/gtm-brain/test/live/scenarios.mjs             # live Codex: ten saving sentences on a clean brain, pass or fail each (~5 min)
 node plugins/gtm-brain/test/live/mentor-bench.mjs          # live Codex through the mentor skills on a made-up brain, a claude-fable-5-2 judge scores each 1 to 5; --cases icp, --dry-run; results in ~/gtm-brain-bench/mentor (~25 min)
+node plugins/gtm-brain/test/live/versus-bench.mjs          # live Codex: GTM Brain vs one Markdown file vs keyword-vector store vs Codex memory on 27 judged questions; --arms a,b --questions recall-1, --judge-only <run>; results in ~/gtm-brain-bench/versus (builds ~1 h once, then ~2 h)
 
 node scripts/sync-derived.mjs                           # regenerate derived blocks and schema
 node scripts/sync-derived.mjs --check                   # report drift only (the suite runs this)

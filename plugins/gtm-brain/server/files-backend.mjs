@@ -128,7 +128,9 @@ export function createFilesBackend({ run, memoryRead }) {
         // batch is the context of every entry without its own: it was dropped, so a correction of a note in Strategy
         // was placed by a guess and refused as "is in strategy, not company" (headless run, 2026-11-16: one more call).
         const shared = memories && typeof one.context === "string" && one.context.trim() ? one.context.trim() : null;
-        const result = await run(root, "gtm-brain-remember/remember.mjs", [...(by ? ["--by", by] : []), "--batch", batch, ...(shared ? ["--context", shared] : []), ...(project ? ["--project", project] : [])]);
+        // --hold-rules: only a save from the chat tool waits on a team rule, because only here is someone there to ask
+        // (the dashboard, the entity forms and the record of a done interaction save as before)
+        const result = await run(root, "gtm-brain-remember/remember.mjs", [...(by ? ["--by", by] : []), "--batch", batch, ...(shared ? ["--context", shared] : []), ...(project ? ["--project", project] : []), "--hold-rules", "true"]);
         const message = [result.out, result.err].filter(Boolean).join("\n").trim();
         if (result.code === 0) return { outcome: "ok", result: message };
         return { outcome: result.code === 2 ? "refused" : "error", message };

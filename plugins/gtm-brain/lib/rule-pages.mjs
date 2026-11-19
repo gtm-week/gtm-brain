@@ -102,11 +102,14 @@ export function withOwnAdditions(target, current, shipped) {
 }
 /* A rulebook is the shipped rules, then, when the person has any, their own additions under that heading. The
    upgrader compares and replaces the rules part only, and carries the additions over as they are. */
+// The team's rules block at the top (lib/standing-rules.mjs) is generated: it is neither shipped rules nor an own addition.
+const RULES_BLOCK = /^<!-- gtm-brain our rules -->\n[\s\S]*?\n<!-- \/gtm-brain our rules -->\n+/;
 export function splitOwn(text) {
-  const t = String(text ?? ""), i = t.indexOf(OWN_MARK);
-  return i < 0 ? { rules: t, own: "" } : { rules: `${t.slice(0, i)}\n`, own: t.slice(i + OWN_MARK.length) };
+  const whole = String(text ?? ""), block = (whole.match(RULES_BLOCK) || [""])[0].replace(/\n+$/, "\n");
+  const t = whole.replace(RULES_BLOCK, ""), i = t.indexOf(OWN_MARK);
+  return i < 0 ? { rules: t, own: "", block } : { rules: `${t.slice(0, i)}\n`, own: t.slice(i + OWN_MARK.length), block };
 }
-export const joinOwn = (rules, own) => own ? `${rules.trimEnd()}${OWN_MARK}${own}` : rules;
+export const joinOwn = (rules, own, block = "") => `${block ? `${block}\n` : ""}${own ? `${rules.trimEnd()}${OWN_MARK}${own}` : rules}`;
 
 /* The whole rulebook as one text: the template, then every page. For tests and the size check. */
 export function wholeRulebook(template) {

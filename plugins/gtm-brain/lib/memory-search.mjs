@@ -47,67 +47,169 @@ const cap = s => s[0].toUpperCase() + s.slice(1);
 /* A period named in the question: [from, to) in local time, a label, and, for a calendar word (a month,
    a weekday, a date), the words a note uses to mention it, so a note about an event on that day is
    found as well as one recorded then. The matched text is removed from the question. */
+// A day as people write it: 2026-11-18, 18 November (2026), November 18(, 2026), optionally after a weekday.
+const MONTH_NC = MONTH_RE.replace(/^\(/, '(?:');
+const DATE_SRC = `(?:(?:${WEEKDAYS.join('|')}),?\\s+)?(?:\\d{4}-\\d{2}-\\d{2}|\\d{1,2}(?:st|nd|rd|th)?\\s+(?:of\\s+)?${MONTH_NC}\\b\\.?(?:,?\\s+\\d{4})?|${MONTH_NC}\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?\\b(?:,?\\s+\\d{4})?)`;
+/* The day a date string names, or null. A date without a year is the last one, unless it is within the coming month. */
+export function parseDay(s, now = nowDate()) {
+  const t = String(s).trim().replace(new RegExp(`^(?:${WEEKDAYS.join('|')}),?\\s+`, 'i'), ''), today = startOfDay(now);
+  let m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t);
+  if (m) { const d = new Date(+m[1], +m[2] - 1, +m[3]); return d.getMonth() === +m[2] - 1 ? d : null; }
+  m = new RegExp(`^(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?${MONTH_RE}\\.?(?:,?\\s+(\\d{4}))?$`, 'i').exec(t);
+  const parts = m ? [+m[1], m[2], m[3]] : (m = new RegExp(`^${MONTH_RE}\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:,?\\s+(\\d{4}))?$`, 'i').exec(t)) ? [+m[2], m[1], m[3]] : null;
+  if (!parts) return null;
+  const [d, month, year] = parts, i = monthIndex(month);
+  if (i < 0 || d < 1 || d > 31) return null;
+  let y = year ? +year : today.getFullYear();
+  if (!year && new Date(y, i, d) > addDays(today, 31)) y--;
+  return new Date(y, i, d);
+}
+const mondayOf = d => addDays(startOfDay(d), -((d.getDay() + 6) % 7));
+// a word that names a period counted from today: a date standing beside one is the day the person says it is
+const RELATIVE = /\b(?:this|last|past|previous|prior|next|coming)\s+(?:week|month|quarter|year)\b|\b(?:last|past|previous|next)\s+\d{1,3}\s+(?:days|weeks|months)\b|\b\d{1,3}\s+(?:days|weeks)\s+ago\b|\bweek\s+before\s+last\b|\b(?:month|year|quarter)[\s-]to[\s-]date\b|\b[mqy]td\b|\byesterday\b|\btomorrow\b/i;
+
+/* The date the person says it is, only from explicit wording ("today is 18 November", "it is 2026-11-18", "(today:
+   2026-11-18)", "as of 2026-11-18"), or query's today parameter: a period is then counted from that day, never
+   narrowed to it (a real brain, 2026-11-17: "what is slipping this week, today is <date>" was read as that one day).
+   A lone date is never taken as today: in "the 2026-11-10 meeting ... this week" it belongs to the meeting.
+   Returns the day and the question without it. */
+// The stated day ends its clause: "It's 20 November for the Acme launch" names the launch's day, not today.
+const CLAUSE_END = '(?=\\s*(?:$|[.,;:!?)\\]]|(?:and|so|but|now|then|what|which|who|how|where|when|is|are|was|were|did|do|does|can|show|list|tell|give)\\b))';
+export function statedToday(question, now = nowDate()) {
+  const q = String(question);
+  const said = new RegExp(`\\(?\\b(?:today(?:'s\\s+date)?(?:\\s+is|\\s*[:=,])?|the\\s+date\\s+is|it\\s+is(?:\\s+now)?|it'?s(?:\\s+now)?|now\\s+is|as\\s+of|date\\s*:)\\s+(${DATE_SRC})\\)?${CLAUSE_END}|\\(?\\b(${DATE_SRC})\\s+is\\s+today\\b\\)?`, 'ig');
+  for (const m of q.matchAll(said)) {
+    const d = parseDay(m[1] || m[2], now); if (!d) continue;
+    return { today: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12), rest: (q.slice(0, m.index) + ' ' + q.slice(m.index + m[0].length)).replace(/\s+([,.?!])/g, '$1').trim(), said: true };
+  }
+  return { today: null, rest: q };
+}
+
+// What is due, slipping or promised looks ahead: a month or a weekday without a year or a "last" is the coming one
+// ("what is due in December?" asked in November is this December, "due on Friday" this week's Friday). A question
+// in the past tense ("what was due", "what slipped") keeps the look back.
+const AHEAD = /\b(?:due|slipping|slips|at\s+risk|promised|planned|scheduled|upcoming|coming\s+up|deadlines?)\b/i;
+const BACK = /\b(?:was|were|had|did|happened|overdue|slipped|missed|last|past|previous|ago|yesterday)\b/i;
+// from a day on: until today when it is past, else a year ahead, where only the notes that name its days are found
+const OPEN_DAYS = 366;
 export function parsePeriod(question, now = nowDate(), isName = () => false) {
-  const today = startOfDay(now);
+  const ahead = AHEAD.test(question) && !BACK.test(question);
+  const stated = statedToday(question, now);
+  if (stated.today) { now = stated.today; question = stated.rest; }
+  const today = startOfDay(now), tomorrow = addDays(today, 1);
   const day = (d, label, mention) => ({ from: d, to: addDays(d, 1), label, mention });
+  const span = (from, toIncl, label) => (from <= toIncl ? { from, to: addDays(toIncl, 1), label } : { from: toIncl, to: addDays(from, 1), label });
+  const N = s => Number(s);
+  const weekOf = (monday, label) => ({ from: monday, to: addDays(monday, 7), label, mention: [0, 1, 2, 3, 4, 5, 6].flatMap(i => dateWords(addDays(monday, i))) });
+  const monthBack = n => new Date(today.getFullYear(), today.getMonth() - n, today.getDate());
   const rules = [
-    [/\b(\d{4})-(\d{2})-(\d{2})\b/, m => { const d = new Date(+m[1], +m[2] - 1, +m[3]); return day(d, ymd(d), [`${d.getDate()} ${MONTHS[d.getMonth()]}`, `${MONTHS[d.getMonth()]} ${d.getDate()}`, ymd(d)]); }],
-    [new RegExp(`\\b(?:on\\s+)?(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?${MONTH_RE}\\b(?:,?\\s+(\\d{4}))?`, 'i'), m => dated(+m[1], m[2], m[3])],
-    [new RegExp(`\\b(?:on\\s+)?${MONTH_RE}\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b(?:,?\\s+(\\d{4}))?`, 'i'), m => dated(+m[2], m[1], m[3])],
-    [/\b(?:later\s+)?(?:today|tonight|this\s+(?:morning|afternoon|evening))\b/i, () => ({ from: today, to: addDays(today, 1), label: 'today' })],
-    [/\byesterday\b/i, () => ({ from: addDays(today, -1), to: today, label: 'yesterday' })],
-    [/\b(?:in\s+the\s+)?(?:last|past)\s+(\d{1,3})\s+days\b/i, m => ({ from: addDays(today, -Number(m[1])), to: addDays(today, 1), label: `the last ${m[1]} days` })],
-    [/\b(\d{1,3})\s+days\s+ago\b/i, m => day(addDays(today, -Number(m[1])), ymd(addDays(today, -Number(m[1]))))],
-    // ahead: nothing is recorded then, so the notes that mention its dates are what is found
-    [/\btomorrow\b/i, () => { const d = addDays(today, 1); return day(d, 'tomorrow', dateWords(d)); }],
-    [/\b(this|last|past|next)\s+week\b/i, m => { const monday = addDays(today, -((today.getDay() + 6) % 7)), w = m[1].toLowerCase();
-      if (w === 'next') { const from = addDays(monday, 7); return { from, to: addDays(from, 7), label: 'next week', mention: [...[0, 1, 2, 3, 4, 5, 6].flatMap(i => dateWords(addDays(from, i)))] }; }
+    // two days: between 9 and 13 November, from 2026-11-09 to 2026-11-13, 9 November - 13 November, 9-13 November
+    [new RegExp(`\\b(?:between\\s+|from\\s+)?(\\d{1,2})(?:st|nd|rd|th)?\\s*(?:-|to|and|until|till|through|thru)\\s*(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?${MONTH_RE}\\b(?:,?\\s+(\\d{4}))?`, 'i'), m => {
+      const a = parseDay(`${m[1]} ${m[3]}${m[4] ? ' ' + m[4] : ''}`, now), b = parseDay(`${m[2]} ${m[3]}${m[4] ? ' ' + m[4] : ''}`, now);
+      return a && b ? span(a, b, `${ymd(a)} to ${ymd(b)}`) : null; }],
+    [new RegExp(`\\b(?:between|from)\\s+(${DATE_SRC})\\s*(?:-|and|to|until|till|through|thru)\\s*(${DATE_SRC})`, 'i'), m => twoDays(m[1], m[2])],
+    [new RegExp(`(?:^|\\s)(${DATE_SRC})\\s*(?:-|to|until|till|through|thru)\\s*(${DATE_SRC})`, 'i'), m => twoDays(m[1], m[2])],
+    [new RegExp(`\\b(?:between|from)\\s+${MONTH_RE}(?:\\s+(\\d{4}))?\\s+(?:and|to|until|till|through|-)\\s+${MONTH_RE}(?:\\s+(\\d{4}))?`, 'i'), m => {
+      const a = monthOf(m[1], m[2]), b = monthOf(m[3], m[4] || m[2]); if (!a || !b) return null;
+      const [x, y] = a.from <= b.from ? [a, b] : [b, a];
+      return { from: x.from, to: y.to, label: `${x.label} to ${y.label}` }; }],
+    // the week of a day: Monday to Sunday around it
+    [new RegExp(`\\b(?:(?:in|during)\\s+)?(?:the\\s+)?week\\s+(?:of|starting|beginning|commencing|from)\\s+(?:on\\s+)?(?:the\\s+)?(${DATE_SRC})`, 'i'), m => {
+      const d = parseDay(m[1], now); if (!d) return null; const monday = mondayOf(d);
+      return { ...weekOf(monday, `the week of ${ymd(monday)}`), since: addDays(monday, -365) }; }],
+    // since, after or from a day (with no end): from then on, until today; a day ahead (or after today) looks ahead
+    [new RegExp(`\\b(since|after|from)\\s+(?:the\\s+)?(${DATE_SRC})(?!\\s*(?:-|to|and|until|till|through|thru)\\s*\\d)`, 'i'), m => {
+      const d = parseDay(m[2], now); if (!d) return null; const w = m[1].toLowerCase(), from = w === 'after' ? addDays(d, 1) : d;
+      return from < tomorrow ? { from, to: tomorrow, label: `${w} ${ymd(d)}` } : onward(from, `${w} ${ymd(d)}`); }],
+    [/\b(?:in\s+the\s+|over\s+the\s+|during\s+the\s+)?(?:last|past|previous)\s+(\d{1,3})\s+days\b/i, m => ({ from: addDays(today, -N(m[1])), to: tomorrow, label: `the last ${m[1]} days` })],
+    [/\b(?:in\s+the\s+|over\s+the\s+|during\s+the\s+)?(?:last|past|previous)\s+(\d{1,2})\s+weeks\b/i, m => ({ from: addDays(today, -7 * N(m[1])), to: tomorrow, label: `the last ${m[1]} weeks` })],
+    [/\b(?:in\s+the\s+|over\s+the\s+|during\s+the\s+)?(?:last|past|previous)\s+(\d{1,2})\s+months\b/i, m => ({ from: monthBack(N(m[1])), to: tomorrow, label: `the last ${m[1]} months` })],
+    [/\bnext\s+(\d{1,3})\s+days\b/i, m => { const to = addDays(today, N(m[1]) + 1); return { from: today, to, label: `the next ${m[1]} days`, mention: daysWords(today, to) }; }],
+    [/\b(\d{1,2})\s+weeks\s+ago\b/i, m => { const monday = addDays(mondayOf(today), -7 * N(m[1])); return { from: monday, to: addDays(monday, 7), label: `the week of ${ymd(monday)}` }; }],
+    [/\b(?:the\s+)?week\s+before\s+last\b/i, () => { const monday = addDays(mondayOf(today), -14); return { from: monday, to: addDays(monday, 7), label: `the week of ${ymd(monday)}` }; }],
+    [/\b(this|last|past|previous|prior|next|coming)\s+week\b/i, m => { const monday = mondayOf(today), w = m[1].toLowerCase();
+      if (w === 'next' || w === 'coming') return weekOf(addDays(monday, 7), 'next week');
       // this week is partly ahead: what is planned for its days is found by the dates the notes mention
       // ("what should I focus on this week?" returned only what was typed that morning; app run, 2026-11-16).
       // Its date words carry no year ("18 november"), so a note recorded more than a year before the week is
       // about another year's 18 November: since is the oldest recording time a mention counts from.
-      return w === 'this' ? { from: monday, to: addDays(monday, 7), label: 'this week', ahead: true, since: addDays(monday, -365), mention: [0, 1, 2, 3, 4, 5, 6].flatMap(i => dateWords(addDays(monday, i))) } : { from: addDays(monday, -7), to: monday, label: 'last week' }; }],
-    [/\b(this|last|past|next)\s+month\b/i, m => { const first = new Date(today.getFullYear(), today.getMonth(), 1), w = m[1].toLowerCase();
-      if (w === 'next') { const from = new Date(today.getFullYear(), today.getMonth() + 1, 1); return { from, to: new Date(from.getFullYear(), from.getMonth() + 1, 1), label: 'next month', mention: [MONTHS[from.getMonth()]] }; }
+      return w === 'this' ? { ...weekOf(monday, 'this week'), ahead: true, since: addDays(monday, -365) } : { from: addDays(monday, -7), to: monday, label: 'last week' }; }],
+    [/\b(?:month[\s-]to[\s-]date|mtd)\b/i, () => ({ from: new Date(today.getFullYear(), today.getMonth(), 1), to: tomorrow, label: 'this month to date' })],
+    [/\b(?:year[\s-]to[\s-]date|ytd)\b/i, () => ({ from: new Date(today.getFullYear(), 0, 1), to: tomorrow, label: 'this year to date' })],
+    [/\b(this|last|past|previous|prior|next|coming)\s+month\b/i, m => { const first = new Date(today.getFullYear(), today.getMonth(), 1), w = m[1].toLowerCase();
+      if (w === 'next' || w === 'coming') { const from = new Date(today.getFullYear(), today.getMonth() + 1, 1); return { from, to: new Date(from.getFullYear(), from.getMonth() + 1, 1), label: 'next month', mention: [MONTHS[from.getMonth()]] }; }
       return w === 'this' ? { from: first, to: new Date(today.getFullYear(), today.getMonth() + 1, 1), label: 'this month' } : { from: new Date(today.getFullYear(), today.getMonth() - 1, 1), to: first, label: 'last month' }; }],
-    [/\b(this|last|past|next)\s+quarter\b/i, m => { const w = m[1].toLowerCase(), k = Math.floor(today.getMonth() / 3) + (w === 'this' ? 0 : w === 'next' ? 1 : -1); return quarter(today.getFullYear() + Math.floor(k / 4), ((k % 4) + 4) % 4); }],
-    [/\bQ([1-4])(?:\s+(\d{4}))?\b/, m => quarter(m[2] ? +m[2] : today.getFullYear(), +m[1] - 1)],
-    [/\b(this|last|past)\s+year\b/i, m => m[1].toLowerCase() === 'this' ? { from: new Date(today.getFullYear(), 0, 1), to: new Date(today.getFullYear() + 1, 0, 1), label: 'this year' } : { from: new Date(today.getFullYear() - 1, 0, 1), to: new Date(today.getFullYear(), 0, 1), label: 'last year' }],
+    [/\b(this|last|past|previous|prior|next|coming)\s+quarter\b/i, m => { const w = m[1].toLowerCase(), k = Math.floor(today.getMonth() / 3) + (w === 'this' ? 0 : w === 'next' || w === 'coming' ? 1 : -1); return quarter(today.getFullYear() + Math.floor(k / 4), ((k % 4) + 4) % 4); }],
+    [/\b(?:quarter[\s-]to[\s-]date|qtd)\b/i, () => ({ from: new Date(today.getFullYear(), Math.floor(today.getMonth() / 3) * 3, 1), to: tomorrow, label: 'this quarter to date' })],
+    // its year: four digits only (Q2 2025, Q2 of 2025, Q2-2025); "Q4 12 accounts" is a count, never 2012
+    [/\bQ([1-4])(?:(?:\s+(?:of\s+)?|\s*[-/]\s*)(\d{4}))?\b/, m => quarter(m[2] ? +m[2] : today.getFullYear(), +m[1] - 1)],
+    [/\b(first|second|third|fourth|1st|2nd|3rd|4th)\s+quarter(?:\s+(?:of\s+)?(\d{4}))?\b/i, m => quarter(m[2] ? +m[2] : today.getFullYear(), { first: 0, '1st': 0, second: 1, '2nd': 1, third: 2, '3rd': 2, fourth: 3, '4th': 3 }[m[1].toLowerCase()])],
+    [/\b(this|last|past|previous|prior)\s+year\b/i, m => m[1].toLowerCase() === 'this' ? { from: new Date(today.getFullYear(), 0, 1), to: new Date(today.getFullYear() + 1, 0, 1), label: 'this year' } : { from: new Date(today.getFullYear() - 1, 0, 1), to: new Date(today.getFullYear(), 0, 1), label: 'last year' }],
+    [/\b(\d{4})-(\d{2})-(\d{2})\b/, m => { const d = new Date(+m[1], +m[2] - 1, +m[3]); return day(d, ymd(d), [`${d.getDate()} ${MONTHS[d.getMonth()]}`, `${MONTHS[d.getMonth()]} ${d.getDate()}`, ymd(d)]); }],
+    [new RegExp(`\\b(?:on\\s+)?(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?${MONTH_RE}\\b(?:,?\\s+(\\d{4}))?`, 'i'), m => dated(+m[1], m[2], m[3])],
+    [new RegExp(`\\b(?:on\\s+)?${MONTH_RE}\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b(?:,?\\s+(\\d{4}))?`, 'i'), m => dated(+m[2], m[1], m[3])],
+    [/\b(?:later\s+)?(?:today|tonight|this\s+(?:morning|afternoon|evening))\b/i, () => ({ from: today, to: tomorrow, label: 'today' })],
+    [/\byesterday\b/i, () => ({ from: addDays(today, -1), to: today, label: 'yesterday' })],
+    [/\b(\d{1,3})\s+days\s+ago\b/i, m => day(addDays(today, -N(m[1])), ymd(addDays(today, -N(m[1]))))],
+    // ahead: nothing is recorded then, so the notes that mention its dates are what is found
+    [/\btomorrow\b/i, () => day(tomorrow, 'tomorrow', dateWords(tomorrow))],
     // "may" and "march" are verbs too: a month only after in/during/since/of/until, or before a year
     [new RegExp(`\\b(?:(in|during|since|of|until|for|from)\\s+)?${MONTH_RE}\\b(?:\\s+(\\d{4}))?`, 'i'), m => {
       const word = m[2].toLowerCase();
       if (['may', 'mar', 'march'].includes(word) && !m[1] && !m[3]) return null;
       if (!m[1] && !m[3] && isName(m[2])) return null;   // Jan, April, June, August: a person in the registry comes first
       const i = monthIndex(word); let y = m[3] ? +m[3] : today.getFullYear();
-      if (!m[3] && i > today.getMonth()) y--;
+      if (!m[3] && !ahead && i > today.getMonth()) y--;
+      if (!m[3] && ahead && i < today.getMonth() && m[1]?.toLowerCase() !== 'since') y++;
       if (m[1]?.toLowerCase() === 'since') return { from: new Date(y, i, 1), to: addDays(today, 1), label: `since ${cap(MONTHS[i])} ${y}` };
       return { from: new Date(y, i, 1), to: new Date(y, i + 1, 1), label: `${cap(MONTHS[i])} ${y}`, mention: [MONTHS[i]] };
     }],
     [/\b(?:(last|this|on|next)\s+)?(sunday|monday|tuesday|wednesday|thursday|friday|saturday)(?:\s+(night|evening|morning|afternoon))?\b/i, m => {
       const i = WEEKDAYS.indexOf(m[2].toLowerCase());
-      const back = (today.getDay() - i + 7) % 7 || (m[1]?.toLowerCase() === 'last' ? 7 : 0);
-      const d = m[1]?.toLowerCase() === 'next' ? addDays(today, (i - today.getDay() + 7) % 7 || 7) : addDays(today, -back);
+      const back = (today.getDay() - i + 7) % 7 || (m[1]?.toLowerCase() === 'last' ? 7 : 0), w = m[1]?.toLowerCase();
+      const d = w === 'next' ? addDays(today, (i - today.getDay() + 7) % 7 || 7) : ahead && w !== 'last' ? addDays(today, (i - today.getDay() + 7) % 7) : addDays(today, -back);
       return { ...day(d, `${cap(WEEKDAYS[i])} ${ymd(d)}`, [WEEKDAYS[i]]), part: m[3]?.toLowerCase() || null, weekday: m[1]?.toLowerCase() || '' };
     }],
     [/\b(?:in|during)\s+(\d{4})\b/, m => ({ from: new Date(+m[1], 0, 1), to: new Date(+m[1] + 1, 0, 1), label: m[1] })],
   ];
+  function onward(from, label) { const to = addDays(from, OPEN_DAYS); return { from, to, label, open: true, mention: daysWords(from, addDays(from, 93)) }; }
   function dateWords(d) { return [`${d.getDate()} ${MONTHS[d.getMonth()]}`, `${MONTHS[d.getMonth()]} ${d.getDate()}`, ymd(d)]; }
+  function daysWords(from, to) { const out = []; for (let d = from; d < to; d = addDays(d, 1)) out.push(...dateWords(d)); return out; }
   function quarter(y, k) { return { from: new Date(y, k * 3, 1), to: new Date(y, k * 3 + 3, 1), label: `Q${k + 1} ${y}` }; }
+  function twoDays(a, b) {
+    // "from 9 November to 13": the second takes the first's month and year when it has none
+    const x = parseDay(a, now); let y = parseDay(b, now);
+    if (x && y && !/\d{4}/.test(b) && /\d{4}/.test(a)) y = new Date(x.getFullYear(), y.getMonth(), y.getDate());
+    if (x && y && y < x && !/\d{4}/.test(b)) y = new Date(y.getFullYear() + 1, y.getMonth(), y.getDate());
+    return x && y ? span(x, y, `${ymd(x < y ? x : y)} to ${ymd(x < y ? y : x)}`) : null;
+  }
+  function monthOf(word, year) {
+    const i = monthIndex(word); if (i < 0) return null;
+    let y = year ? +year : today.getFullYear(); if (!year && i > today.getMonth()) y--;
+    return { from: new Date(y, i, 1), to: new Date(y, i + 1, 1), label: `${cap(MONTHS[i])} ${y}` };
+  }
   function dated(d, month, year) {
     const i = monthIndex(month); if (i < 0 || d < 1 || d > 31) return null;
     let y = year ? +year : today.getFullYear();
-    if (!year && new Date(y, i, d) > addDays(today, 31)) y--;   // a date without a year: the last one, unless it is this coming month
+    if (!year && new Date(y, i, d) > addDays(today, 31) && !ahead) y--;   // a date without a year: the last one, unless it is this coming month
+    if (!year && ahead && new Date(y, i, d) < today) y++;   // or, for what is due, the next one
     const at = new Date(y, i, d);
     return day(at, `${d} ${cap(MONTHS[i])} ${y}`, [`${d} ${MONTHS[i]}`, `${MONTHS[i]} ${d}`, ymd(at)]);
   }
   for (const [re, make] of rules) {
     // a refused match ("may" the verb, Jan the person) does not end the rule: "we may launch in October"
     for (const m of question.matchAll(new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g'))) {
-      const p = make(m); if (!p) continue;
-      return { period: p, rest: (question.slice(0, m.index) + ' ' + question.slice(m.index + m[0].length)).trim() };
+      let p = make(m), start = m.index; if (!p) continue;
+      // since a period (since last week, since Monday, since yesterday): from its first day until today
+      const before = /\b(since|after)\s+(?:the\s+)?$/i.exec(question.slice(0, start));
+      if (before && !/^(since|after) /.test(p.label)) {
+        const from = before[1].toLowerCase() === 'after' ? p.to : p.from;
+        if (from < tomorrow) { p = { from, to: tomorrow, label: `${before[1].toLowerCase()} ${p.label}` }; start = before.index; }
+      }
+      return { period: p, rest: (question.slice(0, start) + ' ' + question.slice(m.index + m[0].length)).trim(), ...(stated.today ? { today: stated.today } : {}) };
     }
   }
-  return { period: null, rest: question };
+  return { period: null, rest: question, ...(stated.today ? { today: stated.today } : {}) };
 }
 
 // Words as typed (letters, digits, @ . ' - _ inside a word), with their original case.
@@ -129,14 +231,54 @@ const sound = w => w.replace(/ph/g, 'f').replace(/ck/g, 'k').replace(/(.)\1+/g, 
 const nearSpelling = (typed, known) => withinOne(typed, known) || withinOne(sound(typed), sound(known));
 
 /* Parse a question into narrowing (entities, kind, tags, period) and words to rank by. */
-export function parseQuestion(question, names, { now = nowDate() } = {}) {
+// a question about what is due, late or promised: dated commitments inside the period count, not only what was said then
+const DUE = /\b(?:due|overdue|slip(?:s|ping|ped|page)?|late|behind|deadlines?|delay(?:s|ed)?|missed|at\s+risk|outstanding|promised|commit(?:ted|ments?)|owe[ds]?|follow[\s-]?ups?|to[\s-]?dos?|open\s+items?|pending)\b/i;
+const DUE_WORD = /^(?:slip\w*|due|overdue|late|behind|deadlines?|delay\w*|missed|risk|outstanding|pending|owe[ds]?)$/;
+const DAY_PARAM = /^\d{4}-\d{2}-\d{2}$/;
+const dayParam = s => { if (!DAY_PARAM.test(String(s || ''))) return null; const d = parseDay(String(s)); return d; };
+/* The explicit days a caller passed (query's today, from and to), checked: YYYY-MM-DD each, from not after to. */
+export function periodParams({ today, from, to } = {}) {
+  const bad = [['today', today], ['from', from], ['to', to]].filter(([, v]) => v !== undefined && v !== null && v !== '' && !dayParam(v)).map(([k]) => k);
+  if (bad.length) return { error: `${bad.join(', ')}: a day as YYYY-MM-DD (2026-11-18).` };
+  const f = dayParam(from), t = dayParam(to);
+  if (f && t && f > t) return { error: `from ${from} is after to ${to}.` };
+  return { today: dayParam(today), from: f, to: t };
+}
+
+export function parseQuestion(question, names, { now = nowDate(), from = null, to = null } = {}) {
+  question = String(question);
   const quoted = [...String(question).matchAll(/"([^"]{2,200})"/g)].map(m => m[1].trim()).filter(Boolean);
   let rest = String(question).replace(/"[^"]{2,200}"/g, ' ');
   const tags = [];
   rest = rest.replace(/(?:^|\s)(?:#|tag:)([\p{L}\p{N}][\p{L}\p{N}:_-]*)/gu, (_, t) => { tags.push(t.toLowerCase()); return ' '; });
   // a greeting is no search word: "Good morning, what should I focus on this week?" searched for "good"
   rest = rest.replace(/\bgood\s+(?:morning|afternoon|evening|day)\b/gi, ' ');
-  let { period, rest: left } = parsePeriod(rest, now, w => !!lib.canonicalName(names, w)); rest = left;
+  const isName = w => !!lib.canonicalName(names, w);
+  let { period, rest: left, today: stated } = parsePeriod(rest, now, isName); rest = left;
+  if (stated) now = stated;
+  // days passed as parameters: one day beside a period word counted from today (this week, last month) is the
+  // day it is, not the period (the model passed from = to = today with "this week"); otherwise they are the period
+  // from without to: from that day on (until today when it is past, a year ahead when it is not)
+  if (from && !to) {
+    const tomorrow = addDays(startOfDay(now), 1);
+    period = from < tomorrow ? { from, to: tomorrow, label: `from ${ymd(from)}` } : { from, to: addDays(from, OPEN_DAYS), label: `from ${ymd(from)}`, open: true, mention: (() => { const out = []; for (let d = from; d < addDays(from, 93); d = addDays(d, 1)) out.push(`${d.getDate()} ${MONTHS[d.getMonth()]}`, `${MONTHS[d.getMonth()]} ${d.getDate()}`, ymd(d)); return out; })() };
+  } else if (from || to) {
+    const a = from || to, b = to || from, oneDay = +a === +b;
+    if (oneDay && period && period.to - period.from > DAY + 3600000) {
+      if (!stated && RELATIVE.test(question)) { now = new Date(a.getFullYear(), a.getMonth(), a.getDate(), 12); ({ period } = parsePeriod(String(question).replace(/"[^"]{2,200}"/g, ' '), now, isName)); }
+    } else {
+      const lo = a <= b ? a : b, hi = a <= b ? b : a;
+      period = oneDay ? { from: lo, to: addDays(lo, 1), label: ymd(lo), mention: [`${lo.getDate()} ${MONTHS[lo.getMonth()]}`, `${MONTHS[lo.getMonth()]} ${lo.getDate()}`, ymd(lo)] }
+        : { from: lo, to: addDays(hi, 1), label: `${ymd(lo)} to ${ymd(hi)}` };
+    }
+  }
+  if (period && DUE.test(question)) {
+    // what falls due in the period: a note recorded before it that names one of its days, within a year
+    const days = Math.round((period.to - period.from) / DAY), mention = [...(period.mention || [])];
+    if (days <= 93) for (let d = period.from; d < period.to; d = addDays(d, 1)) mention.push(`${d.getDate()} ${MONTHS[d.getMonth()]}`, `${MONTHS[d.getMonth()]} ${d.getDate()}`, ymd(d));
+    period = { ...period, mention: [...new Set(mention)], since: period.since || addDays(period.from, -365), due: true };
+  }
+  if (period) period = { ...period, today: ymd(startOfDay(now)) };
   const tokens = words(rest), used = new Array(tokens.length).fill(false), entities = [], ambiguous = [];
   // names: the longest run of words that is a known name, alias, email or id; a single word must be
   // capitalized, an email, an id, or the full name itself (so "sites" is not the alias Sites)
@@ -188,7 +330,10 @@ export function parseQuestion(question, names, { now = nowDate() } = {}) {
   const prep = asksPrep && !!when && when.to > now && (when.mention ? when.from >= today || (!!when.ahead && !past) : when.label === 'today' && !past);
   if (prep) period = when;
   if (prep) return { entities, ambiguous, kind, kindHint, tags, period: null, prep: period.label, terms: [...new Set(terms)].filter(w => !/^(call|calls|meeting|meetings|chat|sync|ready|help|need)$/.test(w)), quoted: quoted.map(fold), sequence };
-  return { entities, ambiguous, kind, kindHint, tags, period, terms: [...new Set(terms)], quoted: quoted.map(fold), sequence, ...(past ? { past } : {}) };
+  // in a due question the period selects: "slipping", "due" or "late" are how it is asked, and a note outside the
+  // period that says "slipped" must not pull the answer out of the week (shape bench, 2026-11-18)
+  const asked = period?.due ? terms.filter(w => !DUE_WORD.test(w)) : terms;
+  return { entities, ambiguous, kind, kindHint, tags, period, terms: [...new Set(asked)], quoted: quoted.map(fold), sequence, ...(past ? { past } : {}) };
 }
 
 const parts = w => w.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
@@ -206,9 +351,9 @@ function forms(w) {
 }
 
 /* Run a parsed question against an open, synced MemoryIndex. Returns ranked rows and what was done. */
-export function searchIndex(index, question, { filters = {}, project = null, now = nowDate(), parsed = null, relationsFor = () => [], everyWord = false } = {}) {
+export function searchIndex(index, question, { filters = {}, project = null, now = nowDate(), parsed = null, relationsFor = () => [], everyWord = false, from = null, to = null } = {}) {
   const db = index.db;
-  const q = parsed || parseQuestion(question, index.names, { now });
+  const q = parsed || parseQuestion(question, index.names, { now, from, to });
   // a memories search made only of words a question drops ("current", "more") is a search for those words
   if (everyWord && !q.terms.length && !q.entities.length && !q.kind && !q.tags.length && !q.period) q.terms = [...new Set(words(question).map(fold).filter(w => w.length >= 2))];
   // a product stands for the company it belongs to as well: its current relationships to an organization
@@ -334,13 +479,15 @@ export function searchIndex(index, question, { filters = {}, project = null, now
     const oneDay = q.period && q.period.to - q.period.from <= DAY + 3600000;   // a day, not a month: an event that day
     // A week partly ahead ranks them first only for a question that looks ahead: "what did we decide this week"
     // is about what was recorded, and a note that only mentions one of its dates must not come above that.
-    const mention = scope.mention && (oneDay || (q.period?.ahead && !q.past)) ? set(scope.mention) : null, part = scope.mention && DAYPART[q.period?.part];
+    const mention = scope.mention && (oneDay || q.period?.due || (q.period?.ahead && !q.past)) ? set(scope.mention) : null, part = scope.mention && DAYPART[q.period?.part];
     const linked = scope.entities && q.entities.length > 1 ? db.prepare(`SELECT count(*) AS n FROM members WHERE memory=? AND field='entities' AND value IN (${q.entities.map(() => '?').join(',')})`) : null;
     const contentOf = part ? db.prepare('SELECT content FROM memories WHERE rowid=?') : null;
     const tagWords = new Set(q.terms), tagOf = db.prepare("SELECT json_extract(value,'$') AS t FROM members WHERE memory=? AND field='tags'");
     const kindOf = q.kindHint ? db.prepare('SELECT kind FROM memories WHERE rowid=?') : null;
+    // what is due: a note that names a day of the period ahead of when it was said comes first, not one that only carries its own date
+    const dueRow = q.period?.due && mention ? db.prepare('SELECT raw FROM memories WHERE rowid=?') : null;
     for (const row of rows) {
-      if (mention?.has(row.r)) row.score += 6;
+      if (mention?.has(row.r)) row.score += dueRow ? (datedAhead(JSON.parse(dueRow.get(row.r).raw), q.period) ? 8 : 0) : 6;
       if (linked) row.score += 3 * (linked.get(row.r, ...q.entities.map(e => JSON.stringify(e.id))).n - 1);   // a note about all the names it asks about
       if (part && part.test(contentOf.get(row.r).content)) row.score += 4;
       const tags = tagOf.all(row.r).map(x => String(x.t).toLowerCase());
@@ -474,7 +621,7 @@ const sourceLine = m => {
 };
 export function noteText(m, now, chars, later = null) {
   const who = [...new Set([...(m.authors || [])])].join(', ');
-  return `${m.id} · ${lib.localDateTime(m.at).slice(0, 10)} (${age(m.at, now)}) · ${m.context} · ${m.kind}${who ? ` · by ${who}` : ''} · source: ${sourceLine(m)}${m.supersedes ? ` · replaces ${m.supersedes}` : ''}${m.retracts ? ` · withdraws ${m.retracts}` : ''}${later ? ` · no longer current: ${later.what} ${later.status} ${later.observed} (${later.id})` : ''}\n   ${clip(String(m.content).replace(/\s*\n\s*/g, ' '), chars)}`;
+  return `${m.id} · ${lib.noteDay(m)} (${age(lib.noteAt(m), now)}) · ${m.context} · ${m.kind}${who ? ` · by ${who}` : ''} · source: ${sourceLine(m)}${m.supersedes ? ` · replaces ${m.supersedes}` : ''}${m.retracts ? ` · withdraws ${m.retracts}` : ''}${later ? ` · no longer current: ${later.what} ${later.status} ${later.observed} (${later.id})` : ''}\n   ${clip(String(m.content).replace(/\s*\n\s*/g, ' '), chars)}`;
 }
 
 /* The short card of an entity the question names: kind, aliases, the compiled overview, the fields,
@@ -507,7 +654,10 @@ const describeNarrowing = q => [
    times for the event's public page, whose address the notes carried as a source. Core rule 5 names a person
    or a company only, and the old last line asked for one to three sentences with a fact, which a draft is not. */
 const NO_WEB = 'What these notes do not hold is not recorded: nothing is looked up on the web and no source link above is opened unless the person asks for exactly that.';
-const DRAFT_CLOSE = 'A draft is asked for: write it now from these notes and the document this kind of work follows, at the length asked; a second search is needed only for a different question. Nothing is looked up on the web and no source link above is opened for a draft unless the person asks for exactly that: a detail these notes do not hold (an agenda, a time, a link) is left out of the draft, and one line after the draft says what is missing.';
+/* An answer is a read: nothing in it is saved (a benchmark run on 2026-11-17 saved its own answer to "what is slipping
+   this week?" as a note). */
+export const NO_SAVE = 'Answering writes nothing: no remember for the answer or for what these notes say.';
+const DRAFT_CLOSE = 'A draft is asked for: write it now from these notes and the document this kind of work follows, at the length asked. Nothing is looked up on the web and no source link above is opened for a draft unless the person asks for exactly that: a detail these notes do not hold (an agenda, a time, a link) is left out of the draft, and one line after the draft says what is missing.';
 const DRAFT_PIECE = /\b(?:messages?|dm|e-?mails?|mail|invitations?|invites?|inviting|posts?|repl(?:y|ies)|follow-?ups?|outreach|copy|announcements?|newsletters?|captions?|intros?|introductions?|pitch|text|letter|headline|tagline|bio|script)\b/i;
 const DRAFT_ASK = /^\W*(?:(?:please|can you|could you|would you|help me|i need you to|i want you to|let'?s)\W+)*(?:draft|write|compose|reword|rewrite)\b/i;
 /* A request to write a piece of text (a message, a post, an email), as opposed to a question about one. */
@@ -534,7 +684,7 @@ function kindList(index, root, question, q, now, maxBytes = SEARCH_MAX_BYTES) {
   const shown = []; let bytes = 0, listedN = 0;
   for (const x of rows.slice(0, KIND_LIST_MAX)) {
     const block = [`- ${x.e.name} · ${x.e.id}${x.e.aliases?.length ? ` · also: ${x.e.aliases.slice(0, 2).join(', ')}` : ''}${x.fields.length ? ` · ${x.fields.map(f => `${f.field}: ${clip(String(f.text), 60)}`).join('; ')}` : ''} · ${x.n} note${x.n === 1 ? '' : 's'}${x.newest ? `, newest ${ymd(new Date(x.newest))} (${age(x.newest, now)})` : ''}`,
-      ...newest.all(JSON.stringify(x.e.id), per).map(n => fetchRow(index, n.r)).map(m => `    ${m.id} · ${lib.localDateTime(m.at).slice(0, 10)}: ${clip(String(m.content).replace(/\s*\n\s*/g, ' '), 200)}`)];
+      ...newest.all(JSON.stringify(x.e.id), per).map(n => fetchRow(index, n.r)).map(m => `    ${m.id} · ${lib.noteDay(m)}: ${clip(String(m.content).replace(/\s*\n\s*/g, ' '), 200)}`)];
     const size = Buffer.byteLength(block.join('\n')) + 1;
     if (listedN && bytes + size > maxBytes * 0.6) break;
     shown.push(...block); bytes += size; listedN++;
@@ -545,68 +695,173 @@ function kindList(index, root, question, q, now, maxBytes = SEARCH_MAX_BYTES) {
     `Answer from this list; what a note above does not say about one (its date, whether we ran, sponsored or attended it) is not recorded. All notes of one: query object answer with its name.`];
 }
 
+/* Everything recorded (win-a): the answer reply carries all of the brain the question can need, so the structured
+   brain never knows less than the same notes in one flat file. Measured on real Codex, a chat calls query answer
+   and nothing else: no entity page read, no grep, no second search. So a small brain (every note in about 40,000
+   characters of compact lines) comes back whole, oldest to newest; a larger one brings every note of each entity
+   the question names, then every note one of its other words, a date in the period it asks about or the kind it
+   asks for matches (stems and prefixes, any of the words), within the same budget, and says in one line how to
+   get what did not fit in one more call. */
+const capWhole = Number(process.env.GTM_BRAIN_ANSWER_MAX_BYTES);
+export const ANSWER_ALL_BYTES = Number.isInteger(capWhole) && capWhole >= 4096 && capWhole <= MAX_RESULT_BYTES ? capWhole : 40000;
+// a whole brain's reply: its lines within ANSWER_ALL_BYTES, plus the cards and best-match pointers above them
+export const ANSWER_REPLY_BYTES = ANSWER_ALL_BYTES + 8000;
+const LONG_NOTE_CHARS = 6000;
+const BEST_NOTE_CHARS = 240;   // a best match is a pointer; its full text is in the list   // one note (a transcript) is cut here in a larger brain; its full text is one sql read
+const oneLineText = m => String(m.content ?? '').replace(/\s*\n\s*/g, ' ').trim();
+/* A compact line: date it was recorded · context · kind · who · full text · id (and what it replaces or withdraws). */
+export function compactLine(m, chars = Infinity) {
+  const who = [...new Set([...(m.authors || []), ...(m.people || [])])].slice(0, 4).join(', ');
+  const text = oneLineText(m);
+  return `- ${lib.noteDay(m)} · ${m.context}${m.kind && m.kind !== 'note' ? ` · ${m.kind}` : ''}${who ? ` · ${who}` : ''} · ${chars < text.length ? clip(text, chars) : text} · ${m.id}${m.supersedes ? ` (replaces ${m.supersedes})` : ''}${m.retracts ? ` (withdraws ${m.retracts})` : ''}`;
+}
+const MONTH_WORD = new RegExp(`\\b${MONTH_RE}\\.?\\b`, 'gi');
+/* The days a note's text names: 2026-11-14, 14 November (2026), November 14, November 2026, 14.11.2026, 14/11/2026.
+   A date without a year takes the year of the note, or the next one when that day is more than a month before it. */
+export function datesInText(text, at) {
+  const t = String(text), base = new Date(at), out = [];
+  const year = (y, mo, d) => { if (y) return Number(y); const guess = new Date(base.getFullYear(), mo, d || 1); return guess < addDays(base, -31) ? base.getFullYear() + 1 : base.getFullYear(); };
+  for (const m of t.matchAll(/\b(20\d\d)-(\d\d)(?:-(\d\d))?\b/g)) out.push({ y: +m[1], mo: +m[2] - 1, d: m[3] ? +m[3] : null });
+  for (const m of t.matchAll(/\b(\d{1,2})[./](\d{1,2})[./](20\d\d)\b/g)) out.push({ y: +m[3], mo: +m[2] - 1, d: +m[1] });
+  for (const m of t.matchAll(new RegExp(`\\b(?:(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?)?${MONTH_RE}\\b\\.?(?:\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b)?(?:,?\\s+(20\\d\\d))?`, 'gi'))) {
+    const mo = monthIndex(m[2]); if (mo < 0) continue;
+    if (/^may$/i.test(m[2]) && !m[1] && !m[3] && !m[4]) continue;   // "may" alone is a verb
+    const d = m[1] ? +m[1] : m[3] ? +m[3] : null;
+    out.push({ y: year(m[4], mo, d), mo, d });
+  }
+  return out.filter(x => x.mo >= 0 && x.mo < 12);
+}
+// a month named without a day ("in November") is in a period of a month or more, never in a week of it
+const inPeriod = (dates, p) => dates.some(x => { if (!x.d && p.to - p.from < 28 * DAY) return false; const from = new Date(x.y, x.mo, x.d || 1), to = x.d ? addDays(from, 1) : new Date(x.y, x.mo + 1, 1); return from < p.to && to > p.from; });
+/* A question word's forms for a generous match: the stem and, for a longer word, its first five letters. */
+const looseForms = w => { const f = fold(w).toLowerCase(), st = stemish(f); return [...new Set([f, st, ...(st.length >= 6 ? [st.slice(0, 5)] : [])])].filter(x => x.length >= 3); };
+const noteWords = text => new Set((fold(String(text)).toLowerCase().match(/[\p{L}\p{N}]+/gu) || []));
+const matchesForm = (bag, form) => { if (bag.has(form)) return true; for (const w of bag) if (w.startsWith(form)) return true; return false; };
+
+/* A note in a period: the day it was said or happened (said_on, else recorded) is inside it, or its text names a day inside it. */
+/* A note that names a day inside the period later than the day it was said: a due date, an event, a promise. */
+const datedAhead = (m, p) => { const at = new Date(lib.noteTime(m)), own = new Date(at.getFullYear(), at.getMonth(), at.getDate()); return datesInText(m.content, at).some(x => { if (!x.d) return false; const d = new Date(x.y, x.mo, x.d); return d >= p.from && d < p.to && d > own; }); };
+const inPeriodNote = (m, p) => { const at = new Date(lib.noteTime(m)); return (at >= p.from && at < p.to) || inPeriod(datesInText(m.content, at), p); };
+/* The period as resolved, in days, so the reader never has to count weeks again. */
+function periodLine(p) {
+  const last = addDays(p.to, -1), wd = d => cap(WEEKDAYS[d.getDay()]).slice(0, 3);
+  return `Period asked: ${p.label} = ${p.open ? `${wd(p.from)} ${ymd(p.from)} on, after today (only notes that name its days count)` : `${wd(p.from)} ${ymd(p.from)} to ${wd(last)} ${ymd(last)}, both included`} (today ${p.today}; a week runs Monday to Sunday). A note counts by the day it was said or happened (said_on, else the day it was recorded) or a day in the period its text names${p.due ? '; for what is due or slipping, a commitment dated inside the period counts, and one dated before today that no later note closes has slipped' : ''}.`;
+}
+function everythingRecorded(index, root, question, q, r, filters, now, budget = ANSWER_ALL_BYTES, prefixBytes = 0) {
+  const scope = index.filterSql(filters || {});
+  const all = index.db.prepare(`${scope.prefix}SELECT m.rowid AS r FROM memories m WHERE ${scope.where.join(' AND ')} ORDER BY m.time ASC, m.id ASC`).all(...scope.params).map(x => x.r);
+  const notes = all.map(rowid => ({ rowid, m: fetchRow(index, rowid) }));
+  const lines = notes.map(n => compactLine(n.m));
+  const total = lines.reduce((a, l) => a + Buffer.byteLength(l) + 1, 0);
+  // the threshold is the lines alone (about 40,000 characters), so a brain that fits is never cut by the cards above
+  if (total <= ANSWER_ALL_BYTES && total + prefixBytes + 1500 <= ANSWER_REPLY_BYTES) return { whole: true, header: `Everything recorded in the brain: all ${notes.length} current note${notes.length === 1 ? '' : 's'}, oldest to newest (replaced and withdrawn notes left out). Each line: date (said or happened, else recorded) · context · kind (when not a plain note) · who · text · id.`, lines, notes: notes.map(n => n.m) };
+  // larger brain: every note of each named entity first, then everything the other words, the period or the kind match
+  const chosen = new Map(), out = []; let bytes = 0; const left = [];
+  const add = (n, section) => {
+    if (chosen.has(n.rowid)) return true;
+    const line = compactLine(n.m, LONG_NOTE_CHARS), size = Buffer.byteLength(line) + 1;
+    if (bytes + size > budget) { left.push(n.m.id); chosen.set(n.rowid, false); return false; }
+    if (section && !out.includes(section)) out.push('', section);
+    out.push(line); chosen.set(n.rowid, true); bytes += size; return true;
+  };
+
+  const member = index.db.prepare(`SELECT v.memory AS r FROM members v WHERE v.field='entities' AND v.value=?`);
+  for (const e of q.entities) {
+    const rows = new Set(member.all(JSON.stringify(e.id)).map(x => x.r));
+    const own = notes.filter(n => rows.has(n.rowid));
+    const title = `Every note about ${e.name} (${own.length}), oldest to newest:`;
+    for (const n of own) add(n, title);
+  }
+  const forms = (q.terms || []).filter(w => !/^\d+$/.test(w)).map(looseForms).filter(f => f.length);
+  const scored = [];
+  const ranked = new Map(r.rows.map((row, i) => [row.r, i]));
+  for (const n of notes) {
+    if (chosen.has(n.rowid)) continue;
+    const bag = noteWords(`${n.m.content} ${(n.m.tags || []).join(' ')}`);
+    let score = forms.filter(f => f.some(x => matchesForm(bag, x))).length;
+    if (q.kind && n.m.kind === q.kind) score += 2;
+    if (q.kindHint && n.m.kind === q.kindHint) score += 1;
+    if (q.period && inPeriodNote(n.m, q.period)) score += 3;
+    if (ranked.has(n.rowid)) score += 1;
+    if (score > 0) scored.push({ n, score });
+  }
+  scored.sort((a, b) => b.score - a.score || a.n.m.at.localeCompare(b.n.m.at));
+  const words = [...(q.terms || []), ...(q.period ? [q.period.label] : []), ...(q.kind ? [`${q.kind}s`] : [])];
+  const title = `Every other note matching ${words.length ? words.map(w => `"${w}"`).join(', ') : 'the question'} (any of the words, stems and prefixes${q.period ? ', the period in the record date or a date in the text' : ''}; ${scored.length}), most matched first:`;
+  for (const x of scored) add(x.n, title);
+  return { whole: false, header: `The brain holds ${notes.length} current notes, more than one reply; below is everything about what the question names and every note its words match.`, lines: out, notes: notes.filter(n => chosen.get(n.rowid)).map(n => n.m), left, matched: scored.length };
+}
+
 /* query (object answer): the question as asked, one reply. */
-export function answerText(index, root, question, { filters = {}, limit, project = null, now = nowDate(), relationsFor = () => [] } = {}) {
+export function answerText(index, root, question, { filters = {}, limit, project = null, now = nowDate(), relationsFor = () => [], today, from, to } = {}) {
   question = String(question || '').trim();
   if (!question) return 'answer needs search: the question as asked.';
-  const r = searchIndex(index, question, { filters, project, now, relationsFor });
-  const q = r.parsed, n = Math.max(1, Math.min(200, Number(limit) || ANSWER_NOTES));
-  const maxBytes = limit ? Math.min(MAX_RESULT_BYTES, Math.max(SEARCH_MAX_BYTES, n * PER_NOTE_BYTES)) : SEARCH_MAX_BYTES;
+  const days = periodParams({ today, from, to }); if (days.error) return days.error;
+  if (days.today) now = new Date(days.today.getFullYear(), days.today.getMonth(), days.today.getDate(), 12);
+  const r = searchIndex(index, question, { filters, project, now, relationsFor, from: days.from, to: days.to });
+  const q = r.parsed;
   const out = [];
-  const narrowing = describeNarrowing(q);
-  const words = r.searched.map(g => g.word);
-  const listed = kindList(index, root, question, q, now, maxBytes);
+  const listed = kindList(index, root, question, q, now, ANSWER_ALL_BYTES * 0.3);
+  const narrowing = describeNarrowing(q), words = r.searched.map(g => g.word);
+  if (!r.total && !listed.length) {
+    const given = Object.keys(filters || {});
+    out.push(given.length ? `Not found: no note within the filters given (${given.join(', ')}); the brain was not searched outside them. The same question without filters reads all of it.`
+      : 'Not found: the brain holds no notes yet. Say so plainly.');
+    return out.join('\n');
+  }
   if (!r.rows.length && listed.length) out.push(`Answer for "${question}": no note matches the words, and the brain has the list below (${r.total} notes searched).`);
-  else if (!r.rows.length) {
+  else if (!r.rows.length && !q.entities.length) {
     out.push(`Not found: no note matches "${question}" (${r.total} notes searched${narrowing ? `; narrowed to ${narrowing}` : ''}${words.length ? `; words: ${words.join(', ')}` : ''}${r.missing.length ? `; no note has ${r.missing.map(w => `"${w}"`).join(', ')} or a spelling one letter off` : ''}).`);
     const given = Object.keys(filters || {});
-    out.push(given.length ? `Nothing within the filters given (${given.join(', ')}); the brain was not searched outside them. The same question without filters searches all of it.`
-      : 'The brain holds nothing on this. Say so plainly; searching again with other words will not find more.');
-  } else {
-    out.push(`Answer for "${question}": ${r.rows.length} note${r.rows.length === 1 ? '' : 's'} match${r.rows.length === 1 ? 'es' : ''} of ${r.total}, best first${narrowing ? `; narrowed to ${narrowing}` : ''}.`);
-  }
-  if (listed.length) out.push('', ...listed, '');
+    out.push(given.length ? `Nothing matched within the filters given (${given.join(', ')}); the brain was not searched outside them, and the notes below are only those within them. The same question without filters reads all of it.`
+      : 'The notes below are everything the brain holds that could bear on it (the whole brain when it is small): if none of them answers the question, say plainly that the brain holds nothing on this.');
+  } else if (r.rows.length) out.push(`Answer for "${question}": ${r.rows.length} note${r.rows.length === 1 ? '' : 's'} match${r.rows.length === 1 ? 'es' : ''} of ${r.total}, best first${narrowing ? `; narrowed to ${narrowing}` : ''}.`);
+  else out.push(`Answer for "${question}": no note matches the words${narrowing ? `; about ${narrowing}` : ''}; everything recorded about what it names is below.`);
   out.push(...r.said);
-  for (const a of q.ambiguous || []) out.push(`"${a.said}" could be ${a.names.join(' or ')}${a.more ? ` (and ${a.more} more)` : ''}; the notes below match the word, not one of them. If it matters, ask which one.`);
   if (r.widened) out.push(r.widened);
-  if (r.literal) out.push('No word matched; these notes contain the text as typed (an id, a tag or a source).');
+  if (r.literal) out.push('No word matched; the best matches contain the text as typed (an id, a tag or a source).');
+  for (const a of q.ambiguous || []) out.push(`"${a.said}" could be ${a.names.join(' or ')}${a.more ? ` (and ${a.more} more)` : ''}; the notes below match the word, not one of them. If it matters, ask which one.`);
   if (q.entities.length) {
     const registry = index.entries || lib.readNames(root);
-    // a question that names several ("who are A, B and C") gets a card for each, so no read per person follows
     for (const e of q.entities.slice(0, ANSWER_CARDS)) { const card = entityCard(index, root, e, now, registry, relationsFor); if (card) out.push('', card); }
-    // several named: say what is not recorded, so the next call is not a brief or a search per person
     if (q.entities.length > 2) {
       const none = q.entities.slice(0, ANSWER_CARDS).map(e => registry.find(x => x.id === e.id)).filter(e => e && (e.kind || 'person') === 'person' && !relationsFor(e.id).some(r => r.type === 'works_at' && r.from.id === e.id && r.status === 'current')).map(e => e.name);
       out.push('', `Each one named has its card above${none.length ? `; no employer is recorded as a relationship for ${none.join(', ')} (a brief or a note below may name one: say it as written, else say it is not recorded)` : ''}. The cards and the notes below are what the brain holds on them: no brief or search per person is needed.`);
     }
     if (q.entities.length > ANSWER_CARDS) out.push('', `${q.entities.length - ANSWER_CARDS} more named (${q.entities.slice(ANSWER_CARDS, ANSWER_CARDS + 8).map(e => e.name).join(', ')}): their cards in one call, query object entities with filters.name as a list.`);
   }
-  let bytes = Buffer.byteLength(out.join('\n')), shown = 0;
-  const notes = [];
-  for (const row of r.rows.slice(0, n)) {
-    const m = fetchRow(index, row.r);
-    const line = `${shown + 1}. ${noteText(m, now, shown < 3 ? FULL_NOTE_CHARS : SHORT_NOTE_CHARS, row.later)}`;
-    const size = Buffer.byteLength(line) + 1;
-    if (shown && bytes + size > maxBytes - 360) break;
-    if (!shown) out.push('');
-    out.push(line); notes.push(m); bytes += size; shown++;
+  if (listed.length) out.push('', ...listed);
+  // the best matches for the question's words first, short, as pointers into the full list below (the list is the answer)
+  const n = Math.max(1, Math.min(200, Number(limit) || ANSWER_NOTES));
+  const best = r.rows.slice(0, n).map((row, i) => `${i + 1}. ${noteText(fetchRow(index, row.r), now, BEST_NOTE_CHARS, row.later)}`);
+  if (best.length) out.push('', `Best matches for the words (full text in the list below):`, ...best);
+  const all = everythingRecorded(index, root, question, q, r, filters, now, ANSWER_ALL_BYTES - Buffer.byteLength(out.join('\n')) - 4400 - (q.period ? 1200 : 0), Buffer.byteLength(out.join('\n')));   // room for the closing lines and up to 150 ids
+  if (q.period) {
+    const p = q.period, list = xs => `${xs.slice(0, 40).join(', ')}${xs.length > 40 ? ', ...' : ''}`;
+    const ahead = all.notes.filter(m => datedAhead(m, p)).map(m => m.id), hits = all.notes.filter(m => inPeriodNote(m, p)).map(m => m.id).filter(id => !ahead.includes(id));
+    out.push('', periodLine(p));
+    if (ahead.length) out.push(`Naming a day inside the period, said before it (due dates, events, promises; ${ahead.length}): ${list(ahead)}.`);
+    if (hits.length) out.push(`${ahead.length ? 'Other notes in the period' : 'In the period'}, of the notes below (${hits.length}): ${list(hits)}.`);
+    if (!ahead.length && !hits.length) out.push('None of the notes below falls in the period: say so, and answer from the nearest dates only if the person asks.');
   }
-  const cutNote = notes.find((m, i) => String(m.content).replace(/\s*\n\s*/g, ' ').length > (i < 3 ? FULL_NOTE_CHARS : SHORT_NOTE_CHARS));
-  if (cutNote) out.push('', `A note's text is cut where it says "more characters"; its full text, only if the answer needs it: query sql SELECT content FROM memories WHERE id='${cutNote.id}'.`);
-  const more = r.rows.length - shown;
-  if (more > 0) out.push('', `${more} more match${more === 1 ? 'es' : ''}. For them: query object answer with the same search and limit ${Math.min(200, shown + Math.min(more, ANSWER_NOTES))} (the next ${Math.min(more, ANSWER_NOTES)}, a larger reply)${q.entities.length || q.period ? '' : ', or name a person, company or period to narrow'}.`);
-  if (r.rows.length) {
-    const ask = askSourceLines(root, notes, { day: at => lib.localDateTime(at).slice(0, 10) });
-    if (ask.length) out.push('', ...ask);
-    // the reply is as long as the question needs (ALL-716: answers were as long as before the round, 451 characters at the median)
-    out.push('', asksForDraft(question) ? DRAFT_CLOSE : `Answer from these notes in one to three sentences: the fact, its date and who or what it came from. No list of everything found, no offers and no second search, unless the person asks for more. ${NO_WEB}`);
+  out.push('', all.header, ...all.lines);
+  if (all.left?.length) {
+    const ids = all.left.slice(0, 150);
+    out.push('', `${all.left.length} more matching note${all.left.length === 1 ? '' : 's'} did not fit this reply. All of them in one more call: query sql SELECT at, context, kind, content, id FROM memories WHERE id IN (${ids.map(id => `'${id}'`).join(', ')})${all.left.length > ids.length ? ` (the first ${ids.length}; then the same with the rest)` : ''}.`);
   }
+  const cut = all.notes.find(m => !all.whole && oneLineText(m).length > LONG_NOTE_CHARS);
+  if (cut) out.push('', `A note's text is cut where it says "more characters"; its full text: query sql SELECT content FROM memories WHERE id='${cut.id}'.`);
+  const ask = askSourceLines(root, all.notes.slice(-40), { day: at => lib.localDateTime(at).slice(0, 10) });
+  if (ask.length) out.push('', ...ask);
+  out.push('', asksForDraft(question) ? DRAFT_CLOSE : `Answer from all the notes shown: they are what the brain holds on this. For a list question (what is due, what we decided, who raised something, what we promised), list every item that fits, each with its date and id; a later note that replaces or withdraws one wins. ${NO_WEB} ${NO_SAVE}`);
   return out.join('\n');
 }
 
 /* query (object memories, with search): the same engine, rows as JSON lines, best first, under the cap. */
-export function searchRows(index, root, search, { filters = {}, limit, project = null, now = nowDate(), relationsFor = () => [] } = {}) {
-  const r = searchIndex(index, search, { filters, project, now, relationsFor, everyWord: true });
+export function searchRows(index, root, search, { filters = {}, limit, project = null, now = nowDate(), relationsFor = () => [], today, from, to } = {}) {
+  const days = periodParams({ today, from, to }); if (days.error) return { text: days.error, rows: [] };
+  if (days.today) now = new Date(days.today.getFullYear(), days.today.getMonth(), days.today.getDate(), 12);
+  const r = searchIndex(index, search, { filters, project, now, relationsFor, everyWord: true, from: days.from, to: days.to });
   const n = Math.max(1, Math.min(501, Number(limit) || 50));
   const maxBytes = limit ? Math.min(MAX_RESULT_BYTES, Math.max(SEARCH_MAX_BYTES, n * PER_NOTE_BYTES)) : SEARCH_MAX_BYTES;
   const lines = [], rows = [], cut = []; let bytes = 0;

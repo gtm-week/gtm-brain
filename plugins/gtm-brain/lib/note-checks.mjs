@@ -147,7 +147,7 @@ export const candidateLine = (m, title) => `not saved yet: this looks already re
 export const keptLine = (m, title) => `already kept in ${title}, ${m.id}: "${shown(m.content)}". Nothing written; tell the person it was already there.`;
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const said = (type, v) => type === "date" ? `${+v.slice(3)} ${MONTH_NAMES[+v.slice(0, 2) - 1]}` : type === "percent" ? `${v}%` : type === "weekday" ? v[0].toUpperCase() + v.slice(1) : ["code", "amount", "time"].includes(type) ? v : `${v} ${type}${v === "1" ? "" : "s"}`;
-export const mayChangeLine = (r, title) => `this may change ${r.changed.id} in ${title} ("${shown(r.changed.content)}", from a source): ${r.was.map(v => said(r.type, v)).join(", ")} there, ${r.now.map(v => said(r.type, v)).join(", ")} here. Both are kept; say so in one line only if it matters to the person.`;
+export const mayChangeLine = (r, title) => `this looks like ${r.changed.id} in ${title} ("${shown(r.changed.content)}"): ${r.was.map(v => said(r.type, v)).join(", ")} there, ${r.now.map(v => said(r.type, v)).join(", ")} here. Both are kept. Only if the person corrected that exact fact, remember this again with supersedes: ${r.changed.id}; never on your own guess.`;
 export const changedLine = (r, title, id) => `this changes ${r.changed.id} in ${title} ("${shown(r.changed.content)}"): ${r.was.map(v => said(r.type, v)).join(", ")} is now ${r.now.map(v => said(r.type, v)).join(", ")}, so ${id} replaces it. Say what changed in one line; if both are true, remember the old note again.`;
 
 /* A note that only says a conversation happened: after the names, the dates, the meeting's own title and the

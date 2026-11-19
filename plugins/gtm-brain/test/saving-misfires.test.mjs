@@ -55,22 +55,22 @@ test("a restated fact is already kept anywhere in the brain, and nothing is writ
   assert.equal(b.all().length, before + 1);
 });
 
-test("a different value of the same fact supersedes the kept note and says so; a note from a source stays beside the new one", () => {
+test("a different value of the same fact is kept beside the kept note and named; only the caller's supersedes replaces it", () => {
   const b = brain();
   assert.equal(b.remember("--context", "strategy", "--content", "Fabian Struck will do 30 minutes on the opening panel.", "--people", "Fabian Struck").status, 0);
   const old = b.live().find(m => /Fabian/.test(m.content));
   const r = b.remember("--context", "strategy", "--content", "Fabian Struck can only do 15 minutes on the opening panel, not 30.", "--people", "Fabian Struck");
   assert.equal(r.status, 0, r.stderr);
   const now = b.live().find(m => /15 minutes/.test(m.content));
-  assert.equal(now.supersedes, old.id, "the correction replaces the kept note");
-  assert.match(r.stdout, new RegExp(`this changes ${old.id} in Strategy .*30 minutes is now 15 minutes, so ${now.id} replaces it`));
-  assert.ok(!b.live().some(m => m.id === old.id));
+  assert.equal(now.supersedes, null, "a look-alike never replaces the kept note by itself");
+  assert.match(r.stdout, new RegExp(`this looks like ${old.id} in Strategy .*30 minutes there, 15 minutes here\\. Both are kept\\. Only if the person corrected that exact fact, remember this again with supersedes: ${old.id}`));
+  assert.ok(b.live().some(m => m.id === old.id));
   // a kept note from an email is true of its moment: the new value is saved beside it, never over it
   assert.equal(b.remember("--context", "strategy", "--content", "Marta Zawadzka offered Saturday 19 December for the hackathon, 09:00-21:00, PLN 17,470.", "--people", "Marta Zawadzka", "--source", "gmail:msg-2").status, 0);
   const mail = b.live().find(m => /19 December/.test(m.content));
   const moved = b.remember("--context", "strategy", "--content", "Marta Zawadzka offered Saturday 12 December for the hackathon, 09:00-21:00, price still coming.", "--people", "Marta Zawadzka");
   assert.equal(moved.status, 0, moved.stderr);
-  assert.match(moved.stdout, new RegExp(`this may change ${mail.id} .*19 December there, 12 December here`));
+  assert.match(moved.stdout, new RegExp(`this looks like ${mail.id} .*19 December there, 12 December here`));
   assert.ok(b.live().some(m => m.id === mail.id), "the email's note stays");
   assert.ok(b.live().some(m => /12 December/.test(m.content) && !m.supersedes));
   // unrelated notes about the same person are not touched

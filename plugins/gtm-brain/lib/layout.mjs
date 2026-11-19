@@ -80,7 +80,7 @@ export function recordKindLayout(root) {
 export function pagePaths(root) {
   const dir = join(root, entitiesDir(root));
   if (!dirOK(dir)) return [];
-  const out = readdirSync(dir, { withFileTypes: true }).filter(d => !d.isDirectory() && d.name.endsWith(".md")).map(d => `${entitiesDir(root)}/${d.name}`);
+  const out = readdirSync(dir, { withFileTypes: true }).filter(d => !d.isDirectory() && d.name.endsWith(".md") && d.name !== "INDEX.md").map(d => `${entitiesDir(root)}/${d.name}`);   // INDEX.md: a 0.38.0 preview file, removed by refresh
   for (const folder of kindFolders(root)) {
     for (const d of readdirSync(join(dir, folder), { withFileTypes: true })) if (!d.isDirectory() && d.name.endsWith(".md") && d.name !== INDEX_FILE) out.push(`${entitiesDir(root)}/${folder}/${d.name}`);
   }

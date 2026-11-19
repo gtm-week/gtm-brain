@@ -15,6 +15,8 @@ import { fileURLToPath } from "node:url";
 
 const P = fileURLToPath(new URL("../../", import.meta.url)).replace(/\/$/, "");
 const KiB = 1024;
+// the reply budgets the harness holds the server to: the answer (everything recorded, cards and pointers) and a memories search
+const { ANSWER_REPLY_BYTES, SEARCH_MAX_BYTES } = await import(join(P, "lib/memory-search.mjs"));
 // note ids anywhere in a text (Markdown escapes the underscore), and the ids of the rows query returns
 // a JSON reply may end with a trailer line the server adds (the save nudge after a few reads)
 const jsonOf = s => { const t = String(s), end = t.lastIndexOf("}"); try { return JSON.parse(t.slice(0, end + 1)); } catch { return null; } };
@@ -67,14 +69,16 @@ export async function runChecks({ brain: source, gold: goldPath, keep = false })
   await check("search.multi_word", "search", async () => found((await q({ object: "memories", search: N.multi.query })).text, N.multi.ids));
   await check("search.stemmed", "search", async () => found((await q({ object: "memories", search: N.stem.query })).text, N.stem.ids));
   await check("search.typo", "search", async () => found((await q({ object: "memories", search: N.typo.query })).text, N.typo.ids));
-  // one call for a question (query object answer): the notes with their ids, the named entity's card, Not found plainly, under the cap
+  // one call for a question (query object answer, 0.38.0): everything recorded that the question can need, the named
+  // entity's card, Not found plainly, within the answer's reply budget. A small brain comes back whole, so Not found is
+  // followed by every current note with the instruction to say plainly that nothing bears on it; no note is a best match.
   await check("answer.question", "search", async () => found((await q({ object: "answer", search: `What do we know about the ${N.multi.query}?` })).text, N.multi.ids, ids));
   await check("answer.stemmed_typo", "search", async () => { const a = await q({ object: "answer", search: `Who mentioned invoices?` }), b = await q({ object: "answer", search: `anything on the ${N.typo.query}` }); const x = found(a.text, N.stem.ids, ids), y = found(b.text, N.typo.ids, ids); return { pass: x.pass && y.pass && /searched "heliograph" instead/.test(b.text), text: a.text + "\n" + b.text, note: [x.note, y.note].filter(Boolean).join("; ") }; });
   await check("answer.entity_card", "search", async () => { const r = await q({ object: "answer", search: `What is going on with ${gold.busiest.name}?` }); return { pass: !r.isError && r.text.includes(gold.busiest.id) && ids(r.text).length > 0, text: r.text }; });
-  await check("answer.not_found", "search", async () => { const r = await q({ object: "answer", search: "Did anyone talk about zqxjvbnonsenseword?" }); return { pass: !r.isError && /^Not found: /.test(r.text) && ids(r.text).length === 0 && Buffer.byteLength(r.text) < 1024, text: r.text }; });
+  await check("answer.not_found", "search", async () => { const r = await q({ object: "answer", search: "Did anyone talk about zqxjvbnonsenseword?" }); const b = Buffer.byteLength(r.text); return { pass: !r.isError && /^Not found: /.test(r.text) && /say plainly that the brain holds nothing on this/.test(r.text) && !/Best matches for the words/.test(r.text) && b <= ANSWER_REPLY_BYTES, text: r.text, note: `${b} B` }; });
   // current over superseded: a relationship that changed later brings the note that changed it, never only the old state
   if (gold.hub?.partnership?.history?.length > 1) await check("answer.current_state", "search", async () => { const p = gold.hub.partnership, last = p.history.at(-1).memory, r = await q({ object: "answer", search: `Is ${gold.hub.name} a partner of ours?` }); const got = ids(r.text); return { pass: !r.isError && got.includes(last), text: r.text, note: `latest ${p.history.at(-1).status} note ${last} at rank ${got.indexOf(last) + 1 || "none"}` }; });
-  await check("answer.capped", "search", async () => { const r = await q({ object: "answer", search: gold.busiest.name }), s = await q({ object: "memories", search: gold.busiest.name }); const a = Buffer.byteLength(r.text), b = Buffer.byteLength(s.text); return { pass: !r.isError && !s.isError && a <= 13 * KiB && b <= 13 * KiB, text: r.text + "\n" + s.text, note: `answer ${a} B, memories search ${b} B` }; });
+  await check("answer.capped", "search", async () => { const r = await q({ object: "answer", search: gold.busiest.name }), s = await q({ object: "memories", search: gold.busiest.name }); const a = Buffer.byteLength(r.text), b = Buffer.byteLength(s.text); return { pass: !r.isError && !s.isError && a <= ANSWER_REPLY_BYTES && b <= SEARCH_MAX_BYTES + KiB, text: r.text + "\n" + s.text, note: `answer ${a} B of ${ANSWER_REPLY_BYTES}, memories search ${b} B of ${SEARCH_MAX_BYTES}` }; });
   await check("search.recall_tool", "search", async () => { const r = await call("recall", { query: N.single.query }); return { pass: !r.isError && new RegExp(`${N.single.ids.length} memor(y|ies) match`).test(r.text), text: r.text }; });
   await check("search.name", "search", async () => { const r = await q({ object: "memories", search: gold.busiest.name }); return { pass: ids(r.text).length > 0, text: r.text }; });
   if (N.alias) await check("search.alias", "search", async () => { const r = await q({ object: "memories", search: N.alias.query }); const got = ids(r.text); return { pass: N.alias.ids.some(x => got.includes(x)), text: r.text, note: `${N.alias.query} -> ${N.alias.name}` }; });

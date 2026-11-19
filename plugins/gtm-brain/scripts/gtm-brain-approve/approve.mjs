@@ -18,6 +18,8 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 import { workDir } from '../../lib/brain-paths.mjs';
 const lib = await import(new URL("../../lib/brain.mjs", import.meta.url));
+// an approved change may carry a team rule: the AGENTS.md block follows it (lib/standing-rules.mjs)
+const rulesBlock = async () => { try { (await import(new URL("../../lib/standing-rules.mjs", import.meta.url))).keepRulesBlock(root, "rules: AGENTS.md block refreshed after an approval"); } catch {} };
 const owner = await import(new URL("../../lib/owner.mjs", import.meta.url));
 const paths = await import(new URL("../../lib/brain-paths.mjs", import.meta.url));
 const diff = lib.lineDiff;
@@ -58,6 +60,7 @@ if (opt.proposal) {
   if (!(await personApproved())) { console.error(NOT_APPROVED); process.exit(4); }
   audit(`${p.id}\t${opt.drop ? "declined" : "approved"} by ${by}\t${p.files.map(f => f.path).join(",")}`);
   let r; try { r = opt.drop ? owner.dropProposal(root, p.id, by) : owner.applyProposal(root, p.id, by); } catch (e) { console.error(`not applied: ${e.message}.`); process.exit(1); }
+  if (!opt.drop) await rulesBlock();
   lib.rerender(root);
   console.log(`${opt.drop ? "declined" : "applied"} proposal ${p.id} (${p.files.map(f => f.path).join(", ")}), asked by ${p.by || "someone"}, ${opt.drop ? "declined" : "approved"} by ${by} · ${r.note}${r.record ? ` · recorded as ${r.record}` : ""}`);
   process.exit(0);
@@ -92,6 +95,7 @@ if (opt.interaction) {
   const where = proposal.external === false ? "record only" : proposal.tool;
   const r = lib.commit(root, [lib.interactionsFile(root)], `interactions: ${proposal.name}\n\n${proposal.external === false ? "record only: no tool step" : `${proposal.tool}: ${proposal.operation}`}`, { system: true });
   let record = null; try { if (r.ok) record = owner.recordApproval(root, { asked: by, approved: by, files: [lib.interactionsFile(root)], summary: `interaction ${proposal.name} (${where})` }); } catch {}
+  await rulesBlock();
   lib.rerender(root);
   console.log(`added interaction ${proposal.name} (${where}) · ${r.note}${record ? ` · recorded as ${record}` : ""}\nlist_objects shows it from the next call; interact runs it.`);
   process.exit(0);
@@ -130,6 +134,7 @@ if (!owner.isOwner(root, by)) {
 audit(`${SETTINGS}\tapproved by ${by}\t${changed.length} lines`);
 writeFileSync(ADMIN, after); unlinkSync(PROP);
 const r = lib.commit(root, [SETTINGS], `admin: change approved by ${by}\n\n${changed.join("\n")}`, { system: true });
+await rulesBlock();
 let record = null; try { if (r.ok) record = owner.recordApproval(root, { asked: by, approved: by, files: [SETTINGS], summary: `${changed.length} line${changed.length === 1 ? "" : "s"} changed: ${changed.slice(0, 2).map(l => l.slice(2).trim()).join("; ").slice(0, 160)}` }); } catch {}
 lib.rerender(root);
 console.log(`applied ${SETTINGS}, approved by ${by} · ${r.note}${record ? ` · recorded as ${record}` : ""}\n${changed.join("\n")}`);

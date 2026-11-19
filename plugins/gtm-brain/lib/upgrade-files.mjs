@@ -97,7 +97,7 @@ export function rulesState(root, templates) {
 export function writeRules(root, templates) {
   const path = join(root, "AGENTS.md"), target = readFileSync(join(templates, "AGENTS.md"), "utf8").replaceAll("{{COMPANY}}", readAdmin(root).company);
   const current = existsSync(path) ? readFileSync(path, "utf8") : null;
-  const next = joinOwn(target, current === null ? "" : splitOwn(current).own);
+  const parts = current === null ? { own: "", block: "" } : splitOwn(current), next = joinOwn(target, parts.own, parts.block);
   if (current === next) return false;
   writeFileSync(path, next); return true;
 }

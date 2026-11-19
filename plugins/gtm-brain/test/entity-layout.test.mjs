@@ -110,7 +110,7 @@ test("a new brain writes pages into a folder per kind, each page named with its 
   assert.equal(ann._path, `brain/entities/people/ann-lee-${sid(ann.id)}.md`);
   assert.ok(existsSync(join(root, `brain/entities/people/max-jendral-${sid(max.id)}.md`)));
   assert.ok(existsSync(join(root, `brain/entities/organizations/acme-${sid(acme.id)}.md`)));
-  assert.deepEqual(readdirSync(join(root, "brain/entities")).filter(f => f.endsWith(".md")), [], "nothing flat");
+  assert.deepEqual(readdirSync(join(root, "brain/entities")).filter(f => f.endsWith(".md") && f !== "INDEX.md"), [], "nothing flat");
 });
 
 test("an offering is a default kind with its own folder; a project is still not a kind", () => {
@@ -295,7 +295,7 @@ test("flat pages a teammate on 0.34 writes into an upgraded brain: reads keep wo
   assert.equal(read.find(n => n.id === max.id)._path, maxPath, "the kind page wins over its twin; nothing throws");
   assert.ok(read.some(n => n.id === lena));
   lib.refreshEntityPages(root);
-  assert.deepEqual(readdirSync(join(root, "brain/entities")).filter(f => f.endsWith(".md")), [], "no flat page left");
+  assert.deepEqual(readdirSync(join(root, "brain/entities")).filter(f => f.endsWith(".md") && f !== "INDEX.md"), [], "no flat page left");
   const after = lib.readNames(root), m = after.find(n => n.id === max.id);
   assert.equal(m._path, maxPath); assert.deepEqual(m.aliases, ["MJ"]); assert.deepEqual(m.emails, ["max@acme.test"], "what only the twin held is kept");
   assert.equal(after.find(n => n.id === lena)._path, `brain/entities/people/lena-ost-${sid(lena)}.md`);
@@ -314,7 +314,7 @@ test("a 0.34 teammate's flat page for a merged, renamed or aliased entity folds 
   writeFileSync(join(root, "brain/entities/max-jendral.md"), page(max.id, "Max Jendral"));
   assert.doesNotThrow(() => lib.readNames(root), "reads keep working");
   assert.doesNotThrow(() => lib.refreshEntityPages(root), "the next write folds them in");
-  assert.deepEqual(readdirSync(join(root, "brain/entities")).filter(f => f.endsWith(".md")), [], "no flat page left");
+  assert.deepEqual(readdirSync(join(root, "brain/entities")).filter(f => f.endsWith(".md") && f !== "INDEX.md"), [], "no flat page left");
   const after = lib.readNames(root), k = after.find(n => n.id === kp.id);
   assert.equal(after.filter(n => n.name === "KP" || n.name === "Chris").length, 0, "no duplicate identity");
   assert.ok(k.emails.includes("chris@acme.test"), "what only the merged twin held reaches the survivor");

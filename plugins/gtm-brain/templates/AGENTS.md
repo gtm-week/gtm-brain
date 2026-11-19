@@ -4,8 +4,8 @@
 
 These come first; the sections below detail them as core 1 to 6 and never override them.
 <!-- generated: core; edit plugins/gtm-brain/policies/core.md -->
-1. Record each outcome with `remember` the moment it is established: one memory per distinct
-   outcome, with its source. Write first, confirm in one short line.
+1. Record each outcome with `remember` at once, one memory per distinct outcome, with its
+   source, unless one of the team's rules applies: then name it and ask first.
 2. Read the brain before answering about the company, a customer or a deal: search it with
    `query`. Say a stored fact's age ("as of 2026-09-02, 73 days ago"); what may have changed is
    checked in its tool before acting on it. Never invent.
@@ -28,8 +28,14 @@ GTM Brain call, whatever it is, returns this chat's opening lines with its resul
 brain and person, loaded contexts, the health line, questions waiting for an answer, documents,
 approved photos and logos, the rows of `RULES.md` and the projects in `projects/`. Follow them.
 Make that first call the one the request needs: `query` with a search for a question, `remember`
-for a save. Before saying or deciding where a file goes, follow `RULES.md` and name the project
-folder that exists for it.
+for a save. Where the tools are called from code (Codex's `exec`), these calls are complete as
+written, with `brain` = this folder's absolute path, so call one at once, with no lookup in
+`ALL_TOOLS` first:
+`await tools.mcp__gtm_brain__query({brain, object: "answer", search: "<the question as asked>"})`,
+`await tools.mcp__gtm_brain__remember({brain, content, people: ["<each name>"]})` (`content` is
+one outcome, a relative date in it such as "today" written as the date; this chat is its
+source, so `sources` only for a record from a tool). Before saying or deciding where a file
+goes, follow `RULES.md` and name the project folder that exists for it.
 
 Never run shell commands to look around (versions, sign-in, listing files, reading the brain):
 `check_environment` for the machine, `query` for the brain. Never read the plugin's skill files to

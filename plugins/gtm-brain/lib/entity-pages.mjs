@@ -10,6 +10,10 @@ import { entityStamp } from './entity-stamp.mjs';
 import { askSourceRevision } from './ask-source.mjs';
 import { memoryStamp } from './memory-journal.mjs';
 import * as lib from './brain.mjs';
+/* The page renderer's version: part of every page's refresh signature, so a change to how a page is written (the
+   Everything recorded section, 0.38.0) re-renders every existing page once after an upgrade, not when each
+   entity next gets a note. Bump it whenever publish() writes a page differently. */
+export const PAGE_RENDER = 2;
 
 export const ENTITY_TIMELINE_LIMIT = 100;
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -25,7 +29,7 @@ export function refreshIndexedPages(root, registry, publish, { readOnly = false 
   const contexts = lib.listContexts(root, { includeMemories: false });
   const sources = () => digest([...contexts.map(c => [c.slug, memoryStamp(c.path)?.key]), ...lib.noteSources(root).map(f => [f.file, memoryStamp(f.path)?.key])]);
   const sourceRevision = sources(), schemaRevision = readSchema(root).schema?.hash || readSchema(root).error?.message || null, askRevision = askSourceRevision(root);
-  if (!readOnly && saved?.format === 1 && saved.sources === sourceRevision && saved.identities === entityStamp(root) && (saved.schema ?? null) === schemaRevision && saved.ask === askRevision) return [];
+  if (!readOnly && saved?.format === 1 && saved.render === PAGE_RENDER && saved.sources === sourceRevision && saved.identities === entityStamp(root) && (saved.schema ?? null) === schemaRevision && saved.ask === askRevision) return [];
   // A pinned snapshot: the cache lock is held only while the cache catches up, not while
   // the pages are built and written, so neither a save nor a read waits on a render.
   const index = openForRead(root), changed = [], checkpoints = {};
@@ -54,7 +58,7 @@ export function refreshIndexedPages(root, registry, publish, { readOnly = false 
     for (const e of registry.filter(e => readOnly || e._path)) {
       const previous = saved?.pages?.[e.id], revision = version.get(JSON.stringify(e.id))?.version || 0;
       const notes = editedBody(e) ? { path: e._path, markdown: e._body } : null;
-      const signatureFor = (related, scoped) => digest([identity(e), e._path, related, scoped, notes, revision, e._fm?.compilation, e._fm?.compiled_as_of, e._fm?.compiled_at, e._fm?.compiled_fields, e._fm?.compiled_schema, schemaRevision, e.kind === 'tool' ? askRevision : null]);
+      const signatureFor = (related, scoped) => digest([PAGE_RENDER, identity(e), e._path, related, scoped, notes, revision, e._fm?.compilation, e._fm?.compiled_as_of, e._fm?.compiled_at, e._fm?.compiled_fields, e._fm?.compiled_schema, schemaRevision, e.kind === 'tool' ? askRevision : null]);
       // Most writes do not change this entity's evidence, its known neighbors or
       // its context covers. Check those recorded dependencies before any history
       // query. The index bumps both old and new owners on every relink/correction.
@@ -81,7 +85,7 @@ export function refreshIndexedPages(root, registry, publish, { readOnly = false 
     if (readOnly) return changed;
     const temporary = path + '.' + process.pid + '.tmp';
     if (sources() !== sourceRevision) throw new Error('Context files changed during entity refresh. Retry the save.');
-    writeFileSync(temporary, JSON.stringify({ format: 1, epoch, pages: checkpoints, sources: sourceRevision, identities: entityStamp(root), schema: schemaRevision, ask: askRevision, refreshed, checked: registry.length, at: new Date().toISOString() }));
+    writeFileSync(temporary, JSON.stringify({ format: 1, render: PAGE_RENDER, epoch, pages: checkpoints, sources: sourceRevision, identities: entityStamp(root), schema: schemaRevision, ask: askRevision, refreshed, checked: registry.length, at: new Date().toISOString() }));
     renameSync(temporary, path);
     return changed;
   } finally { index.close(); }
@@ -103,7 +107,7 @@ function pageFacts(root, e, related, contexts, notes, records) {
     for (const row of records.iterate(c.context)) {
       if (count++) hash.update(',');
       hash.update(row.raw);
-      const m = JSON.parse(row.raw);
+      const m = JSON.parse(row.raw); m.at = lib.noteAt(m);   // the date it happened (said_on), else saved
       if (cited.has(m.id) || m.relation || m.customer || (m.meeting && e.kind === 'meeting')) retained.set(m.id, m);
       if (m.retracts) recent(withdrawals, m, 20);
       else {

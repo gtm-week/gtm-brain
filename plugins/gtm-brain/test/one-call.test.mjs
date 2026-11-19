@@ -19,7 +19,7 @@ process.env.CODEX_HOME = mkdtempSync(join(tmpdir(), "gtm-brain-test-home-"));   
 const lib = await import(`${P}/lib/brain.mjs`);
 const ENV = { ...process.env, GTM_BRAIN_NO_COMMIT: "1", GTM_BRAIN_NO_COMPILE: "1", GTM_BRAIN_NO_OPEN: "1", GTM_BRAIN_NO_SESSION_START: "1", GTM_BRAIN_NO_SAVE_NUDGE: "1" };
 
-const server = spawn(process.execPath, [`${P}/server/server.mjs`], { stdio: ["pipe", "pipe", "pipe"], env: ENV });
+const server = spawn(process.execPath, [`${P}/server/server.mjs`], { stdio: ["pipe", "pipe", "pipe"], env: { ...ENV, GTM_BRAIN_TOOLSET: "full" } });   // full: reads definitions the chat list leaves out
 const waiting = new Map(); let seq = 0;
 createInterface({ input: server.stdout }).on("line", line => { const m = JSON.parse(line); const r = waiting.get(m.id); if (r) { waiting.delete(m.id); r(m); } });
 const rpc = (method, params = {}) => new Promise(res => { const id = ++seq; waiting.set(id, res); server.stdin.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n"); });

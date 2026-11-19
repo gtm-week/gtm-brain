@@ -107,15 +107,19 @@ test("the server's instructions carry the core once, on either host", async () =
     for (const must of [/first GTM Brain call, whatever it is/, /no separate status call/, /kept at once/, /keep_approved_file, in the same turn/])
       assert.match(head, must, `${host || "codex"}: ${must} is past the first 2048 characters`);
     // the five common jobs, one line each, right after: no discovery round, no skill or rule page read first
-    const shapes = text.slice(text.indexOf("Call shapes for the common jobs"), text.indexOf("Files you create, edit, move or delete")).trimEnd().split("\n");
+    const shapes = text.slice(text.indexOf("Call shapes for the common jobs"), text.indexOf("Files you change in the brain folder")).trimEnd().split("\n");
     assert.equal(shapes.length, 6, "a lead line and five shapes");
     assert.match(shapes[0], /Use them as written: no list_objects, describe_object, status or rule page first/);
     // the read named for a question is the one the query tool's description opens with (memory-search.test.mjs
     // holds that sentence), here and in the opening: two names for one job cost a round of choosing
     assert.match(readFileSync(join(plugin, "server/server.mjs"), "utf8"), /query\.description = "To answer a question from the brain, call query with object answer and search/);
-    assert.match(head, /query answer with search for a question, remember for a save/);
+    assert.match(head, /remember for a save, query for a list/);
+    // win-recall: a question about one company or person is a page read, not a search call
+    assert.match(text, /To answer a question, call query with object answer and the question as asked: one call returns everything recorded about the companies and people in the question and every note its words match\./);
+    // a read-only question never leads to a save: the instructions say so where they name the read
+    assert.match(text, /every note its words match\. A question alone saves nothing\./);
     assert.doesNotMatch(text.slice(0, text.indexOf("\nQuestions: ")), /query memories with search|object: "memories"/);
-    for (const [i, re] of [/^- Answer from the brain: query \{object: "answer", search: "<the question as asked>"\}$/,/^- Save a note: remember \{content, people: \[names\], sources\}.*answer_question/,
+    for (const [i, re] of [/^- Any question about the brain \(a company, a person, lists, dates\): query \{object: "answer", search\}; one call returns everything recorded about what it names$/,/^- Save a note: remember \{content, people: \[names\], sources\}.*answer_question/,
       /^- Read several people or companies in one call: query \{object: "entities", filters: \{name: \["A", "B"\]\}\} \(or filters\.id\)/,
       /^- Housekeeping, only when the person asks for it: query \{object: "housekeeping"\}, then the first item only, asked with ask_person/,
       /^- Merge two entities the person confirmed are one: merge_entities \{source, target, confirmed: true\}/].entries()) assert.match(shapes[i + 1], re);

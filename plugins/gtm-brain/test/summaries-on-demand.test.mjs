@@ -128,7 +128,9 @@ after(() => server.kill());
 
 test("a chat is offered the summary writers (not entity_facts) and writes a topic summary from load_context in two calls", async () => {
   const names = (await rpc("tools/list")).result.tools.map(t => t.name);
-  for (const n of ["compile_facts", "compile_apply", "compile_entity"]) assert.ok(names.includes(n), `${n} is offered to a chat`);
+  for (const n of ["compile_apply", "compile_entity"]) assert.ok(names.includes(n), `${n} is offered to a chat`);
+  // compile_facts left the chat's list in the diet of 2026-11-17 (an explicit rewrite is rare); it still answers
+  assert.ok(!/unknown tool/.test(JSON.stringify(await rpc("tools/call", { name: "compile_facts", arguments: {} }))), "compile_facts still answers tools/call");
   assert.ok(!names.includes("entity_facts"), "entity_facts stays with the runs");
   const root = brain();
   await call("remember", { brain: root, by: "ann", context: "icp", content: "Acme wants a pilot in December." });

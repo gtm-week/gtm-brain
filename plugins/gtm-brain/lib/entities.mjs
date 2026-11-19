@@ -485,7 +485,51 @@ export function entityEvidenceIndex(registry, contexts) {
     slices.set(c, byName);
   }
   evidenceSlices.set(index, slices);
+  recordedSlices.set(index, recordedByName(contexts, index));
   return index;
+}
+/* Every record naming each entity, in force or not, plus the corrections that replaced or withdrew one of them:
+   the page's "Everything recorded" (win-recall). References to the stored records, never copies. */
+const recordedSlices = new WeakMap();
+function recordedByName(contexts, index) {
+  const out = new Map(), add = (name, m) => { if (!out.has(name)) out.set(name, new Set()); out.get(name).add(m); };
+  for (const c of contexts) {
+    const stored = new Map(c.memories.map(m => [m.id, m]));
+    for (const m of c.memories) {
+      for (const name of index.get(m.id) || []) add(name, m);
+      const target = m.supersedes || m.retracts;
+      if (target && stored.has(target)) for (const name of index.get(target) || []) add(name, m);
+    }
+  }
+  return out;
+}
+/* The same list from the memory index, for the indexed page refresh. */
+const recordedQueries = new WeakMap();
+export function indexedRecorded(index, id) {
+  let q = recordedQueries.get(index);
+  if (!q) recordedQueries.set(index, q = index.db.prepare(`SELECT m.raw FROM members v JOIN memories m ON m.rowid=v.memory WHERE v.field='entities' AND v.value=?
+    UNION SELECT r.raw FROM members v JOIN memories m ON m.rowid=v.memory JOIN corrections c ON c.file=m.file AND c.target=m.id JOIN memories r ON r.rowid=c.memory WHERE v.field='entities' AND v.value=?`));
+  const key = JSON.stringify(id); // two plain ? (numbered ?1 fails to bind on Node 22.16)
+  return q.all(key, key).map(r => JSON.parse(r.raw));
+}
+export const RECORDED_CAP = 80;
+const flatText = s => String(s || "").replace(/\s+/g, " ").trim();
+/* One line per note, newest first: the date it was said (an observed date when the note carries one), who said it,
+   the full text, and a replaced or withdrawn note marked with the note that replaced it. */
+export function recordedLines(records, cap = RECORDED_CAP) {
+  const unique = [...new Map(records.map(m => [m.id, m])).values()];
+  const after = new Map();
+  for (const m of unique) for (const k of ["supersedes", "retracts"]) if (m[k]) after.set(m[k], { by: m, how: k === "supersedes" ? "replaced" : "withdrawn" });
+  const when = m => m.relation?.observed_at || m.customer?.observed_at || m.at;
+  const sorted = unique.sort((a, b) => Date.parse(when(b)) - Date.parse(when(a)) || Date.parse(b.at) - Date.parse(a.at) || a.id.localeCompare(b.id));
+  const lines = sorted.slice(0, cap).map(m => {
+    const gone = after.get(m.id), d = String(lib.localDateTime(when(m))).slice(0, 10);
+    const mark = gone ? `[${gone.how} by ${gone.by.id} on ${String(lib.localDateTime(gone.by.at)).slice(0, 10)}] ` : "";
+    const what = m.supersedes ? ` (corrects ${m.supersedes})` : m.retracts ? ` (withdraws ${m.retracts})` : "";
+    return `- ${d} · ${(m.authors || []).join(", ") || "unknown"} · ${mark}${flatText(m.content)}${what} · ${m.id}`;
+  });
+  if (sorted.length > cap) lines.push(`- ${sorted.length - cap} older notes are not listed here; query (object memories, filters.entities) lists them.`);
+  return lines;
 }
 /* SCHEMA.md for one entity: the fields and required relationships of its kind, whether its brief was compiled
    under another schema (refilled, never hidden: as_of stays about evidence only), and the cited values kept. */
@@ -528,7 +572,8 @@ export function entityFacts(root, name, { registry = lib.readNames(root), contex
     catch (error) { invalid(e._path, "compilation", error.message, "reconcile the brief's citations with current context memories, preserving the edited text for review"); }
   }
   const { schema, schema_behind, previous_fields } = schemaFacts(root, e, evidence.length);
-  return { entity: { ...identity(e), path: e._path || null }, related_identities, as_of, stale, compiled_at: e._fm?.compiled_at || null, latest_evidence_at: newest(evidence), contexts: relevant,
+  const slice = recordedSlices.get(index) || recordedByName(contexts, index), recorded = [...slice.get(e.name) || []];
+  return { entity: { ...identity(e), path: e._path || null }, related_identities, recorded, as_of, stale, compiled_at: e._fm?.compiled_at || null, latest_evidence_at: newest(evidence), contexts: relevant,
     previous: e._compilation || null, previous_fields, schema, schema_behind, file_notes, evidence,
     timeline: lib.memoryTimeline(evidence) };
 }
@@ -815,6 +860,11 @@ function renderBrief(facts, brief, evidence, registry, scope, now = null, root =
   // a save refreshes (on 1,750 entities that was most of a 20 s save).
   const peers = new Set(scope ? selected.flatMap(lib.createMentionMatcher(registry)).filter(n => n !== facts.entity.name) : facts.related_identities.map(n => n.name));
   if (peers.size) out.push("\nAlso mentioned with: " + [...peers].map(n => { const e = registry.find(x => x.name === n); return e?._path ? link(n, linkFrom(page, e._path)) : md(n); }).join(", ") + ".");
+  if (!scope && facts.recorded) {
+    out.push("\n## Everything recorded", "\nEvery note that names this entity, newest first: date said · who said it · the full note · its id. A note marked replaced or withdrawn no longer holds; the note named in the mark does.");
+    const lines = recordedLines(facts.recorded);
+    out.push("\n" + (lines.join("\n") || "Nothing recorded yet."));
+  }
   const timeline = facts.timeline;
   out.push("\n## Timeline", "\nNotes in recording order, newest first. Relevant event dates are kept in the note text; the timestamp labels when the memory was recorded.");
   if (facts.timeline_total > timeline.length) out.push(`\nShowing the latest ${timeline.length} of ${facts.timeline_total} current context records. Follow the full memory histories below for earlier evidence. ${moreLine(facts.timeline_total - timeline.length, facts.entity.id)}${scope ? ` and filters.context=${scope}` : ""}.`);
@@ -845,8 +895,17 @@ function refreshPages(root) {
   const strays = foldStrayPages(root);
   const registry = lib.readNames(root), changed = [...strays, ...refreshBriefs(root, registry)];
   // the kind indexes follow the pages: same lock, same write path, committed with them
-  changed.push(...writeKindIndexes(root, changed.length ? lib.readNames(root) : registry, kindRelations(root)));
+  const current = changed.length ? lib.readNames(root) : registry;
+  changed.push(...writeKindIndexes(root, current, kindRelations(root)));
+  changed.push(...removeBrainIndex(root));
   return changed;
+}
+/* entities/INDEX.md, written by the 0.38.0 previews only: a 0.37.x plugin reads every top-level .md in entities/ as
+   an entity page and fails on it, so refresh removes one that exists (review finding 4). */
+function removeBrainIndex(root) {
+  const rel = `${entitiesDir(root)}/INDEX.md`, file = join(root, rel);
+  if (!existsSync(file)) return [];
+  try { rmSync(file, { force: true }); return [rel]; } catch { return []; }
 }
 /* Relation to us per entity id, for the kind indexes (lib/relation-to-us.mjs fills it in). */
 function kindRelations(root) {
@@ -861,8 +920,8 @@ function kindRelations(root) {
 }
 function refreshBriefs(root, registry) {
   if (hasMemoryIndex()) {
-    return refreshIndexedPages(root, registry, (e, facts, changed) => {
-      const view = entityBrief(root, e.id, { registry, facts });
+    return refreshIndexedPages(root, registry, (e, facts, changed, index) => {
+      const view = entityBrief(root, e.id, { registry, facts: { ...facts, recorded: indexedRecorded(index, e.id) } });
       const fm = { ...e._fm, evidence_as_of: view.as_of, latest_evidence_at: view.latest_evidence_at, stale: view.stale };
       const body = editedBody(e) ? e._body : view.markdown;
       if (!editedBody(e)) fm.rendered_body_hash = hash(body);

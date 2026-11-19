@@ -197,7 +197,9 @@ test('a prep question about a known name with a day ahead returns the card and t
   assert.ok(ids(r).includes(tomorrowNote.id), 'the note about the call is among them, in its place by date');
   assert.ok(!ids(r).includes(dana.id) && !ids(r).includes(elsewhere.id), 'only the notes of the name');
   assert.doesNotMatch(r, /tomorrow \(recorded|Nothing for|None of the notes|No note has/);
-  assert.match(r, /^4 more match\. For them: query object answer with the same search and limit 12 /m);
+  // win-a: no "more match" window; the small brain is in the reply whole, so every note of the name is there
+  assert.doesNotMatch(r, /more match/);
+  for (const id of newestFirst) assert.ok(r.includes(id), `${id} in the reply`);
   const all = answer(root, 'I have a call with Acme tomorrow, brief me', { now, limit: 20 });
   assert.deepEqual(ids(all), newestFirst, 'all twelve, newest first');
 
