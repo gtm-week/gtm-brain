@@ -34,14 +34,17 @@ test('the key path is gone: a pasted key is never used or kept', () => {
   assert.match(skill, /Never put a ZYNT key in a header and never use curl: the tools are the only way\./);
 });
 
-// ZYNT's tools from any connection (2026-11-18): the plugin, a Claude or ChatGPT connector, a server added to Codex.
-test('ZYNT is set up through its tools from any connection; without them, the sign-in or connect steps', () => {
+// ZYNT's tools from any connection (2026-11-19): in Codex the agent connects ZYNT itself, no plugin, and checks the sign-in.
+test('ZYNT is set up through its tools from any connection; in Codex the agent connects it and checks the sign-in', () => {
   for (const tool of ['add_setup_context', 'get_setup', 'answer_setup']) assert.ok(skill.includes('`' + tool + '`'), tool);
-  for (const step of ['codex plugin marketplace add getzynt/zynt-plugins', 'codex plugin add zynt@zynt', 'codex mcp login zynt',
-    '/plugin marketplace add getzynt/zynt-plugins', '/plugin install zynt@zynt', 'https://app.getzynt.com/mcp']) assert.ok(skill.includes('`' + step + '`'), step);
-  assert.match(skill, /The tool names decide, not where they came from\./);
-  assert.match(skill, /installed, not signed in/);
-  assert.match(skill, /give the steps and stop/);
+  for (const step of ['codex mcp list --json', 'codex mcp add zynt --url https://app.getzynt.com/mcp', 'codex mcp login zynt',
+    'claude mcp add --transport http zynt https://app.getzynt.com/mcp', 'https://app.getzynt.com/mcp']) assert.ok(skill.includes('`' + step + '`'), step);
+  assert.match(skill, /The tool names decide, not where they came\s+from\./);
+  assert.match(skill, /No plugin is needed\./);
+  assert.doesNotMatch(skill, /codex plugin add/, 'the plugin is never required');
+  assert.match(skill, /Only `zynt` with `auth_status` `o_auth` is signed in\./);
+  assert.match(skill, /Never say\s+"signed in" before `codex mcp list --json` shows it\./);
+  assert.match(skill, /codex:\/\/threads\/new\?path=/);
   assert.match(skill, /tools: \["ZYNT"\]/);
   assert.match(skill, /Then call `check_tools`\./);
 });

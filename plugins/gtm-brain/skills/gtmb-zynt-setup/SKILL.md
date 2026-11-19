@@ -4,8 +4,8 @@ description: |
   Set up ZYNT from the brain through ZYNT's tools, from any ZYNT connection (its plugin, a
   Claude or ChatGPT connector, a server added to Codex): the agent fills ZYNT's onboarding from
   the brain's strategy, ICP, market and target companies, puts the brain's companies and people
-  on ZYNT lists, asks only what the brain does not say, and keeps one note. Without ZYNT's tools,
-  it gives the steps to sign in or connect. Triggers: "Set up ZYNT for me", "/gtmb-zynt-setup",
+  on ZYNT lists, asks only what the brain does not say, and keeps one note. Without ZYNT's tools
+  in Codex, it connects ZYNT itself (no plugin) and gives one link to continue. Triggers: "Set up ZYNT for me", "/gtmb-zynt-setup",
   "connect ZYNT", "set up Zynt". Not reading ZYNT's news or signals after setup
   (gtmb-use-brain), and not market research (gtmb-market-research).
 metadata:
@@ -40,33 +40,48 @@ Read what ZYNT's onboarding needs, before asking anything:
 A document shown as `[not filled]` is no guidance: read the context instead. Say which brain
 files the answers came from.
 
-## 2. Use ZYNT's tools
+## 2. Connect ZYNT
 
-ZYNT is set up through its tools, from any ZYNT connection: ZYNT's plugin
-(`getzynt/zynt-plugins`), a ZYNT connector in Claude or ChatGPT, or a ZYNT server added to Codex.
-The tool names decide, not where they came from. The person signs in through the browser, so
-there is no key. Follow the tools' descriptions over this file: `add_setup_context` with what
-step 1 found, then `get_setup` and `answer_setup`.
+ZYNT is set up through its tools, from any ZYNT connection: a ZYNT server in Codex, a ZYNT
+connector in Claude or ChatGPT, or ZYNT's plugin. The tool names decide, not where they came
+from. No plugin is needed. The person signs in through the browser, so there is no key. With
+ZYNT's tools in this chat, go on: `add_setup_context` with what step 1 found, then `get_setup`
+and `answer_setup`. Follow the tools' descriptions over this file.
 
-- **No ZYNT tools, and the chat start or `check_tools` shows ZYNT installed, not signed in**: in
-  Codex they run `codex mcp login zynt`; in Claude Code they type `/mcp` and pick `zynt`. They
-  sign in in the browser, then open a new chat: a chat gets its tools only when it starts.
-- **No ZYNT tools in this chat at all**: give the steps and stop. In Codex:
-  `codex plugin marketplace add getzynt/zynt-plugins`, `codex plugin add zynt@zynt`, then
-  `codex mcp login zynt`. In Claude Code: `/plugin marketplace add getzynt/zynt-plugins`,
-  `/plugin install zynt@zynt`, then `/mcp`, pick `zynt`. In Claude or ChatGPT: add a custom
-  connector with the URL `https://app.getzynt.com/mcp`. No ZYNT account yet:
-  `https://app.getzynt.com/sign-up` first. Then a new chat, and "Set up ZYNT for me" again.
+**In Codex, with no ZYNT tools in this chat**, connect ZYNT for the person; they only approve
+access in the browser. Say first: "I'll connect ZYNT. Approve access in the browser window that
+opens."
+
+1. Run `codex mcp list --json`. No `zynt` entry: run
+   `codex mcp add zynt --url https://app.getzynt.com/mcp`, which adds ZYNT and starts the sign-in.
+   A `zynt` entry whose `auth_status` is not `o_auth`: run `codex mcp login zynt`.
+2. Keep that command running until it ends: a yielded shell call has not ended. Then run
+   `codex mcp list --json` again. Only `zynt` with `auth_status` `o_auth` is signed in. Anything
+   else: say the sign-in did not finish, and run step 1 once more.
+3. Codex gives a chat its tools when the chat starts, so ZYNT's tools come in the next chat.
+   Keep a note with `remember` in Target customers ("ZYNT connected; setup goes on in a new
+   chat"), then give one link named "Continue ZYNT setup" and nothing to type:
+   `codex://threads/new?path=<encoded absolute brain folder>&prompt=<encoded "Set up ZYNT for me">`.
+   Say "Open it, then press Send." Never open the chat yourself; plain steps only when the
+   link fails.
+
+Elsewhere:
+
+- **Claude Code**: `claude mcp add --transport http zynt https://app.getzynt.com/mcp`, then
+  `/mcp`, pick `zynt` and sign in.
+- **Claude or ChatGPT**: add a custom connector with the URL `https://app.getzynt.com/mcp`.
+- **No ZYNT account yet**: `https://app.getzynt.com/sign-up` first.
 - **A tool says the connection can only read**: tell the person what its message says (sign in
-  again), then a new chat.
+  again).
 - **ZYNT says no setup chat is open**: the workspace is set up already. Skip to step 5 for the
   lists, and say a new segment starts with "New scenario" at
   `https://app.getzynt.com/settings/business`.
 - **The person pasted a ZYNT key**: do not use it, and do not repeat it. Say the browser sign-in
-  replaces it, and give the steps above when the tools are missing.
+  replaces it.
 
-Never put a ZYNT key in a header and never use curl: the tools are the only way. `check_tools` at
-the end finds the connection by itself.
+Never put a ZYNT key in a header and never use curl: the tools are the only way. Never say
+"signed in" before `codex mcp list --json` shows it. `check_tools` at the end finds the
+connection by itself.
 
 ## 3. Ask, one question at a time
 
