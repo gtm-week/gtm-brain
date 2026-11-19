@@ -158,10 +158,12 @@ for (const p of plugins.values()) {
   }
 }
 /* Codex shows no tools of a remote server it is not signed in to (`codex mcp list --json`, auth_status), so such a
-   server is not connected yet: ZYNT configured but never signed in looked installed while the chat had no ZYNT tools. */
-const notSignedIn = new Set((() => { try { return JSON.parse(execFileSync("codex", ["mcp", "list", "--json"], { encoding: "utf8", timeout: Number(process.env.GTM_BRAIN_CODEX_TIMEOUT) || 60000, maxBuffer: 64 * 1024 * 1024 })); } catch { return []; } })()
-  .filter(s => s && s.auth_status === "not_logged_in").map(s => s.name));
-const serverStatus = s => notSignedIn.has(s) ? "installed, not signed in" : "installed";
+   server is not connected yet: ZYNT configured but never signed in looked installed while the chat had no ZYNT tools.
+   Asked once, and only when an MCP server is on the page: `codex` is a node process, and a chat start has a budget. */
+let signedOut;
+const notSignedIn = s => (signedOut ??= new Set((() => { try { return JSON.parse(execFileSync("codex", ["mcp", "list", "--json"], { encoding: "utf8", timeout: Number(process.env.GTM_BRAIN_CODEX_TIMEOUT) || 60000, maxBuffer: 64 * 1024 * 1024 })); } catch { return []; } })()
+  .filter(x => x && x.auth_status === "not_logged_in").map(x => x.name))).has(s);
+const serverStatus = s => notSignedIn(s) ? "installed, not signed in" : "installed";
 const mcpFor = tool => { const nk = norm(key(tool)); return mcpServers.find(s => norm(s).length >= 3 && nk.startsWith(norm(s))) || null; };
 const rows = [];
 for (const tool of admin.tools || []) {
@@ -275,7 +277,7 @@ const known = new Set(rows.map(r => r.p && r.p.id).filter(Boolean));
 const extra = candidates().filter(p => p.state === "enabled" && !known.has(p.id) && !used.some(u => norm(u.tool) === norm(p.display || p.id)) && !DEV.has(p.id) && p.policy !== "INSTALLED_BY_DEFAULT" && !mcpServers.some(m => norm(p.display).startsWith(norm(m)))).map(p => p.display || p.id);
 if (used.length) console.log(`\nused in this brain, on the dashboard, not in admin.md tools: ${used.map(u => `${u.tool} (${u.why})`).join(", ")}. Offer once to add them to the company profile (gtmb-configure workplace-change procedure).`);
 if (extra.length) console.log(`\ninstalled in Codex but not in admin.md tools: ${extra.join(", ")}. Offer to add them (gtmb-configure workplace-change procedure).`);
-for (const s of manual.filter(m => notSignedIn.has(m))) console.log(`\nnot signed in: ${state[key(s)].tool}. sign in: codex mcp login ${s}, then open a new chat (Codex shows its tools only after that)`);
+for (const s of manual.filter(notSignedIn)) console.log(`\nnot signed in: ${state[key(s)].tool}. sign in: codex mcp login ${s}, then open a new chat (Codex shows its tools only after that)`);
 if (manual.length) console.log(`\nconnected as MCP servers, not in admin.md tools: ${manual.map(s => state[key(s)].tool).join(", ")}. They are on the dashboard already; offer once to add them to the company profile (gtmb-configure workplace-change procedure).`);
 for (const s of suggested) {
   if (s.declined) { console.log(`\ndeclined earlier: ${s.tool} (not offered again unless they ask)`); continue; }
