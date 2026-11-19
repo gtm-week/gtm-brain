@@ -24,7 +24,7 @@ const nudge = await import(`${P}/lib/save-nudge.mjs`);
 const stale = await import(`${P}/lib/staleness.mjs`);
 
 const NOW = "2026-11-14T12:00:00Z", now = Date.parse(NOW);
-const NUDGE = /^Nothing saved in this chat since \d\d:\d\d: if the person stated a decision, a change or a commitment, save it now with remember\. A question and its answer are never saved\.$/;
+const NUDGE = /^Nothing saved in this chat since \d\d:\d\d: if the person stated a decision, a change or a commitment, or answered a brain question, save it now with remember\. A question they ask you is not saved\.$/;
 
 function brain() {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "gtm-nudge-")));
@@ -53,7 +53,10 @@ test("the line is short and the counts are constants", () => {
   assert.ok(!/[\u2013\u2014]/.test(line));
   // a read-only question must never read as something to save: the old "or an answer" did (2026-11-17)
   assert.doesNotMatch(line, /or an answer|this turn established/);
-  assert.match(line, /A question and its answer are never saved/);
+  // a question the person asks causes no save; their answer to a question the brain asked is saved as usual (review of 0.38.0)
+  assert.match(line, /A question they ask you is not saved/);
+  assert.match(line, /or answered a brain question, save it/);
+  assert.doesNotMatch(line, /its answer are never saved/);
 });
 
 test("the tracker: fires at the third read, waits five more, starts again after a save, per chat", () => {

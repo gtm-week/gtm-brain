@@ -47,13 +47,13 @@ export function createMemoryEdit({ root, token, json, log = () => {} }) {
   const said = out => (out.stderr || out.stdout || "").split("\n").filter(l => l.trim() && !/^(Reply to the person|kept )/.test(l.trim())).slice(0, 2).join(" ")
     .replace(/^(#\d+ )?(not remembered yet|nothing remembered|not remembered|not kept \(\d+ of \d+\)):\s*/, "").replace(/\s+(Whatever is still unclear|No question needed|Fix these and call again|Then remember)\b[\s\S]*$/, "").trim().slice(0, 600);
   // the one remember call: the entries go in a batch file, as the MCP tool passes them. The person's own click is
-  // their answer to the team rules: remember's rule hold asks Codex to ask them, and here there is nobody else to
-  // ask (a move held on its copy after the withdrawal was written left the note in force nowhere)
+  // their own edit: remember holds a save on a team rule only for the chat tool (--hold-rules), never here, where
+  // there is nobody else to ask (a move held on its copy after the withdrawal was written left the note in force nowhere)
   const remember = async (by, entries) => {
     mkdirSync(workDir(root), { recursive: true });
     const batch = join(workDir(root), `remember-${randomUUID()}.json`);
     try {
-      writeFileSync(batch, JSON.stringify(entries.map(e => ({ ...e, rule_checked: true }))));
+      writeFileSync(batch, JSON.stringify(entries));
       const out = await run(["--by", by, "--batch", batch]);
       return { out, ids: [...out.stdout.matchAll(/\bremembered (m_[0-9a-f]{6,12}) in ([a-z0-9-]+)/g)].map(m => ({ id: m[1], context: m[2] })) };
     } finally { try { rmSync(batch, { force: true }); } catch {} }

@@ -1652,6 +1652,19 @@ export function noteAt(m) {
   const t = (m?.tags || []).map(x => SAID_TAG.exec(String(x))).find(Boolean);
   return t ? `${t[1]}T12:00:00.000Z` : m?.at;
 }
+/* A said_on day is a calendar day, never an instant: as 12:00 UTC it was the next day in a zone 12 hours or more
+   ahead (Auckland), so a note said on a Sunday fell into the next week. noteTime is its local noon (what periods
+   and the index compare), noteDay its YYYY-MM-DD (what a line shows); a note without said_on keeps its saved time. */
+export function noteTime(m) {
+  const t = (m?.tags || []).map(x => SAID_TAG.exec(String(x))).find(Boolean);
+  if (!t) return Date.parse(m?.at) || 0;
+  const [y, mo, d] = t[1].split("-").map(Number);
+  return new Date(y, mo - 1, d, 12).getTime();
+}
+export function noteDay(m) {
+  const t = (m?.tags || []).map(x => SAID_TAG.exec(String(x))).find(Boolean);
+  return t ? t[1] : localDateTime(m?.at).slice(0, 10);
+}
 export function appendMemory(root, slug, options) {
   assertWritable(root);
   return withEntityLock(root, () => appendMemoryRecord(root, slug, prepareMeetingMemory(root, slug, options)));

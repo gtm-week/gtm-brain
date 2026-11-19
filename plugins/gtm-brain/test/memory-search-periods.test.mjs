@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { spawnSync } from 'node:child_process';
 import * as lib from '../lib/brain.mjs';
 import { answer, search, parsePeriod, parseQuestion, statedToday, periodParams } from '../lib/memory-search.mjs';
 process.env.TZ = 'UTC';
@@ -82,8 +83,7 @@ test('the day the question says it is moves the period; it is never read as a on
     ['what happened last week (today: 2026-11-25)', '2026-11-16..2026-11-22', '2026-11-25'],
     ['It is 2026-12-02. What is due this month?', '2026-12-01..2026-12-31', '2026-12-02'],
     ['Today is Wednesday, 4 November 2026: what did we decide in the last 7 days?', '2026-10-28..2026-11-04', '2026-11-04'],
-    ['slipping this week 2026-11-25', '2026-11-23..2026-11-29', '2026-11-25'],   // a lone date beside a period word
-    ['what slipped last month, 2026-12-10', '2026-11-01..2026-11-30', '2026-12-10'],
+    ['What is slipping this week, as of 2026-11-25?', '2026-11-23..2026-11-29', '2026-11-25'],
   ]) {
     const r = parsePeriod(q, now);
     assert.equal(`${iso(r.period.from)}..${last(r.period.to)}`, want, q);
@@ -193,16 +193,19 @@ test('a date that belongs to something in the question is not the day it is', ()
   assert.equal(statedToday('Which invoices dated 5 November were paid last week?', now).today, null);
   const root = fixture(); note(root, 'Acme Retail paid the October invoice.', { at: '2026-11-11T10:00:00Z' });
   assert.match(answer(root, 'Which invoices dated 5 November were paid last week?', { now }), /Period asked: last week = Mon 2026-11-09 to Sun 2026-11-15, both included \(today 2026-11-18;/);
-  // the forms that do say the day still do
+  // the forms that do say the day still do; a lone date never does, even set apart (second review of 0.38.0)
   assert.equal(iso(statedToday('Today is 25 November what is due this week', now).today), '2026-11-25');
-  assert.equal(iso(statedToday('slipping this week 2026-11-25', now).today), '2026-11-25');
+  assert.equal(iso(statedToday('(today: 2026-11-25) what is due this week', now).today), '2026-11-25');
+  for (const q of ['slipping this week 2026-11-25', 'what slipped last month, 2026-12-10', 'What did we promise in the 2026-11-10 meeting this week?']) assert.equal(statedToday(q, now).today, null, q);
 });
 
-test('a quarter takes a four-digit year, or two after an apostrophe; a count after it stays a count', () => {
+test('a quarter takes a four-digit year only; a count after it stays a count', () => {
   assert.equal(range('In Q4 12 accounts churned, who?'), '2026-10-01..2026-12-31');
   assert.match(parsePeriod('In Q4 12 accounts churned, who?', now).rest, /\b12 accounts\b/);
   assert.equal(range('Q2 10 deals'), '2026-04-01..2026-06-30');
-  assert.equal(range("Q3 '25 numbers"), '2025-07-01..2025-09-30');
+  assert.equal(range('Q2 10 deals'), '2026-04-01..2026-06-30');
+  assert.equal(range('Q3 2025 numbers'), '2025-07-01..2025-09-30');
+  assert.equal(range('Q1-2027 plan'), '2027-01-01..2027-03-31');
   assert.equal(range('Q2 of 2025'), '2025-04-01..2025-06-30');
 });
 
@@ -217,4 +220,40 @@ test('what is due looks ahead: a month or a weekday alone is the coming one; wha
   assert.equal(range('What was due on Friday?'), '2026-11-13..2026-11-13');
   assert.equal(range('What did we decide in December?'), '2025-12-01..2025-12-31');
   assert.equal(range('What is due last Friday?'), '2026-11-13..2026-11-13');
+});
+
+test('slipping and promised look ahead like due; from a day on; after today is never printed backwards', () => {
+  assert.equal(range('What is slipping in December?'), '2026-12-01..2026-12-31');
+  assert.equal(range('What is promised for Friday?'), '2026-11-20..2026-11-20');
+  assert.equal(range('What slipped in October?'), '2026-10-01..2026-10-31');
+  assert.equal(range('What did we promise on Friday?'), '2026-11-13..2026-11-13');
+  // since or from a day ahead: from then on, never that one day
+  for (const q of ['since 2026-12-01', 'what is planned from 2026-12-01']) { const p = parsePeriod(q, now).period; assert.equal(iso(p.from), '2026-12-01', q); assert.ok(p.open && p.to - p.from > 300 * 864e5, q); }
+  assert.equal(range('from 2026-11-02'), '2026-11-02..2026-11-18', 'a past day on: until today');
+  const root = fixture(); note(root, 'Anna Lind will send Acme Retail the plan on 2026-11-24.', { at: '2026-11-17T10:00:00Z' });
+  const after = answer(root, 'What happened after 2026-11-18?', { now });
+  assert.match(after, /Period asked: after 2026-11-18 = Thu 2026-11-19 on, after today/, after);
+  assert.doesNotMatch(after, /2026-11-19 to Wed 2026-11-18/);
+  // the from parameter alone: from that day on
+  const onward = answer(root, 'What happened?', { now, from: '2026-11-16' });
+  assert.match(onward, /Period asked: from 2026-11-16 = Mon 2026-11-16 to Wed 2026-11-18, both included/, onward);
+  const names = [], x = parseQuestion('what is planned', names, { now, from: new Date('2026-12-01T00:00:00') }).period;
+  assert.ok(x.open && iso(x.from) === '2026-12-01', 'a day ahead: from then on');
+});
+
+test('a said_on day is that calendar day in every time zone, Auckland included', () => {
+  const run = tz => {
+    const code = `process.env.GTM_BRAIN_NO_COMMIT='1';process.env.GTM_BRAIN_NO_COMPILE='1';process.env.GTM_BRAIN_NOW='2026-11-18T09:00:00Z';
+      const lib = await import(${JSON.stringify(new URL('../lib/brain.mjs', import.meta.url).href)}); const { answer } = await import(${JSON.stringify(new URL('../lib/memory-search.mjs', import.meta.url).href)});
+      const { mkdtempSync, mkdirSync, writeFileSync } = await import('node:fs'); const { join } = await import('node:path'); const { tmpdir } = await import('node:os');
+      const root = mkdtempSync(join(tmpdir(), 'gtm-said-tz-')); mkdirSync(join(root, 'brain'));
+      writeFileSync(join(root, 'brain', 'admin.md'), lib.renderFrontmatter({ company: 'Northfold', team: [{ name: 'Anna Lind', handle: 'anna', email: 'anna@northfold.test' }] }));
+      lib.writeContext(root, 'sales', { title: 'sales' });
+      const m = lib.appendMemory(root, 'sales', { authors: ['anna'], content: 'Acme Retail said yes on Sunday.', tags: ['said:2026-11-15'], at: '2026-11-16T20:00:00Z' }).rec;
+      const lastWeek = answer(root, 'What happened last week?', { now: new Date(process.env.GTM_BRAIN_NOW) }), thisWeek = answer(root, 'What happened this week?', { now: new Date(process.env.GTM_BRAIN_NOW) });
+      console.log(JSON.stringify({ last: lastWeek.includes(m.id), this: (/^(?:Other notes in the period|In the period)[^\\n]*/m.exec(thisWeek)?.[0] || '').includes(m.id), line: /- 2026-11-15 · sales · anna · Acme Retail said yes on Sunday\\./.test(lastWeek) }));`;
+    const r = spawnSync(process.execPath, ['--input-type=module', '-e', code], { env: { ...process.env, TZ: tz }, encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr); return JSON.parse(r.stdout.trim().split('\n').pop());
+  };
+  for (const tz of ['Pacific/Auckland', 'Pacific/Kiritimati', 'Europe/Warsaw', 'America/Los_Angeles']) assert.deepEqual(run(tz), { last: true, this: false, line: true }, tz);
 });

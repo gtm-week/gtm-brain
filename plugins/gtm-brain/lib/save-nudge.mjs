@@ -16,7 +16,7 @@ export const NUDGE_SAVES = new Set(["remember", "interact", "keep_approved_file"
 const clock = at => { const d = new Date(at), p = n => String(n).padStart(2, "0"); return `${p(d.getHours())}:${p(d.getMinutes())}`; };
 // Only what the person said: "an answer" in the line read as the brain's own answer (a benchmark run on 2026-11-17
 // asked what is slipping this week, read four times, then saved its answer as a note). A question saves nothing.
-export const nudgeLine = since => `Nothing saved in this chat since ${clock(since)}: if the person stated a decision, a change or a commitment, save it now with remember. A question and its answer are never saved.`;
+export const nudgeLine = since => `Nothing saved in this chat since ${clock(since)}: if the person stated a decision, a change or a commitment, or answered a brain question, save it now with remember. A question they ask you is not saved.`;
 
 /* One tracker per server. note(key, tool, {ok, now}) records a call and returns the line to append, or "".
    quietMs: a key silent for longer is a new chat (the server opens a chat again after the same pause). */

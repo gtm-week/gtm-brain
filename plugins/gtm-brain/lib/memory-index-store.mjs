@@ -7,7 +7,16 @@ import { existsSync, mkdirSync, renameSync, rmSync, lstatSync, writeFileSync, ap
 import { join } from 'node:path';
 import { workDir } from './brain-paths.mjs';
 let DatabaseSync;
-try { ({ DatabaseSync } = await import('node:sqlite')); } catch {}
+// Node 22 prints "ExperimentalWarning: SQLite is an experimental feature" to stderr on this import (24 does not), so
+// a script's stderr differed by Node version and a refusal read on 22.16 started with the warning (CI, 0.38.0).
+// Only that one warning is dropped, only while the module loads; every other warning still prints.
+{ const emit = process.emitWarning;
+  process.emitWarning = function (warning, ...rest) {
+    const type = typeof rest[0] === 'string' ? rest[0] : rest[0]?.type;
+    if (type === 'ExperimentalWarning' && /SQLite/i.test(String(warning?.message ?? warning))) return;
+    return emit.call(this, warning, ...rest);
+  };
+  try { ({ DatabaseSync } = await import('node:sqlite')); } catch {} finally { process.emitWarning = emit; } }
 // Node 22.13-22.15 and 23 ship node:sqlite without FTS5; the index needs both.
 const fts5 = () => { const db = new DatabaseSync(':memory:'); try { db.exec('CREATE VIRTUAL TABLE t USING fts5(x)'); return true; } catch { return false; } finally { db.close(); } };
 let indexable;

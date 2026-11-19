@@ -19,7 +19,7 @@ import { hasMemoryIndex, indexPath, openDatabase, cacheLock, readerLock, retireC
 export { hasMemoryIndex };
 export const MAX_RECORD_BYTES = 4 * 1024 * 1024;
 export const MAX_RESULT_BYTES = 2 * 1024 * 1024;
-export const MEMORY_INDEX_VERSION = 11;   // 11: source, the file a record is read from: its context's file (layouts 1 to 3) or its month's (layout 4). file stays the record's context, and line orders a context's records (month, then line, in layout 4)
+export const MEMORY_INDEX_VERSION = 12;   // 12: time is a said_on day's local noon (lib.noteTime), never 12:00 UTC. 11: source, the file a record is read from: its context's file (layouts 1 to 3) or its month's (layout 4). file stays the record's context, and line orders a context's records (month, then line, in layout 4)
 // earlier:   // 5: source pointers as members (field source); 6: entity rows with relation to us and SCHEMA.md fields; 7: meeting ids as identity refs; 8: stemmed keywords, word list for typos; 9: relations, relation events and entity events (lib/relation-log.mjs)
 const VERSION = MEMORY_INDEX_VERSION;
 /* memories.line in layout 4: the month's ordinal times this, plus the line in the month's file. */
@@ -319,7 +319,7 @@ export class MemoryIndex {
             const errors = lib.validateMemory(r);
             if (errors.length || (!this.monthly && r.context !== f.file)) throw new Error(`Invalid memory: ${f.path}:${line}. ${errors.join('; ') || 'Context does not match the source folder.'}`);
             const row = project(r);
-            const rowid = insert.run(f.file, r.context, base + line, r.id, r.context, r.kind, r.via, lib.noteAt(r), Date.parse(lib.noteAt(r)) || 0, JSON.stringify(r), JSON.stringify(row.entities), r.authors.join(' '), r.people.join(' '), r.tools.join(' '), r.content, ...asset(r), normalizeMention(r.content)).lastInsertRowid;
+            const rowid = insert.run(f.file, r.context, base + line, r.id, r.context, r.kind, r.via, lib.noteAt(r), lib.noteTime(r), JSON.stringify(r), JSON.stringify(row.entities), r.authors.join(' '), r.people.join(' '), r.tools.join(' '), r.content, ...asset(r), normalizeMention(r.content)).lastInsertRowid;
             for (const field of ['authors', 'people', 'tools', 'tags', 'entities']) for (const value of row[field]) member.run(rowid, field, JSON.stringify(value));
             for (const ref of new Set([...(r.entities || []), ...r.people, ...(r.asset ? [r.asset.entity] : []), ...(anchorOf(r) ? [`meeting:${anchorOf(r)}`] : [])])) member.run(rowid, 'identity_ref', String(ref).trim().toLowerCase());
             for (const key of sourceMembers(r.source)) member.run(rowid, 'source', JSON.stringify(key));

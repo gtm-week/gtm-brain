@@ -31,7 +31,9 @@ function brain({ rules = RULES } = {}) {
   if (rules) appendFileSync(join(root, "RULES.md"), `\n${rules}\n`);
   return root;
 }
-const remember = (root, entry) => spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, root, "--by", "anna-lind", "--batch", (() => { const f = join(root, "work", `b-${Math.random()}.json`); writeFileSync(f, JSON.stringify([entry])); return f; })()], { cwd: root, env, encoding: "utf8" });
+// the chat tool's call (files-backend passes --hold-rules); chat: false is every other caller of remember.mjs
+const rememberAll = (root, entries, { chat = true } = {}) => spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, root, "--by", "anna-lind", "--batch", (() => { const f = join(root, "work", `b-${Math.random()}.json`); writeFileSync(f, JSON.stringify(entries)); return f; })(), ...(chat ? ["--hold-rules", "true"] : [])], { cwd: root, env, encoding: "utf8" });
+const remember = (root, entry, o) => rememberAll(root, [entry], o);
 const say = r => `${r.stdout}${r.stderr}`;
 const notes = root => lib.listContexts(root).flatMap(c => lib.effectiveMemories(c.memories)).map(m => m.content);
 const churned = root => { const r = remember(root, { content: "Acme Retail churned: they cancelled at the end of September.", companies: ["Acme Retail"], new_names: ["Acme Retail"], context: "company" }); assert.equal(r.status, 0, say(r)); return r; };
@@ -108,7 +110,7 @@ test("rules are read again on every save: a rule noted in chat applies to the ne
 test("a background run (GTM_BRAIN_RUN) is nobody's chat: no rule hold", () => {
   const root = brain();
   const f = join(root, "work", "b-run.json"); writeFileSync(f, JSON.stringify([{ content: "We offered Bramble Foods 0.30 EUR per return.", companies: ["Bramble Foods"], new_names: ["Bramble Foods"], context: "company" }]));
-  const r = spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, root, "--by", "anna-lind", "--batch", f], { cwd: root, env: { ...env, GTM_BRAIN_RUN: "test" }, encoding: "utf8" });
+  const r = spawnSync(process.execPath, [`${P}/scripts/gtm-brain-remember/remember.mjs`, root, "--by", "anna-lind", "--batch", f, "--hold-rules", "true"], { cwd: root, env: { ...env, GTM_BRAIN_RUN: "test" }, encoding: "utf8" });
   assert.doesNotMatch(say(r), /team rule/);
 });
 
@@ -188,9 +190,74 @@ test("a rule holds a note only on what the rule is about: no count, no quoted pe
 test("a rule fires on every form of its word and on a two-letter acronym", () => {
   const root = brain({ rules: "" });
   const hits = (rule, content) => S.rulesForSave(root, { content }, { rules: [{ text: rule, fromFile: true, source: "RULES.md line 1" }] });
-  for (const content of ["Karl has a new role: partnerships.", "Karl has two roles now: sales and partnerships."]) assert.equal(hits("Ask before saving any role change.", content)[0]?.hold, true, content);
+  // one of the rule's two topic words: printed, not held; both, in either form: held
+  for (const content of ["Karl has a new role: partnerships.", "Karl has two roles now: sales and partnerships."]) { const h = hits("Ask before saving any role change.", content); assert.equal(h.length, 1, content); assert.equal(h[0].hold, false, content); }
+  for (const content of ["Karl's role changes to partnerships.", "Karl's roles changed: sales and partnerships."]) assert.equal(hits("Ask before saving any role change.", content)[0]?.hold, true, content);
+  for (const [rule, content] of [["Ask before saving anything about rates.", "Our day rate goes up in January."], ["Ask before saving the dates.", "The launch date moved."], ["Ask before saving anything about sales.", "One sale closed today."]]) assert.equal(hits(rule, content)[0]?.hold, true, `${rule} / ${content}`);
+  assert.equal(hits("Ask before saving anything about AI.", "The AI pilot starts in March.")[0]?.hold, true);
+  assert.equal(hits("Ask before saving anything about QA.", "QA signed off the release.")[0]?.hold, true);
   assert.equal(hits("Ask before saving anything about rates.", "Our day rate goes up in January.")[0]?.hold, true);
   assert.equal(hits("Ask before saving anything about HR.", "HR: Karl is on leave until January.")[0]?.hold, true);
   assert.equal(hits("Ask before saving anything about PR.", "The PR agency sent the November plan.")[0]?.hold, true);
   assert.deepEqual(hits("Ask before saving anything about HR.", "Karl is on leave until January."), []);
+});
+
+// Review of 0.38.0, second round: the hold is the chat tool's alone, and a call is held whole or not at all
+test("only the chat tool's save waits on a rule: any other caller of remember.mjs saves, with the rule printed first", () => {
+  const root = brain();
+  const r = remember(root, { content: "We offered Bramble Foods 0.30 EUR per return.", companies: ["Bramble Foods"], new_names: ["Bramble Foods"], context: "company" }, { chat: false });
+  assert.equal(r.status, 0, say(r));
+  assert.match(r.stdout, /^team rule "Ask before saving anything about pricing[^\n]*Saved; follow the rule/);
+  assert.doesNotMatch(say(r), /person's yes|not remembered yet/);
+  assert.ok(notes(root).some(c => /0\.30 EUR/.test(c)));
+});
+
+test("a held entry holds the whole call: a move is never half written; the yes on the held entry writes both", () => {
+  const root = brain();
+  lib.writeContext(root, "pipeline", { title: "Pipeline", rule: "Deals and renewals." });
+  const old = lib.appendMemory(root, "company", { authors: ["anna-lind"], content: "Bramble Foods pays 0.30 EUR per return." }).rec;
+  const move = [{ content: "Moved to Pipeline.", retracts: old.id, context: "company" }, { content: old.content, companies: ["Bramble Foods"], new_names: ["Bramble Foods"], context: "pipeline" }];
+  const r = rememberAll(root, move);
+  assert.equal(r.status, 2, say(r));
+  assert.match(r.stderr, /^not kept \(0 of 2\): a team rule holds #2: #2 team rule "Ask before saving anything about pricing/);
+  assert.match(r.stderr, /Nothing in this call was written[^\n]*rule_checked: true on #2/);
+  const inForce = ctx => lib.effectiveMemories(lib.readMemories(root, ctx)).filter(m => !m.retracts).map(m => m.content);
+  assert.ok(inForce("company").includes(old.content), "the withdrawal was not written either");
+  const yes = rememberAll(root, [move[0], { ...move[1], rule_checked: true }]);
+  assert.equal(yes.status, 0, say(yes));
+  assert.match(yes.stdout, /#2 team rule "Ask before saving anything about pricing[^\n]*Saved on the person's yes/);
+  assert.ok(inForce("pipeline").includes(old.content) && !inForce("company").includes(old.content));
+});
+
+test("rule_checked on a note no rule ever held is not a yes: held in the chat, never claimed as the person's answer", () => {
+  const root = brain();
+  const first = remember(root, { content: "Bramble Foods pays 0.31 EUR per return from January.", companies: ["Bramble Foods"], new_names: ["Bramble Foods"], context: "company", rule_checked: true });
+  assert.equal(first.status, 2, say(first));
+  assert.match(first.stderr, /The rule says to ask first: do not save yet/);
+  const plain = remember(root, { content: "The October webinar on returns drew 140 sign-ups.", context: "company", rule_checked: true });
+  assert.equal(plain.status, 0, say(plain));
+  assert.doesNotMatch(say(plain), /person's yes/);
+  const page = remember(root, { content: "Acme Retail pays 0.25 EUR per return.", companies: ["Acme Retail"], new_names: ["Acme Retail"], context: "company", rule_checked: true }, { chat: false });
+  assert.equal(page.status, 0, say(page));
+  assert.doesNotMatch(say(page), /person's yes/);
+  assert.match(page.stdout, /Saved; follow the rule/);
+});
+
+test("a rule stated in entry 1 of a batch applies to the entries after it", () => {
+  const root = brain({ rules: "" });
+  const batch = [{ content: "Never save anything about salaries without asking Anna first.", kind: "decision", context: "company", states_rule: true }, { content: "Karl Berg's salary goes up to 5,000 in January.", context: "company", new_names: ["Karl Berg"], people: ["Karl Berg"] }];
+  const r = rememberAll(root, batch);
+  assert.equal(r.status, 2, say(r));
+  assert.match(r.stderr, /#2 team rule "Never save anything about salaries without asking Anna first\." \(entry #1 of this save\)/);
+  assert.ok(!notes(root).some(c => /salar/.test(c)), "nothing written");
+  const page = rememberAll(root, batch, { chat: false });
+  assert.equal(page.status, 0, say(page));
+  assert.match(page.stdout, /#2 team rule "Never save anything about salaries[^\n]*Saved; follow the rule/);
+});
+
+test("Node 22's SQLite warning never reaches a script's stderr; other warnings still do", () => {
+  const r = spawnSync(process.execPath, ["--input-type=module", "-e", `await import(${JSON.stringify(`${P}/lib/memory-index-store.mjs`)}); process.emitWarning("still shown", "ExperimentalWarning");`], { encoding: "utf8" });
+  assert.equal(r.status, 0, r.stderr);
+  assert.doesNotMatch(r.stderr, /SQLite is an experimental feature/);
+  assert.match(r.stderr, /still shown/);
 });

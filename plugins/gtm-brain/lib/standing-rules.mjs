@@ -79,9 +79,10 @@ export const offerLine = (id, root) => { let file = "the rules file"; try { file
    (stemmed, without filler and without people's names) against the note's words, its tags and its status block,
    plus a few fixed concepts (a price or a discount is "pricing", a cancellation is "churn"). The rule's
    condition may also sit in the earlier notes about a company or person the note names ("Quarry Lane Books
-   churned"): those are the evidence. A rule that tells to ask first, or one the note appears to break (its
-   condition known, its forbidden thing in the note), holds the save until the person answered; any other rule
-   that applies is printed at the top of the result. rule_checked: true is the person's yes. */
+   churned"): those are the evidence. A rule that tells to ask first, or one the note clearly appears to break (its
+   condition known, its forbidden thing in the note), is a hold; only remember's chat tool call acts on it (the
+   save waits until the person answered), every other caller saves. Any other rule that applies is printed at the
+   top of the result. rule_checked: true is the person's yes to a hold that happened. */
 const STOP_W = new Set(("a an the of to for with on in at by is are be was were has have had our their its his her and or any every each before after until unless without from as that this it them they we you us " +
   "ask asks asked asking sav save saves saved saving check checks checked confirm confirmed first time times always never again note notes record records recorded team anything something everything " +
   "thing things someone anyone people company compan companies customer customers client clients need needs must should make sure keep also only what when which who whom will would can could get use " +
@@ -126,16 +127,26 @@ const FORBID = /\b(?:never|do not|don'?t|must not|may not|should not|shouldn'?t|
 // a day or a month in the forbidden thing is part of it: "Do not email partners on Fridays" is not broken by an email on a Tuesday
 const QUALIFIER = new Set([..."monday tuesday wednesday thursday friday saturday sunday weekend january february march april may june july august september october november december".split(" ")].map(stemW));
 /* The rule's keywords: its words without filler, attribution ("(Anna Lind, 2026-04-30)"), whom to ask or the names
-   of the brain's people; split at the forbidding word into condition (before) and the forbidden thing (after). */
+   of the brain's people; split at the forbidding word into condition (before) and the forbidden thing (after), both
+   inside the sentence that forbids. askTopic: the words of the sentences that say to ask first (the whole rule when
+   those sentences name nothing, "Check with Anna first, every time."): what asking governs. */
+const SENTENCES = t => t.split(/(?<=[.!?;])\s+/).filter(x => x.trim());
 function ruleKeys(text, names) {
   const t = String(text).replace(/\([^)]*\b\d{4}-\d{2}-\d{2}[^)]*\)/g, " "), ask = ASK.test(t);
   const words = t.replace(ASKED, m => m.split(/\s+/)[0]);
-  const m = words.match(FORBID), cut = m ? m.index : -1;
+  const all = wordsOf(words, names);
+  const askSay = SENTENCES(words).filter(x => ASK.test(x)).flatMap(x => [...wordsOf(x, names).keys()]);
+  const forbidding = SENTENCES(words).find(x => FORBID.test(x)) || "", m = forbidding.match(FORBID), cut = m ? m.index : -1;
   // "never X before (without, until, unless) Y": Y is what makes X allowed, never a sign the note breaks it
-  const tail = cut >= 0 ? words.slice(cut) : "", ex = tail.search(/\b(?:before|without|until|unless|except|other than)\b/i);
-  const all = wordsOf(words, names), cond = cut > 0 ? wordsOf(words.slice(0, cut), names) : new Map(), act = cut >= 0 ? wordsOf(ex > 0 ? tail.slice(0, ex) : tail, names) : all;
-  return { all: [...all.keys()], cond: [...cond.keys()], act: [...act.keys()], ask, forbids: !!m, unless: ex > 0 };
+  const tail = cut >= 0 ? forbidding.slice(cut) : "", ex = tail.search(/\b(?:before|without|until|unless|except|other than)\b/i);
+  const cond = cut > 0 ? wordsOf(forbidding.slice(0, cut), names) : new Map(), act = cut >= 0 ? wordsOf(ex > 0 ? tail.slice(0, ex) : tail, names) : all;
+  return { all: [...all.keys()], cond: [...cond.keys()], act: [...act.keys()], askTopic: askSay.length ? [...new Set(askSay)] : [...all.keys()], ask, forbids: !!m, unless: ex > 0 };
 }
+// A hold needs the rule's own condition to clearly match: a named concept (pricing, churn), two distinct topic words
+// of the rule, or the one word a one-word topic has. Anything less is printed at the top and saved: a wrong hold
+// costs the person a question about nothing, a missed one still shows them the rule.
+const CONCEPT_STEMS = new Set(CONCEPTS.map(c => c[1]));
+const clearly = (hit, topic) => hit.some(s => CONCEPT_STEMS.has(s)) || new Set(hit).size >= 2 || (topic.length === 1 && hit.length === 1);
 const many = v => Array.isArray(v) ? v.map(String) : typeof v === "string" ? v.split(",").map(x => x.trim()).filter(Boolean) : [];
 
 /* The rules a note falls under: [{rule, said, known, hold, why}]. said: the rule's words the note has, as written;
@@ -172,10 +183,15 @@ export function rulesForSave(root, entry, { rules = null, registry = null, memor
       const need = k.all.length === 1 ? 1 : k.all.length >= 4 ? 2 : lead ? 1 : 2;
       if (said.length + known.length < need) continue;
       // appears to break it: the condition is known (in the note or an earlier note) and the forbidden thing is in the note
-      const condMet = !k.cond.length || k.cond.some(s => note.has(s) || known.some(x => x.stem === s));
+      const condHit = k.cond.filter(s => note.has(s) || known.some(x => x.stem === s));
+      const condMet = !k.cond.length || condHit.length > 0;
       if (k.forbids && !condMet) continue;   // "a churned customer is never a prospect": a company nobody says churned is not its business
-      const breaks = k.forbids && !k.unless && k.act.some(s => !QUALIFIER.has(s) && note.has(s)) && k.act.every(s => !QUALIFIER.has(s) || note.has(s));
-      out.push({ rule, said: said.map(s => note.get(s)), known, ask: k.ask, breaks, hold: k.ask || breaks });
+      const actHit = k.act.filter(s => !QUALIFIER.has(s) && note.has(s));
+      const breaks = k.forbids && !k.unless && actHit.length > 0 && k.act.every(s => !QUALIFIER.has(s) || note.has(s))
+        && clearly([...condHit, ...actHit], [...new Set([...k.cond, ...k.act.filter(s => !QUALIFIER.has(s))])]);
+      // ask first holds only on what the asking sentence is about, said in the note itself
+      const asks = k.ask && clearly(k.askTopic.filter(s => note.has(s)), k.askTopic);
+      out.push({ rule, said: said.map(s => note.get(s)), known, ask: asks, breaks, hold: asks || breaks });
     }
     return out;
   } catch { return []; }
@@ -183,7 +199,7 @@ export function rulesForSave(root, entry, { rules = null, registry = null, memor
 
 /* One line per rule for the save's result. held: the save waits for the person; confirmed: it is their yes. */
 export function ruleSaveLine(hit, { held = false, confirmed = false } = {}) {
-  const r = hit.rule, src = r.fromFile ? r.source : `note ${r.id}`;
+  const r = hit.rule, src = r.fromFile || r.fromCall ? r.source : `note ${r.id}`;
   const facts = hit.known.map(x => `${x.id} says ${x.name} "${x.text}"`).join("; ");
   const head = `team rule "${r.text.slice(0, 300)}" (${src}) applies: the note says ${hit.said.map(w => `"${w}"`).join(", ")}${facts ? `, and ${facts}` : ""}`;
   if (confirmed && hit.hold) return `${head}. Saved on the person's yes (rule_checked); say so in your reply.`;
