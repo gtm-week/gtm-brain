@@ -59,8 +59,7 @@ opens."
    `codex mcp list --json` again. Only `zynt` with `auth_status` `o_auth` is signed in. Anything
    else: say the sign-in did not finish, and run step 1 once more.
 3. Codex gives a chat its tools when the chat starts, so ZYNT's tools come in the next chat.
-   Keep a note with `remember` in Target customers ("ZYNT connected; setup goes on in a new
-   chat"), then give one link named "Continue ZYNT setup" and nothing to type:
+   Give one link named "Continue ZYNT setup" and nothing to type:
    `codex://threads/new?path=<encoded absolute brain folder>&prompt=<encoded "Set up ZYNT for me">`.
    Say "Open it, then press Send." Never open the chat yourself; plain steps only when the
    link fails.
@@ -80,8 +79,9 @@ Elsewhere:
   replaces it.
 
 Never put a ZYNT key in a header and never use curl: the tools are the only way. Never say
-"signed in" before `codex mcp list --json` shows it. `check_tools` at the end finds the
-connection by itself.
+"signed in" before `codex mcp list --json` shows it. In Codex, `check_tools` at the end finds
+the connection by itself. Elsewhere, after ZYNT's first real read, call `mark_tool` ZYNT `ok`
+so the dashboard shows it connected.
 
 ## 3. Ask, one question at a time
 

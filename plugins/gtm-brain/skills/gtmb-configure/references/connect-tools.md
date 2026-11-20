@@ -60,7 +60,10 @@ call `mark_tool` so it shows.
 The check also reads remote MCP servers from Codex's `config.toml`. One that matches a tool in
 `admin.md` counts as installed. One that does not (*"connected as MCP servers, not in admin.md
 tools: Zynt"*) is on the dashboard already, as installed and untested, with no APPROVE. Offer once
-to add it to the company profile. A tool used outside Codex has no entry and stays listed only.
+to add it to the company profile. A server Codex is not signed in to shows as *"not signed in"*
+(or *"installed, not signed in"* for a tool in `admin.md`), with no tools in the chat: give the
+`codex mcp login <server>` step the check prints, then a new chat. A tool used outside Codex has
+no entry and stays listed only.
 
 ## Step 2: choose once, install the selected tools
 
