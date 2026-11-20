@@ -14,6 +14,7 @@ to distinguish these workflows from other installed skills.
 | `gtmb-publish-website` | GTM Brain: Publish the website | Vercel preview first, production only on its own decision, through the Vercel and GitHub connectors |
 | `gtmb-start` | GTM Brain: Start | The first command in a project: creates the brain here, gets to know the business, connects the tools, opens the dashboard; resumes what is unfinished |
 | `gtmb-sync` | GTM Brain: Sync | Pull what came in through the connected tools since the last sync, one subagent per tool, and record what matters |
+| `gtmb-use-zynt` | GTM Brain: Use ZYNT | Reads the news and signals on the team's ZYNT lists from any ZYNT connection and answers in the words of ZYNT's signals workshop: signals first, each in four parts (what happened, when, why it matters, who to contact), then the news, called news. With no signals yet it says so in one sentence and shows the news. Reads them against the brain's strategy and ICP, adds companies or people to a ZYNT list only on request, keeps useful findings in Target customers. Without ZYNT's tools it gives the steps from ZYNT's site guide; it never changes settings or uses a key |
 | `gtmb-todo` | GTM Brain: Todo | What should I do now: everything waiting on you, ordered, walked through one by one |
 | `gtmb-housekeeping` | GTM Brain: Housekeeping | Tidy names and gaps: `query` with object `housekeeping`, then one item at a time with the person; nothing looked up on the web |
 | `gtmb-interaction` | GTM Brain: Interaction | Propose one of the company's own interactions (`propose_interaction`, then the APPROVE form of `approve_change`), list them or run one with `interact` |
@@ -49,7 +50,7 @@ They are not additional discoverable skills. Tools show outcomes such as "Rememb
 "Searching the brain" in chat. Review proposals on the dashboard (it changes nothing but a document you edit and save there). APPROVE is a choice in the form `approve_change` shows; in a chat nothing else applies it.
 A question to you comes the same way: `ask_person` shows a form with the choices to click (or a field to type in) and hands your answer back to Codex. It records nothing and applies nothing. Where the host shows no form, Codex asks in its own question box, or in chat text with numbered options.
 Scripts retain their paths for terminal use with
-`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.38.0`.
+`export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.38.1`.
 
 Legend for "writes": what files the command changes. Nothing else is ever touched. The paths are
 those of a brain in the four folders (file layout 4, what setup makes since 0.37); a brain not
