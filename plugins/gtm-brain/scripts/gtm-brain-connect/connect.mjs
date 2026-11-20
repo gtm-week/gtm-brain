@@ -161,7 +161,7 @@ for (const p of plugins.values()) {
    server is not connected yet: ZYNT configured but never signed in looked installed while the chat had no ZYNT tools.
    Asked once, and only when an MCP server is on the page: `codex` is a node process, and a chat start has a budget. */
 let signedOut;
-const notSignedIn = s => (signedOut ??= new Set((() => { try { return JSON.parse(execFileSync("codex", ["mcp", "list", "--json"], { encoding: "utf8", timeout: Number(process.env.GTM_BRAIN_CODEX_TIMEOUT) || 60000, maxBuffer: 64 * 1024 * 1024 })); } catch { return []; } })()
+const notSignedIn = s => (signedOut ??= new Set((() => { try { const l = JSON.parse(execFileSync("codex", ["mcp", "list", "--json"], { encoding: "utf8", timeout: Number(process.env.GTM_BRAIN_CODEX_TIMEOUT) || 60000, maxBuffer: 64 * 1024 * 1024 })); return Array.isArray(l) ? l : []; } catch { return []; } })()
   .filter(x => x && x.auth_status === "not_logged_in").map(x => x.name))).has(s);
 const serverStatus = s => notSignedIn(s) ? "installed, not signed in" : "installed";
 const mcpFor = tool => { const nk = norm(key(tool)); return mcpServers.find(s => norm(s).length >= 3 && nk.startsWith(norm(s))) || null; };

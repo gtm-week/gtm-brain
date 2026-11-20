@@ -33,9 +33,9 @@ judgment rests on. Do not create a context for ZYNT, one account or one run.
 Use ZYNT's tools from whatever connection this chat has: a connector, a server added to Codex,
 or ZYNT's plugin. The tool names decide, not where they came from.
 
-- **No ZYNT tools in this chat**: say ZYNT is not connected here, and give the steps for this
-  app from https://getzynt.com/agent-setup.md. Do not change the person's settings or config
-  yourself, and never ask for or use a ZYNT key. Then stop.
+- **No ZYNT tools in this chat**: say ZYNT is not connected here, and offer to connect it with
+  the ZYNT setup (gtmb-zynt-setup, "Set up ZYNT for me"). Do not change the person's settings or
+  config yourself, and never ask for or use a ZYNT key. Then stop.
 - **A tool says the connection can only read** or the person is not signed in: tell them what
   its message says.
 - After a real read, `mark_tool` ZYNT `ok` with what worked, or `fail` with the error. A failed

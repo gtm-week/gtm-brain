@@ -46,7 +46,7 @@ files the answers came from.
 ZYNT is set up through its tools, from any ZYNT connection: a ZYNT server in Codex, a ZYNT
 connector in Claude or ChatGPT, or ZYNT's plugin. The tool names decide, not where they came
 from. No plugin is needed. The person signs in through the browser, so there is no key. With
-ZYNT's tools in this chat, go on to step 4. Follow the tools' descriptions over this file.
+ZYNT's tools in this chat, go on to step 3. Follow the tools' descriptions over this file.
 
 **In Codex, with no ZYNT tools in this chat**, connect ZYNT for the person; they only approve
 access in the browser. Say first: "I'll connect ZYNT. Approve access in the browser window that
