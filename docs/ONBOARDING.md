@@ -152,6 +152,7 @@ summary is written when you ask about it. When you want a specific workflow:
 |---|---|
 | Know what to do next | `/gtmb-todo` |
 | Pull in what arrived through your tools | `/gtmb-sync` |
+| News and signals on your ZYNT lists, and who to contact now: say "signals for me" | `/gtmb-use-zynt` |
 | Get a one-page brief before a call | `/gtmb-deepdive` |
 | Decide whether to push, fix, stop or measure growth spend | `/gtmb-unit-economics` |
 | Assess a market, its segments and competitors against what you can prove today | `/gtmb-market-research` |

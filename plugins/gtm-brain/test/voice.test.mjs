@@ -28,7 +28,7 @@ test('the voice skill follows the shipped-skill template: name, links, openai.ya
   assert.ok(i > 0 && catalog[i].group === 'mentor' && catalog[i].role === 'mentor' && catalog[i].fills === 'voice' && catalog[i].featured === false);
   assert.ok(catalog.slice(0, i).every(s => s.group === 'mentor'), 'among the mentors, which lead the catalogue');
   for (const doc of ['README.md', 'docs/COMMANDS.md', 'docs/ONBOARDING.md']) assert.match(readFileSync(join(R, doc), 'utf8'), /gtmb-voice/, doc);
-  for (const doc of ['docs/SKILLS.md', '.claude/CLAUDE.md', '.github/CONTRIBUTING.md', 'docs/USER-SKILLS.md']) assert.match(readFileSync(join(R, doc), 'utf8'), /twenty/i, doc);
+  for (const doc of ['docs/SKILLS.md', '.claude/CLAUDE.md', '.github/CONTRIBUTING.md', 'docs/USER-SKILLS.md']) assert.match(readFileSync(join(R, doc), 'utf8'), /thirty/i, doc);
   assert.match(readFileSync(join(R, 'docs/GUIDE.md'), 'utf8'), /\/gtmb-voice/);
 });
 

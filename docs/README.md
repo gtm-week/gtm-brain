@@ -4,7 +4,7 @@ Read in this order. The short introduction is the [README](../README.md); instal
 brain works inside is in [the manual](../plugins/gtm-brain/MANUAL.md), which ships with the plugin.
 
 - [HOW-IT-WORKS.md](HOW-IT-WORKS.md): the four parts of a brain, how they fit together, what is stored on disk, sources and boundaries.
-- [SKILLS.md](SKILLS.md): the twenty-nine shipped skills, in order: rules and schema, mentors, everyday, setup and maintenance.
+- [SKILLS.md](SKILLS.md): the thirty shipped skills, in order: rules and schema, mentors, everyday, setup and maintenance.
 - [ONBOARDING.md](ONBOARDING.md): the first-use walkthrough, from nothing installed to a working brain.
 - [GUIDE.md](GUIDE.md): everyday use: what to say in a chat, examples by situation, the dashboard, your tools and sync, the workshop demo.
 - [COMMANDS.md](COMMANDS.md): every skill, tool and command, and the files each one writes.

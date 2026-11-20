@@ -1,0 +1,4 @@
+interface:
+  display_name: "GTM Brain: Use ZYNT"
+  short_description: "News and signals on your ZYNT lists, read against the brain"
+  default_prompt: "Use $gtmb-use-zynt: who on our ZYNT lists has a reason to hear from us now?"
