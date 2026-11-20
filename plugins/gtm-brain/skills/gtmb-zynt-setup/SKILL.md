@@ -7,7 +7,7 @@ description: |
   on ZYNT lists, asks only what the brain does not say, and keeps one note. Without ZYNT's tools
   in Codex, it connects ZYNT itself (no plugin) and gives one link to continue. Triggers: "Set up ZYNT for me", "/gtmb-zynt-setup",
   "connect ZYNT", "set up Zynt". Not reading ZYNT's news or signals after setup
-  (gtmb-use-brain), and not market research (gtmb-market-research).
+  (gtmb-use-zynt), and not market research (gtmb-market-research).
 metadata:
   author: GTM Brain, with Wojciech Ozimek and Filip (ZYNT)
 allowed-tools: [Bash, Read, WebFetch]
@@ -15,7 +15,8 @@ allowed-tools: [Bash, Read, WebFetch]
 
 # GTM Brain: Set up ZYNT
 
-ZYNT finds companies that are ready to buy and says why now. Read
+ZYNT finds the news about the companies you sell to and picks the news that gives you a reason
+to talk to them now: signals. Read
 [the method](references/method.md) once and follow it. Conduct the conversation and author brain
 records in English. Every question follows
 [question handling](../gtmb-start/references/questions.md).
@@ -45,8 +46,7 @@ files the answers came from.
 ZYNT is set up through its tools, from any ZYNT connection: a ZYNT server in Codex, a ZYNT
 connector in Claude or ChatGPT, or ZYNT's plugin. The tool names decide, not where they came
 from. No plugin is needed. The person signs in through the browser, so there is no key. With
-ZYNT's tools in this chat, go on: `add_setup_context` with what step 1 found, then `get_setup`
-and `answer_setup`. Follow the tools' descriptions over this file.
+ZYNT's tools in this chat, go on to step 4. Follow the tools' descriptions over this file.
 
 **In Codex, with no ZYNT tools in this chat**, connect ZYNT for the person; they only approve
 access in the browser. Say first: "I'll connect ZYNT. Approve access in the browser window that
@@ -89,13 +89,25 @@ Ask only what the brain does not say; usually only which segment to start with. 
 pending, the reason in one line, two or three options, the recommended one first. No default,
 timeout or empty result is an answer.
 
-## 4. Send, then let the person confirm
+## 4. Read the setup, send, then let the person confirm
 
-Send each answer to ZYNT once, through its tools. A brain line that is a hypothesis, a draft or
-a `[not filled]` starter goes as a draft, never as a confirmed fact.
+1. `get_setup` first: it says where the setup stands and the answers it takes now. A setup the
+   person started before, or one already past its questions, is not broken: follow its `next`.
+2. While its step is `company` or `customers`, send the brain's business facts once with
+   `add_setup_context`: what step 1 found in strategy, ICP, market and offer, and the list of
+   current customers. Business facts only: never passwords, keys, personal emails, other
+   people's phone numbers, deal amounts or copied conversations. Refused: do what its hint says
+   and go on without it.
+3. `answer_setup` with one of the answers `get_setup` lists and the revision you read, until the
+   step is `done`. A setup that moved on meanwhile: read it again and answer the new question.
+   ZYNT asks for a phone number: tell the person it calls only if the setup gets stuck.
+4. A brain line that is a hypothesis or a `[not filled]` starter is sent as what it is: write
+   "hypothesis" in the text, never a confirmed fact. ZYNT turns the files into guesses that the
+   person confirms on the summary; there is no separate draft mode.
 
 Never confirm on the person's behalf: show ZYNT's summary in the chat and ask "Looks right, or
-what is wrong?". Answer the summary in ZYNT only with the person's yes to that question.
+what is wrong?". Answer the summary in ZYNT only with the person's yes to that question. The
+setup is done only when ZYNT's step is `done`, not at the person's yes to the summary.
 
 ## 5. Put the brain's companies and people on ZYNT lists
 
@@ -118,12 +130,13 @@ People".
 
 ## 6. Keep the result
 
-When the person says the summary is right, keep one note through `remember` in Target customers:
+When ZYNT's step is `done`, keep one note through `remember` in Target customers:
 what was set up, the segment, the list names and the date, with `tools: ["ZYNT"]` and `sources`
 as `zynt:<the list or workspace id ZYNT returned>`. Not the answers sent. Then call `check_tools`.
 
-Never claim a failed call succeeded. Finish in one to three sentences, then offer what the
-person can ask now:
+Never claim a failed call succeeded. Finish in one to three sentences: ZYNT now reads the news
+about the companies on the lists; the news shows at once, and signals, the news that gives a
+reason to talk now, can take a while. Then offer what the person can ask now (`gtmb-use-zynt`):
 
 - "Signals for me": the signals and news on every ZYNT list, best first.
 - "Which companies on my list had news this week?"

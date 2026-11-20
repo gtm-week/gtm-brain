@@ -51,7 +51,10 @@ test('ZYNT is set up through its tools from any connection; in Codex the agent c
 
 test('reads the brain before asking, sends guesses as drafts and lets the person confirm in ZYNT', () => {
   for (const ref of ['`strategy`', '`icp`', '`market`', '`voice`']) assert.ok(skill.includes(ref), ref);
-  assert.match(skill, /goes as a draft, never as a confirmed fact/);
+  assert.match(skill, /is sent as what it is: write\s+"hypothesis" in the text, never a confirmed fact/);
+  assert.match(skill, /`get_setup` first/);
+  assert.match(skill, /Business facts only: never passwords, keys, personal emails, other\s+people's phone numbers, deal amounts or copied conversations\./);
+  assert.match(skill, /The\s+setup is done only when ZYNT's step is `done`/);
   assert.match(skill, /Never confirm on the person's behalf/);
   assert.match(skill, /only with the person's yes to that question/);
   assert.match(skill, /slug `icp`/);
