@@ -17,7 +17,7 @@ export const RENAMED = ["add-section", "build-landing-page", "clay-setup", "conf
 export const RENAMED_AGAIN = { "define-icp": "icp", "market-desk-research": "market-research" };
 const now = name => RENAMED_AGAIN[name] || name;
 /* The skills that ship today. */
-export const SHIPPED = [...new Set([...RENAMED.map(now), "market", "housekeeping", "interaction"])].sort();
+export const SHIPPED = [...new Set([...RENAMED.map(now), "market", "housekeeping", "interaction", "use-zynt"])].sort();
 const old = () => new RegExp(`(?<!scripts/)(?:gtm-brain-(${[...RENAMED].sort((a, b) => b.length - a.length).join("|")})|gtmb-(${Object.keys(RENAMED_AGAIN).sort((a, b) => b.length - a.length).join("|")}))(?![a-z0-9-])`, "g");
 export const hasOldSkillNames = text => old().test(String(text || ""));
 export const renameSkillNames = text => String(text || "").replace(old(), (_, first, second) => `gtmb-${now(first || second)}`);

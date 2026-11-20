@@ -31,23 +31,38 @@ test('a pasted ZYNT prompt reaches the skill: its first line is a trigger', () =
 test('the key path is gone: a pasted key is never used or kept', () => {
   assert.match(skill, /\*\*The person pasted a ZYNT key\*\*: do not use it, and do not repeat it\./);
   assert.doesNotMatch(skill, /agent-setup\.md|mark_tool/);
-  assert.match(skill, /Never connect ZYNT another way: no `codex mcp add`, no key in a header, no curl\./);
+  assert.match(skill, /Never put a ZYNT key in a header and never use curl: the tools are the only way\./);
 });
 
-// ZYNT's plugin (getzynt/zynt-plugins, 2026-11-16): browser sign-in, so a key never reaches the chat.
-test('ZYNT is set up only through its plugin; without it, the install steps for both hosts', () => {
+// ZYNT's tools from any connection (2026-11-19): in Codex the agent connects ZYNT itself, no plugin, and checks the sign-in.
+test('ZYNT is set up through its tools from any connection; in Codex the agent connects it and checks the sign-in', () => {
   for (const tool of ['add_setup_context', 'get_setup', 'answer_setup']) assert.ok(skill.includes('`' + tool + '`'), tool);
-  for (const step of ['codex plugin marketplace add getzynt/zynt-plugins', 'codex plugin add zynt@zynt', 'codex mcp login zynt',
-    '/plugin marketplace add getzynt/zynt-plugins', '/plugin install zynt@zynt']) assert.ok(skill.includes('`' + step + '`'), step);
-  assert.match(skill, /give the install steps and stop/);
+  for (const step of ['codex mcp list --json', 'codex mcp add zynt --url https://app.getzynt.com/mcp', 'codex mcp login zynt',
+    'claude mcp add --transport http zynt https://app.getzynt.com/mcp', 'https://app.getzynt.com/mcp']) assert.ok(skill.includes('`' + step + '`'), step);
+  assert.match(skill, /The tool names decide, not where they came\s+from\./);
+  assert.match(skill, /No plugin is needed\./);
+  assert.doesNotMatch(skill, /codex plugin add/, 'the plugin is never required');
+  assert.match(skill, /Only `zynt` with `auth_status` `o_auth` is signed in\./);
+  assert.match(skill, /Never say\s+"signed in" before `codex mcp list --json` shows it\./);
+  assert.match(skill, /codex:\/\/threads\/new\?path=/);
   assert.match(skill, /tools: \["ZYNT"\]/);
   assert.match(skill, /Then call `check_tools`\./);
 });
 
 test('reads the brain before asking, sends guesses as drafts and lets the person confirm in ZYNT', () => {
   for (const ref of ['`strategy`', '`icp`', '`market`', '`voice`']) assert.ok(skill.includes(ref), ref);
-  assert.match(skill, /goes as a draft, never as a confirmed fact/);
+  assert.match(skill, /is sent as what it is: write\s+"hypothesis" in the text, never a confirmed fact/);
+  assert.match(skill, /`get_setup` first/);
+  assert.match(skill, /Business facts only: never passwords, keys, personal emails, other\s+people's phone numbers, deal amounts or copied conversations\./);
+  assert.match(skill, /The\s+setup is done only when ZYNT's step is `done`/);
   assert.match(skill, /Never confirm on the person's behalf/);
   assert.match(skill, /only with the person's yes to that question/);
   assert.match(skill, /slug `icp`/);
+});
+
+test('puts the brain\'s companies and people on two ZYNT lists after a yes, and ends with what to ask', () => {
+  for (const tool of ['list_audiences', 'create_audience', 'add_companies', 'lookup_person', 'add_to_audience']) assert.ok(skill.includes('`' + tool + '`'), tool);
+  assert.match(skill, /"GTM Brain · <segment> · Companies"/);
+  assert.match(skill, /Yes, add them;\s+No, skip\./);
+  assert.match(skill, /"Signals for me"/);
 });

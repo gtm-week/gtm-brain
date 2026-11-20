@@ -1,6 +1,6 @@
 # The shipped skills
 
-Twenty-nine skills ship with GTM Brain. A skill is one sitting of work you start in a Codex chat
+Thirty skills ship with GTM Brain. A skill is one sitting of work you start in a Codex chat
 opened in the brain's folder: type its command, `/gtmb-<name>`, or say the sentence beside it.
 For the difference from a workflow, your own skill and an interaction see
 [How GTM Brain works: Skills, projects and interactions](HOW-IT-WORKS.md#skills-projects-and-interactions).
@@ -15,7 +15,7 @@ Start here. One command creates the brain; the rest connect what you already use
 | Create the brain in an empty folder | `/gtmb-start` | |
 | Connect your CRM, email, calendar or call recorder; change company, team or settings | `/gtmb-configure` | "connect my tools", "change our company details" |
 | Connect Clay and find your target companies and people in it | `/gtmb-clay-setup` | "set up Clay for me" |
-| Connect ZYNT buying signals through ZYNT's own plugin | `/gtmb-zynt-setup` | "set up ZYNT for me" |
+| Connect ZYNT buying signals and put the brain's companies and people on ZYNT lists | `/gtmb-zynt-setup` | "set up ZYNT for me" |
 | Connect Freckle and build a first list of target companies and people | `/gtmb-freckle-setup` | "set up Freckle for me" |
 | Connect Woodpecker, see how campaigns perform, draft one email sequence | `/gtmb-woodpecker-setup` | "set up Woodpecker for me" |
 | Connect Surfer, get topics from your notes, brief a first article | `/gtmb-surfer-setup` | "set up Surfer for me" |
@@ -61,6 +61,7 @@ in full before every email, plan and page; the other four produce work from thos
 | `/gtmb-use-brain` | Recall evidence, save findings and resume everyday work. | "just got off a call with ...", "what do we know about pricing?", "add pricing as a base file" |
 | `/gtmb-todo` | List what you owe: open questions, dated follow-ups, Slack replies; at most eight, one at a time. | "what is waiting on me" |
 | `/gtmb-sync` | Pull what changed in connected tools and keep what matters; set up the daily sync. | "catch up", "sync every morning" |
+| `/gtmb-use-zynt` | Read the news and signals on your ZYNT lists against the brain: who has a reason to hear from you now, what ZYNT knows about an account. | "signals for me", "any news on my list?" |
 | `/gtmb-housekeeping` | Tidy names and gaps one question at a time: first names without a surname, names that may be the same, required fields nobody stated. | "let's do housekeeping" |
 | `/gtmb-workflow` | Create a workflow (a playbook), check it, switch it on, start a run and advance through its steps and gates. | "start the outbound workflow", "make a playbook for ..." |
 | `/gtmb-interaction` | Propose an action you repeat in your own tool; after APPROVE Codex does it and records it the same way every time. List or run the ones you have. | "propose an interaction for moving a deal in HubSpot" |

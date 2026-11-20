@@ -238,7 +238,7 @@ Three things sit beside the four parts and are easy to confuse with a workflow.
 
 | Thing | What it is | Where it lives |
 | --- | --- | --- |
-| Shipped skill | One sitting of work. Twenty-nine ship with the plugin as `/gtmb-<name>`: [the list](SKILLS.md). Not yours to edit | the plugin |
+| Shipped skill | One sitting of work. Thirty ship with the plugin as `/gtmb-<name>`: [the list](SKILLS.md). Not yours to edit | the plugin |
 | Your own skill | The same, made by you. Kept in the brain and through updates | `.agents/skills/gtmb-<name>/` |
 | Workflow | Skills chained into steps, with gates and a trigger | `workflows/` |
 | Interaction | One approved action in your own tool, done and recorded the same way every time | `configuration/interactions.json` |

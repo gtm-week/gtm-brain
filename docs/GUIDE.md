@@ -146,7 +146,7 @@ preserve them.
 
 The research skills end in something you keep: `/gtmb-deepdive` a one-page brief,
 `/gtmb-market-research` a sourced report with a positioning map, `/gtmb-unit-economics` a PUSH,
-FIX, STOP or MEASURE decision note. All twenty-nine skills are in [SKILLS.md](SKILLS.md).
+FIX, STOP or MEASURE decision note. All thirty skills are in [SKILLS.md](SKILLS.md).
 
 ## The dashboard
 

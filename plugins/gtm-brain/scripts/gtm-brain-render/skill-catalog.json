@@ -164,6 +164,15 @@
     "example": "Sync recent updates from my connected tools."
   },
   {
+    "id": "gtmb-use-zynt",
+    "group": "daily",
+    "role": "everyday",
+    "featured": false,
+    "title": "Use ZYNT",
+    "description": "The news and signals on your ZYNT lists, read against what you sell: who has a reason to hear from you now.",
+    "example": "Who on our ZYNT lists has a reason to hear from us now?"
+  },
+  {
     "id": "gtmb-use-brain",
     "group": "knowledge",
     "role": "everyday",
