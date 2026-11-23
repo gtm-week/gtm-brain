@@ -201,7 +201,7 @@ test("Workflows and Entities on a brain with runs, its own skill and a customer:
     assert.equal(done.ended.how, "done"); assert.equal(done.step, null);
     assert.deepEqual(W.orphans.map(o => [o.workflow, o.step?.n, o.step?.status]), [["webinar", 1, "due"]], "a run whose workflow file is gone still shows");
     assert.equal(B.pillars.entities.rows.find(e => e.name === "Northwind")?.relation, "customer", "a customer's relation to us comes from the customer notes");
-    const p = page(B); p.run('show("workflows")');
+    const p = page(B, { now: "2026-11-12T12:00:00Z" }); p.run('show("workflows")');
     const w = p.node("#pw-files").innerHTML;
     const title = live.step.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     assert.match(w, new RegExp(`1 run in progress.*Last run: on step 2 of ${ob.steps}: ${title}, due 2026-11-20`, "s"), "the card says where the last run stands in words");
@@ -226,13 +226,13 @@ test("Workflows and Entities on a brain with runs, its own skill and a customer:
     // a step whose date has passed is overdue in the tracker and in Coming up, by the same test
     const lateB = structuredClone(B), lateRun = lateB.pillars.workflows.files.find(f => f.slug === "outbound").runs.find(x => x.id === live.id);
     Object.assign(lateRun.step, { status: "due", due: "2026-01-05" }); Object.assign(lateRun.steps[1], { status: "due", due: "2026-01-05", waits: "waits for a note tagged sequence-written" });
-    const lp = page(lateB); lp.run('show("workflows")');
+    const lp = page(lateB, { now: "2026-11-12T12:00:00Z" }); lp.run('show("workflows")');
     assert.match(lp.node("#pw-files").innerHTML, /class="wf-run late" data-run="outbound-2026-11-01-marta".*<span class="pl-state late">Overdue<\/span>.*data-step-state="late".*was due.*Waits for a note tagged sequence-written/s);
     assert.match(lp.node("#ov-soon").innerHTML, /<li class="late" data-soon-run="outbound-2026-11-01-marta">.*was due.*See the run.*Do it with Codex/s, "Coming up says the same and leads to the tracker");
     assert.equal(decodeURIComponent(lp.node("#ov-soon").innerHTML.match(/data-soon-run="outbound-2026-11-01-marta".*?class="pl-chat" href="[^"]*prompt=([^"]+)"/s)[1]), nextHref.searchParams.get("prompt"), "one wording for the next step, on the Overview and in the tracker");
     // a switched-on workflow with a schedule says which trigger; the explainer and the count are drawn from data
     const onB = structuredClone(B), wfOn = onB.pillars.workflows.files.find(f => f.slug === "outbound"); wfOn.trigger = "every monday 09:00";
-    const op = page(onB); op.run('show("workflows")');
+    const op = page(onB, { now: "2026-11-12T12:00:00Z" }); op.run('show("workflows")');
     const onCard = op.node("#pw-files").innerHTML; const onOut = onCard.slice(onCard.indexOf('data-pw="outbound"'));
     assert.match(onOut, /data-pw-on href="codex:[^"]+">Switch on in Codex.*it starts from its trigger \(every monday 09:00\)/s);
     assert.match(decodeURIComponent(onOut.match(/data-pw-on href="[^"]*prompt=([^"]+)"/)[1]), /^Use GTM Brain\. Switch on the Outbound workflow/);
