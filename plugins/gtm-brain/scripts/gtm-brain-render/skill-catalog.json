@@ -173,6 +173,32 @@
     "example": "Who on our ZYNT lists has a reason to hear from us now?"
   },
   {
+    "id": "gtmb-topic-analyzer",
+    "group": "daily",
+    "role": "everyday",
+    "featured": false,
+    "title": "Analyze audience topics",
+    "description": "Rank recurring buyer questions and problems with sourced evidence, confidence and review.",
+    "example": "Analyze which topics matter to our buyers.",
+    "reads": [
+      "strategy",
+      "icp"
+    ]
+  },
+  {
+    "id": "gtmb-audience-loop",
+    "group": "daily",
+    "role": "everyday",
+    "featured": false,
+    "title": "Find people and conversations",
+    "description": "Find a thread worth joining, see what people have already said and choose what you could add.",
+    "example": "I have ten minutes on LinkedIn. Which conversation should I join?",
+    "reads": [
+      "strategy",
+      "icp"
+    ]
+  },
+  {
     "id": "gtmb-use-brain",
     "group": "knowledge",
     "role": "everyday",

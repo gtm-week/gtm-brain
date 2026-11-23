@@ -28,7 +28,7 @@ needed only if you later choose to share your own private company brain through 
 codex plugin marketplace add gtm-week/gtm-brain   # straight from GitHub (verified)
 codex plugin marketplace upgrade gtm-brain        # refresh an existing marketplace snapshot
 codex plugin add gtm-brain@gtm-brain
-codex plugin list | grep gtm-brain                                      # installed, enabled, 0.38.1
+codex plugin list | grep gtm-brain                                      # installed, enabled, 0.38.2
 ```
 
 The [install message](../README.md#1-install) runs these for you. The upgrade line refreshes a
@@ -88,7 +88,7 @@ new chat in Codex on the test folder (restart the app only if old skills linger)
 Set this once in your shell; the scripts below use it:
 
 ```bash
-export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.38.1
+export PLUGIN_ROOT=~/.codex/plugins/cache/gtm-brain/gtm-brain/0.38.2
 ```
 
 In a chat the skills run as GTM Brain tools: you see "Remembering", "Searching the brain",

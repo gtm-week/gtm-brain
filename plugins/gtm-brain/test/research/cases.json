@@ -1,0 +1,93 @@
+[
+  {
+    "id": "topics",
+    "skill": "topic-analyzer",
+    "prompt": "Find three recurring buyer questions worth researching for the sample GTM Brain setup service. Compare independent accounts, relevance, urgency and confidence. Cite source IDs/files and show at least one contradiction or limitation. Do not draft posts or save anything.",
+    "files": [
+      "data/transcripts/t01-alderpath.md",
+      "data/transcripts/t02-brindle.md",
+      "data/transcripts/t03-cobaltledger.md",
+      "data/transcripts/t04-dovetailroute.md",
+      "data/email/e01-alderpath.md",
+      "data/email/e02-brindle.md",
+      "data/email/e03-cobaltledger.md",
+      "data/email/e04-dovetailroute.md"
+    ]
+  },
+  {
+    "id": "list",
+    "skill": "topic-analyzer",
+    "prompt": "Use contacts P001, P002 and P006 in the supplied contacts table as my input list. Analyze what their available conversations suggest we should learn about this audience. No Audience Loop has run. Explain coverage and qualification limits; use the available files now and do not save anything.",
+    "files": [
+      "data/crm/contacts.csv",
+      "data/transcripts/t01-alderpath.md",
+      "data/transcripts/t02-brindle.md",
+      "data/transcripts/t06-fjordlinemetrics.md",
+      "data/email/e06-fjordlinemetrics.md"
+    ]
+  },
+  {
+    "id": "timing",
+    "skill": "topic-analyzer",
+    "prompt": "What topic or buyer question does Grovebridge illustrate, and how urgent is it? Compare the CRM, call and email evidence. Give a concise recommendation with references. Do not save anything.",
+    "files": [
+      "data/crm/deals.csv",
+      "data/transcripts/t07-grovebridge.md",
+      "data/email/e07-grovebridge.md"
+    ]
+  },
+  {
+    "id": "partial",
+    "skill": "audience-loop",
+    "prompt": "Assess Leonie Hart and Omar Lind at Fjordline as people relevant to our offering. Separate role fit, need, buying authority and conversation-host evidence. State what is missing and what to verify next. Do not save or admit anyone to a list.",
+    "files": [
+      "data/crm/contacts.csv",
+      "data/crm/deals.csv",
+      "data/transcripts/t06-fjordlinemetrics.md",
+      "data/email/e06-fjordlinemetrics.md"
+    ]
+  },
+  {
+    "id": "identities",
+    "skill": "audience-loop",
+    "prompt": "Review the researched prospect list and prepared enrichment results for possible additions to our audience research. Apply the operator exclusions where applicable, reconcile duplicate company records and retain unresolved matches. Distinguish research fit from outbound eligibility and conversation-host qualification. Give a concise shortlist or holds with source references; do not change lists or save anything.",
+    "files": [
+      "data/crm/companies.csv",
+      "data/crm/contacts.csv",
+      "data/prospecting/prospects-researched.csv",
+      "data/enrichment/prepared-results.csv",
+      "data/operators/exclusions.csv"
+    ]
+  },
+  {
+    "id": "exclusions",
+    "skill": "audience-loop",
+    "prompt": "Should Emberlane and Dovetail be added to net-new outreach, and can their evidence still inform our audience research? Explain fit, readiness and any outcomes actually established. Do not contact anyone or save anything.",
+    "files": [
+      "data/transcripts/t05-emberlane.md",
+      "data/email/e05-emberlane.md",
+      "data/transcripts/t04-dovetailroute.md",
+      "data/email/e04-dovetailroute.md",
+      "data/operators/exclusions.csv"
+    ]
+  },
+  {
+    "id": "live",
+    "skill": "audience-loop",
+    "prompt": "I have ten minutes on LinkedIn. Which conversation should I join using the supplied material? Give the best useful next step and no invented discussion. Do not save anything.",
+    "files": [
+      "content/post-01-account-preparation.md",
+      "content/post-02-enrichment.md"
+    ]
+  },
+  {
+    "id": "resume",
+    "skill": "topic-analyzer",
+    "prompt": "Review Grovebridge and retain one sourced finding about the current proposed start window and approval status for this research. This is authorization to save that single finding, not an accepted topic priority. Keep it concise and cite the original source. Use the existing research/offer context in Brain mode, or saved-finding.md in standalone mode.",
+    "files": [
+      "data/transcripts/t07-grovebridge.md",
+      "data/email/e07-grovebridge.md"
+    ],
+    "follow_up": "Continue from the saved finding. Read it back, tell me the proposed window and what still needs approval, and avoid creating another copy. Do not infer acceptance, a booked start or completed onboarding."
+  }
+]

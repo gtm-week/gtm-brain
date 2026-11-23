@@ -1,0 +1,4 @@
+interface:
+  display_name: "GTM Brain: Audience loop"
+  short_description: "Find relevant people, hosts and timely conversations"
+  default_prompt: "Use $gtmb-audience-loop to find one LinkedIn conversation where I can contribute in ten minutes."

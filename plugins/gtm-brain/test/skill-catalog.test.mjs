@@ -75,7 +75,7 @@ test('search reads names, commands, promises, documents and examples; a chip cou
  const mentors=D.skills.filter(s=>s.role==='mentor').map(s=>s.id);
  assert.deepEqual(ids().slice(0,mentors.length),mentors,'under All the mentors lead, in catalogue order');
  assert.match(p.node('#skill-results').innerHTML,/^<h3 class="sk-cat" data-sk-cat="mentor">Mentors <span class="pl-count">9<\/span><\/h3>/);
- assert.match(p.node('#skill-groups').innerHTML,/^<button[^>]*data-skill-group="all"[^>]*>All<span class="pill-count">30<\/span><\/button><button[^>]*data-skill-group="mentor"[^>]*>Mentors</);
+ assert.match(p.node('#skill-groups').innerHTML,/^<button[^>]*data-skill-group="all"[^>]*>All<span class="pill-count">32<\/span><\/button><button[^>]*data-skill-group="mentor"[^>]*>Mentors</);
  assert.doesNotMatch(p.node('#skill-groups').innerHTML,/Your skills/,'no chip for a category with nothing in it');
  p.node('#skill-search').oninput({target:{value:'voice'}});
  assert.ok(ids().includes('gtmb-voice'),'the tone of voice mentor');assert.ok(!ids().includes('gtmb-sync'),'not an unrelated skill');
@@ -102,15 +102,15 @@ test('copy prompt copies the exact command and example without navigating',async
  assert.match(p.node('#copy-status-'+s.id).textContent,/Copied/);assert.equal(p.run('view'),'home','copying does not navigate away from the front page');
 });
 
-test('the person can ask for thirty shipped workflows; internal procedures remain references',()=>{
- assert.deepEqual(skillCatalog().map(s=>s.id).sort(),['gtmb-add-section','gtmb-build-landing-page','gtmb-clay-setup','gtmb-configure','gtmb-deepdive','gtmb-design-system','gtmb-freckle-setup','gtmb-heyreach-setup','gtmb-housekeeping','gtmb-icp','gtmb-interaction','gtmb-market','gtmb-market-research','gtmb-project','gtmb-publish-website','gtmb-rules','gtmb-schema','gtmb-skill','gtmb-start','gtmb-strategy','gtmb-surfer-setup','gtmb-sync','gtmb-todo','gtmb-unit-economics','gtmb-use-brain','gtmb-use-zynt','gtmb-voice','gtmb-woodpecker-setup','gtmb-workflow','gtmb-zynt-setup']);
+test('the person can ask for thirty-two shipped workflows; internal procedures remain references',()=>{
+ assert.deepEqual(skillCatalog().map(s=>s.id).sort(),['gtmb-add-section','gtmb-audience-loop','gtmb-build-landing-page','gtmb-clay-setup','gtmb-configure','gtmb-deepdive','gtmb-design-system','gtmb-freckle-setup','gtmb-heyreach-setup','gtmb-housekeeping','gtmb-icp','gtmb-interaction','gtmb-market','gtmb-market-research','gtmb-project','gtmb-publish-website','gtmb-rules','gtmb-schema','gtmb-skill','gtmb-start','gtmb-strategy','gtmb-surfer-setup','gtmb-sync','gtmb-todo','gtmb-topic-analyzer','gtmb-unit-economics','gtmb-use-brain','gtmb-use-zynt','gtmb-voice','gtmb-woodpecker-setup','gtmb-workflow','gtmb-zynt-setup']);
 });
 
 test('the catalogue is the one place that says which skills are mentors, everyday or setup; mentors lead and say what they fill',()=>{
  const all=skillCatalog(),mentors=skillsByRole('mentor');
  assert.deepEqual(mentors.map(s=>s.id),['gtmb-strategy','gtmb-icp','gtmb-market','gtmb-voice','gtmb-design-system','gtmb-market-research','gtmb-unit-economics','gtmb-deepdive','gtmb-build-landing-page']);
  assert.deepEqual(all.slice(0,mentors.length),mentors,'mentors come first in the catalogue');
- assert.deepEqual(skillsByRole('everyday').map(s=>s.id).sort(),['gtmb-add-section','gtmb-housekeeping','gtmb-interaction','gtmb-project','gtmb-publish-website','gtmb-skill','gtmb-sync','gtmb-todo','gtmb-use-brain','gtmb-use-zynt','gtmb-workflow']);
+ assert.deepEqual(skillsByRole('everyday').map(s=>s.id).sort(),['gtmb-add-section','gtmb-audience-loop','gtmb-housekeeping','gtmb-interaction','gtmb-project','gtmb-publish-website','gtmb-skill','gtmb-sync','gtmb-todo','gtmb-topic-analyzer','gtmb-use-brain','gtmb-use-zynt','gtmb-workflow']);
  assert.equal(skillsByRole('setup').length,10);assert.ok(skillsByRole('setup').some(s=>s.id==='gtmb-clay-setup'),'a tool setup skill is not a mentor');
  assert.equal(mentors.length+skillsByRole('everyday').length+skillsByRole('setup').length,all.length);
  const starters=['strategy','icp','voice','design-system','market'];

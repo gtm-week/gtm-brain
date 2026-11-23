@@ -64,7 +64,7 @@ test("parsers: triggers, milestones, header items and steps with a skill and a m
 });
 
 test("the shipped drafts carry a header, stay drafts, and every step has a milestone", () => {
-  for (const name of ["outbound", "ads-then-outbound"]) {
+  for (const name of ["outbound", "ads-then-outbound", "topic-analysis", "audience-discovery"]) {
     const text = readFileSync(`${P}/templates/workflows/${name}.md`, "utf8");
     assert.match(text, /^status: draft$/m); assert.match(text, /^trigger: manual$/m); assert.match(text, /^reads: /m); assert.doesNotMatch(text, /^owner:/m, "no owner field on a workflow");
     const steps = text.split("## Steps")[1].split("## Learn")[0];

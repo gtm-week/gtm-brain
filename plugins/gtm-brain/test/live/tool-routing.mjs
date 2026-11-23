@@ -339,6 +339,10 @@ for (const scenario of selected) {
       const args = ["exec", "--ignore-user-config", "--ephemeral", "--json", "--sandbox", "read-only", "-C", cwd, "-m", model, ...(scenario.project ? ["--skip-git-repo-check"] : []),
         "-c", "features.apps=false", "-c", "approval_policy=\"never\"",
         "-c", `mcp_servers.gtm_brain_eval.command=${JSON.stringify(process.execPath)}`,
+        // Codex does not forward every parent env var to MCP children. Pass the test profile
+        // explicitly so registerBrain never writes to the real user's picker.
+        "-c", `mcp_servers.gtm_brain_eval.env.GTM_BRAIN_EVAL_PROFILE=${JSON.stringify(fixtureProfile)}`,
+        "-c", 'mcp_servers.gtm_brain_eval.env.GTM_BRAIN_NO_WATCH="1"',
         "-c", `mcp_servers.gtm_brain_eval.args=${JSON.stringify([fileURLToPath(new URL("./tool-routing-proxy.mjs", import.meta.url)), root, trace, scenario.answer || "", scenario.meetings ? "meetings" : scenario.onboarding ? "onboarding" : scenario.creation ? "projects" : "", scenario.crm || "", plugin])}`,
         "-c", "mcp_servers.gtm_brain_eval.tool_timeout_sec=60", "-o", out, "-"];
       if (/^(hubspot-)?write-/.test(scenario.crm || '')) args.splice(args.length - 1, 0,

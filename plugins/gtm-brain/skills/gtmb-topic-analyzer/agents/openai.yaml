@@ -1,0 +1,4 @@
+interface:
+  display_name: "GTM Brain: Topic analyzer"
+  short_description: "Rank audience topics from sourced questions and problems"
+  default_prompt: "Use $gtmb-topic-analyzer to analyze which topics matter to our buyers using existing evidence."

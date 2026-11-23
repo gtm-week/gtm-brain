@@ -1,6 +1,6 @@
 # The shipped skills
 
-Thirty skills ship with GTM Brain. A skill is one sitting of work you start in a Codex chat
+Thirty-two skills ship with GTM Brain. A skill is one sitting of work you start in a Codex chat
 opened in the brain's folder: type its command, `/gtmb-<name>`, or say the sentence beside it.
 For the difference from a workflow, your own skill and an interaction see
 [How GTM Brain works: Skills, projects and interactions](HOW-IT-WORKS.md#skills-projects-and-interactions).
@@ -88,3 +88,12 @@ source unchanged and plugin updates never rewrite your website project. See the
 Until 0.36 the skills had longer names. An old name still works: Codex runs the new skill and
 tells you its name. The table of old and new names is in
 [Updating to 0.36](../plugins/gtm-brain/MANUAL.md#updating-to-036-short-skill-names).
+
+## Topic and audience research
+
+| Command | Result |
+| --- | --- |
+| `/gtmb-topic-analyzer` | Sourced topics from any supplied ICP list, interviews or CRM evidence |
+| `/gtmb-audience-loop` | Independently assessed people, hosts and discussion openings |
+
+Either runs alone. See [the research workflows](TOPIC-AND-AUDIENCE.md) for evidence, review and collection boundaries.

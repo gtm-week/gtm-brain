@@ -1,0 +1,40 @@
+{
+  "repository": "https://github.com/gtm-week/berlin-codex-dummy",
+  "revision": "2a1e5c7bd6c4d47e30b7f30942bd300147b55bf7",
+  "as_of": "2026-11-16",
+  "timezone": "Europe/Berlin",
+  "common_files": [
+    "product/gtm-brain-brief.md",
+    "content/sample-offer.md",
+    "content/voice.md",
+    "data/SCHEMA.md"
+  ],
+  "files": {
+    "content/post-01-account-preparation.md": "044fd727c93774c4f3539d7b8e6193e00725585124d82c3e5615b3b3350aaf2f",
+    "content/post-02-enrichment.md": "370fb1a58872a70854d6fcdca026605d3b723699c50e280e3787f21fb74e63f1",
+    "content/sample-offer.md": "6eee6480387ee900b054f9a7323459bfbac8bb55f00a22100bf7405f5130cba3",
+    "content/voice.md": "9b34cd3e6dc2c99f72041b6276931c0ab39d7808b95f1870179bc974f93ae112",
+    "data/SCHEMA.md": "3d65975868afff25fca90e3eb62d3085f55366129e2c884780b549bb7a80726f",
+    "data/crm/companies.csv": "f21d8319716eb15fac521d7f09c8f9a086ff1575931f76de55fb494667418274",
+    "data/crm/contacts.csv": "086212afd47e371e662552b514f20667748a0764ee48bba72ba7ef34a613998e",
+    "data/crm/deals.csv": "39b694ea5911107a7562fc390b46c4ced81217b1c0ffffb3c1403972603f9115",
+    "data/email/e01-alderpath.md": "2984f76ef226bf2cdca544f7b413bdcf767a9ec96ab4dcb3b3f607017ad011a7",
+    "data/email/e02-brindle.md": "6994479f18777f549885bcdecee9e82ad45d6f7a32620c690f58e0bc9cb2b15b",
+    "data/email/e03-cobaltledger.md": "9d741083f8500a9f83b8870efd089db3202731e74f1a8c684f07db769feec68a",
+    "data/email/e04-dovetailroute.md": "cb5e5f633176a50c58b3f8c8b118919cbcb778a6bf5dc51db7b7230c3c1fc170",
+    "data/email/e05-emberlane.md": "18017761f90fae66deffb8da549af72aa2d6b02aa00fa96ac69fb96a39929bfe",
+    "data/email/e06-fjordlinemetrics.md": "980ecc650285a3c42725f4aeb90373da81f9b937a6268b82e081b7e69ff56a62",
+    "data/email/e07-grovebridge.md": "886a8696e6fde07050defcfaf8492207e84d706b1e914c89c6278cf67604e8ff",
+    "data/enrichment/prepared-results.csv": "5cad1fa06fe2edd16d25839da1042f37d15f14e53316e63c4894758c37d7f59a",
+    "data/operators/exclusions.csv": "25bd44e45897ebdcf99d15eec16406168bdc0aca22388967e90320a18dac8253",
+    "data/prospecting/prospects-researched.csv": "4ef044743b64030b19d39008aa003cd2fed01dfb9570eec7d42687cb313a7ed5",
+    "data/transcripts/t01-alderpath.md": "9b80f1096df104022e373c2dc76e3a4ca3beb3f58eb9eafbcae9119d5fda5f06",
+    "data/transcripts/t02-brindle.md": "dd1f9e60d1ca7015364b2c215d9697920e9a7e2d1ed6891633928d20e2dadb79",
+    "data/transcripts/t03-cobaltledger.md": "051d3b3b1f66e00896e70c0e830c11b5f6458dbaa26f1e90c800be0bf8d3cd93",
+    "data/transcripts/t04-dovetailroute.md": "2bb2e256f1bf141b87410de1a7b932ce8dbf53c4e7a7a13b8ba769dbf631d33c",
+    "data/transcripts/t05-emberlane.md": "01e62079898129780f71f0c2dd9eb6791eb7e3f4ca53b0ce80829b5fea3fb26d",
+    "data/transcripts/t06-fjordlinemetrics.md": "6671216010737e2a9aff5b0a7ac05a9df4152bfa3ae1c55b8046038967b3f26e",
+    "data/transcripts/t07-grovebridge.md": "f1865ed15a4d9b8462f2258c5ff662ca0bb5544d5fb3eff2f4838f232b66f262",
+    "product/gtm-brain-brief.md": "1ff57a54dcbe081f5f7262940bff5e2e32988ae020105b70912ec13a42b42584"
+  }
+}
