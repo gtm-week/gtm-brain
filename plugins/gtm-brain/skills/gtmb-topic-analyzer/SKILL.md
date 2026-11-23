@@ -1,8 +1,10 @@
 ---
 name: gtmb-topic-analyzer
 description: |
-  Analyze topics from any supplied ICP list or source evidence into an evidence-backed shortlist.
-  Triggers: "/gtmb-topic-analyzer", "analyze our topics", "which topics matter to our buyers".
+  Given the ICP, analyze the conversations its members are having and the questions, problems
+  and decisions they discuss, using observed posts, engagement or supplied conversations.
+  Triggers: "/gtmb-topic-analyzer", "given our ICP, what conversations are they having?", "what is our ICP discussing?",
+  "analyze our topics", "which topics matter to our buyers".
   Includes ICP engagement and post collection for topic research. Not audience expansion or
   tracking-list admission (gtmb-audience-loop),
   market sizing (gtmb-market-research), or finished post writing.
@@ -11,7 +13,28 @@ allowed-tools: [Bash, Read]
 
 # GTM Brain: Topic analyzer
 
-Use [the method](references/method.md) to choose topics from evidence. Any supplied ICP list
+Answer **Given our ICP, what conversations are they having?** Begin with the selected ICP
+and its observed conversations, then derive recurring questions, problems and decisions.
+Topic priorities and possible contribution angles follow from that evidence and its relevance
+to the offering. Keep seller-generated ideas separate from what the audience actually says.
+
+Audience Loop is introduced first as the way to find relevant people and conversations.
+It is optional here: an existing ICP list, CRM segment or supplied conversation evidence is
+enough to start. Interviews and CRM notes are valid audience conversations alongside posts
+and replies. If ICP fit or participation is unverified, label the analysis exploratory and
+state the gap rather than claiming these are qualified buyers' conversations.
+
+For saved Up2Data JSON, **start by running the bundled evidence reader**:
+`node <this-skill-directory>/scripts/read-evidence.mjs <evidence-directory> --as-of <review-time>`.
+Use its statement records, counts and date/policy checks; do not recreate the provider parser
+with ad hoc field guesses. Then follow [source review](references/source-review.md):
+verify central quotations with `--record`/`--quote`; use `--view identities` only for role
+assessment; check any proposed opening with `--post`, `--formats` and `--branch`. The answer
+is unfinished until those source checks are complete. Before sending, pass the complete draft
+through `--check-citations` as described in the method and correct unmatched URLs. This is
+local reading, not paid collection.
+
+Use [the method](references/method.md) to understand the ICP's conversations. Any supplied ICP list
 is a first-class starting point: a pasted list, file, CRM segment or saved list, regardless of
 whether the Audience Loop has run. This skill owns the scoped collection and analysis needed
 for that list. Customer interviews, CRM notes and supplied post evidence are also valid inputs.
@@ -90,3 +113,7 @@ The audience loop can return source pointers for a later topic analysis without 
 
 Finish with the report, accepted priorities and unresolved gaps. Do not publish, send outreach,
 admit people to tracking lists, schedule runs or send Slack reports through this skill.
+
+When live source access is missing or the person asks to connect Up2Data, follow
+[Up2Data onboarding](references/up2data-onboarding.md). Offer supplied-file analysis as an alternative;
+verify account access separately from paid research authorization and collector readiness.

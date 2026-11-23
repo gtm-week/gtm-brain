@@ -1,8 +1,8 @@
 ---
 name: gtmb-audience-loop
 description: |
-  Discover and review relevant people, conversation hosts and timely engagement opportunities.
-  Triggers: "/gtmb-audience-loop", "run the audience loop", "find relevant conversations", "which LinkedIn conversation should I join?",
+  Identify who fits the ICP and find relevant conversations from supplied or authorized evidence.
+  Triggers: "/gtmb-audience-loop", "run the audience loop", "who fits our ICP?", "where are relevant conversations happening?", "find relevant conversations", "which LinkedIn conversation should I join?",
   "who replied to me on LinkedIn?", "what should I do on LinkedIn today", "who do I owe a reply on LinkedIn".
   Keeps sourced candidate assessments and opportunities. Not topic prioritization
   (gtmb-topic-analyzer), broad source sync (gtmb-sync), or outreach execution.
@@ -10,6 +10,23 @@ allowed-tools: [Bash, Read]
 ---
 
 # GTM Brain: Audience loop
+
+Start with the audience. Answer the question the person asked: **Who fits our ICP?**
+or **Where are relevant conversations happening?** A request to assess people does not
+require a conversation recommendation; a request to find conversations does not require
+expanding a tracking list. Assess people, hosts and openings with their own evidence.
+
+Introduce Audience Loop before Topic Analyzer when explaining the pair. Topic Analyzer asks
+what the selected ICP is discussing; it can use an existing list or supplied evidence directly.
+An evidence handoff is optional, not a requirement to run the two skills in sequence.
+
+For saved Up2Data JSON, **start by running the bundled evidence reader**:
+`node <this-skill-directory>/../gtmb-topic-analyzer/scripts/read-evidence.mjs <evidence-directory> --as-of <review-time>`.
+Use its statement records, counts and date/policy checks; do not recreate the provider parser
+with ad hoc field guesses. Then follow [source review](../gtmb-topic-analyzer/references/source-review.md):
+verify central quotations with `--record`/`--quote`; use `--view identities` only for role
+assessment; check any proposed opening with `--post`, `--formats` and `--branch`. The answer
+is unfinished until those source checks are complete. This is local reading, not paid collection.
 
 Follow [the method](references/method.md). Run independently from the topic analyzer: accepted
 topics are optional discovery seeds, not prerequisites or qualification evidence.
@@ -103,3 +120,7 @@ Report coverage, actual spend/reservations and blockers in the executing chat. S
 external delivery needs explicit destination and delivery authority; reconcile an uncertain
 send before retrying. This skill supplies no default delivery destination, recurring schedule, paid budget,
 LinkedIn posting, connection, reaction, removal or outreach authority.
+
+When live source access is missing or the person asks to connect Up2Data, follow
+[Up2Data onboarding](../gtmb-topic-analyzer/references/up2data-onboarding.md). Offer supplied-file analysis as an alternative;
+verify account access separately from paid research authorization and collector readiness.

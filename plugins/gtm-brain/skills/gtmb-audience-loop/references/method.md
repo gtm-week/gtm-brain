@@ -13,6 +13,11 @@ confirmed recurring access to the audience. A host can live outside the buyer ge
 verify participant geography and professional fit separately. Followers and reach are not
 host qualification. A person may hold both roles, with different evidence and admission outcomes.
 
+Without observed relevant participants, host evidence is unknown: an author's senior title,
+topic fit or a separately supplied participant profile cannot establish a conversation-host
+signal. Research qualification is an assessment. Admission is a separate explicit decision
+and recorded membership state; never redefine it as research qualification.
+
 ## Opportunity quality
 
 Verify the original author and event date, source wording, actionable age and professional
@@ -23,6 +28,19 @@ For an older post, dated recent discussion must demonstrate that it remains acti
 Use the company's freshness and quality targets. If none exist, propose them when they change
 the task rather than inheriting another company's numeric defaults. Broaden discovery where
 category gaps remain; never fill a quota with weaker or misclassified candidates.
+
+Missing replies do not suspend the original-post gates. Apply known format exclusions before
+choosing which thread to investigate next; do not propose even a conditional contribution to
+a policy-excluded post. For an eligible opening, provide the exact available post/branch URL,
+name who raised the point and who answered it, and explain the addition beyond that exchange.
+When only a research hold is justified, lead with that state rather than a live recommendation.
+
+A no-opening answer still needs a useful result. Cite the supplied source that establishes
+the gap, name the missing evidence, and give one concrete next step, such as reviewing a
+supplied original with its current replies. If the material is only an unpublished draft,
+say so and cite its file; do not invent a published link. Check citation destinations against
+the actual source paths or permalinks before sending. Use a plain source filename when a
+working link cannot be established. A refusal alone does not complete a conversation review.
 
 ## Returning to a conversation
 

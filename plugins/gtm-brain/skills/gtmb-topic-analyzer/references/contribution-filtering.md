@@ -38,9 +38,27 @@ the cited source before reuse; do not claim machine-verified integrity.
 
 Never infer meaning from URL slugs, engagement counts or keyword matches alone. Distinguish
 comment and reaction observations; neither establishes agreement, passive readership or buying
-intent. Classify mixed formats explicitly: an excluded event recap remains excluded even when
-it contains a relevant paragraph. A substantive argument is not an event recap merely because
-it mentions an event; record the classification rationale from the full text.
+intent. Classify the original's format **before** ranking its topic or author. Use a separate
+first pass over its opening, body and ending. Record all supported formats, not just the
+dominant one. A useful argument does not cancel the announcement, promotion or event that
+frames it. Missing replies cannot change the original's classification.
+
+For an event exclusion, distinguish these two situations from the original text:
+
+- **Event content is present:** the author recounts speaking, attending or organising, or
+  invites people to an event, and develops that event through details such as its setting,
+  participants, activities, takeaways or closing acknowledgements. A reflection built around
+  a talk or workshop is mixed event/reflection even if its ideas occupy most of the text.
+- **Incidental reference only:** an event is briefly cited as background or a source, while
+  the post develops a standalone argument without retelling, inviting or thanking that event.
+  The event name alone does not make this an event post.
+
+Apply the same distinction to a named programme launch inside an explanation and a linked
+offer inside a useful analysis. Preserve the additional format; a free resource can still be
+promotion. Use the company's definitions when supplied. If the distinction remains genuinely
+uncertain, mark the format unresolved and review the original framing before recommending
+more discussion collection. Do not rank a possibly excluded post as the best next opportunity
+merely because its author or topic has strong fit.
 
 A useful angle adds a specific question, relevant experience, distinction or correction grounded
 in the source and the company's supported expertise. A nonempty angle field or generic agreement

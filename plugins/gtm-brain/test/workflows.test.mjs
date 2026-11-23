@@ -185,7 +185,9 @@ test("workflow --status shows every step with its state, the open gate question 
   const root = ready(); const today = wf.localDate(), id = `outbound-${today}-q4`;
   workflow(root, "--start", "outbound", "--context", "offer", "--handle", "Q4", "--settled", JSON.stringify({ "Target accounts": "list A", "Why now": "budget season", Owner: "Marta", Sequencer: "lemlist" }), "--by", "marta");
   const out = workflow(root, "--status", id);
-  assert.match(out, new RegExp(`^run ${id}: Outbound in Our offer, started ${today} by marta-nowak, in progress\\n`));
+  // Status shows the recorded UTC date; local run IDs can already be on the next day.
+  const recordedDate = lib.readMemories(root, "offer").find(m => m.tags?.includes(`run:${id}`) && m.tags.includes("run-start")).at.slice(0, 10);
+  assert.match(out, new RegExp(`^run ${id}: Outbound in Our offer, started ${recordedDate} by marta-nowak, in progress\\n`));
   assert.match(out, /\n1\. Build the target list: due now\n2\. Write the sequence: not started\n3\. Launch: not started\n4\. Read replies and book: not started \(gate: after 10 days\)\n/);
   assert.match(out, /\nbrief:\n- Target accounts: list A\n/);
   assert.match(out, /\nnext: do step 1 in this chat through the connected tools, then workflow advance with step 1\.$/);

@@ -337,6 +337,7 @@ for (const scenario of selected) {
       const suffix = n ? `-turn${n + 1}` : "", out = n ? `${final}${suffix}` : final;
       writeFileSync(join(artifacts, `${scenario.name}${suffix}-prompt.txt`), text);
       const args = ["exec", "--ignore-user-config", "--ephemeral", "--json", "--sandbox", "read-only", "-C", cwd, "-m", model, ...(scenario.project ? ["--skip-git-repo-check"] : []),
+        ...(process.env.GTM_BRAIN_EVAL_EFFORT ? ['-c', `model_reasoning_effort=${JSON.stringify(process.env.GTM_BRAIN_EVAL_EFFORT)}`] : []),
         "-c", "features.apps=false", "-c", "approval_policy=\"never\"",
         "-c", `mcp_servers.gtm_brain_eval.command=${JSON.stringify(process.execPath)}`,
         // Codex does not forward every parent env var to MCP children. Pass the test profile
@@ -353,7 +354,9 @@ for (const scenario of selected) {
         if (process.env.CODEX_HOME) agentEnv.CODEX_HOME = process.env.CODEX_HOME; else delete agentEnv.CODEX_HOME;
         const child = spawn("codex", args, { cwd, env: agentEnv, stdio: ["pipe", "pipe", "pipe"] });
         let stdout = "", err = "", timedOut = false;
-        const timer = setTimeout(() => { timedOut = true; child.kill("SIGTERM"); }, scenario.daily ? 360000 : 180000);
+        const configuredTimeout = Number(process.env.GTM_BRAIN_EVAL_CASE_TIMEOUT_MS);
+        const timeout = Number.isFinite(configuredTimeout) && configuredTimeout >= 1000 && configuredTimeout <= 900000 ? configuredTimeout : scenario.daily ? 360000 : 180000;
+        const timer = setTimeout(() => { timedOut = true; child.kill("SIGTERM"); }, timeout);
         child.stdout.on("data", data => { stdout += data; }); child.stderr.on("data", data => { err += data; });
         child.on("error", error => { clearTimeout(timer); reject(error); });
         child.on("close", code => { clearTimeout(timer); writeFileSync(`${events}${suffix}`, stdout); writeFileSync(join(artifacts, `${scenario.name}${suffix}-stderr.log`), err); resolve({ code, timedOut, final: existsSync(out) ? readFileSync(out, "utf8").trim() : "" }); });

@@ -1,0 +1,47 @@
+[
+  {
+    "id": "topics",
+    "skill": "topic-analyzer",
+    "prompt": "Use Topic Analyzer to identify the two strongest topic hypotheses in this evidence for our selected offering. Explain what recurs across independent authors, what is only one person's claim, and what we should validate next. Cite the actual supplied sources, distinguish publication from collection dates, and report coverage. Do not write finished posts or save findings."
+  },
+  {
+    "id": "audience",
+    "skill": "audience-loop",
+    "prompt": "Use Audience Loop to assess these authors as possible buyers and conversation hosts separately. Apply our supplied contribution policy and recommend at most one discussion opening we could use now, if the evidence supports one. Explain what the relevant exchange already covers and what we could add. Classify each original post's format, keep admission and buying intent separate, and state coverage limits. Do not save findings or contact anyone."
+  },
+  {
+    "id": "missing-discussion",
+    "skill": "audience-loop",
+    "prompt": "Use Audience Loop to choose a current conversation to join from the supplied evidence. Give a useful result even if the evidence is insufficient. Assess what these files actually establish, cite your sources, and explain the next step. Do not save findings, contact anyone or collect more data."
+  },
+  {
+    "id": "attribution",
+    "skill": "topic-analyzer",
+    "prompt": "Which people actually express a workplace problem in these discussions? Give a concise evidence table with each speaker, a short exact quotation, the source, and what it supports. Separate substantive statements, praise, requests for materials and profile-only context. Then suggest one topic hypothesis without overstating independent corroboration. Do not save anything."
+  },
+  {
+    "id": "policy-change",
+    "skill": "audience-loop",
+    "prompt": "Assess the supplied posts for one useful conversation to join under the current policy in evidence/policy.json. Explain each post's format decision and the best next step. Use only that policy and the supplied evidence. No saves, collection or external actions."
+  },
+  {
+    "id": "freshness",
+    "skill": "audience-loop",
+    "prompt": "Review these saved discussions for a contribution at the stated review time. Use the supplied freshness policy, explain what the dates establish, and give an actionable opening only if the evidence supports it now. No new collection, saves or external actions."
+  },
+  {
+    "id": "identity-only",
+    "skill": "audience-loop",
+    "prompt": "Assess these people as potential buyers and conversation hosts for our selected offering. What can we responsibly conclude, and which conversation, if any, should we join? Give a useful next step from the available evidence. Do not collect, save, admit or contact anyone."
+  },
+  {
+    "id": "holdout-topics",
+    "skill": "topic-analyzer",
+    "prompt": "Analyze this separate source sample for our selected offering. Identify the strongest topic hypotheses, with attributable evidence and independent-observation counts. Distinguish author statements from comments and profile claims, quantify coverage, and say what is still unproven. Do not write finished posts or save findings."
+  },
+  {
+    "id": "icp-conversations",
+    "skill": "topic-analyzer",
+    "prompt": "Given our ICP in profile.md and the people in the supplied profile snapshots, what conversations are they having? Use the available evidence now; no Audience Loop has run. Explain what matters to this audience and what remains unclear. Do not save findings, write finished posts or collect more data."
+  }
+]

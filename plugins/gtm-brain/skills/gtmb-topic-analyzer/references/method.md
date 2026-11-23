@@ -1,5 +1,10 @@
 # Topic analysis method
 
+The primary question is: **Given our ICP, what conversations are they having?**
+Use the selected ICP to identify whose conversations the evidence represents. Lead the report
+with what those people discuss, who participates, what is already answered and what remains
+open. Derive topic priorities afterward; do not start from what the seller wants to say.
+
 ## Independent ICP-list route
 
 1. Accept the supplied list independently of its origin. Record its snapshot/reference, selected
@@ -24,6 +29,29 @@ Audience Loop handoff is another input with the same provenance requirements, ne
 of this skill's collection stage. Collection authority still comes from the company/run scope.
 
 ## Analyze the corpus
+
+Copy citation destinations from source records or reader output, retaining the full post
+identifier and comment/reply target. Do not reconstruct or abbreviate them. For saved Up2Data
+sources, check the **complete draft answer** before sending it:
+
+```sh
+node /absolute/path/to/read-evidence.mjs /absolute/evidence --check-citations <<'ANSWER'
+Paste the complete draft answer here.
+ANSWER
+```
+
+This reads stdin locally and creates no file or network request. A nonzero exit lists URLs
+that do not match a supplied source. Replace each with the exact source URL, or cite its
+filename and record pointer, then rerun the complete draft. Send only after `valid: true`,
+keeping the checked citation destinations unchanged. This checks every supporting link;
+it does not replace quotation verification or semantic review.
+
+Keep an audience-to-conversation evidence map: ICP person or role, qualification basis,
+observed participation (author, comment, reply or reaction), original discussion and date,
+and the question or problem actually expressed. A reaction shows engagement, not agreement
+or speech. A relevant host's other posts are a separately labelled corpus; do not imply the
+ICP participated in them. When only a role hypothesis or topical match connects a source to
+the ICP, say so. Do not discard useful exploratory evidence or inflate it into buyer demand.
 
 Group questions by the job, obstacle or decision the audience describes, rather than shared
 keywords. Preserve the difference between a repeated pain, curiosity and the analyst's idea.

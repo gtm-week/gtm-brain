@@ -156,8 +156,9 @@ summary is written when you ask about it. When you want a specific workflow:
 | Get a one-page brief before a call | `/gtmb-deepdive` |
 | Decide whether to push, fix, stop or measure growth spend | `/gtmb-unit-economics` |
 | Assess a market, its segments and competitors against what you can prove today | `/gtmb-market-research` |
-| Analyze buyer questions from a list or supplied evidence | `/gtmb-topic-analyzer` |
-| Review relevant people and conversations | `/gtmb-audience-loop` |
+| Identify who fits our ICP | `/gtmb-audience-loop` |
+| Find relevant conversations | `/gtmb-audience-loop` |
+| Understand what conversations our ICP is having | `/gtmb-topic-analyzer` |
 | Define who to target: company fit, buying roles and readiness, kept as one draft | `/gtmb-icp` |
 | Fill in the strategy the brain starts with (`strategy.md`), in a 10-15 minute conversation | `/gtmb-strategy` |
 | Draft a tone of voice: first whose it is (the company's, yours or a team's), then from writing that fits, tested on one fresh email or post; `voice.md` for the company; offered at the end of setup, skippable, run again any time | `/gtmb-voice` |

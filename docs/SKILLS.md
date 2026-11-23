@@ -93,7 +93,7 @@ tells you its name. The table of old and new names is in
 
 | Command | Result |
 | --- | --- |
-| `/gtmb-topic-analyzer` | Sourced topics from any supplied ICP list, interviews or CRM evidence |
-| `/gtmb-audience-loop` | Independently assessed people, hosts and discussion openings |
+| `/gtmb-audience-loop` | Identify who fits the ICP or find relevant conversations |
+| `/gtmb-topic-analyzer` | Understand the conversations the ICP is having, with sourced questions and participation evidence |
 
 Either runs alone. See [the research workflows](TOPIC-AND-AUDIENCE.md) for evidence, review and collection boundaries.
