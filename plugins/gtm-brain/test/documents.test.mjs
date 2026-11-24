@@ -67,8 +67,8 @@ test("scan: only marked Markdown at depth 0-2 outside the engine and projects; h
   mkdirSync(join(root, "brain", "guidelines"), { recursive: true }); writeFileSync(join(root, "brain", "guidelines", "old.md"), docs.renderDocument({ ...ok, title: "Old" }));
   mkdirSync(join(root, "website"), { recursive: true }); writeFileSync(join(root, "website", "README.md"), docs.renderDocument({ ...ok, title: "Site" }));
   writeFileSync(join(root, "work", "projects.json"), JSON.stringify({ projects: [{ slug: "website", path: join(root, "website") }] }));
-  assert.deepEqual(docs.markdownFiles(root), ["brand/voice.md", "market/battle-cards/sierra.md", "notes.md", "strategy.md", "workflows/ads-then-outbound.md", "workflows/outbound.md"]);
-  assert.deepEqual(docs.listDocuments(root).map(d => d.path), ["brand/voice.md", "market/battle-cards/sierra.md", "strategy.md", "workflows/ads-then-outbound.md", "workflows/outbound.md"]);
+  assert.deepEqual(docs.markdownFiles(root), ["brand/voice.md", "market/battle-cards/sierra.md", "notes.md", "strategy.md", "workflows/ads-then-outbound.md", "workflows/audience-discovery.md", "workflows/outbound.md", "workflows/topic-analysis.md"]);
+  assert.deepEqual(docs.listDocuments(root).map(d => d.path), ["brand/voice.md", "market/battle-cards/sierra.md", "strategy.md", "workflows/ads-then-outbound.md", "workflows/audience-discovery.md", "workflows/outbound.md", "workflows/topic-analysis.md"]);
   assert.equal(readFileSync(join(root, "notes.md"), "utf8"), "# My notes\n\nno marker here\n");
   assert.equal(docs.readDocument(root, "notes"), null);
 });
@@ -102,12 +102,12 @@ test("files: a folder of the document's name beside it; a document alone in its 
   assert.equal(docs.landingDir(root, docs.readDocument(root, "pricing/pricing"), all), "pricing/pricing");
   assert.deepEqual(docs.documentFiles(root, docs.readDocument(root, "pricing/pricing"), all), []);
   assert.ok(existsSync(join(root, "pricing", "pricing-2026.xlsx")));
-  assert.deepEqual(docs.savePaths(root).sort(), ["pricing", "pricing/discounts.md", "pricing/pricing.md", "strategy", "strategy.md", "workflows", "workflows/ads-then-outbound.md", "workflows/outbound.md"]);
+  assert.deepEqual(docs.savePaths(root).sort(), ["pricing", "pricing/discounts.md", "pricing/pricing.md", "strategy", "strategy.md", "workflows", "workflows/ads-then-outbound.md", "workflows/audience-discovery.md", "workflows/outbound.md", "workflows/topic-analysis.md"]);
 });
 
 test("the line names every document with status, kinds of work, path and file count, and says what to do when there are none", () => {
   const root = brain();
-  assert.match(docs.documentsLine(root), /^documents: Strategy \[not filled\] \(strategy, planning\) -> strategy\.md  ·  Ads, then outbound \[draft\] \(outbound campaign, linkedin ads\) -> workflows\/ads-then-outbound\.md  ·  Outbound \[draft\] \(outbound campaign\) -> workflows\/outbound\.md\./, "setup wrote strategy.md and the two workflows, all waiting for the person");
+  assert.match(docs.documentsLine(root), /^documents: Strategy \[not filled\] \(strategy, planning\) -> strategy\.md  ·  Ads, then outbound \[draft\] \(outbound campaign, linkedin ads\) -> workflows\/ads-then-outbound\.md  ·  Audience discovery \[draft\] \(people and conversation discovery\) -> workflows\/audience-discovery\.md  ·  Outbound \[draft\] \(outbound campaign\) -> workflows\/outbound\.md  ·  Topic analysis \[draft\] \(audience topic prioritization\) -> workflows\/topic-analysis\.md\./, "setup wrote strategy.md and the four workflows, all waiting for the person");
   docs.writeDocument(root, { ...ok, path: "strategy.md", title: "Strategy", applies_to: "strategy, planning", status: "approved" });
   docs.writeDocument(root, { ...ok, path: "brand/design-system.md", title: "Design system", applies_to: "design" });
   mkdirSync(join(root, "brand", "design-system")); writeFileSync(join(root, "brand", "design-system", "tokens.json"), "{}"); writeFileSync(join(root, "brand", "design-system", "logo.svg"), "<svg/>");
@@ -133,11 +133,11 @@ test("the script creates at the root or in a folder, lists, shows, updates, remo
   assert.match(document(root, "--update", "tone-of-voice", "--status", "approved"), /updated document brand\/tone-of-voice\.md/);
   assert.equal(lastCommit(root), "Updated document brand/tone-of-voice.md");
   assert.match(readFileSync(join(root, "brand", "tone-of-voice.md"), "utf8"), /^status: approved$/m);
-  assert.deepEqual(JSON.parse(document(root, "--list", "--json")).map(d => [d.slug, d.status, d.files]), [["tone-of-voice", "approved", 0], ["positioning", "draft", 0], ["strategy", "draft", 0], ["ads-then-outbound", "draft", 0], ["outbound", "draft", 0]]);
+  assert.deepEqual(JSON.parse(document(root, "--list", "--json")).map(d => [d.slug, d.status, d.files]), [["tone-of-voice", "approved", 0], ["positioning", "draft", 0], ["strategy", "draft", 0], ["ads-then-outbound", "draft", 0], ["audience-discovery", "draft", 0], ["outbound", "draft", 0], ["topic-analysis", "draft", 0]]);
   assert.match(refused(root, "--create", "--title", "Tone of voice", "--applies-to", "copy", "--body", "x", "--folder", "brand").text, /already exists/);
   assert.match(refused(root, "--create", "--title", "Bad", "--applies-to", "", "--body", "x").text, /applies_to/);
   assert.match(refused(root, "--create", "--title", "Bad", "--applies-to", "copy", "--body", "x", "--folder", "brain").text, /folder/);
-  assert.match(refused(root, "--update", "nope", "--status", "approved").text, /no such document nope; yours: tone-of-voice, positioning, strategy, ads-then-outbound, outbound/);
+  assert.match(refused(root, "--update", "nope", "--status", "approved").text, /no such document nope; yours: tone-of-voice, positioning, strategy, ads-then-outbound, audience-discovery, outbound, topic-analysis/);
   assert.match(document(root, "--remove", "tone-of-voice"), /removed document brand\/tone-of-voice\.md/);
   assert.ok(!existsSync(join(root, "brand")));
   assert.equal(lastCommit(root), "Removed document brand/tone-of-voice.md");

@@ -6,6 +6,7 @@ gtm-week-context/
 # anything else in a docs/ folder is internal working material.
 **/docs/*
 !/docs/*.md
+!/docs/research-source.json
 !/docs/releases/
 !/docs/images/
 !/docs/skill-template/

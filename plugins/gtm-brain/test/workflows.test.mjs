@@ -148,7 +148,7 @@ const script = `${P}/scripts/gtm-brain-workflow/workflow.mjs`;
 const workflow = (root, ...args) => execFileSync(process.execPath, [script, ".", ...args], { cwd: root, encoding: "utf8", env }).trimEnd();
 const refusedBy = (root, ...args) => { try { workflow(root, ...args); return null; } catch (e) { return { code: e.status, text: String(e.stderr) }; } };
 const SETTLED = JSON.stringify({ "Target accounts": "the 40 logistics accounts from the ICP", "Why now": "Q4 budget season", Budget: "EUR 2000", "Ad platform": "LinkedIn, Marta", Sequencer: "lemlist" });
-const ready = () => { const root = brain(); for (const name of ["outbound", "ads-then-outbound"]) writeFileSync(join(root, "workflows", `${name}.md`), template(name)); return root; };
+const ready = () => { const root = brain(); for (const name of ["topic-analysis", "audience-discovery"]) rmSync(join(root, "workflows", `${name}.md`)); for (const name of ["outbound", "ads-then-outbound"]) writeFileSync(join(root, "workflows", `${name}.md`), template(name)); return root; };
 
 test("workflow --list names the shipped workflows with their steps and the runs in progress; --json is the parsed shape", () => {
   const root = ready();
@@ -185,7 +185,9 @@ test("workflow --status shows every step with its state, the open gate question 
   const root = ready(); const today = wf.localDate(), id = `outbound-${today}-q4`;
   workflow(root, "--start", "outbound", "--context", "offer", "--handle", "Q4", "--settled", JSON.stringify({ "Target accounts": "list A", "Why now": "budget season", Owner: "Marta", Sequencer: "lemlist" }), "--by", "marta");
   const out = workflow(root, "--status", id);
-  assert.match(out, new RegExp(`^run ${id}: Outbound in Our offer, started ${today} by marta-nowak, in progress\\n`));
+  // Status shows the recorded UTC date; local run IDs can already be on the next day.
+  const recordedDate = lib.readMemories(root, "offer").find(m => m.tags?.includes(`run:${id}`) && m.tags.includes("run-start")).at.slice(0, 10);
+  assert.match(out, new RegExp(`^run ${id}: Outbound in Our offer, started ${recordedDate} by marta-nowak, in progress\\n`));
   assert.match(out, /\n1\. Build the target list: due now\n2\. Write the sequence: not started\n3\. Launch: not started\n4\. Read replies and book: not started \(gate: after 10 days\)\n/);
   assert.match(out, /\nbrief:\n- Target accounts: list A\n/);
   assert.match(out, /\nnext: do step 1 in this chat through the connected tools, then workflow advance with step 1\.$/);
@@ -330,10 +332,10 @@ test("session maintenance and the scheduled run mark due steps: one gate questio
   assert.match(readFileSync(join(root, "work", "hooks.log"), "utf8"), /scheduled-run  workflows: no step due/);
 });
 
-test("setup writes workflows/ with the two shipped drafts, committed, dated and versioned", () => {
+test("setup writes workflows/ with the shipped drafts, committed, dated and versioned", () => {
   const root = brain();
   const version = JSON.parse(readFileSync(`${P}/.codex-plugin/plugin.json`, "utf8")).version;
-  for (const name of ["outbound", "ads-then-outbound"]) {
+  for (const name of ["outbound", "ads-then-outbound", "topic-analysis", "audience-discovery"]) {
     const text = readFileSync(join(root, "workflows", `${name}.md`), "utf8");
     assert.match(text, /^type: workflow$/m); assert.match(text, new RegExp(`^gtm-brain: ${version.replace(/\./g, "\\.")}$`, "m")); assert.match(text, /^updated: \d{4}-\d{2}-\d{2}$/m);
     assert.doesNotMatch(text, /{{/);
@@ -348,7 +350,7 @@ test("upgrade adds workflows/ once to a brain without it and never adds a shippe
   const root = brain();
   rmSync(join(root, "workflows"), { recursive: true });
   const upgrade = () => execFileSync("bash", [`${P}/scripts/gtm-brain-upgrade/upgrade.sh`, root], { cwd: root, encoding: "utf8", env });
-  assert.match(upgrade(), /added workflows\/ with the two shipped workflows/);
+  assert.match(upgrade(), /added workflows\/ with the shipped workflows/);
   assert.ok(existsSync(join(root, "workflows", "outbound.md"))); assert.ok(existsSync(join(root, "workflows", "ads-then-outbound.md")));
   rmSync(join(root, "workflows", "outbound.md"));
   const again = upgrade();
@@ -394,4 +396,32 @@ test("a playbook is a workflow: create writes a new draft that parses, refuses a
   // the words people use route here, and the rulebook no longer files a playbook as a document
   assert.match(readFileSync(`${P}/skills/gtmb-workflow/SKILL.md`, "utf8"), /"I need a playbook"/);
   assert.match(wholeRulebook(readFileSync(`${P}/templates/AGENTS.md`, "utf8")), /A playbook\s+is a workflow \(gtmb-workflow\)/);
+});
+
+
+test("topic and audience workflows resume independently without transferring milestones", () => {
+  const root = brain();
+  const settled = JSON.stringify({
+    "Audience and offering": "Operations leaders for the selected offering",
+    "Scope and sources": "Supplied interview notes only",
+    "Research authority": "Existing evidence only; no collection",
+    "Contribution policy": "Inventory-only research; no contributions",
+    "Review and output": "Marta reviews in the offer context"
+  });
+  const today = wf.localDate();
+  for (const slug of ["topic-analysis", "audience-discovery"]) {
+    workflow(root, "--start", slug, "--context", "offer", "--handle", "fixture", "--settled", settled, "--by", "marta");
+  }
+  const topic = `topic-analysis-${today}-fixture`, audience = `audience-discovery-${today}-fixture`;
+  workflow(root, "--advance", topic, "--step", "1", "--note", "Confirmed supplied-evidence scope", "--by", "marta");
+  assert.equal(wf.runState(root, topic).current.n, 2);
+  assert.equal(wf.runState(root, audience).current.n, 1);
+  assert.equal(wf.listRuns(root).length, 2);
+  const topicNotes = lib.readMemories(root, "offer").filter(m => m.tags.includes(`run:${topic}`));
+  const audienceNotes = lib.readMemories(root, "offer").filter(m => m.tags.includes(`run:${audience}`));
+  assert.ok(topicNotes.some(m => m.tags.includes("topic-frame")));
+  assert.ok(!audienceNotes.some(m => m.tags.includes("topic-frame")));
+  assert.match(workflow(root, "--status", topic), /step 2/);
+  assert.equal(wf.readWorkflow(root, "topic-analysis").header.status, "draft");
+  assert.equal(wf.readWorkflow(root, "audience-discovery").header.trigger.kind, "manual");
 });

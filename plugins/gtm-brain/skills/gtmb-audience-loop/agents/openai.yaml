@@ -1,0 +1,4 @@
+interface:
+  display_name: "GTM Brain: Audience loop"
+  short_description: "Find ICP candidates or relevant conversations"
+  default_prompt: "Use $gtmb-audience-loop to assess who fits our ICP."

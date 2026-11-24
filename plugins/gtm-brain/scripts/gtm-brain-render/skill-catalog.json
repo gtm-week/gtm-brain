@@ -173,6 +173,32 @@
     "example": "Who on our ZYNT lists has a reason to hear from us now?"
   },
   {
+    "id": "gtmb-audience-loop",
+    "group": "daily",
+    "role": "everyday",
+    "featured": false,
+    "title": "Find people and conversations",
+    "description": "Assess ICP candidates or find relevant conversations, with separate evidence for each request.",
+    "example": "Who fits our ICP?",
+    "reads": [
+      "strategy",
+      "icp"
+    ]
+  },
+  {
+    "id": "gtmb-topic-analyzer",
+    "group": "daily",
+    "role": "everyday",
+    "featured": false,
+    "title": "Understand ICP conversations",
+    "description": "Find the questions, problems and decisions our ICP discusses, with observed participation and source evidence.",
+    "example": "Given our ICP, what conversations are they having?",
+    "reads": [
+      "strategy",
+      "icp"
+    ]
+  },
+  {
     "id": "gtmb-use-brain",
     "group": "knowledge",
     "role": "everyday",

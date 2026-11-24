@@ -1,0 +1,4 @@
+interface:
+  display_name: "GTM Brain: Topic analyzer"
+  short_description: "Understand the conversations your ICP is having"
+  default_prompt: "Use $gtmb-topic-analyzer to understand what conversations our ICP is having."

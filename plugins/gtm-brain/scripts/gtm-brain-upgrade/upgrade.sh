@@ -123,14 +123,14 @@ done
 if [ -n "$layout_change" ]; then
   echo "$layout_change"; changed=1; paths="$paths $LAYOUT_F"
 fi
-# workflows/ (0.28.0): a brain from before gets the folder with the two shipped workflows once. A folder that
+# workflows/ (0.28.0): a brain from before gets the folder with the shipped workflows once. A folder that
 # exists is never added to, so a deleted shipped workflow stays deleted; a deleted folder comes back.
 added_workflows=0
 if [ ! -d workflows ]; then
   PLUGIN_VERSION="$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$PLUGIN/.codex-plugin/plugin.json" | head -1)"
   mkdir -p workflows
   for f in "$T"/workflows/*.md; do sed -e "s|{{DATE}}|$(date +%F)|g" -e "s|{{VERSION}}|$PLUGIN_VERSION|g" "$f" > "workflows/$(basename "$f")"; done
-  echo "added workflows/ with the two shipped workflows"; changed=1; paths="$paths workflows"; added_workflows=1
+  echo "added workflows/ with the shipped workflows"; changed=1; paths="$paths workflows"; added_workflows=1
 fi
 # What this upgrade did and what it left alone, in the person's words: the last thing they read.
 moved_n="$(printf '%s\n' "$docs_out" | grep -c '^moved ' || true)"; kept_n="$(printf '%s\n' "$docs_out" | grep -c '^kept ' || true)"
@@ -143,7 +143,7 @@ echo "upgrade report:"
 [ -n "$other_starters" ] && echo "  added the starter documents $other_starters, as drafts to fill when it suits (say: list the documents)"
 [ -n "$added_page" ] && echo "  added the design system page $added_page beside its Markdown: a starter until you say: fill in our design system"
 [ -n "$added_rules" ] && echo "  added $added_rules: the brain's rules and what it keeps, yours to edit (say: show me the rules)"
-[ "$added_workflows" = 1 ] && echo "  added workflows/: outbound and ads-then-outbound, as drafts (say: start the outbound workflow)"
+[ "$added_workflows" = 1 ] && echo "  added workflows/: the shipped workflows, as drafts (say: start the outbound workflow)"
 [ "$old_files" -gt 0 ] && echo "  $old_files files in files/ from before 0.27 stay where they are; their links keep working. New files land beside a document or a company."
 [ -n "$stray" ] && echo "  folders at the top GTM Brain does not use: $stray. A Markdown in them can become a document where it lies (adopt the documents in <folder>/); the rest is yours to move or delete."
 [ "$moved_n" = 0 ] && [ "$kept_n" = 0 ] && [ "$added_strategy" = 0 ] && [ -z "$other_starters" ] && [ -z "$added_page" ] && [ -z "$added_rules" ] && [ "$added_workflows" = 0 ] && [ "$old_files" = 0 ] && [ -z "$stray" ] && echo "  nothing to migrate"

@@ -158,8 +158,9 @@ test("after saving, remember hands Codex facts to judge: the open question it ma
 
   // what the brain last said about a person, so Codex can say what changed
   assert.equal(remember("--content", "Florian Weber will send the slides by Friday 2026-11-13.", "--people", "Florian Weber", "--new", "Florian Weber").status, 0);
+  const previousDate = lib.readMemories(root, "company").at(-1).at.slice(0, 10);
   const moved = remember("--content", "Florian Weber moved the slides to Monday 2026-11-16.", "--people", "Florian Weber");
-  assert.match(moved.stdout, /the brain last said about Florian Weber: "Florian Weber will send the slides by Friday 2026-11-13\." \(2026-11-1\d\)\. If this note changes one of these, say what changed in one line/);
+  assert.ok(moved.stdout.includes(`the brain last said about Florian Weber: "Florian Weber will send the slides by Friday 2026-11-13." (${previousDate}). If this note changes one of these, say what changed in one line`));
 });
 
 test("meetings around now with the people in a note are listed; far ones are not", () => {

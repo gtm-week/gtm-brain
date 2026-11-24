@@ -58,6 +58,15 @@ what is waiting on me?
 open the dashboard
 ```
 
+## Topic and audience research
+
+| Command | Result |
+| --- | --- |
+| `/gtmb-topic-analyzer` | Sourced topics from supplied lists or evidence |
+| `/gtmb-audience-loop` | Relevant people and verified conversation openings |
+
+[Methods, manual workflows and evaluation](docs/TOPIC-AND-AUDIENCE.md). Each skill works independently.
+
 ## More
 
 - [Everyday use, the dashboard, updating](docs/GUIDE.md)

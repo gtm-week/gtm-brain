@@ -113,7 +113,7 @@ node --input-type=module -e '
 # are recorded as given, so an upgrade never brings back one the person deleted (lib/layout-version.mjs). The
 # layout number is the 3 startKindLayout recorded above; this adds the starters and never lowers it.
 node -e 'const v=await import(process.argv[1]),u=await import(process.argv[2]);v.writeLayout(".",{starters:u.GIVEN})' "$PLUGIN/lib/layout-version.mjs" "$PLUGIN/lib/upgrade-files.mjs"
-# workflows/ from day one (0.28.0): the two shipped workflow documents as drafts; a folder already there is the person's.
+# workflows/ from day one (0.28.0): the shipped workflow documents as drafts; a folder already there is the person's.
 if [ ! -d workflows ]; then
   mkdir -p workflows
   for f in "$T"/workflows/*.md; do sed -e "s|{{DATE}}|$(date +%F)|g" -e "s|{{VERSION}}|$PLUGIN_VERSION|g" "$f" > "workflows/$(basename "$f")"; done
